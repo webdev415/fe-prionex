@@ -1,0 +1,29 @@
+{
+  "general": {
+    "unknown": "An unknown error occurred",
+    "network": "Network error. Please check your connection.",
+    "server": "Server error. Please try again later.",
+    "notFound": "Resource not found",
+    "forbidden": "Access denied",
+    "unauthorized": "Please sign in to continue"
+  },
+  "auth": {
+    "invalidCredentials": "Invalid username or password",
+    "accountLocked": "Your account has been locked",
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "alreadyLoggedIn": "You are already logged in on another device",
+    "tooManyAttempts": "Too many login attempts. Please try again later."
+  },
+  "validation": {
+    "required": "This field is required",
+    "invalidEmail": "Please enter a valid email address",
+    "invalidPhone": "Please enter a valid phone number",
+    "minLength": "Must be at least {{min}} characters",
+    "maxLength": "Must be no more than {{max}} characters"
+  },
+  "api": {
+    "timeout": "Request timed out. Please try again.",
+    "rateLimit": "Too many requests. Please wait a moment.",
+    "maintenance": "System is under maintenance. Please try again later."
+  }
+}
