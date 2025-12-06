@@ -1,0 +1,103 @@
+/**
+ * SearchBar Component
+ *
+ * Reusable search bar component with input, dropdown, and search button.
+ */
+
+import { useState } from 'react'
+import { Icons } from '@/lib/icons'
+import { colors } from '@/lib/colors'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/RadixSelect'
+
+interface SearchOption {
+  value: string
+  label: string
+}
+
+interface SearchBarProps {
+  placeholder?: string
+  searchOptions?: SearchOption[]
+  defaultSearchType?: string
+  onSearch?: (query: string, searchType: string) => void
+  className?: string
+}
+
+export function SearchBar({
+  placeholder = 'Search',
+  searchOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'projects', label: 'Projects' },
+    { value: 'users', label: 'Users' },
+  ],
+  defaultSearchType = 'all',
+  onSearch,
+  className,
+}: SearchBarProps) {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchType, setSearchType] = useState(defaultSearchType)
+
+  const handleSearch = () => {
+    onSearch?.(searchQuery, searchType)
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch()
+    }
+  }
+
+  return (
+    <div
+      className={`border-light-100 flex h-11 w-[448px] items-center gap-3 rounded-full border bg-white pl-4 pr-2 ${className || ''}`}
+    >
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        onKeyPress={handleKeyPress}
+        placeholder={placeholder}
+        className="flex-1 bg-transparent outline-none text-sm placeholder:text-gray-600"
+        style={{
+          color: colors.neutral.dark[500],
+        }}
+      />
+      <div className="h-5 w-px bg-gray-300" />
+      <Select value={searchType} onValueChange={setSearchType}>
+        <SelectTrigger
+          className="h-auto border-0 bg-transparent p-0 shadow-none focus:ring-0"
+          style={{ width: 'auto', minWidth: '120px', fontSize: '12px', color: colors.neutral.dark[500] }}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="bg-white">
+          {searchOptions.map((option) => (
+            <SelectItem
+              key={option.value}
+              value={option.value}
+              style={{ fontSize: '12px', color: colors.neutral.dark[500] }}
+            >
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <button
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105"
+        aria-label="Search"
+        onClick={handleSearch}
+        style={{
+          backgroundColor: colors.primary[300],
+        }}
+      >
+        <Icons.Search size={20} color={colors.neutral.dark[500]} strokeWidth={1.5} />
+      </button>
+    </div>
+  )
+}
+

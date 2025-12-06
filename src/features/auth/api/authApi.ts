@@ -1,5 +1,11 @@
 import api from '@/lib/api'
-import type { LoginRequest, LoginResponse, User, TokenValidateResponse } from '@/types/api'
+import type {
+  LoginRequest,
+  LoginResponse,
+  User,
+  TokenValidateResponse,
+  CurrentUserResponse,
+} from '@/types/api'
 
 export const authApi = {
   login: (data: LoginRequest) => api.post<LoginResponse>('/api/v1/auth/login', data),
@@ -10,7 +16,7 @@ export const authApi = {
 
   validate: () => api.post<TokenValidateResponse>('/api/v1/auth/validate'),
 
-  me: () => api.get<User>('/api/v1/users/me'),
+  me: () => api.get<CurrentUserResponse>('/api/v1/users/me'),
 
   switchProject: (projectId: string) =>
     api.post<LoginResponse>('/api/v1/auth/switch-project', { project_id: projectId }),

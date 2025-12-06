@@ -29,6 +29,8 @@ import {
   FilterIcon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
+  ArrowDown01Icon,
+  ArrowUp01Icon,
   EyeIcon,
   LockIcon,
   CircleUnlock01Icon,
@@ -105,11 +107,16 @@ export const Icons = {
   // Navigation arrows
   ArrowLeft: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowLeft01Icon} {...props} />,
   ArrowRight: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowRight01Icon} {...props} />,
+  ArrowDown: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowDown01Icon} {...props} />,
+  ArrowUp: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowUp01Icon} {...props} />,
+  // Checkmark (using CheckmarkCircle02Icon)
+  Checkmark: (props: Omit<IconProps, 'icon'>) => <Icon icon={CheckmarkCircle02Icon} {...props} />,
 
   // Auth
   Lock: (props: Omit<IconProps, 'icon'>) => <Icon icon={LockIcon} {...props} />,
   Unlock: (props: Omit<IconProps, 'icon'>) => <Icon icon={CircleUnlock01Icon} {...props} />,
   User: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserIcon} {...props} />,
+  User02: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserIcon} {...props} />, // Using UserIcon as User02Icon doesn't exist
   Mail: (props: Omit<IconProps, 'icon'>) => <Icon icon={Mail01Icon} {...props} />,
   Logout: (props: Omit<IconProps, 'icon'>) => <Icon icon={Logout01Icon} {...props} />,
 
@@ -151,6 +158,8 @@ export {
   FilterIcon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
+  ArrowDown01Icon,
+  ArrowUp01Icon,
   EyeIcon,
   LockIcon,
   CircleUnlock01Icon,

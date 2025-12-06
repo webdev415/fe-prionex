@@ -177,13 +177,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     // Validate token with backend to check if session is still valid
     try {
-      const response = await authApi.validate()
-      if (response.data.valid) {
-        set({
-          isAuthenticated: true,
-          isLoading: false,
-          hasCheckedAuth: true,
-        })
+      const validateResponse = await authApi.validate()
+      if (validateResponse.data.valid) {
+        // Token is valid, now fetch the current user data
+        try {
+          const userResponse = await authApi.me()
+          const backendUser = userResponse.data
+
+          // Map backend user data to frontend User type
+          const user: User = {
+            id: String(backendUser.id),
+            username: backendUser.username,
+            email: backendUser.email,
+            firstName: backendUser.first_name,
+            lastName: backendUser.last_name,
+            projects: backendUser.projects?.map((p) => ({
+              id: String(p.id),
+              name: p.name,
+              roles: [{ id: String(p.id), name: p.role_name }],
+            })) || [],
+            active_project_id: backendUser.active_project ? String(backendUser.active_project.id) : null,
+            active_role_id: backendUser.role ? String(backendUser.role.id) : null,
+            active_role_name: backendUser.role?.name || null,
+            createdAt: backendUser.created_at,
+            updatedAt: backendUser.created_at,
+          }
+
+          set({
+            user,
+            isAuthenticated: true,
+            isLoading: false,
+            hasCheckedAuth: true,
+          })
+        } catch (userError) {
+          // Failed to fetch user data, but token is valid - set authenticated without user
+          console.warn('Failed to fetch user data:', userError)
+          set({
+            isAuthenticated: true,
+            isLoading: false,
+            hasCheckedAuth: true,
+          })
+        }
       } else {
         // Token invalid or session expired - clear auth state
         setAccessToken(null)

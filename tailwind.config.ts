@@ -92,8 +92,8 @@ const config: Config = {
           950: '#121909',
         },
         light: {
-          50: '#F5F5F6',
-          100: '#E5E6E8',
+          50: '#F2F3F0',
+          100: '#EBECE8',
           200: '#CDCFD4',
           300: '#ABAFB5',
           400: '#81858F',
@@ -103,6 +103,11 @@ const config: Config = {
           800: '#424448',
           900: '#3A3B3F',
           950: '#242528',
+        },
+        neutral: {
+          dark: {
+            500: '#05040D',
+          },
         },
         success: {
           50: '#F0FDF4',

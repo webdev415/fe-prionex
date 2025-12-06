@@ -1,8 +1,9 @@
 import { type ReactNode, useState } from 'react'
 import { useAuth } from '@/features/auth'
-import { Select } from '@/components/ui/Select'
 import { LogoutConfirmationModal } from './LogoutConfirmationModal'
 import { Sidebar, type SidebarItem, type SidebarAction } from './Sidebar'
+import { SearchBar } from './SearchBar'
+import { UserProfile } from './UserProfile'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -18,8 +19,6 @@ interface DashboardLayoutProps {
  */
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout } = useAuth()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchType, setSearchType] = useState('phone')
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
@@ -39,6 +38,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleLogoutCancel = () => {
     setShowLogoutModal(false)
+  }
+
+  const handleSearch = (_query: string, _searchType: string) => {
+    // TODO: Implement search functionality
   }
 
   // Search type options
@@ -78,7 +81,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div
-      className="min-h-screen bg-[#F2F3F0]"
+      className="bg-light-50 min-h-screen"
       style={{
         backgroundImage: 'url(/assets/images/dashboard-light-bg.svg)',
         backgroundSize: 'cover',
@@ -99,81 +102,27 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Content Area with left margin for sidebar */}
       <div className="ml-16">
         {/* Fixed Header */}
-        <header className="fixed top-0 right-0 left-16 z-20 flex items-center justify-between border-b border-gray-200 bg-white/80 px-6 py-4 backdrop-blur-sm">
+        <header
+          className="bg-light-50 fixed top-0 right-0 left-16 z-20 flex h-[60px] items-center justify-between px-6"
+          style={{
+            borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 1px 2px 0px rgba(0, 0, 0, 0.06)',
+          }}
+        >
           {/* Search Bar */}
-          <div className="flex items-center gap-3 rounded-full border border-gray-200 bg-white px-4 py-2.5 shadow-sm">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search"
-              className="w-48 bg-transparent text-sm text-gray-700 placeholder-gray-400 transition-colors outline-none focus:placeholder-gray-500"
-            />
-            <div className="h-5 w-px bg-gray-300" />
-            <Select
-              value={searchType}
-              onChange={(e) => setSearchType(e.target.value)}
-              options={searchOptions}
-              variant="ghost"
-              className="min-w-[120px] text-gray-700"
-            />
-            <button
-              className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-[#BBFB5B] transition-all duration-200 hover:scale-105 hover:bg-[#a8e84f]"
-              aria-label="Search"
-              onClick={() => console.log('Search:', searchQuery, searchType)}
-            >
-              <svg
-                className="h-4 w-4 text-gray-900"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </button>
-          </div>
+          <SearchBar
+            placeholder="Search"
+            searchOptions={searchOptions}
+            defaultSearchType="phone"
+            onSearch={handleSearch}
+          />
 
           {/* User Profile */}
-          <button className="group flex items-center gap-2.5 rounded-full bg-[#BBFB5B] px-4 py-2.5 shadow-sm transition-all duration-200 hover:bg-[#a8e84f] hover:shadow-md">
-            <svg
-              className="h-5 w-5 text-gray-900"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-            <span className="text-sm font-medium text-gray-900">
-              {user?.username || 'Maria Ivanenko'}
-            </span>
-            <svg
-              className="h-4 w-4 text-gray-900 transition-transform group-hover:translate-y-0.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </button>
+          <UserProfile onLogoutClick={handleLogoutClick} />
         </header>
 
         {/* Scrollable Page Content with top padding for fixed header */}
-        <main className="min-h-screen overflow-y-auto px-6 pt-20 pb-6">{children}</main>
+        <main className="min-h-screen overflow-y-auto px-6 pt-[60px] pb-6">{children}</main>
       </div>
 
       {/* Logout Confirmation Modal */}
