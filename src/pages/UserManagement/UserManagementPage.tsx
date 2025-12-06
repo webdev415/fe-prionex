@@ -12,6 +12,11 @@ import { UserDetailModal } from './components/UserDetailModal'
 import type { ApiUser } from '@/features/users/types'
 import { Icons } from '@/lib/icons'
 import { colors } from '@/lib/colors'
+import { DataTable, type Column } from '@/components/ui/DataTable'
+import { StatusBadge } from '@/components/ui/StatusBadge'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { Pagination } from '@/components/ui/Pagination'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 
 const ITEMS_PER_PAGE = 10
 
@@ -28,29 +33,7 @@ export function UserManagementPage() {
 
   const users = data?.users || []
   const totalUsers = data?.pagination.total_count || 0
-  const totalPages = Math.ceil(totalUsers / ITEMS_PER_PAGE)
-
-  // Generate visible page numbers
-  const getVisiblePages = () => {
-    const pages: number[] = []
-    const maxVisible = 3
-
-    let start = Math.max(1, currentPage - 1)
-    const end = Math.min(totalPages, start + maxVisible - 1)
-
-    if (end - start + 1 < maxVisible) {
-      start = Math.max(1, end - maxVisible + 1)
-    }
-
-    for (let i = start; i <= end; i++) {
-      pages.push(i)
-    }
-    return pages
-  }
-
-  const handleRowClick = (userId: number) => {
-    setSelectedUserId(userId)
-  }
+  const totalPages = data?.pagination.total_pages || 0
 
   const handleCloseDetail = () => {
     setSelectedUserId(null)
@@ -60,33 +43,125 @@ export function UserManagementPage() {
     setShowCreateModal(false)
   }
 
-  // Map API status to display status
-  const getStatusDisplay = (status: ApiUser['status']) => {
-    switch (status) {
-      case 'active':
-        return 'Active'
-      case 'inactive':
-        return 'Inactive'
-      case 'suspended':
-        return 'Suspended'
-      default:
-        return status
-    }
+  const handleEdit = (user: ApiUser) => {
+    setSelectedUserId(user.id)
   }
 
-  // Get status badge color
-  const getStatusColor = (status: ApiUser['status']) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-500/20 text-green-400 border-green-500/50'
-      case 'inactive':
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/50'
-      case 'suspended':
-        return 'bg-red-500/20 text-red-400 border-red-500/50'
-      default:
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/50'
-    }
+  const handleView = (user: ApiUser) => {
+    setSelectedUserId(user.id)
   }
+
+  const handleImpersonate = (user: ApiUser) => {
+    // TODO: Implement impersonate functionality
+    console.log('Impersonate user:', user.id)
+  }
+
+  const handleUnlockToggle = (user: ApiUser, checked: boolean) => {
+    // TODO: Implement unlock/lock functionality
+    console.log('Toggle unlock for user:', user.id, checked)
+  }
+
+  // Map status for StatusBadge component
+  const getStatusType = (
+    status: ApiUser['status']
+  ): 'active' | 'disabled' | 'inactive' | 'suspended' => {
+    if (status === 'active') return 'active'
+    if (status === 'suspended') return 'suspended'
+    if (status === 'inactive') return 'disabled' // Map inactive to disabled for UI
+    return 'disabled'
+  }
+
+  // Check if user is unlocked (for toggle state)
+  const isUnlocked = (user: ApiUser) => {
+    if (!user.locked_until) return true
+    return new Date(user.locked_until) <= new Date()
+  }
+
+  // Table columns definition
+  const columns: Column<ApiUser>[] = [
+    {
+      key: 'username',
+      header: 'Username',
+      render: (user) => (
+        <span className="font-medium">
+          {user.first_name} {user.last_name}
+        </span>
+      ),
+    },
+    {
+      key: 'role',
+      header: 'Role',
+      render: () => <span>Operator</span>, // TODO: Get actual role from user data
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      align: 'center',
+      render: (user) => <StatusBadge status={getStatusType(user.status)} />,
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      align: 'center',
+      render: (user) => (
+        <div className="flex items-center justify-center gap-4">
+          <button
+            onClick={() => handleView(user)}
+            className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
+            style={{
+              fontSize: '12px',
+              fontWeight: 500,
+              color: '#05040D',
+            }}
+          >
+            <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
+            View
+          </button>
+          <button
+            onClick={() => handleEdit(user)}
+            className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
+            style={{
+              fontSize: '12px',
+              fontWeight: 500,
+              color: '#05040D',
+            }}
+          >
+            <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
+            Edit
+          </button>
+          <button
+            onClick={() => handleImpersonate(user)}
+            className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
+            style={{
+              fontSize: '12px',
+              fontWeight: 500,
+              color: '#05040D',
+            }}
+          >
+            <Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />
+            Impersonate
+          </button>
+          <div className="flex items-center gap-2">
+            <label
+              className="font-medium"
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: '#05040D',
+              }}
+            >
+              Unlock
+            </label>
+            <ToggleSwitch
+              checked={isUnlocked(user)}
+              onChange={(checked) => handleUnlockToggle(user, checked)}
+              ariaLabel={`${isUnlocked(user) ? 'Lock' : 'Unlock'} user ${user.username}`}
+            />
+          </div>
+        </div>
+      ),
+    },
+  ]
 
   return (
     <div>
@@ -146,162 +221,27 @@ export function UserManagementPage() {
       </div>
 
       {/* Loading State */}
-      {isLoading && (
-        <div
-          className="rounded-xl p-8 text-center"
-          style={{ backgroundColor: 'rgba(30, 60, 60, 0.6)' }}
-        >
-          <p className="text-gray-400">Loading users...</p>
-        </div>
-      )}
+      {isLoading && <TableSkeleton columns={columns.length} rows={ITEMS_PER_PAGE} />}
 
       {/* Error State */}
       {isError && (
-        <div
-          className="rounded-xl p-8 text-center"
-          style={{ backgroundColor: 'rgba(30, 60, 60, 0.6)' }}
-        >
-          <p className="text-red-400">Error loading users: {error?.message}</p>
+        <div className="rounded-lg bg-white p-8 text-center shadow-sm">
+          <p style={{ color: '#EF4444' }}>Error loading users: {error?.message}</p>
         </div>
       )}
 
-      {/* User Table - Dark Theme */}
+      {/* User Table */}
       {!isLoading && !isError && (
-        <div
-          className="overflow-hidden rounded-xl"
-          style={{ backgroundColor: 'rgba(30, 60, 60, 0.6)' }}
-        >
-          <table className="min-w-full">
-            {/* Table Header */}
-            <thead>
-              <tr style={{ backgroundColor: 'rgba(40, 70, 70, 0.8)' }}>
-                <th scope="col" className="px-6 py-4 text-left text-sm font-medium text-gray-300">
-                  Username
-                </th>
-                <th scope="col" className="px-6 py-4 text-left text-sm font-medium text-gray-300">
-                  Email
-                </th>
-                <th scope="col" className="px-6 py-4 text-left text-sm font-medium text-gray-300">
-                  Name
-                </th>
-                <th scope="col" className="px-6 py-4 text-center text-sm font-medium text-gray-300">
-                  Status
-                </th>
-                <th scope="col" className="px-6 py-4 text-center text-sm font-medium text-gray-300">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-
-            {/* Table Body */}
-            <tbody className="divide-y divide-white/5">
-              {users.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-sm text-gray-400">
-                    No users found
-                  </td>
-                </tr>
-              ) : (
-                users.map((user, index) => (
-                  <tr
-                    key={user.id}
-                    className="cursor-pointer transition-colors hover:bg-white/5"
-                    style={{
-                      backgroundColor:
-                        index % 2 === 0 ? 'rgba(35, 65, 65, 0.5)' : 'rgba(40, 70, 70, 0.4)',
-                    }}
-                    onClick={() => handleRowClick(user.id)}
-                  >
-                    {/* Username */}
-                    <td className="px-6 py-4 text-sm font-medium text-white">{user.username}</td>
-
-                    {/* Email */}
-                    <td className="px-6 py-4 text-sm text-gray-300">{user.email}</td>
-
-                    {/* Name */}
-                    <td className="px-6 py-4 text-sm text-gray-300">
-                      {user.first_name} {user.last_name}
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-6 py-4 text-center">
-                      <span
-                        className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${getStatusColor(user.status)}`}
-                      >
-                        {getStatusDisplay(user.status)}
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleRowClick(user.id)
-                        }}
-                        className="text-sm font-medium text-blue-400 hover:text-blue-300"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable columns={columns} data={users} emptyMessage="No users found" />
       )}
 
-      {/* Pagination - Circular Design */}
+      {/* Pagination */}
       {!isLoading && !isError && totalPages > 1 && (
-        <div className="mt-6 flex items-center justify-center gap-2">
-          {/* Previous Arrow */}
-          <button
-            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-white transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Previous page"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-          </button>
-
-          {/* Page Numbers */}
-          {getVisiblePages().map((page) => (
-            <button
-              key={page}
-              onClick={() => setCurrentPage(page)}
-              className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
-                currentPage === page
-                  ? 'text-gray-900'
-                  : 'border border-white/20 text-white hover:bg-white/10'
-              }`}
-              style={currentPage === page ? { backgroundColor: '#bbfb5b' } : {}}
-              aria-label={`Go to page ${page}`}
-              aria-current={currentPage === page ? 'page' : undefined}
-            >
-              {page}
-            </button>
-          ))}
-
-          {/* Next Arrow */}
-          <button
-            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-            disabled={currentPage === totalPages}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-white transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Next page"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       )}
 
       {/* Modals */}
