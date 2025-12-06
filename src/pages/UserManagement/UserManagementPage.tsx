@@ -10,6 +10,8 @@ import { useUsers } from '@/features/users/hooks/useUsers'
 import { CreateUserModal } from './components/CreateUserModal'
 import { UserDetailModal } from './components/UserDetailModal'
 import type { ApiUser } from '@/features/users/types'
+import { Icons } from '@/lib/icons'
+import { colors } from '@/lib/colors'
 
 const ITEMS_PER_PAGE = 10
 
@@ -33,7 +35,7 @@ export function UserManagementPage() {
     const pages: number[] = []
     const maxVisible = 3
 
-    const start = Math.max(1, currentPage - 1)
+    let start = Math.max(1, currentPage - 1)
     const end = Math.min(totalPages, start + maxVisible - 1)
 
     if (end - start + 1 < maxVisible) {
@@ -91,20 +93,55 @@ export function UserManagementPage() {
       {/* Page Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold text-white">User Management</h1>
-          <span className="text-lg text-gray-400">{totalUsers}</span>
+          <h1
+            className="font-light"
+            style={{
+              fontSize: '24px',
+              fontWeight: 300,
+              color: colors.neutral.dark[500],
+            }}
+          >
+            User Management
+          </h1>
+          <span
+            className="font-light"
+            style={{
+              fontSize: '16px',
+              fontWeight: 300,
+              color: colors.gray[500],
+            }}
+          >
+            {totalUsers}
+          </span>
         </div>
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-gray-900 transition-colors hover:opacity-90"
-          style={{ backgroundColor: '#bbfb5b' }}
+          className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+          style={{
+            backgroundColor: colors.secondary[800],
+          }}
           aria-label="Add new user"
         >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Add New User
+          <div
+            className="flex items-center justify-center rounded-full"
+            style={{
+              width: '40px',
+              height: '40px',
+              backgroundColor: colors.primary[300],
+              marginLeft: '4px',
+            }}
+          >
+            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          </div>
+          <span
+            className="px-4 py-3 font-medium text-white"
+            style={{
+              fontSize: '14px',
+            }}
+          >
+            Add New User
+          </span>
         </button>
       </div>
 
