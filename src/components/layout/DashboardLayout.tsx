@@ -18,7 +18,7 @@ interface DashboardLayoutProps {
  * - Dark teal/green gradient background
  */
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user, logout } = useAuth()
+  const { logout } = useAuth()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
@@ -122,7 +122,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </header>
 
         {/* Scrollable Page Content with top padding for fixed header */}
-        <main className="min-h-screen overflow-y-auto px-6 pt-[60px] pb-6">{children}</main>
+        <main className="min-h-screen overflow-y-auto px-[28px] pt-[80px] pb-[20px]">
+          {children}
+        </main>
       </div>
 
       {/* Logout Confirmation Modal */}

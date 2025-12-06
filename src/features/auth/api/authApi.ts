@@ -2,7 +2,6 @@ import api from '@/lib/api'
 import type {
   LoginRequest,
   LoginResponse,
-  User,
   TokenValidateResponse,
   CurrentUserResponse,
 } from '@/types/api'

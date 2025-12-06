@@ -191,12 +191,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             email: backendUser.email,
             firstName: backendUser.first_name,
             lastName: backendUser.last_name,
-            projects: backendUser.projects?.map((p) => ({
-              id: String(p.id),
-              name: p.name,
-              roles: [{ id: String(p.id), name: p.role_name }],
-            })) || [],
-            active_project_id: backendUser.active_project ? String(backendUser.active_project.id) : null,
+            projects:
+              backendUser.projects?.map((p) => ({
+                id: String(p.id),
+                name: p.name,
+                roles: [{ id: String(p.id), name: p.role_name }],
+              })) || [],
+            active_project_id: backendUser.active_project
+              ? String(backendUser.active_project.id)
+              : null,
             active_role_id: backendUser.role ? String(backendUser.role.id) : null,
             active_role_name: backendUser.role?.name || null,
             createdAt: backendUser.created_at,

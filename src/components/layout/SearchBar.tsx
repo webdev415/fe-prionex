@@ -54,7 +54,7 @@ export function SearchBar({
 
   return (
     <div
-      className={`border-light-100 flex h-11 w-[448px] items-center gap-3 rounded-full border bg-white pl-4 pr-2 ${className || ''}`}
+      className={`border-light-100 flex h-11 w-[448px] items-center gap-3 rounded-full border bg-white pr-2 pl-4 ${className || ''}`}
     >
       <input
         type="text"
@@ -62,7 +62,7 @@ export function SearchBar({
         onChange={(e) => setSearchQuery(e.target.value)}
         onKeyPress={handleKeyPress}
         placeholder={placeholder}
-        className="flex-1 bg-transparent outline-none text-sm placeholder:text-gray-600"
+        className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-600"
         style={{
           color: colors.neutral.dark[500],
         }}
@@ -71,7 +71,12 @@ export function SearchBar({
       <Select value={searchType} onValueChange={setSearchType}>
         <SelectTrigger
           className="h-auto border-0 bg-transparent p-0 shadow-none focus:ring-0"
-          style={{ width: 'auto', minWidth: '120px', fontSize: '12px', color: colors.neutral.dark[500] }}
+          style={{
+            width: 'auto',
+            minWidth: '120px',
+            fontSize: '12px',
+            color: colors.neutral.dark[500],
+          }}
         >
           <SelectValue />
         </SelectTrigger>
@@ -101,3 +106,4 @@ export function SearchBar({
   )
 }
 
+export default SearchBar

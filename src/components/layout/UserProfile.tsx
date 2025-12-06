@@ -52,8 +52,8 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
       <DropdownMenuContent align="end" className="w-[175px] bg-white">
         <DropdownMenuItem
           onClick={onLogoutClick}
-          className="cursor-pointer flex items-center gap-2"
-          style={{ 
+          className="flex cursor-pointer items-center gap-2"
+          style={{
             color: colors.neutral.dark[500],
             fontSize: '14px',
           }}
@@ -65,4 +65,3 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
     </DropdownMenu>
   )
 }
-
