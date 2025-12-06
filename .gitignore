@@ -39,3 +39,10 @@ coverage/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+cursor.md
+.cursor/
+memory-bank/
+*.cursor.md
+.cursor-*
+.cursorrules

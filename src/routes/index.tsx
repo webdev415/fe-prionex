@@ -1,5 +1,8 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import LoginPage from '@/pages/auth/LoginPage'
+import { UserManagementPage } from '@/pages/UserManagement'
+import { ProjectManagementPage } from '@/pages/ProjectManagement/ProjectManagementPage'
+import { RoleManagementPage } from '@/pages/RoleManagement/RoleManagementPage'
 import { ProtectedRoute } from './ProtectedRoute'
 import { GuestRoute } from './GuestRoute'
 import { DashboardLayout } from '@/components/layout'
@@ -30,6 +33,36 @@ export const router = createBrowserRouter([
       <ProtectedRoute>
         <DashboardLayout>
           <DashboardContent />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/users',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <UserManagementPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/projects',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ProjectManagementPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/roles',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <RoleManagementPage />
         </DashboardLayout>
       </ProtectedRoute>
     ),

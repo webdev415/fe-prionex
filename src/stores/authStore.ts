@@ -11,6 +11,7 @@ interface AuthState {
   errorState: AuthErrorState | null
   lockoutMinutes: number | null
   pendingCredentials: LoginRequest | null
+  hasCheckedAuth: boolean
 
   login: (credentials: LoginRequest) => Promise<void>
   logout: () => Promise<void>
@@ -27,6 +28,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   errorState: null,
   lockoutMinutes: null,
   pendingCredentials: null,
+  hasCheckedAuth: false,
 
   login: async (credentials: LoginRequest) => {
     set({ isLoading: true, error: null, errorState: null, pendingCredentials: null })
@@ -43,6 +45,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         error: null,
         errorState: null,
+        hasCheckedAuth: true,
       })
     } catch (error: unknown) {
       const err = error as {
@@ -107,6 +110,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         error: null,
         errorState: null,
+        hasCheckedAuth: false,
       })
     }
   },
@@ -134,6 +138,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         error: null,
         errorState: null,
         pendingCredentials: null,
+        hasCheckedAuth: true,
       })
     } catch (error: unknown) {
       const err = error as { response?: { data?: { detail?: string | { message?: string } } } }
@@ -150,12 +155,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   checkAuth: async () => {
+    const { hasCheckedAuth, isLoading } = get()
+
+    // Prevent concurrent auth checks
+    if (hasCheckedAuth || isLoading) {
+      return
+    }
+
+    set({ isLoading: true })
+
     const token = getAccessToken()
     if (!token) {
       set({
         user: null,
         isAuthenticated: false,
         isLoading: false,
+        hasCheckedAuth: true,
       })
       return
     }
@@ -167,6 +182,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({
           isAuthenticated: true,
           isLoading: false,
+          hasCheckedAuth: true,
         })
       } else {
         // Token invalid or session expired - clear auth state
@@ -175,6 +191,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           user: null,
           isAuthenticated: false,
           isLoading: false,
+          hasCheckedAuth: true,
         })
       }
     } catch {
@@ -184,6 +201,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: null,
         isAuthenticated: false,
         isLoading: false,
+        hasCheckedAuth: true,
       })
     }
   },

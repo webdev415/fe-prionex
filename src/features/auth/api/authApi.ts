@@ -11,6 +11,17 @@ export const authApi = {
   validate: () => api.post<TokenValidateResponse>('/api/v1/auth/validate'),
 
   me: () => api.get<User>('/api/v1/users/me'),
+
+  switchProject: (projectId: string) =>
+    api.post<LoginResponse>('/api/v1/auth/switch-project', { project_id: projectId }),
+
+  impersonate: (userId: string) =>
+    api.post<LoginResponse>('/api/v1/auth/impersonate', { user_id: userId }),
+
+  exitImpersonation: () => api.post<LoginResponse>('/api/v1/auth/impersonate/exit'),
+
+  changePassword: (data: { current_password: string; new_password: string }) =>
+    api.post('/api/v1/users/me/change-password', data),
 }
 
 export default authApi

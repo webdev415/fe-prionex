@@ -1,6 +1,7 @@
 export { Button, buttonVariants, type ButtonProps } from './Button'
 export { Input, inputVariants, type InputProps } from './Input'
 export { Label, labelVariants, type LabelProps } from './Label'
+export { Select, type SelectProps } from './Select'
 export {
   Card,
   CardHeader,
@@ -19,3 +20,4 @@ export {
   alertVariants,
   type AlertProps,
 } from './Alert'
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './Tooltip'

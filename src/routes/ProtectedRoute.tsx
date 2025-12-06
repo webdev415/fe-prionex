@@ -18,6 +18,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       hasCheckedRef.current = true
       checkAuth()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Empty dependency array - only run once on mount
 
   if (isLoading) {
