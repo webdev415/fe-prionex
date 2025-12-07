@@ -62,3 +62,35 @@ export function useDeleteRole() {
     },
   })
 }
+
+/**
+ * Hook to get users assigned to a role
+ */
+export function useRoleUsers(roleId: number) {
+  return useQuery({
+    queryKey: [...rolesKeys.detail(roleId), 'users'],
+    queryFn: () => rolesApi.getRoleUsers(roleId),
+    enabled: !!roleId && roleId > 0,
+  })
+}
+
+/**
+ * Hook to archive a role
+ */
+export function useArchiveRole() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      roleId,
+      data,
+    }: {
+      roleId: number
+      data: { reassign_to_role_id?: number; use_default_role?: boolean }
+    }) => rolesApi.archiveRole(roleId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: rolesKeys.detail(variables.roleId) })
+      queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
+    },
+  })
+}

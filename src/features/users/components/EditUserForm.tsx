@@ -41,8 +41,9 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
   // Project/role assignment state (UI only, similar to CreateUserForm)
   const { data: projectsData } = useProjects()
   const projects: ApiProject[] = projectsData?.projects || []
-  const { data: rolesData } = useRoles({})
-  const allRoles: ApiRole[] = rolesData?.roles || []
+  // Fetch only active roles (exclude archived/inactive roles)
+  const { data: rolesData } = useRoles({ is_active: true })
+  const allRoles: ApiRole[] = (rolesData?.roles || []).filter((role) => role.is_active)
 
   const [selectedProjects, setSelectedProjects] = useState<number[]>(() =>
     (user.projects || []).map((p) => p.project_id)
@@ -95,9 +96,9 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
     return <div className="py-8 text-center text-gray-600">No user data available</div>
   }
 
-  // Helpers for project/role editing
+  // Helpers for project/role editing (only active roles)
   const getRolesForProject = (projectId: number): ApiRole[] =>
-    allRoles.filter((role) => role.project_id === projectId)
+    allRoles.filter((role) => role.project_id === projectId && role.is_active)
 
   const onSubmit = (data: UpdateUserFormData) => {
     // Build payload for update

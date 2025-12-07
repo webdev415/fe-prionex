@@ -23,11 +23,13 @@ import { colors } from '@/lib/colors'
 import { CreateRoleModal } from './components/CreateRoleModal'
 import { RoleDetailModal } from './components/RoleDetailModal'
 import { EditRoleModal } from './components/EditRoleModal'
+import { ArchiveRoleModal } from './components/ArchiveRoleModal'
 
 export function RoleManagementPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null)
   const [editRoleId, setEditRoleId] = useState<number | null>(null)
+  const [archiveRoleId, setArchiveRoleId] = useState<number | null>(null)
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
 
   // Fetch all projects for dropdown
@@ -122,13 +124,7 @@ export function RoleManagementPage() {
                 fontWeight: 500,
                 color: '#05040D',
               }}
-              onClick={() => {
-                if (window.confirm('Are you sure you want to delete this role?')) {
-                  // Delete logic will be added in a follow-up step
-                  // eslint-disable-next-line no-console
-                  console.log('Delete role', role.id)
-                }
-              }}
+              onClick={() => setArchiveRoleId(role.id)}
             >
               <Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />
               Delete
@@ -345,6 +341,18 @@ export function RoleManagementPage() {
           onClose={() => setEditRoleId(null)}
           onSuccess={() => {
             setEditRoleId(null)
+            refetch()
+          }}
+        />
+      )}
+
+      {archiveRoleId && (
+        <ArchiveRoleModal
+          open={archiveRoleId !== null}
+          roleId={archiveRoleId}
+          onClose={() => setArchiveRoleId(null)}
+          onSuccess={() => {
+            setArchiveRoleId(null)
             refetch()
           }}
         />

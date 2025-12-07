@@ -6,4 +6,11 @@
 
 export { useRoles, rolesKeys } from './useRoles'
 export { useRole } from './useRole'
-export { usePermissions, useCreateRole, useUpdateRole, useDeleteRole } from './useRoleMutations'
+export {
+  usePermissions,
+  useCreateRole,
+  useUpdateRole,
+  useDeleteRole,
+  useRoleUsers,
+  useArchiveRole,
+} from './useRoleMutations'

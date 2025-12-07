@@ -28,8 +28,9 @@ describe('Alert', () => {
 
   it('renders with error variant', () => {
     render(<Alert variant="error">Error message</Alert>)
-    expect(screen.getByRole('alert')).toHaveClass('bg-error-950')
+    expect(screen.getByRole('alert')).toHaveClass('bg-white')
     expect(screen.getByRole('alert')).toHaveClass('border-error-500')
+    expect(screen.getByRole('alert')).toHaveClass('text-error-500')
   })
 
   it('renders with info variant', () => {

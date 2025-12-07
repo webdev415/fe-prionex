@@ -57,6 +57,29 @@ export async function deleteRole(roleId: number): Promise<void> {
 }
 
 /**
+ * Get users assigned to a role
+ */
+export async function getRoleUsers(roleId: number): Promise<{
+  users: Array<{ id: number; username: string; first_name: string; last_name: string }>
+}> {
+  const response = await api.get<{
+    users: Array<{ id: number; username: string; first_name: string; last_name: string }>
+  }>(`/api/v1/admin/roles/${roleId}/users`)
+  return response.data
+}
+
+/**
+ * Archive a role with optional user reassignment
+ */
+export async function archiveRole(
+  roleId: number,
+  data: { reassign_to_role_id?: number; use_default_role?: boolean }
+): Promise<RoleDetailResponse> {
+  const response = await api.post<RoleDetailResponse>(`/api/v1/admin/roles/${roleId}/archive`, data)
+  return response.data
+}
+
+/**
  * Fetch all available permissions
  */
 export async function getPermissions(): Promise<PermissionsResponse> {
@@ -71,4 +94,6 @@ export const rolesApi = {
   updateRole,
   deleteRole,
   getPermissions,
+  getRoleUsers,
+  archiveRole,
 }

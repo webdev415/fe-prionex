@@ -7,6 +7,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { usersApi } from '../api/usersApi'
 import { usersKeys } from './useUsers'
+import { rolesKeys } from '@/features/roles/hooks/useRoles'
 import type { UpdateUserInput } from '../types'
 
 /**
@@ -38,6 +39,10 @@ export function useUpdateUser() {
       queryClient.invalidateQueries({ queryKey: usersKeys.detail(variables.userId) })
       // Invalidate users list
       queryClient.invalidateQueries({ queryKey: usersKeys.lists() })
+      // Invalidate roles list to update user_count for roles (if role assignment changed)
+      queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
+      // Invalidate all role detail queries (including users) to update role user lists
+      queryClient.invalidateQueries({ queryKey: rolesKeys.details() })
     },
   })
 }

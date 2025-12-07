@@ -6,7 +6,7 @@
  */
 
 import { useMemo } from 'react'
-import { usePermissions } from '../hooks/usePermissions'
+import { usePermissions } from '../hooks/useRoleMutations'
 import { colors } from '@/lib/colors'
 import type { RoleDetailResponse } from '../types'
 

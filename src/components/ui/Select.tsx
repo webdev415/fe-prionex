@@ -29,17 +29,20 @@ SelectValue.displayName = SelectPrimitive.Value.displayName
 const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, style, ...props }, ref) => (
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      'ring-offset-background data-[placeholder]:text-muted-foreground flex h-[45px] w-full items-center justify-between rounded-md border bg-white px-3 py-2 text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1',
+      'ring-offset-background data-[placeholder]:text-muted-foreground flex h-[45px] w-full items-center justify-between rounded-lg border bg-white px-3 py-2 text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none disabled:opacity-50 [&>span]:line-clamp-1',
       className
     )}
     style={{
       fontSize: '14px',
       fontWeight: 300,
       color: colors.gray[950],
+      borderColor: colors.gray[400],
+      cursor: props.disabled ? 'default' : 'pointer',
+      ...style,
     }}
     {...props}
   >

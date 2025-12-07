@@ -15,5 +15,6 @@ export function useRole(roleId: number) {
   return useQuery({
     queryKey: rolesKeys.detail(roleId),
     queryFn: () => rolesApi.getRole(roleId),
+    enabled: !!roleId && roleId > 0,
   })
 }
