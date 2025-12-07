@@ -1,12 +1,16 @@
 /**
  * RoleDetailModal Component
  *
- * Modal for viewing role details.
+ * Modal for viewing role details using the same structure as EditRoleModal.
  */
 
-import { Dialog, DialogTitle } from '@/components/ui/Dialog'
-import { Button } from '@/components/ui/Button'
+import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
+import { ViewRoleForm } from '@/features/roles/components/ViewRoleForm'
 import { useRole } from '@/features/roles/hooks/useRole'
+import { useProject } from '@/features/projects/hooks/useProject'
+import { Icons } from '@/lib/icons'
+import { Button } from '@/components/ui/Button'
+import { colors } from '@/lib/colors'
 
 interface RoleDetailModalProps {
   open: boolean
@@ -15,91 +19,54 @@ interface RoleDetailModalProps {
 }
 
 export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps) {
-  const { data: role, isLoading } = useRole(roleId)
+  const { data: role, isLoading: roleLoading } = useRole(roleId)
+  const { data: project, isLoading: projectLoading } = useProject(role?.project_id ?? 0)
 
-  if (isLoading || !role) {
-    return (
-      <Dialog open={open} onClose={onClose}>
-        <div className="w-full max-w-2xl rounded-lg bg-white px-6 py-6 shadow-xl">
-          <div className="text-center text-gray-400">Loading role details...</div>
-        </div>
-      </Dialog>
-    )
-  }
+  const isLoading = roleLoading || (role?.project_id ? projectLoading : false)
 
   return (
-    <Dialog open={open} onClose={onClose}>
-      <div className="w-full max-w-2xl rounded-lg bg-white px-6 py-6 shadow-xl">
-        <DialogTitle className="mb-4 text-xl font-semibold text-gray-900">Role Details</DialogTitle>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-500">Role Name</label>
-            <p className="mt-1 text-base text-gray-900">{role.name}</p>
+    <Modal open={open} onClose={onClose} maxWidth="2xl">
+      <ModalHeader
+        icon={
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-full"
+            style={{ backgroundColor: colors.primary[400] }}
+          >
+            <Icons.View size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
           </div>
-
-          {role.description && (
-            <div>
-              <label className="block text-sm font-medium text-gray-500">Description</label>
-              <p className="mt-1 text-base text-gray-700">{role.description}</p>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-500">Type</label>
-            <span
-              className={`mt-1 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                role.is_default ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-              }`}
-            >
-              {role.is_default ? 'Default Role' : 'Custom Role'}
-            </span>
+        }
+        title={role ? `View Role: ${role.name}${role.is_default ? ' (Default)' : ''}` : 'View Role'}
+      />
+      <ModalContent>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-teal-600" />
+            <span className="ml-3 text-gray-600">Loading role data...</span>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-500">Status</label>
-            <span
-              className={`mt-1 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                role.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-              }`}
-            >
-              {role.is_active ? 'Active' : 'Inactive'}
-            </span>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-500">Permissions</label>
-            <p className="mt-1 text-base text-gray-700">
-              {role.permission_count} permissions assigned
-            </p>
-            {role.permissions && role.permissions.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {role.permissions.map((permission) => (
-                  <span
-                    key={permission.id}
-                    className="inline-flex rounded bg-gray-100 px-2 py-1 text-xs text-gray-700"
-                  >
-                    {permission.name}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-500">Users</label>
-            <p className="mt-1 text-base text-gray-700">
-              {role.user_count} users assigned to this role
-            </p>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3 pt-6">
-          <Button type="button" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      </div>
-    </Dialog>
+        ) : role && project ? (
+          <ViewRoleForm role={role} projectName={project.name} />
+        ) : (
+          <div className="py-8 text-center text-gray-600">Role not found</div>
+        )}
+      </ModalContent>
+      <ModalFooter>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          className="flex-1 rounded-md text-sm font-medium"
+          style={{
+            border: 'none',
+            backgroundColor: colors.gray[500],
+            color: '#FFFFFF',
+            height: '45px',
+            fontSize: '14px',
+            fontWeight: 500,
+          }}
+        >
+          Close
+        </Button>
+      </ModalFooter>
+    </Modal>
   )
 }

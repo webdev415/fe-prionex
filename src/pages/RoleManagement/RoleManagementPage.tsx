@@ -22,10 +22,12 @@ import { Icons } from '@/lib/icons'
 import { colors } from '@/lib/colors'
 import { CreateRoleModal } from './components/CreateRoleModal'
 import { RoleDetailModal } from './components/RoleDetailModal'
+import { EditRoleModal } from './components/EditRoleModal'
 
 export function RoleManagementPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null)
+  const [editRoleId, setEditRoleId] = useState<number | null>(null)
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
 
   // Fetch all projects for dropdown
@@ -106,11 +108,7 @@ export function RoleManagementPage() {
               fontWeight: 500,
               color: '#05040D',
             }}
-            // TODO: Wire edit modal when design is ready
-            onClick={() => {
-              // eslint-disable-next-line no-console
-              console.log('Edit role', role.id)
-            }}
+            onClick={() => setEditRoleId(role.id)}
           >
             <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
             Edit
@@ -337,6 +335,18 @@ export function RoleManagementPage() {
           open={selectedRoleId !== null}
           roleId={selectedRoleId}
           onClose={() => setSelectedRoleId(null)}
+        />
+      )}
+
+      {editRoleId && (
+        <EditRoleModal
+          open={editRoleId !== null}
+          roleId={editRoleId}
+          onClose={() => setEditRoleId(null)}
+          onSuccess={() => {
+            setEditRoleId(null)
+            refetch()
+          }}
         />
       )}
     </div>

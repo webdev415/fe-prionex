@@ -69,18 +69,22 @@ export interface CreateRoleInput {
 
 /**
  * Update role input
+ * All fields are optional to match backend UpdateRoleRequest
  */
 export interface UpdateRoleInput {
-  name: string
+  name?: string
   description?: string
-  permission_ids: number[]
+  permission_ids?: number[]
+  is_active?: boolean
 }
 
 /**
  * Role detail response
+ * Extends ApiRole but permissions are always included in detail view
  */
-export interface RoleDetailResponse extends ApiRole {
-  user_count?: number
+export interface RoleDetailResponse extends Omit<ApiRole, 'user_count'> {
+  user_count: number // Required in detail response
+  permissions: Permission[] // Always included in detail view
 }
 
 /**
