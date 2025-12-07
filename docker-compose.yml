@@ -1,0 +1,44 @@
+# Frontend Development Docker Compose
+# For local development with hot reload
+
+name: fe-prionex
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fe-prionex-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount source code for hot reload
+      - ./src:/app/src:ro
+      - ./public:/app/public:ro
+      - ./index.html:/app/index.html:ro
+      - ./vite.config.ts:/app/vite.config.ts:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./tsconfig.app.json:/app/tsconfig.app.json:ro
+      - ./tailwind.config.ts:/app/tailwind.config.ts:ro
+      - ./postcss.config.js:/app/postcss.config.js:ro
+      # Exclude node_modules (use container's)
+      - /app/node_modules
+    environment:
+      # Use Kong service name when on same network (crm-network)
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://kong:8000}
+      - NODE_ENV=development
+    networks:
+      - crm-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  crm-network:
+    external: true
+    name: crm-network
+

@@ -105,6 +105,47 @@ npm run build
 npm run preview
 ```
 
+## 🐳 Docker Deployment
+
+### Development (with hot reload)
+```bash
+# Build and start
+docker-compose up --build
+
+# Run in background
+docker-compose up -d
+
+# View logs
+docker-compose logs -f frontend
+
+# Stop
+docker-compose down
+```
+
+The app will be available at `http://localhost:3000` with hot reload enabled.
+
+### Production
+```bash
+# Build and start
+docker-compose -f docker-compose.prod.yml up --build -d
+
+# View logs
+docker-compose -f docker-compose.prod.yml logs -f frontend
+
+# Stop
+docker-compose -f docker-compose.prod.yml down
+```
+
+The app will be available at `http://localhost:80` (or your configured port).
+
+**Environment Variables:**
+- Set `VITE_API_BASE_URL` in `.env` file or pass via environment:
+  ```bash
+  VITE_API_BASE_URL=http://your-api-url:8000 docker-compose -f docker-compose.prod.yml up -d
+  ```
+
+**Note:** For production, the build process happens inside the Docker container, so environment variables must be set at build time. You can use a `.env` file or pass them via `docker-compose` environment section.
+
 ## 📝 Available Scripts
 
 - `npm run dev` - Start development server
