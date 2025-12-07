@@ -32,7 +32,7 @@ const createRoleSchema = z.object({
 
 type CreateRoleFormData = z.infer<typeof createRoleSchema>
 
-export function CreateRoleForm({ projectId, onSuccess }: CreateRoleFormProps) {
+export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: CreateRoleFormProps) {
   const createMutation = useCreateRole()
   const { data: permissionsData, isLoading: loadingPermissions } = usePermissions()
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])

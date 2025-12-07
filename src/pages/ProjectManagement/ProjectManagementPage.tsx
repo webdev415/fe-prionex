@@ -40,7 +40,6 @@ export function ProjectManagementPage() {
 
   const handleEdit = (project: ApiProject) => {
     // TODO: Implement edit functionality
-    // eslint-disable-next-line no-console
     console.log('Edit project:', project.id)
   }
 

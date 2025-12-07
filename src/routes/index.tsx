@@ -38,7 +38,7 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: '/users',
+    path: '/dashboard/users',
     element: (
       <ProtectedRoute>
         <DashboardLayout>
@@ -48,7 +48,7 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: '/projects',
+    path: '/dashboard/projects',
     element: (
       <ProtectedRoute>
         <DashboardLayout>
@@ -58,7 +58,7 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: '/roles',
+    path: '/dashboard/roles',
     element: (
       <ProtectedRoute>
         <DashboardLayout>
@@ -69,6 +69,10 @@ export const router = createBrowserRouter([
   },
   {
     path: '/',
+    element: <Navigate to="/dashboard" replace />,
+  },
+  {
+    path: '*',
     element: <Navigate to="/dashboard" replace />,
   },
 ])
