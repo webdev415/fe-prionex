@@ -273,3 +273,5 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
     </Modal>
   )
 }
+
+export default UnlockAccountModal

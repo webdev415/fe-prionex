@@ -11,7 +11,7 @@ const SelectGroup = SelectPrimitive.Group
 const SelectValue = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Value>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Value>
->(({ className, ...props }, ref) => (
+>(({ className, style, ...props }, ref) => (
   <SelectPrimitive.Value
     ref={ref}
     className={cn('font-light', className)}
@@ -19,6 +19,7 @@ const SelectValue = React.forwardRef<
       fontSize: '14px',
       fontWeight: 300,
       color: colors.gray[950],
+      ...style,
     }}
     {...props}
   />

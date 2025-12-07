@@ -2,18 +2,28 @@
  * RoleManagementPage Component
  *
  * Main page for managing roles and permissions.
+ * Uses the shared DataTable and UI patterns from User Management.
  */
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRoles } from '@/features/roles'
+import type { ApiRole } from '@/features/roles/types'
 import { useProjects } from '@/features/projects'
+import {
+  DataTable,
+  type Column,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui'
+import { Icons } from '@/lib/icons'
+import { colors } from '@/lib/colors'
 import { CreateRoleModal } from './components/CreateRoleModal'
 import { RoleDetailModal } from './components/RoleDetailModal'
 
-const ITEMS_PER_PAGE = 20
-
 export function RoleManagementPage() {
-  const [currentPage, setCurrentPage] = useState(1)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null)
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
@@ -41,241 +51,273 @@ export function RoleManagementPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProjectId])
 
-  const { data, isError, refetch } = useRoles({
-    page: currentPage,
-    page_size: ITEMS_PER_PAGE,
+  const { data, isError, error, refetch } = useRoles({
+    page: 1,
+    page_size: 100,
     project_id: selectedProjectId || undefined,
+    is_active: true,
   })
 
-  const roles = data?.roles || []
-  const totalRoles = data?.pagination?.total_count || 0
-  const totalPages = data?.pagination?.total_pages || Math.ceil(totalRoles / ITEMS_PER_PAGE)
+  const roles = (data?.roles || []) as ApiRole[]
+  const defaultRoles = roles.filter((role) => role.is_default)
+  const customRoles = roles.filter((role) => !role.is_default)
 
-  if (loadingProjects) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="animate-pulse">
-            <div className="mb-4 h-8 w-1/4 rounded bg-gray-200" />
-            <div className="h-64 rounded bg-gray-200" />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (projects.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="mx-auto max-w-7xl">
-          <h1 className="mb-4 text-3xl font-bold text-gray-900">Role & Permissions Management</h1>
-          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-            <p className="text-yellow-800">
-              No active projects found. Please create a project first.
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (isError) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-            <p className="text-red-800">Failed to load roles. Please try again.</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Role & Permissions Management</h1>
-              <p className="mt-1 text-sm text-gray-600">
-                Manage roles and permissions for each project
-              </p>
-            </div>
+  const columns: Column<ApiRole>[] = [
+    {
+      key: 'name',
+      header: 'Role',
+      render: (role) => <span className="font-medium">{role.name}</span>,
+    },
+    {
+      key: 'description',
+      header: 'Description',
+      render: (role) => <span className="font-medium">{role.description || '—'}</span>,
+    },
+    {
+      key: 'user_count',
+      header: 'Users',
+      align: 'center',
+      render: (role) => <span>{role.user_count}</span>,
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      align: 'center',
+      render: (role) => (
+        <div className="flex items-center justify-center gap-4">
+          <button
+            type="button"
+            onClick={() => setSelectedRoleId(role.id)}
+            className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
+            style={{
+              fontSize: '12px',
+              fontWeight: 500,
+              color: '#05040D',
+            }}
+          >
+            <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
+            View
+          </button>
+          <button
+            type="button"
+            className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
+            style={{
+              fontSize: '12px',
+              fontWeight: 500,
+              color: '#05040D',
+            }}
+            // TODO: Wire edit modal when design is ready
+            onClick={() => {
+              // eslint-disable-next-line no-console
+              console.log('Edit role', role.id)
+            }}
+          >
+            <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
+            Edit
+          </button>
+          {!role.is_default && (
             <button
-              onClick={() => setShowCreateModal(true)}
-              disabled={!selectedProjectId}
-              className="inline-flex items-center rounded-md border border-transparent bg-teal-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-teal-700 focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <svg
-                className="mr-2 h-5 w-5"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
-              </svg>
-              Add New Role
-            </button>
-          </div>
-
-          {/* Project Selector */}
-          <div className="flex items-center gap-4">
-            <label htmlFor="project-select" className="text-sm font-medium text-gray-700">
-              Select Project:
-            </label>
-            <select
-              id="project-select"
-              value={selectedProjectId || ''}
-              onChange={(e) => {
-                setSelectedProjectId(Number(e.target.value))
-                setCurrentPage(1)
+              type="button"
+              className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: '#05040D',
               }}
-              className="block w-80 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none"
+              onClick={() => {
+                if (window.confirm('Are you sure you want to delete this role?')) {
+                  // Delete logic will be added in a follow-up step
+                  // eslint-disable-next-line no-console
+                  console.log('Delete role', role.id)
+                }
+              }}
             >
-              <option value="">Select a project...</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name} ({project.code})
-                </option>
-              ))}
-            </select>
-            {selectedProjectId && (
-              <span className="text-sm text-gray-600">
-                {totalRoles} role{totalRoles !== 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Roles Table */}
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                  Description
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                  Permissions
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {roles.map((role) => (
-                <tr key={role.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900">
-                    {role.name}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{role.description || '—'}</td>
-                  <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-500">
-                    {role.permission_count} permissions
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex rounded-full px-2 text-xs font-semibold ${
-                        role.is_default ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {role.is_default ? 'Default' : 'Custom'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap">
-                    <button
-                      onClick={() => setSelectedRoleId(role.id)}
-                      className="mr-4 text-teal-600 hover:text-teal-900"
-                    >
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
-              <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-gray-700">
-                    Showing{' '}
-                    <span className="font-medium">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to{' '}
-                    <span className="font-medium">
-                      {Math.min(currentPage * ITEMS_PER_PAGE, totalRoles)}
-                    </span>{' '}
-                    of <span className="font-medium">{totalRoles}</span> roles
-                  </p>
-                </div>
-                <div>
-                  <nav className="relative z-0 inline-flex -space-x-px rounded-md shadow-sm">
-                    <button
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      Previous
-                    </button>
-                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(
-                      (page) => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`relative inline-flex items-center border px-4 py-2 text-sm font-medium ${
-                            page === currentPage
-                              ? 'z-10 border-teal-500 bg-teal-50 text-teal-600'
-                              : 'border-gray-300 bg-white text-gray-500 hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      )
-                    )}
-                    <button
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                      className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      Next
-                    </button>
-                  </nav>
-                </div>
-              </div>
-            </div>
+              <Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />
+              Delete
+            </button>
           )}
         </div>
+      ),
+    },
+  ]
 
-        {/* Empty State */}
-        {roles.length === 0 && (
-          <div className="py-12 text-center">
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-              />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No roles</h3>
-            <p className="mt-1 text-sm text-gray-500">Get started by creating a new role.</p>
+  return (
+    <div>
+      {/* Page Header */}
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h1
+            className="font-light"
+            style={{
+              fontSize: '24px',
+              fontWeight: 300,
+              color: colors.neutral.dark[500],
+            }}
+          >
+            Role Management
+          </h1>
+        </div>
+
+        <button
+          onClick={() => setShowCreateModal(true)}
+          disabled={!selectedProjectId}
+          className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+          style={{
+            backgroundColor: colors.secondary[800],
+          }}
+          aria-label="Create role"
+        >
+          <div
+            className="flex items-center justify-center rounded-full"
+            style={{
+              width: '40px',
+              height: '40px',
+              backgroundColor: colors.primary[300],
+              marginLeft: '4px',
+            }}
+          >
+            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
           </div>
-        )}
+          <span
+            className="px-4 py-3 font-medium text-white"
+            style={{
+              fontSize: '14px',
+            }}
+          >
+            Create Role
+          </span>
+        </button>
       </div>
+
+      {/* Project Selector */}
+      <div className="mb-6 flex items-center gap-3">
+        <span
+          className="font-light"
+          style={{
+            fontSize: '20px',
+            fontWeight: 300,
+            color: '#7B7B7B',
+          }}
+        >
+          Project:
+        </span>
+        <Select
+          value={selectedProjectId ? String(selectedProjectId) : ''}
+          onValueChange={(value) => setSelectedProjectId(Number(value))}
+        >
+          <SelectTrigger
+            className="flex h-auto items-center gap-2 border-0 bg-transparent p-0 shadow-none focus:ring-0 [&>div.opacity-50]:hidden"
+            style={{
+              width: 'auto',
+              minWidth: 'auto',
+              fontSize: '20px',
+              fontWeight: 300,
+              color: '#05040D',
+            }}
+          >
+            <SelectValue
+              placeholder="Select project"
+              style={{
+                fontSize: '20px',
+                fontWeight: 300,
+                color: '#05040D',
+              }}
+            />
+            <div
+              className="flex h-6 w-6 items-center justify-center rounded-md"
+              style={{
+                backgroundColor: colors.primary[300],
+              }}
+            >
+              <Icons.ArrowDown size={16} color={colors.neutral.dark[500]} strokeWidth={1.5} />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            {projects.map((project) => (
+              <SelectItem key={project.id} value={String(project.id)}>
+                {project.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Loading / Error States */}
+      {loadingProjects && (
+        <div className="rounded-lg bg-white p-8 text-center shadow-sm">
+          <p className="text-sm" style={{ color: colors.gray[500] }}>
+            Loading projects...
+          </p>
+        </div>
+      )}
+
+      {!loadingProjects && projects.length === 0 && (
+        <div className="rounded-lg bg-white p-8 text-center shadow-sm">
+          <p className="text-sm" style={{ color: colors.gray[500] }}>
+            No active projects found. Please create a project first.
+          </p>
+        </div>
+      )}
+
+      {!loadingProjects && projects.length > 0 && isError && (
+        <div className="rounded-lg bg-white p-8 text-center shadow-sm">
+          <p style={{ color: '#EF4444' }}>Error loading roles: {error?.message}</p>
+        </div>
+      )}
+
+      {!loadingProjects && projects.length > 0 && !isError && (
+        <div className="space-y-8">
+          {/* Default Roles */}
+          <section
+            className="rounded-xl"
+            style={{
+              backgroundColor: '#FFFFFF80',
+              padding: '24px',
+            }}
+          >
+            <h2
+              className="mb-3 font-light"
+              style={{
+                fontSize: '20px',
+                fontWeight: 300,
+                color: '#000000',
+              }}
+            >
+              Default Roles
+            </h2>
+            <DataTable<ApiRole>
+              columns={columns}
+              data={defaultRoles}
+              emptyMessage="No default roles"
+            />
+          </section>
+
+          {/* Custom Roles */}
+          <section
+            className="rounded-xl"
+            style={{
+              backgroundColor: '#FFFFFF80',
+              padding: '24px',
+            }}
+          >
+            <h2
+              className="mb-3 font-light"
+              style={{
+                fontSize: '20px',
+                fontWeight: 300,
+                color: '#000000',
+              }}
+            >
+              Custom Roles
+            </h2>
+            <DataTable<ApiRole>
+              columns={columns}
+              data={customRoles}
+              emptyMessage="No custom roles"
+            />
+          </section>
+        </div>
+      )}
 
       {/* Modals */}
       {showCreateModal && selectedProjectId && (

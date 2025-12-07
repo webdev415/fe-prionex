@@ -58,7 +58,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { path: '/projects', icon: 'file-import', label: 'Projects' },
     { path: '/analytics', icon: 'analytics-01', label: 'Analytics' },
     { path: '/users', icon: 'community', label: 'Users' },
-    { path: '/user-status', icon: 'user-status', label: 'User Status' },
+    { path: '/roles', icon: 'user-status', label: 'Roles' },
     { path: '/transactions', icon: 'transaction-history', label: 'Transactions' },
   ]
 
