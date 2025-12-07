@@ -32,13 +32,30 @@ describe('useProjects', () => {
 
   it('should fetch projects successfully', async () => {
     const mockData = {
-      count: 2,
-      next: null,
-      previous: null,
-      results: [
-        { id: 1, name: 'Project Alpha', code: 'ALPHA', status: 'active' as const },
-        { id: 2, name: 'Project Beta', code: 'BETA', status: 'active' as const },
+      projects: [
+        {
+          id: 1,
+          name: 'Project Alpha',
+          code: 'ALPHA',
+          is_active: true,
+          created_at: '2025-01-01T00:00:00Z',
+          updated_at: '2025-01-01T00:00:00Z',
+        },
+        {
+          id: 2,
+          name: 'Project Beta',
+          code: 'BETA',
+          is_active: true,
+          created_at: '2025-01-01T00:00:00Z',
+          updated_at: '2025-01-01T00:00:00Z',
+        },
       ],
+      pagination: {
+        page: 1,
+        page_size: 10,
+        total_items: 2,
+        total_pages: 1,
+      },
     }
 
     vi.mocked(projectsApi.projectsApi.getProjects).mockResolvedValue(mockData)
@@ -55,10 +72,22 @@ describe('useProjects', () => {
 
   it('should pass query params to API', async () => {
     const mockData = {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [{ id: 1, name: 'Project Alpha', code: 'ALPHA', status: 'active' as const }],
+      projects: [
+        {
+          id: 1,
+          name: 'Project Alpha',
+          code: 'ALPHA',
+          is_active: true,
+          created_at: '2025-01-01T00:00:00Z',
+          updated_at: '2025-01-01T00:00:00Z',
+        },
+      ],
+      pagination: {
+        page: 2,
+        page_size: 10,
+        total_items: 1,
+        total_pages: 1,
+      },
     }
 
     vi.mocked(projectsApi.projectsApi.getProjects).mockResolvedValue(mockData)

@@ -92,17 +92,15 @@ export const createUserSchema = z.object({
   middle_name: optionalNameSchema,
   phone: phoneSchema,
   language: z.enum(['en', 'uk', 'ru'], {
-    errorMap: () => ({ message: 'Please select a language' }),
+    message: 'Please select a language',
   }),
   timezone: z.string().min(1, 'Please select a timezone'),
   must_change_password: z.boolean().default(true),
   project_id: z.number({
-    required_error: 'Please select a project',
-    invalid_type_error: 'Please select a project',
+    message: 'Please select a project',
   }),
   role_id: z.number({
-    required_error: 'Please select a role',
-    invalid_type_error: 'Please select a role',
+    message: 'Please select a role',
   }),
 })
 
@@ -119,7 +117,7 @@ export const updateUserSchema = z.object({
   middle_name: optionalNameSchema,
   phone: phoneSchema,
   language: z.enum(['en', 'uk', 'ru'], {
-    errorMap: () => ({ message: 'Please select a language' }),
+    message: 'Please select a language',
   }),
   timezone: z.string().min(1, 'Please select a timezone'),
 })

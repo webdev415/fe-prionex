@@ -12,7 +12,7 @@ import { Icon, Cancel01Icon } from '@/lib/icons'
 import { colors } from '@/lib/colors'
 import { cn } from '@/lib/utils'
 
-interface ModalProps {
+export interface ModalProps {
   open: boolean
   onClose: () => void
   children: ReactNode
