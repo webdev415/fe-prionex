@@ -1,18 +1,16 @@
 /**
  * UserDetailModal Component
  *
- * Modal wrapper for UserDetail with action modals integration.
+ * Modal wrapper for viewing user details.
+ * Uses the same Modal structure as CreateUserModal.
  */
 
-import { useState } from 'react'
-import { Dialog } from '@/components/ui/Dialog'
-import { UserDetail } from '@/features/users/components/UserDetail'
-import { DeactivateUserModal } from '@/features/users/components/DeactivateUserModal'
-import { ResetPasswordModal } from '@/features/users/components/ResetPasswordModal'
-import { UnlockAccountModal } from '@/features/users/components/UnlockAccountModal'
-import { ReactivateUserModal } from '@/features/users/components/ReactivateUserModal'
-import { EditUserModal } from './EditUserModal'
+import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
+import { ViewUserForm } from '@/features/users/components/ViewUserForm'
 import { useUser } from '@/features/users/hooks/useUser'
+import { Icons } from '@/lib/icons'
+import { Button } from '@/components/ui/Button'
+import { colors } from '@/lib/colors'
 
 interface UserDetailModalProps {
   open: boolean
@@ -20,84 +18,53 @@ interface UserDetailModalProps {
   onClose: () => void
 }
 
-type ActionModal = 'edit' | 'deactivate' | 'reactivate' | 'resetPassword' | 'unlock' | null
-
 export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps) {
   const { data: user, isLoading } = useUser(userId)
-  const [activeModal, setActiveModal] = useState<ActionModal>(null)
-
-  const handleActionSuccess = () => {
-    setActiveModal(null)
-    // Optionally refetch user data or show success message
-  }
-
-  if (isLoading || !user) {
-    return (
-      <Dialog open={open} onClose={onClose} className="max-w-4xl">
-        <div className="p-8 text-center text-gray-400">Loading user details...</div>
-      </Dialog>
-    )
-  }
 
   return (
-    <>
-      <Dialog open={open && activeModal === null} onClose={onClose} className="max-w-4xl">
-        <UserDetail
-          user={user}
-          onEdit={() => setActiveModal('edit')}
-          onDeactivate={() => setActiveModal('deactivate')}
-          onReactivate={() => setActiveModal('reactivate')}
-          onResetPassword={() => setActiveModal('resetPassword')}
-          onUnlock={() => setActiveModal('unlock')}
-          onBack={onClose}
-        />
-      </Dialog>
-
-      {/* Action Modals */}
-      {activeModal === 'edit' && (
-        <EditUserModal
-          open={true}
-          user={user}
-          onSuccess={handleActionSuccess}
-          onClose={() => setActiveModal(null)}
-        />
-      )}
-
-      {activeModal === 'deactivate' && (
-        <DeactivateUserModal
-          open={true}
-          user={user}
-          onSuccess={handleActionSuccess}
-          onClose={() => setActiveModal(null)}
-        />
-      )}
-
-      {activeModal === 'reactivate' && (
-        <ReactivateUserModal
-          open={true}
-          user={user}
-          onSuccess={handleActionSuccess}
-          onClose={() => setActiveModal(null)}
-        />
-      )}
-
-      {activeModal === 'resetPassword' && (
-        <ResetPasswordModal
-          open={true}
-          user={user}
-          onSuccess={handleActionSuccess}
-          onClose={() => setActiveModal(null)}
-        />
-      )}
-
-      {activeModal === 'unlock' && (
-        <UnlockAccountModal
-          open={true}
-          user={user}
-          onSuccess={handleActionSuccess}
-          onClose={() => setActiveModal(null)}
-        />
-      )}
-    </>
+    <Modal open={open} onClose={onClose} maxWidth="2xl">
+      <ModalHeader
+        icon={
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-full"
+            style={{ backgroundColor: '#A0F229' }}
+          >
+            <Icons.View size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          </div>
+        }
+        title="View User"
+      />
+      <ModalContent>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-teal-600" />
+            <span className="ml-3 text-gray-600">Loading user data...</span>
+          </div>
+        ) : user ? (
+          <ViewUserForm user={user} />
+        ) : (
+          <div className="py-8 text-center text-gray-600">User not found</div>
+        )}
+      </ModalContent>
+      <ModalFooter>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          className="flex-1"
+          style={{
+            border: 'none',
+            backgroundColor: colors.gray[500],
+            color: '#FFFFFF',
+            height: '45px',
+            borderRadius: '8px',
+            fontWeight: 500,
+            fontSize: '14px',
+          }}
+        >
+          Close
+        </Button>
+      </ModalFooter>
+    </Modal>
   )
 }

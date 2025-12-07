@@ -135,6 +135,7 @@ export type UpdateUserFormData = z.infer<typeof updateUserSchema>
  * Note: In production, this should be a comprehensive list or fetched from an API
  */
 export const timezoneOptions = [
+  { value: 'Europe/Kyiv', label: 'Europe/Kyiv (EET/EEST)' }, // Default per backend
   { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
   { value: 'America/New_York', label: 'America/New York (EST/EDT)' },
   { value: 'America/Chicago', label: 'America/Chicago (CST/CDT)' },

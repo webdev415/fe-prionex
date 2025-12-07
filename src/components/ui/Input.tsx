@@ -13,7 +13,7 @@ const inputVariants = cva(
       },
       inputSize: {
         sm: 'h-8 text-body-xs',
-        md: 'h-10 text-body-sm',
+        md: 'h-[45px] text-body-sm',
         lg: 'h-12 text-body-md',
         xl: 'h-[45px] text-body-sm',
       },
@@ -49,6 +49,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       leftIcon,
       rightIcon,
       id,
+      style,
       ...props
     },
     ref
@@ -85,7 +86,10 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               rightIcon && 'pr-10',
               className
             )}
-            style={{ color: 'var(--color-primary-950)' }}
+            style={{
+              color: 'var(--color-primary-950)',
+              ...(style || {}),
+            }}
             ref={ref}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : helperText ? helperId : undefined}

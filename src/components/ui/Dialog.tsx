@@ -1,12 +1,11 @@
 /**
  * Dialog Component
  *
- * Modal dialog built with Headless UI.
+ * Modal dialog built with Radix UI.
  * Used for confirmations, forms, and other modal interactions.
  */
 
-import { Fragment } from 'react'
-import { Dialog as HeadlessDialog, Transition } from '@headlessui/react'
+import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { cn } from '@/lib/utils'
 
 interface DialogProps {
@@ -18,41 +17,27 @@ interface DialogProps {
 
 export function Dialog({ open, onClose, children, className }: DialogProps) {
   return (
-    <Transition show={open} as={Fragment}>
-      <HeadlessDialog onClose={onClose} className="relative z-50">
-        {/* Backdrop */}
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-        </Transition.Child>
-
-        {/* Full-screen container */}
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0 scale-95"
-            enterTo="opacity-100 scale-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100 scale-100"
-            leaveTo="opacity-0 scale-95"
+    <DialogPrimitive.Root open={open} onOpenChange={(open) => !open && onClose()}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/30" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <DialogPrimitive.Content
+            className={cn(
+              'z-50 mx-auto max-w-md rounded-lg bg-white p-6 shadow-xl',
+              'data-[state=open]:animate-in data-[state=closed]:animate-out',
+              'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+              'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
+              'data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]',
+              'data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]',
+              'duration-200',
+              className
+            )}
           >
-            <HeadlessDialog.Panel
-              className={cn('mx-auto max-w-md rounded-lg bg-white p-6 shadow-xl', className)}
-            >
-              {children}
-            </HeadlessDialog.Panel>
-          </Transition.Child>
+            {children}
+          </DialogPrimitive.Content>
         </div>
-      </HeadlessDialog>
-    </Transition>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   )
 }
 
@@ -63,9 +48,9 @@ interface DialogTitleProps {
 
 export function DialogTitle({ children, className }: DialogTitleProps) {
   return (
-    <HeadlessDialog.Title className={cn('text-lg font-semibold text-gray-900', className)}>
+    <DialogPrimitive.Title className={cn('text-lg font-semibold text-gray-900', className)}>
       {children}
-    </HeadlessDialog.Title>
+    </DialogPrimitive.Title>
   )
 }
 
@@ -76,9 +61,9 @@ interface DialogDescriptionProps {
 
 export function DialogDescription({ children, className }: DialogDescriptionProps) {
   return (
-    <HeadlessDialog.Description className={cn('mt-2 text-sm text-gray-600', className)}>
+    <DialogPrimitive.Description className={cn('mt-2 text-sm text-gray-600', className)}>
       {children}
-    </HeadlessDialog.Description>
+    </DialogPrimitive.Description>
   )
 }
 

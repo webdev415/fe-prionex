@@ -6,6 +6,16 @@
  */
 
 /**
+ * Project role assignment
+ */
+export interface ProjectRole {
+  project_id: number
+  project_name: string
+  role_id: number
+  role_name: string
+}
+
+/**
  * User entity from API responses
  */
 export interface ApiUser {
@@ -24,7 +34,8 @@ export interface ApiUser {
   failed_login_attempts: number
   locked_until?: string
   created_at: string
-  updated_at: string
+  updated_at?: string
+  projects?: ProjectRole[]
 }
 
 /**
@@ -79,6 +90,8 @@ export interface UpdateUserInput {
   phone?: string
   language?: 'uk' | 'ru' | 'en'
   timezone?: string
+  project_id?: number
+  role_id?: number
 }
 
 /**
@@ -107,7 +120,7 @@ export interface UserDetailResponse extends ApiUser {
   projects?: Array<{
     project_id: number
     project_name: string
-    project_code: string
+    project_code?: string
     role_id: number
     role_name: string
   }>

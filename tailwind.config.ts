@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+import tailwindcssAnimate from 'tailwindcss-animate'
 
 const config: Config = {
   content: [
@@ -31,8 +32,8 @@ const config: Config = {
           100: '#E0F2FE',
           200: '#B9E7FE',
           300: '#BBFB5B',
-          400: '#36C0FA',
-          500: '#0CA8EB',
+          400: '#A0F229',
+          500: '#80D80A',
           600: '#008FD6',
           700: '#016AA3',
           800: '#065A86',
@@ -179,7 +180,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [tailwindcssAnimate],
 }
 
 export default config

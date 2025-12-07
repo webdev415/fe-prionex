@@ -1,7 +1,19 @@
 export { Button, buttonVariants, type ButtonProps } from './Button'
 export { Input, inputVariants, type InputProps } from './Input'
 export { Label, labelVariants, type LabelProps } from './Label'
-export { Select, type SelectProps } from './Select'
+export { Checkbox, type CheckboxProps } from './Checkbox'
+export {
+  Select,
+  SelectGroup,
+  SelectValue,
+  SelectTrigger,
+  SelectContent,
+  SelectLabel,
+  SelectItem,
+  SelectSeparator,
+  SelectScrollUpButton,
+  SelectScrollDownButton,
+} from './Select'
 export {
   Card,
   CardHeader,
@@ -26,3 +38,4 @@ export { StatusBadge, type StatusType } from './StatusBadge'
 export { ToggleSwitch } from './ToggleSwitch'
 export { Pagination, type PaginationProps } from './Pagination'
 export { TableSkeleton, type TableSkeletonProps } from './TableSkeleton'
+export { Modal, ModalHeader, ModalContent, ModalFooter, type ModalProps } from './Modal'

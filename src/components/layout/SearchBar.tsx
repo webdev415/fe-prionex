@@ -13,7 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/RadixSelect'
+} from '@/components/ui/Select'
 
 interface SearchOption {
   value: string

@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { useUsers } from '@/features/users/hooks/useUsers'
 import { CreateUserModal } from './components/CreateUserModal'
 import { UserDetailModal } from './components/UserDetailModal'
+import { EditUserModal } from './components/EditUserModal'
 import type { ApiUser } from '@/features/users/types'
 import { Icons } from '@/lib/icons'
 import { colors } from '@/lib/colors'
@@ -23,7 +24,8 @@ const ITEMS_PER_PAGE = 10
 export function UserManagementPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
+  const [viewUserId, setViewUserId] = useState<number | null>(null)
+  const [editUserId, setEditUserId] = useState<number | null>(null)
 
   // Fetch users with pagination
   const { data, isLoading, isError, error } = useUsers({
@@ -35,20 +37,28 @@ export function UserManagementPage() {
   const totalUsers = data?.pagination.total_count || 0
   const totalPages = data?.pagination.total_pages || 0
 
-  const handleCloseDetail = () => {
-    setSelectedUserId(null)
+  const handleCloseView = () => {
+    setViewUserId(null)
+  }
+
+  const handleCloseEdit = () => {
+    setEditUserId(null)
   }
 
   const handleCreateSuccess = () => {
     setShowCreateModal(false)
   }
 
+  const handleEditSuccess = () => {
+    setEditUserId(null)
+  }
+
   const handleEdit = (user: ApiUser) => {
-    setSelectedUserId(user.id)
+    setEditUserId(user.id)
   }
 
   const handleView = (user: ApiUser) => {
-    setSelectedUserId(user.id)
+    setViewUserId(user.id)
   }
 
   const handleImpersonate = (user: ApiUser) => {
@@ -91,7 +101,14 @@ export function UserManagementPage() {
     {
       key: 'role',
       header: 'Role',
-      render: () => <span>Operator</span>, // TODO: Get actual role from user data
+      render: (user) => {
+        // Display roles from projects, or "No role" if none assigned
+        if (user.projects && user.projects.length > 0) {
+          // Show all roles, separated by comma if multiple
+          return <span>{user.projects.map((p) => p.role_name).join(', ')}</span>
+        }
+        return <span style={{ color: colors.gray[500] }}>No role</span>
+      },
     },
     {
       key: 'status',
@@ -253,11 +270,16 @@ export function UserManagementPage() {
         />
       )}
 
-      {selectedUserId && (
-        <UserDetailModal
-          open={selectedUserId !== null}
-          userId={selectedUserId}
-          onClose={handleCloseDetail}
+      {viewUserId && (
+        <UserDetailModal open={viewUserId !== null} userId={viewUserId} onClose={handleCloseView} />
+      )}
+
+      {editUserId && (
+        <EditUserModal
+          open={editUserId !== null}
+          userId={editUserId}
+          onClose={handleCloseEdit}
+          onSuccess={handleEditSuccess}
         />
       )}
     </div>
