@@ -21,7 +21,7 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
   }
 
   return (
-    <div className="mt-4 space-y-6 px-1 pb-2">
+    <div className="space-y-6">
       {/* User Credentials Section */}
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">

@@ -184,7 +184,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
   }
 
   return (
-    <form id="create-user-form" onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-6 px-1">
+    <form id="create-user-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* API Error Alert */}
       {isError && (
         <Alert variant="error">
@@ -431,7 +431,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
       </div>
 
       {/* Assign Projects Section */}
-      <div className="mt-4 space-y-4">
+      <div className="mt-4 mb-0 space-y-4">
         <h3
           className="text-sm font-semibold"
           style={{ color: colors.neutral.dark[500], fontSize: '14px' }}
@@ -463,7 +463,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
       {/* Role per Project Section */}
       {selectedProjects.length > 0 && (
-        <div className="mt-4 space-y-4">
+        <div className="mt-4 mb-0 space-y-4">
           <h3
             className="text-sm font-semibold"
             style={{ color: colors.neutral.dark[500], fontSize: '14px' }}

@@ -110,10 +110,9 @@ export async function resetPassword(userId: number): Promise<ResetPasswordRespon
 }
 
 /**
- * Unlock user account after lockout
+ * Unlock user account after lockout (by user ID).
  *
- * @param userId - User ID
- * @returns Unlock confirmation with username
+ * Backend endpoint: POST /api/v1/admin/users/{user_id}/unlock
  */
 export async function unlockAccount(userId: number): Promise<UnlockAccountResponse> {
   const response = await api.post<UnlockAccountResponse>(`/api/v1/admin/users/${userId}/unlock`)

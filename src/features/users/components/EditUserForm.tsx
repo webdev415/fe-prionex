@@ -126,7 +126,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
   }
 
   return (
-    <form id="edit-user-form" onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-6 px-1">
+    <form id="edit-user-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {isError && (
         <Alert variant="error">
           <div>
@@ -321,7 +321,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       </div>
 
       {/* Assign Projects Section (editable, similar to CreateUserForm) */}
-      <div className="mt-4 space-y-4">
+      <div className="mt-4 mb-0 space-y-4">
         <h3
           className="text-sm font-semibold"
           style={{ color: colors.neutral.dark[500], fontSize: '14px' }}
@@ -362,7 +362,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
       {/* Role per Project Section (editable) */}
       {selectedProjects.length > 0 && (
-        <div className="mt-4 space-y-4">
+        <div className="mt-4 mb-0 space-y-4">
           <h3
             className="text-sm font-semibold"
             style={{ color: colors.neutral.dark[500], fontSize: '14px' }}

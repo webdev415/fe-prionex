@@ -45,6 +45,7 @@ export function Modal({ open, onClose, children, className, maxWidth = 'md' }: M
         {/* Full-screen container */}
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <DialogPrimitive.Content
+            aria-describedby={undefined}
             className={cn(
               'relative z-50 w-full rounded-lg shadow-xl',
               'data-[state=open]:animate-in data-[state=closed]:animate-out',
@@ -87,7 +88,7 @@ export function Modal({ open, onClose, children, className, maxWidth = 'md' }: M
 
 interface ModalHeaderProps {
   icon?: ReactNode
-  title: string
+  title: ReactNode
   onClose?: () => void
   className?: string
 }
@@ -127,7 +128,7 @@ export function ModalContent({ children, className }: ModalContentProps) {
       style={{
         maxHeight: 'calc(90vh - 200px)',
         maxWidth: '100%',
-        padding: '0',
+        padding: '24px 4px 24px 4px',
       }}
     >
       {children}

@@ -10,6 +10,7 @@ import { useUsers } from '@/features/users/hooks/useUsers'
 import { CreateUserModal } from './components/CreateUserModal'
 import { UserDetailModal } from './components/UserDetailModal'
 import { EditUserModal } from './components/EditUserModal'
+import { UnlockAccountModal } from './components/UnlockAccountModal'
 import type { ApiUser } from '@/features/users/types'
 import { Icons } from '@/lib/icons'
 import { colors } from '@/lib/colors'
@@ -26,6 +27,7 @@ export function UserManagementPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [viewUserId, setViewUserId] = useState<number | null>(null)
   const [editUserId, setEditUserId] = useState<number | null>(null)
+  const [unlockUser, setUnlockUser] = useState<ApiUser | null>(null)
 
   // Fetch users with pagination
   const { data, isLoading, isError, error } = useUsers({
@@ -67,8 +69,10 @@ export function UserManagementPage() {
   }
 
   const handleUnlockToggle = (user: ApiUser, checked: boolean) => {
-    // TODO: Implement unlock/lock functionality
-    console.log('Toggle unlock for user:', user.id, checked)
+    // Only support unlocking via confirmation modal; no manual locking from UI.
+    if (checked && !isUnlocked(user)) {
+      setUnlockUser(user)
+    }
   }
 
   // Map status for StatusBadge component
@@ -280,6 +284,14 @@ export function UserManagementPage() {
           userId={editUserId}
           onClose={handleCloseEdit}
           onSuccess={handleEditSuccess}
+        />
+      )}
+
+      {unlockUser && (
+        <UnlockAccountModal
+          open={unlockUser !== null}
+          user={unlockUser}
+          onClose={() => setUnlockUser(null)}
         />
       )}
     </div>
