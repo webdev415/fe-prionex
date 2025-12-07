@@ -7,6 +7,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { usersApi } from '../api/usersApi'
 import { usersKeys } from './useUsers'
+import { rolesKeys } from '@/features/roles/hooks/useRoles'
 
 /**
  * Deactivate user account
@@ -34,6 +35,10 @@ export function useDeactivateUser() {
     onSuccess: (_, userId) => {
       queryClient.invalidateQueries({ queryKey: usersKeys.detail(userId) })
       queryClient.invalidateQueries({ queryKey: usersKeys.lists() })
+      // Invalidate roles list to update user_count for roles
+      queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
+      // Invalidate all role detail queries (including users) to update role user lists
+      queryClient.invalidateQueries({ queryKey: rolesKeys.details() })
     },
   })
 }

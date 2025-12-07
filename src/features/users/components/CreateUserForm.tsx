@@ -99,9 +99,9 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
     },
   })
 
-  // Fetch all roles and filter by project
-  const { data: rolesData } = useRoles({})
-  const allRoles = rolesData?.roles || []
+  // Fetch all roles and filter by project (exclude archived/inactive roles)
+  const { data: rolesData } = useRoles({ is_active: true })
+  const allRoles = (rolesData?.roles || []).filter((role) => role.is_active)
 
   const handleProjectToggle = async (projectId: number, checked: boolean) => {
     const newSelected = checked
@@ -143,9 +143,9 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
     await trigger(['projectRoles', 'selectedProjects'])
   }
 
-  // Get roles for a specific project
+  // Get roles for a specific project (only active roles)
   const getRolesForProject = (projectId: number): Role[] => {
-    return allRoles.filter((role) => role.project_id === projectId)
+    return allRoles.filter((role) => role.project_id === projectId && role.is_active)
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -54,12 +54,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // Navigation items with Hugeicons
   const navItems: SidebarItem[] = [
     { path: '/dashboard', icon: 'home-04', label: 'Dashboard' },
-    { path: '/activity', icon: 'activity-01', label: 'Activity' },
-    { path: '/projects', icon: 'file-import', label: 'Projects' },
-    { path: '/analytics', icon: 'analytics-01', label: 'Analytics' },
-    { path: '/users', icon: 'community', label: 'Users' },
-    { path: '/roles', icon: 'user-status', label: 'Roles' },
-    { path: '/transactions', icon: 'transaction-history', label: 'Transactions' },
+    { path: '/dashboard', icon: 'activity-01', label: 'Activity', disabled: true }, // Route doesn't exist
+    { path: '/dashboard/projects', icon: 'file-import', label: 'Projects' },
+    { path: '/dashboard/users', icon: 'community', label: 'Users' },
+    { path: '/dashboard/roles', icon: 'user-status', label: 'Roles' },
+    { path: '/dashboard', icon: 'transaction-history', label: 'Transactions', disabled: true }, // Route doesn't exist
   ]
 
   // Bottom action buttons

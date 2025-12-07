@@ -10,7 +10,7 @@ const alertVariants = cva(
         default: 'bg-dark-300 border-dark-200 text-gray-300',
         success: 'bg-success-950 border-success-500 text-success-300',
         warning: 'bg-warning-950 border-warning-500 text-warning-300',
-        error: 'bg-error-950 border-error-500 text-error-300',
+        error: 'bg-white border-error-500 text-error-500',
         info: 'bg-info-950 border-info-500 text-info-300',
       },
     },

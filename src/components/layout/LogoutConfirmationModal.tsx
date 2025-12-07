@@ -2,10 +2,13 @@
  * LogoutConfirmationModal Component
  *
  * Confirmation modal for logging out.
+ * Uses the global Modal component for consistent styling.
  */
 
-import { Dialog, DialogTitle, DialogDescription } from '@/components/ui/Dialog'
+import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { Icons } from '@/lib/icons'
+import { colors } from '@/lib/colors'
 
 interface LogoutConfirmationModalProps {
   open: boolean
@@ -21,28 +24,65 @@ export function LogoutConfirmationModal({
   isLoading = false,
 }: LogoutConfirmationModalProps) {
   return (
-    <Dialog open={open} onClose={onCancel}>
-      <div className="w-full max-w-md rounded-lg bg-white px-6 py-6 shadow-xl">
-        <DialogTitle className="text-xl font-semibold text-gray-900">Confirm Logout</DialogTitle>
-
-        <DialogDescription className="mt-2 text-sm text-gray-600">
-          Are you sure you want to logout? You will need to login again to access the system.
-        </DialogDescription>
-
-        <div className="mt-6 flex justify-end gap-3">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            onClick={onConfirm}
-            disabled={isLoading}
-            className="bg-red-600 text-white hover:bg-red-700"
+    <Modal open={open} onClose={onCancel} maxWidth="md">
+      <ModalHeader
+        icon={
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-full"
+            style={{ backgroundColor: colors.primary[400] }}
           >
-            {isLoading ? 'Logging out...' : 'Logout'}
-          </Button>
-        </div>
-      </div>
-    </Dialog>
+            <Icons.LogoutSquare01 size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          </div>
+        }
+        title="Confirm Logout"
+      />
+      <ModalContent>
+        <p
+          className="font-light"
+          style={{
+            fontSize: '16px',
+            fontWeight: 300,
+            color: colors.neutral.dark[500],
+          }}
+        >
+          Are you sure you want to logout? You will need to login again to access the system.
+        </p>
+      </ModalContent>
+      <ModalFooter>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isLoading}
+          className="flex-1 rounded-md text-sm font-medium"
+          style={{
+            border: 'none',
+            backgroundColor: colors.gray[500],
+            color: '#FFFFFF',
+            height: '45px',
+            fontSize: '14px',
+            fontWeight: 500,
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          onClick={onConfirm}
+          disabled={isLoading}
+          className="flex-1 rounded-md text-sm font-medium"
+          style={{
+            border: 'none',
+            backgroundColor: '#EF4444',
+            color: '#FFFFFF',
+            height: '45px',
+            fontSize: '14px',
+            fontWeight: 500,
+          }}
+        >
+          {isLoading ? 'Logging out...' : 'Logout'}
+        </Button>
+      </ModalFooter>
+    </Modal>
   )
 }

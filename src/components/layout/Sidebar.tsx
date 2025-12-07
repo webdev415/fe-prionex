@@ -19,6 +19,7 @@ export interface SidebarItem {
   path: string
   icon: string
   label: string
+  disabled?: boolean
 }
 
 export interface SidebarAction {
@@ -107,7 +108,20 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
               return null
             }
 
-            const isActive = isActivePath(item.path)
+            const isActive = !item.disabled && isActivePath(item.path)
+            const isDisabled = item.disabled
+
+            if (isDisabled) {
+              return (
+                <div
+                  key={item.path}
+                  className="mx-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-md opacity-50"
+                  aria-label={item.label}
+                >
+                  <IconComponent size={20} color={colors.gray[400]} strokeWidth={1.5} />
+                </div>
+              )
+            }
 
             return (
               <Tooltip key={item.path}>
