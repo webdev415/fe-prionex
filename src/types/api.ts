@@ -37,6 +37,38 @@ export interface UserRole {
   name: string
 }
 
+// Backend response from /api/v1/users/me
+export interface CurrentUserResponse {
+  id: number
+  username: string
+  email: string
+  first_name: string
+  last_name: string
+  full_name: string
+  status: string
+  language: string
+  timezone: string
+  phone?: string | null
+  role: {
+    id: number
+    name: string
+  }
+  active_project: {
+    id: number
+    name: string
+    code: string
+  }
+  projects: Array<{
+    id: number
+    name: string
+    code: string
+    role_name: string
+  }>
+  permissions: string[]
+  last_login_at?: string | null
+  created_at: string
+}
+
 export interface User {
   id: string
   username: string

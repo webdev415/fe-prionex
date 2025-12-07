@@ -47,7 +47,7 @@ describe('Input', () => {
     expect(screen.getByPlaceholderText('Small')).toHaveClass('h-8')
 
     rerender(<Input inputSize="md" placeholder="Medium" />)
-    expect(screen.getByPlaceholderText('Medium')).toHaveClass('h-10')
+    expect(screen.getByPlaceholderText('Medium')).toHaveClass('h-[45px]')
 
     rerender(<Input inputSize="lg" placeholder="Large" />)
     expect(screen.getByPlaceholderText('Large')).toHaveClass('h-12')

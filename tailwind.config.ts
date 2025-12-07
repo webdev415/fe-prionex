@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+import tailwindcssAnimate from 'tailwindcss-animate'
 
 const config: Config = {
   content: [
@@ -30,9 +31,9 @@ const config: Config = {
           50: '#F0F9FF',
           100: '#E0F2FE',
           200: '#B9E7FE',
-          300: '#7CD4FD',
-          400: '#36C0FA',
-          500: '#0CA8EB',
+          300: '#BBFB5B',
+          400: '#A0F229',
+          500: '#80D80A',
           600: '#008FD6',
           700: '#016AA3',
           800: '#065A86',
@@ -60,14 +61,40 @@ const config: Config = {
           400: '#ADADAD',
           500: '#A1A1A1',
           600: '#888888',
-          700: '#787B7B',
+          700: '#7B7B7B',
           800: '#676767',
           900: '#545454',
           950: '#363636',
         },
+        secondary: {
+          50: '#E6F5F4',
+          100: '#CCEBE9',
+          200: '#99D7D3',
+          300: '#66C3BD',
+          400: '#33AFA7',
+          500: '#009B91',
+          600: '#007C73',
+          700: '#236260',
+          800: '#204E4D',
+          900: '#1A3F3E',
+          950: '#0F2524',
+        },
+        accent: {
+          50: '#F9FDF5',
+          100: '#F3FCEB',
+          200: '#E7F9D7',
+          300: '#DBF6C3',
+          400: '#CFF3AF',
+          500: '#BBFB5B',
+          600: '#96C949',
+          700: '#709737',
+          800: '#4B6424',
+          900: '#253212',
+          950: '#121909',
+        },
         light: {
-          50: '#F5F5F6',
-          100: '#E5E6E8',
+          50: '#F2F3F0',
+          100: '#EBECE8',
           200: '#CDCFD4',
           300: '#ABAFB5',
           400: '#81858F',
@@ -77,6 +104,11 @@ const config: Config = {
           800: '#424448',
           900: '#3A3B3F',
           950: '#242528',
+        },
+        neutral: {
+          dark: {
+            500: '#05040D',
+          },
         },
         success: {
           50: '#F0FDF4',
@@ -148,7 +180,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [tailwindcssAnimate],
 }
 
 export default config

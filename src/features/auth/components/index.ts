@@ -1,3 +1,6 @@
 export { LoginCard } from './LoginCard'
 export { AccountLockedCard } from './AccountLockedCard'
 export { AlreadyLoggedInCard } from './AlreadyLoggedInCard'
+export { ProjectSwitcher } from './ProjectSwitcher'
+export { ImpersonationBanner } from './ImpersonationBanner'
+export { ChangePasswordModal } from './ChangePasswordModal'

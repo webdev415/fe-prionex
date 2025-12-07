@@ -3,12 +3,12 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const labelVariants = cva(
-  'text-text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
+  'leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
   {
     variants: {
       variant: {
-        default: 'text-gray-300',
-        error: 'text-error-500',
+        default: 'text-neutral-dark-500 font-light',
+        error: 'text-error-500 font-light',
       },
     },
     defaultVariants: {
@@ -18,11 +18,30 @@ const labelVariants = cva(
 )
 
 export interface LabelProps
-  extends React.LabelHTMLAttributes<HTMLLabelElement>, VariantProps<typeof labelVariants> {}
+  extends React.LabelHTMLAttributes<HTMLLabelElement>, VariantProps<typeof labelVariants> {
+  required?: boolean
+}
 
-const Label = forwardRef<HTMLLabelElement, LabelProps>(({ className, variant, ...props }, ref) => {
-  return <label ref={ref} className={cn(labelVariants({ variant, className }))} {...props} />
-})
+const Label = forwardRef<HTMLLabelElement, LabelProps>(
+  ({ className, variant, style, required, children, ...props }, ref) => {
+    return (
+      <label
+        ref={ref}
+        className={cn(labelVariants({ variant, className }))}
+        style={{
+          fontSize: '14px',
+          fontWeight: 200,
+          color: '#05040D',
+          ...style,
+        }}
+        {...props}
+      >
+        {children}
+        {required && <span className="ml-1 text-red-500">*</span>}
+      </label>
+    )
+  }
+)
 
 Label.displayName = 'Label'
 

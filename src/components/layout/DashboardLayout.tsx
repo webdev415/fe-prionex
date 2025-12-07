@@ -1,80 +1,139 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import { useAuth } from '@/features/auth'
-import { Button } from '@/components/ui'
+import { LogoutConfirmationModal } from './LogoutConfirmationModal'
+import { Sidebar, type SidebarItem, type SidebarAction } from './Sidebar'
+import { SearchBar } from './SearchBar'
+import { UserProfile } from './UserProfile'
 
 interface DashboardLayoutProps {
   children: ReactNode
 }
 
+/**
+ * DashboardLayout - Main application layout matching the dark teal/green design
+ *
+ * Features:
+ * - Narrow icon-only sidebar (left)
+ * - Header with search bar and user profile (top)
+ * - Dark teal/green gradient background
+ */
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user, logout, isLoading } = useAuth()
+  const { logout } = useAuth()
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true)
+  }
+
+  const handleLogoutConfirm = async () => {
+    setIsLoggingOut(true)
+    try {
+      await logout()
+    } finally {
+      setIsLoggingOut(false)
+      setShowLogoutModal(false)
+    }
+  }
+
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false)
+  }
+
+  const handleSearch = (_query: string, _searchType: string) => {
+    // TODO: Implement search functionality
+  }
+
+  // Search type options
+  const searchOptions = [
+    { value: 'phone', label: 'Phone number' },
+    { value: 'email', label: 'Email' },
+    { value: 'username', label: 'Username' },
+  ]
+
+  // Navigation items with Hugeicons
+  const navItems: SidebarItem[] = [
+    { path: '/dashboard', icon: 'home-04', label: 'Dashboard' },
+    { path: '/activity', icon: 'activity-01', label: 'Activity' },
+    { path: '/projects', icon: 'file-import', label: 'Projects' },
+    { path: '/analytics', icon: 'analytics-01', label: 'Analytics' },
+    { path: '/users', icon: 'community', label: 'Users' },
+    { path: '/roles', icon: 'user-status', label: 'Roles' },
+    { path: '/transactions', icon: 'transaction-history', label: 'Transactions' },
+  ]
+
+  // Bottom action buttons
+  const sidebarActions: SidebarAction[] = [
+    {
+      icon: 'setting-07',
+      label: 'Settings',
+      onClick: () => {
+        // Navigate to settings or open settings modal
+        console.log('Settings clicked')
+      },
+    },
+    {
+      icon: 'logout-square-01',
+      label: 'Logout',
+      onClick: handleLogoutClick,
+    },
+  ]
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div
+      className="bg-light-50 min-h-screen"
+      style={{
+        backgroundImage: 'url(/assets/images/dashboard-light-bg.svg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
       {/* Sidebar */}
-      <aside className="bg-dark-900 flex w-64 flex-col text-white">
-        {/* Logo */}
-        <div className="border-dark-700 border-b p-4">
-          <img src="/assets/images/logo.png" alt="Prionex" className="h-8" />
-        </div>
+      <Sidebar
+        items={navItems}
+        actions={sidebarActions}
+        onMenuClick={() => {
+          // Handle menu click (e.g., toggle sidebar, open menu, etc.)
+          console.log('Menu clicked')
+        }}
+      />
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4">
-          <ul className="space-y-2">
-            <li>
-              <a
-                href="/dashboard"
-                className="bg-dark-700 flex items-center gap-3 rounded-lg px-3 py-2 text-white"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                  />
-                </svg>
-                Dashboard
-              </a>
-            </li>
-          </ul>
-        </nav>
+      {/* Main Content Area with left margin for sidebar */}
+      <div className="ml-16">
+        {/* Fixed Header */}
+        <header
+          className="bg-light-50 fixed top-0 right-0 left-16 z-20 flex h-[60px] items-center justify-between px-6"
+          style={{
+            borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 1px 2px 0px rgba(0, 0, 0, 0.06)',
+          }}
+        >
+          {/* Search Bar */}
+          <SearchBar
+            placeholder="Search"
+            searchOptions={searchOptions}
+            defaultSearchType="phone"
+            onSearch={handleSearch}
+          />
 
-        {/* User section */}
-        <div className="border-dark-700 border-t p-4">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="bg-dark-600 flex h-10 w-10 items-center justify-center rounded-full">
-              <span className="text-sm font-medium">
-                {user?.username?.charAt(0).toUpperCase() || 'U'}
-              </span>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{user?.username || 'User'}</p>
-              <p className="truncate text-xs text-gray-400">{user?.active_role_name || 'Role'}</p>
-            </div>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="w-full"
-            onClick={logout}
-            isLoading={isLoading}
-          >
-            <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-            Logout
-          </Button>
-        </div>
-      </aside>
+          {/* User Profile */}
+          <UserProfile onLogoutClick={handleLogoutClick} />
+        </header>
 
-      {/* Main content */}
-      <main className="flex-1 p-8">{children}</main>
+        {/* Scrollable Page Content with top padding for fixed header */}
+        <main className="min-h-screen overflow-y-auto px-[28px] pt-[80px] pb-[20px]">
+          {children}
+        </main>
+      </div>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmationModal
+        open={showLogoutModal}
+        onConfirm={handleLogoutConfirm}
+        onCancel={handleLogoutCancel}
+        isLoading={isLoggingOut}
+      />
     </div>
   )
 }
