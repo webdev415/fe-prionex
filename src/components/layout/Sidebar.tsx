@@ -100,7 +100,7 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
 
         {/* Navigation Icons */}
         <nav className="flex w-full flex-1 flex-col items-center gap-6 overflow-x-hidden overflow-y-auto px-0">
-          {items.map((item) => {
+          {items.map((item, index) => {
             const IconComponent = iconMap[item.icon]
 
             if (!IconComponent) {
@@ -110,11 +110,13 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
 
             const isActive = !item.disabled && isActivePath(item.path)
             const isDisabled = item.disabled
+            // Use unique key combining path and label to avoid duplicates
+            const uniqueKey = `${item.path}-${item.label}-${index}`
 
             if (isDisabled) {
               return (
                 <div
-                  key={item.path}
+                  key={uniqueKey}
                   className="mx-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-md opacity-50"
                   aria-label={item.label}
                 >
@@ -124,7 +126,7 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
             }
 
             return (
-              <Tooltip key={item.path}>
+              <Tooltip key={uniqueKey}>
                 <TooltipTrigger asChild>
                   <NavLink
                     to={item.path}

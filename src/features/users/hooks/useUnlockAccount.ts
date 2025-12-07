@@ -5,8 +5,10 @@
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { usersApi } from '../api/usersApi'
 import { usersKeys } from './useUsers'
+import { getErrorMessage } from '@/lib/errors'
 
 /**
  * Unlock user account after lockout
@@ -32,8 +34,12 @@ export function useUnlockAccount() {
   return useMutation({
     mutationFn: (userId: number) => usersApi.unlockAccount(userId),
     onSuccess: (_, userId) => {
+      toast.success('Account unlocked successfully')
       queryClient.invalidateQueries({ queryKey: usersKeys.detail(userId) })
       queryClient.invalidateQueries({ queryKey: usersKeys.lists() })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error))
     },
   })
 }

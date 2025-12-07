@@ -20,7 +20,9 @@ interface RoleDetailModalProps {
 
 export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps) {
   const { data: role, isLoading: roleLoading } = useRole(roleId)
-  const { data: project, isLoading: projectLoading } = useProject(role?.project_id ?? 0)
+  const { data: project, isLoading: projectLoading } = useProject(role?.project_id ?? 0, {
+    enabled: !!role?.project_id && role.project_id > 0,
+  })
 
   const isLoading = roleLoading || (role?.project_id ? projectLoading : false)
 
