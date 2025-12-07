@@ -5,8 +5,10 @@
  */
 
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { rolesApi } from '../api/rolesApi'
 import { rolesKeys } from './useRoles'
+import { getErrorMessage } from '@/lib/errors'
 import type { CreateRoleInput, UpdateRoleInput } from '../types'
 
 /**
@@ -28,7 +30,11 @@ export function useCreateRole() {
   return useMutation({
     mutationFn: (data: CreateRoleInput) => rolesApi.createRole(data),
     onSuccess: () => {
+      toast.success('Role created successfully')
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error))
     },
   })
 }
@@ -43,8 +49,12 @@ export function useUpdateRole() {
     mutationFn: ({ roleId, data }: { roleId: number; data: UpdateRoleInput }) =>
       rolesApi.updateRole(roleId, data),
     onSuccess: (_, variables) => {
+      toast.success('Role updated successfully')
       queryClient.invalidateQueries({ queryKey: rolesKeys.detail(variables.roleId) })
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error))
     },
   })
 }
@@ -58,7 +68,11 @@ export function useDeleteRole() {
   return useMutation({
     mutationFn: ({ roleId }: { roleId: number }) => rolesApi.deleteRole(roleId),
     onSuccess: () => {
+      toast.success('Role deleted successfully')
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error))
     },
   })
 }
@@ -89,8 +103,12 @@ export function useArchiveRole() {
       data: { reassign_to_role_id?: number; use_default_role?: boolean }
     }) => rolesApi.archiveRole(roleId, data),
     onSuccess: (_, variables) => {
+      toast.success('Role archived successfully')
       queryClient.invalidateQueries({ queryKey: rolesKeys.detail(variables.roleId) })
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error))
     },
   })
 }

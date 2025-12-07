@@ -5,9 +5,11 @@
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { usersApi } from '../api/usersApi'
 import { usersKeys } from './useUsers'
 import { rolesKeys } from '@/features/roles/hooks/useRoles'
+import { getErrorMessage } from '@/lib/errors'
 
 /**
  * Deactivate user account
@@ -33,12 +35,16 @@ export function useDeactivateUser() {
   return useMutation({
     mutationFn: (userId: number) => usersApi.deactivateUser(userId),
     onSuccess: (_, userId) => {
+      toast.success('User deactivated successfully')
       queryClient.invalidateQueries({ queryKey: usersKeys.detail(userId) })
       queryClient.invalidateQueries({ queryKey: usersKeys.lists() })
       // Invalidate roles list to update user_count for roles
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
       // Invalidate all role detail queries (including users) to update role user lists
       queryClient.invalidateQueries({ queryKey: rolesKeys.details() })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error))
     },
   })
 }

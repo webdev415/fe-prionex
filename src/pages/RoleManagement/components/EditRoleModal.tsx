@@ -21,7 +21,10 @@ interface EditRoleModalProps {
 
 export function EditRoleModal({ open, roleId, onClose, onSuccess }: EditRoleModalProps) {
   const { data: role, isLoading: roleLoading } = useRole(roleId)
-  const { data: project, isLoading: projectLoading } = useProject(role?.project_id ?? 0)
+  // Only fetch project if we have a valid project_id
+  const { data: project, isLoading: projectLoading } = useProject(role?.project_id ?? 0, {
+    enabled: !!role?.project_id && role.project_id > 0,
+  })
 
   const isLoading = roleLoading || (role?.project_id ? projectLoading : false)
 

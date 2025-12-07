@@ -19,6 +19,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { ErrorState } from '@/components/ErrorState'
 
 const ITEMS_PER_PAGE = 10
 
@@ -246,9 +247,11 @@ export function UserManagementPage() {
 
       {/* Error State */}
       {isError && (
-        <div className="rounded-lg bg-white p-8 text-center shadow-sm">
-          <p style={{ color: '#EF4444' }}>Error loading users: {error?.message}</p>
-        </div>
+        <ErrorState
+          error={error}
+          onRetry={() => window.location.reload()}
+          title="Error loading users"
+        />
       )}
 
       {/* User Table */}

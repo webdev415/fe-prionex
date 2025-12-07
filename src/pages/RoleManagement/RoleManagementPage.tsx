@@ -18,6 +18,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui'
+import { ErrorState } from '@/components/ErrorState'
 import { Icons } from '@/lib/icons'
 import { colors } from '@/lib/colors'
 import { CreateRoleModal } from './components/CreateRoleModal'
@@ -254,9 +255,7 @@ export function RoleManagementPage() {
       )}
 
       {!loadingProjects && projects.length > 0 && isError && (
-        <div className="rounded-lg bg-white p-8 text-center shadow-sm">
-          <p style={{ color: '#EF4444' }}>Error loading roles: {error?.message}</p>
-        </div>
+        <ErrorState error={error} onRetry={() => refetch()} title="Error loading roles" />
       )}
 
       {!loadingProjects && projects.length > 0 && !isError && (

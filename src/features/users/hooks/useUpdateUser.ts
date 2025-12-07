@@ -5,9 +5,11 @@
  */
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { usersApi } from '../api/usersApi'
 import { usersKeys } from './useUsers'
 import { rolesKeys } from '@/features/roles/hooks/useRoles'
+import { getErrorMessage } from '@/lib/errors'
 import type { UpdateUserInput } from '../types'
 
 /**
@@ -35,6 +37,7 @@ export function useUpdateUser() {
     mutationFn: ({ userId, data }: { userId: number; data: UpdateUserInput }) =>
       usersApi.updateUser(userId, data),
     onSuccess: (_, variables) => {
+      toast.success('User updated successfully')
       // Invalidate specific user detail
       queryClient.invalidateQueries({ queryKey: usersKeys.detail(variables.userId) })
       // Invalidate users list
@@ -43,6 +46,9 @@ export function useUpdateUser() {
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
       // Invalidate all role detail queries (including users) to update role user lists
       queryClient.invalidateQueries({ queryKey: rolesKeys.details() })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error))
     },
   })
 }
