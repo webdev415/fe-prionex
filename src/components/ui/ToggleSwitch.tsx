@@ -35,7 +35,14 @@ export function ToggleSwitch({
         width: '36px',
         height: '20px',
         backgroundColor: checked ? '#287975' : '#C8C8C8', // Color/Secondary/600 for on, Color/Gray/300 for off
-        focusRingColor: '#287975',
+      }}
+      onFocus={(e) => {
+        e.currentTarget.style.outline = '2px solid #287975'
+        e.currentTarget.style.outlineOffset = '2px'
+      }}
+      onBlur={(e) => {
+        e.currentTarget.style.outline = ''
+        e.currentTarget.style.outlineOffset = ''
       }}
     >
       <span

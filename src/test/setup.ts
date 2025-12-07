@@ -2,11 +2,13 @@ import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 
 // Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  })) as unknown as typeof ResizeObserver
+}
 
 // Mock i18next
 vi.mock('react-i18next', () => ({

@@ -36,7 +36,7 @@ describe('useProject', () => {
       name: 'Project Alpha',
       code: 'ALPHA',
       description: 'Test project',
-      status: 'active' as const,
+      is_active: true,
       created_at: '2025-01-01T00:00:00Z',
       updated_at: '2025-01-01T00:00:00Z',
     }
