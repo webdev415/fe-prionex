@@ -18,7 +18,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # Docker image name must be lowercase; hard-code repo path to avoid case issues
+  IMAGE_NAME: crm-prionex/fe-prionex
 
 jobs:
   build-and-push:
