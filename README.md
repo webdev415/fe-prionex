@@ -16,7 +16,6 @@ Modern React-based frontend application for the Prionex CRM system, built with T
 - **Zod** - Schema validation
 - **Sonner** - Toast notifications
 - **Vitest** - Unit testing
-- **Playwright** - E2E testing
 
 ## 📋 Prerequisites
 
@@ -88,11 +87,6 @@ npm run test
 npm run test:run
 ```
 
-### E2E Tests
-```bash
-npm run test:e2e
-```
-
 ## 🏗️ Build
 
 ### Development Build
@@ -159,7 +153,6 @@ The app will be available at `http://localhost:80` (or your configured port).
 - `npm run test` - Run tests in watch mode
 - `npm run test:run` - Run tests once
 - `npm run test:coverage` - Run tests with coverage
-- `npm run test:e2e` - Run E2E tests
 
 ## 🎨 Features
 
