@@ -9,8 +9,14 @@ services:
       context: .
       dockerfile: Dockerfile.prod
       args:
-        # Use Kong service name when on same network (crm-network)
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://kong:8000}
+        # ⚠️ IMPORTANT: This URL is used by browsers, not Docker containers!
+        # Use server IP/domain that browsers can access, NOT Docker service names
+        # Examples:
+        # - http://YOUR_SERVER_IP:80 (if Kong is on port 80)
+        # - https://api.yourdomain.com (if using domain)
+        # - https://yourdomain.com/api (if using reverse proxy)
+        # ❌ DO NOT USE: http://kong:8000 (browsers can't resolve this!)
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:80}
     container_name: fe-prionex-prod
     ports:
       # Use port 8080 to avoid conflict with backend Kong on port 80
