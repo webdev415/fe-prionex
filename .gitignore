@@ -46,3 +46,5 @@ memory-bank/
 *.cursor.md
 .cursor-*
 .cursorrules
+
+.env
