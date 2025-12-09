@@ -1,7 +1,8 @@
 /**
  * useProjects Hook
  *
- * React Query hook for fetching paginated projects list.
+ * React Query hooks for fetching projects.
+ * Updated: 2025-12-08 - Added useProjectDetail hook
  */
 
 import { useQuery } from '@tanstack/react-query'
@@ -26,5 +27,16 @@ export function useProjects(params: ProjectListParams = {}) {
   return useQuery({
     queryKey: projectsKeys.list(params),
     queryFn: () => projectsApi.getProjects(params),
+  })
+}
+
+/**
+ * Hook to fetch a single project detail
+ */
+export function useProjectDetail(projectId: number | null) {
+  return useQuery({
+    queryKey: projectsKeys.detail(projectId ?? 0),
+    queryFn: () => projectsApi.getProject(projectId!),
+    enabled: projectId !== null && projectId > 0,
   })
 }

@@ -53,6 +53,10 @@ import {
   TransactionHistoryIcon,
   Setting07Icon,
   LogoutSquare01Icon,
+  // Additional icons for UI enhancements
+  MultiplicationSignIcon,
+  Download01Icon,
+  File01Icon,
 } from '@hugeicons/core-free-icons'
 
 /**
@@ -142,6 +146,11 @@ export const Icons = {
   ),
   Setting07: (props: Omit<IconProps, 'icon'>) => <Icon icon={Setting07Icon} {...props} />,
   LogoutSquare01: (props: Omit<IconProps, 'icon'>) => <Icon icon={LogoutSquare01Icon} {...props} />,
+
+  // Additional icons for UI enhancements
+  Close: (props: Omit<IconProps, 'icon'>) => <Icon icon={MultiplicationSignIcon} {...props} />,
+  Download: (props: Omit<IconProps, 'icon'>) => <Icon icon={Download01Icon} {...props} />,
+  File: (props: Omit<IconProps, 'icon'>) => <Icon icon={File01Icon} {...props} />,
 }
 
 /**

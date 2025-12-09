@@ -71,6 +71,22 @@ export async function deleteProject(projectId: number): Promise<void> {
   await api.delete(`/api/v1/projects/${projectId}`)
 }
 
+/**
+ * Export projects to CSV or XLSX
+ */
+export async function exportProjects(params: {
+  format: 'csv' | 'xlsx'
+  search?: string
+  status?: string
+  client_company?: string
+}): Promise<Blob> {
+  const response = await api.get('/api/v1/projects/export', {
+    params,
+    responseType: 'blob',
+  })
+  return response.data
+}
+
 export const projectsApi = {
   getProjects,
   getProject,
@@ -79,4 +95,5 @@ export const projectsApi = {
   archiveProject,
   restoreProject,
   deleteProject,
+  exportProjects,
 }
