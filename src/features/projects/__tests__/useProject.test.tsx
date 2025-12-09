@@ -36,9 +36,23 @@ describe('useProject', () => {
       name: 'Project Alpha',
       code: 'ALPHA',
       description: 'Test project',
+      status: 'active' as const,
       is_active: true,
+      total_clients: 0,
+      total_debt_amount: 0,
+      user_count: 0,
+      role_count: 0,
       created_at: '2025-01-01T00:00:00Z',
       updated_at: '2025-01-01T00:00:00Z',
+      statistics: {
+        user_count: 0,
+        active_user_count: 0,
+        role_count: 0,
+        custom_role_count: 0,
+      },
+      roles: [],
+      default_roles: ['Admin', 'Supervisor', 'Operator'],
+      assigned_users_count: 0,
     }
 
     vi.mocked(projectsApi.projectsApi.getProject).mockResolvedValue(mockProject)

@@ -2,10 +2,16 @@
  * ChangePasswordModal Component
  *
  * Modal for changing user password with validation.
+ * Uses Modal component pattern consistent with other modals.
  */
 
 import { useState } from 'react'
-import { Dialog } from '@/components/ui/Dialog'
+import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
+import { Input } from '@/components/ui/Input'
+import { Label } from '@/components/ui/Label'
+import { Button } from '@/components/ui/Button'
+import { Icons } from '@/lib/icons'
+import { colors } from '@/lib/colors'
 
 export interface ChangePasswordModalProps {
   open: boolean
@@ -70,103 +76,135 @@ export function ChangePasswordModal({
   }
 
   return (
-    <Dialog open={open} onClose={handleClose}>
-      <div className="w-full max-w-md rounded-lg bg-white px-6 py-6 shadow-xl">
-        <h2 className="mb-4 text-xl font-semibold text-gray-900">Change Password</h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <Modal open={open} onClose={handleClose} maxWidth="md">
+      <ModalHeader
+        icon={
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-full"
+            style={{ backgroundColor: colors.primary[300] }}
+          >
+            <Icons.Lock size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          </div>
+        }
+        title="Change Password"
+      />
+      <ModalContent>
+        <form id="change-password-form" onSubmit={handleSubmit} className="space-y-4">
           {/* Current Password */}
           <div>
-            <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700">
-              Current Password
-            </label>
+            <Label htmlFor="currentPassword" required>
+              Current Password:
+            </Label>
             <div className="relative mt-1">
-              <input
+              <Input
                 id="currentPassword"
                 type={showCurrentPassword ? 'text' : 'password'}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+                variant={errors.currentPassword ? 'error' : 'default'}
               />
               <button
                 type="button"
                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                 className="absolute inset-y-0 right-0 flex items-center px-3"
-                aria-label="Show password"
+                aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
               >
-                {showCurrentPassword ? '👁️' : '👁️‍🗨️'}
+                <Icons.Eye
+                  size={18}
+                  color={showCurrentPassword ? colors.primary[500] : colors.gray[400]}
+                />
               </button>
             </div>
             {errors.currentPassword && (
-              <p className="mt-1 text-sm text-red-600">{errors.currentPassword}</p>
+              <p className="mt-1 text-sm text-red-500">{errors.currentPassword}</p>
             )}
           </div>
 
           {/* New Password */}
           <div>
-            <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
-              New Password
-            </label>
+            <Label htmlFor="newPassword" required>
+              New Password:
+            </Label>
             <div className="relative mt-1">
-              <input
+              <Input
                 id="newPassword"
                 type={showNewPassword ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
+                variant={errors.newPassword ? 'error' : 'default'}
               />
               <button
                 type="button"
                 onClick={() => setShowNewPassword(!showNewPassword)}
                 className="absolute inset-y-0 right-0 flex items-center px-3"
-                aria-label="Show password"
+                aria-label={showNewPassword ? 'Hide password' : 'Show password'}
               >
-                {showNewPassword ? '👁️' : '👁️‍🗨️'}
+                <Icons.Eye
+                  size={18}
+                  color={showNewPassword ? colors.primary[500] : colors.gray[400]}
+                />
               </button>
             </div>
             {errors.newPassword && (
-              <p className="mt-1 text-sm text-red-600">{errors.newPassword}</p>
+              <p className="mt-1 text-sm text-red-500">{errors.newPassword}</p>
             )}
           </div>
 
           {/* Confirm Password */}
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-              Confirm New Password
-            </label>
-            <div className="mt-1">
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-teal-500 focus:ring-teal-500 sm:text-sm"
-              />
-            </div>
+            <Label htmlFor="confirmPassword" required>
+              Confirm New Password:
+            </Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              variant={errors.confirmPassword ? 'error' : 'default'}
+              className="mt-1"
+            />
             {errors.confirmPassword && (
-              <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+              <p className="mt-1 text-sm text-red-500">{errors.confirmPassword}</p>
             )}
           </div>
-
-          {/* Actions */}
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:outline-none"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="rounded-md border border-transparent bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isLoading ? 'Changing...' : 'Change Password'}
-            </button>
-          </div>
         </form>
-      </div>
-    </Dialog>
+      </ModalContent>
+      <ModalFooter>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleClose}
+          disabled={isLoading}
+          className="flex-1 rounded-md text-sm font-medium"
+          style={{
+            border: 'none',
+            backgroundColor: colors.gray[500],
+            color: '#FFFFFF',
+            height: '45px',
+            fontSize: '14px',
+            fontWeight: 500,
+          }}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          form="change-password-form"
+          variant="primary"
+          disabled={isLoading}
+          className="flex-1 rounded-md text-sm font-medium"
+          style={{
+            border: 'none',
+            backgroundColor: colors.primary[300],
+            color: colors.neutral.dark[500],
+            height: '45px',
+            fontSize: '14px',
+            fontWeight: 500,
+          }}
+        >
+          {isLoading ? 'Changing...' : 'Change Password'}
+        </Button>
+      </ModalFooter>
+    </Modal>
   )
 }

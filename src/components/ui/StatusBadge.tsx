@@ -5,7 +5,7 @@
  * Matches the design specification for Active/Disabled statuses.
  */
 
-export type StatusType = 'active' | 'disabled' | 'inactive' | 'suspended'
+export type StatusType = 'active' | 'disabled' | 'inactive' | 'suspended' | 'pending' | 'archived'
 
 interface StatusBadgeProps {
   status: StatusType
@@ -46,7 +46,11 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
           ? 'Inactive'
           : status === 'suspended'
             ? 'Suspended'
-            : 'Disabled'}
+            : status === 'pending'
+              ? 'Pending'
+              : status === 'archived'
+                ? 'Archived'
+                : 'Disabled'}
     </span>
   )
 }

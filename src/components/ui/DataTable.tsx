@@ -3,9 +3,12 @@
  *
  * Reusable data table component with light theme styling.
  * Matches the design specification with light gray header and white rows.
+ * Supports sortable columns with visual indicators.
  */
 
 import { type ReactNode } from 'react'
+import { Icons } from '@/lib/icons'
+import { colors } from '@/lib/colors'
 
 export interface Column<T> {
   key: string
@@ -13,6 +16,15 @@ export interface Column<T> {
   render?: (item: T) => ReactNode
   align?: 'left' | 'center' | 'right'
   className?: string
+  sortable?: boolean
+  sortKey?: string // Optional different key for sorting (e.g., 'name' column might sort by 'name' field)
+}
+
+export type SortOrder = 'asc' | 'desc'
+
+export interface SortConfig {
+  key: string
+  order: SortOrder
 }
 
 export interface DataTableProps<T> {
@@ -21,6 +33,8 @@ export interface DataTableProps<T> {
   emptyMessage?: string
   onRowClick?: (item: T) => void
   className?: string
+  sortConfig?: SortConfig
+  onSort?: (key: string, order: SortOrder) => void
 }
 
 export function DataTable<T extends { id: number | string }>({
@@ -29,7 +43,44 @@ export function DataTable<T extends { id: number | string }>({
   emptyMessage = 'No data found',
   onRowClick,
   className,
+  sortConfig,
+  onSort,
 }: DataTableProps<T>) {
+  const handleSort = (column: Column<T>) => {
+    if (!column.sortable || !onSort) return
+
+    const sortKey = column.sortKey || column.key
+    const newOrder: SortOrder =
+      sortConfig?.key === sortKey && sortConfig.order === 'asc' ? 'desc' : 'asc'
+
+    onSort(sortKey, newOrder)
+  }
+
+  const getSortIcon = (column: Column<T>) => {
+    if (!column.sortable) return null
+
+    const sortKey = column.sortKey || column.key
+    const isActive = sortConfig?.key === sortKey
+
+    if (!isActive) {
+      return (
+        <span className="ml-1 opacity-40">
+          <Icons.ArrowDown size={14} color={colors.gray[500]} strokeWidth={1.5} />
+        </span>
+      )
+    }
+
+    return sortConfig.order === 'asc' ? (
+      <span className="ml-1">
+        <Icons.ArrowUp size={14} color={colors.primary[500]} strokeWidth={2} />
+      </span>
+    ) : (
+      <span className="ml-1">
+        <Icons.ArrowDown size={14} color={colors.primary[500]} strokeWidth={2} />
+      </span>
+    )
+  }
+
   return (
     <div
       className={`overflow-hidden rounded-xl ${className || ''}`}
@@ -52,7 +103,7 @@ export function DataTable<T extends { id: number | string }>({
                     : column.align === 'right'
                       ? 'text-right'
                       : 'text-left'
-                }`}
+                } ${column.sortable ? 'cursor-pointer select-none hover:bg-gray-50' : ''}`}
                 style={{
                   height: '49px',
                   fontSize: '12px',
@@ -60,8 +111,12 @@ export function DataTable<T extends { id: number | string }>({
                   color: '#05040D',
                   borderRight: index < columns.length - 1 ? '1px solid #EBECE8' : 'none',
                 }}
+                onClick={() => handleSort(column)}
               >
-                {column.header}
+                <span className="inline-flex items-center">
+                  {column.header}
+                  {getSortIcon(column)}
+                </span>
               </th>
             ))}
           </tr>
