@@ -6,9 +6,12 @@
  */
 
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '@/features/auth'
 import { useUsers } from '@/features/users/hooks/useUsers'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 import { CreateUserModal } from './components/CreateUserModal'
 import { UserDetailModal } from './components/UserDetailModal'
 import { EditUserModal } from './components/EditUserModal'
@@ -26,6 +29,7 @@ import { ErrorState } from '@/components/ErrorState'
 const ITEMS_PER_PAGE = 10
 
 export function UserManagementPage() {
+  const navigate = useNavigate()
   const { startImpersonation, user: currentUser, isLoading: authLoading } = useAuth()
   const [currentPage, setCurrentPage] = useState(1)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -34,8 +38,8 @@ export function UserManagementPage() {
   const [unlockUser, setUnlockUser] = useState<ApiUser | null>(null)
   const [impersonatingUserId, setImpersonatingUserId] = useState<number | null>(null)
 
-  // Check if current user has impersonate permission
-  const canImpersonate = currentUser?.permissions?.includes('impersonate_users') ?? false
+  // Permission checks are handled by PermissionGuard components
+  // No need to declare variables here - just use the guards directly
 
   // Fetch users with pagination
   const { data, isLoading, isError, error } = useUsers({
@@ -76,6 +80,10 @@ export function UserManagementPage() {
     try {
       await startImpersonation(user.id)
       toast.success(`Now viewing as ${user.username}`)
+
+      // Redirect to dashboard to avoid permission issues
+      // (impersonated user may not have access to current page)
+      navigate('/dashboard')
     } catch (error: unknown) {
       console.error('Failed to impersonate user:', error)
       const err = error as { message?: string }
@@ -155,33 +163,39 @@ export function UserManagementPage() {
             <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
             View
           </button>
-          <button
-            onClick={() => handleEdit(user)}
-            className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
-            style={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: '#05040D',
-            }}
-          >
-            <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
-            Edit
-          </button>
-          {canImpersonate && currentUser?.id !== String(user.id) && (
+
+          <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
             <button
-              onClick={() => handleImpersonate(user)}
-              disabled={authLoading || impersonatingUserId !== null}
-              className="flex items-center gap-1 font-medium transition-colors hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => handleEdit(user)}
+              className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
               style={{
                 fontSize: '12px',
                 fontWeight: 500,
                 color: '#05040D',
               }}
             >
-              <Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />
-              {impersonatingUserId === user.id ? 'Impersonating...' : 'Impersonate'}
+              <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
+              Edit
             </button>
-          )}
+          </PermissionGuard>
+
+          <PermissionGuard permission={PERMISSIONS.USERS.IMPERSONATE}>
+            {currentUser?.id !== String(user.id) && (
+              <button
+                onClick={() => handleImpersonate(user)}
+                disabled={authLoading || impersonatingUserId !== null}
+                className="flex items-center gap-1 font-medium transition-colors hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  color: '#05040D',
+                }}
+              >
+                <Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />
+                {impersonatingUserId === user.id ? 'Impersonating...' : 'Impersonate'}
+              </button>
+            )}
+          </PermissionGuard>
           <div className="flex items-center gap-2">
             <label
               className="font-medium"
@@ -231,34 +245,36 @@ export function UserManagementPage() {
           </span>
         </div>
 
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-          style={{
-            backgroundColor: colors.secondary[800],
-          }}
-          aria-label="Add new user"
-        >
-          <div
-            className="flex items-center justify-center rounded-full"
+        <PermissionGuard permission={PERMISSIONS.USERS.CREATE}>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
             style={{
-              width: '40px',
-              height: '40px',
-              backgroundColor: colors.primary[300],
-              marginLeft: '4px',
+              backgroundColor: colors.secondary[800],
             }}
+            aria-label="Add new user"
           >
-            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
-          </div>
-          <span
-            className="px-4 py-3 font-medium text-white"
-            style={{
-              fontSize: '14px',
-            }}
-          >
-            Add New User
-          </span>
-        </button>
+            <div
+              className="flex items-center justify-center rounded-full"
+              style={{
+                width: '40px',
+                height: '40px',
+                backgroundColor: colors.primary[300],
+                marginLeft: '4px',
+              }}
+            >
+              <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+            </div>
+            <span
+              className="px-4 py-3 font-medium text-white"
+              style={{
+                fontSize: '14px',
+              }}
+            >
+              Add New User
+            </span>
+          </button>
+        </PermissionGuard>
       </div>
 
       {/* Loading State */}
