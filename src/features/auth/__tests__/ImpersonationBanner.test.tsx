@@ -16,6 +16,9 @@ const mockImpersonatedUser = {
   email: 'john@example.com',
   firstName: 'John',
   lastName: 'Doe',
+  active_role_name: 'Admin',
+  active_project_id: '1',
+  projects: [{ id: '1', name: 'Test Project' }],
 }
 
 const mockOnExitImpersonation = vi.fn()
@@ -49,7 +52,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      expect(screen.getByRole('banner')).toBeInTheDocument()
+      expect(screen.getByText(/impersonation mode/i)).toBeInTheDocument()
     })
 
     it('should display impersonated username', () => {
@@ -88,10 +91,10 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      expect(screen.getByRole('button', { name: /exit view/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /exit impersonation/i })).toBeInTheDocument()
     })
 
-    it('should have blue/info styling for visibility', () => {
+    it('should have white background styling for visibility', () => {
       render(
         <ImpersonationBanner
           isImpersonating={true}
@@ -101,11 +104,11 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const banner = screen.getByRole('banner')
-      expect(banner).toHaveClass('bg-blue-600')
+      const banner = screen.getByText(/impersonation mode/i).closest('div')?.parentElement
+      expect(banner).toHaveClass('bg-white')
     })
 
-    it('should be sticky at the top', () => {
+    it('should render with proper layout structure', () => {
       render(
         <ImpersonationBanner
           isImpersonating={true}
@@ -115,9 +118,11 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const banner = screen.getByRole('banner')
-      expect(banner).toHaveClass('sticky')
-      expect(banner).toHaveClass('top-0')
+      const container = screen.getByText(/impersonation mode/i).closest('div')
+        ?.parentElement?.parentElement
+      expect(container).toHaveClass('w-full')
+      expect(container).toHaveClass('flex')
+      expect(container).toHaveClass('items-center')
     })
   })
 
@@ -134,7 +139,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const exitButton = screen.getByRole('button', { name: /exit view/i })
+      const exitButton = screen.getByRole('button', { name: /exit impersonation/i })
       await user.click(exitButton)
 
       expect(mockOnExitImpersonation).toHaveBeenCalledTimes(1)
@@ -150,7 +155,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const exitButton = screen.getByRole('button', { name: /exit view/i })
+      const exitButton = screen.getByRole('button', { name: /exiting\.\.\./i })
       expect(exitButton).toBeDisabled()
     })
 
@@ -164,12 +169,12 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      expect(screen.getByText(/exiting/i)).toBeInTheDocument()
+      expect(screen.getByText(/exiting\.\.\./i)).toBeInTheDocument()
     })
   })
 
   describe('User information display', () => {
-    it('should display full name when available', () => {
+    it('should display username and role', () => {
       render(
         <ImpersonationBanner
           isImpersonating={true}
@@ -179,32 +184,62 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      expect(screen.getByText(/John Doe/)).toBeInTheDocument()
+      expect(screen.getByText(/john_doe/i)).toBeInTheDocument()
+      expect(screen.getByText(/Admin/i)).toBeInTheDocument()
     })
 
-    it('should display username only when no full name', () => {
-      const userWithoutName = {
+    it('should display project name', () => {
+      render(
+        <ImpersonationBanner
+          isImpersonating={true}
+          impersonatedUser={mockImpersonatedUser}
+          onExitImpersonation={mockOnExitImpersonation}
+          isLoading={false}
+        />
+      )
+
+      expect(screen.getByText(/test project/i)).toBeInTheDocument()
+    })
+
+    it('should display unknown role when role is not available', () => {
+      const userWithoutRole = {
         ...mockImpersonatedUser,
-        firstName: undefined,
-        lastName: undefined,
+        active_role_name: null,
       }
 
       render(
         <ImpersonationBanner
           isImpersonating={true}
-          impersonatedUser={userWithoutName}
+          impersonatedUser={userWithoutRole}
           onExitImpersonation={mockOnExitImpersonation}
           isLoading={false}
         />
       )
 
-      expect(screen.getByText('john_doe')).toBeInTheDocument()
-      expect(screen.queryByText(/John Doe/)).not.toBeInTheDocument()
+      expect(screen.getByText(/unknown role/i)).toBeInTheDocument()
+    })
+
+    it('should display unknown project when project is not available', () => {
+      const userWithoutProject = {
+        ...mockImpersonatedUser,
+        active_project_id: null,
+      }
+
+      render(
+        <ImpersonationBanner
+          isImpersonating={true}
+          impersonatedUser={userWithoutProject}
+          onExitImpersonation={mockOnExitImpersonation}
+          isLoading={false}
+        />
+      )
+
+      expect(screen.getByText(/unknown project/i)).toBeInTheDocument()
     })
   })
 
   describe('Accessibility', () => {
-    it('should have appropriate role for banner', () => {
+    it('should display impersonation mode text', () => {
       render(
         <ImpersonationBanner
           isImpersonating={true}
@@ -214,7 +249,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      expect(screen.getByRole('banner')).toBeInTheDocument()
+      expect(screen.getByText(/impersonation mode/i)).toBeInTheDocument()
     })
 
     it('should have clear button label', () => {
@@ -227,11 +262,11 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const button = screen.getByRole('button', { name: /exit view/i })
+      const button = screen.getByRole('button', { name: /exit impersonation/i })
       expect(button).toHaveAccessibleName()
     })
 
-    it('should have high color contrast for visibility', () => {
+    it('should have proper styling for visibility', () => {
       render(
         <ImpersonationBanner
           isImpersonating={true}
@@ -241,14 +276,13 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const banner = screen.getByRole('banner')
-      // Should have white text on dark blue background
-      expect(banner).toHaveClass('text-white')
+      const bannerContainer = screen.getByText(/impersonation mode/i).closest('div')?.parentElement
+      expect(bannerContainer).toHaveClass('bg-white')
     })
   })
 
-  describe('Z-index layering', () => {
-    it('should have high z-index to stay on top', () => {
+  describe('Layout and styling', () => {
+    it('should have proper container structure', () => {
       render(
         <ImpersonationBanner
           isImpersonating={true}
@@ -258,8 +292,25 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const banner = screen.getByRole('banner')
-      expect(banner).toHaveClass('z-50')
+      const mainContainer = screen.getByText(/impersonation mode/i).closest('div')
+        ?.parentElement?.parentElement
+      expect(mainContainer).toHaveClass('w-full')
+      expect(mainContainer).toHaveClass('flex')
+    })
+
+    it('should have rounded corners and proper height', () => {
+      render(
+        <ImpersonationBanner
+          isImpersonating={true}
+          impersonatedUser={mockImpersonatedUser}
+          onExitImpersonation={mockOnExitImpersonation}
+          isLoading={false}
+        />
+      )
+
+      const bannerCard = screen.getByText(/impersonation mode/i).closest('div')?.parentElement
+      expect(bannerCard).toHaveClass('rounded-md')
+      expect(bannerCard).toHaveClass('h-[65px]')
     })
   })
 })

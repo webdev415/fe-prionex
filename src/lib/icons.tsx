@@ -5,6 +5,7 @@
  * Import icons from this file for consistent usage across the app.
  */
 
+/* eslint-disable react-refresh/only-export-components */
 import { HugeiconsIcon } from '@hugeicons/react'
 import type { ComponentProps } from 'react'
 

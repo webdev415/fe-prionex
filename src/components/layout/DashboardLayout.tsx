@@ -1,5 +1,7 @@
 import { type ReactNode, useState } from 'react'
+import { toast } from 'sonner'
 import { useAuth } from '@/features/auth'
+import { ImpersonationBanner } from '@/features/auth/components/ImpersonationBanner'
 import { LogoutConfirmationModal } from './LogoutConfirmationModal'
 import { Sidebar, type SidebarItem, type SidebarAction } from './Sidebar'
 import { SearchBar } from './SearchBar'
@@ -18,9 +20,10 @@ interface DashboardLayoutProps {
  * - Dark teal/green gradient background
  */
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { logout } = useAuth()
+  const { logout, isImpersonating, impersonatedUser, exitImpersonation } = useAuth()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isExitingImpersonation, setIsExitingImpersonation] = useState(false)
 
   const handleLogoutClick = () => {
     setShowLogoutModal(true)
@@ -38,6 +41,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleLogoutCancel = () => {
     setShowLogoutModal(false)
+  }
+
+  const handleExitImpersonation = async () => {
+    setIsExitingImpersonation(true)
+    try {
+      await exitImpersonation()
+      toast.success('Exited impersonation mode')
+    } catch (error: unknown) {
+      console.error('Failed to exit impersonation:', error)
+      const err = error as { message?: string }
+      toast.error(err.message || 'Failed to exit impersonation')
+    } finally {
+      setIsExitingImpersonation(false)
+    }
   }
 
   const handleSearch = (_query: string, _searchType: string) => {
@@ -126,6 +143,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Fixed Impersonation Banner at Bottom */}
+      {isImpersonating && impersonatedUser && (
+        <div className="fixed right-0 bottom-6 left-0 z-50">
+          <ImpersonationBanner
+            isImpersonating={isImpersonating}
+            impersonatedUser={impersonatedUser}
+            onExitImpersonation={handleExitImpersonation}
+            isLoading={isExitingImpersonation}
+          />
+        </div>
+      )}
 
       {/* Logout Confirmation Modal */}
       <LogoutConfirmationModal

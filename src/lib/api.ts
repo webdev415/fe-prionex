@@ -1,4 +1,5 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
+import { useAuthStore } from '@/stores/authStore'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
@@ -107,6 +108,16 @@ api.interceptors.response.use(
         // Refresh failed - clear token and redirect to login
         setAccessToken(null)
         refreshSubscribers = []
+
+        // Clear auth state including impersonation
+        useAuthStore.setState({
+          user: null,
+          isAuthenticated: false,
+          isImpersonating: false,
+          impersonatedUser: null,
+          originalAdminUser: null,
+        })
+
         window.location.href = '/login'
         return Promise.reject(refreshError)
       } finally {

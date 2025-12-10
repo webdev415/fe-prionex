@@ -83,7 +83,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
     handleSubmit,
     control,
     setValue,
-    watch,
+    getValues,
     trigger,
     formState: { errors },
   } = useForm<CreateUserFormData>({
@@ -273,7 +273,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
         <div className="flex items-center gap-2">
           <Checkbox
             id="must_change_password"
-            checked={watch('must_change_password') || false}
+            checked={getValues('must_change_password') || false}
             onCheckedChange={(checked) => setValue('must_change_password', checked === true)}
           />
           <Label htmlFor="must_change_password" className="mb-0 cursor-pointer">
