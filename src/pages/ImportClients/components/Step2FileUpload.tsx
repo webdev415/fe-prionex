@@ -131,7 +131,7 @@ export function Step2FileUpload({ data, onChange }: Step2FileUploadProps) {
               aspectRatio: '1/1',
             }}
             >
-            <Icons.FileRemove size={48} color="#EF4444" />
+            <Icons.FileRemove size={48} strokeWidth={0.5} color="#EF4444" />
           </div>
         )}
 
@@ -161,10 +161,10 @@ export function Step2FileUpload({ data, onChange }: Step2FileUploadProps) {
           {hasInvalidFile && (
             <div
               style={{
-                fontSize: '16px',
-                fontWeight: 500,
-                lineHeight: '155%',
-                letterSpacing: '-0.32px',
+                fontSize: '24px',
+                fontWeight: 300,
+                lineHeight: '120%',
+                letterSpacing: '-0.48px',
                 textAlign: 'center',
                 color: '#EF4444', // Red color for error
               }}
@@ -207,7 +207,7 @@ export function Step2FileUpload({ data, onChange }: Step2FileUploadProps) {
             <div
               style={{
                 fontSize: '16px',
-                fontWeight: 300,
+                fontWeight: 500,
                 lineHeight: '155%',
                 letterSpacing: '-0.32px',
                 textAlign: 'center',
