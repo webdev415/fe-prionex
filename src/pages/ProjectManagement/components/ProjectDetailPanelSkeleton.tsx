@@ -29,7 +29,7 @@ export function ProjectDetailPanelSkeleton() {
       </div>
 
       {/* Scrollable Content Skeleton */}
-      <div className="mt-2 flex-1 overflow-y-auto flex flex-col gap-2">
+      <div className="mt-2 flex flex-1 flex-col gap-2 overflow-y-auto">
         {/* Basic Info Skeleton */}
         <div className="grid grid-cols-2 gap-1">
           {Array.from({ length: 4 }).map((_, index) => (
@@ -161,4 +161,3 @@ export function ProjectDetailPanelSkeleton() {
 }
 
 export default ProjectDetailPanelSkeleton
-

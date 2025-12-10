@@ -135,10 +135,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
 
           {/* Project Information Section */}
           <div className="space-y-4">
-            <h3
-              className="text-base font-medium"
-              style={{ color: colors.neutral.dark[500] }}
-            >
+            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
               Project Information
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -179,13 +176,21 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                 >
                   <div className="flex items-center gap-2">
                     <RadioItem value="active" id="status-active" />
-                    <Label htmlFor="status-active" className="mb-0 cursor-pointer" style={{ fontWeight: 300, fontSize: '14px' }}>
+                    <Label
+                      htmlFor="status-active"
+                      className="mb-0 cursor-pointer"
+                      style={{ fontWeight: 300, fontSize: '14px' }}
+                    >
                       Active
                     </Label>
                   </div>
                   <div className="flex items-center gap-2">
                     <RadioItem value="inactive" id="status-inactive" />
-                    <Label htmlFor="status-inactive" className="mb-0 cursor-pointer" style={{ fontWeight: 300, fontSize: '14px' }}>
+                    <Label
+                      htmlFor="status-inactive"
+                      className="mb-0 cursor-pointer"
+                      style={{ fontWeight: 300, fontSize: '14px' }}
+                    >
                       Inactive
                     </Label>
                   </div>
@@ -197,10 +202,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
 
           {/* Client & Contract Section */}
           <div className="space-y-4">
-            <h3
-              className="text-base font-medium"
-              style={{ color: colors.neutral.dark[500] }}
-            >
+            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
               Client & Contract
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -227,10 +229,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
 
           {/* Timeline Section */}
           <div className="space-y-4">
-            <h3
-              className="text-base font-medium"
-              style={{ color: colors.neutral.dark[500] }}
-            >
+            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
               Timeline
             </h3>
             <div className="flex items-center gap-4">

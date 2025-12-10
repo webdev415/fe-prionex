@@ -122,9 +122,9 @@ export function SearchFiltersBar({
   )
 
   return (
-    <div className="mb-6 w-full flex items-center justify-between gap-3">
+    <div className="mb-6 flex w-full items-center justify-between gap-3">
       {/* Search + Filters pill - styled to match dashboard header search bar */}
-      <div className='w-[70%] flex items-center justify-between'>
+      <div className="flex w-[70%] items-center justify-between">
         <div
           className="flex flex-1 items-center gap-3 rounded-full border bg-white pr-2 pl-4 shadow-sm"
           style={{
@@ -241,62 +241,62 @@ export function SearchFiltersBar({
         </div>
       </div>
 
-      <div className='w-[30%] flex items-center justify-end gap-2'>
-          {/* Add New Project Button */}
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+      <div className="flex w-[30%] items-center justify-end gap-2">
+        {/* Add New Project Button */}
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+          style={{
+            backgroundColor: colors.secondary[800],
+          }}
+          aria-label="Add new project"
+        >
+          <div
+            className="flex items-center justify-center rounded-full"
             style={{
-              backgroundColor: colors.secondary[800],
-            }}
-            aria-label="Add new project"
-          >
-            <div
-              className="flex items-center justify-center rounded-full"
-              style={{
-                width: '40px',
-                height: '40px',
-                backgroundColor: colors.primary[300],
-                marginLeft: '4px',
-              }}
-            >
-              <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
-            </div>
-            <span
-              className="px-4 py-3 font-medium text-white"
-              style={{
-                fontSize: '14px',
-              }}
-            >
-              New Project
-            </span>
-          </button>
-
-          {/* Create Modal */}
-          {showCreateModal && (
-            <CreateProjectModal
-              open={showCreateModal}
-              onClose={() => setShowCreateModal(false)}
-              onSuccess={handleCreateSuccess}
-            />
-          )}
-
-          {/* Export Button */}
-          <button
-            onClick={onExport}
-            disabled={isLoading}
-            type="button"
-            className="flex items-center gap-2 rounded-full bg-white px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
-            style={{
+              width: '40px',
+              height: '40px',
               backgroundColor: colors.primary[300],
-              color: colors.neutral.dark[500],
-              height: '45px',
+              marginLeft: '4px',
             }}
           >
-            <Icons.FileImport size={16} color={colors.neutral.dark[500]} />
-            Export
-          </button>
-        </div>
+            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          </div>
+          <span
+            className="px-4 py-3 font-medium text-white"
+            style={{
+              fontSize: '14px',
+            }}
+          >
+            New Project
+          </span>
+        </button>
+
+        {/* Create Modal */}
+        {showCreateModal && (
+          <CreateProjectModal
+            open={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onSuccess={handleCreateSuccess}
+          />
+        )}
+
+        {/* Export Button */}
+        <button
+          onClick={onExport}
+          disabled={isLoading}
+          type="button"
+          className="flex items-center gap-2 rounded-full bg-white px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
+          style={{
+            backgroundColor: colors.primary[300],
+            color: colors.neutral.dark[500],
+            height: '45px',
+          }}
+        >
+          <Icons.FileImport size={16} color={colors.neutral.dark[500]} />
+          Export
+        </button>
+      </div>
     </div>
   )
 }

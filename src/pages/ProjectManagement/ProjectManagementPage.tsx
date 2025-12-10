@@ -61,11 +61,13 @@ export function ProjectManagementPage() {
   }, [selectedProjectId, projects])
 
   // Fetch selected project detail using effective ID
-  const { data: projectDetail, isLoading: isDetailLoading } = useProjectDetail(effectiveSelectedProjectId)
+  const { data: projectDetail, isLoading: isDetailLoading } = useProjectDetail(
+    effectiveSelectedProjectId
+  )
 
   // Export mutation
   const exportMutation = useProjectExport()
-  
+
   // Delete mutation
   const deleteMutation = useDeleteProject()
 
@@ -244,7 +246,6 @@ export function ProjectManagementPage() {
         >
           Project Management
         </h1>
-
       </div>
 
       {/* Search & Filters */}
@@ -271,7 +272,7 @@ export function ProjectManagementPage() {
         {/* Projects Table */}
         {!isLoading && !isError && (
           <div className="flex flex-1 flex-col">
-            <div className="flex-1 overflow-y-auto flex items-start justify-between w-full">
+            <div className="flex w-full flex-1 items-start justify-between overflow-y-auto">
               <div className="w-[70%]">
                 <div
                   className="rounded-xl p-6"

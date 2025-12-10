@@ -60,7 +60,6 @@ import {
   Download01Icon,
   File01Icon,
   Sorting01Icon,
-
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -209,7 +208,7 @@ export {
   LogoutSquare01Icon,
   ChartRingIcon,
   Sorting01Icon,
-  UserCircle02Icon
+  UserCircle02Icon,
 }
 
 /**

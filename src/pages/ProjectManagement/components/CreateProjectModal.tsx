@@ -139,10 +139,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
 
           {/* Project Information Section */}
           <div className="space-y-4">
-            <h3
-              className="text-base font-medium"
-              style={{ color: colors.neutral.dark[500] }}
-            >
+            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
               Project Information
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -173,10 +170,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
 
           {/* Client & Contract Section */}
           <div className="space-y-4">
-            <h3
-              className="text-base font-medium"
-              style={{ color: colors.neutral.dark[500] }}
-            >
+            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
               Client & Contract
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -203,10 +197,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
 
           {/* Timeline Section */}
           <div className="space-y-4">
-            <h3
-              className="text-base font-medium"
-              style={{ color: colors.neutral.dark[500] }}
-            >
+            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
               Timeline
             </h3>
             <div className="flex items-center gap-4">

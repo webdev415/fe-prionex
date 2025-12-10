@@ -76,4 +76,3 @@ export function RoleManagementPageSkeleton() {
 }
 
 export default RoleManagementPageSkeleton
-

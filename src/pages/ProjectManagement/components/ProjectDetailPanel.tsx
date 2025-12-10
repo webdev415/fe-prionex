@@ -90,9 +90,7 @@ export function ProjectDetailPanel({
       }}
     >
       {/* Header */}
-      <div
-        className="flex items-center border-none"
-      >
+      <div className="flex items-center border-none">
         <div className="flex items-center gap-2">
           <StatusBadge status={getStatusType(project.status)} />
           <h2
@@ -106,13 +104,13 @@ export function ProjectDetailPanel({
       </div>
 
       {/* Scrollable Content */}
-      <div className="mt-2 flex-1 overflow-y-auto flex flex-col gap-2">
+      <div className="mt-2 flex flex-1 flex-col gap-2 overflow-y-auto">
         {/* Basic Info */}
         <div className="grid grid-cols-2 gap-1">
-            <InfoItem label="Code" value={project.code} />
-            <InfoItem label="Contract" value={project.contract_number} />
-            <InfoItem label="Client" value={project.client_company} />
-            <InfoItem label="Users" value={project.user_count?.toString()} />
+          <InfoItem label="Code" value={project.code} />
+          <InfoItem label="Contract" value={project.contract_number} />
+          <InfoItem label="Client" value={project.client_company} />
+          <InfoItem label="Users" value={project.user_count?.toString()} />
         </div>
 
         {/* Divider */}
@@ -125,10 +123,7 @@ export function ProjectDetailPanel({
           </h3>
           <div className="grid grid-cols-2 gap-3">
             <MetricCard label="Clients" value={formatNumber(project.total_clients)} />
-            <MetricCard
-              label="Total Debt"
-              value={formatCurrency(project.total_debt_amount)}
-            />
+            <MetricCard label="Total Debt" value={formatCurrency(project.total_debt_amount)} />
           </div>
         </div>
 
@@ -141,15 +136,18 @@ export function ProjectDetailPanel({
             <h3 className="text-sm font-light" style={{ color: colors.neutral.dark[500] }}>
               Description
             </h3>
-            <p className="text-sm font-light leading-relaxed" style={{ color: colors.neutral.dark[500] }}>
+            <p
+              className="text-sm leading-relaxed font-light"
+              style={{ color: colors.neutral.dark[500] }}
+            >
               {isExpanded ? project.description : truncateText(project.description, 120)}
             </p>
             {project.description.length > 120 && (
-              <div className='flex'>
+              <div className="flex">
                 <button
                   onClick={() => setIsExpanded(!isExpanded)}
                   className="text-xs font-medium"
-                  style={{ color: colors.secondary[800]}}
+                  style={{ color: colors.secondary[800] }}
                 >
                   {isExpanded ? 'Show less' : 'Read more'}
                 </button>
@@ -162,7 +160,7 @@ export function ProjectDetailPanel({
         <div className="my-1 h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
 
         {/* Access and Roles */}
-        <div className='flex flex-col gap-2'>
+        <div className="flex flex-col gap-2">
           <h3 className="text-base font-light" style={{ color: colors.neutral.dark[500] }}>
             Access and Roles
           </h3>
@@ -186,10 +184,10 @@ export function ProjectDetailPanel({
               {project.default_roles?.join(', ') || 'None'}
             </span>
           </div>
-          <div className='flex'>
+          <div className="flex">
             <button
               onClick={() => navigate('/dashboard/roles')}
-              className="mt-3 flex items-center gap-1.5 text-xs font-[500] text-white p-2.5 rounded"
+              className="mt-3 flex items-center gap-1.5 rounded p-2.5 text-xs font-[500] text-white"
               style={{ backgroundColor: colors.secondary[800] }}
             >
               <Icons.UserCircle02Icon size={20} color={colors.primary[500]} />
@@ -280,7 +278,7 @@ function InfoItem({ label, value }: { label: string; value?: string }) {
       <span className="text-xs font-light" style={{ color: colors.gray[700] }}>
         {label}:
       </span>
-      <span className="text-base font-medium" style={{ color: colors.neutral.dark[500]  }}>
+      <span className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
         {value || '—'}
       </span>
     </div>

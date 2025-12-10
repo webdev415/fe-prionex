@@ -57,7 +57,13 @@ export function RoleManagementPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProjectId])
 
-  const { data, isLoading: loadingRoles, isError, error, refetch } = useRoles({
+  const {
+    data,
+    isLoading: loadingRoles,
+    isError,
+    error,
+    refetch,
+  } = useRoles({
     page: 1,
     page_size: 100,
     project_id: selectedProjectId || undefined,

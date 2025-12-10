@@ -14,7 +14,7 @@ const TABLE_COLUMNS = 6
 export function ProjectManagementPageSkeleton() {
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto flex items-start justify-between w-full">
+      <div className="flex w-full flex-1 items-start justify-between overflow-y-auto">
         {/* Table Area (70%) */}
         <div className="w-[70%]">
           <div
@@ -48,4 +48,3 @@ export function ProjectManagementPageSkeleton() {
 }
 
 export default ProjectManagementPageSkeleton
-
