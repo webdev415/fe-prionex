@@ -45,9 +45,9 @@ export function ImpersonationBanner({
   const roleName = impersonatedUser.active_role_name || 'Unknown Role'
 
   return (
-    <div className="w-full flex items-center justify-center">
+    <div className="flex w-full items-center justify-center">
       <div
-        className="w-[80%] xl:w-[60%] h-[65px] bg-white flex items-center justify-between rounded-md"
+        className="flex h-[65px] w-[80%] items-center justify-between rounded-md bg-white xl:w-[60%]"
         style={{
           color: colors.neutral.dark[500],
           fontSize: '16px',
@@ -64,22 +64,19 @@ export function ImpersonationBanner({
           <Icons.UserCircle02Icon size={20} color={colors.secondary[800]} strokeWidth={1.5} />
           Impersonation mode
         </div>
-        <div className='font-light'>
+        <div className="font-light">
           Viewing as:{' '}
           <span className="font-medium">
             {impersonatedUser.username}({roleName})
           </span>
         </div>
-        <div className='font-light'>
-          Project: {' '}
-          <span className="font-medium">
-            {projectName}
-          </span>
+        <div className="font-light">
+          Project: <span className="font-medium">{projectName}</span>
         </div>
         <button
           onClick={onExitImpersonation}
           disabled={isLoading}
-          className="rounded-sm flex items-center justify-center gap-2"
+          className="flex items-center justify-center gap-2 rounded-sm"
           style={{
             color: colors.neutral.dark[500],
             fontSize: '14px',

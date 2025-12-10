@@ -541,11 +541,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Backend returns: { success: bool, message: string, data: { impersonation_token: string, impersonated_user: {...} } }
       // Validate response structure
-      if (!response.data || !response.data.data || !response.data.data.impersonation_token || !response.data.data.impersonated_user) {
+      if (
+        !response.data ||
+        !response.data.data ||
+        !response.data.data.impersonation_token ||
+        !response.data.data.impersonated_user
+      ) {
         throw new Error('Invalid response from impersonation API')
       }
 
-      const { impersonation_token, impersonated_user, active_project, permissions } = response.data.data
+      const { impersonation_token, impersonated_user, active_project, permissions } =
+        response.data.data
 
       // Store the new impersonation token
       setAccessToken(impersonation_token)
@@ -595,7 +601,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       let errorState: AuthErrorState | null = null
 
       // Handle specific error cases
-      const err = error as { response?: { status?: number; data?: { detail?: string | { message?: string } } } }
+      const err = error as {
+        response?: { status?: number; data?: { detail?: string | { message?: string } } }
+      }
 
       if (err.response?.status === 403) {
         errorMessage = 'You do not have permission to impersonate users'
@@ -628,7 +636,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       // Backend returns: { success: bool, message: string, data: { admin_token: string, admin_user: {...} } }
       // Validate response structure
-      if (!response.data || !response.data.data || !response.data.data.admin_token || !response.data.data.admin_user) {
+      if (
+        !response.data ||
+        !response.data.data ||
+        !response.data.data.admin_token ||
+        !response.data.data.admin_user
+      ) {
         throw new Error('Invalid response from exit impersonation API')
       }
 
@@ -647,14 +660,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email: admin_user.email,
         firstName: admin_user.first_name,
         lastName: admin_user.last_name,
-        projects: admin_user.projects?.map((p: { id: number; name: string; code: string; role_name: string }) => ({
-          id: String(p.id),
-          name: p.name,
-          roles: [{ id: String(p.id), name: p.role_name }],
-        })) || [],
-        active_project_id: admin_user.active_project
-          ? String(admin_user.active_project.id)
-          : null,
+        projects:
+          admin_user.projects?.map(
+            (p: { id: number; name: string; code: string; role_name: string }) => ({
+              id: String(p.id),
+              name: p.name,
+              roles: [{ id: String(p.id), name: p.role_name }],
+            })
+          ) || [],
+        active_project_id: admin_user.active_project ? String(admin_user.active_project.id) : null,
         active_role_id: admin_user.role ? String(admin_user.role.id) : null,
         active_role_name: admin_user.role?.name || null,
         permissions: admin_user.permissions || [],

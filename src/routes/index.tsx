@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import LoginPage from '@/pages/auth/LoginPage'
 import { UserManagementPage } from '@/pages/UserManagement'

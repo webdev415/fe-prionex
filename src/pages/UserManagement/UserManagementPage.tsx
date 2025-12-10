@@ -171,7 +171,7 @@ export function UserManagementPage() {
             <button
               onClick={() => handleImpersonate(user)}
               disabled={authLoading || impersonatingUserId !== null}
-              className="flex items-center gap-1 font-medium transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1 font-medium transition-colors hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
               style={{
                 fontSize: '12px',
                 fontWeight: 500,

@@ -18,12 +18,16 @@ interface ViewRoleFormProps {
 export function ViewRoleForm({ role }: ViewRoleFormProps) {
   const { data: permissionsData, isLoading: loadingPermissions } = usePermissions()
 
-  const permissions = permissionsData?.permissions || []
-
   // Get selected permission IDs from role
   const selectedPermissionIds = useMemo(
     () => new Set(role.permissions?.map((p) => p.id) || []),
     [role.permissions]
+  )
+
+  // Group permissions by category
+  const permissions = useMemo(
+    () => permissionsData?.permissions || [],
+    [permissionsData?.permissions]
   )
 
   // Filter to only selected permissions and group by category

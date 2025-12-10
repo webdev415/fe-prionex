@@ -146,7 +146,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Fixed Impersonation Banner at Bottom */}
       {isImpersonating && impersonatedUser && (
-        <div className="fixed bottom-6 left-0 right-0 z-50">
+        <div className="fixed right-0 bottom-6 left-0 z-50">
           <ImpersonationBanner
             isImpersonating={isImpersonating}
             impersonatedUser={impersonatedUser}

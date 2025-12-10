@@ -18,9 +18,7 @@ const mockImpersonatedUser = {
   lastName: 'Doe',
   active_role_name: 'Admin',
   active_project_id: '1',
-  projects: [
-    { id: '1', name: 'Test Project' },
-  ],
+  projects: [{ id: '1', name: 'Test Project' }],
 }
 
 const mockOnExitImpersonation = vi.fn()
@@ -120,7 +118,8 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const container = screen.getByText(/impersonation mode/i).closest('div')?.parentElement?.parentElement
+      const container = screen.getByText(/impersonation mode/i).closest('div')
+        ?.parentElement?.parentElement
       expect(container).toHaveClass('w-full')
       expect(container).toHaveClass('flex')
       expect(container).toHaveClass('items-center')
@@ -293,7 +292,8 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const mainContainer = screen.getByText(/impersonation mode/i).closest('div')?.parentElement?.parentElement
+      const mainContainer = screen.getByText(/impersonation mode/i).closest('div')
+        ?.parentElement?.parentElement
       expect(mainContainer).toHaveClass('w-full')
       expect(mainContainer).toHaveClass('flex')
     })
