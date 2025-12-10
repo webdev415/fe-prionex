@@ -24,9 +24,10 @@ export interface Step2Data {
 export interface Step2FileUploadProps {
   data: Step2Data
   onChange: (data: Partial<Step2Data>) => void
+  isImportInProgress?: boolean // Add this prop to track active imports
 }
 
-export function Step2FileUpload({ data, onChange }: Step2FileUploadProps) {
+export function Step2FileUpload({ data, onChange, isImportInProgress = false }: Step2FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [isValidating, setIsValidating] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -86,6 +87,11 @@ export function Step2FileUpload({ data, onChange }: Step2FileUploadProps) {
   }
 
   const handleFileSelect = async (file: File | null) => {
+    // Prevent file selection if import is in progress
+    if (isImportInProgress) {
+      return
+    }
+
     if (!file) {
       onChange({ csvFile: null, invalidFile: null, csvValidationError: null })
       return
@@ -175,15 +181,39 @@ export function Step2FileUpload({ data, onChange }: Step2FileUploadProps) {
         Import Client Data (Simple CSV)
       </h2>
 
+      {/* Warning Alert - shown when import is in progress */}
+      {isImportInProgress && (
+        <div
+          className="flex items-center justify-center gap-3 rounded-lg p-6"
+          style={{
+            backgroundColor: '#FFFFFF',
+          }}
+        >
+          <Icons.Warning size={24} color="#EF4444" />
+          <span
+            style={{
+              fontSize: '14px',
+              fontWeight: 500,
+              lineHeight: '150%',
+              letterSpacing: '-0.28px',
+              color: '#EF4444',
+            }}
+          >
+            You cannot start another import until this one finishes.
+          </span>
+        </div>
+      )}
+
       {/* File Upload Drop Zone */}
       <div
         className={cn(
           'relative flex flex-col items-center gap-6 self-stretch rounded-lg border-2 border-dashed p-6 transition-colors',
-          isDragging ? 'border-primary-500 bg-primary-50' : 'border-gray-300'
+          isDragging ? 'border-primary-500 bg-primary-50' : 'border-gray-300',
+          isImportInProgress && 'opacity-50 pointer-events-none' // Disable when import in progress
         )}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
+        onDragOver={isImportInProgress ? undefined : handleDragOver}
+        onDragLeave={isImportInProgress ? undefined : handleDragLeave}
+        onDrop={isImportInProgress ? undefined : handleDrop}
         style={{
           padding: '24px',
         }}
@@ -444,6 +474,7 @@ export function Step2FileUpload({ data, onChange }: Step2FileUploadProps) {
         <Button
           variant="outline"
           onClick={handleDownloadTemplate}
+          disabled={isImportInProgress}
           leftIcon={<Icons.FileDownload size={20} color={colors.secondary[800]} />}
           style={{
             display: 'flex',
@@ -458,6 +489,7 @@ export function Step2FileUpload({ data, onChange }: Step2FileUploadProps) {
             justifyContent: 'center',
             alignItems: 'center',
             height: '48px',
+            opacity: isImportInProgress ? 0.5 : 1,
           }}
         >
           Download Sample CSV Template
@@ -467,13 +499,13 @@ export function Step2FileUpload({ data, onChange }: Step2FileUploadProps) {
         <Button
           variant="primary"
           onClick={() => {
-            if (hasValidFile && !hasInvalidCSVStructure) handleStartImport()
+            if (hasValidFile && !hasInvalidCSVStructure && !isImportInProgress) handleStartImport()
           }}
-        //   disabled={!hasValidFile || hasInvalidCSVStructure}
+        //   disabled={!hasValidFile || hasInvalidCSVStructure || isImportInProgress}
           style={{
             display: 'flex',
-            backgroundColor: hasValidFile && !hasInvalidCSVStructure ? colors.secondary[800] : colors.gray[200], // #204E4D when enabled
-            color: hasValidFile && !hasInvalidCSVStructure ? '#FFFFFF' : colors.gray[600],
+            backgroundColor: hasValidFile && !hasInvalidCSVStructure && !isImportInProgress ? colors.secondary[800] : colors.gray[200], // #204E4D when enabled
+            color: hasValidFile && !hasInvalidCSVStructure && !isImportInProgress ? '#FFFFFF' : colors.gray[600],
             borderRadius: '9999px', // Pill shape
             padding: '4px 4px 4px 24px',
             lineHeight: '150%',
@@ -483,7 +515,7 @@ export function Step2FileUpload({ data, onChange }: Step2FileUploadProps) {
             fontWeight: '500',
             gap: '10px',
             height: '48px',
-            cursor: hasValidFile && !hasInvalidCSVStructure ? 'pointer' : 'not-allowed',
+            cursor: hasValidFile && !hasInvalidCSVStructure && !isImportInProgress ? 'pointer' : 'not-allowed',
           }}
         >
           <span>Start Import</span>
@@ -493,14 +525,14 @@ export function Step2FileUpload({ data, onChange }: Step2FileUploadProps) {
               width: '40px',
               height: '40px',
               borderRadius: '50%',
-              backgroundColor: hasValidFile && !hasInvalidCSVStructure ? colors.primary[300] : colors.gray[600], // #BBFB5B when enabled
+              backgroundColor: hasValidFile && !hasInvalidCSVStructure && !isImportInProgress ? colors.primary[300] : colors.gray[600], // #BBFB5B when enabled
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <Icons.ArrowRight02 size={24} color={hasValidFile && !hasInvalidCSVStructure ? colors.neutral.dark[500] : colors.gray[500]} />
+            <Icons.ArrowRight02 size={24} color={hasValidFile && !hasInvalidCSVStructure && !isImportInProgress ? colors.neutral.dark[500] : colors.gray[500]} />
           </div>
         </Button>
       </div>

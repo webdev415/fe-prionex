@@ -26,6 +26,7 @@ const STEPS: Step[] = [
 
 export function ImportClientsPage() {
   const [currentStep, setCurrentStep] = useState(1)
+  const [isImportInProgress] = useState(false) // Add this state
   const [step1Data, setStep1Data] = useState<Step1Data>({
     sellerCreditor: '',
     projectCode: '',
@@ -154,7 +155,13 @@ export function ImportClientsPage() {
           >
             {currentStep === 1 && <Step1LoanSource data={step1Data} onChange={handleStep1Change} />}
 
-            {currentStep === 2 && <Step2FileUpload data={step2Data} onChange={handleStep2Change} />}
+            {currentStep === 2 && (
+              <Step2FileUpload 
+                data={step2Data} 
+                onChange={handleStep2Change}
+                isImportInProgress={isImportInProgress} // Pass the prop
+              />
+            )}
 
             {/* Navigation Buttons */}
             <div className="mt-8 flex justify-center">
