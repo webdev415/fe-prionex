@@ -49,7 +49,7 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: '/dashboard/importclients',
+    path: '/dashboard/import',
     element: (
       <ProtectedRoute>
         <DashboardLayout>

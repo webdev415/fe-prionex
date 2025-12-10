@@ -64,6 +64,7 @@ import {
   FileDownloadIcon,
   ArrowLeft02Icon,
   FileRemoveIcon,
+  Csv02Icon,
 } from '@hugeicons/core-free-icons'
 
 /**
@@ -165,6 +166,7 @@ export const Icons = {
   FileDownload: (props: Omit<IconProps, 'icon'>) => <Icon icon={FileDownloadIcon} {...props} />,
   ArrowLeft02: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowLeft02Icon} {...props} />,
   FileRemove: (props: Omit<IconProps, 'icon'>) => <Icon icon={FileRemoveIcon} {...props} />,
+  Csv02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Csv02Icon} {...props} />,
 }
 
 /**
@@ -221,6 +223,7 @@ export {
   FileDownloadIcon,
   ArrowLeft02Icon,
   FileRemoveIcon,
+  Csv02Icon,
 }
 
 /**

@@ -36,6 +36,7 @@ export function ImportClientsPage() {
   const [step2Data, setStep2Data] = useState<Step2Data>({
     csvFile: null,
     invalidFile: null,
+    csvValidationError: null, 
   })
 
   const handleStep1Change = (data: Partial<Step1Data>) => {
