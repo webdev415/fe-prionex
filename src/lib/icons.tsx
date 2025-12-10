@@ -59,6 +59,11 @@ import {
   Download01Icon,
   File01Icon,
   ArrowRight02Icon,
+  Tick01Icon,
+  CloudDownloadIcon,
+  FileDownloadIcon,
+  ArrowLeft02Icon,
+  FileRemoveIcon,
 } from '@hugeicons/core-free-icons'
 
 /**
@@ -155,6 +160,11 @@ export const Icons = {
   Download: (props: Omit<IconProps, 'icon'>) => <Icon icon={Download01Icon} {...props} />,
   File: (props: Omit<IconProps, 'icon'>) => <Icon icon={File01Icon} {...props} />,
   ArrowRight02: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowRight02Icon} {...props} />,
+  Tick01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Tick01Icon} {...props} />,
+  CloudDownload: (props: Omit<IconProps, 'icon'>) => <Icon icon={CloudDownloadIcon} {...props} />,
+  FileDownload: (props: Omit<IconProps, 'icon'>) => <Icon icon={FileDownloadIcon} {...props} />,
+  ArrowLeft02: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowLeft02Icon} {...props} />,
+  FileRemove: (props: Omit<IconProps, 'icon'>) => <Icon icon={FileRemoveIcon} {...props} />,
 }
 
 /**
@@ -206,6 +216,11 @@ export {
   LogoutSquare01Icon,
   ChartRingIcon,
   ArrowRight02Icon,
+  Tick01Icon,
+  CloudDownloadIcon,
+  FileDownloadIcon,
+  ArrowLeft02Icon,
+  FileRemoveIcon,
 }
 
 /**

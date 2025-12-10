@@ -7,6 +7,7 @@
 
 import { colors } from '@/lib/colors'
 import { cn } from '@/lib/utils'
+import { Icons } from '@/lib/icons'
 
 export interface Step {
   number: number
@@ -58,7 +59,7 @@ export function StepIndicator({ steps, currentStep, className }: StepIndicatorPr
                       : colors.gray[500], // Gray text (#A1A1A1) for inactive
                   }}
                 >
-                  {step.number}
+                  {isCompleted ? <Icons.Tick01 size={24} color={colors.primary[300]} /> : step.number}
                 </div>
               </div>
               
