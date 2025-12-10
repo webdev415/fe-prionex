@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import type { ProjectFilters } from '@/features/projects/types'
+import { CreateProjectModal } from './CreateProjectModal'
 
 interface SearchFiltersBarProps {
   filters: ProjectFilters
@@ -36,6 +37,7 @@ export function SearchFiltersBar({
 }: SearchFiltersBarProps) {
   const [searchValue, setSearchValue] = useState(filters.search || '')
   const [period, setPeriod] = useState<PeriodOption>('any')
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
   // Debounce search input
   useEffect(() => {
@@ -66,6 +68,11 @@ export function SearchFiltersBar({
     },
     [filters, onFilterChange]
   )
+
+  const handleCreateSuccess = useCallback(() => {
+    setShowCreateModal(false)
+    // refetch()
+  }, [])
 
   const handlePeriodChange = useCallback(
     (value: PeriodOption) => {
@@ -114,157 +121,164 @@ export function SearchFiltersBar({
     [filters, onFilterChange]
   )
 
-  const handleClearFilters = useCallback(() => {
-    setSearchValue('')
-    onFilterChange({
-      search: undefined,
-      status: 'active',
-      client_company: undefined,
-      start_date_from: undefined,
-      start_date_to: undefined,
-    })
-  }, [onFilterChange])
-
-  const hasActiveFilters =
-    filters.search ||
-    (filters.status && filters.status !== 'active') ||
-    filters.client_company ||
-    filters.start_date_from ||
-    filters.start_date_to
-
   return (
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div className="mb-6 flex w-full items-center justify-between gap-3">
       {/* Search + Filters pill - styled to match dashboard header search bar */}
-      <div
-        className="flex min-w-[320px] flex-1 items-center gap-3 rounded-full border bg-white pr-2 pl-4 shadow-sm"
-        style={{
-          borderColor: colors.gray[200],
-        }}
-      >
-        {/* Search Input */}
-        <div className="flex flex-1 items-center gap-2">
-          <Icons.Search size={18} color={colors.gray[500]} />
-          <input
-            type="text"
-            placeholder="Search by name, code, clients"
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            disabled={isLoading}
-            className="h-10 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500 disabled:opacity-60"
-            style={{
-              color: colors.neutral.dark[500],
-            }}
-          />
-          {searchValue && (
-            <button
-              onClick={() => setSearchValue('')}
-              className="flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
-              type="button"
-            >
-              <Icons.Close size={14} color={colors.gray[500]} />
-            </button>
-          )}
-        </div>
-
-        {/* Divider */}
-        <div className="mx-2 hidden h-5 w-px bg-gray-200 md:block" />
-
-        {/* Inline Filters */}
-        <div className="hidden items-center gap-4 text-xs text-gray-700 md:flex">
-          {/* Status Filter */}
-          <div className="flex items-center gap-1">
-            <span className="text-[11px] text-gray-500">Status:</span>
-            <Select
-              value={filters.status || 'active'}
-              onValueChange={handleStatusChange}
-              disabled={isLoading}
-            >
-              <SelectTrigger className="h-auto border-0 bg-transparent p-0 text-[11px] font-medium shadow-none focus:ring-0">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
-                <SelectItem value="all">All</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Client Filter */}
-          <div className="flex items-center gap-1">
-            <span className="text-[11px] text-gray-500">Client</span>
-            <Select
-              value={filters.client_company || 'all'}
-              onValueChange={handleClientChange}
-              disabled={isLoading || clients.length === 0}
-            >
-              <SelectTrigger className="h-auto border-0 bg-transparent p-0 text-[11px] font-medium shadow-none focus:ring-0">
-                <SelectValue placeholder="Client" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all">All Clients</SelectItem>
-                {clients.map((client) => (
-                  <SelectItem key={client} value={client}>
-                    {client}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Period Filter */}
-          <div className="flex items-center gap-1">
-            <span className="text-[11px] text-gray-500">Period</span>
-            <Select
-              value={period}
-              onValueChange={(value) => handlePeriodChange(value as PeriodOption)}
-              disabled={isLoading}
-            >
-              <SelectTrigger className="h-auto border-0 bg-transparent p-0 text-[11px] font-medium shadow-none focus:ring-0">
-                <SelectValue placeholder="Any" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="any">Any time</SelectItem>
-                <SelectItem value="last_30_days">Last 30 days</SelectItem>
-                <SelectItem value="last_90_days">Last 90 days</SelectItem>
-                <SelectItem value="this_year">This year</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Search Button - styled like dashboard header search circle */}
-        <button
-          type="button"
-          onClick={() => {
-            onFilterChange({ ...filters, search: searchValue || undefined })
-          }}
-          disabled={isLoading}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
+      <div className="flex w-[70%] items-center justify-between">
+        <div
+          className="flex flex-1 items-center gap-3 rounded-full border bg-white pr-2 pl-4 shadow-sm"
           style={{
-            backgroundColor: colors.primary[300],
+            borderColor: colors.gray[200],
           }}
-          aria-label="Search projects"
         >
-          <Icons.Search size={18} color={colors.neutral.dark[500]} strokeWidth={1.5} />
-        </button>
+          {/* Search Input */}
+          <div className="flex flex-1 items-center gap-2 py-1">
+            <input
+              type="text"
+              placeholder="Search by name, code, clients"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              disabled={isLoading}
+              className="h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500 disabled:opacity-60"
+              style={{
+                color: colors.neutral.dark[500],
+              }}
+            />
+            {searchValue && (
+              <button
+                onClick={() => setSearchValue('')}
+                className="flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+                type="button"
+              >
+                <Icons.Close size={14} color={colors.gray[500]} />
+              </button>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="mx-2 hidden h-5 w-px bg-gray-200 md:block" />
+
+          {/* Inline Filters */}
+          <div className="hidden items-center gap-4 text-xs text-gray-700 md:flex">
+            {/* Status Filter */}
+            <div className="flex items-center gap-1">
+              <span className="text-[14px] text-gray-500">Status:</span>
+              <Select
+                value={filters.status || 'active'}
+                onValueChange={handleStatusChange}
+                disabled={isLoading}
+              >
+                <SelectTrigger className="h-auto border-0 bg-transparent p-0 text-[11px] font-medium shadow-none focus:ring-0">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Client Filter */}
+            <div className="flex items-center gap-1">
+              <span className="text-[14px] text-gray-500">Client</span>
+              <Select
+                value={filters.client_company || 'all'}
+                onValueChange={handleClientChange}
+                disabled={isLoading || clients.length === 0}
+              >
+                <SelectTrigger className="h-auto border-0 bg-transparent p-0 text-[11px] font-medium shadow-none focus:ring-0">
+                  <SelectValue placeholder="Client" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="all">All Clients</SelectItem>
+                  {clients.map((client) => (
+                    <SelectItem key={client} value={client}>
+                      {client}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Period Filter */}
+            <div className="flex items-center gap-1">
+              <span className="text-[14px] text-gray-500">Period</span>
+              <Select
+                value={period}
+                onValueChange={(value) => handlePeriodChange(value as PeriodOption)}
+                disabled={isLoading}
+              >
+                <SelectTrigger className="h-auto border-0 bg-transparent p-0 text-[11px] font-medium shadow-none focus:ring-0">
+                  <SelectValue placeholder="Any" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="any">Any time</SelectItem>
+                  <SelectItem value="last_30_days">Last 30 days</SelectItem>
+                  <SelectItem value="last_90_days">Last 90 days</SelectItem>
+                  <SelectItem value="this_year">This year</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Search Button - styled like dashboard header search circle */}
+          <button
+            type="button"
+            onClick={() => {
+              onFilterChange({ ...filters, search: searchValue || undefined })
+            }}
+            disabled={isLoading}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
+            style={{
+              backgroundColor: colors.primary[300],
+            }}
+            aria-label="Search projects"
+          >
+            <Icons.Search size={18} color={colors.neutral.dark[500]} strokeWidth={1.5} />
+          </button>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        {/* Clear Filters Button */}
-        {hasActiveFilters && (
-          <button
-            onClick={handleClearFilters}
-            type="button"
-            className="h-9 rounded-full border bg-white px-4 text-xs font-medium transition-colors hover:bg-gray-50"
+      <div className="flex w-[30%] items-center justify-end gap-2">
+        {/* Add New Project Button */}
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+          style={{
+            backgroundColor: colors.secondary[800],
+          }}
+          aria-label="Add new project"
+        >
+          <div
+            className="flex items-center justify-center rounded-full"
             style={{
-              borderColor: colors.gray[300],
-              color: colors.gray[700],
+              width: '40px',
+              height: '40px',
+              backgroundColor: colors.primary[300],
+              marginLeft: '4px',
             }}
           >
-            Clear
-          </button>
+            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          </div>
+          <span
+            className="px-4 py-3 font-medium text-white"
+            style={{
+              fontSize: '14px',
+            }}
+          >
+            New Project
+          </span>
+        </button>
+
+        {/* Create Modal */}
+        {showCreateModal && (
+          <CreateProjectModal
+            open={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onSuccess={handleCreateSuccess}
+          />
         )}
 
         {/* Export Button */}
@@ -272,13 +286,14 @@ export function SearchFiltersBar({
           onClick={onExport}
           disabled={isLoading}
           type="button"
-          className="flex h-9 items-center gap-2 rounded-full border bg-white px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-full bg-white px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
           style={{
-            borderColor: colors.gray[300],
-            color: colors.gray[700],
+            backgroundColor: colors.primary[300],
+            color: colors.neutral.dark[500],
+            height: '45px',
           }}
         >
-          <Icons.Download size={16} color={colors.gray[700]} />
+          <Icons.FileImport size={16} color={colors.neutral.dark[500]} />
           Export
         </button>
       </div>

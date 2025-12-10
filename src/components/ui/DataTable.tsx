@@ -65,18 +65,18 @@ export function DataTable<T extends { id: number | string }>({
     if (!isActive) {
       return (
         <span className="ml-1 opacity-40">
-          <Icons.ArrowDown size={14} color={colors.gray[500]} strokeWidth={1.5} />
+          <Icons.Sorting01Icon size={14} color={colors.gray[500]} strokeWidth={1.5} />
         </span>
       )
     }
 
     return sortConfig.order === 'asc' ? (
-      <span className="ml-1">
-        <Icons.ArrowUp size={14} color={colors.primary[500]} strokeWidth={2} />
+      <span className="ml-1" style={{ transform: 'rotate(180deg)', display: 'inline-block' }}>
+        <Icons.Sorting01Icon size={14} color={colors.primary[500]} strokeWidth={2} />
       </span>
     ) : (
       <span className="ml-1">
-        <Icons.ArrowDown size={14} color={colors.primary[500]} strokeWidth={2} />
+        <Icons.Sorting01Icon size={14} color={colors.primary[500]} strokeWidth={2} />
       </span>
     )
   }
@@ -161,7 +161,7 @@ export function DataTable<T extends { id: number | string }>({
                       height: '49px',
                       fontSize: '12px',
                       fontWeight: 500,
-                      color: '#05040D',
+                      color: colors.neutral.dark[500],
                       borderRight: colIndex < columns.length - 1 ? '1px solid #EBECE8' : 'none',
                     }}
                   >

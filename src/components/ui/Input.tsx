@@ -66,7 +66,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-body-sm text-primary-950 mb-1.5 block font-normal"
+            className="text-body-sm text-primary-950 mb-1.5 block font-light"
+            style={{ fontWeight: 300 }}
           >
             {label}
           </label>

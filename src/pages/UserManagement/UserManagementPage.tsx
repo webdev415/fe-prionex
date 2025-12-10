@@ -260,7 +260,7 @@ export function UserManagementPage() {
       )}
 
       {/* Pagination */}
-      {!isLoading && !isError && totalPages > 1 && (
+      {!isLoading && !isError && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

@@ -49,6 +49,7 @@ const iconMap: Record<
   'home-04': (props) => <Icons.Home04 {...props} />,
   'activity-01': (props) => <Icons.Activity01 {...props} />,
   'file-import': (props) => <Icons.FileImport {...props} />,
+  'chart-ring': (props) => <Icons.ChartRing {...props} />,
   'analytics-01': (props) => <Icons.Analytics01 {...props} />,
   community: (props) => <Icons.Community {...props} />,
   'user-status': (props) => <Icons.UserStatus {...props} />,
