@@ -6,7 +6,7 @@
  * Matches design specification with proper colors and styling
  */
 
-import { Radio } from '@/components/ui/Radio'
+import { Radio } from '@/pages/ImportClients/components/Radio'
 import { colors } from '@/lib/colors'
 import { cn } from '@/lib/utils'
 
