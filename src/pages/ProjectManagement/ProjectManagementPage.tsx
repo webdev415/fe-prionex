@@ -17,9 +17,9 @@ import { colors } from '@/lib/colors'
 import { formatPeriod, formatCurrency } from '@/lib/formatters'
 import { DataTable, type Column, type SortConfig, type SortOrder } from '@/components/ui/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { ErrorState } from '@/components/ErrorState'
 import { Pagination } from '@/components/ui/Pagination'
+import { ProjectManagementPageSkeleton } from './components/ProjectManagementPageSkeleton'
 
 const ITEMS_PER_PAGE = 10
 
@@ -258,64 +258,59 @@ export function ProjectManagementPage() {
 
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Table Area */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          {/* Loading State */}
-          {isLoading && <TableSkeleton columns={columns.length} rows={ITEMS_PER_PAGE} />}
+        {/* Loading State */}
+        {isLoading && <ProjectManagementPageSkeleton />}
 
-          {/* Error State */}
-          {isError && (
+        {/* Error State */}
+        {!isLoading && isError && (
+          <div className="flex flex-1 flex-col">
             <ErrorState error={error} onRetry={() => refetch()} title="Error loading projects" />
-          )}
+          </div>
+        )}
 
-          {/* Projects Table */}
-          {!isLoading && !isError && (
-            <div className="flex flex-1 flex-col">
-              <div
-                className="flex-1 overflow-y-auto flex items-start justify-between w-full"
-              >
-                <div className='w-[70%]'>
-                  <div
-                    className="rounded-xl p-6"
-                    style={{
-                      backgroundColor: '#FFFFFF80',
-                    }}
-                  >
-                    <DataTable
-                      columns={columns}
-                      data={projects}
-                      emptyMessage="No projects found"
-                      onRowClick={handleRowClick}
-                      sortConfig={sortConfig}
-                      onSort={handleSort}
-                    />
-                  </div>
-                </div>
-                <div className='w-[30%] pl-4'>
-                  {/* Side Panel */}
-                  <ProjectDetailPanel
-                    project={projectDetail as ApiProjectDetail | null}
-                    hasProjects={projects.length > 0}
-                    onEdit={handleEditFromPanel}
-                    onDelete={handleDeleteFromPanel}
-                    isLoading={effectiveSelectedProjectId !== null && isDetailLoading}
+        {/* Projects Table */}
+        {!isLoading && !isError && (
+          <div className="flex flex-1 flex-col">
+            <div className="flex-1 overflow-y-auto flex items-start justify-between w-full">
+              <div className="w-[70%]">
+                <div
+                  className="rounded-xl p-6"
+                  style={{
+                    backgroundColor: '#FFFFFF80',
+                  }}
+                >
+                  <DataTable
+                    columns={columns}
+                    data={projects}
+                    emptyMessage="No projects found"
+                    onRowClick={handleRowClick}
+                    sortConfig={sortConfig}
+                    onSort={handleSort}
                   />
                 </div>
               </div>
-              
-              {/* Pagination */}
-              <div className="mt-4">
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
+              <div className="w-[30%] pl-4">
+                {/* Side Panel */}
+                <ProjectDetailPanel
+                  project={projectDetail as ApiProjectDetail | null}
+                  hasProjects={projects.length > 0}
+                  onEdit={handleEditFromPanel}
+                  onDelete={handleDeleteFromPanel}
+                  isLoading={effectiveSelectedProjectId !== null && isDetailLoading}
                 />
               </div>
             </div>
-          )}
-        </div>
 
-
+            {/* Pagination */}
+            <div className="mt-4">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Edit Modal */}
