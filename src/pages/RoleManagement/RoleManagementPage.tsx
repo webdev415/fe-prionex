@@ -25,6 +25,7 @@ import { CreateRoleModal } from './components/CreateRoleModal'
 import { RoleDetailModal } from './components/RoleDetailModal'
 import { EditRoleModal } from './components/EditRoleModal'
 import { ArchiveRoleModal } from './components/ArchiveRoleModal'
+import { RoleManagementPageSkeleton } from './components/RoleManagementPageSkeleton'
 
 export function RoleManagementPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -56,7 +57,13 @@ export function RoleManagementPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProjectId])
 
-  const { data, isError, error, refetch } = useRoles({
+  const {
+    data,
+    isLoading: loadingRoles,
+    isError,
+    error,
+    refetch,
+  } = useRoles({
     page: 1,
     page_size: 100,
     project_id: selectedProjectId || undefined,
@@ -237,16 +244,11 @@ export function RoleManagementPage() {
         </Select>
       </div>
 
-      {/* Loading / Error States */}
-      {loadingProjects && (
-        <div className="rounded-lg bg-white p-8 text-center shadow-sm">
-          <p className="text-sm" style={{ color: colors.gray[500] }}>
-            Loading projects...
-          </p>
-        </div>
-      )}
+      {/* Loading States */}
+      {(loadingProjects || loadingRoles) && <RoleManagementPageSkeleton />}
 
-      {!loadingProjects && projects.length === 0 && (
+      {/* Error States */}
+      {!loadingProjects && !loadingRoles && projects.length === 0 && (
         <div className="rounded-lg bg-white p-8 text-center shadow-sm">
           <p className="text-sm" style={{ color: colors.gray[500] }}>
             No active projects found. Please create a project first.
@@ -254,11 +256,12 @@ export function RoleManagementPage() {
         </div>
       )}
 
-      {!loadingProjects && projects.length > 0 && isError && (
+      {!loadingProjects && !loadingRoles && projects.length > 0 && isError && (
         <ErrorState error={error} onRetry={() => refetch()} title="Error loading roles" />
       )}
 
-      {!loadingProjects && projects.length > 0 && !isError && (
+      {/* Content */}
+      {!loadingProjects && !loadingRoles && projects.length > 0 && !isError && (
         <div className="space-y-8">
           {/* Default Roles */}
           <section

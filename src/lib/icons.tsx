@@ -53,6 +53,7 @@ import {
   TransactionHistoryIcon,
   Setting07Icon,
   LogoutSquare01Icon,
+  UserCircle02Icon,
   ChartRingIcon,
   // Additional icons for UI enhancements
   MultiplicationSignIcon,
@@ -65,8 +66,8 @@ import {
   ArrowLeft02Icon,
   FileRemoveIcon,
   Csv02Icon,
+  Sorting01Icon,
 } from '@hugeicons/core-free-icons'
-
 /**
  * Icon component props
  */
@@ -108,6 +109,7 @@ export const Icons = {
   Contact: (props: Omit<IconProps, 'icon'>) => <Icon icon={ContactIcon} {...props} />,
   Settings: (props: Omit<IconProps, 'icon'>) => <Icon icon={Settings01Icon} {...props} />,
   Home: (props: Omit<IconProps, 'icon'>) => <Icon icon={Home01Icon} {...props} />,
+  Sorting01Icon: (props: Omit<IconProps, 'icon'>) => <Icon icon={Sorting01Icon} {...props} />,
 
   // Actions
   Add: (props: Omit<IconProps, 'icon'>) => <Icon icon={Add01Icon} {...props} />,
@@ -155,6 +157,8 @@ export const Icons = {
   Setting07: (props: Omit<IconProps, 'icon'>) => <Icon icon={Setting07Icon} {...props} />,
   LogoutSquare01: (props: Omit<IconProps, 'icon'>) => <Icon icon={LogoutSquare01Icon} {...props} />,
   ChartRing: (props: Omit<IconProps, 'icon'>) => <Icon icon={ChartRingIcon} {...props} />,
+
+  UserCircle02Icon: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserCircle02Icon} {...props} />,
 
   // Additional icons for UI enhancements
   Close: (props: Omit<IconProps, 'icon'>) => <Icon icon={MultiplicationSignIcon} {...props} />,
@@ -217,6 +221,8 @@ export {
   Setting07Icon,
   LogoutSquare01Icon,
   ChartRingIcon,
+  Sorting01Icon,
+  UserCircle02Icon,
   ArrowRight02Icon,
   Tick01Icon,
   CloudDownloadIcon,
