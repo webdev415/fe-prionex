@@ -6,6 +6,8 @@
  */
 
 import { useState } from 'react'
+import { toast } from 'sonner'
+import { useAuth } from '@/features/auth'
 import { useUsers } from '@/features/users/hooks/useUsers'
 import { CreateUserModal } from './components/CreateUserModal'
 import { UserDetailModal } from './components/UserDetailModal'
@@ -24,11 +26,16 @@ import { ErrorState } from '@/components/ErrorState'
 const ITEMS_PER_PAGE = 10
 
 export function UserManagementPage() {
+  const { startImpersonation, user: currentUser, isLoading: authLoading } = useAuth()
   const [currentPage, setCurrentPage] = useState(1)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [viewUserId, setViewUserId] = useState<number | null>(null)
   const [editUserId, setEditUserId] = useState<number | null>(null)
   const [unlockUser, setUnlockUser] = useState<ApiUser | null>(null)
+  const [impersonatingUserId, setImpersonatingUserId] = useState<number | null>(null)
+
+  // Check if current user has impersonate permission
+  const canImpersonate = currentUser?.permissions?.includes('impersonate_users') ?? false
 
   // Fetch users with pagination
   const { data, isLoading, isError, error } = useUsers({
@@ -64,9 +71,18 @@ export function UserManagementPage() {
     setViewUserId(user.id)
   }
 
-  const handleImpersonate = (user: ApiUser) => {
-    // TODO: Implement impersonate functionality
-    console.log('Impersonate user:', user.id)
+  const handleImpersonate = async (user: ApiUser) => {
+    setImpersonatingUserId(user.id)
+    try {
+      await startImpersonation(user.id)
+      toast.success(`Now viewing as ${user.username}`)
+    } catch (error: unknown) {
+      console.error('Failed to impersonate user:', error)
+      const err = error as { message?: string }
+      toast.error(err.message || 'Failed to impersonate user')
+    } finally {
+      setImpersonatingUserId(null)
+    }
   }
 
   const handleUnlockToggle = (user: ApiUser, checked: boolean) => {
@@ -151,18 +167,21 @@ export function UserManagementPage() {
             <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
             Edit
           </button>
-          <button
-            onClick={() => handleImpersonate(user)}
-            className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
-            style={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: '#05040D',
-            }}
-          >
-            <Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />
-            Impersonate
-          </button>
+          {canImpersonate && currentUser?.id !== String(user.id) && (
+            <button
+              onClick={() => handleImpersonate(user)}
+              disabled={authLoading || impersonatingUserId !== null}
+              className="flex items-center gap-1 font-medium transition-colors hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: '#05040D',
+              }}
+            >
+              <Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />
+              {impersonatingUserId === user.id ? 'Impersonating...' : 'Impersonate'}
+            </button>
+          )}
           <div className="flex items-center gap-2">
             <label
               className="font-medium"

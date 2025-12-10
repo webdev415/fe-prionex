@@ -13,11 +13,18 @@ export function useAuth() {
     error,
     errorState,
     lockoutMinutes,
+    // Impersonation state
+    isImpersonating,
+    impersonatedUser,
+    originalAdminUser,
+    // Methods
     login: storeLogin,
     logout: storeLogout,
     forceLogin: storeForceLogin,
     checkAuth,
     clearError,
+    startImpersonation: storeStartImpersonation,
+    exitImpersonation: storeExitImpersonation,
   } = useAuthStore()
 
   const login = useCallback(
@@ -46,6 +53,17 @@ export function useAuth() {
     }
   }, [storeForceLogin, navigate])
 
+  const startImpersonation = useCallback(
+    async (userId: number) => {
+      await storeStartImpersonation(userId)
+    },
+    [storeStartImpersonation]
+  )
+
+  const exitImpersonation = useCallback(async () => {
+    await storeExitImpersonation()
+  }, [storeExitImpersonation])
+
   return {
     user,
     isAuthenticated,
@@ -53,11 +71,18 @@ export function useAuth() {
     error,
     errorState,
     lockoutMinutes,
+    // Impersonation state
+    isImpersonating,
+    impersonatedUser,
+    originalAdminUser,
+    // Methods
     login,
     logout,
     forceLogin,
     checkAuth,
     clearError,
+    startImpersonation,
+    exitImpersonation,
   }
 }
 
