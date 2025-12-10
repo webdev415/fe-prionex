@@ -7,28 +7,27 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { useProjects, useProjectDetail } from '@/features/projects/hooks/useProjects'
-import { useProjectExport } from '@/features/projects/hooks/useProjectMutations'
-import { CreateProjectModal } from './components/CreateProjectModal'
+import { useProjectExport, useDeleteProject } from '@/features/projects/hooks/useProjectMutations'
 import { EditProjectModal } from './components/EditProjectModal'
 import { ProjectDetailPanel } from './components/ProjectDetailPanel'
+import { DeleteProjectConfirmationModal } from './components/DeleteProjectConfirmationModal'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import type { ApiProject, ApiProjectDetail, ProjectFilters } from '@/features/projects/types'
-import { Icons } from '@/lib/icons'
 import { colors } from '@/lib/colors'
 import { formatPeriod, formatCurrency } from '@/lib/formatters'
 import { DataTable, type Column, type SortConfig, type SortOrder } from '@/components/ui/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { ErrorState } from '@/components/ErrorState'
+import { Pagination } from '@/components/ui/Pagination'
 
 const ITEMS_PER_PAGE = 10
 
 export function ProjectManagementPage() {
   const [currentPage, setCurrentPage] = useState(1)
-  const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [editingProject, setEditingProject] = useState<ApiProjectDetail | null>(null)
+  const [deletingProject, setDeletingProject] = useState<ApiProjectDetail | null>(null)
   const [filters, setFilters] = useState<ProjectFilters>({
     status: 'active',
   })
@@ -46,15 +45,29 @@ export function ProjectManagementPage() {
     sort_order: sortConfig.order,
   })
 
-  // Fetch selected project detail
-  const { data: projectDetail, isLoading: isDetailLoading } = useProjectDetail(selectedProjectId)
+  // Memoize projects to avoid dependency issues
+  const projects = useMemo(() => data?.projects || [], [data?.projects])
+  const totalPages = data?.pagination?.total_pages || 0
+
+  // Compute the effective selected project ID - auto-select first project if none selected
+  const effectiveSelectedProjectId = useMemo(() => {
+    if (selectedProjectId !== null) {
+      return selectedProjectId
+    }
+    if (projects.length > 0) {
+      return projects[0].id
+    }
+    return null
+  }, [selectedProjectId, projects])
+
+  // Fetch selected project detail using effective ID
+  const { data: projectDetail, isLoading: isDetailLoading } = useProjectDetail(effectiveSelectedProjectId)
 
   // Export mutation
   const exportMutation = useProjectExport()
-
-  const projects = data?.projects || []
-  const totalPages = data?.pagination?.total_pages || 0
-  const totalItems = data?.pagination?.total_items || 0
+  
+  // Delete mutation
+  const deleteMutation = useDeleteProject()
 
   // Extract unique client companies for filter
   const clientCompanies = useMemo(() => {
@@ -86,36 +99,41 @@ export function ProjectManagementPage() {
     setSelectedProjectId(project.id)
   }, [])
 
-  const handleEditClick = useCallback((project: ApiProject, e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent row click
-    setSelectedProjectId(project.id)
-    // We'll open edit modal when projectDetail is loaded
-  }, [])
-
   const handleEditFromPanel = useCallback(() => {
     if (projectDetail) {
       setEditingProject(projectDetail as ApiProjectDetail)
     }
   }, [projectDetail])
 
-  const handleClosePanel = useCallback(() => {
-    setSelectedProjectId(null)
-  }, [])
-
-  const handleManageUsersRoles = useCallback(() => {
-    // TODO: Navigate to roles/users management for this project
-    console.log('Navigate to users/roles management for project:', selectedProjectId)
-  }, [selectedProjectId])
-
   const handleEditSuccess = useCallback(() => {
     setEditingProject(null)
     refetch()
   }, [refetch])
 
-  const handleCreateSuccess = useCallback(() => {
-    setShowCreateModal(false)
-    refetch()
-  }, [refetch])
+  const handleDeleteFromPanel = useCallback(() => {
+    if (projectDetail) {
+      setDeletingProject(projectDetail as ApiProjectDetail)
+    }
+  }, [projectDetail])
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (deletingProject) {
+      deleteMutation.mutate(
+        { projectId: deletingProject.id },
+        {
+          onSuccess: () => {
+            setDeletingProject(null)
+            setSelectedProjectId(null)
+            refetch()
+          },
+        }
+      )
+    }
+  }, [deletingProject, deleteMutation, refetch])
+
+  const handleDeleteCancel = useCallback(() => {
+    setDeletingProject(null)
+  }, [])
 
   // Map status for StatusBadge component
   const getStatusType = (status: string): 'active' | 'disabled' | 'inactive' | 'archived' => {
@@ -141,12 +159,11 @@ export function ProjectManagementPage() {
       render: (project) => (
         <div className="flex items-center justify-center">
           <span
-            className="flex items-center justify-center rounded-full text-sm font-medium"
+            className="flex items-center justify-center"
             style={{
-              width: '32px',
-              height: '32px',
-              backgroundColor: colors.gray[100],
-              color: colors.gray[700],
+              color: colors.neutral.dark[500],
+              fontSize: '12px',
+              fontWeight: 500,
             }}
           >
             {project.user_count || 0}
@@ -160,10 +177,10 @@ export function ProjectManagementPage() {
       sortable: true,
       render: (project) => (
         <div className="flex flex-col">
-          <span className="font-medium" style={{ color: colors.gray[900] }}>
+          <span style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}>
             {project.name}
           </span>
-          <span className="text-xs" style={{ color: colors.gray[500] }}>
+          <span style={{ color: colors.gray[700], fontSize: '12px', fontWeight: 500 }}>
             {project.code}
           </span>
         </div>
@@ -177,7 +194,7 @@ export function ProjectManagementPage() {
         <span
           className="block max-w-[180px] truncate"
           title={project.client_company}
-          style={{ color: colors.gray[700] }}
+          style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}
         >
           {project.client_company || '—'}
         </span>
@@ -188,7 +205,7 @@ export function ProjectManagementPage() {
       header: 'Period',
       sortable: true,
       render: (project) => (
-        <span style={{ color: colors.gray[700] }}>
+        <span style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}>
           {formatPeriod(project.start_date, project.end_date)}
         </span>
       ),
@@ -199,7 +216,7 @@ export function ProjectManagementPage() {
       align: 'right',
       sortable: true,
       render: (project) => (
-        <span className="font-medium" style={{ color: colors.gray[900] }}>
+        <span style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}>
           {formatCurrency(project.total_debt_amount)}
         </span>
       ),
@@ -210,43 +227,6 @@ export function ProjectManagementPage() {
       align: 'center',
       sortable: true,
       render: (project) => <StatusBadge status={getStatusType(project.status)} />,
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      align: 'center',
-      sortable: false,
-      render: (project) => (
-        <div className="flex items-center justify-center gap-3">
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setSelectedProjectId(project.id)
-            }}
-            className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
-            style={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: colors.gray[700],
-            }}
-          >
-            <Icons.View size={16} color={colors.gray[700]} strokeWidth={1.5} />
-            View
-          </button>
-          <button
-            onClick={(e) => handleEditClick(project, e)}
-            className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
-            style={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: colors.gray[700],
-            }}
-          >
-            <Icons.PencilEdit size={16} color={colors.gray[700]} strokeWidth={1.5} />
-            Edit
-          </button>
-        </div>
-      ),
     },
   ]
 
@@ -265,34 +245,6 @@ export function ProjectManagementPage() {
           Project Management
         </h1>
 
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-          style={{
-            backgroundColor: colors.secondary[800],
-          }}
-          aria-label="Add new project"
-        >
-          <div
-            className="flex items-center justify-center rounded-full"
-            style={{
-              width: '40px',
-              height: '40px',
-              backgroundColor: colors.primary[300],
-              marginLeft: '4px',
-            }}
-          >
-            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
-          </div>
-          <span
-            className="px-4 py-3 font-medium text-white"
-            style={{
-              fontSize: '14px',
-            }}
-          >
-            Add New Project
-          </span>
-        </button>
       </div>
 
       {/* Search & Filters */}
@@ -318,57 +270,53 @@ export function ProjectManagementPage() {
 
           {/* Projects Table */}
           {!isLoading && !isError && (
-            <div className="flex-1 overflow-y-auto">
-              <DataTable
-                columns={columns}
-                data={projects}
-                emptyMessage="No projects found"
-                onRowClick={handleRowClick}
-                sortConfig={sortConfig}
-                onSort={handleSort}
-              />
-            </div>
-          )}
-
-          {/* Pagination & Info */}
-          {!isLoading && !isError && (
-            <div
-              className="flex items-center justify-between border-t py-4"
-              style={{ borderColor: colors.gray[200] }}
-            >
-              <span className="text-sm" style={{ color: colors.gray[600] }}>
-                Showing {projects.length} of {totalItems} projects
-              </span>
-              {totalPages > 1 && (
+            <div className="flex flex-1 flex-col">
+              <div
+                className="flex-1 overflow-y-auto flex items-start justify-between w-full"
+              >
+                <div className='w-[70%]'>
+                  <div
+                    className="rounded-xl p-6"
+                    style={{
+                      backgroundColor: '#FFFFFF80',
+                    }}
+                  >
+                    <DataTable
+                      columns={columns}
+                      data={projects}
+                      emptyMessage="No projects found"
+                      onRowClick={handleRowClick}
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    />
+                  </div>
+                </div>
+                <div className='w-[30%] pl-4'>
+                  {/* Side Panel */}
+                  <ProjectDetailPanel
+                    project={projectDetail as ApiProjectDetail | null}
+                    hasProjects={projects.length > 0}
+                    onEdit={handleEditFromPanel}
+                    onDelete={handleDeleteFromPanel}
+                    isLoading={effectiveSelectedProjectId !== null && isDetailLoading}
+                  />
+                </div>
+              </div>
+              
+              {/* Pagination */}
+              <div className="mt-4">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
                   onPageChange={setCurrentPage}
                 />
-              )}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Side Panel */}
-        <ProjectDetailPanel
-          project={projectDetail as ApiProjectDetail | null}
-          isOpen={selectedProjectId !== null}
-          onClose={handleClosePanel}
-          onEdit={handleEditFromPanel}
-          onManageUsersRoles={handleManageUsersRoles}
-          isLoading={isDetailLoading}
-        />
-      </div>
 
-      {/* Create Modal */}
-      {showCreateModal && (
-        <CreateProjectModal
-          open={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={handleCreateSuccess}
-        />
-      )}
+      </div>
 
       {/* Edit Modal */}
       {editingProject && (
@@ -377,6 +325,17 @@ export function ProjectManagementPage() {
           open={editingProject !== null}
           onClose={() => setEditingProject(null)}
           onSuccess={handleEditSuccess}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingProject && (
+        <DeleteProjectConfirmationModal
+          open={deletingProject !== null}
+          projectName={deletingProject.name}
+          onConfirm={handleDeleteConfirm}
+          onCancel={handleDeleteCancel}
+          isLoading={deleteMutation.isPending}
         />
       )}
     </div>

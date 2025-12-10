@@ -62,7 +62,7 @@ export function SearchBar({
         onChange={(e) => setSearchQuery(e.target.value)}
         onKeyPress={handleKeyPress}
         placeholder={placeholder}
-        className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-600"
+        className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400 placeholder:font-light"
         style={{
           color: colors.neutral.dark[500],
         }}

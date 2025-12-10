@@ -8,16 +8,13 @@
 import { useState } from 'react'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
-import { Label } from '@/components/ui/Label'
+import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/Select'
+import { DateSelect } from '@/components/ui/DateSelect'
+import { Checkbox } from '@/components/ui/Checkbox'
+import { Label } from '@/components/ui/Label'
+import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { useUpdateProject } from '@/features/projects/hooks/useProjectMutations'
 import type { ApiProjectDetail, UpdateProjectInput } from '@/features/projects/types'
 import { Icons } from '@/lib/icons'
@@ -47,6 +44,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
     status: project.status === 'archived' ? 'inactive' : project.status,
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [noEndDate, setNoEndDate] = useState(!project.end_date)
 
   const updateMutation = useUpdateProject()
 
@@ -57,7 +55,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
       newErrors.name = 'Name must be at least 3 characters'
     }
 
-    if (formData.start_date && formData.end_date) {
+    if (formData.start_date && formData.end_date && !noEndDate) {
       const start = new Date(formData.start_date)
       const end = new Date(formData.end_date)
       if (end < start) {
@@ -85,8 +83,11 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
         updateData.contract_number = formData.contract_number || undefined
       if (formData.start_date !== (project.start_date || ''))
         updateData.start_date = formData.start_date || undefined
-      if (formData.end_date !== (project.end_date || ''))
+      if (noEndDate) {
+        updateData.end_date = undefined
+      } else if (formData.end_date !== (project.end_date || '')) {
         updateData.end_date = formData.end_date || undefined
+      }
       if (formData.status !== project.status && project.status !== 'archived')
         updateData.status = formData.status
 
@@ -109,10 +110,20 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
     }
   }
 
+  const handleNoEndDateChange = (checked: boolean) => {
+    setNoEndDate(checked)
+    if (checked) {
+      setFormData((prev) => ({ ...prev, end_date: '' }))
+      if (errors.end_date) {
+        setErrors((prev) => ({ ...prev, end_date: '' }))
+      }
+    }
+  }
+
   return (
     <>
       <ModalContent>
-        <form id="edit-project-form" onSubmit={handleSubmit} className="space-y-4">
+        <form id="edit-project-form" onSubmit={handleSubmit} className="space-y-6">
           {updateMutation.isError && (
             <Alert variant="error">
               <div>
@@ -122,138 +133,160 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
             </Alert>
           )}
 
-          {/* Code (Read-only) */}
-          <div>
-            <Label htmlFor="code">Project Code:</Label>
-            <Input
-              id="code"
-              value={project.code}
-              disabled
-              className="mt-1"
-              style={{ backgroundColor: colors.gray[100] }}
-            />
-            <p className="mt-1 text-xs" style={{ color: colors.gray[500] }}>
-              Code cannot be changed after creation
-            </p>
+          {/* Project Information Section */}
+          <div className="space-y-4">
+            <h3
+              className="text-base font-medium"
+              style={{ color: colors.neutral.dark[500] }}
+            >
+              Project Information
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                id="name"
+                label="Project Name:"
+                value={formData.name || ''}
+                onChange={(e) => handleChange('name', e.target.value)}
+                placeholder="Enter Project Name"
+                disabled={updateMutation.isPending}
+                variant={errors.name ? 'error' : 'default'}
+                error={errors.name}
+              />
+
+              <div>
+                <Input
+                  id="code"
+                  label="Project Code:"
+                  value={project.code}
+                  disabled
+                  style={{ backgroundColor: colors.gray[100] }}
+                />
+                <p className="mt-1 text-xs" style={{ color: colors.gray[500] }}>
+                  Code cannot be changed after creation
+                </p>
+              </div>
+            </div>
+            {project.status !== 'archived' && (
+              <div>
+                <Label className="mb-2 block" style={{ fontWeight: 300, fontSize: '14px' }}>
+                  Status:
+                </Label>
+                <RadioGroup
+                  value={formData.status}
+                  onValueChange={(value) => handleChange('status', value)}
+                  disabled={updateMutation.isPending}
+                  className="flex gap-6"
+                >
+                  <div className="flex items-center gap-2">
+                    <RadioItem value="active" id="status-active" />
+                    <Label htmlFor="status-active" className="mb-0 cursor-pointer" style={{ fontWeight: 300, fontSize: '14px' }}>
+                      Active
+                    </Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <RadioItem value="inactive" id="status-inactive" />
+                    <Label htmlFor="status-inactive" className="mb-0 cursor-pointer" style={{ fontWeight: 300, fontSize: '14px' }}>
+                      Inactive
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            <div className="h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
           </div>
 
-          {/* Name */}
-          <div>
-            <Label htmlFor="name" required>
-              Project Name:
-            </Label>
-            <Input
-              id="name"
-              value={formData.name || ''}
-              onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="Enter project name"
-              disabled={updateMutation.isPending}
-              variant={errors.name ? 'error' : 'default'}
-              className="mt-1"
-            />
-            {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
-          </div>
-
-          {/* Description */}
-          <div>
-            <Label htmlFor="description">Description:</Label>
-            <textarea
-              id="description"
-              value={formData.description || ''}
-              onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="Enter project description"
-              rows={3}
-              disabled={updateMutation.isPending}
-              className="mt-1 block w-full rounded-md border px-3 py-2 text-sm focus:ring-1 focus:outline-none disabled:opacity-50"
-              style={{
-                borderColor: colors.light[100],
-                color: colors.neutral.dark[500],
-              }}
-            />
-          </div>
-
-          {/* Two-column layout for client info */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="client_company">Client Company:</Label>
+          {/* Client & Contract Section */}
+          <div className="space-y-4">
+            <h3
+              className="text-base font-medium"
+              style={{ color: colors.neutral.dark[500] }}
+            >
+              Client & Contract
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
               <Input
                 id="client_company"
+                label="Client Company:"
                 value={formData.client_company || ''}
                 onChange={(e) => handleChange('client_company', e.target.value)}
-                placeholder="Enter client company"
+                placeholder="Client Company"
                 disabled={updateMutation.isPending}
-                className="mt-1"
               />
-            </div>
 
-            <div>
-              <Label htmlFor="contract_number">Contract Number:</Label>
               <Input
                 id="contract_number"
+                label="Contract Number:"
                 value={formData.contract_number || ''}
                 onChange={(e) => handleChange('contract_number', e.target.value)}
-                placeholder="Enter contract number"
+                placeholder="Contract Number"
                 disabled={updateMutation.isPending}
-                className="mt-1"
               />
             </div>
+            <div className="h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
           </div>
 
-          {/* Two-column layout for dates */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="start_date">Start Date:</Label>
-              <Input
-                id="start_date"
-                type="date"
-                value={formData.start_date || ''}
-                onChange={(e) => handleChange('start_date', e.target.value)}
-                disabled={updateMutation.isPending}
-                className="mt-1"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="end_date">End Date:</Label>
-              <Input
-                id="end_date"
-                type="date"
-                value={formData.end_date || ''}
-                onChange={(e) => handleChange('end_date', e.target.value)}
-                disabled={updateMutation.isPending}
-                variant={errors.end_date ? 'error' : 'default'}
-                className="mt-1"
-              />
-              {errors.end_date && <p className="mt-1 text-sm text-red-500">{errors.end_date}</p>}
-            </div>
-          </div>
-
-          {/* Status */}
-          {project.status !== 'archived' && (
-            <div>
-              <Label htmlFor="status">Status:</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value) => handleChange('status', value)}
-                disabled={updateMutation.isPending}
-              >
-                <SelectTrigger
-                  className="mt-1 w-full border"
-                  style={{
-                    borderColor: colors.light[100],
-                    fontSize: '14px',
-                    color: colors.neutral.dark[500],
+          {/* Timeline Section */}
+          <div className="space-y-4">
+            <h3
+              className="text-base font-medium"
+              style={{ color: colors.neutral.dark[500] }}
+            >
+              Timeline
+            </h3>
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <DateSelect
+                  id="start_date"
+                  value={formData.start_date}
+                  onChange={(args) => {
+                    const dateStr = args.value ? args.value.toISOString().split('T')[0] : ''
+                    handleChange('start_date', dateStr)
                   }}
-                >
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+                  disabled={updateMutation.isPending}
+                  error={errors.start_date}
+                  placeholder="Start Date"
+                />
+              </div>
+              <div className="flex-1">
+                <DateSelect
+                  id="end_date"
+                  value={formData.end_date}
+                  onChange={(args) => {
+                    const dateStr = args.value ? args.value.toISOString().split('T')[0] : ''
+                    handleChange('end_date', dateStr)
+                  }}
+                  disabled={updateMutation.isPending || noEndDate}
+                  error={errors.end_date}
+                  placeholder="End Date"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="no_end_date"
+                  checked={noEndDate}
+                  onCheckedChange={handleNoEndDateChange}
+                  disabled={updateMutation.isPending}
+                />
+                <Label htmlFor="no_end_date" className="mb-0 cursor-pointer">
+                  No end date
+                </Label>
+              </div>
             </div>
-          )}
+            <div className="h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+          </div>
+
+          {/* Description Section */}
+          <div className="space-y-4">
+            <Textarea
+              id="description"
+              label="Description:"
+              value={formData.description || ''}
+              onChange={(e) => handleChange('description', e.target.value)}
+              placeholder="Placeholder text"
+              rows={3}
+              disabled={updateMutation.isPending}
+            />
+          </div>
 
           {project.status === 'archived' && (
             <Alert variant="warning">

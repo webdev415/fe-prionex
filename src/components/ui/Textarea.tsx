@@ -47,7 +47,8 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         {label && (
           <label
             htmlFor={textareaId}
-            className="text-body-sm text-primary-950 mb-1.5 block font-normal"
+            className="text-body-sm text-primary-950 mb-1.5 block font-light"
+            style={{ fontWeight: 300 }}
           >
             {label}
           </label>

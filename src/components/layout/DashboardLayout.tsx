@@ -55,7 +55,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navItems: SidebarItem[] = [
     { path: '/dashboard', icon: 'home-04', label: 'Dashboard' },
     { path: '/dashboard', icon: 'activity-01', label: 'Activity', disabled: true }, // Route doesn't exist
-    { path: '/dashboard/projects', icon: 'file-import', label: 'Projects' },
+    { path: '/dashboard/importclients', icon: 'file-import', label: 'Import Clients' },
+    { path: '/dashboard/projects', icon: 'chart-ring', label: 'Projects' },
     { path: '/dashboard/users', icon: 'community', label: 'Users' },
     { path: '/dashboard/roles', icon: 'user-status', label: 'Roles' },
     { path: '/dashboard', icon: 'transaction-history', label: 'Transactions', disabled: true }, // Route doesn't exist

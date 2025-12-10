@@ -67,11 +67,6 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
     visiblePages[visiblePages.length - 1] === totalPages &&
     visiblePages[visiblePages.length - 2] < totalPages - 1
 
-  // Don't show pagination if there's only 1 page or less
-  if (totalPages <= 1) {
-    return null
-  }
-
   return (
     <div className={`mt-6 flex items-center justify-center gap-2 ${className || ''}`}>
       {/* Previous Arrow */}
