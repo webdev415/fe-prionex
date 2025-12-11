@@ -17,12 +17,7 @@ export function ProjectManagementPageSkeleton() {
       <div className="flex w-full flex-1 items-start justify-between overflow-y-auto">
         {/* Table Area (70%) */}
         <div className="w-[70%]">
-          <div
-            className="rounded-xl p-6"
-            style={{
-              backgroundColor: '#FFFFFF80',
-            }}
-          >
+          <div className="rounded-xl bg-white/50 p-6">
             <TableSkeleton columns={TABLE_COLUMNS} rows={ITEMS_PER_PAGE} />
           </div>
         </div>
@@ -36,11 +31,7 @@ export function ProjectManagementPageSkeleton() {
       {/* Pagination Skeleton */}
       <div className="mt-4 flex items-center justify-center gap-2">
         {Array.from({ length: 5 }).map((_, index) => (
-          <div
-            key={index}
-            className="h-10 w-10 animate-pulse rounded"
-            style={{ backgroundColor: '#E5E7EB' }}
-          />
+          <div key={index} className="h-10 w-10 animate-pulse rounded bg-gray-200" />
         ))}
       </div>
     </div>

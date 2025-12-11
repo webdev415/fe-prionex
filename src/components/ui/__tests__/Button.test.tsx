@@ -12,7 +12,7 @@ describe('Button', () => {
   it('renders with primary variant by default', () => {
     render(<Button>Primary</Button>)
     const button = screen.getByRole('button')
-    expect(button).toHaveClass('bg-accent-400')
+    expect(button).toHaveClass('bg-primary-300')
   })
 
   it('renders with secondary variant', () => {
@@ -91,5 +91,28 @@ describe('Button', () => {
   it('applies custom className', () => {
     render(<Button className="custom-class">Custom</Button>)
     expect(screen.getByRole('button')).toHaveClass('custom-class')
+  })
+
+  // STYLING STANDARDIZATION TESTS (Phase 2)
+
+  it('primary variant should use primary-300 background (official design system)', () => {
+    render(<Button variant="primary">Primary</Button>)
+    const button = screen.getByRole('button')
+    // Official: PRIMARY (Green #80D80A)
+    expect(button).toHaveClass('bg-primary-300')
+    expect(button).toHaveClass('hover:bg-primary-400')
+  })
+
+  it('should NOT have inline style attribute (Tailwind classes only)', () => {
+    render(<Button variant="primary">Primary</Button>)
+    const button = screen.getByRole('button')
+    expect(button).not.toHaveAttribute('style')
+  })
+
+  it('primary variant text color should use Tailwind class (not inline style)', () => {
+    render(<Button variant="primary">Primary</Button>)
+    const button = screen.getByRole('button')
+    // Should have text color as Tailwind class
+    expect(button).toHaveClass('text-dark-500')
   })
 })

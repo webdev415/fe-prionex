@@ -6,7 +6,6 @@
  */
 
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 
 export interface PaginationProps {
   /** Current page number (1-indexed) */
@@ -73,43 +72,21 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
       <button
         onClick={() => onPageChange(Math.max(1, currentPage - 1))}
         disabled={currentPage === 1}
-        className="flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-        style={{
-          borderColor: colors.gray[300],
-        }}
-        onMouseEnter={(e) => {
-          if (currentPage !== 1) {
-            e.currentTarget.style.backgroundColor = colors.gray[100]
-          }
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = '#FFFFFF'
-        }}
+        className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
         aria-label="Previous page"
       >
-        <Icons.ArrowLeft size={16} color={colors.neutral.dark[500]} strokeWidth={1.5} />
+        <Icons.ArrowLeft size={16} color="#05040D" strokeWidth={1.5} />
       </button>
 
       {/* First page */}
       {visiblePages[0] === 1 && (
         <button
           onClick={() => onPageChange(1)}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors"
-          style={{
-            backgroundColor: currentPage === 1 ? colors.secondary[800] : '#FFFFFF',
-            color: currentPage === 1 ? '#FFFFFF' : colors.neutral.dark[500],
-            border: currentPage === 1 ? 'none' : `1px solid ${colors.gray[300]}`,
-          }}
-          onMouseEnter={(e) => {
-            if (currentPage !== 1) {
-              e.currentTarget.style.backgroundColor = colors.gray[100]
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (currentPage !== 1) {
-              e.currentTarget.style.backgroundColor = '#FFFFFF'
-            }
-          }}
+          className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+            currentPage === 1
+              ? 'bg-secondary-800 text-white'
+              : 'text-dark-500 border border-gray-300 bg-white hover:bg-gray-100'
+          }`}
           aria-label="Go to page 1"
           aria-current={currentPage === 1 ? 'page' : undefined}
         >
@@ -120,11 +97,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
       {/* Ellipsis before */}
       {showEllipsisBefore && (
         <button
-          className="flex h-10 w-10 items-center justify-center rounded-full border bg-white text-sm font-medium"
-          style={{
-            borderColor: colors.gray[300],
-            color: colors.neutral.dark[500],
-          }}
+          className="text-dark-500 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-medium"
           disabled
           aria-label="More pages"
         >
@@ -139,22 +112,11 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
           <button
             key={page}
             onClick={() => onPageChange(page)}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors"
-            style={{
-              backgroundColor: currentPage === page ? colors.secondary[800] : '#FFFFFF',
-              color: currentPage === page ? '#FFFFFF' : colors.neutral.dark[500],
-              border: currentPage === page ? 'none' : `1px solid ${colors.gray[300]}`,
-            }}
-            onMouseEnter={(e) => {
-              if (currentPage !== page) {
-                e.currentTarget.style.backgroundColor = colors.gray[100]
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (currentPage !== page) {
-                e.currentTarget.style.backgroundColor = '#FFFFFF'
-              }
-            }}
+            className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+              currentPage === page
+                ? 'bg-secondary-800 text-white'
+                : 'text-dark-500 border border-gray-300 bg-white hover:bg-gray-100'
+            }`}
             aria-label={`Go to page ${page}`}
             aria-current={currentPage === page ? 'page' : undefined}
           >
@@ -165,11 +127,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
       {/* Ellipsis after */}
       {showEllipsisAfter && (
         <button
-          className="flex h-10 w-10 items-center justify-center rounded-full border bg-white text-sm font-medium"
-          style={{
-            borderColor: colors.gray[300],
-            color: colors.neutral.dark[500],
-          }}
+          className="text-dark-500 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-medium"
           disabled
           aria-label="More pages"
         >
@@ -181,22 +139,11 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
       {visiblePages[visiblePages.length - 1] === totalPages && totalPages !== 1 && (
         <button
           onClick={() => onPageChange(totalPages)}
-          className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors"
-          style={{
-            backgroundColor: currentPage === totalPages ? colors.secondary[800] : '#FFFFFF',
-            color: currentPage === totalPages ? '#FFFFFF' : colors.neutral.dark[500],
-            border: currentPage === totalPages ? 'none' : `1px solid ${colors.gray[300]}`,
-          }}
-          onMouseEnter={(e) => {
-            if (currentPage !== totalPages) {
-              e.currentTarget.style.backgroundColor = colors.gray[100]
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (currentPage !== totalPages) {
-              e.currentTarget.style.backgroundColor = '#FFFFFF'
-            }
-          }}
+          className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+            currentPage === totalPages
+              ? 'bg-secondary-800 text-white'
+              : 'text-dark-500 border border-gray-300 bg-white hover:bg-gray-100'
+          }`}
           aria-label={`Go to page ${totalPages}`}
           aria-current={currentPage === totalPages ? 'page' : undefined}
         >
@@ -208,21 +155,10 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
       <button
         onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
         disabled={currentPage === totalPages}
-        className="flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-        style={{
-          borderColor: colors.gray[300],
-        }}
-        onMouseEnter={(e) => {
-          if (currentPage !== totalPages) {
-            e.currentTarget.style.backgroundColor = colors.gray[100]
-          }
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = '#FFFFFF'
-        }}
+        className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
         aria-label="Next page"
       >
-        <Icons.ArrowRight size={16} color={colors.neutral.dark[500]} strokeWidth={1.5} />
+        <Icons.ArrowRight size={16} color="#05040D" strokeWidth={1.5} />
       </button>
     </div>
   )

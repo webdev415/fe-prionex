@@ -8,7 +8,6 @@
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +35,7 @@ export function LanguageSwitcher() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="text-body-sm inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-sm text-white backdrop-blur-sm transition-colors hover:bg-white/20"
         >
           <span className="text-base leading-none">{LANGUAGE_FLAGS[currentLanguage]}</span>
           <span className="font-medium">{LANGUAGE_SHORT_NAMES[currentLanguage]}</span>
@@ -55,19 +54,14 @@ export function LanguageSwitcher() {
             key={lang}
             onClick={() => handleLanguageChange(lang)}
             className={cn(
-              'text-body-sm flex w-full items-center gap-2 rounded-md px-2.5 py-2 transition-colors',
+              'flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors',
               currentLanguage === lang ? 'text-primary-600 font-medium' : 'text-gray-700'
             )}
           >
             <span className="text-base leading-none">{LANGUAGE_FLAGS[lang]}</span>
             <span>{LANGUAGE_SHORT_NAMES[lang]}</span>
             {currentLanguage === lang && (
-              <Icons.Checkmark
-                size={16}
-                color={colors.primary[600]}
-                strokeWidth={2}
-                className="ml-auto"
-              />
+              <Icons.Checkmark size={16} color="#0369A1" strokeWidth={2} className="ml-auto" />
             )}
           </DropdownMenuItem>
         ))}

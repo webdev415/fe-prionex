@@ -28,14 +28,9 @@ export function ToggleSwitch({
       aria-label={ariaLabel}
       disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
-      className={`relative inline-flex items-center rounded-full transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
-        disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
-      } ${className || ''}`}
-      style={{
-        width: '36px',
-        height: '20px',
-        backgroundColor: checked ? '#287975' : '#C8C8C8', // Color/Secondary/600 for on, Color/Gray/300 for off
-      }}
+      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:ring-2 focus:ring-offset-2 focus:outline-none ${
+        checked ? 'bg-[#287975]' : 'bg-[#C8C8C8]'
+      } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${className || ''}`}
       onFocus={(e) => {
         e.currentTarget.style.outline = '2px solid #287975'
         e.currentTarget.style.outlineOffset = '2px'
@@ -46,12 +41,9 @@ export function ToggleSwitch({
       }}
     >
       <span
-        className="inline-block rounded-full bg-white transition-transform"
-        style={{
-          width: '14px',
-          height: '14px',
-          transform: checked ? 'translateX(18px)' : 'translateX(2px)',
-        }}
+        className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
+          checked ? 'translate-x-[18px]' : 'translate-x-0.5'
+        }`}
       />
     </button>
   )

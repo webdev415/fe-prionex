@@ -13,7 +13,6 @@ import { ProjectDetailPanel } from './components/ProjectDetailPanel'
 import { DeleteProjectConfirmationModal } from './components/DeleteProjectConfirmationModal'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import type { ApiProject, ApiProjectDetail, ProjectFilters } from '@/features/projects/types'
-import { colors } from '@/lib/colors'
 import { formatPeriod, formatCurrency } from '@/lib/formatters'
 import { DataTable, type Column, type SortConfig, type SortOrder } from '@/components/ui/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -160,14 +159,7 @@ export function ProjectManagementPage() {
       sortable: true,
       render: (project) => (
         <div className="flex items-center justify-center">
-          <span
-            className="flex items-center justify-center"
-            style={{
-              color: colors.neutral.dark[500],
-              fontSize: '12px',
-              fontWeight: 500,
-            }}
-          >
+          <span className="text-dark-500 flex items-center justify-center text-xs font-medium">
             {project.user_count || 0}
           </span>
         </div>
@@ -179,12 +171,8 @@ export function ProjectManagementPage() {
       sortable: true,
       render: (project) => (
         <div className="flex flex-col">
-          <span style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}>
-            {project.name}
-          </span>
-          <span style={{ color: colors.gray[700], fontSize: '12px', fontWeight: 500 }}>
-            {project.code}
-          </span>
+          <span className="text-dark-500 text-xs font-medium">{project.name}</span>
+          <span className="text-xs font-medium text-gray-700">{project.code}</span>
         </div>
       ),
     },
@@ -194,9 +182,8 @@ export function ProjectManagementPage() {
       sortable: true,
       render: (project) => (
         <span
-          className="block max-w-[180px] truncate"
+          className="text-dark-500 block max-w-[180px] truncate text-xs font-medium"
           title={project.client_company}
-          style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}
         >
           {project.client_company || '—'}
         </span>
@@ -207,7 +194,7 @@ export function ProjectManagementPage() {
       header: 'Period',
       sortable: true,
       render: (project) => (
-        <span style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}>
+        <span className="text-dark-500 text-xs font-medium">
           {formatPeriod(project.start_date, project.end_date)}
         </span>
       ),
@@ -218,7 +205,7 @@ export function ProjectManagementPage() {
       align: 'right',
       sortable: true,
       render: (project) => (
-        <span style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}>
+        <span className="text-dark-500 text-xs font-medium">
           {formatCurrency(project.total_debt_amount)}
         </span>
       ),
@@ -236,16 +223,7 @@ export function ProjectManagementPage() {
     <div className="flex h-full flex-col">
       {/* Page Header */}
       <div className="mb-4 flex items-center justify-between">
-        <h1
-          className="font-light"
-          style={{
-            fontSize: '24px',
-            fontWeight: 300,
-            color: colors.neutral.dark[500],
-          }}
-        >
-          Project Management
-        </h1>
+        <h1 className="text-dark-500 text-2xl font-light">Project Management</h1>
       </div>
 
       {/* Search & Filters */}
@@ -274,12 +252,7 @@ export function ProjectManagementPage() {
           <div className="flex flex-1 flex-col">
             <div className="flex w-full flex-1 items-start justify-between overflow-y-auto">
               <div className="w-[70%]">
-                <div
-                  className="rounded-xl p-6"
-                  style={{
-                    backgroundColor: '#FFFFFF80',
-                  }}
-                >
+                <div className="rounded-xl bg-white/50 p-6">
                   <DataTable
                     columns={columns}
                     data={projects}

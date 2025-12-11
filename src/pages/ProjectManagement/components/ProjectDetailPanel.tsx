@@ -8,7 +8,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { formatCurrency, formatNumber, formatDateTime, truncateText } from '@/lib/formatters'
 import type { ApiProjectDetail } from '@/features/projects/types'
@@ -48,17 +47,9 @@ export function ProjectDetailPanel({
   // Empty state when there are no projects
   if (!hasProjects) {
     return (
-      <div
-        className="flex h-full flex-col items-center justify-center rounded-lg p-6"
-        style={{
-          backgroundColor: '#FFFFFF80',
-          border: `1px solid ${colors.gray[200]}`,
-        }}
-      >
-        <Icons.View size={48} color={colors.gray[300]} strokeWidth={1} />
-        <p className="mt-4 text-sm" style={{ color: colors.gray[500] }}>
-          There is no project
-        </p>
+      <div className="flex h-full flex-col items-center justify-center rounded-lg border border-gray-200 bg-white/50 p-6">
+        <Icons.View size={48} color="#D1D5DB" strokeWidth={1} />
+        <p className="mt-4 text-sm text-gray-500">There is no project</p>
       </div>
     )
   }
@@ -66,36 +57,20 @@ export function ProjectDetailPanel({
   // Loading state
   if (isLoading || !project) {
     return (
-      <div
-        className="flex h-full items-center justify-center rounded-lg"
-        style={{
-          backgroundColor: '#FFFFFF',
-          border: `1px solid ${colors.gray[200]}`,
-        }}
-      >
-        <div
-          className="h-8 w-8 animate-spin rounded-full border-b-2"
-          style={{ borderColor: colors.primary[500] }}
-        />
+      <div className="flex h-full items-center justify-center rounded-lg border border-gray-200 bg-white">
+        <div className="border-primary-500 h-8 w-8 animate-spin rounded-full border-b-2" />
       </div>
     )
   }
 
   return (
-    <div
-      className="flex h-full flex-col overflow-hidden rounded-lg p-6"
-      style={{
-        backgroundColor: '#FFFFFF80',
-        border: `1px solid ${colors.gray[200]}`,
-      }}
-    >
+    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white/50 p-6">
       {/* Header */}
       <div className="flex items-center border-none">
         <div className="flex items-center gap-2">
           <StatusBadge status={getStatusType(project.status)} />
           <h2
-            className="max-w-[180px] truncate text-base font-medium"
-            style={{ color: colors.neutral.dark[500] }}
+            className="text-dark-500 max-w-[180px] truncate text-base font-medium"
             title={project.name}
           >
             {project.name}
@@ -114,13 +89,11 @@ export function ProjectDetailPanel({
         </div>
 
         {/* Divider */}
-        <div className="my-1 h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+        <div className="my-1 h-px w-full bg-gray-200" />
 
         {/* Metrics */}
         <div className="flex flex-col gap-2">
-          <h3 className="text-base font-light" style={{ color: colors.neutral.dark[500] }}>
-            Metrics
-          </h3>
+          <h3 className="text-dark-500 text-base font-light">Metrics</h3>
           <div className="grid grid-cols-2 gap-3">
             <MetricCard label="Clients" value={formatNumber(project.total_clients)} />
             <MetricCard label="Total Debt" value={formatCurrency(project.total_debt_amount)} />
@@ -128,26 +101,20 @@ export function ProjectDetailPanel({
         </div>
 
         {/* Divider */}
-        <div className="my-1 h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+        <div className="my-1 h-px w-full bg-gray-200" />
 
         {/* Description */}
         {project.description && (
           <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-light" style={{ color: colors.neutral.dark[500] }}>
-              Description
-            </h3>
-            <p
-              className="text-sm leading-relaxed font-light"
-              style={{ color: colors.neutral.dark[500] }}
-            >
+            <h3 className="text-dark-500 text-sm font-light">Description</h3>
+            <p className="text-dark-500 text-sm leading-relaxed font-light">
               {isExpanded ? project.description : truncateText(project.description, 120)}
             </p>
             {project.description.length > 120 && (
               <div className="flex">
                 <button
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-xs font-medium"
-                  style={{ color: colors.secondary[800] }}
+                  className="text-secondary-800 text-xs font-medium"
                 >
                   {isExpanded ? 'Show less' : 'Read more'}
                 </button>
@@ -157,28 +124,21 @@ export function ProjectDetailPanel({
         )}
 
         {/* Divider */}
-        <div className="my-1 h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+        <div className="my-1 h-px w-full bg-gray-200" />
 
         {/* Access and Roles */}
         <div className="flex flex-col gap-2">
-          <h3 className="text-base font-light" style={{ color: colors.neutral.dark[500] }}>
-            Access and Roles
-          </h3>
+          <h3 className="text-dark-500 text-base font-light">Access and Roles</h3>
           <div className="flex items-center justify-start gap-2">
-            <span className="text-xs font-light" style={{ color: colors.gray[600] }}>
-              Assigned users:
-            </span>
-            <span className="text-sm font-medium" style={{ color: colors.neutral.dark[500] }}>
+            <span className="text-xs font-light text-gray-600">Assigned users:</span>
+            <span className="text-dark-500 text-sm font-medium">
               {project.assigned_users_count || project.statistics?.user_count || 0}
             </span>
           </div>
           <div className="flex items-center justify-start gap-2">
-            <span className="text-xs font-light" style={{ color: colors.gray[600] }}>
-              Default roles:
-            </span>
+            <span className="text-xs font-light text-gray-600">Default roles:</span>
             <span
-              className="text-right text-xs font-medium"
-              style={{ color: colors.neutral.dark[500] }}
+              className="text-dark-500 text-right text-xs font-medium"
               title={project.default_roles?.join(', ')}
             >
               {project.default_roles?.join(', ') || 'None'}
@@ -187,46 +147,37 @@ export function ProjectDetailPanel({
           <div className="flex">
             <button
               onClick={() => navigate('/dashboard/roles')}
-              className="mt-3 flex items-center gap-1.5 rounded p-2.5 text-xs font-[500] text-white"
-              style={{ backgroundColor: colors.secondary[800] }}
+              className="bg-secondary-800 mt-3 flex items-center gap-1.5 rounded p-2.5 text-xs font-[500] text-white"
             >
-              <Icons.UserCircle02Icon size={20} color={colors.primary[500]} />
+              <Icons.UserCircle02Icon size={20} color="#A0F229" />
               Manage users & roles
-              <Icons.ArrowRight size={20} color={colors.primary[500]} />
+              <Icons.ArrowRight size={20} color="#A0F229" />
             </button>
           </div>
         </div>
 
         {/* Divider */}
-        <div className="my-1 h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+        <div className="my-1 h-px w-full bg-gray-200" />
 
         {/* Audit */}
         <div className="flex flex-col gap-3">
-          <h3 className="text-base font-light" style={{ color: colors.neutral.dark[500] }}>
-            Audit
-          </h3>
+          <h3 className="text-dark-500 text-base font-light">Audit</h3>
           <div className="space-y-1">
             <div className="flex justify-between">
-              <span className="text-xs font-light" style={{ color: colors.gray[700] }}>
-                Created by
-              </span>
-              <span className="text-xs font-medium" style={{ color: colors.neutral.dark[500] }}>
+              <span className="text-xs font-light text-gray-700">Created by</span>
+              <span className="text-dark-500 text-xs font-medium">
                 {project.created_by?.username || 'System'}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-xs font-light" style={{ color: colors.gray[700] }}>
-                Created
-              </span>
-              <span className="text-xs font-medium" style={{ color: colors.neutral.dark[500] }}>
+              <span className="text-xs font-light text-gray-700">Created</span>
+              <span className="text-dark-500 text-xs font-medium">
                 {formatDateTime(project.created_at)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-xs font-light" style={{ color: colors.gray[700] }}>
-                Last updated
-              </span>
-              <span className="text-xs font-medium" style={{ color: colors.neutral.dark[500] }}>
+              <span className="text-xs font-light text-gray-700">Last updated</span>
+              <span className="text-dark-500 text-xs font-medium">
                 {formatDateTime(project.updated_at)}
               </span>
             </div>
@@ -238,30 +189,14 @@ export function ProjectDetailPanel({
       <div className="flex gap-3 pt-3">
         <button
           onClick={onEdit}
-          className="flex flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="bg-primary-300 text-dark-500 flex h-[45px] flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium"
         >
-          <Icons.PencilEdit size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          <Icons.PencilEdit size={20} color="#05040D" strokeWidth={2} />
           Edit
         </button>
         <button
           onClick={onDelete}
-          className="flex flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: '#EF4444',
-            color: '#FFFFFF',
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="bg-error-500 flex h-[45px] flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium text-white"
         >
           <Icons.Delete size={20} color="#FFFFFF" strokeWidth={2} />
           Delete
@@ -275,12 +210,8 @@ export function ProjectDetailPanel({
 function InfoItem({ label, value }: { label: string; value?: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs font-light" style={{ color: colors.gray[700] }}>
-        {label}:
-      </span>
-      <span className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
-        {value || '—'}
-      </span>
+      <span className="text-xs font-light text-gray-700">{label}:</span>
+      <span className="text-dark-500 text-base font-medium">{value || '—'}</span>
     </div>
   )
 }
@@ -289,12 +220,8 @@ function InfoItem({ label, value }: { label: string; value?: string }) {
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs font-light" style={{ color: colors.gray[700] }}>
-        {label}:
-      </span>
-      <span className="text-xs font-medium" style={{ color: colors.neutral.dark[500] }}>
-        {value}
-      </span>
+      <span className="text-xs font-light text-gray-700">{label}:</span>
+      <span className="text-dark-500 text-xs font-medium">{value}</span>
     </div>
   )
 }

@@ -7,7 +7,6 @@
 
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { Button } from './ui/Button'
-import { colors } from '@/lib/colors'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -60,18 +59,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div
-          className="flex min-h-screen flex-col items-center justify-center p-8"
-          style={{ backgroundColor: colors.light[50] }}
-        >
-          <div
-            className="w-full max-w-md rounded-lg p-8 shadow-lg"
-            style={{ backgroundColor: '#FFFFFF' }}
-          >
-            <h1 className="mb-4 text-2xl font-semibold" style={{ color: colors.neutral.dark[500] }}>
-              Something went wrong
-            </h1>
-            <p className="mb-6 text-sm" style={{ color: colors.gray[600] }}>
+        <div className="bg-light-50 flex min-h-screen flex-col items-center justify-center p-8">
+          <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-lg">
+            <h1 className="text-dark-500 mb-4 text-2xl font-semibold">Something went wrong</h1>
+            <p className="mb-6 text-sm text-gray-600">
               {this.state.error?.message ||
                 'An unexpected error occurred. Please try refreshing the page.'}
             </p>
@@ -79,22 +70,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               <Button
                 onClick={this.handleReset}
                 variant="primary"
-                className="flex-1"
-                style={{
-                  backgroundColor: colors.primary[300],
-                  color: colors.neutral.dark[500],
-                }}
+                className="bg-primary-300 text-dark-500 flex-1"
               >
                 Try Again
               </Button>
               <Button
                 onClick={() => window.location.reload()}
                 variant="outline"
-                className="flex-1"
-                style={{
-                  borderColor: colors.gray[400],
-                  color: colors.neutral.dark[500],
-                }}
+                className="text-dark-500 flex-1 border-gray-400"
               >
                 Refresh Page
               </Button>

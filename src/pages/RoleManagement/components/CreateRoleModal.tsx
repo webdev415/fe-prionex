@@ -8,7 +8,6 @@ import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/M
 import { CreateRoleForm } from '@/features/roles/components/CreateRoleForm'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
-import { colors } from '@/lib/colors'
 
 interface CreateRoleModalProps {
   open: boolean
@@ -27,11 +26,8 @@ export function CreateRoleModal({ open, projectId, onClose, onSuccess }: CreateR
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.primary[400] }}
-          >
-            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.Add size={20} color="#05040D" strokeWidth={2} />
           </div>
         }
         title="Create Role"
@@ -43,17 +39,9 @@ export function CreateRoleModal({ open, projectId, onClose, onSuccess }: CreateR
       <ModalFooter>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={onClose}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: colors.gray[500],
-            color: '#FFFFFF',
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
           Cancel
         </Button>
@@ -61,15 +49,7 @@ export function CreateRoleModal({ open, projectId, onClose, onSuccess }: CreateR
           type="submit"
           form="create-role-form"
           variant="primary"
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
         >
           Create Role
         </Button>
