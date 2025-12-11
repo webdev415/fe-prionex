@@ -2,18 +2,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
 
 @theme {
-  /* PRIMARY (Light Blue #0CA8EB) - CTAs, links, focus states, interactive elements */
-  --color-primary-50: #f0f9ff;
-  --color-primary-100: #e0f2fe;
-  --color-primary-200: #b9e7fe;
-  --color-primary-300: #7cd4fd;
-  --color-primary-400: #36c0fa;
-  --color-primary-500: #0ca8eb;
-  --color-primary-600: #008fd6;
-  --color-primary-700: #016aa3;
-  --color-primary-800: #065a86;
-  --color-primary-900: #0b4b6f;
-  --color-primary-950: #07304a;
+  /* PRIMARY (Green #80D80A) - CTAs, links, focus states, interactive elements */
+  --color-primary-50: #f7ffe5;
+  --color-primary-100: #ebffc8;
+  --color-primary-200: #ceff7d;
+  --color-primary-300: #bbfb5b;
+  --color-primary-400: #a0f229;
+  --color-primary-500: #80d80a;
+  --color-primary-600: #62ad03;
+  --color-primary-700: #4a8308;
+  --color-primary-800: #3d670d;
+  --color-primary-900: #345710;
+  --color-primary-950: #193102;
+
+  /* SECONDARY (Teal/Blue-Green #359791) - Secondary actions, accents */
+  --color-secondary-50: #f3faf9;
+  --color-secondary-100: #d5f2ed;
+  --color-secondary-200: #abe4db;
+  --color-secondary-300: #7acec5;
+  --color-secondary-400: #4eb3aa;
+  --color-secondary-500: #359791;
+  --color-secondary-600: #287975;
+  --color-secondary-700: #236260;
+  --color-secondary-800: #204e4d;
+  --color-secondary-900: #1f4242;
+  --color-secondary-950: #0d2526;
 
   /* INFORMATION (Blue #3B82F6) - Info messages, secondary actions, informational badges */
   --color-information-50: #eff6ff;
@@ -28,16 +41,16 @@
   --color-information-900: #1e3a8a;
   --color-information-950: #172e54;
 
-  /* DARK (Dark Gray/Black) - Text, dark backgrounds, headers */
-  --color-dark-50: #366a80;
-  --color-dark-100: #28576a;
-  --color-dark-200: #1f4150;
-  --color-dark-300: #152f3a;
-  --color-dark-400: #0b1b22;
-  --color-dark-500: #050d11;
-  --color-dark-600: #040b0e;
-  --color-dark-700: #02090b;
-  --color-dark-800: #02090b;
+  /* DARK (Dark #05040D) - Text, dark backgrounds, headers */
+  --color-dark-50: #272166;
+  --color-dark-100: #231e5b;
+  --color-dark-200: #1d194d;
+  --color-dark-300: #0c0a20;
+  --color-dark-400: #080716;
+  --color-dark-500: #05040d;
+  --color-dark-600: #04030a;
+  --color-dark-700: #030209;
+  --color-dark-800: #020107;
   --color-dark-900: #000000;
   --color-dark-950: #000000;
 
@@ -54,18 +67,18 @@
   --color-gray-900: #545454;
   --color-gray-950: #363636;
 
-  /* LIGHT (Light Gray/White) - Light backgrounds, cards, panels */
+  /* LIGHT (Grey-Green #90947B) - Light backgrounds, cards, panels */
   --color-light-50: #f2f3f0;
   --color-light-100: #ebece8;
-  --color-light-200: #cdcfd4;
-  --color-light-300: #abafb5;
-  --color-light-400: #81858f;
-  --color-light-500: #6d727d;
-  --color-light-600: #575a63;
-  --color-light-700: #4a4d54;
-  --color-light-800: #424448;
-  --color-light-900: #3a3b3f;
-  --color-light-950: #242528;
+  --color-light-200: #d6d9cf;
+  --color-light-300: #bbc0b1;
+  --color-light-400: #a2a691;
+  --color-light-500: #90947b;
+  --color-light-600: #84876f;
+  --color-light-700: #6f715d;
+  --color-light-800: #5e5e4e;
+  --color-light-900: #4d4d41;
+  --color-light-950: #282822;
 
   /* SUCCESS (Green #22C55E) - Success messages, positive feedback, completed states */
   --color-success-50: #f0fdf4;
@@ -80,7 +93,7 @@
   --color-success-900: #14532d;
   --color-success-950: #052e14;
 
-  /* WARNING (Yellow #EAB308) - Warning messages, caution states, pending actions */
+  /* WARNING (Yellow/Orange #EAB308) - Warning messages, caution states, pending actions */
   --color-warning-50: #fefce8;
   --color-warning-100: #fef9c3;
   --color-warning-200: #fef08a;
@@ -91,7 +104,7 @@
   --color-warning-700: #a16207;
   --color-warning-800: #854d0e;
   --color-warning-900: #713f12;
-  --color-warning-950: #422306;
+  --color-warning-950: #423306;
 
   /* ERROR (Red #EF4444) - Error messages, destructive actions, validation failures */
   --color-error-50: #fef2f2;
@@ -105,30 +118,6 @@
   --color-error-800: #991b1b;
   --color-error-900: #7f1d1d;
   --color-error-950: #450a0a;
-
-  --color-secondary-50: #ecfdf5;
-  --color-secondary-100: #d1fae5;
-  --color-secondary-200: #a7f3d0;
-  --color-secondary-300: #6ee7b7;
-  --color-secondary-400: #34d399;
-  --color-secondary-500: #10b981;
-  --color-secondary-600: #059669;
-  --color-secondary-700: #047857;
-  --color-secondary-800: #065f46;
-  --color-secondary-900: #064e3b;
-  --color-secondary-950: #022c22;
-
-  --color-tertiary-50: #faf5ff;
-  --color-tertiary-100: #f3e8ff;
-  --color-tertiary-200: #e9d5ff;
-  --color-tertiary-300: #d8b4fe;
-  --color-tertiary-400: #c084fc;
-  --color-tertiary-500: #8b5cf6;
-  --color-tertiary-600: #7c3aed;
-  --color-tertiary-700: #6d28d9;
-  --color-tertiary-800: #5b21b6;
-  --color-tertiary-900: #4c1d95;
-  --color-tertiary-950: #2e1065;
 
   /* Font Family */
   --font-family-sans: 'Lexend', sans-serif;
