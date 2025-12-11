@@ -10,7 +10,6 @@ import { useRole } from '@/features/roles/hooks/useRole'
 import { useProject } from '@/features/projects/hooks/useProject'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
-import { colors } from '@/lib/colors'
 
 interface EditRoleModalProps {
   open: boolean
@@ -39,9 +38,9 @@ export function EditRoleModal({ open, roleId, onClose, onSuccess }: EditRoleModa
         icon={
           <div
             className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.primary[400] }}
+            style={{ backgroundColor: '#B0EDC7' }}
           >
-            <Icons.PencilEdit size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+            <Icons.PencilEdit size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
         }
         title={role ? `Edit Role: ${role.name}${role.is_default ? ' (Default)' : ''}` : 'Edit Role'}
@@ -71,7 +70,7 @@ export function EditRoleModal({ open, roleId, onClose, onSuccess }: EditRoleModa
           className="flex-1 rounded-md text-sm font-medium"
           style={{
             border: 'none',
-            backgroundColor: colors.gray[500],
+            backgroundColor: '#6B7280',
             color: '#FFFFFF',
             height: '45px',
             fontSize: '14px',
@@ -88,8 +87,8 @@ export function EditRoleModal({ open, roleId, onClose, onSuccess }: EditRoleModa
           className="flex-1 rounded-md text-sm font-medium"
           style={{
             border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
+            backgroundColor: '#A7E8BD',
+            color: '#1A1A1A',
             height: '45px',
             fontSize: '14px',
             fontWeight: 500,

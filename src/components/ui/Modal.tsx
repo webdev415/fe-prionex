@@ -9,7 +9,6 @@
 import { type ReactNode } from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { Icon, Cancel01Icon } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import { cn } from '@/lib/utils'
 
 export interface ModalProps {
@@ -34,20 +33,14 @@ export function Modal({ open, onClose, children, className, maxWidth = 'md' }: M
     <DialogPrimitive.Root open={open} onOpenChange={(open) => !open && onClose()}>
       <DialogPrimitive.Portal>
         {/* Backdrop with blur */}
-        <DialogPrimitive.Overlay
-          className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50"
-          style={{
-            backgroundColor: '#05040D4D',
-            backdropFilter: 'blur(14px)',
-          }}
-        />
+        <DialogPrimitive.Overlay className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/30 backdrop-blur-xl" />
 
         {/* Full-screen container */}
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <DialogPrimitive.Content
             aria-describedby={undefined}
             className={cn(
-              'relative z-50 w-full rounded-lg shadow-xl',
+              'bg-light-50 relative z-50 max-h-[90vh] w-full rounded-lg p-10 shadow-xl',
               'data-[state=open]:animate-in data-[state=closed]:animate-out',
               'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
               'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
@@ -57,25 +50,13 @@ export function Modal({ open, onClose, children, className, maxWidth = 'md' }: M
               maxWidthClasses[maxWidth],
               className
             )}
-            style={{
-              backgroundColor: colors.light[50],
-              padding: '40px',
-              boxShadow:
-                '0px 2px 4px -2px rgba(0, 0, 0, 0.06), 0px 5px 8px -2px rgba(0, 0, 0, 0.08)',
-              maxHeight: '90vh',
-            }}
           >
             <DialogPrimitive.Close asChild>
               <button
                 className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
                 aria-label="Close modal"
               >
-                <Icon
-                  icon={Cancel01Icon}
-                  size={20}
-                  color={colors.neutral.dark[500]}
-                  strokeWidth={1.5}
-                />
+                <Icon icon={Cancel01Icon} size={20} color="#1A1A1A" strokeWidth={1.5} />
               </button>
             </DialogPrimitive.Close>
             {children}
@@ -95,20 +76,10 @@ interface ModalHeaderProps {
 
 export function ModalHeader({ icon, title, className }: ModalHeaderProps) {
   return (
-    <div
-      className={cn('flex items-center border-b', className)}
-      style={{ borderColor: colors.light[100], padding: '0' }}
-    >
+    <div className={cn('border-light-200 flex items-center border-b p-0', className)}>
       <div className="flex items-center gap-3">
         {icon && <div className="flex-shrink-0">{icon}</div>}
-        <DialogPrimitive.Title
-          className="font-medium"
-          style={{
-            fontSize: '30px',
-            fontWeight: 500,
-            color: colors.neutral.dark[500],
-          }}
-        >
+        <DialogPrimitive.Title className="text-dark-950 text-2xl font-medium">
           {title}
         </DialogPrimitive.Title>
       </div>
@@ -124,12 +95,10 @@ interface ModalContentProps {
 export function ModalContent({ children, className }: ModalContentProps) {
   return (
     <div
-      className={cn('modal-content-scroll overflow-auto', className)}
-      style={{
-        maxHeight: 'calc(90vh - 200px)',
-        maxWidth: '100%',
-        padding: '24px 4px 24px 4px',
-      }}
+      className={cn(
+        'modal-content-scroll max-h-[calc(90vh-200px)] max-w-full overflow-auto px-1 py-6',
+        className
+      )}
     >
       {children}
     </div>
@@ -144,8 +113,10 @@ interface ModalFooterProps {
 export function ModalFooter({ children, className }: ModalFooterProps) {
   return (
     <div
-      className={cn('flex items-center justify-end gap-3 border-t', className)}
-      style={{ borderColor: colors.light[100], padding: '12px 0 0 0' }}
+      className={cn(
+        'border-light-200 flex items-center justify-end gap-3 border-t pt-3',
+        className
+      )}
     >
       {children}
     </div>

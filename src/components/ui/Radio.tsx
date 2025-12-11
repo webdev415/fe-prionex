@@ -8,7 +8,6 @@
 import * as React from 'react'
 import * as RadioGroupPrimitive from '@radix-ui/react-radio-group'
 import { cn } from '@/lib/utils'
-import { colors } from '@/lib/colors'
 
 export interface RadioGroupProps extends React.ComponentPropsWithoutRef<
   typeof RadioGroupPrimitive.Root
@@ -38,21 +37,13 @@ const RadioItem = React.forwardRef<
     <RadioGroupPrimitive.Item
       ref={ref}
       className={cn(
-        'aspect-square h-4 w-4 rounded-full border focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+        'aspect-square h-4 w-4 rounded-full border border-gray-300 focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
         className
       )}
-      style={{
-        borderColor: colors.gray[300],
-      }}
       {...props}
     >
       <RadioGroupPrimitive.Indicator className="flex items-center justify-center">
-        <div
-          className="h-2.5 w-2.5 rounded-full"
-          style={{
-            backgroundColor: colors.primary[500],
-          }}
-        />
+        <div className="bg-primary-500 h-2.5 w-2.5 rounded-full" />
       </RadioGroupPrimitive.Indicator>
     </RadioGroupPrimitive.Item>
   )

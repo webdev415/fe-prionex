@@ -7,7 +7,6 @@
 
 import { useMemo } from 'react'
 import { usePermissions } from '../hooks/useRoleMutations'
-import { colors } from '@/lib/colors'
 import type { RoleDetailResponse } from '../types'
 
 interface ViewRoleFormProps {
@@ -53,13 +52,13 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
       <div className="flex items-center gap-2">
         <span
           className="font-light"
-          style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+          style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
         >
           Role Name:
         </span>
         <span
           className="font-semibold"
-          style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
+          style={{ fontSize: '14px', fontWeight: 600, color: '#030712' }}
         >
           {role.name}
         </span>
@@ -69,13 +68,13 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
       <div className="flex items-center gap-2">
         <span
           className="font-light"
-          style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+          style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
         >
           Description:
         </span>
         <span
           className="font-semibold"
-          style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
+          style={{ fontSize: '14px', fontWeight: 600, color: '#030712' }}
         >
           {role.description || '—'}
         </span>
@@ -85,13 +84,13 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
       <div className="flex items-center gap-2">
         <span
           className="font-light"
-          style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+          style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
         >
           Type:
         </span>
         <span
           className="font-semibold"
-          style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
+          style={{ fontSize: '14px', fontWeight: 600, color: '#030712' }}
         >
           {role.is_default ? 'System Default' : 'Custom Role'}
         </span>
@@ -101,13 +100,13 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
       <div className="flex items-center gap-2">
         <span
           className="font-light"
-          style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+          style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
         >
           Users:
         </span>
         <span
           className="font-semibold"
-          style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
+          style={{ fontSize: '14px', fontWeight: 600, color: '#030712' }}
         >
           {role.user_count || 0}
         </span>
@@ -118,13 +117,13 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
         <div className="mb-4">
           <span
             className="font-light"
-            style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+            style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
           >
             Permissions:
           </span>
           <span
             className="ml-2 font-light"
-            style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+            style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
           >
             ({selectedPermissionIds.size} of {permissions.length} permissions)
           </span>
@@ -138,7 +137,7 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
           }}
         >
           {loadingPermissions ? (
-            <div className="py-4 text-sm" style={{ color: colors.gray[500] }}>
+            <div className="py-4 text-sm" style={{ color: '#6B7280' }}>
               Loading permissions...
             </div>
           ) : (
@@ -151,11 +150,11 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
                   >
                     <span
                       className="font-light"
-                      style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
+                      style={{ fontSize: '14px', fontWeight: 300, color: '#030712' }}
                     >
                       {category}
                     </span>
-                    <span className="text-xs" style={{ color: colors.gray[500] }}>
+                    <span className="text-xs" style={{ color: '#6B7280' }}>
                       {categoryPerms.length}
                     </span>
                   </div>
@@ -165,8 +164,8 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
                         <div
                           className="flex h-4 w-4 items-center justify-center rounded border"
                           style={{
-                            borderColor: colors.primary[500],
-                            backgroundColor: colors.primary[500],
+                            borderColor: '#0CA8EB',
+                            backgroundColor: '#0CA8EB',
                           }}
                         >
                           <svg
@@ -191,7 +190,7 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
                             style={{
                               fontSize: '14px',
                               fontWeight: 300,
-                              color: colors.gray[950],
+                              color: '#030712',
                             }}
                           >
                             {perm.name}
@@ -202,7 +201,7 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
                               style={{
                                 fontSize: '14px',
                                 fontWeight: 300,
-                                color: colors.gray[500],
+                                color: '#6B7280',
                               }}
                             >
                               {perm.description}

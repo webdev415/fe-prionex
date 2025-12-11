@@ -15,7 +15,6 @@ import { EditUserModal } from './components/EditUserModal'
 import UnlockAccountModal from './components/UnlockAccountModal'
 import type { ApiUser } from '@/features/users/types'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
@@ -128,7 +127,7 @@ export function UserManagementPage() {
           // Show all roles, separated by comma if multiple
           return <span>{user.projects.map((p) => p.role_name).join(', ')}</span>
         }
-        return <span style={{ color: colors.gray[500] }}>No role</span>
+        return <span style={{ color: '#6B7280' }}>No role</span>
       },
     },
     {
@@ -214,7 +213,7 @@ export function UserManagementPage() {
             style={{
               fontSize: '24px',
               fontWeight: 300,
-              color: colors.neutral.dark[500],
+              color: '#1A1A1A',
             }}
           >
             User Management
@@ -224,7 +223,7 @@ export function UserManagementPage() {
             style={{
               fontSize: '16px',
               fontWeight: 300,
-              color: colors.gray[500],
+              color: '#6B7280',
             }}
           >
             {totalUsers}
@@ -235,7 +234,7 @@ export function UserManagementPage() {
           onClick={() => setShowCreateModal(true)}
           className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
           style={{
-            backgroundColor: colors.secondary[800],
+            backgroundColor: '#164E63',
           }}
           aria-label="Add new user"
         >
@@ -244,11 +243,11 @@ export function UserManagementPage() {
             style={{
               width: '40px',
               height: '40px',
-              backgroundColor: colors.primary[300],
+              backgroundColor: '#A7E8BD',
               marginLeft: '4px',
             }}
           >
-            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+            <Icons.Add size={20} color={'#1A1A1A'} strokeWidth={2} />
           </div>
           <span
             className="px-4 py-3 font-medium text-white"

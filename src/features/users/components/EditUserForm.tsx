@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
-import { colors } from '@/lib/colors'
 import type { UserDetailResponse } from '../types'
 import { useProjects } from '@/features/projects'
 import { useRoles } from '@/features/roles'
@@ -149,7 +148,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
               className="mt-1"
               style={{ backgroundColor: '#F9FAFB' }}
             />
-            <p className="mt-1 text-xs" style={{ color: colors.gray[500] }}>
+            <p className="mt-1 text-xs" style={{ color: '#6B7280' }}>
               Username cannot be changed
             </p>
           </div>
@@ -257,9 +256,9 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
                   <SelectTrigger
                     className="mt-1 w-full border"
                     style={{
-                      borderColor: colors.light[100],
+                      borderColor: '#F2F3F0',
                       fontSize: '14px',
-                      color: colors.neutral.dark[500],
+                      color: '#1A1A1A',
                     }}
                   >
                     <SelectValue />
@@ -289,9 +288,9 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
                   <SelectTrigger
                     className="mt-1 w-full border"
                     style={{
-                      borderColor: colors.light[100],
+                      borderColor: '#F2F3F0',
                       fontSize: '14px',
-                      color: colors.neutral.dark[500],
+                      color: '#1A1A1A',
                     }}
                   >
                     <SelectValue />
@@ -323,10 +322,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
       {/* Assign Projects Section (editable, similar to CreateUserForm) */}
       <div className="mt-4 mb-0 space-y-4">
-        <h3
-          className="text-sm font-semibold"
-          style={{ color: colors.neutral.dark[500], fontSize: '14px' }}
-        >
+        <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A', fontSize: '14px' }}>
           Assign Projects:
         </h3>
         <div className="flex flex-wrap gap-4">
@@ -336,7 +332,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
               <label
                 key={project.id}
                 className="flex cursor-pointer items-center gap-2 text-sm font-light"
-                style={{ color: colors.neutral.dark[500] }}
+                style={{ color: '#1A1A1A' }}
               >
                 <Checkbox
                   checked={isChecked}
@@ -364,10 +360,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       {/* Role per Project Section (editable) */}
       {selectedProjects.length > 0 && (
         <div className="mt-4 mb-0 space-y-4">
-          <h3
-            className="text-sm font-semibold"
-            style={{ color: colors.neutral.dark[500], fontSize: '14px' }}
-          >
+          <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A', fontSize: '14px' }}>
             Role per Project:
           </h3>
           <div className="space-y-3">
@@ -378,7 +371,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
               return (
                 <div key={projectId} className="grid w-full grid-cols-2 items-center gap-4">
-                  <span className="text-sm font-light" style={{ color: colors.neutral.dark[500] }}>
+                  <span className="text-sm font-light" style={{ color: '#1A1A1A' }}>
                     {project?.name}:
                   </span>
                   <Select
@@ -391,9 +384,9 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
                     <SelectTrigger
                       className="mt-1 w-full border"
                       style={{
-                        borderColor: colors.light[100],
+                        borderColor: '#F2F3F0',
                         fontSize: '14px',
-                        color: colors.neutral.dark[500],
+                        color: '#1A1A1A',
                       }}
                     >
                       <SelectValue placeholder="Not assigned" />

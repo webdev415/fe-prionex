@@ -9,7 +9,6 @@ import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/M
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import type { ApiUser } from '@/features/users/types'
 import { useAdminUnlockAccount } from '@/features/users/hooks'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -58,9 +57,9 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
         icon={
           <div
             className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.primary[400] }}
+            style={{ backgroundColor: '#B0EDC7' }}
           >
-            <HugeiconsIcon icon={LockedIcon} size={20} color={colors.neutral.dark[500]} />
+            <HugeiconsIcon icon={LockedIcon} size={20} color="#1A1A1A" />
           </div>
         }
         title={
@@ -78,7 +77,7 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
               style={{
                 fontWeight: 500,
                 fontSize: '16px',
-                color: colors.neutral.dark[500],
+                color: '#1A1A1A',
               }}
             >
               Unlock Account:
@@ -87,7 +86,7 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
               style={{
                 fontWeight: 300,
                 fontSize: '16px',
-                color: colors.neutral.dark[500],
+                color: '#1A1A1A',
               }}
             >
               {user.username}
@@ -98,7 +97,7 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
               style={{
                 fontWeight: 300,
                 fontSize: '16px',
-                color: colors.neutral.dark[500],
+                color: '#1A1A1A',
               }}
             >
               Failed Attempts:
@@ -107,7 +106,7 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
               style={{
                 fontWeight: 500,
                 fontSize: '16px',
-                color: colors.neutral.dark[500],
+                color: '#1A1A1A',
               }}
             >
               {failedAttempts}
@@ -119,7 +118,7 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
                 style={{
                   fontWeight: 300,
                   fontSize: '16px',
-                  color: colors.neutral.dark[500],
+                  color: '#1A1A1A',
                 }}
               >
                 Locked At:
@@ -128,7 +127,7 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
                 style={{
                   fontWeight: 500,
                   fontSize: '16px',
-                  color: colors.neutral.dark[500],
+                  color: '#1A1A1A',
                 }}
               >
                 {lockedAt.toLocaleString(undefined, {
@@ -147,7 +146,7 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
                 style={{
                   fontWeight: 300,
                   fontSize: '16px',
-                  color: colors.neutral.dark[500],
+                  color: '#1A1A1A',
                 }}
               >
                 Auto-Unlock At:
@@ -156,7 +155,7 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
                 style={{
                   fontWeight: 500,
                   fontSize: '16px',
-                  color: colors.neutral.dark[500],
+                  color: '#1A1A1A',
                 }}
               >
                 {autoUnlockAt.toLocaleString(undefined, {
@@ -172,7 +171,7 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
                   style={{
                     fontWeight: 300,
                     fontSize: '14px',
-                    color: colors.neutral.dark[500],
+                    color: '#1A1A1A',
                     marginLeft: '4px',
                   }}
                 >{`(${remainingMinutes} min remaining)`}</span>
@@ -181,45 +180,36 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
           )}
         </div>
 
-        <hr className="border-t" style={{ borderColor: colors.light[100] }} />
+        <hr className="border-t" style={{ borderColor: '#F2F3F0' }} />
 
         {/* Confirmation copy */}
         <div className="space-y-3 text-sm">
           <p
             className="font-medium"
-            style={{ color: colors.neutral.dark[500], fontSize: '18px', fontWeight: 500 }}
+            style={{ color: '#1A1A1A', fontSize: '18px', fontWeight: 500 }}
           >
             Are you sure you want to unlock this account?
           </p>
           <div className="space-y-2">
-            <p className="font-light" style={{ color: colors.neutral.dark[500], fontSize: '16px' }}>
+            <p className="font-light" style={{ color: '#1A1A1A', fontSize: '16px' }}>
               This will:
             </p>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Icons.ArrowRight size={14} color={colors.neutral.dark[500]} strokeWidth={1.5} />
-                <span
-                  className="font-light"
-                  style={{ color: colors.neutral.dark[500], fontSize: '16px' }}
-                >
+                <Icons.ArrowRight size={14} color="#1A1A1A" strokeWidth={1.5} />
+                <span className="font-light" style={{ color: '#1A1A1A', fontSize: '16px' }}>
                   Immediately restore login access
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Icons.ArrowRight size={14} color={colors.neutral.dark[500]} strokeWidth={1.5} />
-                <span
-                  className="font-light"
-                  style={{ color: colors.neutral.dark[500], fontSize: '16px' }}
-                >
+                <Icons.ArrowRight size={14} color="#1A1A1A" strokeWidth={1.5} />
+                <span className="font-light" style={{ color: '#1A1A1A', fontSize: '16px' }}>
                   Reset failed attempt counter
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Icons.ArrowRight size={14} color={colors.neutral.dark[500]} strokeWidth={1.5} />
-                <span
-                  className="font-light"
-                  style={{ color: colors.neutral.dark[500], fontSize: '16px' }}
-                >
+                <Icons.ArrowRight size={14} color="#1A1A1A" strokeWidth={1.5} />
+                <span className="font-light" style={{ color: '#1A1A1A', fontSize: '16px' }}>
                   Be recorded in the audit log
                 </span>
               </div>
@@ -242,7 +232,7 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
           className="flex-1"
           style={{
             border: 'none',
-            backgroundColor: colors.gray[500],
+            backgroundColor: '#6B7280',
             color: '#FFFFFF',
             height: '45px',
             borderRadius: '8px',
@@ -259,8 +249,8 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
           className="flex-1"
           style={{
             border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
+            backgroundColor: '#A7E8BD',
+            color: '#1A1A1A',
             borderRadius: '8px',
             fontWeight: 500,
             height: '45px',

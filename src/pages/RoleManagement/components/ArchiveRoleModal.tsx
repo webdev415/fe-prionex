@@ -21,7 +21,6 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 
 interface ArchiveRoleModalProps {
   open: boolean
@@ -109,9 +108,9 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
         icon={
           <div
             className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.primary[400] }}
+            style={{ backgroundColor: '#B0EDC7' }}
           >
-            <Icons.Delete size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+            <Icons.Delete size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
         }
         title={role ? `Archive Role: ${role.name}` : 'Archive Role'}
@@ -137,7 +136,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
               <div>
                 <p
                   className="mb-3 font-light"
-                  style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
+                  style={{ fontSize: '14px', fontWeight: 300, color: '#030712' }}
                 >
                   This role has users assigned:
                 </p>
@@ -147,7 +146,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                       <Checkbox checked={true} disabled />
                       <span
                         className="font-light"
-                        style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
+                        style={{ fontSize: '14px', fontWeight: 300, color: '#030712' }}
                       >
                         {user.username}
                         {user.first_name || user.last_name
@@ -162,7 +161,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
               <div>
                 <p
                   className="font-light"
-                  style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
+                  style={{ fontSize: '14px', fontWeight: 300, color: '#030712' }}
                 >
                   This role has no users assigned. You can archive it directly.
                 </p>
@@ -172,10 +171,10 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
             {/* Role per Project Section */}
             {hasUsers && (
               <div className="space-y-4">
-                <hr className="border-t" style={{ borderColor: colors.light[100] }} />
+                <hr className="border-t" style={{ borderColor: '#F2F3F0' }} />
                 <p
                   className="font-light"
-                  style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
+                  style={{ fontSize: '14px', fontWeight: 300, color: '#030712' }}
                 >
                   Role per Project:
                 </p>
@@ -187,12 +186,9 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                       type="button"
                       className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 focus:outline-none"
                       style={{
-                        borderColor:
-                          reassignmentOption === 'reassign'
-                            ? colors.primary[500]
-                            : colors.gray[300],
+                        borderColor: reassignmentOption === 'reassign' ? '#0CA8EB' : '#D1D5DB',
                         backgroundColor:
-                          reassignmentOption === 'reassign' ? colors.primary[500] : 'transparent',
+                          reassignmentOption === 'reassign' ? '#0CA8EB' : 'transparent',
                       }}
                       onClick={() => setReassignmentOption('reassign')}
                     >
@@ -217,7 +213,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                     >
                       <span
                         className="w-1/2 font-light"
-                        style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
+                        style={{ fontSize: '14px', fontWeight: 300, color: '#030712' }}
                       >
                         Reassign to:
                       </span>
@@ -263,10 +259,9 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                       type="button"
                       className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 focus:outline-none"
                       style={{
-                        borderColor:
-                          reassignmentOption === 'default' ? colors.primary[500] : colors.gray[300],
+                        borderColor: reassignmentOption === 'default' ? '#0CA8EB' : '#D1D5DB',
                         backgroundColor:
-                          reassignmentOption === 'default' ? colors.primary[500] : 'transparent',
+                          reassignmentOption === 'default' ? '#0CA8EB' : 'transparent',
                       }}
                       onClick={() => setReassignmentOption('default')}
                     >
@@ -291,13 +286,13 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                     >
                       <span
                         className="w-1/2 font-light"
-                        style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
+                        style={{ fontSize: '14px', fontWeight: 300, color: '#030712' }}
                       >
                         Set to default:
                       </span>
                       <span
                         className="w-1/2 font-light"
-                        style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
+                        style={{ fontSize: '14px', fontWeight: 300, color: '#030712' }}
                       >
                         {defaultOperatorRole?.name || 'Operator'}
                       </span>
@@ -340,7 +335,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
           className="flex-1 rounded-md text-sm font-medium"
           style={{
             border: 'none',
-            backgroundColor: colors.gray[500],
+            backgroundColor: '#6B7280',
             color: '#FFFFFF',
             height: '45px',
             fontSize: '14px',
@@ -357,8 +352,8 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
           className="flex-1 rounded-md text-sm font-medium"
           style={{
             border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
+            backgroundColor: '#A7E8BD',
+            color: '#1A1A1A',
             height: '45px',
             fontSize: '14px',
             fontWeight: 500,

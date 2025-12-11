@@ -5,7 +5,6 @@
  * Displays information as plain text with the same 2-column layout as CreateUserForm.
  */
 
-import { colors } from '@/lib/colors'
 import type { UserDetailResponse } from '../types'
 
 interface ViewUserFormProps {
@@ -39,13 +38,13 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
           <div className="flex items-center gap-2">
             <span
               className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+              style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
             >
               Username:
             </span>
             <span
               className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
+              style={{ fontSize: '14px', fontWeight: 600, color: '#030712' }}
             >
               {user.username || '—'}
             </span>
@@ -54,13 +53,13 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
           <div className="flex items-center gap-2">
             <span
               className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+              style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
             >
               Email:
             </span>
             <span
               className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
+              style={{ fontSize: '14px', fontWeight: 600, color: '#030712' }}
             >
               {user.email || '—'}
             </span>
@@ -74,13 +73,13 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
           <div className="flex items-center gap-2">
             <span
               className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+              style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
             >
               First Name:
             </span>
             <span
               className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
+              style={{ fontSize: '14px', fontWeight: 600, color: '#030712' }}
             >
               {user.first_name || '—'}
             </span>
@@ -89,13 +88,13 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
           <div className="flex items-center gap-2">
             <span
               className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+              style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
             >
               Last Name:
             </span>
             <span
               className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
+              style={{ fontSize: '14px', fontWeight: 600, color: '#030712' }}
             >
               {user.last_name || '—'}
             </span>
@@ -106,13 +105,13 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
           <div className="flex items-center gap-2">
             <span
               className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+              style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
             >
               Middle Name:
             </span>
             <span
               className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
+              style={{ fontSize: '14px', fontWeight: 600, color: '#030712' }}
             >
               {user.middle_name || '—'}
             </span>
@@ -121,13 +120,13 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
           <div className="flex items-center gap-2">
             <span
               className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+              style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
             >
               Phone:
             </span>
             <span
               className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
+              style={{ fontSize: '14px', fontWeight: 600, color: '#030712' }}
             >
               {user.phone || '—'}
             </span>
@@ -141,13 +140,13 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
           <div className="flex items-center gap-2">
             <span
               className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+              style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
             >
               Language:
             </span>
             <span
               className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
+              style={{ fontSize: '14px', fontWeight: 600, color: '#030712' }}
             >
               {getLanguageLabel(user.language || '')}
             </span>
@@ -156,13 +155,13 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
           <div className="flex items-center gap-2">
             <span
               className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+              style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
             >
               Timezone:
             </span>
             <span
               className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
+              style={{ fontSize: '14px', fontWeight: 600, color: '#030712' }}
             >
               {user.timezone || '—'}
             </span>
@@ -176,7 +175,7 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
           <div>
             <span
               className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+              style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
             >
               Assigned Projects:
             </span>
@@ -186,13 +185,13 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
               <div key={project.project_id} className="grid w-full grid-cols-2 items-center gap-4">
                 <span
                   className="font-light"
-                  style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
+                  style={{ fontSize: '14px', fontWeight: 300, color: '#6B7280' }}
                 >
                   {project.project_name}:
                 </span>
                 <span
                   className="font-semibold"
-                  style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
+                  style={{ fontSize: '14px', fontWeight: 600, color: '#030712' }}
                 >
                   {project.role_name}
                 </span>

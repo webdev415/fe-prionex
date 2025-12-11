@@ -10,7 +10,6 @@ import { EditUserForm } from '@/features/users/components/EditUserForm'
 import { useUser } from '@/features/users/hooks/useUser'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
-import { colors } from '@/lib/colors'
 
 interface EditUserModalProps {
   open: boolean
@@ -35,7 +34,7 @@ export function EditUserModal({ open, userId, onClose, onSuccess }: EditUserModa
             className="flex h-8 w-8 items-center justify-center rounded-full"
             style={{ backgroundColor: '#A0F229' }}
           >
-            <Icons.PencilEdit size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+            <Icons.PencilEdit size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
         }
         title="Edit User"
@@ -60,7 +59,7 @@ export function EditUserModal({ open, userId, onClose, onSuccess }: EditUserModa
           className="flex-1"
           style={{
             border: 'none',
-            backgroundColor: colors.gray[500],
+            backgroundColor: '#6B7280',
             color: '#FFFFFF',
             height: '45px',
             borderRadius: '8px',
@@ -77,8 +76,8 @@ export function EditUserModal({ open, userId, onClose, onSuccess }: EditUserModa
           className="flex-1"
           style={{
             border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
+            backgroundColor: '#A7E8BD',
+            color: '#1A1A1A',
             borderRadius: '8px',
             fontWeight: 500,
             height: '45px',

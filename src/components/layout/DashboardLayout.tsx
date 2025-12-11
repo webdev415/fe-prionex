@@ -97,15 +97,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   ]
 
   return (
-    <div
-      className="bg-light-50 min-h-screen"
-      style={{
-        backgroundImage: 'url(/assets/images/dashboard-light-bg.svg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }}
-    >
+    <div className="bg-light-50 min-h-screen bg-[url(/assets/images/dashboard-light-bg.svg)] bg-cover bg-center bg-no-repeat">
       {/* Sidebar */}
       <Sidebar
         items={navItems}
@@ -119,13 +111,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Content Area with left margin for sidebar */}
       <div className="ml-16">
         {/* Fixed Header */}
-        <header
-          className="bg-light-50 fixed top-0 right-0 left-16 z-20 flex h-[60px] items-center justify-between px-6"
-          style={{
-            borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
-            boxShadow: '0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 1px 2px 0px rgba(0, 0, 0, 0.06)',
-          }}
-        >
+        <header className="bg-light-50 fixed top-0 right-0 left-16 z-20 flex h-[60px] items-center justify-between border-l border-white/10 px-6 shadow-sm">
           {/* Search Bar */}
           <SearchBar
             placeholder="Search"

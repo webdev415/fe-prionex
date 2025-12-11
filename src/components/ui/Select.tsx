@@ -2,7 +2,6 @@ import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 
 const Select = SelectPrimitive.Root
 
@@ -18,7 +17,7 @@ const SelectValue = React.forwardRef<
     style={{
       fontSize: '14px',
       fontWeight: 300,
-      color: colors.gray[950],
+      color: '#050D11',
       ...style,
     }}
     {...props}
@@ -39,8 +38,8 @@ const SelectTrigger = React.forwardRef<
     style={{
       fontSize: '14px',
       fontWeight: 300,
-      color: colors.gray[950],
-      borderColor: colors.gray[400],
+      color: '#050D11',
+      borderColor: '#9CA3AF',
       cursor: props.disabled ? 'default' : 'pointer',
       ...style,
     }}
@@ -139,7 +138,7 @@ const SelectItem = React.forwardRef<
     style={{
       fontSize: '14px',
       fontWeight: 300,
-      color: colors.gray[950],
+      color: '#050D11',
     }}
     {...props}
   >

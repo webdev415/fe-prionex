@@ -8,7 +8,6 @@
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 
 interface DeleteProjectConfirmationModalProps {
   open: boolean
@@ -31,9 +30,9 @@ export function DeleteProjectConfirmationModal({
         icon={
           <div
             className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.primary[400] }}
+            style={{ backgroundColor: '#B0EDC7' }}
           >
-            <Icons.Delete size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+            <Icons.Delete size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
         }
         title={`Delete Project: ${projectName}`}
@@ -44,7 +43,7 @@ export function DeleteProjectConfirmationModal({
           style={{
             fontSize: '16px',
             fontWeight: 300,
-            color: colors.neutral.dark[500],
+            color: '#1A1A1A',
           }}
         >
           Are you sure you want to delete this project? This action cannot be undone.
@@ -59,7 +58,7 @@ export function DeleteProjectConfirmationModal({
           className="flex-1 rounded-md text-sm font-medium"
           style={{
             border: 'none',
-            backgroundColor: colors.gray[500],
+            backgroundColor: '#6B7280',
             color: '#FFFFFF',
             height: '45px',
             fontSize: '14px',

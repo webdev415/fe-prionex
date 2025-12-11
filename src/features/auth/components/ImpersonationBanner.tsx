@@ -6,7 +6,6 @@
  */
 
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 
 export interface ImpersonationBannerProps {
   isImpersonating: boolean
@@ -46,22 +45,9 @@ export function ImpersonationBanner({
 
   return (
     <div className="flex w-full items-center justify-center">
-      <div
-        className="flex h-[65px] w-[80%] items-center justify-between rounded-md bg-white xl:w-[60%]"
-        style={{
-          color: colors.neutral.dark[500],
-          fontSize: '16px',
-          paddingLeft: '24px',
-          paddingRight: '20px',
-        }}
-      >
-        <div
-          className="font-medimun flex items-center gap-2"
-          style={{
-            color: colors.secondary[800],
-          }}
-        >
-          <Icons.UserCircle02Icon size={20} color={colors.secondary[800]} strokeWidth={1.5} />
+      <div className="text-dark-950 flex h-[65px] w-[80%] items-center justify-between rounded-md bg-white pr-5 pl-6 text-base xl:w-[60%]">
+        <div className="font-medimun text-secondary-800 flex items-center gap-2">
+          <Icons.UserCircle02Icon size={20} color="#1A5C54" strokeWidth={1.5} />
           Impersonation mode
         </div>
         <div className="font-light">
@@ -76,21 +62,10 @@ export function ImpersonationBanner({
         <button
           onClick={onExitImpersonation}
           disabled={isLoading}
-          className="flex items-center justify-center gap-2 rounded-sm"
-          style={{
-            color: colors.neutral.dark[500],
-            fontSize: '14px',
-            fontWeight: 500,
-            border: 'none',
-            backgroundColor: colors.primary[300],
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            height: '41px',
-            width: '189px',
-            opacity: isLoading ? 0.5 : 1,
-          }}
+          className="bg-primary-300 text-dark-950 flex h-[41px] w-[189px] items-center justify-center gap-2 rounded-sm border-none text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isLoading ? 'Exiting...' : 'Exit Impersonation'}
-          <Icons.LogoutSquare01 size={20} color={colors.neutral.dark[500]} strokeWidth={1.5} />
+          <Icons.LogoutSquare01 size={20} color="#1A1A1A" strokeWidth={1.5} />
         </button>
       </div>
     </div>

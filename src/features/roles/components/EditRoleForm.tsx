@@ -19,7 +19,6 @@ import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Alert } from '@/components/ui/Alert'
 import { Checkbox } from '@/components/ui/Checkbox'
-import { colors } from '@/lib/colors'
 import type { RoleDetailResponse } from '../types'
 
 interface EditRoleFormProps {
@@ -148,10 +147,10 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
         <div
           className="rounded-lg border bg-white px-4 py-2"
           style={{
-            borderColor: colors.light[100],
+            borderColor: '#F2F3F0',
             fontSize: '14px',
             fontWeight: 300,
-            color: colors.gray[950],
+            color: '#030712',
             height: '45px',
             display: 'flex',
             alignItems: 'center',
@@ -169,10 +168,10 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
           <div
             className="rounded-lg border bg-white px-4 py-2"
             style={{
-              borderColor: colors.light[100],
+              borderColor: '#F2F3F0',
               fontSize: '14px',
               fontWeight: 300,
-              color: colors.gray[950],
+              color: '#030712',
               height: '45px',
               display: 'flex',
               alignItems: 'center',
@@ -206,10 +205,10 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
           <div
             className="rounded-lg border bg-white px-4 py-2"
             style={{
-              borderColor: colors.light[100],
+              borderColor: '#F2F3F0',
               fontSize: '14px',
               fontWeight: 300,
-              color: colors.gray[950],
+              color: '#030712',
               minHeight: '80px',
               display: 'flex',
               alignItems: 'flex-start',
@@ -233,7 +232,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
       <div>
         <Label>
           Permissions
-          <span className="ml-2 font-light" style={{ fontSize: '14px', color: colors.gray[500] }}>
+          <span className="ml-2 font-light" style={{ fontSize: '14px', color: '#6B7280' }}>
             (Selected: {selectedPermissions.length} of {permissions.length} permissions)
           </span>
         </Label>
@@ -246,7 +245,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
           }}
         >
           {loadingPermissions ? (
-            <div className="py-4 text-sm" style={{ color: colors.gray[500] }}>
+            <div className="py-4 text-sm" style={{ color: '#6B7280' }}>
               Loading permissions...
             </div>
           ) : (
@@ -260,11 +259,11 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
                     >
                       <span
                         className="font-light"
-                        style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
+                        style={{ fontSize: '14px', fontWeight: 300, color: '#030712' }}
                       >
                         {category}
                       </span>
-                      <span className="text-xs" style={{ color: colors.gray[500] }}>
+                      <span className="text-xs" style={{ color: '#6B7280' }}>
                         {categoryPerms.filter((p) => selectedPermissions.includes(p.id)).length}/
                         {categoryPerms.length}
                       </span>
@@ -283,7 +282,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
                           <div className="flex-1">
                             <span
                               className="font-light"
-                              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
+                              style={{ fontSize: '14px', fontWeight: 300, color: '#030712' }}
                             >
                               {perm.name}
                             </span>
@@ -293,7 +292,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
                                 style={{
                                   fontSize: '14px',
                                   fontWeight: 300,
-                                  color: colors.gray[500],
+                                  color: '#6B7280',
                                 }}
                               >
                                 {perm.description}

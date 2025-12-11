@@ -13,7 +13,6 @@ import { ProjectDetailPanel } from './components/ProjectDetailPanel'
 import { DeleteProjectConfirmationModal } from './components/DeleteProjectConfirmationModal'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import type { ApiProject, ApiProjectDetail, ProjectFilters } from '@/features/projects/types'
-import { colors } from '@/lib/colors'
 import { formatPeriod, formatCurrency } from '@/lib/formatters'
 import { DataTable, type Column, type SortConfig, type SortOrder } from '@/components/ui/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -163,7 +162,7 @@ export function ProjectManagementPage() {
           <span
             className="flex items-center justify-center"
             style={{
-              color: colors.neutral.dark[500],
+              color: '#1A1A1A',
               fontSize: '12px',
               fontWeight: 500,
             }}
@@ -179,10 +178,10 @@ export function ProjectManagementPage() {
       sortable: true,
       render: (project) => (
         <div className="flex flex-col">
-          <span style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}>
+          <span style={{ color: '#1A1A1A', fontSize: '12px', fontWeight: 500 }}>
             {project.name}
           </span>
-          <span style={{ color: colors.gray[700], fontSize: '12px', fontWeight: 500 }}>
+          <span style={{ color: '#374151', fontSize: '12px', fontWeight: 500 }}>
             {project.code}
           </span>
         </div>
@@ -196,7 +195,7 @@ export function ProjectManagementPage() {
         <span
           className="block max-w-[180px] truncate"
           title={project.client_company}
-          style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}
+          style={{ color: '#1A1A1A', fontSize: '12px', fontWeight: 500 }}
         >
           {project.client_company || '—'}
         </span>
@@ -207,7 +206,7 @@ export function ProjectManagementPage() {
       header: 'Period',
       sortable: true,
       render: (project) => (
-        <span style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}>
+        <span style={{ color: '#1A1A1A', fontSize: '12px', fontWeight: 500 }}>
           {formatPeriod(project.start_date, project.end_date)}
         </span>
       ),
@@ -218,7 +217,7 @@ export function ProjectManagementPage() {
       align: 'right',
       sortable: true,
       render: (project) => (
-        <span style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}>
+        <span style={{ color: '#1A1A1A', fontSize: '12px', fontWeight: 500 }}>
           {formatCurrency(project.total_debt_amount)}
         </span>
       ),
@@ -241,7 +240,7 @@ export function ProjectManagementPage() {
           style={{
             fontSize: '24px',
             fontWeight: 300,
-            color: colors.neutral.dark[500],
+            color: '#1A1A1A',
           }}
         >
           Project Management

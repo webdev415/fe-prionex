@@ -10,7 +10,6 @@ import { ViewUserForm } from '@/features/users/components/ViewUserForm'
 import { useUser } from '@/features/users/hooks/useUser'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
-import { colors } from '@/lib/colors'
 
 interface UserDetailModalProps {
   open: boolean
@@ -29,7 +28,7 @@ export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps)
             className="flex h-8 w-8 items-center justify-center rounded-full"
             style={{ backgroundColor: '#A0F229' }}
           >
-            <Icons.View size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+            <Icons.View size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
         }
         title="View User"
@@ -54,7 +53,7 @@ export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps)
           className="flex-1"
           style={{
             border: 'none',
-            backgroundColor: colors.gray[500],
+            backgroundColor: '#6B7280',
             color: '#FFFFFF',
             height: '45px',
             borderRadius: '8px',

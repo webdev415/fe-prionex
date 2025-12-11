@@ -4,7 +4,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const inputVariants = cva(
-  'flex w-full rounded-lg border bg-white px-4 py-2 text-body-sm font-light text-primary-950 placeholder:text-gray-500 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+  'flex w-full rounded-lg border bg-white px-4 py-2 text-sm font-light text-dark-950 placeholder:text-gray-500 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
   {
     variants: {
       variant: {
@@ -13,10 +13,10 @@ const inputVariants = cva(
         success: 'border-success-500 focus:border-success-500 focus:ring-success-500',
       },
       inputSize: {
-        sm: 'h-8 text-body-xs',
-        md: 'h-[45px] text-body-sm',
-        lg: 'h-12 text-body-md',
-        xl: 'h-[45px] text-body-sm',
+        sm: 'h-8 text-xs',
+        md: 'h-[45px]',
+        lg: 'h-12 text-base',
+        xl: 'h-[45px]',
       },
     },
     defaultVariants: {
@@ -50,7 +50,6 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       leftIcon,
       rightIcon,
       id,
-      style,
       ...props
     },
     ref
@@ -65,11 +64,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label
-            htmlFor={inputId}
-            className="text-body-sm text-primary-950 mb-1.5 block font-light"
-            style={{ fontWeight: 300 }}
-          >
+          <label htmlFor={inputId} className="text-dark-950 mb-1.5 block text-sm font-light">
             {label}
           </label>
         )}
@@ -88,10 +83,6 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               rightIcon && 'pr-10',
               className
             )}
-            style={{
-              color: 'var(--color-primary-950)',
-              ...(style || {}),
-            }}
             ref={ref}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : helperText ? helperId : undefined}
@@ -104,12 +95,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
         {error && (
-          <p id={errorId} className="text-text-xs text-error-500 mt-1.5" role="alert">
+          <p id={errorId} className="text-error-500 mt-1.5 text-xs" role="alert">
             {error}
           </p>
         )}
         {helperText && !error && (
-          <p id={helperId} className="text-text-xs mt-1.5 text-gray-500">
+          <p id={helperId} className="mt-1.5 text-xs text-gray-500">
             {helperText}
           </p>
         )}

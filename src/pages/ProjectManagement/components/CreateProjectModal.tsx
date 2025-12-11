@@ -17,7 +17,6 @@ import { Label } from '@/components/ui/Label'
 import { useCreateProject } from '@/features/projects/hooks/useProjectMutations'
 import type { CreateProjectInput } from '@/features/projects/types'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 
 interface CreateProjectModalProps {
   open: boolean
@@ -119,9 +118,9 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
         icon={
           <div
             className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.primary[300] }}
+            style={{ backgroundColor: '#A7E8BD' }}
           >
-            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+            <Icons.Add size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
         }
         title="Create New Project"
@@ -139,7 +138,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
 
           {/* Project Information Section */}
           <div className="space-y-4">
-            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
+            <h3 className="text-base font-medium" style={{ color: '#1A1A1A' }}>
               Project Information
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -165,12 +164,12 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 error={errors.code}
               />
             </div>
-            <div className="h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+            <div className="h-px w-full" style={{ backgroundColor: '#E5E7EB' }} />
           </div>
 
           {/* Client & Contract Section */}
           <div className="space-y-4">
-            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
+            <h3 className="text-base font-medium" style={{ color: '#1A1A1A' }}>
               Client & Contract
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -192,12 +191,12 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 disabled={createMutation.isPending}
               />
             </div>
-            <div className="h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+            <div className="h-px w-full" style={{ backgroundColor: '#E5E7EB' }} />
           </div>
 
           {/* Timeline Section */}
           <div className="space-y-4">
-            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
+            <h3 className="text-base font-medium" style={{ color: '#1A1A1A' }}>
               Timeline
             </h3>
             <div className="flex items-center gap-4">
@@ -239,7 +238,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 </Label>
               </div>
             </div>
-            <div className="h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+            <div className="h-px w-full" style={{ backgroundColor: '#E5E7EB' }} />
           </div>
 
           {/* Description Section */}
@@ -265,7 +264,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
           className="flex-1 rounded-md text-sm font-medium"
           style={{
             border: 'none',
-            backgroundColor: colors.gray[500],
+            backgroundColor: '#6B7280',
             color: '#FFFFFF',
             height: '45px',
             fontSize: '14px',
@@ -282,8 +281,8 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
           className="flex-1 rounded-md text-sm font-medium"
           style={{
             border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
+            backgroundColor: '#A7E8BD',
+            color: '#1A1A1A',
             height: '45px',
             fontSize: '14px',
             fontWeight: 500,

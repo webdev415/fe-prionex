@@ -85,4 +85,30 @@ describe('Input', () => {
     rerender(<Input type="password" placeholder="Password" />)
     expect(screen.getByPlaceholderText('Password')).toHaveAttribute('type', 'password')
   })
+
+  // STYLING STANDARDIZATION TESTS (Phase 2)
+
+  it('input should NOT have inline style attribute (Tailwind classes only)', () => {
+    render(<Input placeholder="Test input" />)
+    const input = screen.getByPlaceholderText('Test input')
+    expect(input).not.toHaveAttribute('style')
+  })
+
+  it('label should NOT have inline style attribute (Tailwind classes only)', () => {
+    render(<Input label="Test label" placeholder="Test input" />)
+    const label = screen.getByText('Test label')
+    expect(label).not.toHaveAttribute('style')
+  })
+
+  it('label should use Tailwind font-light class instead of inline font-weight', () => {
+    render(<Input label="Test label" placeholder="Test input" />)
+    const label = screen.getByText('Test label')
+    expect(label).toHaveClass('font-light')
+  })
+
+  it('input should use text-dark-950 class for text color', () => {
+    render(<Input placeholder="Test input" />)
+    const input = screen.getByPlaceholderText('Test input')
+    expect(input).toHaveClass('text-dark-950')
+  })
 })

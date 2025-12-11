@@ -7,7 +7,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import {
   Select,
   SelectContent,
@@ -128,7 +127,7 @@ export function SearchFiltersBar({
         <div
           className="flex flex-1 items-center gap-3 rounded-full border bg-white pr-2 pl-4 shadow-sm"
           style={{
-            borderColor: colors.gray[200],
+            borderColor: '#E5E7EB',
           }}
         >
           {/* Search Input */}
@@ -141,7 +140,7 @@ export function SearchFiltersBar({
               disabled={isLoading}
               className="h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500 disabled:opacity-60"
               style={{
-                color: colors.neutral.dark[500],
+                color: '#1A1A1A',
               }}
             />
             {searchValue && (
@@ -150,7 +149,7 @@ export function SearchFiltersBar({
                 className="flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
                 type="button"
               >
-                <Icons.Close size={14} color={colors.gray[500]} />
+                <Icons.Close size={14} color="#6B7280" />
               </button>
             )}
           </div>
@@ -232,11 +231,11 @@ export function SearchFiltersBar({
             disabled={isLoading}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
             style={{
-              backgroundColor: colors.primary[300],
+              backgroundColor: '#A7E8BD',
             }}
             aria-label="Search projects"
           >
-            <Icons.Search size={18} color={colors.neutral.dark[500]} strokeWidth={1.5} />
+            <Icons.Search size={18} color="#1A1A1A" strokeWidth={1.5} />
           </button>
         </div>
       </div>
@@ -247,7 +246,7 @@ export function SearchFiltersBar({
           onClick={() => setShowCreateModal(true)}
           className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
           style={{
-            backgroundColor: colors.secondary[800],
+            backgroundColor: '#164E63',
           }}
           aria-label="Add new project"
         >
@@ -256,11 +255,11 @@ export function SearchFiltersBar({
             style={{
               width: '40px',
               height: '40px',
-              backgroundColor: colors.primary[300],
+              backgroundColor: '#A7E8BD',
               marginLeft: '4px',
             }}
           >
-            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+            <Icons.Add size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
           <span
             className="px-4 py-3 font-medium text-white"
@@ -288,12 +287,12 @@ export function SearchFiltersBar({
           type="button"
           className="flex items-center gap-2 rounded-full bg-white px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
           style={{
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
+            backgroundColor: '#A7E8BD',
+            color: '#1A1A1A',
             height: '45px',
           }}
         >
-          <Icons.FileImport size={16} color={colors.neutral.dark[500]} />
+          <Icons.FileImport size={16} color="#1A1A1A" />
           Export
         </button>
       </div>

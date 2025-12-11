@@ -9,7 +9,6 @@ import { CreateUserForm } from '@/features/users/components/CreateUserForm'
 import { useProjects } from '@/features/projects'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
-import { colors } from '@/lib/colors'
 
 interface CreateUserModalProps {
   open: boolean
@@ -37,7 +36,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
             className="flex h-8 w-8 items-center justify-center rounded-full"
             style={{ backgroundColor: '#A0F229' }}
           >
-            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+            <Icons.Add size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
         }
         title="Create New User"
@@ -61,7 +60,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
           className="flex-1 rounded-md text-sm font-medium"
           style={{
             border: 'none',
-            backgroundColor: colors.gray[500],
+            backgroundColor: '#6B7280',
             color: '#FFFFFF',
             height: '45px',
             fontSize: '14px',
@@ -78,8 +77,8 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
           className="flex-1 rounded-md text-sm font-medium"
           style={{
             border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
+            backgroundColor: '#A7E8BD',
+            color: '#1A1A1A',
             height: '45px',
             fontSize: '14px',
             fontWeight: 500,

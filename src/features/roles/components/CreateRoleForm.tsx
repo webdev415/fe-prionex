@@ -16,7 +16,6 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Label } from '@/components/ui/Label'
 import { Alert } from '@/components/ui/Alert'
 import { Checkbox } from '@/components/ui/Checkbox'
-import { colors } from '@/lib/colors'
 
 interface CreateRoleFormProps {
   projectId: number
@@ -138,7 +137,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
       <div>
         <Label>
           Permissions
-          <span className="ml-2 font-light" style={{ fontSize: '14px', color: colors.gray[500] }}>
+          <span className="ml-2 font-light" style={{ fontSize: '14px', color: '#6B7280' }}>
             (Selected: {selectedPermissions.length} of {permissions.length} permissions)
           </span>
         </Label>
@@ -151,7 +150,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
           }}
         >
           {loadingPermissions ? (
-            <div className="py-4 text-sm" style={{ color: colors.gray[500] }}>
+            <div className="py-4 text-sm" style={{ color: '#6B7280' }}>
               Loading permissions...
             </div>
           ) : (
@@ -165,11 +164,11 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
                     >
                       <span
                         className="font-light"
-                        style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
+                        style={{ fontSize: '14px', fontWeight: 300, color: '#030712' }}
                       >
                         {category}
                       </span>
-                      <span className="text-xs" style={{ color: colors.gray[500] }}>
+                      <span className="text-xs" style={{ color: '#6B7280' }}>
                         {categoryPerms.filter((p) => selectedPermissions.includes(p.id)).length}/
                         {categoryPerms.length}
                       </span>
@@ -188,7 +187,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
                           <div className="flex-1">
                             <span
                               className="font-light"
-                              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
+                              style={{ fontSize: '14px', fontWeight: 300, color: '#030712' }}
                             >
                               {perm.name}
                             </span>
@@ -198,7 +197,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
                                 style={{
                                   fontSize: '14px',
                                   fontWeight: 300,
-                                  color: colors.gray[500],
+                                  color: '#6B7280',
                                 }}
                               >
                                 {perm.description}

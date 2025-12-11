@@ -18,7 +18,6 @@ import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { useUpdateProject } from '@/features/projects/hooks/useProjectMutations'
 import type { ApiProjectDetail, UpdateProjectInput } from '@/features/projects/types'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 
 interface EditProjectModalProps {
   project: ApiProjectDetail | null
@@ -135,7 +134,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
 
           {/* Project Information Section */}
           <div className="space-y-4">
-            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
+            <h3 className="text-base font-medium" style={{ color: '#1A1A1A' }}>
               Project Information
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -156,9 +155,9 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                   label="Project Code:"
                   value={project.code}
                   disabled
-                  style={{ backgroundColor: colors.gray[100] }}
+                  style={{ backgroundColor: '#F3F4F6' }}
                 />
-                <p className="mt-1 text-xs" style={{ color: colors.gray[500] }}>
+                <p className="mt-1 text-xs" style={{ color: '#6B7280' }}>
                   Code cannot be changed after creation
                 </p>
               </div>
@@ -197,12 +196,12 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                 </RadioGroup>
               </div>
             )}
-            <div className="h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+            <div className="h-px w-full" style={{ backgroundColor: '#E5E7EB' }} />
           </div>
 
           {/* Client & Contract Section */}
           <div className="space-y-4">
-            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
+            <h3 className="text-base font-medium" style={{ color: '#1A1A1A' }}>
               Client & Contract
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -224,12 +223,12 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                 disabled={updateMutation.isPending}
               />
             </div>
-            <div className="h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+            <div className="h-px w-full" style={{ backgroundColor: '#E5E7EB' }} />
           </div>
 
           {/* Timeline Section */}
           <div className="space-y-4">
-            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
+            <h3 className="text-base font-medium" style={{ color: '#1A1A1A' }}>
               Timeline
             </h3>
             <div className="flex items-center gap-4">
@@ -271,7 +270,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                 </Label>
               </div>
             </div>
-            <div className="h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+            <div className="h-px w-full" style={{ backgroundColor: '#E5E7EB' }} />
           </div>
 
           {/* Description Section */}
@@ -305,7 +304,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
           className="flex-1 rounded-md text-sm font-medium"
           style={{
             border: 'none',
-            backgroundColor: colors.gray[500],
+            backgroundColor: '#6B7280',
             color: '#FFFFFF',
             height: '45px',
             fontSize: '14px',
@@ -322,8 +321,8 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
           className="flex-1 rounded-md text-sm font-medium"
           style={{
             border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
+            backgroundColor: '#A7E8BD',
+            color: '#1A1A1A',
             height: '45px',
             fontSize: '14px',
             fontWeight: 500,
@@ -345,9 +344,9 @@ export function EditProjectModal({ project, open, onClose, onSuccess }: EditProj
         icon={
           <div
             className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.primary[300] }}
+            style={{ backgroundColor: '#A7E8BD' }}
           >
-            <Icons.PencilEdit size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+            <Icons.PencilEdit size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
         }
         title="Edit Project"

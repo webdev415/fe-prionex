@@ -9,9 +9,9 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-accent-400 text-btn-dark hover:bg-accent-500 active:bg-accent-600',
+        primary: 'bg-primary-500 text-dark-950 hover:bg-primary-600 active:bg-primary-700',
         secondary: 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-500',
-        light: 'bg-gray-200 text-gray-600 hover:bg-gray-300 active:bg-gray-400',
+        light: 'bg-gray-200 text-gray-700 hover:bg-gray-300 active:bg-gray-400',
         outline:
           'border border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white active:bg-primary-600',
         ghost: 'text-gray-300 hover:bg-dark-300 hover:text-white active:bg-dark-200',
@@ -19,10 +19,10 @@ const buttonVariants = cva(
         success: 'bg-success-500 text-white hover:bg-success-600 active:bg-success-700',
       },
       size: {
-        sm: 'h-8 px-3 text-text-xs',
-        md: 'h-10 px-4 text-text-sm',
-        lg: 'h-12 px-6 text-text-md',
-        xl: 'h-[45px] px-6 text-body-sm',
+        sm: 'h-8 px-3 text-xs',
+        md: 'h-10 px-4',
+        lg: 'h-12 px-6 text-base',
+        xl: 'h-[45px] px-6',
         icon: 'h-10 w-10',
       },
     },
@@ -59,19 +59,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     const Comp = asChild ? Slot : 'button'
 
-    let style: React.CSSProperties | undefined
-    if (variant === 'primary' || variant === undefined) {
-      style = { color: 'var(--color-primary-950)' }
-    } else if (variant === 'light') {
-      style = { color: 'var(--color-gray-600)' }
-    }
-
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={disabled || isLoading}
-        style={style}
         {...props}
       >
         {isLoading ? (

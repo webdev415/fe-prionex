@@ -7,7 +7,6 @@
 
 import { Button } from './ui/Button'
 import { Alert } from './ui/Alert'
-import { colors } from '@/lib/colors'
 import { getErrorMessage } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 
@@ -26,23 +25,10 @@ export function ErrorState({ error, onRetry, title, className }: ErrorStateProps
       <div className="mb-4 flex justify-center">
         <Icons.Warning size={48} color="#EF4444" strokeWidth={1.5} />
       </div>
-      {title && (
-        <h3 className="mb-2 text-lg font-semibold" style={{ color: colors.neutral.dark[500] }}>
-          {title}
-        </h3>
-      )}
-      <p className="mb-6 text-sm" style={{ color: colors.gray[600] }}>
-        {errorMessage}
-      </p>
+      {title && <h3 className="text-dark-950 mb-2 text-lg font-semibold">{title}</h3>}
+      <p className="mb-6 text-sm text-gray-600">{errorMessage}</p>
       {onRetry && (
-        <Button
-          onClick={onRetry}
-          variant="primary"
-          style={{
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
-          }}
-        >
+        <Button onClick={onRetry} variant="primary" className="bg-primary-300 text-dark-950">
           Try Again
         </Button>
       )}
