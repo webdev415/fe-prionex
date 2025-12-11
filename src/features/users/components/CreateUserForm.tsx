@@ -44,15 +44,13 @@ interface CreateUserFormProps {
   onCancel?: () => void
 }
 
-// Extended schema to support multiple projects with roles (for UI)
-// The API only accepts one project_id and role_id, so we'll use the first selected
+// Extended schema to support multiple projects with roles
 const createUserFormSchema = createUserSchema
   .extend({
     confirmPassword: z.string(),
     selectedProjects: z.array(z.number()).min(1, 'Please select at least one project'),
     projectRoles: z.record(z.string(), z.number()),
   })
-  .omit({ project_id: true, role_id: true })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",
     path: ['confirmPassword'],
@@ -151,13 +149,12 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onSubmit = (data: any) => {
     const formData = data as CreateUserFormData
-    // API only accepts one project_id and role_id, so we use the first selected
-    const firstProjectId = formData.selectedProjects[0]
-    const firstRoleId = formData.projectRoles[String(firstProjectId)]
 
-    if (!firstProjectId || !firstRoleId) {
-      return
-    }
+    // Build project assignments array from all selected projects
+    const project_assignments = formData.selectedProjects.map((projectId) => ({
+      project_id: projectId,
+      role_id: formData.projectRoles[String(projectId)],
+    }))
 
     // Note: status is not sent to API as users are always created as "active"
     mutate(
@@ -172,8 +169,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
         language: formData.language || 'uk',
         timezone: formData.timezone || 'Europe/Kyiv',
         must_change_password: formData.must_change_password || false,
-        project_id: firstProjectId,
-        role_id: firstRoleId,
+        project_assignments,
       },
       {
         onSuccess: () => {

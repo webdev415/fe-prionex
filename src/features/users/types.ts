@@ -6,13 +6,21 @@
  */
 
 /**
- * Project role assignment
+ * Project role assignment (for responses)
  */
 export interface ProjectRole {
   project_id: number
   project_name: string
   role_id: number
   role_name: string
+}
+
+/**
+ * Project role assignment (for requests)
+ */
+export interface ProjectRoleAssignment {
+  project_id: number
+  role_id: number
 }
 
 /**
@@ -75,8 +83,7 @@ export interface CreateUserInput {
   language: 'uk' | 'ru' | 'en'
   timezone: string
   must_change_password: boolean
-  project_id: number
-  role_id: number
+  project_assignments: ProjectRoleAssignment[]
 }
 
 /**
@@ -90,8 +97,7 @@ export interface UpdateUserInput {
   phone?: string
   language?: 'uk' | 'ru' | 'en'
   timezone?: string
-  project_id?: number
-  role_id?: number
+  project_assignments?: ProjectRoleAssignment[]
 }
 
 /**

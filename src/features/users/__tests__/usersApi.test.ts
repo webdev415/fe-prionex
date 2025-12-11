@@ -135,8 +135,10 @@ describe('usersApi', () => {
         language: 'en',
         timezone: 'UTC',
         must_change_password: true,
-        project_id: 1,
-        role_id: 2,
+        project_assignments: [
+          { project_id: 1, role_id: 2 },
+          { project_id: 2, role_id: 3 },
+        ],
       }
 
       const mockResponse = {
@@ -167,8 +169,7 @@ describe('usersApi', () => {
         language: 'en',
         timezone: 'UTC',
         must_change_password: false,
-        project_id: 1,
-        role_id: 1,
+        project_assignments: [{ project_id: 1, role_id: 1 }],
       }
 
       vi.mocked(api.post).mockRejectedValueOnce({
