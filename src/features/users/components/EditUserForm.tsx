@@ -102,9 +102,15 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
     allRoles.filter((role) => role.project_id === projectId && role.is_active)
 
   const onSubmit = (data: UpdateUserFormData) => {
-    // Build payload for update
+    // Build payload for update with project assignments
     const payload: UpdateUserInput = {
-      ...data,
+      email: data.email,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      middle_name: data.middle_name,
+      phone: data.phone,
+      language: data.language,
+      timezone: data.timezone,
     }
 
     // Build project assignments array from all selected projects
