@@ -28,13 +28,11 @@ const Label = forwardRef<HTMLLabelElement, LabelProps>(
     return (
       <label
         ref={ref}
-        className={cn(labelVariants({ variant, className }))}
-        style={{
-          fontSize: '14px',
-          fontWeight: 200,
-          color: '#05040D',
-          ...style,
-        }}
+        className={cn(
+          'text-dark-950 text-sm font-extralight',
+          labelVariants({ variant, className })
+        )}
+        style={style}
         {...props}
       >
         {children}

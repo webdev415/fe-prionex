@@ -24,10 +24,7 @@ export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps)
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: '#A0F229' }}
-          >
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#A0F229]">
             <Icons.View size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
         }
@@ -50,16 +47,7 @@ export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps)
           type="button"
           variant="outline"
           onClick={onClose}
-          className="flex-1"
-          style={{
-            border: 'none',
-            backgroundColor: '#6B7280',
-            color: '#FFFFFF',
-            height: '45px',
-            borderRadius: '8px',
-            fontWeight: 500,
-            fontSize: '14px',
-          }}
+          className="h-[45px] flex-1 rounded-lg border-none bg-gray-500 text-sm font-medium text-white"
         >
           Close
         </Button>

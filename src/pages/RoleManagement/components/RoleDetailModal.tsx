@@ -29,10 +29,7 @@ export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps)
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: '#B0EDC7' }}
-          >
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#B0EDC7]">
             <Icons.View size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
         }
@@ -55,15 +52,7 @@ export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps)
           type="button"
           variant="outline"
           onClick={onClose}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: '#6B7280',
-            color: '#FFFFFF',
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
           Close
         </Button>

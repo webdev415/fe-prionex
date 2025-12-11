@@ -49,7 +49,6 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           <label
             htmlFor={textareaId}
             className="text-body-sm text-primary-950 mb-1.5 block font-light"
-            style={{ fontWeight: 300 }}
           >
             {label}
           </label>
@@ -57,10 +56,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           id={textareaId}
           className={cn(textareaVariants({ variant: effectiveVariant, textareaSize }), className)}
-          style={{
-            color: 'var(--color-primary-950)',
-            ...(style || {}),
-          }}
+          style={style}
           ref={ref}
           aria-invalid={!!error}
           aria-describedby={error ? errorId : helperText ? helperId : undefined}
