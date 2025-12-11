@@ -363,14 +363,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
               control={control}
               render={({ field }) => (
                 <Select value={field.value || 'uk'} onValueChange={field.onChange}>
-                  <SelectTrigger
-                    className="mt-1 w-full border"
-                    style={{
-                      borderColor: '#F2F3F0',
-                      fontSize: '14px',
-                      color: '#1A1A1A',
-                    }}
-                  >
+                  <SelectTrigger className="border-light-50 text-dark-950 mt-1 w-full border text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -395,14 +388,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
               control={control}
               render={({ field }) => (
                 <Select value={field.value || 'Europe/Kyiv'} onValueChange={field.onChange}>
-                  <SelectTrigger
-                    className="mt-1 w-full border"
-                    style={{
-                      borderColor: '#F2F3F0',
-                      fontSize: '14px',
-                      color: '#1A1A1A',
-                    }}
-                  >
+                  <SelectTrigger className="border-light-50 text-dark-950 mt-1 w-full border text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -431,17 +417,14 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
       {/* Assign Projects Section */}
       <div className="mt-4 mb-0 space-y-4">
-        <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A', fontSize: '14px' }}>
-          Assign Projects:
-        </h3>
+        <h3 className="text-dark-950 text-sm font-semibold">Assign Projects:</h3>
         <div className="flex flex-wrap gap-4">
           {projects.map((project) => {
             const isChecked = selectedProjects.includes(project.id)
             return (
               <label
                 key={project.id}
-                className="flex cursor-pointer items-center gap-2 text-sm font-light"
-                style={{ color: '#1A1A1A' }}
+                className="text-dark-950 flex cursor-pointer items-center gap-2 text-sm font-light"
               >
                 <Checkbox
                   checked={isChecked}
@@ -460,9 +443,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
       {/* Role per Project Section */}
       {selectedProjects.length > 0 && (
         <div className="mt-4 mb-0 space-y-4">
-          <h3 className="text-sm font-semibold" style={{ color: '#1A1A1A', fontSize: '14px' }}>
-            Role per Project:
-          </h3>
+          <h3 className="text-dark-950 text-sm font-semibold">Role per Project:</h3>
           <div className="space-y-3">
             {selectedProjects.map((projectId) => {
               const project = projects.find((p) => p.id === projectId)
@@ -471,9 +452,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
               return (
                 <div key={projectId} className="grid w-full grid-cols-2 items-center gap-4">
-                  <span className="text-sm font-light" style={{ color: '#1A1A1A' }}>
-                    {project?.name}:
-                  </span>
+                  <span className="text-dark-950 text-sm font-light">{project?.name}:</span>
                   <Select
                     value={selectedRoleId?.toString() || ''}
                     onValueChange={(value) => {
@@ -481,14 +460,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
                       handleRoleChange(projectId, roleId)
                     }}
                   >
-                    <SelectTrigger
-                      className="mt-1 w-full border"
-                      style={{
-                        borderColor: '#F2F3F0',
-                        fontSize: '14px',
-                        color: '#1A1A1A',
-                      }}
-                    >
+                    <SelectTrigger className="border-light-50 text-dark-950 mt-1 w-full border text-sm">
                       <SelectValue placeholder="Not assigned" />
                     </SelectTrigger>
                     <SelectContent>

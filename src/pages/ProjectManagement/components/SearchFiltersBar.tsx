@@ -124,12 +124,7 @@ export function SearchFiltersBar({
     <div className="mb-6 flex w-full items-center justify-between gap-3">
       {/* Search + Filters pill - styled to match dashboard header search bar */}
       <div className="flex w-[70%] items-center justify-between">
-        <div
-          className="flex flex-1 items-center gap-3 rounded-full border bg-white pr-2 pl-4 shadow-sm"
-          style={{
-            borderColor: '#E5E7EB',
-          }}
-        >
+        <div className="flex flex-1 items-center gap-3 rounded-full border border-gray-200 bg-white pr-2 pl-4 shadow-sm">
           {/* Search Input */}
           <div className="flex flex-1 items-center gap-2 py-1">
             <input
@@ -138,10 +133,7 @@ export function SearchFiltersBar({
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               disabled={isLoading}
-              className="h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500 disabled:opacity-60"
-              style={{
-                color: '#1A1A1A',
-              }}
+              className="text-dark-950 h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500 disabled:opacity-60"
             />
             {searchValue && (
               <button
@@ -229,10 +221,7 @@ export function SearchFiltersBar({
               onFilterChange({ ...filters, search: searchValue || undefined })
             }}
             disabled={isLoading}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
-            style={{
-              backgroundColor: '#A7E8BD',
-            }}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#A7E8BD] transition-all duration-200 hover:scale-105 disabled:opacity-60"
             aria-label="Search projects"
           >
             <Icons.Search size={18} color="#1A1A1A" strokeWidth={1.5} />
@@ -244,31 +233,13 @@ export function SearchFiltersBar({
         {/* Add New Project Button */}
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-          style={{
-            backgroundColor: '#164E63',
-          }}
+          className="flex items-center rounded-full bg-[#164E63] shadow-md transition-all duration-200 hover:shadow-lg"
           aria-label="Add new project"
         >
-          <div
-            className="flex items-center justify-center rounded-full"
-            style={{
-              width: '40px',
-              height: '40px',
-              backgroundColor: '#A7E8BD',
-              marginLeft: '4px',
-            }}
-          >
+          <div className="ml-1 flex h-10 w-10 items-center justify-center rounded-full bg-[#A7E8BD]">
             <Icons.Add size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
-          <span
-            className="px-4 py-3 font-medium text-white"
-            style={{
-              fontSize: '14px',
-            }}
-          >
-            New Project
-          </span>
+          <span className="px-4 py-3 text-sm font-medium text-white">New Project</span>
         </button>
 
         {/* Create Modal */}
@@ -285,12 +256,7 @@ export function SearchFiltersBar({
           onClick={onExport}
           disabled={isLoading}
           type="button"
-          className="flex items-center gap-2 rounded-full bg-white px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
-          style={{
-            backgroundColor: '#A7E8BD',
-            color: '#1A1A1A',
-            height: '45px',
-          }}
+          className="text-dark-950 flex h-[45px] items-center gap-2 rounded-full bg-[#A7E8BD] px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
         >
           <Icons.FileImport size={16} color="#1A1A1A" />
           Export

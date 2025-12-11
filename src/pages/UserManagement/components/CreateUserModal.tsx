@@ -32,10 +32,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: '#A0F229' }}
-          >
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#A0F229]">
             <Icons.Add size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
         }
@@ -57,15 +54,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
           type="button"
           variant="outline"
           onClick={onClose}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: '#6B7280',
-            color: '#FFFFFF',
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
           Cancel
         </Button>
@@ -74,15 +63,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
           form="create-user-form"
           variant="primary"
           disabled={isLoading}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: '#A7E8BD',
-            color: '#1A1A1A',
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="text-dark-950 h-[45px] flex-1 rounded-md border-none bg-[#A7E8BD] text-sm font-medium"
         >
           Save
         </Button>

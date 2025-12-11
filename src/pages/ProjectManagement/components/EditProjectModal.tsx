@@ -171,8 +171,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                     <RadioItem value="active" id="status-active" />
                     <Label
                       htmlFor="status-active"
-                      className="mb-0 cursor-pointer"
-                      className="text-sm font-light"
+                      className="mb-0 cursor-pointer text-sm font-light"
                     >
                       Active
                     </Label>
@@ -181,8 +180,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                     <RadioItem value="inactive" id="status-inactive" />
                     <Label
                       htmlFor="status-inactive"
-                      className="mb-0 cursor-pointer"
-                      className="text-sm font-light"
+                      className="mb-0 cursor-pointer text-sm font-light"
                     >
                       Inactive
                     </Label>
@@ -316,10 +314,7 @@ export function EditProjectModal({ project, open, onClose, onSuccess }: EditProj
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full"
-            className="bg-[#A7E8BD]"
-          >
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#A7E8BD]">
             <Icons.PencilEdit size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
         }

@@ -116,10 +116,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full"
-            className="bg-[#A7E8BD]"
-          >
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#A7E8BD]">
             <Icons.Add size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
         }
