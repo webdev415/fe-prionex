@@ -18,7 +18,7 @@ export interface RadioProps extends React.InputHTMLAttributes<HTMLInputElement> 
 const Radio = React.forwardRef<HTMLInputElement, RadioProps>(
   ({ className, checked, ...props }, ref) => {
     return (
-      <div 
+      <div
         className="relative flex items-center justify-center"
         style={{
           width: '24px',
@@ -27,7 +27,7 @@ const Radio = React.forwardRef<HTMLInputElement, RadioProps>(
       >
         {/* Outer circle - always visible, 15px centered in 24px container */}
         <div
-          className={cn('rounded-full relative', className)}
+          className={cn('relative rounded-full', className)}
           style={{
             width: '16px',
             height: '16px',
@@ -51,13 +51,7 @@ const Radio = React.forwardRef<HTMLInputElement, RadioProps>(
           )}
         </div>
         {/* Hidden native input for accessibility */}
-        <input
-          type="radio"
-          ref={ref}
-          checked={checked}
-          className="sr-only"
-          {...props}
-        />
+        <input type="radio" ref={ref} checked={checked} className="sr-only" {...props} />
       </div>
     )
   }

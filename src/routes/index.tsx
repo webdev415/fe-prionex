@@ -1,12 +1,16 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import LoginPage from '@/pages/auth/LoginPage'
 import { UserManagementPage } from '@/pages/UserManagement'
 import { ImportClientsPage } from '@/pages/ImportClients/ImportClientsPage'
 import { ProjectManagementPage } from '@/pages/ProjectManagement/ProjectManagementPage'
 import { RoleManagementPage } from '@/pages/RoleManagement/RoleManagementPage'
+import { ForbiddenPage } from '@/pages/errors'
 import { ProtectedRoute } from './ProtectedRoute'
+import { PermissionRoute } from './PermissionRoute'
 import { GuestRoute } from './GuestRoute'
 import { DashboardLayout } from '@/components/layout'
+import { PERMISSIONS } from '@/constants/permissions'
 
 function DashboardContent() {
   return (
@@ -29,6 +33,14 @@ export const router = createBrowserRouter([
     ),
   },
   {
+    path: '/forbidden',
+    element: (
+      <ProtectedRoute>
+        <ForbiddenPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
     path: '/dashboard',
     element: (
       <ProtectedRoute>
@@ -42,9 +54,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/users',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <UserManagementPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.USERS.VIEW}>
+          <DashboardLayout>
+            <UserManagementPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
@@ -62,9 +76,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/projects',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <ProjectManagementPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.PROJECTS.MANAGE}>
+          <DashboardLayout>
+            <ProjectManagementPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
@@ -72,9 +88,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/roles',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <RoleManagementPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
+          <DashboardLayout>
+            <RoleManagementPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },

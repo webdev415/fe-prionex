@@ -27,7 +27,11 @@ export interface Step2FileUploadProps {
   isImportInProgress?: boolean // Add this prop to track active imports
 }
 
-export function Step2FileUpload({ data, onChange, isImportInProgress = false }: Step2FileUploadProps) {
+export function Step2FileUpload({
+  data,
+  onChange,
+  isImportInProgress = false,
+}: Step2FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [isValidating, setIsValidating] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -152,7 +156,7 @@ export function Step2FileUpload({ data, onChange, isImportInProgress = false }: 
   const hasValidFile = !!data.csvFile
   const hasInvalidFile = !!data.invalidFile
   const hasInvalidCSVStructure = !!data.csvValidationError && !data.csvValidationError.isValid
-  
+
   // Get the file from validation error state - we need to track it separately
   // For now, we'll show the error but need to store the file reference
   const [errorFile, setErrorFile] = useState<File | null>(null)
@@ -209,7 +213,7 @@ export function Step2FileUpload({ data, onChange, isImportInProgress = false }: 
         className={cn(
           'relative flex flex-col items-center gap-6 self-stretch rounded-lg border-2 border-dashed p-6 transition-colors',
           isDragging ? 'border-primary-500 bg-primary-50' : 'border-gray-300',
-          isImportInProgress && 'opacity-50 pointer-events-none' // Disable when import in progress
+          isImportInProgress && 'pointer-events-none opacity-50' // Disable when import in progress
         )}
         onDragOver={isImportInProgress ? undefined : handleDragOver}
         onDragLeave={isImportInProgress ? undefined : handleDragLeave}
@@ -350,44 +354,43 @@ export function Step2FileUpload({ data, onChange, isImportInProgress = false }: 
           )}
 
           {/* Missing Required Columns - shown when invalid CSV structure */}
-          {hasInvalidCSVStructure && data.csvValidationError?.missingColumns && data.csvValidationError.missingColumns.length > 0 && (
-            <div className="flex flex-col items-center gap-3 w-full">
-              <div
-                style={{
-                  fontSize: '16px',
-                  fontWeight: 500,
-                  lineHeight: '155%',
-                  letterSpacing: '-0.32px',
-                  textAlign: 'center',
-                  color: colors.neutral.dark[500],
-                }}
-              >
-                Missing required columns:
+          {hasInvalidCSVStructure &&
+            data.csvValidationError?.missingColumns &&
+            data.csvValidationError.missingColumns.length > 0 && (
+              <div className="flex w-full flex-col items-center gap-3">
+                <div
+                  style={{
+                    fontSize: '16px',
+                    fontWeight: 500,
+                    lineHeight: '155%',
+                    letterSpacing: '-0.32px',
+                    textAlign: 'center',
+                    color: colors.neutral.dark[500],
+                  }}
+                >
+                  Missing required columns:
+                </div>
+                <div className="flex w-full flex-wrap items-center justify-center gap-2">
+                  {data.csvValidationError.missingColumns.map((column) => (
+                    <div key={column} className="flex items-center gap-2 rounded-full px-3 py-1.5">
+                      <Icons.Close size={16} color="#EF4444" />
+                      <span
+                        style={{
+                          fontSize: '16px',
+                          fontWeight: 300,
+                          color: '#EF4444',
+                          textTransform: 'capitalize',
+                          lineHeight: '155%',
+                          letterSpacing: '-0.32px',
+                        }}
+                      >
+                        {column.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-2 w-full">
-                {data.csvValidationError.missingColumns.map((column) => (
-                  <div
-                    key={column}
-                    className="flex items-center gap-2 rounded-full px-3 py-1.5"
-                  >
-                    <Icons.Close size={16} color="#EF4444" />
-                    <span
-                      style={{
-                        fontSize: '16px',
-                        fontWeight: 300,
-                        color: '#EF4444',
-                        textTransform: 'capitalize',
-                        lineHeight: '155%',
-                        letterSpacing: '-0.32px',
-                      }}
-                    >
-                      {column.replace(/_/g, ' ')}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            )}
 
           {/* Error Message - Only .csv files supported */}
           {hasInvalidFile && !hasInvalidCSVStructure && (
@@ -460,12 +463,7 @@ export function Step2FileUpload({ data, onChange, isImportInProgress = false }: 
         </Button>
 
         {/* Hidden File Input - removed accept restriction to allow all file types */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          onChange={handleFileInputChange}
-          className="hidden"
-        />
+        <input ref={fileInputRef} type="file" onChange={handleFileInputChange} className="hidden" />
       </div>
 
       {/* Action Buttons */}
@@ -501,11 +499,17 @@ export function Step2FileUpload({ data, onChange, isImportInProgress = false }: 
           onClick={() => {
             if (hasValidFile && !hasInvalidCSVStructure && !isImportInProgress) handleStartImport()
           }}
-        //   disabled={!hasValidFile || hasInvalidCSVStructure || isImportInProgress}
+          //   disabled={!hasValidFile || hasInvalidCSVStructure || isImportInProgress}
           style={{
             display: 'flex',
-            backgroundColor: hasValidFile && !hasInvalidCSVStructure && !isImportInProgress ? colors.secondary[800] : colors.gray[200], // #204E4D when enabled
-            color: hasValidFile && !hasInvalidCSVStructure && !isImportInProgress ? '#FFFFFF' : colors.gray[600],
+            backgroundColor:
+              hasValidFile && !hasInvalidCSVStructure && !isImportInProgress
+                ? colors.secondary[800]
+                : colors.gray[200], // #204E4D when enabled
+            color:
+              hasValidFile && !hasInvalidCSVStructure && !isImportInProgress
+                ? '#FFFFFF'
+                : colors.gray[600],
             borderRadius: '9999px', // Pill shape
             padding: '4px 4px 4px 24px',
             lineHeight: '150%',
@@ -515,7 +519,10 @@ export function Step2FileUpload({ data, onChange, isImportInProgress = false }: 
             fontWeight: '500',
             gap: '10px',
             height: '48px',
-            cursor: hasValidFile && !hasInvalidCSVStructure && !isImportInProgress ? 'pointer' : 'not-allowed',
+            cursor:
+              hasValidFile && !hasInvalidCSVStructure && !isImportInProgress
+                ? 'pointer'
+                : 'not-allowed',
           }}
         >
           <span>Start Import</span>
@@ -525,14 +532,24 @@ export function Step2FileUpload({ data, onChange, isImportInProgress = false }: 
               width: '40px',
               height: '40px',
               borderRadius: '50%',
-              backgroundColor: hasValidFile && !hasInvalidCSVStructure && !isImportInProgress ? colors.primary[300] : colors.gray[600], // #BBFB5B when enabled
+              backgroundColor:
+                hasValidFile && !hasInvalidCSVStructure && !isImportInProgress
+                  ? colors.primary[300]
+                  : colors.gray[600], // #BBFB5B when enabled
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <Icons.ArrowRight02 size={24} color={hasValidFile && !hasInvalidCSVStructure && !isImportInProgress ? colors.neutral.dark[500] : colors.gray[500]} />
+            <Icons.ArrowRight02
+              size={24}
+              color={
+                hasValidFile && !hasInvalidCSVStructure && !isImportInProgress
+                  ? colors.neutral.dark[500]
+                  : colors.gray[500]
+              }
+            />
           </div>
         </Button>
       </div>

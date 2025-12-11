@@ -19,7 +19,7 @@ export function ImportClientsPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [isImportInProgress] = useState(false) // Add this state
   const [showImportHistory, setShowImportHistory] = useState(false)
-  
+
   // Mock data for import history - in real app, this would come from API
   const [importHistoryData] = useState<ImportHistoryData | null>({
     file: 'clients_batch_2024-11-20.csv',
@@ -43,7 +43,7 @@ export function ImportClientsPage() {
   const [step2Data, setStep2Data] = useState<Step2Data>({
     csvFile: null,
     invalidFile: null,
-    csvValidationError: null, 
+    csvValidationError: null,
   })
   const [step2VendorData, setStep2VendorData] = useState<Step2VendorDumpData>({
     files: [],
@@ -55,9 +55,9 @@ export function ImportClientsPage() {
     setStep1Data((prev) => ({ ...prev, ...data }))
   }
 
-//   const handleStep2Change = (data: Partial<Step2Data>) => {
-//     setStep2Data((prev) => ({ ...prev, ...data }))
-//   }
+  //   const handleStep2Change = (data: Partial<Step2Data>) => {
+  //     setStep2Data((prev) => ({ ...prev, ...data }))
+  //   }
 
   const handleNextStep = () => {
     if (currentStep < STEPS.length) {
@@ -92,10 +92,9 @@ export function ImportClientsPage() {
 
   // Get steps based on import type
   const getSteps = (): Step[] => {
-    const step2Label = step1Data.importType === 'vendor' 
-      ? 'Files (Vendor Dump)' 
-      : 'Files (Simple CSV)'
-    
+    const step2Label =
+      step1Data.importType === 'vendor' ? 'Files (Vendor Dump)' : 'Files (Simple CSV)'
+
     return [
       {
         number: 1,
@@ -115,12 +114,13 @@ export function ImportClientsPage() {
       {/* Page Header */}
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          {currentStep > 1 && (<Button
-            variant="outline"
-            onClick={handlePreviousStep}
-            leftIcon={<Icons.ArrowLeft02 size={20} color={colors.secondary[800]} />}
-            className='flex flex-row justify-center items-center'
-            style={{
+          {currentStep > 1 && (
+            <Button
+              variant="outline"
+              onClick={handlePreviousStep}
+              leftIcon={<Icons.ArrowLeft02 size={20} color={colors.secondary[800]} />}
+              className="flex flex-row items-center justify-center"
+              style={{
                 padding: '10px 16px',
                 borderRadius: '9999px',
                 borderColor: '#FFFFFF',
@@ -130,10 +130,11 @@ export function ImportClientsPage() {
                 fontWeight: 500,
                 lineHeight: '150%',
                 height: '48px',
-            }}
-          >
-            Back
-          </Button>)}
+              }}
+            >
+              Back
+            </Button>
+          )}
           <h1
             className="font-light"
             style={{
@@ -193,16 +194,16 @@ export function ImportClientsPage() {
             {currentStep === 1 && <Step1LoanSource data={step1Data} onChange={handleStep1Change} />}
 
             {currentStep === 2 && step1Data.importType === 'simple' && (
-              <Step2FileUpload 
-                data={step2Data} 
+              <Step2FileUpload
+                data={step2Data}
                 onChange={(data) => setStep2Data((prev) => ({ ...prev, ...data }))}
                 isImportInProgress={isImportInProgress}
               />
             )}
 
             {currentStep === 2 && step1Data.importType === 'vendor' && (
-              <Step2VendorDump 
-                data={step2VendorData} 
+              <Step2VendorDump
+                data={step2VendorData}
                 onChange={(data) => setStep2VendorData((prev) => ({ ...prev, ...data }))}
                 isImportInProgress={isImportInProgress}
               />
@@ -251,26 +252,27 @@ export function ImportClientsPage() {
 
       {/* Import Progress Banner */}
       {isImportInProgress && (
-      <div
-          className="flex items-center justify-between px-6 py-4 z-50 mx-50 my-10"
-          style={{      
+        <div
+          className="z-50 mx-50 my-10 flex items-center justify-between px-6 py-4"
+          style={{
             backgroundColor: '#FFFFFF',
             borderRadius: '10px',
             border: '1px solid #ECEFF3',
-            boxShadow: '0 12px 16px -4px rgba(16, 24, 40, 0.08), 0 4px 6px -2px rgba(16, 24, 40, 0.03)',
+            boxShadow:
+              '0 12px 16px -4px rgba(16, 24, 40, 0.08), 0 4px 6px -2px rgba(16, 24, 40, 0.03)',
             gap: '16px',
           }}
         >
-          <div 
+          <div
             className="flex items-center"
             style={{
-                gap: '10px',
-                padding:'4px 0 4px 12px',
-                color: '#EAB308',
+              gap: '10px',
+              padding: '4px 0 4px 12px',
+              color: '#EAB308',
             }}
           >
             {/* Icon - document with refresh symbol */}
-            <Icons.FileImport size={20}  />
+            <Icons.FileImport size={20} />
             <span
               style={{
                 fontSize: '14px',
@@ -281,44 +283,59 @@ export function ImportClientsPage() {
               Import in progress
             </span>
           </div>
-        <span className='text-[#05040D] font-lexend text-sm font-light leading-[150%] tracking-[-0.28px]'>File: <span className='text-[#05040D] font-lexend text-sm font-medium leading-[150%] tracking-[-0.28px]'>clients_batch_2024-11-20.csv</span></span>
-        <span className='text-[#05040D] font-lexend text-sm font-light leading-[150%] tracking-[-0.28px]'>Started: <span className='text-[#05040D] font-lexend text-sm font-medium leading-[150%] tracking-[-0.28px]'>10:03</span></span>
-        <span className='text-[#05040D] font-lexend text-sm font-light leading-[150%] tracking-[-0.28px]'>Status: <span className='text-[#05040D] font-lexend text-sm font-medium leading-[150%] tracking-[-0.28px]'>45% complete</span></span>
-        <Button
+          <span className="font-lexend text-sm leading-[150%] font-light tracking-[-0.28px] text-[#05040D]">
+            File:{' '}
+            <span className="font-lexend text-sm leading-[150%] font-medium tracking-[-0.28px] text-[#05040D]">
+              clients_batch_2024-11-20.csv
+            </span>
+          </span>
+          <span className="font-lexend text-sm leading-[150%] font-light tracking-[-0.28px] text-[#05040D]">
+            Started:{' '}
+            <span className="font-lexend text-sm leading-[150%] font-medium tracking-[-0.28px] text-[#05040D]">
+              10:03
+            </span>
+          </span>
+          <span className="font-lexend text-sm leading-[150%] font-light tracking-[-0.28px] text-[#05040D]">
+            Status:{' '}
+            <span className="font-lexend text-sm leading-[150%] font-medium tracking-[-0.28px] text-[#05040D]">
+              45% complete
+            </span>
+          </span>
+          <Button
             variant="primary"
             onClick={() => {
-            // TODO: Implement view details functionality
-            console.log('View Details clicked')
+              // TODO: Implement view details functionality
+              console.log('View Details clicked')
             }}
             style={{
-            backgroundColor: colors.secondary[800],
-            color: '#FFFFFF',
-            gap: '10px',
-            borderRadius: '8px',
-            padding: '10px 16px',
-            fontSize: '14px',
-            fontWeight: 500,
-            height: '40px',
+              backgroundColor: colors.secondary[800],
+              color: '#FFFFFF',
+              gap: '10px',
+              borderRadius: '8px',
+              padding: '10px 16px',
+              fontSize: '14px',
+              fontWeight: 500,
+              height: '40px',
             }}
-        >
+          >
             View Details
-        </Button>
-        <Button
+          </Button>
+          <Button
             variant="outline"
             onClick={handleGoToImportHistory}
             style={{
-            borderColor: colors.secondary[800],
-            backgroundColor: '#FFFFFF',
-            color: colors.secondary[800],
-            borderRadius: '8px',
-            gap: '10px',
-            padding: '10px 16px',
-            fontSize: '14px',
-            fontWeight: 500,
+              borderColor: colors.secondary[800],
+              backgroundColor: '#FFFFFF',
+              color: colors.secondary[800],
+              borderRadius: '8px',
+              gap: '10px',
+              padding: '10px 16px',
+              fontSize: '14px',
+              fontWeight: 500,
             }}
-        >
+          >
             Go to Import History
-        </Button>
+          </Button>
         </div>
       )}
 

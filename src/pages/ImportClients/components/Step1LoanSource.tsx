@@ -4,7 +4,13 @@
 
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { Label } from '@/components/ui/Label'
 import { RadioCard } from './RadioCard'
 import { useProjects } from '@/features/projects'
@@ -42,17 +48,13 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
         >
           Loan Source / Metadata
         </h2>
-        
+
         <div className="space-y-4">
           {/* First Row: Seller/Creditor and Project Code side by side */}
-          <div className="flex gap-4 items-end">
+          <div className="flex items-end gap-4">
             {/* Seller / Creditor */}
             <div className="flex-1">
-              <Label
-                htmlFor="seller-creditor"
-                required
-                className="mb-1.5 block"
-              >
+              <Label htmlFor="seller-creditor" required className="mb-1.5 block">
                 Seller / Creditor
               </Label>
               <Select
@@ -85,10 +87,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
 
           {/* Purchase Date */}
           <div>
-            <Label
-              htmlFor="purchase-date"
-              className="mb-1.5 block"
-            >
+            <Label htmlFor="purchase-date" className="mb-1.5 block">
               Purchase date:
             </Label>
             <Input
@@ -110,10 +109,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
               maxLength={100}
               className="pb-8"
             />
-            <div
-              className="absolute bottom-3 right-3 text-xs"
-              style={{ color: colors.gray[500] }}
-            >
+            <div className="absolute right-3 bottom-3 text-xs" style={{ color: colors.gray[500] }}>
               {data.comment.length}/100
             </div>
           </div>
@@ -132,7 +128,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
         >
           Import Type:
         </h2>
-        
+
         <div className="flex gap-4">
           <RadioCard
             name="importType"

@@ -37,9 +37,12 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
   const { data: permissionsData, isLoading: loadingPermissions } = usePermissions()
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
 
-  const permissions = permissionsData?.permissions || []
-
   // Group permissions by category
+  const permissions = useMemo(
+    () => permissionsData?.permissions || [],
+    [permissionsData?.permissions]
+  )
+
   const permissionsByCategory = useMemo(() => {
     return permissions.reduce(
       (acc, perm) => {

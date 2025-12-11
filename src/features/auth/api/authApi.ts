@@ -4,6 +4,8 @@ import type {
   LoginResponse,
   TokenValidateResponse,
   CurrentUserResponse,
+  ImpersonationResponse,
+  ExitImpersonationResponse,
 } from '@/types/api'
 
 export const authApi = {
@@ -21,9 +23,9 @@ export const authApi = {
     api.post<LoginResponse>('/api/v1/auth/switch-project', { project_id: projectId }),
 
   impersonate: (userId: string) =>
-    api.post<LoginResponse>('/api/v1/auth/impersonate', { user_id: userId }),
+    api.post<ImpersonationResponse>('/api/v1/auth/impersonate', { user_id: userId }),
 
-  exitImpersonation: () => api.post<LoginResponse>('/api/v1/auth/impersonate/exit'),
+  exitImpersonation: () => api.post<ExitImpersonationResponse>('/api/v1/auth/impersonate/exit'),
 
   changePassword: (data: { current_password: string; new_password: string }) =>
     api.post('/api/v1/users/me/change-password', data),

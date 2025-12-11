@@ -30,6 +30,7 @@ export const ROUTES = {
   USERS: '/dashboard/users',
   PROJECTS: '/dashboard/projects',
   ROLES: '/dashboard/roles',
+  FORBIDDEN: '/forbidden',
 } as const
 
 /**
@@ -39,3 +40,8 @@ export const SESSION = {
   TOKEN_KEY: 'auth_token',
   REFRESH_TOKEN_KEY: 'refresh_token',
 } as const
+
+/**
+ * Re-export permissions from permissions module
+ */
+export { PERMISSIONS, type Permission } from './permissions'

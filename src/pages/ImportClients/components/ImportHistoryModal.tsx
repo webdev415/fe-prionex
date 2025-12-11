@@ -358,11 +358,11 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
               <Icons.Warning size={20} color="#EF4444" />
               <span
                 style={{
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    color: '#EF4444',
-                    lineHeight: '150%',
-                    letterSpacing: '-0.28px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: '#EF4444',
+                  lineHeight: '150%',
+                  letterSpacing: '-0.28px',
                 }}
               >
                 The import failed due to a system error. No rows were processed.

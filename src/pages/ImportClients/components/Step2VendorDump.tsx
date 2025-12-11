@@ -42,7 +42,11 @@ const INITIAL_DATASETS: Omit<DatasetFile, 'id'>[] = [
   { type: 'documents', name: 'Documents', status: 'optional', file: null },
 ]
 
-export function Step2VendorDump({ data, onChange, isImportInProgress = false }: Step2VendorDumpProps) {
+export function Step2VendorDump({
+  data,
+  onChange,
+  isImportInProgress = false,
+}: Step2VendorDumpProps) {
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const browseFileInputRef = useRef<HTMLInputElement | null>(null)
@@ -72,7 +76,7 @@ export function Step2VendorDump({ data, onChange, isImportInProgress = false }: 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
-    
+
     if (isImportInProgress) return
 
     const droppedFiles = Array.from(e.dataTransfer.files)
@@ -80,8 +84,8 @@ export function Step2VendorDump({ data, onChange, isImportInProgress = false }: 
   }
 
   const handleFilesSelection = (files: File[]) => {
-    const zipFile = files.find(f => f.name.toLowerCase().endsWith('.zip'))
-    
+    const zipFile = files.find((f) => f.name.toLowerCase().endsWith('.zip'))
+
     if (zipFile) {
       // If ZIP is uploaded, mark documents as selected
       const updatedFiles = data.files.map((f) =>
@@ -96,20 +100,20 @@ export function Step2VendorDump({ data, onChange, isImportInProgress = false }: 
 
   const handleFilesUpload = (files: File[]) => {
     const updatedFiles = [...data.files]
-    
+
     files.forEach((file) => {
       const fileName = file.name.toLowerCase()
       if (fileName.includes('users') || fileName.includes('user')) {
-        const usersIndex = updatedFiles.findIndex(f => f.type === 'users')
+        const usersIndex = updatedFiles.findIndex((f) => f.type === 'users')
         if (usersIndex !== -1) updatedFiles[usersIndex].file = file
       } else if (fileName.includes('loans') || fileName.includes('loan')) {
-        const loansIndex = updatedFiles.findIndex(f => f.type === 'loans')
+        const loansIndex = updatedFiles.findIndex((f) => f.type === 'loans')
         if (loansIndex !== -1) updatedFiles[loansIndex].file = file
       } else if (fileName.includes('charges') || fileName.includes('charge')) {
-        const chargesIndex = updatedFiles.findIndex(f => f.type === 'charges')
+        const chargesIndex = updatedFiles.findIndex((f) => f.type === 'charges')
         if (chargesIndex !== -1) updatedFiles[chargesIndex].file = file
       } else if (fileName.includes('payments') || fileName.includes('payment')) {
-        const paymentsIndex = updatedFiles.findIndex(f => f.type === 'payments')
+        const paymentsIndex = updatedFiles.findIndex((f) => f.type === 'payments')
         if (paymentsIndex !== -1) updatedFiles[paymentsIndex].file = file
       }
     })
@@ -132,11 +136,9 @@ export function Step2VendorDump({ data, onChange, isImportInProgress = false }: 
     const file = e.target.files?.[0] || null
     if (!file) return
 
-    const updatedFiles = data.files.map((f) =>
-      f.type === type ? { ...f, file } : f
-    )
+    const updatedFiles = data.files.map((f) => (f.type === type ? { ...f, file } : f))
     onChange({ files: updatedFiles, isZipUpload: false })
-    
+
     // Reset input so same file can be selected again
     if (fileInputRefs.current[type]) {
       fileInputRefs.current[type]!.value = ''
@@ -164,9 +166,9 @@ export function Step2VendorDump({ data, onChange, isImportInProgress = false }: 
     return `${mb.toFixed(1)} MB`
   }
 
-  const requiredFilesSelected = data.files.length > 0 && data.files
-    .filter(f => f.status === 'required')
-    .every(f => f.file !== null)
+  const requiredFilesSelected =
+    data.files.length > 0 &&
+    data.files.filter((f) => f.status === 'required').every((f) => f.file !== null)
 
   const columns: Column<DatasetFile>[] = [
     {
@@ -207,7 +209,7 @@ export function Step2VendorDump({ data, onChange, isImportInProgress = false }: 
       render: (item) => {
         const isDocuments = item.type === 'documents'
         const hasFile = item.file !== null
-        
+
         return (
           <div className="flex items-center gap-2">
             {hasFile ? (
@@ -273,7 +275,7 @@ export function Step2VendorDump({ data, onChange, isImportInProgress = false }: 
 
       {/* Instructions */}
       <p
-        className="text-center mb-6"
+        className="mb-6 text-center"
         style={{
           fontSize: '16px',
           fontWeight: 300,
@@ -290,7 +292,7 @@ export function Step2VendorDump({ data, onChange, isImportInProgress = false }: 
         className={cn(
           'relative flex flex-col items-center gap-6 self-stretch rounded-lg border-2 border-dashed p-6 transition-colors',
           isDragging ? 'border-primary-500 bg-primary-50' : 'border-gray-300',
-          isImportInProgress && 'opacity-50 pointer-events-none'
+          isImportInProgress && 'pointer-events-none opacity-50'
         )}
         onDragOver={isImportInProgress ? undefined : handleDragOver}
         onDragLeave={isImportInProgress ? undefined : handleDragLeave}
@@ -359,22 +361,21 @@ export function Step2VendorDump({ data, onChange, isImportInProgress = false }: 
 
       {/* Dataset Table */}
       <div className="mt-6">
-        <DataTable
-          columns={columns}
-          data={data.files}
-          emptyMessage="No datasets configured"
-        />
+        <DataTable columns={columns} data={data.files} emptyMessage="No datasets configured" />
       </div>
 
       {/* Start Import Button */}
-      <div className="flex justify-center mt-8">
+      <div className="mt-8 flex justify-center">
         <Button
           variant="primary"
           onClick={handleStartImport}
           disabled={!requiredFilesSelected || isImportInProgress}
           style={{
             display: 'flex',
-            backgroundColor: requiredFilesSelected && !isImportInProgress ? colors.secondary[800] : colors.gray[200],
+            backgroundColor:
+              requiredFilesSelected && !isImportInProgress
+                ? colors.secondary[800]
+                : colors.gray[200],
             color: requiredFilesSelected && !isImportInProgress ? '#FFFFFF' : colors.gray[600],
             borderRadius: '9999px',
             padding: '4px 4px 4px 24px',
@@ -394,7 +395,10 @@ export function Step2VendorDump({ data, onChange, isImportInProgress = false }: 
               width: '40px',
               height: '40px',
               borderRadius: '50%',
-              backgroundColor: requiredFilesSelected && !isImportInProgress ? colors.primary[300] : colors.gray[600],
+              backgroundColor:
+                requiredFilesSelected && !isImportInProgress
+                  ? colors.primary[300]
+                  : colors.gray[600],
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -403,7 +407,11 @@ export function Step2VendorDump({ data, onChange, isImportInProgress = false }: 
           >
             <Icons.ArrowRight02
               size={24}
-              color={requiredFilesSelected && !isImportInProgress ? colors.neutral.dark[500] : colors.gray[500]}
+              color={
+                requiredFilesSelected && !isImportInProgress
+                  ? colors.neutral.dark[500]
+                  : colors.gray[500]
+              }
             />
           </div>
         </Button>

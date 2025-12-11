@@ -1,6 +1,6 @@
 /**
  * RadioCard Component
- * 
+ *
  * Reusable radio button card component for Import Clients feature
  * Uses the Radio component from components/ui
  * Matches design specification with proper colors and styling
@@ -32,7 +32,7 @@ export function RadioCard({
   return (
     <label
       className={cn(
-        'flex cursor-pointer items-start rounded-lg border p-4 transition-all shadow-sm',
+        'flex cursor-pointer items-start rounded-lg border p-4 shadow-sm transition-all',
         className
       )}
       style={{
@@ -58,7 +58,7 @@ export function RadioCard({
           className="font-medium"
           style={{
             fontSize: '14px',
-            color: colors.neutral.dark[500]
+            color: colors.neutral.dark[500],
           }}
         >
           {title}
@@ -66,7 +66,7 @@ export function RadioCard({
         {description && (
           <div
             className="mt-1 text-sm"
-            style={{ 
+            style={{
               color: colors.gray[700],
             }}
           >

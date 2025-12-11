@@ -48,7 +48,6 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
   const { data: permissionsData, isLoading: loadingPermissions } = usePermissions()
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
 
-  const permissions = permissionsData?.permissions || []
   const isDefaultRole = role.is_default
   const editRoleSchema = useMemo(
     () => (isDefaultRole ? defaultRoleSchema : customRoleSchema),
@@ -67,6 +66,11 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
   }, [initialPermissions])
 
   // Group permissions by category
+  const permissions = useMemo(
+    () => permissionsData?.permissions || [],
+    [permissionsData?.permissions]
+  )
+
   const permissionsByCategory = useMemo(() => {
     return permissions.reduce(
       (acc, perm) => {

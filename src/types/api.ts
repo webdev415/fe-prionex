@@ -79,6 +79,7 @@ export interface User {
   active_project_id: string | null
   active_role_id: string | null
   active_role_name: string | null
+  permissions?: string[]
   createdAt?: string
   updatedAt?: string
 }
@@ -91,6 +92,37 @@ export interface LoginRequest {
 export interface LoginResponse {
   token: string
   user: User
+}
+
+export interface ImpersonationResponse {
+  success: boolean
+  message: string
+  data: {
+    impersonation_token: string
+    impersonated_user: {
+      id: number
+      username: string
+      email: string
+      first_name: string
+      last_name: string
+    }
+    active_project: {
+      project_id: number
+      project_name: string
+      role_id: number
+      role_name: string
+    }
+    permissions: string[]
+  }
+}
+
+export interface ExitImpersonationResponse {
+  success: boolean
+  message: string
+  data: {
+    admin_token: string
+    admin_user: CurrentUserResponse
+  }
 }
 
 export interface TokenValidatePayload {
