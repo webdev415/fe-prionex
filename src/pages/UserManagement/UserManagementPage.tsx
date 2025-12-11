@@ -6,9 +6,12 @@
  */
 
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '@/features/auth'
 import { useUsers } from '@/features/users/hooks/useUsers'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 import { CreateUserModal } from './components/CreateUserModal'
 import { UserDetailModal } from './components/UserDetailModal'
 import { EditUserModal } from './components/EditUserModal'
@@ -25,6 +28,7 @@ import { ErrorState } from '@/components/ErrorState'
 const ITEMS_PER_PAGE = 10
 
 export function UserManagementPage() {
+  const navigate = useNavigate()
   const { startImpersonation, user: currentUser, isLoading: authLoading } = useAuth()
   const [currentPage, setCurrentPage] = useState(1)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -32,9 +36,6 @@ export function UserManagementPage() {
   const [editUserId, setEditUserId] = useState<number | null>(null)
   const [unlockUser, setUnlockUser] = useState<ApiUser | null>(null)
   const [impersonatingUserId, setImpersonatingUserId] = useState<number | null>(null)
-
-  // Check if current user has impersonate permission
-  const canImpersonate = currentUser?.permissions?.includes('impersonate_users') ?? false
 
   // Fetch users with pagination
   const { data, isLoading, isError, error } = useUsers({
@@ -75,6 +76,10 @@ export function UserManagementPage() {
     try {
       await startImpersonation(user.id)
       toast.success(`Now viewing as ${user.username}`)
+
+      // Redirect to dashboard to avoid permission issues
+      // (impersonated user may not have access to current page)
+      navigate('/dashboard')
     } catch (error: unknown) {
       console.error('Failed to impersonate user:', error)
       const err = error as { message?: string }
@@ -112,22 +117,43 @@ export function UserManagementPage() {
     {
       key: 'username',
       header: 'Username',
+      render: (user) => <span className="font-medium">{user.username}</span>,
+    },
+    {
+      key: 'fullName',
+      header: 'Full Name',
       render: (user) => (
-        <span className="font-medium">
-          {user.first_name} {user.last_name}
+        <span>
+          {user.first_name && user.last_name
+            ? `${user.first_name} ${user.last_name}`
+            : user.first_name || user.last_name || '-'}
         </span>
       ),
     },
     {
-      key: 'role',
-      header: 'Role',
+      key: 'email',
+      header: 'Email',
+      render: (user) => <span className="text-gray-700">{user.email || '-'}</span>,
+    },
+    {
+      key: 'projectRole',
+      header: 'Project & Role',
       render: (user) => {
-        // Display roles from projects, or "No role" if none assigned
+        // Display project name with role: "Project Name (Role)"
         if (user.projects && user.projects.length > 0) {
-          // Show all roles, separated by comma if multiple
-          return <span>{user.projects.map((p) => p.role_name).join(', ')}</span>
+          const projectRoles = user.projects.map((p) => {
+            const projectName = p.project_name || 'Unknown Project'
+            const roleName = p.role_name || 'No Role'
+            return (
+              <div key={`${p.project_id}-${p.role_id}`} className="py-0.5">
+                <span className="font-medium">{projectName}</span>
+                <span className="text-gray-600"> ({roleName})</span>
+              </div>
+            )
+          })
+          return <div className="flex flex-col gap-0.5">{projectRoles}</div>
         }
-        return <span className="text-gray-500">No role</span>
+        return <span className="text-gray-500">No assignment</span>
       },
     },
     {
@@ -149,23 +175,29 @@ export function UserManagementPage() {
             <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
             View
           </button>
-          <button
-            onClick={() => handleEdit(user)}
-            className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
-          >
-            <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
-            Edit
-          </button>
-          {canImpersonate && currentUser?.id !== String(user.id) && (
+
+          <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
             <button
-              onClick={() => handleImpersonate(user)}
-              disabled={authLoading || impersonatingUserId !== null}
-              className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => handleEdit(user)}
+              className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
             >
-              <Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />
-              {impersonatingUserId === user.id ? 'Impersonating...' : 'Impersonate'}
+              <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
+              Edit
             </button>
-          )}
+          </PermissionGuard>
+
+          <PermissionGuard permission={PERMISSIONS.USERS.IMPERSONATE}>
+            {currentUser?.id !== String(user.id) && (
+              <button
+                onClick={() => handleImpersonate(user)}
+                disabled={authLoading || impersonatingUserId !== null}
+                className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />
+                {impersonatingUserId === user.id ? 'Impersonating...' : 'Impersonate'}
+              </button>
+            )}
+          </PermissionGuard>
           <div className="flex items-center gap-2">
             <label className="text-dark-500 text-xs font-medium">Unlock</label>
             <ToggleSwitch
@@ -188,16 +220,18 @@ export function UserManagementPage() {
           <span className="text-base font-light text-gray-500">{totalUsers}</span>
         </div>
 
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-          aria-label="new user"
-        >
-          <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-            <Icons.Add size={20} color={'#05040D'} strokeWidth={2} />
-          </div>
-          <span className="px-4 py-3 text-sm font-medium text-white">New User</span>
-        </button>
+        <PermissionGuard permission={PERMISSIONS.USERS.CREATE}>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+            aria-label="Add new user"
+          >
+            <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
+              <Icons.Add size={20} color={'#05040D'} strokeWidth={2} />
+            </div>
+            <span className="px-4 py-3 text-sm font-medium text-white">Add New User</span>
+          </button>
+        </PermissionGuard>
       </div>
 
       {/* Loading State */}

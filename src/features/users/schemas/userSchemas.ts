@@ -82,6 +82,7 @@ export const languageOptions = [
  * Create User Form Schema
  *
  * Validation for creating a new user.
+ * Note: project_assignments are handled separately in the form components.
  */
 export const createUserSchema = z.object({
   username: usernameSchema,
@@ -96,12 +97,6 @@ export const createUserSchema = z.object({
   }),
   timezone: z.string().min(1, 'Please select a timezone'),
   must_change_password: z.boolean().default(true),
-  project_id: z.number({
-    message: 'Please select a project',
-  }),
-  role_id: z.number({
-    message: 'Please select a role',
-  }),
 })
 
 /**
@@ -109,6 +104,7 @@ export const createUserSchema = z.object({
  *
  * Validation for updating an existing user.
  * Note: Cannot update username or password (separate endpoints exist for password reset)
+ * Note: project_assignments are handled separately in the form components.
  */
 export const updateUserSchema = z.object({
   email: emailSchema,
