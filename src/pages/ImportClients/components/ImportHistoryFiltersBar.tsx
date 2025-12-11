@@ -7,7 +7,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import {
   Select,
   SelectContent,
@@ -95,20 +94,9 @@ export function ImportHistoryFiltersBar({
   }, [filters, onFilterChange, searchValue])
 
   return (
-    <div
-      className="flex items-center justify-between"
-      style={{
-        flex: '1 0 0',
-      }}
-    >
+    <div className="flex flex-1 items-center justify-between">
       {/* Search + Filters pill - styled to match SearchFiltersBar */}
-      <div
-        className="flex flex-1 items-center gap-3 rounded-full border bg-white pr-2 pl-4 shadow-sm"
-        style={{
-          borderColor: colors.gray[200],
-          height: '48px',
-        }}
-      >
+      <div className="flex h-12 flex-1 items-center gap-3 rounded-full border border-gray-200 bg-white pr-2 pl-4 shadow-sm">
         {/* Search Input */}
         <div className="flex flex-1 items-center gap-2 py-1">
           <input
@@ -122,10 +110,7 @@ export function ImportHistoryFiltersBar({
               }
             }}
             disabled={isLoading}
-            className="h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500 disabled:opacity-60"
-            style={{
-              color: colors.neutral.dark[500],
-            }}
+            className="text-dark-500 h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500 disabled:opacity-60"
           />
           {searchValue && (
             <button
@@ -133,7 +118,7 @@ export function ImportHistoryFiltersBar({
               className="flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
               type="button"
             >
-              <Icons.Close size={14} color={colors.gray[500]} />
+              <Icons.Close size={14} className="text-gray-500" />
             </button>
           )}
         </div>
@@ -150,13 +135,7 @@ export function ImportHistoryFiltersBar({
               onValueChange={handleDateRangeChange}
               disabled={isLoading}
             >
-              <SelectTrigger
-                className="h-auto border-0 p-0 px-2 text-[11px] font-medium shadow-none focus:ring-0"
-                style={{
-                  height: '32px',
-                  borderRadius: '0',
-                }}
-              >
+              <SelectTrigger className="h-8 rounded-none border-0 p-0 px-2 text-[11px] font-medium shadow-none focus:ring-0">
                 <SelectValue placeholder="Date range" />
               </SelectTrigger>
               <SelectContent className="bg-white">
@@ -180,13 +159,7 @@ export function ImportHistoryFiltersBar({
               onValueChange={handleStatusChange}
               disabled={isLoading}
             >
-              <SelectTrigger
-                className="h-auto border-0 p-0 px-2 text-[11px] font-medium shadow-none focus:ring-0"
-                style={{
-                  height: '32px',
-                  borderRadius: '0',
-                }}
-              >
+              <SelectTrigger className="h-8 rounded-none border-0 p-0 px-2 text-[11px] font-medium shadow-none focus:ring-0">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent className="bg-white">
@@ -207,13 +180,7 @@ export function ImportHistoryFiltersBar({
               onValueChange={handleUploadedByChange}
               disabled={isLoading || availableUsers.length === 0}
             >
-              <SelectTrigger
-                className="h-auto border-0 p-0 px-2 text-[11px] font-medium shadow-none focus:ring-0"
-                style={{
-                  height: '32px',
-                  borderRadius: '0',
-                }}
-              >
+              <SelectTrigger className="h-8 rounded-none border-0 p-0 px-2 text-[11px] font-medium shadow-none focus:ring-0">
                 <SelectValue placeholder="Uploaded by" />
               </SelectTrigger>
               <SelectContent className="bg-white">
@@ -236,13 +203,10 @@ export function ImportHistoryFiltersBar({
           type="button"
           onClick={handleSearch}
           disabled={isLoading}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
-          style={{
-            backgroundColor: colors.primary[300],
-          }}
+          className="bg-primary-300 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
           aria-label="Search import history"
         >
-          <Icons.Search size={18} color={colors.neutral.dark[500]} strokeWidth={1.5} />
+          <Icons.Search size={18} className="text-dark-500" strokeWidth={1.5} />
         </button>
       </div>
     </div>

@@ -15,7 +15,6 @@ import { Label } from '@/components/ui/Label'
 import { RadioCard } from './RadioCard'
 import { useProjects } from '@/features/projects'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 
 export interface Step1Data {
   sellerCreditor: string
@@ -38,16 +37,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
     <div className="space-y-6">
       {/* Loan Source / Metadata Section */}
       <div>
-        <h2
-          className="mb-4 font-medium"
-          style={{
-            fontSize: '14px',
-            fontWeight: 500,
-            color: colors.neutral.dark[500],
-          }}
-        >
-          Loan Source / Metadata
-        </h2>
+        <h2 className="text-dark-500 mb-4 text-sm font-medium">Loan Source / Metadata</h2>
 
         <div className="space-y-4">
           {/* First Row: Seller/Creditor and Project Code side by side */}
@@ -95,7 +85,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
               type="date"
               value={data.purchaseDate}
               onChange={(e) => onChange({ purchaseDate: e.target.value })}
-              rightIcon={<Icons.Calendar size={20} color={colors.gray[500]} />}
+              rightIcon={<Icons.Calendar size={20} className="text-gray-500" />}
             />
           </div>
 
@@ -109,7 +99,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
               maxLength={100}
               className="pb-8"
             />
-            <div className="absolute right-3 bottom-3 text-xs" style={{ color: colors.gray[500] }}>
+            <div className="absolute right-3 bottom-3 text-xs text-gray-500">
               {data.comment.length}/100
             </div>
           </div>
@@ -118,16 +108,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
 
       {/* Import Type Section */}
       <div>
-        <h2
-          className="mb-4 font-medium"
-          style={{
-            fontSize: '14px',
-            fontWeight: 500,
-            color: colors.neutral.dark[500],
-          }}
-        >
-          Import Type:
-        </h2>
+        <h2 className="text-dark-500 mb-4 text-sm font-medium">Import Type:</h2>
 
         <div className="flex gap-4">
           <RadioCard

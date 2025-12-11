@@ -9,7 +9,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 
 // Generate mock error details for existing imports
 const generateMockErrorDetails = () => {
@@ -71,20 +70,8 @@ function ImportDetailStatusBadge({
 }) {
   if (status === 'done') {
     return (
-      <span
-        className="inline-flex items-center gap-1.5 rounded-full px-3 text-xs font-medium"
-        style={{
-          height: '33px',
-          backgroundColor: '#204E4D',
-          color: '#FFFFFF',
-        }}
-      >
-        <span
-          className="h-2 w-2 rounded-full"
-          style={{
-            backgroundColor: '#FFFFFF',
-          }}
-        />
+      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-[#204E4D] px-3 text-xs font-medium text-white">
+        <span className="h-2 w-2 rounded-full bg-white" />
         Completed
       </span>
     )
@@ -92,35 +79,16 @@ function ImportDetailStatusBadge({
 
   if (status === 'completed_with_errors') {
     return (
-      <span
-        className="inline-flex items-center gap-1.5 rounded-full px-3 text-xs font-medium"
-        style={{
-          height: '33px',
-          backgroundColor: colors.gray[600],
-          color: '#FFFFFF',
-        }}
-      >
-        <Icons.Warning size={14} color="#FFFFFF" />
+      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-gray-600 px-3 text-xs font-medium text-white">
+        <Icons.Warning size={14} className="text-white" />
         Completed with errors
       </span>
     )
   }
 
   return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full px-3 text-xs font-medium"
-      style={{
-        height: '33px',
-        backgroundColor: '#DC2626',
-        color: '#FFFFFF',
-      }}
-    >
-      <span
-        className="h-2 w-2 rounded-full"
-        style={{
-          backgroundColor: '#FFFFFF',
-        }}
-      />
+    <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-[#DC2626] px-3 text-xs font-medium text-white">
+      <span className="h-2 w-2 rounded-full bg-white" />
       Failed
     </span>
   )
@@ -136,7 +104,7 @@ export function ImportDetailsPage() {
   if (!importDetail) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <p style={{ color: colors.gray[600] }}>Import not found</p>
+        <p className="text-gray-600">Import not found</p>
         <Button
           variant="outline"
           onClick={() => navigate('/dashboard/import/history')}
@@ -170,30 +138,12 @@ export function ImportDetailsPage() {
           <Button
             variant="outline"
             onClick={() => navigate('/dashboard/import/history')}
-            leftIcon={<Icons.ArrowLeft02 size={20} color={colors.secondary[800]} />}
-            style={{
-              padding: '10px 16px',
-              borderRadius: '9999px',
-              borderColor: '#FFFFFF',
-              backgroundColor: '#FFFFFF',
-              color: colors.secondary[800],
-              fontSize: '14px',
-              fontWeight: 500,
-              height: '48px',
-            }}
+            leftIcon={<Icons.ArrowLeft02 size={20} className="text-secondary-800" />}
+            className="text-secondary-800 h-12 rounded-full border-white bg-white px-4 py-2.5 text-sm font-medium"
           >
             Back to History
           </Button>
-          <h1
-            className="font-light"
-            style={{
-              fontSize: '24px',
-              fontWeight: 300,
-              color: colors.neutral.dark[500],
-            }}
-          >
-            Import Details
-          </h1>
+          <h1 className="text-dark-500 text-2xl font-light">Import Details</h1>
         </div>
 
         <Button
@@ -202,16 +152,8 @@ export function ImportDetailsPage() {
             // TODO: Implement download error CSV
             console.log('Download Error CSV clicked')
           }}
-          leftIcon={<Icons.FileDownload size={20} color={colors.neutral.dark[500]} />}
-          style={{
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
-            borderRadius: '9999px',
-            height: '48px',
-            padding: '10px 16px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          leftIcon={<Icons.FileDownload size={20} className="text-dark-500" />}
+          className="bg-primary-300 text-dark-500 h-12 rounded-full px-4 py-2.5 text-sm font-medium"
         >
           Download Error CSV
         </Button>
@@ -220,210 +162,62 @@ export function ImportDetailsPage() {
       {/* Content Cards */}
       <div className="grid grid-cols-2 gap-6">
         {/* Last Import Summary Card */}
-        <div
-          className="rounded-xl p-6 shadow-sm"
-          style={{
-            backgroundColor: '#FFFFFF80',
-          }}
-        >
-          <h2
-            className="mb-6 font-light"
-            style={{
-              fontSize: '20px',
-              fontWeight: 300,
-              color: colors.neutral.dark[500],
-            }}
-          >
-            Last Import Summary
-          </h2>
+        <div className="rounded-xl bg-white/50 p-6 shadow-sm">
+          <h2 className="text-dark-500 mb-6 text-xl font-light">Last Import Summary</h2>
 
           <div className="space-y-4">
             <div>
-              <p
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  color: colors.gray[600],
-                  marginBottom: '4px',
-                }}
-              >
-                File
-              </p>
-              <p
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: colors.neutral.dark[500],
-                }}
-              >
-                {importDetail.file}
-              </p>
+              <p className="mb-1 text-xs font-medium text-gray-600">File</p>
+              <p className="text-dark-500 text-sm font-medium">{importDetail.file}</p>
             </div>
 
             <div>
-              <p
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  color: colors.gray[600],
-                  marginBottom: '4px',
-                }}
-              >
-                Uploaded by
-              </p>
-              <p
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: colors.neutral.dark[500],
-                }}
-              >
+              <p className="mb-1 text-xs font-medium text-gray-600">Uploaded by</p>
+              <p className="text-dark-500 text-sm font-medium">
                 {importDetail.uploadedBy} at {importDetail.uploadedAt}
               </p>
             </div>
 
             <div>
-              <p
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  color: colors.gray[600],
-                  marginBottom: '4px',
-                }}
-              >
-                Status
-              </p>
+              <p className="mb-1 text-xs font-medium text-gray-600">Status</p>
               <ImportDetailStatusBadge status={importDetail.status} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    color: colors.gray[600],
-                    marginBottom: '4px',
-                  }}
-                >
-                  Total rows
-                </p>
-                <p
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    color: colors.neutral.dark[500],
-                  }}
-                >
+                <p className="mb-1 text-xs font-medium text-gray-600">Total rows</p>
+                <p className="text-dark-500 text-sm font-medium">
                   {importDetail.totalRows.toLocaleString()}
                 </p>
               </div>
               <div>
-                <p
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    color: colors.gray[600],
-                    marginBottom: '4px',
-                  }}
-                >
-                  New clients
-                </p>
-                <p
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    color: colors.neutral.dark[500],
-                  }}
-                >
+                <p className="mb-1 text-xs font-medium text-gray-600">New clients</p>
+                <p className="text-dark-500 text-sm font-medium">
                   {importDetail.newClients.toLocaleString()}
                 </p>
               </div>
               <div>
-                <p
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    color: colors.gray[600],
-                    marginBottom: '4px',
-                  }}
-                >
-                  Updated clients
-                </p>
-                <p
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    color: colors.neutral.dark[500],
-                  }}
-                >
+                <p className="mb-1 text-xs font-medium text-gray-600">Updated clients</p>
+                <p className="text-dark-500 text-sm font-medium">
                   {importDetail.updatedClients.toLocaleString()}
                 </p>
               </div>
               <div>
-                <p
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    color: colors.gray[600],
-                    marginBottom: '4px',
-                  }}
-                >
-                  Errors
-                </p>
-                <p
-                  style={{
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    color: colors.neutral.dark[500],
-                  }}
-                >
-                  {importDetail.errors}
-                </p>
+                <p className="mb-1 text-xs font-medium text-gray-600">Errors</p>
+                <p className="text-dark-500 text-sm font-medium">{importDetail.errors}</p>
               </div>
             </div>
 
             <div>
-              <p
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  color: colors.gray[600],
-                  marginBottom: '4px',
-                }}
-              >
-                Processing time
-              </p>
-              <p
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: colors.neutral.dark[500],
-                }}
-              >
-                {importDetail.processingTime}
-              </p>
+              <p className="mb-1 text-xs font-medium text-gray-600">Processing time</p>
+              <p className="text-dark-500 text-sm font-medium">{importDetail.processingTime}</p>
             </div>
           </div>
         </div>
 
         {/* Errors Card */}
-        <div
-          className="rounded-xl p-6 shadow-sm"
-          style={{
-            backgroundColor: '#FFFFFF80',
-          }}
-        >
-          <h2
-            className="mb-6 font-light"
-            style={{
-              fontSize: '20px',
-              fontWeight: 300,
-              color: colors.neutral.dark[500],
-            }}
-          >
-            Errors
-          </h2>
+        <div className="rounded-xl bg-white/50 p-6 shadow-sm">
+          <h2 className="text-dark-500 mb-6 text-xl font-light">Errors</h2>
 
           {importDetail.errorList.length > 0 ? (
             <DataTable
@@ -432,14 +226,7 @@ export function ImportDetailsPage() {
               emptyMessage="No errors"
             />
           ) : (
-            <p
-              style={{
-                fontSize: '14px',
-                color: colors.gray[600],
-              }}
-            >
-              No errors found
-            </p>
+            <p className="text-sm text-gray-600">No errors found</p>
           )}
         </div>
       </div>

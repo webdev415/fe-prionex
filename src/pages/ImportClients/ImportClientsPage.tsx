@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/Button'
 import { Step1LoanSource, type Step1Data } from './components/Step1LoanSource'
 import { Step2FileUpload, type Step2Data } from './components/Step2FileUpload'
 import { Step2VendorDump, type Step2VendorDumpData } from './components/Step2VendorDump'
-import { colors } from '@/lib/colors'
 import { Icons } from '@/lib/icons'
 import { ImportHistoryModal, type ImportHistoryData } from './components/ImportHistoryModal'
 import { useNavigate } from 'react-router-dom'
@@ -119,52 +118,20 @@ export function ImportClientsPage() {
             <Button
               variant="outline"
               onClick={handlePreviousStep}
-              leftIcon={<Icons.ArrowLeft02 size={20} color={colors.secondary[800]} />}
-              className="flex flex-row items-center justify-center"
-              style={{
-                padding: '10px 16px',
-                borderRadius: '9999px',
-                borderColor: '#FFFFFF',
-                backgroundColor: '#FFFFFF',
-                color: colors.secondary[800],
-                fontSize: '14px',
-                fontWeight: 500,
-                lineHeight: '150%',
-                height: '48px',
-              }}
+              leftIcon={<Icons.ArrowLeft02 size={20} className="text-secondary-800" />}
+              className="text-secondary-800 flex h-12 flex-row items-center justify-center rounded-full border-white bg-white px-4 py-2.5 text-sm leading-[150%] font-medium"
             >
               Back
             </Button>
           )}
-          <h1
-            className="font-light"
-            style={{
-              fontSize: '24px',
-              fontWeight: 300,
-              color: colors.neutral.dark[500],
-            }}
-          >
-            Import Clients
-          </h1>
+          <h1 className="text-dark-500 text-2xl font-light">Import Clients</h1>
         </div>
 
         <Button
           variant="primary"
           onClick={handleViewHistory}
-          leftIcon={<Icons.TransactionHistory size={20} color={colors.neutral.dark[500]} />}
-          style={{
-            display: 'flex',
-            flexDirection: 'row',
-            backgroundColor: colors.primary[300], // #BBFB5B
-            color: colors.neutral.dark[500], // #05040D
-            borderRadius: '9999px', // Pill shape
-            height: '48px',
-            padding: '10px 16px',
-            fontSize: '12px',
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'center',
-          }}
+          leftIcon={<Icons.TransactionHistory size={20} className="text-dark-500" />}
+          className="bg-primary-300 text-dark-500 flex h-12 flex-row items-center justify-center rounded-full px-4 py-2.5 text-center text-xs"
         >
           View History
         </Button>
@@ -173,25 +140,13 @@ export function ImportClientsPage() {
       {/* Main Content */}
       <div className="flex gap-5">
         {/* Left Panel - Step Indicator */}
-        <div
-          className="w-64 shrink-0 gap-0 rounded-xl bg-white px-6 py-11 shadow-sm"
-          style={{
-            backgroundColor: '#FFFFFF80',
-            width: '24%',
-            display: 'flex',
-          }}
-        >
+        <div className="flex w-[24%] shrink-0 gap-0 rounded-xl bg-white/50 px-6 py-11 shadow-sm">
           <StepIndicator steps={STEPS} currentStep={currentStep} />
         </div>
 
         {/* Right Panel - Form Content */}
         <div className="flex-1 flex-col gap-3">
-          <div
-            className="rounded-xl p-6 shadow-sm"
-            style={{
-              backgroundColor: '#FFFFFF80',
-            }}
-          >
+          <div className="rounded-xl bg-white/50 p-6 shadow-sm">
             {currentStep === 1 && <Step1LoanSource data={step1Data} onChange={handleStep1Change} />}
 
             {currentStep === 2 && step1Data.importType === 'simple' && (
@@ -217,32 +172,11 @@ export function ImportClientsPage() {
                   variant="primary"
                   onClick={handleNextStep}
                   disabled={!isStep1Valid()}
-                  style={{
-                    backgroundColor: colors.secondary[800],
-                    color: '#FFFFFF',
-                    borderRadius: '9999px',
-                    padding: '4px 4px 4px 24px',
-                    height: '48px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontSize: '14px',
-                    gap: '10px',
-                  }}
+                  className="bg-secondary-800 flex h-12 items-center gap-2.5 rounded-full py-1 pr-1 pl-6 text-sm text-white"
                 >
                   <span>Next Step</span>
-                  <div
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      backgroundColor: colors.primary[300],
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Icons.ArrowRight02 size={24} color={colors.neutral.dark[500]} />
+                  <div className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+                    <Icons.ArrowRight02 size={24} className="text-dark-500" />
                   </div>
                 </Button>
               )}
@@ -253,36 +187,11 @@ export function ImportClientsPage() {
 
       {/* Import Progress Banner */}
       {isImportInProgress && (
-        <div
-          className="z-50 mx-50 my-10 flex items-center justify-between px-6 py-4"
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '10px',
-            border: '1px solid #ECEFF3',
-            boxShadow:
-              '0 12px 16px -4px rgba(16, 24, 40, 0.08), 0 4px 6px -2px rgba(16, 24, 40, 0.03)',
-            gap: '16px',
-          }}
-        >
-          <div
-            className="flex items-center"
-            style={{
-              gap: '10px',
-              padding: '4px 0 4px 12px',
-              color: '#EAB308',
-            }}
-          >
+        <div className="z-50 mx-50 my-10 flex items-center justify-between gap-4 rounded-[10px] border border-[#ECEFF3] bg-white px-6 py-4 shadow-[0_12px_16px_-4px_rgba(16,24,40,0.08),0_4px_6px_-2px_rgba(16,24,40,0.03)]">
+          <div className="flex items-center gap-2.5 py-1 pl-3 text-[#EAB308]">
             {/* Icon - document with refresh symbol */}
             <Icons.FileImport size={20} />
-            <span
-              style={{
-                fontSize: '14px',
-                fontWeight: 500,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Import in progress
-            </span>
+            <span className="text-sm font-medium whitespace-nowrap">Import in progress</span>
           </div>
           <span className="font-lexend text-sm leading-[150%] font-light tracking-[-0.28px] text-[#05040D]">
             File:{' '}
@@ -308,32 +217,14 @@ export function ImportClientsPage() {
               // TODO: Implement view details functionality
               console.log('View Details clicked')
             }}
-            style={{
-              backgroundColor: colors.secondary[800],
-              color: '#FFFFFF',
-              gap: '10px',
-              borderRadius: '8px',
-              padding: '10px 16px',
-              fontSize: '14px',
-              fontWeight: 500,
-              height: '40px',
-            }}
+            className="bg-secondary-800 h-10 gap-2.5 rounded-lg px-4 py-2.5 text-sm font-medium text-white"
           >
             View Details
           </Button>
           <Button
             variant="outline"
             onClick={handleGoToImportHistory}
-            style={{
-              borderColor: colors.secondary[800],
-              backgroundColor: '#FFFFFF',
-              color: colors.secondary[800],
-              borderRadius: '8px',
-              gap: '10px',
-              padding: '10px 16px',
-              fontSize: '14px',
-              fontWeight: 500,
-            }}
+            className="border-secondary-800 text-secondary-800 gap-2.5 rounded-lg bg-white px-4 py-2.5 text-sm font-medium"
           >
             Go to Import History
           </Button>

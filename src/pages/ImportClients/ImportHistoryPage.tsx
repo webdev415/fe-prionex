@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/Select'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import {
   ImportHistoryFiltersBar,
   type ImportHistoryFilters,
@@ -70,19 +69,11 @@ function ImportStatusBadge({ status }: { status: 'done' | 'failed' }) {
   const isDone = status === 'done'
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full px-3 text-xs font-medium"
-      style={{
-        height: '33px',
-        backgroundColor: isDone ? '#204E4D' : '#DC2626', // Green for done, red for failed
-        color: '#FFFFFF',
-      }}
+      className={`inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white ${
+        isDone ? 'bg-[#204E4D]' : 'bg-red-600'
+      }`}
     >
-      <span
-        className="h-2 w-2 rounded-full"
-        style={{
-          backgroundColor: '#FFFFFF',
-        }}
-      />
+      <span className="h-2 w-2 rounded-full bg-white" />
       {isDone ? 'Done' : 'Failed'}
     </span>
   )
@@ -323,9 +314,7 @@ export function ImportHistoryPage() {
       render: (item) => (
         <div className="flex flex-col">
           <span className="font-medium">{item.fileName}</span>
-          <span style={{ fontSize: '11px', color: colors.gray[600], marginTop: '2px' }}>
-            Uploaded by: {item.uploadedBy}
-          </span>
+          <span className="mt-0.5 text-[11px] text-gray-600">Uploaded by: {item.uploadedBy}</span>
         </div>
       ),
     },
@@ -353,15 +342,9 @@ export function ImportHistoryPage() {
             onClick={(e) => {
               e.stopPropagation()
             }}
-            className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
-            style={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: '#05040D',
-              textDecoration: 'none',
-            }}
+            className="text-dark-500 flex items-center gap-1 text-xs font-medium no-underline transition-colors hover:opacity-80"
           >
-            <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
+            <Icons.View size={16} className="text-dark-500" strokeWidth={1.5} />
             View
           </Link>
         </div>
@@ -373,17 +356,7 @@ export function ImportHistoryPage() {
     <div>
       {/* Page Header */}
       <div className="mb-8">
-        <h1
-          className="font-light"
-          style={{
-            fontSize: '24px',
-            fontWeight: 300,
-            color: colors.neutral.dark[500],
-            marginBottom: '24px',
-          }}
-        >
-          Import History
-        </h1>
+        <h1 className="text-dark-500 mb-6 text-2xl font-light">Import History</h1>
         <div className="mb-6 flex w-full items-center justify-between gap-3">
           {/* Filters Section - using the reusable component */}
           <ImportHistoryFiltersBar
@@ -398,43 +371,20 @@ export function ImportHistoryPage() {
             {filteredAndSortedData.length > 0 && (
               <button
                 onClick={handleViewDetails}
-                className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-                style={{
-                  backgroundColor: colors.secondary[800],
-                }}
+                className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
               >
-                <div
-                  className="flex items-center justify-center rounded-full"
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    backgroundColor: colors.primary[300],
-                    marginLeft: '4px',
-                  }}
-                >
-                  <Icons.File size={20} color={colors.neutral.dark[500]} strokeWidth={1.5} />
+                <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
+                  <Icons.File size={20} className="text-dark-500" strokeWidth={1.5} />
                 </div>
-                <span
-                  className="px-4 py-3 font-medium text-white"
-                  style={{
-                    fontSize: '14px',
-                  }}
-                >
-                  View Details
-                </span>
+                <span className="px-4 py-3 text-sm font-medium text-white">View Details</span>
               </button>
             )}
             <button
               onClick={handleDownloadErrors}
               type="button"
-              className="flex items-center gap-2 rounded-full bg-white px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
-              style={{
-                backgroundColor: colors.primary[300],
-                color: colors.neutral.dark[500],
-                height: '45px',
-              }}
+              className="bg-primary-300 text-dark-500 flex h-[45px] items-center gap-2 rounded-full px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
             >
-              <Icons.FileDownload size={20} color={colors.neutral.dark[500]} />
+              <Icons.FileDownload size={20} className="text-dark-500" />
               Download Errors
             </button>
           </div>
@@ -442,136 +392,58 @@ export function ImportHistoryPage() {
       </div>
 
       {/* Data Table or Empty State */}
-      <div
-        className="rounded-xl p-6 shadow-sm"
-        style={{
-          backgroundColor: '#FFFFFF80',
-          minHeight: '400px',
-        }}
-      >
+      <div className="min-h-[400px] rounded-xl bg-white/50 p-6 shadow-sm">
         {filteredAndSortedData.length === 0 && hasActiveFilters ? (
           // Empty State - No results for filters
           <div className="flex flex-col items-center justify-center py-16">
             {/* Icon */}
             <div className="flex h-16 w-16 items-center justify-center rounded-lg">
-              <Icons.FolderRemove size={48} color={colors.gray[400]} strokeWidth={1} />
+              <Icons.FolderRemove size={48} className="text-gray-400" strokeWidth={1} />
             </div>
 
             {/* Message */}
-            <h3
-              className="flex flex-col items-center justify-center"
-              style={{
-                padding: '24px',
-                fontSize: '24px',
-                fontWeight: 300,
-                lineHeight: '120%',
-                letterSpacing: '-0.48px',
-                color: colors.neutral.dark[500],
-                gap: '24px',
-              }}
-            >
+            <h3 className="text-dark-500 flex flex-col items-center justify-center gap-6 p-6 text-2xl leading-[120%] font-light tracking-[-0.48px]">
               No imports found for selected filters.
             </h3>
 
             {/* Clear Filters Button */}
             <button
               onClick={handleClearFilters}
-              className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-              style={{
-                backgroundColor: colors.secondary[800],
-              }}
+              className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
             >
-              <div
-                className="flex items-center justify-center rounded-full"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  backgroundColor: colors.primary[300],
-                  marginLeft: '4px',
-                }}
-              >
-                <Icons.Reload size={22} color={colors.neutral.dark[500]} strokeWidth={1.5} />
+              <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
+                <Icons.Reload size={22} className="text-dark-500" strokeWidth={1.5} />
               </div>
-              <span
-                className="px-4 py-3 font-medium text-white"
-                style={{
-                  fontSize: '14px',
-                }}
-              >
-                Clear filters
-              </span>
+              <span className="px-4 py-3 text-sm font-medium text-white">Clear filters</span>
             </button>
           </div>
         ) : hasNoData ? (
           // Empty State - No import history at all
-          <div
-            className="flex flex-col items-center justify-center"
-            style={{
-              padding: '24px',
-              gap: '24px',
-              minHeight: '448px',
-            }}
-          >
+          <div className="flex min-h-[448px] flex-col items-center justify-center gap-6 p-6">
             {/* Icon */}
             <div className="flex h-20 w-20 items-center justify-center">
-              <Icons.FolderRemove size={48} color={colors.gray[400]} strokeWidth={1} />
+              <Icons.FolderRemove size={48} className="text-gray-400" strokeWidth={1} />
             </div>
 
             {/* Primary Message */}
-            <h3
-              className="text-center"
-              style={{
-                fontSize: '24px',
-                fontWeight: 300,
-                lineHeight: '120%',
-                letterSpacing: '-0.48px',
-                color: colors.neutral.dark[500],
-              }}
-            >
+            <h3 className="text-dark-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
               No import history yet.
             </h3>
 
             {/* Secondary Message */}
-            <p
-              className="text-center"
-              style={{
-                fontSize: '16px',
-                fontWeight: 500,
-                lineHeight: '150%',
-                letterSpacing: '-0.32px',
-                color: colors.neutral.dark[500],
-              }}
-            >
+            <p className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.32px]">
               Run your first CSV import to see history here.
             </p>
 
             {/* Go to Import Clients Button */}
             <button
               onClick={handleGoToImportClients}
-              className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-              style={{
-                backgroundColor: colors.secondary[800],
-              }}
+              className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
             >
-              <div
-                className="flex items-center justify-center rounded-full"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  backgroundColor: colors.primary[300],
-                  marginLeft: '4px',
-                }}
-              >
-                <Icons.FileImport size={20} color={colors.neutral.dark[500]} strokeWidth={1.5} />
+              <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
+                <Icons.FileImport size={20} className="text-dark-500" strokeWidth={1.5} />
               </div>
-              <span
-                className="px-4 py-3 font-medium text-white"
-                style={{
-                  fontSize: '14px',
-                }}
-              >
-                Go to Import Clients
-              </span>
+              <span className="px-4 py-3 text-sm font-medium text-white">Go to Import Clients</span>
             </button>
           </div>
         ) : (
@@ -591,22 +463,9 @@ export function ImportHistoryPage() {
         <div className="mt-6 flex items-center justify-between">
           {/* Rows per page selector */}
           <div className="flex items-center gap-2">
-            <span
-              style={{
-                fontSize: '14px',
-                color: colors.neutral.dark[500],
-                fontWeight: 400,
-              }}
-            >
-              Rows per page:
-            </span>
+            <span className="text-dark-500 text-sm font-normal">Rows per page:</span>
             <Select value={String(rowsPerPage)} onValueChange={handleRowsPerPageChange}>
-              <SelectTrigger
-                style={{
-                  width: '80px',
-                  height: '40px',
-                }}
-              >
+              <SelectTrigger className="h-10 w-20">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -626,13 +485,7 @@ export function ImportHistoryPage() {
           />
 
           {/* Page info */}
-          <div
-            style={{
-              fontSize: '14px',
-              color: colors.neutral.dark[500],
-              fontWeight: 400,
-            }}
-          >
+          <div className="text-dark-500 text-sm font-normal">
             Page {currentPage} of {totalPages}
           </div>
         </div>

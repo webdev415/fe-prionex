@@ -7,7 +7,6 @@
  */
 
 import { Radio } from '@/pages/ImportClients/components/Radio'
-import { colors } from '@/lib/colors'
 import { cn } from '@/lib/utils'
 
 export interface RadioCardProps {
@@ -32,47 +31,21 @@ export function RadioCard({
   return (
     <label
       className={cn(
-        'flex cursor-pointer items-start rounded-lg border p-4 shadow-sm transition-all',
+        'flex cursor-pointer items-start gap-2 rounded-lg border bg-white p-4 shadow-sm transition-all',
+        checked ? 'border-primary-400' : 'border-white',
         className
       )}
-      style={{
-        gap: '8px', // var(--Other-gap-2, 8px) - using inline style to ensure it applies
-        borderColor: checked ? colors.primary[400] : '#FFFFFF', // #A0F229 when selected, white when unselected
-        borderWidth: '1px',
-        backgroundColor: '#FFFFFF',
-        boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.1), 0px 1px 2px rgba(0, 0, 0, 0.06)', // Same shadow for both states
-        display: 'flex', // Ensure flex is applied
-        alignItems: 'flex-start', // items-start equivalent
-      }}
     >
       <Radio
         name={name}
         value={value}
         checked={checked}
         onChange={() => onChange(value)}
-        className="shrink-0"
-        style={{ marginTop: '1px' }} // Slight top alignment adjustment
+        className="mt-[1px] shrink-0"
       />
       <div className="flex-1">
-        <div
-          className="font-medium"
-          style={{
-            fontSize: '14px',
-            color: colors.neutral.dark[500],
-          }}
-        >
-          {title}
-        </div>
-        {description && (
-          <div
-            className="mt-1 text-sm"
-            style={{
-              color: colors.gray[700],
-            }}
-          >
-            {description}
-          </div>
-        )}
+        <div className="text-dark-500 text-sm font-medium">{title}</div>
+        {description && <div className="mt-1 text-sm text-gray-700">{description}</div>}
       </div>
     </label>
   )

@@ -9,7 +9,6 @@
 
 import * as React from 'react'
 import { cn } from '@/lib/utils'
-import { colors } from '@/lib/colors'
 
 export interface RadioProps extends React.InputHTMLAttributes<HTMLInputElement> {
   className?: string
@@ -18,37 +17,17 @@ export interface RadioProps extends React.InputHTMLAttributes<HTMLInputElement> 
 const Radio = React.forwardRef<HTMLInputElement, RadioProps>(
   ({ className, checked, ...props }, ref) => {
     return (
-      <div
-        className="relative flex items-center justify-center"
-        style={{
-          width: '24px',
-          height: '24px',
-        }}
-      >
+      <div className="relative flex h-6 w-6 items-center justify-center">
         {/* Outer circle - always visible, 15px centered in 24px container */}
         <div
-          className={cn('relative rounded-full', className)}
-          style={{
-            width: '16px',
-            height: '16px',
-            border: `1px solid ${checked ? colors.primary[500] : colors.gray[500]}`,
-            boxSizing: 'border-box',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          className={cn(
+            'relative flex h-4 w-4 items-center justify-center rounded-full border',
+            checked ? 'border-primary-500' : 'border-gray-500',
+            className
+          )}
         >
           {/* Inner filled circle - only when checked, 10px centered */}
-          {checked && (
-            <div
-              className="rounded-full"
-              style={{
-                width: '10px',
-                height: '10px',
-                backgroundColor: colors.primary[500], // #80D80A
-              }}
-            />
-          )}
+          {checked && <div className="bg-primary-500 h-[10px] w-[10px] rounded-full" />}
         </div>
         {/* Hidden native input for accessibility */}
         <input type="radio" ref={ref} checked={checked} className="sr-only" {...props} />

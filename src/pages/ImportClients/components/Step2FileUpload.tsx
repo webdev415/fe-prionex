@@ -8,7 +8,6 @@
 import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import { cn } from '@/lib/utils'
 import api from '@/lib/api'
 
@@ -171,38 +170,15 @@ export function Step2FileUpload({
   return (
     <div className="space-y-6">
       {/* Section Title */}
-      <h2
-        className="mb-6 font-medium"
-        style={{
-          fontSize: '24px',
-          fontWeight: 300,
-          color: colors.neutral.dark[500],
-          lineHeight: '120%',
-          textAlign: 'center',
-          letterSpacing: '-0.48px',
-        }}
-      >
+      <h2 className="text-dark-500 mb-6 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
         Import Client Data (Simple CSV)
       </h2>
 
       {/* Warning Alert - shown when import is in progress */}
       {isImportInProgress && (
-        <div
-          className="flex items-center justify-center gap-3 rounded-lg p-6"
-          style={{
-            backgroundColor: '#FFFFFF',
-          }}
-        >
-          <Icons.Warning size={24} color="#EF4444" />
-          <span
-            style={{
-              fontSize: '14px',
-              fontWeight: 500,
-              lineHeight: '150%',
-              letterSpacing: '-0.28px',
-              color: '#EF4444',
-            }}
-          >
+        <div className="flex items-center justify-center gap-3 rounded-lg bg-white p-6">
+          <Icons.Warning size={24} className="text-red-500" />
+          <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-red-500">
             You cannot start another import until this one finishes.
           </span>
         </div>
@@ -218,120 +194,51 @@ export function Step2FileUpload({
         onDragOver={isImportInProgress ? undefined : handleDragOver}
         onDragLeave={isImportInProgress ? undefined : handleDragLeave}
         onDrop={isImportInProgress ? undefined : handleDrop}
-        style={{
-          padding: '24px',
-        }}
       >
         {/* CSV Error Icon - shown when invalid CSV structure */}
         {hasInvalidCSVStructure && (
-          <div
-            style={{
-              display: 'flex',
-              padding: '6px 4px',
-              justifyContent: 'center',
-              alignItems: 'center',
-              aspectRatio: '1/1',
-            }}
-          >
-            <Icons.Csv02 size={48} strokeWidth={0.5} color="#EF4444" />
+          <div className="flex aspect-square items-center justify-center px-1 py-1.5">
+            <Icons.Csv02 size={48} strokeWidth={0.5} className="text-red-500" />
           </div>
         )}
 
         {/* Error Icon - shown when invalid file type */}
         {hasInvalidFile && !hasInvalidCSVStructure && (
-          <div
-            style={{
-              display: 'flex',
-              padding: '6px 4px',
-              justifyContent: 'center',
-              alignItems: 'center',
-              aspectRatio: '1/1',
-            }}
-          >
-            <Icons.FileRemove size={48} strokeWidth={0.5} color="#EF4444" />
+          <div className="flex aspect-square items-center justify-center px-1 py-1.5">
+            <Icons.FileRemove size={48} strokeWidth={0.5} className="text-red-500" />
           </div>
         )}
 
         {/* Cloud Icon - shown when no file or valid file */}
         {!hasInvalidFile && !hasInvalidCSVStructure && (
-          <div
-            className=""
-            style={{
-              display: 'flex',
-              padding: '6px 4px',
-              justifyContent: 'center',
-              alignItems: 'center',
-              aspectRatio: '1/1',
-            }}
-          >
-            <Icons.CloudDownload
-              size={48}
-              color={colors.neutral.dark[500]}
-              strokeWidth={0.5}
-              stroke={colors.neutral.dark[500]}
-            />
+          <div className="flex aspect-square items-center justify-center px-1 py-1.5">
+            <Icons.CloudDownload size={48} strokeWidth={0.5} className="text-dark-500" />
           </div>
         )}
 
         <div className="align-self-stretch flex flex-col items-center justify-center gap-4">
           {/* Invalid CSV Structure Error Message */}
           {hasInvalidCSVStructure && (
-            <div
-              style={{
-                fontSize: '24px',
-                fontWeight: 300,
-                lineHeight: '120%',
-                letterSpacing: '-0.48px',
-                textAlign: 'center',
-                color: '#EF4444', // Red color for error
-              }}
-            >
+            <div className="text-center text-2xl leading-[120%] font-light tracking-[-0.48px] text-red-500">
               Invalid CSV structure
             </div>
           )}
 
           {/* Invalid File Type Error Message */}
           {hasInvalidFile && !hasInvalidCSVStructure && (
-            <div
-              style={{
-                fontSize: '24px',
-                fontWeight: 300,
-                lineHeight: '120%',
-                letterSpacing: '-0.48px',
-                textAlign: 'center',
-                color: '#EF4444', // Red color for error
-              }}
-            >
+            <div className="text-center text-2xl leading-[120%] font-light tracking-[-0.48px] text-red-500">
               Invalid file type
             </div>
           )}
 
           {/* File Name Display */}
           {displayFile ? (
-            <div
-              style={{
-                fontSize: '16px',
-                fontWeight: 300,
-                lineHeight: '155%',
-                letterSpacing: '-0.32px',
-                textAlign: 'center',
-                color: colors.neutral.dark[500],
-              }}
-            >
+            <div className="text-dark-500 text-center text-base leading-[155%] font-light tracking-[-0.32px]">
               {displayFile.name} ({formatFileSize(displayFile.size)})
             </div>
           ) : (
             !hasInvalidCSVStructure && (
-              <div
-                style={{
-                  fontSize: '24px',
-                  fontWeight: 300,
-                  lineHeight: '120%',
-                  letterSpacing: '-0.48px',
-                  textAlign: 'center',
-                  color: colors.neutral.dark[500],
-                }}
-              >
+              <div className="text-dark-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
                 Choose CSV File
               </div>
             )
@@ -339,16 +246,7 @@ export function Step2FileUpload({
 
           {/* Show "Choose CSV File" text even when invalid CSV structure */}
           {hasInvalidCSVStructure && (
-            <div
-              style={{
-                fontSize: '16px',
-                fontWeight: 300,
-                lineHeight: '155%',
-                letterSpacing: '-0.32px',
-                textAlign: 'center',
-                color: colors.neutral.dark[500],
-              }}
-            >
+            <div className="text-dark-500 text-center text-base leading-[155%] font-light tracking-[-0.32px]">
               Choose CSV File
             </div>
           )}
@@ -358,32 +256,14 @@ export function Step2FileUpload({
             data.csvValidationError?.missingColumns &&
             data.csvValidationError.missingColumns.length > 0 && (
               <div className="flex w-full flex-col items-center gap-3">
-                <div
-                  style={{
-                    fontSize: '16px',
-                    fontWeight: 500,
-                    lineHeight: '155%',
-                    letterSpacing: '-0.32px',
-                    textAlign: 'center',
-                    color: colors.neutral.dark[500],
-                  }}
-                >
+                <div className="text-dark-500 text-center text-base leading-[155%] font-medium tracking-[-0.32px]">
                   Missing required columns:
                 </div>
                 <div className="flex w-full flex-wrap items-center justify-center gap-2">
                   {data.csvValidationError.missingColumns.map((column) => (
                     <div key={column} className="flex items-center gap-2 rounded-full px-3 py-1.5">
-                      <Icons.Close size={16} color="#EF4444" />
-                      <span
-                        style={{
-                          fontSize: '16px',
-                          fontWeight: 300,
-                          color: '#EF4444',
-                          textTransform: 'capitalize',
-                          lineHeight: '155%',
-                          letterSpacing: '-0.32px',
-                        }}
-                      >
+                      <Icons.Close size={16} className="text-red-500" />
+                      <span className="text-base leading-[155%] font-light tracking-[-0.32px] text-red-500 capitalize">
                         {column.replace(/_/g, ' ')}
                       </span>
                     </div>
@@ -394,16 +274,7 @@ export function Step2FileUpload({
 
           {/* Error Message - Only .csv files supported */}
           {hasInvalidFile && !hasInvalidCSVStructure && (
-            <div
-              style={{
-                fontSize: '16px',
-                fontWeight: 500,
-                lineHeight: '155%',
-                letterSpacing: '-0.32px',
-                textAlign: 'center',
-                color: colors.neutral.dark[500],
-              }}
-            >
+            <div className="text-dark-500 text-center text-base leading-[155%] font-medium tracking-[-0.32px]">
               Only .csv files are supported in this version.
             </div>
           )}
@@ -411,35 +282,26 @@ export function Step2FileUpload({
           {/* File Requirements - hidden when invalid file or invalid CSV structure */}
           {!hasInvalidFile && !hasInvalidCSVStructure && (
             <>
-              <div className="font-lexend text-center text-[16px] leading-[155%] font-light tracking-[-0.32px] text-[#05040D]">
+              <div className="text-dark-500 text-center text-base leading-[155%] font-light tracking-[-0.32px]">
                 File Requirements:
               </div>
-              <div
-                className="flex items-center justify-center gap-1 self-stretch"
-                style={{ color: colors.neutral.dark[500] }}
-              >
-                <span className="font-lexend text-[16px] leading-[155%] font-medium tracking-[-0.32px]">
+              <div className="text-dark-500 flex items-center justify-center gap-1 self-stretch">
+                <span className="text-base leading-[155%] font-medium tracking-[-0.32px]">
                   One CSV
                 </span>{' '}
                 only,{' '}
-                <span className="font-lexend text-[16px] leading-[155%] font-light tracking-[-0.32px]">
+                <span className="text-base leading-[155%] font-light tracking-[-0.32px]">
                   max 50,000 rows
                 </span>
               </div>
-              <div
-                className="flex items-center justify-center gap-1 self-stretch"
-                style={{ color: colors.neutral.dark[500] }}
-              >
-                <span className="font-lexend text-[16px] leading-[155%] font-medium tracking-[-0.32px]">
+              <div className="text-dark-500 flex items-center justify-center gap-1 self-stretch">
+                <span className="text-base leading-[155%] font-medium tracking-[-0.32px]">
                   Required:
                 </span>{' '}
                 name, phone, debt_amount
               </div>
-              <div
-                className="flex items-center justify-center gap-1 self-stretch"
-                style={{ color: colors.neutral.dark[500] }}
-              >
-                <span className="font-lexend text-[16px] leading-[155%] font-medium tracking-[-0.32px]">
+              <div className="text-dark-500 flex items-center justify-center gap-1 self-stretch">
+                <span className="text-base leading-[155%] font-medium tracking-[-0.32px]">
                   Optional:
                 </span>{' '}
                 address, inn, contract...
@@ -453,11 +315,7 @@ export function Step2FileUpload({
           variant="outline"
           onClick={handleBrowseClick}
           disabled={isValidating}
-          className="flex h-12 flex-col items-center justify-center gap-[10px] rounded-full border border-[#888] px-[20px] py-[12px]"
-          style={{
-            color: colors.neutral.dark[500],
-            fontSize: '14px',
-          }}
+          className="text-dark-500 flex h-12 flex-col items-center justify-center gap-[10px] rounded-full border border-gray-600 px-5 py-3 text-sm"
         >
           {isValidating ? 'Validating...' : 'Browse File'}
         </Button>
@@ -473,22 +331,11 @@ export function Step2FileUpload({
           variant="outline"
           onClick={handleDownloadTemplate}
           disabled={isImportInProgress}
-          leftIcon={<Icons.FileDownload size={20} color={colors.secondary[800]} />}
-          style={{
-            display: 'flex',
-            borderColor: '#FFFFFF',
-            backgroundColor: '#FFFFFF',
-            color: colors.secondary[800],
-            borderRadius: '9999px',
-            padding: '10px 16px',
-            fontSize: '14px',
-            fontWeight: 500,
-            lineHeight: '150%',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '48px',
-            opacity: isImportInProgress ? 0.5 : 1,
-          }}
+          leftIcon={<Icons.FileDownload size={20} className="text-secondary-800" />}
+          className={cn(
+            'text-secondary-800 flex h-12 items-center justify-center rounded-full border-white bg-white px-4 py-2.5 text-sm leading-[150%] font-medium',
+            isImportInProgress && 'opacity-50'
+          )}
         >
           Download Sample CSV Template
         </Button>
@@ -500,55 +347,30 @@ export function Step2FileUpload({
             if (hasValidFile && !hasInvalidCSVStructure && !isImportInProgress) handleStartImport()
           }}
           //   disabled={!hasValidFile || hasInvalidCSVStructure || isImportInProgress}
-          style={{
-            display: 'flex',
-            backgroundColor:
-              hasValidFile && !hasInvalidCSVStructure && !isImportInProgress
-                ? colors.secondary[800]
-                : colors.gray[200], // #204E4D when enabled
-            color:
-              hasValidFile && !hasInvalidCSVStructure && !isImportInProgress
-                ? '#FFFFFF'
-                : colors.gray[600],
-            borderRadius: '9999px', // Pill shape
-            padding: '4px 4px 4px 24px',
-            lineHeight: '150%',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '14px',
-            fontWeight: '500',
-            gap: '10px',
-            height: '48px',
-            cursor:
-              hasValidFile && !hasInvalidCSVStructure && !isImportInProgress
-                ? 'pointer'
-                : 'not-allowed',
-          }}
+          className={cn(
+            'flex h-12 items-center justify-center gap-2.5 rounded-full py-1 pr-1 pl-6 text-sm leading-[150%] font-medium',
+            hasValidFile && !hasInvalidCSVStructure && !isImportInProgress
+              ? 'bg-secondary-800 cursor-pointer text-white'
+              : 'cursor-not-allowed bg-gray-200 text-gray-600'
+          )}
         >
           <span>Start Import</span>
           {/* Circular icon with arrow - matching Next Step button design */}
           <div
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              backgroundColor:
-                hasValidFile && !hasInvalidCSVStructure && !isImportInProgress
-                  ? colors.primary[300]
-                  : colors.gray[600], // #BBFB5B when enabled
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
+            className={cn(
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
+              hasValidFile && !hasInvalidCSVStructure && !isImportInProgress
+                ? 'bg-primary-300'
+                : 'bg-gray-600'
+            )}
           >
             <Icons.ArrowRight02
               size={24}
-              color={
+              className={cn(
                 hasValidFile && !hasInvalidCSVStructure && !isImportInProgress
-                  ? colors.neutral.dark[500]
-                  : colors.gray[500]
-              }
+                  ? 'text-dark-500'
+                  : 'text-gray-500'
+              )}
             />
           </div>
         </Button>

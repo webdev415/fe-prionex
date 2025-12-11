@@ -9,7 +9,6 @@ import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import { cn } from '@/lib/utils'
 
 export type DatasetType = 'users' | 'loans' | 'charges' | 'payments' | 'documents'
@@ -174,11 +173,7 @@ export function Step2VendorDump({
     {
       key: 'name',
       header: 'Dataset',
-      render: (item) => (
-        <span style={{ fontSize: '12px', fontWeight: 500, color: colors.neutral.dark[500] }}>
-          {item.name}
-        </span>
-      ),
+      render: (item) => <span className="text-dark-500 text-xs font-medium">{item.name}</span>,
     },
     {
       key: 'status',
@@ -186,18 +181,12 @@ export function Step2VendorDump({
       render: (item) => (
         <div className="flex items-center gap-2">
           <span
-            className="h-2 w-2 rounded-full"
-            style={{
-              backgroundColor: item.status === 'required' ? '#EF4444' : colors.gray[500],
-            }}
+            className={cn(
+              'h-2 w-2 rounded-full',
+              item.status === 'required' ? 'bg-red-500' : 'bg-gray-500'
+            )}
           />
-          <span
-            style={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: colors.neutral.dark[500],
-            }}
-          >
+          <span className="text-dark-500 text-xs font-medium">
             {item.status === 'required' ? 'Required' : 'Optional'}
           </span>
         </div>
@@ -213,13 +202,7 @@ export function Step2VendorDump({
         return (
           <div className="flex items-center gap-2">
             {hasFile ? (
-              <span
-                style={{
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  color: colors.neutral.dark[500],
-                }}
-              >
+              <span className="text-dark-500 text-xs font-medium">
                 {item.file?.name} ({formatFileSize(item.file?.size || 0)})
               </span>
             ) : (
@@ -227,16 +210,7 @@ export function Step2VendorDump({
                 variant="outline"
                 onClick={() => handleBrowseClick(item.type)}
                 disabled={isImportInProgress}
-                style={{
-                  borderColor: '#888',
-                  backgroundColor: '#FFFFFF',
-                  color: colors.neutral.dark[500],
-                  borderRadius: '9999px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  height: '32px',
-                }}
+                className="text-dark-500 h-8 rounded-full border-[#888] bg-white px-3 py-1.5 text-xs font-medium"
               >
                 {isDocuments ? 'Choose ZIP' : 'Choose file'}
               </Button>
@@ -259,77 +233,33 @@ export function Step2VendorDump({
   return (
     <div className="space-y-6">
       {/* Section Title */}
-      <h2
-        className="mb-6 font-medium"
-        style={{
-          fontSize: '24px',
-          fontWeight: 300,
-          color: colors.neutral.dark[500],
-          lineHeight: '120%',
-          textAlign: 'center',
-          letterSpacing: '-0.48px',
-        }}
-      >
+      <h2 className="text-dark-500 mb-6 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
         Upload raw export from seller.
       </h2>
 
       {/* Instructions */}
-      <p
-        className="mb-6 text-center"
-        style={{
-          fontSize: '16px',
-          fontWeight: 300,
-          color: colors.neutral.dark[500],
-          lineHeight: '155%',
-          letterSpacing: '-0.32px',
-        }}
-      >
+      <p className="text-dark-500 mb-6 text-center text-base leading-[155%] font-light tracking-[-0.32px]">
         Drag the CSVs and contracts folder, or one .zip.
       </p>
 
       {/* File Upload Drop Zone */}
       <div
         className={cn(
-          'relative flex flex-col items-center gap-6 self-stretch rounded-lg border-2 border-dashed p-6 transition-colors',
+          'relative flex flex-col items-center gap-6 self-stretch rounded-lg border-2 border-dashed px-6 py-12 transition-colors',
           isDragging ? 'border-primary-500 bg-primary-50' : 'border-gray-300',
           isImportInProgress && 'pointer-events-none opacity-50'
         )}
         onDragOver={isImportInProgress ? undefined : handleDragOver}
         onDragLeave={isImportInProgress ? undefined : handleDragLeave}
         onDrop={isImportInProgress ? undefined : handleDrop}
-        style={{
-          padding: '48px 24px',
-        }}
       >
         {/* Cloud Icon */}
-        <div
-          style={{
-            display: 'flex',
-            padding: '6px 4px',
-            justifyContent: 'center',
-            alignItems: 'center',
-            aspectRatio: '1/1',
-          }}
-        >
-          <Icons.CloudDownload
-            size={48}
-            color={colors.neutral.dark[500]}
-            strokeWidth={0.5}
-            stroke={colors.neutral.dark[500]}
-          />
+        <div className="flex aspect-square items-center justify-center px-1 py-1.5">
+          <Icons.CloudDownload size={48} color="#1F2937" strokeWidth={0.5} stroke="#1F2937" />
         </div>
 
         <div className="align-self-stretch flex flex-col items-center justify-center gap-4">
-          <div
-            style={{
-              fontSize: '24px',
-              fontWeight: 300,
-              lineHeight: '120%',
-              letterSpacing: '-0.48px',
-              textAlign: 'center',
-              color: colors.neutral.dark[500],
-            }}
-          >
+          <div className="text-dark-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
             Drag & drop files/folder here
           </div>
 
@@ -338,11 +268,7 @@ export function Step2VendorDump({
             variant="outline"
             onClick={() => handleBrowseClick()}
             disabled={isImportInProgress}
-            className="flex h-12 flex-col items-center justify-center gap-[10px] rounded-full border border-[#888] px-[20px] py-[12px]"
-            style={{
-              color: colors.neutral.dark[500],
-              fontSize: '14px',
-            }}
+            className="text-dark-500 flex h-12 flex-col items-center justify-center gap-[10px] rounded-full border border-[#888] px-5 py-3 text-sm"
           >
             Browse File
           </Button>
@@ -370,48 +296,23 @@ export function Step2VendorDump({
           variant="primary"
           onClick={handleStartImport}
           disabled={!requiredFilesSelected || isImportInProgress}
-          style={{
-            display: 'flex',
-            backgroundColor:
-              requiredFilesSelected && !isImportInProgress
-                ? colors.secondary[800]
-                : colors.gray[200],
-            color: requiredFilesSelected && !isImportInProgress ? '#FFFFFF' : colors.gray[600],
-            borderRadius: '9999px',
-            padding: '4px 4px 4px 24px',
-            lineHeight: '150%',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '14px',
-            fontWeight: '500',
-            gap: '10px',
-            height: '48px',
-            cursor: requiredFilesSelected && !isImportInProgress ? 'pointer' : 'not-allowed',
-          }}
+          className={cn(
+            'flex h-12 items-center justify-center gap-2.5 rounded-full py-1 pr-1 pl-6 text-sm leading-[150%] font-medium',
+            requiredFilesSelected && !isImportInProgress
+              ? 'bg-secondary-800 cursor-pointer text-white'
+              : 'cursor-not-allowed bg-gray-200 text-gray-600'
+          )}
         >
           <span>Start Import</span>
           <div
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              backgroundColor:
-                requiredFilesSelected && !isImportInProgress
-                  ? colors.primary[300]
-                  : colors.gray[600],
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
+            className={cn(
+              'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full',
+              requiredFilesSelected && !isImportInProgress ? 'bg-primary-300' : 'bg-gray-600'
+            )}
           >
             <Icons.ArrowRight02
               size={24}
-              color={
-                requiredFilesSelected && !isImportInProgress
-                  ? colors.neutral.dark[500]
-                  : colors.gray[500]
-              }
+              color={requiredFilesSelected && !isImportInProgress ? '#1F2937' : '#6B7280'}
             />
           </div>
         </Button>
