@@ -196,6 +196,11 @@
 }
 
 @layer utilities {
+  /* Dashboard background image */
+  .bg-dashboard-light {
+    background-image: url(/assets/images/dashboard-light-bg.svg);
+  }
+
   /* Button text color for light backgrounds */
   .text-btn-dark {
     color: #05040d !important;

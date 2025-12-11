@@ -5,7 +5,6 @@ import { UserManagementPage } from '@/pages/UserManagement'
 import { ProjectManagementPage } from '@/pages/ProjectManagement/ProjectManagementPage'
 import { RoleManagementPage } from '@/pages/RoleManagement/RoleManagementPage'
 import { ProtectedRoute } from './ProtectedRoute'
-import { PermissionGuard } from './PermissionGuard'
 import { GuestRoute } from './GuestRoute'
 import { DashboardLayout } from '@/components/layout'
 
@@ -43,11 +42,9 @@ export const router = createBrowserRouter([
     path: '/dashboard/users',
     element: (
       <ProtectedRoute>
-        <PermissionGuard requiredPermission="view_users">
-          <DashboardLayout>
-            <UserManagementPage />
-          </DashboardLayout>
-        </PermissionGuard>
+        <DashboardLayout>
+          <UserManagementPage />
+        </DashboardLayout>
       </ProtectedRoute>
     ),
   },
@@ -55,11 +52,9 @@ export const router = createBrowserRouter([
     path: '/dashboard/projects',
     element: (
       <ProtectedRoute>
-        <PermissionGuard requiredPermission="view_projects">
-          <DashboardLayout>
-            <ProjectManagementPage />
-          </DashboardLayout>
-        </PermissionGuard>
+        <DashboardLayout>
+          <ProjectManagementPage />
+        </DashboardLayout>
       </ProtectedRoute>
     ),
   },
@@ -67,11 +62,9 @@ export const router = createBrowserRouter([
     path: '/dashboard/roles',
     element: (
       <ProtectedRoute>
-        <PermissionGuard requiredPermission="view_roles">
-          <DashboardLayout>
-            <RoleManagementPage />
-          </DashboardLayout>
-        </PermissionGuard>
+        <DashboardLayout>
+          <RoleManagementPage />
+        </DashboardLayout>
       </ProtectedRoute>
     ),
   },
