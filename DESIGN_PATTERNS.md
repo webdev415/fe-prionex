@@ -104,93 +104,231 @@ src/
 
 ## Color System
 
-### Brand Color Palette
+### Complete Color Palettes
 
-Our design system uses these primary colors:
+Our design system uses **9 complete color palettes** defined in `src/index.css` using Tailwind v4's `@theme` directive. Each palette has 11 shades (50-950).
 
-| Color Name | Hex Code | Tailwind Class | Usage |
-|------------|----------|----------------|-------|
-| **Primary Green** | `#80D80A` | `primary-300` | Primary actions, highlights |
-| **Secondary Teal** | `#359791` | `secondary-800` | Secondary actions, accents |
-| **Dark Purple** | `#05040D` | `dark-500` | Text, headings |
-| **Light Grey-Green** | `#90947B` | `light-500` | Subtle backgrounds |
+| Palette | Main Shade | Hex Code | Usage |
+|---------|-----------|----------|-------|
+| **PRIMARY** | `primary-500` | `#80D80A` | CTAs, links, focus states, interactive elements (Green) |
+| **SECONDARY** | `secondary-500` | `#359791` | Secondary actions, accents (Teal/Blue-Green) |
+| **INFORMATION** | `information-500` | `#3B82F6` | Info messages, secondary actions, informational badges (Blue) |
+| **DARK** | `dark-500` | `#05040D` | Text, dark backgrounds, headers (Dark Purple/Black) |
+| **GRAY** | `gray-500` | `#A1A1A1` | Borders, dividers, disabled states, secondary text (Neutral Gray) |
+| **LIGHT** | `light-500` | `#90947B` | Light backgrounds, cards, panels (Grey-Green) |
+| **SUCCESS** | `success-500` | `#22C55E` | Success messages, positive feedback, completed states (Green) |
+| **WARNING** | `warning-500` | `#EAB308` | Warning messages, caution states, pending actions (Yellow/Orange) |
+| **ERROR** | `error-500` | `#EF4444` | Error messages, destructive actions, validation failures (Red) |
 
-### Complete Color Mapping
+### Commonly Used Shades
 
-#### Primary Colors
+Based on actual component usage in the codebase:
+
+| Tailwind Class | Hex Code | Common Usage in Codebase |
+|---------------|----------|--------------------------|
+| `bg-primary-300` | `#BBFB5B` | Bright accent buttons, icon backgrounds |
+| `bg-primary-500` | `#80D80A` | Standard primary green |
+| `bg-secondary-800` | `#204E4D` | Dark teal backgrounds, primary action buttons |
+| `bg-secondary-500` | `#359791` | Standard teal |
+| `text-dark-500` | `#05040D` | Main text color, headings |
+| `bg-gray-200` | `#DFDFDF` | Light borders, disabled backgrounds |
+| `text-gray-500` | `#A1A1A1` | Medium gray text |
+| `text-gray-600` | `#888888` | Darker gray text, labels |
+| `bg-white/50` | `rgba(255,255,255,0.5)` | Semi-transparent cards |
+| `bg-error-600` | `#DC2626` | Destructive action buttons |
+
+### Primary Colors (Green Palette)
+
 ```tsx
-bg-primary-300   // #80D80A - Primary green
-bg-primary-400   // Lighter green
-bg-primary-500   // Standard green
-text-primary-300 // Primary green text
-border-primary-300 // Primary green border
+// Full palette from src/index.css
+bg-primary-50     // #f7ffe5 - Lightest green
+bg-primary-100    // #ebffc8
+bg-primary-200    // #ceff7d
+bg-primary-300    // #bbfb5b - ⭐ Commonly used bright accent
+bg-primary-400    // #a0f229
+bg-primary-500    // #80d80a - ⭐ Main primary color
+bg-primary-600    // #62ad03
+bg-primary-700    // #4a8308
+bg-primary-800    // #3d670d
+bg-primary-900    // #345710
+bg-primary-950    // #193102 - Darkest green
+
+// Usage examples
+text-primary-300
+text-primary-500
+border-primary-300
 ```
 
-#### Secondary Colors
+### Secondary Colors (Teal Palette)
+
 ```tsx
-bg-secondary-800   // #359791 - Teal
-text-secondary-800 // Teal text
-border-secondary-800 // Teal border
+// Full palette from src/index.css
+bg-secondary-50   // #f3faf9
+bg-secondary-100  // #d5f2ed
+bg-secondary-200  // #abe4db
+bg-secondary-300  // #7acec5
+bg-secondary-400  // #4eb3aa
+bg-secondary-500  // #359791 - ⭐ Main secondary color
+bg-secondary-600  // #287975
+bg-secondary-700  // #236260
+bg-secondary-800  // #204e4d - ⭐ Commonly used dark teal
+bg-secondary-900  // #1f4242
+bg-secondary-950  // #0d2526
+
+// Usage examples
+text-secondary-800
+text-secondary-500
+border-secondary-800
 ```
 
-#### Dark Colors (Text)
+### Information Colors (Blue Palette)
+
 ```tsx
-text-dark-500    // #05040D - Main text color
-bg-dark-500      // Dark background
+// Key shades from src/index.css
+bg-information-50   // #eff6ff
+bg-information-100  // #dbeafe
+bg-information-500  // #3b82f6 - ⭐ Main blue
+bg-information-900  // #1e3a8a
+
+// Usage examples
+text-information-500
+border-information-500
+bg-information-100 text-information-900 // Info alerts
 ```
 
-#### Gray Scale
+### Dark Colors (Dark Purple/Black Palette)
+
 ```tsx
-text-gray-400    // #9CA3AF - Light gray text
-text-gray-500    // #6B7280 - Medium gray
-text-gray-600    // #4B5563 - Dark gray
-text-gray-700    // #374151 - Darker gray
-bg-gray-100      // #F3F4F6 - Very light gray background
-bg-gray-200      // #E5E7EB - Light gray background
-border-gray-200  // Light gray border
+// Key shades from src/index.css
+bg-dark-50     // #272166
+bg-dark-100    // #231e5b
+bg-dark-500    // #05040d - ⭐ Main dark color (text, headings)
+bg-dark-900    // #000000
+bg-dark-950    // #000000
+
+// Usage examples
+text-dark-500  // ⭐ Primary text color
+bg-dark-500
+border-dark-500
 ```
 
-#### Status Colors
+### Gray Scale (Neutral Gray)
+
 ```tsx
-// Success
-bg-success-500   // Green
+// Full palette from src/index.css
+bg-gray-50     // #f7f7f7 - Very light gray
+bg-gray-100    // #ededed
+bg-gray-200    // #dfdfdf - ⭐ Light borders
+bg-gray-300    // #c8c8c8
+bg-gray-400    // #adadad
+bg-gray-500    // #a1a1a1 - ⭐ Medium gray
+bg-gray-600    // #888888 - ⭐ Common gray text
+bg-gray-700    // #7b7b7b
+bg-gray-800    // #676767
+bg-gray-900    // #545454
+bg-gray-950    // #363636 - Darkest gray
+
+// Usage examples
+text-gray-600
+text-gray-500
+border-gray-200
+bg-gray-100 // Light backgrounds
+```
+
+### Light Colors (Grey-Green Palette)
+
+```tsx
+// Key shades from src/index.css
+bg-light-50    // #f2f3f0
+bg-light-100   // #ebece8
+bg-light-500   // #90947b - ⭐ Main light color
+bg-light-950   // #282822
+
+// Usage examples
+bg-light-500
+text-light-500
+```
+
+### Success Colors (Green Palette)
+
+```tsx
+// Key shades from src/index.css
+bg-success-50    // #f0fdf4
+bg-success-100   // #dcfce7
+bg-success-500   // #22c55e - ⭐ Main success green
+bg-success-700   // #15803d
+
+// Usage examples
+bg-success-100 text-success-700 // Success alerts
 text-success-500
-
-// Warning
-bg-warning-500   // Yellow
-text-warning-500
-
-// Error
-bg-error-500     // #EF4444 - Red
-text-error-500
-bg-red-500       // Alternative red
-text-red-500
+border-success-500
 ```
 
-#### Special Colors
+### Warning Colors (Yellow Palette)
+
 ```tsx
-bg-white         // #FFFFFF
-text-white       // White text
-bg-white/50      // 50% transparent white (#FFFFFF80)
-border-white     // White border
+// Key shades from src/index.css
+bg-warning-50    // #fefce8
+bg-warning-100   // #fef9c3
+bg-warning-500   // #eab308 - ⭐ Main warning yellow
+bg-warning-900   // #713f12
+
+// Usage examples
+bg-warning-100 text-warning-900 // Warning alerts
+text-warning-500
+border-warning-500
+```
+
+### Error Colors (Red Palette)
+
+```tsx
+// Key shades from src/index.css
+bg-error-50     // #fef2f2
+bg-error-100    // #fee2e2
+bg-error-500    // #ef4444 - ⭐ Main error red
+bg-error-600    // #dc2626 - ⭐ Commonly used for destructive buttons
+bg-error-700    // #b91c1c
+bg-error-900    // #7f1d1d
+
+// Usage examples
+bg-error-600     // ⭐ Destructive action buttons
+text-error-500
+border-error-500
+bg-error-50 text-error-700 // Error alerts
+```
+
+### Special Colors
+
+```tsx
+// White, Black, and Transparency
+bg-white            // #FFFFFF
+text-white          // White text
+bg-white/50         // 50% transparent white
+bg-white/10         // 10% transparent white
+bg-black            // #000000
+text-black          // Black text
+border-white        // White border
+border-white/10     // 10% transparent white border
 ```
 
 ### Old to New Color Mappings
 
-When refactoring legacy code:
+When refactoring legacy code that imports `colors` object:
 
-| Old Code | New Tailwind Class |
-|----------|-------------------|
-| `colors.neutral.dark[500]` | `text-dark-500` or `bg-dark-500` |
-| `colors.primary[300]` | `bg-primary-300` |
-| `colors.primary[400]` | `bg-primary-400` |
-| `colors.primary[500]` | `bg-primary-500` |
-| `colors.secondary[800]` | `bg-secondary-800` |
-| `colors.gray[400]` | `text-gray-400` |
-| `colors.gray[500]` | `text-gray-500` |
-| `colors.gray[600]` | `text-gray-600` |
-| `#FFFFFF80` | `bg-white/50` |
-| `#EF4444` | `bg-error-500` or `text-error-500` |
+| Old Code | New Tailwind Class | Actual Hex Code |
+|----------|-------------------|----------------|
+| `colors.neutral.dark[500]` | `text-dark-500` or `bg-dark-500` | `#05040D` |
+| `colors.primary[300]` | `bg-primary-300` | `#BBFB5B` |
+| `colors.primary[500]` | `bg-primary-500` | `#80D80A` |
+| `colors.secondary[500]` | `bg-secondary-500` | `#359791` |
+| `colors.secondary[800]` | `bg-secondary-800` | `#204E4D` |
+| `colors.gray[200]` | `bg-gray-200` or `border-gray-200` | `#DFDFDF` |
+| `colors.gray[300]` | `bg-gray-300` | `#C8C8C8` |
+| `colors.gray[500]` | `text-gray-500` | `#A1A1A1` |
+| `colors.gray[600]` | `text-gray-600` | `#888888` |
+| `#FFFFFF80` | `bg-white/50` | 50% transparent white |
+| `#EF4444` | `bg-error-500` or `text-error-500` | `#EF4444` |
+| `#DC2626` | `bg-error-600` | `#DC2626` |
 
 ---
 
@@ -387,7 +525,7 @@ h-full     // height: 100%
 </span>
 
 // Error Badge
-<span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-error-500 text-white">
+<span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium bg-error-600 text-white">
   <Icons.Warning size={14} className="text-white" />
   Failed
 </span>
@@ -638,8 +776,8 @@ export function UserCard({
 ## References
 
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
-- [Tailwind CSS v4 (Alpha) Documentation](https://tailwindcss.com/docs/v4-alpha)
-- Project Tailwind Config: `src/index.css` (@theme directive)
+- [Tailwind CSS v4 Documentation](https://tailwindcss.com/docs/v4-alpha)
+- **Project Tailwind Config**: `src/index.css` (@theme directive) - **Source of Truth**
 - Utility Functions: `src/lib/utils.ts`
 - Icon Library: `src/lib/icons.ts`
 
@@ -650,7 +788,9 @@ export function UserCard({
 If you have questions about these patterns or need to propose changes:
 
 1. Check existing components for examples
-2. Consult with the team lead
-3. Update this document with any approved changes
+2. Consult `src/index.css` for the definitive color configuration
+3. Consult with the team lead
+4. Update this document with any approved changes
 
 **Last Updated**: December 2024
+**Reflects**: Tailwind v4 configuration in `src/index.css`
