@@ -62,7 +62,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     return (
       <div className={`w-full ${className || ''}`}>
         {label && (
-          <label htmlFor={inputId} className="text-dark-950 mb-1.5 block text-sm font-light">
+          <label htmlFor={inputId} className="text-dark-500 mb-1.5 block text-sm font-light">
             {label}
           </label>
         )}
@@ -87,7 +87,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               background-color: white;
               font-size: 14px;
               font-weight: 300;
-              color: #1A1A1A;
+              color: #05040D;
               outline: none;
               transition: all 0.2s;
             }
@@ -116,7 +116,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               padding-top: 12px;
             }
             .react-datepicker__current-month {
-              color: #1A1A1A;
+              color: #05040D;
               font-weight: 500;
               font-size: 14px;
             }
@@ -126,7 +126,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               font-size: 12px;
             }
             .react-datepicker__day {
-              color: #1A1A1A;
+              color: #05040D;
               border-radius: 0.375rem;
               transition: all 0.15s;
             }
@@ -154,7 +154,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               border-color: #6B7280;
             }
             .react-datepicker__navigation:hover *::before {
-              border-color: #1A1A1A;
+              border-color: #05040D;
             }
             .react-datepicker__triangle {
               display: none;

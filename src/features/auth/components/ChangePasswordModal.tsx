@@ -79,7 +79,7 @@ export function ChangePasswordModal({
       <ModalHeader
         icon={
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#A7E8BD]">
-            <Icons.Lock size={20} color="#1A1A1A" strokeWidth={2} />
+            <Icons.Lock size={20} color="#05040D" strokeWidth={2} />
           </div>
         }
         title="Change Password"
@@ -174,7 +174,7 @@ export function ChangePasswordModal({
           form="change-password-form"
           variant="primary"
           disabled={isLoading}
-          className="text-dark-950 h-[45px] flex-1 rounded-md border-none bg-[#A7E8BD] text-sm font-medium"
+          className="text-dark-500 h-[45px] flex-1 rounded-md border-none bg-[#A7E8BD] text-sm font-medium"
         >
           {isLoading ? 'Changing...' : 'Change Password'}
         </Button>

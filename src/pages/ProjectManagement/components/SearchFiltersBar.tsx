@@ -133,7 +133,7 @@ export function SearchFiltersBar({
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               disabled={isLoading}
-              className="text-dark-950 h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500 disabled:opacity-60"
+              className="text-dark-500 h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500 disabled:opacity-60"
             />
             {searchValue && (
               <button
@@ -221,10 +221,10 @@ export function SearchFiltersBar({
               onFilterChange({ ...filters, search: searchValue || undefined })
             }}
             disabled={isLoading}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#A7E8BD] transition-all duration-200 hover:scale-105 disabled:opacity-60"
+            className="bg-primary-300 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
             aria-label="Search projects"
           >
-            <Icons.Search size={18} color="#1A1A1A" strokeWidth={1.5} />
+            <Icons.Search size={18} color="#05040D" strokeWidth={1.5} />
           </button>
         </div>
       </div>
@@ -233,11 +233,11 @@ export function SearchFiltersBar({
         {/* Add New Project Button */}
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center rounded-full bg-[#164E63] shadow-md transition-all duration-200 hover:shadow-lg"
+          className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
           aria-label="Add new project"
         >
-          <div className="ml-1 flex h-10 w-10 items-center justify-center rounded-full bg-[#A7E8BD]">
-            <Icons.Add size={20} color="#1A1A1A" strokeWidth={2} />
+          <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
+            <Icons.Add size={20} color="#05040D" strokeWidth={2} />
           </div>
           <span className="px-4 py-3 text-sm font-medium text-white">New Project</span>
         </button>
@@ -256,9 +256,9 @@ export function SearchFiltersBar({
           onClick={onExport}
           disabled={isLoading}
           type="button"
-          className="text-dark-950 flex h-[45px] items-center gap-2 rounded-full bg-[#A7E8BD] px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
+          className="text-dark-500 bg-primary-300 flex h-[45px] items-center gap-2 rounded-full px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
         >
-          <Icons.FileImport size={16} color="#1A1A1A" />
+          <Icons.FileImport size={16} color="#05040D" />
           Export
         </button>
       </div>

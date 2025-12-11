@@ -29,8 +29,8 @@ export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps)
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#B0EDC7]">
-            <Icons.View size={20} color="#1A1A1A" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.View size={20} color="#05040D" strokeWidth={2} />
           </div>
         }
         title={role ? `View Role: ${role.name}${role.is_default ? ' (Default)' : ''}` : 'View Role'}
@@ -50,7 +50,7 @@ export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps)
       <ModalFooter>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={onClose}
           className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >

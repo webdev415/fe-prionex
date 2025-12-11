@@ -24,8 +24,8 @@ export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps)
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#A0F229]">
-            <Icons.View size={20} color="#1A1A1A" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.View size={20} color="#05040D" strokeWidth={2} />
           </div>
         }
         title="View User"
@@ -45,7 +45,7 @@ export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps)
       <ModalFooter>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={onClose}
           className="h-[45px] flex-1 rounded-lg border-none bg-gray-500 text-sm font-medium text-white"
         >

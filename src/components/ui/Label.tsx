@@ -8,7 +8,7 @@ const labelVariants = cva(
   {
     variants: {
       variant: {
-        default: 'text-neutral-dark-500 font-light',
+        default: 'text-dark-500 font-light',
         error: 'text-error-500 font-light',
       },
     },
@@ -29,7 +29,7 @@ const Label = forwardRef<HTMLLabelElement, LabelProps>(
       <label
         ref={ref}
         className={cn(
-          'text-dark-950 text-sm font-extralight',
+          'text-dark-500 text-sm font-extralight',
           labelVariants({ variant, className })
         )}
         style={style}

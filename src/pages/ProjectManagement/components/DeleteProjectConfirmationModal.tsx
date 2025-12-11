@@ -29,13 +29,13 @@ export function DeleteProjectConfirmationModal({
       <ModalHeader
         icon={
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#B0EDC7]">
-            <Icons.Delete size={20} color="#1A1A1A" strokeWidth={2} />
+            <Icons.Delete size={20} color="#05040D" strokeWidth={2} />
           </div>
         }
         title={`Delete Project: ${projectName}`}
       />
       <ModalContent>
-        <p className="text-dark-950 text-base font-light">
+        <p className="text-dark-500 text-base font-light">
           Are you sure you want to delete this project? This action cannot be undone.
         </p>
       </ModalContent>

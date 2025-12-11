@@ -87,7 +87,7 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
           <TooltipTrigger asChild>
             <button
               onClick={onMenuClick}
-              className="focus:ring-primary-500 mb-8 rounded-md p-1 transition-all duration-200 hover:scale-110 focus:ring-2 focus:ring-offset-2 focus:outline-none"
+              className="focus:ring-primary-500 mb-4 rounded-md p-1 transition-all duration-200 hover:scale-110 focus:ring-2 focus:ring-offset-2 focus:outline-none"
               aria-label="Menu"
             >
               <Icons.Menu11 size={22} color="#374151" strokeWidth={1.5} />
@@ -99,7 +99,7 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
         </Tooltip>
 
         {/* Navigation Icons */}
-        <nav className="flex w-full flex-1 flex-col items-center gap-6 overflow-x-hidden overflow-y-auto px-0">
+        <nav className="flex w-full flex-1 flex-col items-center gap-6 overflow-x-hidden overflow-y-auto px-0 py-4">
           {items.map((item, index) => {
             const IconComponent = iconMap[item.icon]
 
@@ -141,7 +141,7 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
                   >
                     <IconComponent
                       size={20}
-                      color={isActive ? '#0CA8EB' : '#374151'}
+                      color={isActive ? '#BBFB5B' : '#7B7B7B'}
                       strokeWidth={1.5}
                     />
                   </NavLink>

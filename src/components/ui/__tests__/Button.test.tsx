@@ -12,7 +12,7 @@ describe('Button', () => {
   it('renders with primary variant by default', () => {
     render(<Button>Primary</Button>)
     const button = screen.getByRole('button')
-    expect(button).toHaveClass('bg-primary-500')
+    expect(button).toHaveClass('bg-primary-300')
   })
 
   it('renders with secondary variant', () => {
@@ -95,12 +95,12 @@ describe('Button', () => {
 
   // STYLING STANDARDIZATION TESTS (Phase 2)
 
-  it('primary variant should use primary-500 background (official design system)', () => {
+  it('primary variant should use primary-300 background (official design system)', () => {
     render(<Button variant="primary">Primary</Button>)
     const button = screen.getByRole('button')
-    // Official: PRIMARY (Light Blue #0CA8EB)
-    expect(button).toHaveClass('bg-primary-500')
-    expect(button).toHaveClass('hover:bg-primary-600')
+    // Official: PRIMARY (Green #80D80A)
+    expect(button).toHaveClass('bg-primary-300')
+    expect(button).toHaveClass('hover:bg-primary-400')
   })
 
   it('should NOT have inline style attribute (Tailwind classes only)', () => {
@@ -113,6 +113,6 @@ describe('Button', () => {
     render(<Button variant="primary">Primary</Button>)
     const button = screen.getByRole('button')
     // Should have text color as Tailwind class
-    expect(button).toHaveClass('text-dark-950')
+    expect(button).toHaveClass('text-dark-500')
   })
 })

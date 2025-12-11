@@ -61,7 +61,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return (
         <div className="bg-light-50 flex min-h-screen flex-col items-center justify-center p-8">
           <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-lg">
-            <h1 className="text-dark-950 mb-4 text-2xl font-semibold">Something went wrong</h1>
+            <h1 className="text-dark-500 mb-4 text-2xl font-semibold">Something went wrong</h1>
             <p className="mb-6 text-sm text-gray-600">
               {this.state.error?.message ||
                 'An unexpected error occurred. Please try refreshing the page.'}
@@ -70,14 +70,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               <Button
                 onClick={this.handleReset}
                 variant="primary"
-                className="bg-primary-300 text-dark-950 flex-1"
+                className="bg-primary-300 text-dark-500 flex-1"
               >
                 Try Again
               </Button>
               <Button
                 onClick={() => window.location.reload()}
                 variant="outline"
-                className="text-dark-950 flex-1 border-gray-400"
+                className="text-dark-500 flex-1 border-gray-400"
               >
                 Refresh Page
               </Button>

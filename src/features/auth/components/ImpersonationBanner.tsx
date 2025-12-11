@@ -45,7 +45,7 @@ export function ImpersonationBanner({
 
   return (
     <div className="flex w-full items-center justify-center">
-      <div className="text-dark-950 flex h-[65px] w-[80%] items-center justify-between rounded-md bg-white pr-5 pl-6 text-base xl:w-[60%]">
+      <div className="text-dark-500 flex h-[65px] w-[80%] items-center justify-between rounded-md bg-white pr-5 pl-6 text-base xl:w-[60%]">
         <div className="font-medimun text-secondary-800 flex items-center gap-2">
           <Icons.UserCircle02Icon size={20} color="#1A5C54" strokeWidth={1.5} />
           Impersonation mode
@@ -62,10 +62,10 @@ export function ImpersonationBanner({
         <button
           onClick={onExitImpersonation}
           disabled={isLoading}
-          className="bg-primary-300 text-dark-950 flex h-[41px] w-[189px] items-center justify-center gap-2 rounded-sm border-none text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+          className="bg-primary-300 text-dark-500 flex h-[41px] w-[189px] items-center justify-center gap-2 rounded-sm border-none text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isLoading ? 'Exiting...' : 'Exit Impersonation'}
-          <Icons.LogoutSquare01 size={20} color="#1A1A1A" strokeWidth={1.5} />
+          <Icons.LogoutSquare01 size={20} color="#05040D" strokeWidth={1.5} />
         </button>
       </div>
     </div>

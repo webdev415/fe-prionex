@@ -27,20 +27,20 @@ export function LogoutConfirmationModal({
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.LogoutSquare01 size={20} color="#1A1A1A" strokeWidth={2} />
+            <Icons.LogoutSquare01 size={20} color="#05040D" strokeWidth={2} />
           </div>
         }
         title="Confirm Logout"
       />
       <ModalContent>
-        <p className="text-dark-950 text-base font-light">
+        <p className="text-dark-500 text-base font-light">
           Are you sure you want to logout? You will need to login again to access the system.
         </p>
       </ModalContent>
       <ModalFooter>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={onCancel}
           disabled={isLoading}
           className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
@@ -51,7 +51,8 @@ export function LogoutConfirmationModal({
           type="button"
           onClick={onConfirm}
           disabled={isLoading}
-          className="bg-error-500 h-[45px] flex-1 rounded-md border-none text-sm font-medium text-white"
+          variant="danger"
+          className="h-[45px] flex-1 rounded-md border-none text-sm font-medium text-white"
         >
           {isLoading ? 'Logging out...' : 'Logout'}
         </Button>

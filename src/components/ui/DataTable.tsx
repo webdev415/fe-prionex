@@ -132,7 +132,7 @@ export function DataTable<T extends { id: number | string }>({
                 {columns.map((column, colIndex) => (
                   <td
                     key={column.key}
-                    className={`text-dark-950 h-[49px] px-6 text-xs font-medium ${
+                    className={`text-dark-500 h-[49px] px-6 text-xs font-medium ${
                       column.align === 'center'
                         ? 'text-center'
                         : column.align === 'right'

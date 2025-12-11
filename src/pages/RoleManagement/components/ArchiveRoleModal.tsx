@@ -106,8 +106,8 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#B0EDC7]">
-            <Icons.Delete size={20} color="#1A1A1A" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.Delete size={20} color="#05040D" strokeWidth={2} />
           </div>
         }
         title={role ? `Archive Role: ${role.name}` : 'Archive Role'}
@@ -290,7 +290,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
       <ModalFooter>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={onClose}
           className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
@@ -301,7 +301,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
           variant="primary"
           onClick={handleArchive}
           disabled={!canArchive || archiveMutation.isPending || isLoading}
-          className={`text-dark-950 h-[45px] flex-1 rounded-md border-none bg-[#A7E8BD] text-sm font-medium ${!canArchive ? 'opacity-50' : ''}`}
+          className={`text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium ${!canArchive ? 'opacity-50' : ''}`}
         >
           Archive Role
         </Button>

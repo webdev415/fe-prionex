@@ -75,7 +75,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
         className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
         aria-label="Previous page"
       >
-        <Icons.ArrowLeft size={16} color="#1A1A1A" strokeWidth={1.5} />
+        <Icons.ArrowLeft size={16} color="#05040D" strokeWidth={1.5} />
       </button>
 
       {/* First page */}
@@ -85,7 +85,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
           className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
             currentPage === 1
               ? 'bg-secondary-800 text-white'
-              : 'text-dark-950 border border-gray-300 bg-white hover:bg-gray-100'
+              : 'text-dark-500 border border-gray-300 bg-white hover:bg-gray-100'
           }`}
           aria-label="Go to page 1"
           aria-current={currentPage === 1 ? 'page' : undefined}
@@ -97,7 +97,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
       {/* Ellipsis before */}
       {showEllipsisBefore && (
         <button
-          className="text-dark-950 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-medium"
+          className="text-dark-500 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-medium"
           disabled
           aria-label="More pages"
         >
@@ -115,7 +115,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
             className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
               currentPage === page
                 ? 'bg-secondary-800 text-white'
-                : 'text-dark-950 border border-gray-300 bg-white hover:bg-gray-100'
+                : 'text-dark-500 border border-gray-300 bg-white hover:bg-gray-100'
             }`}
             aria-label={`Go to page ${page}`}
             aria-current={currentPage === page ? 'page' : undefined}
@@ -127,7 +127,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
       {/* Ellipsis after */}
       {showEllipsisAfter && (
         <button
-          className="text-dark-950 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-medium"
+          className="text-dark-500 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-medium"
           disabled
           aria-label="More pages"
         >
@@ -142,7 +142,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
           className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
             currentPage === totalPages
               ? 'bg-secondary-800 text-white'
-              : 'text-dark-950 border border-gray-300 bg-white hover:bg-gray-100'
+              : 'text-dark-500 border border-gray-300 bg-white hover:bg-gray-100'
           }`}
           aria-label={`Go to page ${totalPages}`}
           aria-current={currentPage === totalPages ? 'page' : undefined}
@@ -158,7 +158,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
         className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
         aria-label="Next page"
       >
-        <Icons.ArrowRight size={16} color="#1A1A1A" strokeWidth={1.5} />
+        <Icons.ArrowRight size={16} color="#05040D" strokeWidth={1.5} />
       </button>
     </div>
   )

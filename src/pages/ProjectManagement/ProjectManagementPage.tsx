@@ -159,7 +159,7 @@ export function ProjectManagementPage() {
       sortable: true,
       render: (project) => (
         <div className="flex items-center justify-center">
-          <span className="text-dark-950 flex items-center justify-center text-xs font-medium">
+          <span className="text-dark-500 flex items-center justify-center text-xs font-medium">
             {project.user_count || 0}
           </span>
         </div>
@@ -171,7 +171,7 @@ export function ProjectManagementPage() {
       sortable: true,
       render: (project) => (
         <div className="flex flex-col">
-          <span className="text-dark-950 text-xs font-medium">{project.name}</span>
+          <span className="text-dark-500 text-xs font-medium">{project.name}</span>
           <span className="text-xs font-medium text-gray-700">{project.code}</span>
         </div>
       ),
@@ -182,7 +182,7 @@ export function ProjectManagementPage() {
       sortable: true,
       render: (project) => (
         <span
-          className="text-dark-950 block max-w-[180px] truncate text-xs font-medium"
+          className="text-dark-500 block max-w-[180px] truncate text-xs font-medium"
           title={project.client_company}
         >
           {project.client_company || '—'}
@@ -194,7 +194,7 @@ export function ProjectManagementPage() {
       header: 'Period',
       sortable: true,
       render: (project) => (
-        <span className="text-dark-950 text-xs font-medium">
+        <span className="text-dark-500 text-xs font-medium">
           {formatPeriod(project.start_date, project.end_date)}
         </span>
       ),
@@ -205,7 +205,7 @@ export function ProjectManagementPage() {
       align: 'right',
       sortable: true,
       render: (project) => (
-        <span className="text-dark-950 text-xs font-medium">
+        <span className="text-dark-500 text-xs font-medium">
           {formatCurrency(project.total_debt_amount)}
         </span>
       ),
@@ -223,7 +223,7 @@ export function ProjectManagementPage() {
     <div className="flex h-full flex-col">
       {/* Page Header */}
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-dark-950 text-2xl font-light">Project Management</h1>
+        <h1 className="text-dark-500 text-2xl font-light">Project Management</h1>
       </div>
 
       {/* Search & Filters */}

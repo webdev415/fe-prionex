@@ -4,7 +4,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const inputVariants = cva(
-  'flex w-full rounded-lg border bg-white px-4 py-2 text-sm font-light text-dark-950 placeholder:text-gray-500 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+  'flex w-full rounded-lg border bg-white px-4 py-2 text-sm font-light text-dark-500 placeholder:text-gray-500 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
   {
     variants: {
       variant: {
@@ -64,7 +64,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label htmlFor={inputId} className="text-dark-950 mb-1.5 block text-sm font-light">
+          <label htmlFor={inputId} className="text-dark-500 mb-1.5 block text-sm font-light">
             {label}
           </label>
         )}

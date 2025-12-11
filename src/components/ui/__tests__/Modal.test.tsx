@@ -157,7 +157,7 @@ describe('ModalHeader', () => {
     )
     const title = screen.getByText('Title')
     expect(title).toHaveClass('text-2xl')
-    expect(title).toHaveClass('text-dark-950')
+    expect(title).toHaveClass('text-dark-500')
   })
 })
 

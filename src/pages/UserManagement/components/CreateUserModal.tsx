@@ -32,8 +32,8 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#A0F229]">
-            <Icons.Add size={20} color="#1A1A1A" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.Add size={20} color="#05040D" strokeWidth={2} />
           </div>
         }
         title="Create New User"
@@ -52,7 +52,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
       <ModalFooter>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={onClose}
           className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
@@ -63,7 +63,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
           form="create-user-form"
           variant="primary"
           disabled={isLoading}
-          className="text-dark-950 h-[45px] flex-1 rounded-md border-none bg-[#A7E8BD] text-sm font-medium"
+          className="text-dark-500 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
         >
           Save
         </Button>

@@ -56,7 +56,7 @@ export function Modal({ open, onClose, children, className, maxWidth = 'md' }: M
                 className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
                 aria-label="Close modal"
               >
-                <Icon icon={Cancel01Icon} size={20} color="#1A1A1A" strokeWidth={1.5} />
+                <Icon icon={Cancel01Icon} size={20} color="#05040D" strokeWidth={1.5} />
               </button>
             </DialogPrimitive.Close>
             {children}
@@ -76,10 +76,10 @@ interface ModalHeaderProps {
 
 export function ModalHeader({ icon, title, className }: ModalHeaderProps) {
   return (
-    <div className={cn('border-light-200 flex items-center border-b p-0', className)}>
+    <div className={cn('border-light-200 flex items-center border-b p-0 pb-2', className)}>
       <div className="flex items-center gap-3">
         {icon && <div className="flex-shrink-0">{icon}</div>}
-        <DialogPrimitive.Title className="text-dark-950 text-2xl font-medium">
+        <DialogPrimitive.Title className="text-dark-500 text-2xl font-medium">
           {title}
         </DialogPrimitive.Title>
       </div>

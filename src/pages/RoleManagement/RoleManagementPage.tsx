@@ -99,14 +99,14 @@ export function RoleManagementPage() {
           <button
             type="button"
             onClick={() => setSelectedRoleId(role.id)}
-            className="text-dark-950 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+            className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
           >
             <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
             View
           </button>
           <button
             type="button"
-            className="text-dark-950 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+            className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
             onClick={() => setEditRoleId(role.id)}
           >
             <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
@@ -115,7 +115,7 @@ export function RoleManagementPage() {
           {!role.is_default && (
             <button
               type="button"
-              className="text-dark-950 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+              className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
               onClick={() => setArchiveRoleId(role.id)}
             >
               <Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />
@@ -132,19 +132,19 @@ export function RoleManagementPage() {
       {/* Page Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-dark-950 text-2xl font-light">Role Management</h1>
+          <h1 className="text-dark-500 text-2xl font-light">Role Management</h1>
         </div>
 
         <button
           onClick={() => setShowCreateModal(true)}
           disabled={!selectedProjectId}
           className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
-          aria-label="Create role"
+          aria-label="New role"
         >
           <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-            <Icons.Add size={20} color="#1A1A1A" strokeWidth={2} />
+            <Icons.Add size={20} color="#05040D" strokeWidth={2} />
           </div>
-          <span className="px-4 py-3 text-sm font-medium text-white">Create Role</span>
+          <span className="px-4 py-3 text-sm font-medium text-white">New Role</span>
         </button>
       </div>
 
@@ -155,13 +155,13 @@ export function RoleManagementPage() {
           value={selectedProjectId ? String(selectedProjectId) : ''}
           onValueChange={(value) => setSelectedProjectId(Number(value))}
         >
-          <SelectTrigger className="text-dark-950 flex h-auto w-auto min-w-0 items-center gap-2 border-0 bg-transparent p-0 text-xl font-light shadow-none focus:ring-0 [&>div.opacity-50]:hidden">
+          <SelectTrigger className="text-dark-500 flex h-auto w-auto min-w-0 items-center gap-2 border-0 bg-transparent p-0 text-xl font-light shadow-none focus:ring-0 [&>div.opacity-50]:hidden">
             <SelectValue
               placeholder="Select project"
-              className="text-dark-950 text-xl font-light"
+              className="text-dark-500 text-xl font-light"
             />
             <div className="bg-primary-300 flex h-6 w-6 items-center justify-center rounded-md">
-              <Icons.ArrowDown size={16} color="#1A1A1A" strokeWidth={1.5} />
+              <Icons.ArrowDown size={16} color="#05040D" strokeWidth={1.5} />
             </div>
           </SelectTrigger>
           <SelectContent>

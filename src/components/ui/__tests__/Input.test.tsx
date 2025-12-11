@@ -106,9 +106,9 @@ describe('Input', () => {
     expect(label).toHaveClass('font-light')
   })
 
-  it('input should use text-dark-950 class for text color', () => {
+  it('input should use text-dark-500 class for text color', () => {
     render(<Input placeholder="Test input" />)
     const input = screen.getByPlaceholderText('Test input')
-    expect(input).toHaveClass('text-dark-950')
+    expect(input).toHaveClass('text-dark-500')
   })
 })

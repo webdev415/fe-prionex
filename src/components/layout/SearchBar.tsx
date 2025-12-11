@@ -61,16 +61,16 @@ export function SearchBar({
         onChange={(e) => setSearchQuery(e.target.value)}
         onKeyPress={handleKeyPress}
         placeholder={placeholder}
-        className="text-dark-950 flex-1 bg-transparent text-sm outline-none placeholder:font-light placeholder:text-gray-400"
+        className="text-dark-500 flex-1 bg-transparent text-sm outline-none placeholder:font-light placeholder:text-gray-400"
       />
       <div className="h-5 w-px bg-gray-300" />
       <Select value={searchType} onValueChange={setSearchType}>
-        <SelectTrigger className="text-dark-950 h-auto w-auto min-w-[120px] border-0 bg-transparent p-0 text-xs shadow-none focus:ring-0">
+        <SelectTrigger className="text-dark-500 h-auto w-auto min-w-[120px] border-0 bg-transparent p-0 text-xs shadow-none focus:ring-0">
           <SelectValue />
         </SelectTrigger>
         <SelectContent className="bg-white">
           {searchOptions.map((option) => (
-            <SelectItem key={option.value} value={option.value} className="text-dark-950 text-xs">
+            <SelectItem key={option.value} value={option.value} className="text-dark-500 text-xs">
               {option.label}
             </SelectItem>
           ))}
@@ -81,7 +81,7 @@ export function SearchBar({
         aria-label="Search"
         onClick={handleSearch}
       >
-        <Icons.Search size={20} color="#1A1A1A" strokeWidth={1.5} />
+        <Icons.Search size={20} color="#05040D" strokeWidth={1.5} />
       </button>
     </div>
   )
