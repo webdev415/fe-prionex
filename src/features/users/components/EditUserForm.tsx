@@ -11,6 +11,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useUpdateUser } from '../hooks/useUpdateUser'
 import { updateUserSchema, type UpdateUserFormData } from '../schemas/userSchemas'
+import type { UpdateUserInput } from '../types'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Alert } from '@/components/ui/Alert'
@@ -102,18 +103,16 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
   const onSubmit = (data: UpdateUserFormData) => {
     // Build payload for update
-    const payload: UpdateUserFormData & { project_id?: number; role_id?: number } = {
+    const payload: UpdateUserInput = {
       ...data,
     }
 
-    // If there is at least one selected project with a role, send it to backend
+    // Build project assignments array from all selected projects
     if (selectedProjects.length > 0) {
-      const firstProjectId = selectedProjects[0]
-      const firstRoleId = projectRoles[firstProjectId]
-      if (firstProjectId && firstRoleId) {
-        payload.project_id = firstProjectId
-        payload.role_id = firstRoleId
-      }
+      payload.project_assignments = selectedProjects.map((projectId) => ({
+        project_id: projectId,
+        role_id: projectRoles[projectId],
+      }))
     }
 
     mutate(

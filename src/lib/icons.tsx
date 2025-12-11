@@ -131,6 +131,7 @@ export const Icons = {
 
   // Auth
   Lock: (props: Omit<IconProps, 'icon'>) => <Icon icon={LockIcon} {...props} />,
+  LockedIcon01: (props: Omit<IconProps, 'icon'>) => <Icon icon={LockIcon} {...props} />,
   Unlock: (props: Omit<IconProps, 'icon'>) => <Icon icon={CircleUnlock01Icon} {...props} />,
   User: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserIcon} {...props} />,
   User02: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserIcon} {...props} />, // Using UserIcon as User02Icon doesn't exist

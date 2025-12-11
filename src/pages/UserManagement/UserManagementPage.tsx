@@ -121,22 +121,43 @@ export function UserManagementPage() {
     {
       key: 'username',
       header: 'Username',
+      render: (user) => <span className="font-medium">{user.username}</span>,
+    },
+    {
+      key: 'fullName',
+      header: 'Full Name',
       render: (user) => (
-        <span className="font-medium">
-          {user.first_name} {user.last_name}
+        <span>
+          {user.first_name && user.last_name
+            ? `${user.first_name} ${user.last_name}`
+            : user.first_name || user.last_name || '-'}
         </span>
       ),
     },
     {
-      key: 'role',
-      header: 'Role',
+      key: 'email',
+      header: 'Email',
+      render: (user) => <span style={{ color: colors.gray[700] }}>{user.email || '-'}</span>,
+    },
+    {
+      key: 'projectRole',
+      header: 'Project & Role',
       render: (user) => {
-        // Display roles from projects, or "No role" if none assigned
+        // Display project name with role: "Project Name (Role)"
         if (user.projects && user.projects.length > 0) {
-          // Show all roles, separated by comma if multiple
-          return <span>{user.projects.map((p) => p.role_name).join(', ')}</span>
+          const projectRoles = user.projects.map((p) => {
+            const projectName = p.project_name || 'Unknown Project'
+            const roleName = p.role_name || 'No Role'
+            return (
+              <div key={`${p.project_id}-${p.role_id}`} className="py-0.5">
+                <span className="font-medium">{projectName}</span>
+                <span style={{ color: colors.gray[600] }}> ({roleName})</span>
+              </div>
+            )
+          })
+          return <div className="flex flex-col gap-0.5">{projectRoles}</div>
         }
-        return <span style={{ color: colors.gray[500] }}>No role</span>
+        return <span style={{ color: colors.gray[500] }}>No assignment</span>
       },
     },
     {
