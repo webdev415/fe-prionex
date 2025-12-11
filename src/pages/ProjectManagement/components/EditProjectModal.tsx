@@ -134,9 +134,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
 
           {/* Project Information Section */}
           <div className="space-y-4">
-            <h3 className="text-base font-medium" style={{ color: '#1A1A1A' }}>
-              Project Information
-            </h3>
+            <h3 className="text-dark-950 text-base font-medium">Project Information</h3>
             <div className="grid grid-cols-2 gap-4">
               <Input
                 id="name"
@@ -155,18 +153,14 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                   label="Project Code:"
                   value={project.code}
                   disabled
-                  style={{ backgroundColor: '#F3F4F6' }}
+                  className="bg-gray-100"
                 />
-                <p className="mt-1 text-xs" style={{ color: '#6B7280' }}>
-                  Code cannot be changed after creation
-                </p>
+                <p className="mt-1 text-xs text-gray-500">Code cannot be changed after creation</p>
               </div>
             </div>
             {project.status !== 'archived' && (
               <div>
-                <Label className="mb-2 block" style={{ fontWeight: 300, fontSize: '14px' }}>
-                  Status:
-                </Label>
+                <Label className="mb-2 block text-sm font-light">Status:</Label>
                 <RadioGroup
                   value={formData.status}
                   onValueChange={(value) => handleChange('status', value)}
@@ -178,7 +172,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                     <Label
                       htmlFor="status-active"
                       className="mb-0 cursor-pointer"
-                      style={{ fontWeight: 300, fontSize: '14px' }}
+                      className="text-sm font-light"
                     >
                       Active
                     </Label>
@@ -188,7 +182,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                     <Label
                       htmlFor="status-inactive"
                       className="mb-0 cursor-pointer"
-                      style={{ fontWeight: 300, fontSize: '14px' }}
+                      className="text-sm font-light"
                     >
                       Inactive
                     </Label>
@@ -196,14 +190,12 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                 </RadioGroup>
               </div>
             )}
-            <div className="h-px w-full" style={{ backgroundColor: '#E5E7EB' }} />
+            <div className="h-px w-full bg-gray-200" />
           </div>
 
           {/* Client & Contract Section */}
           <div className="space-y-4">
-            <h3 className="text-base font-medium" style={{ color: '#1A1A1A' }}>
-              Client & Contract
-            </h3>
+            <h3 className="text-dark-950 text-base font-medium">Client & Contract</h3>
             <div className="grid grid-cols-2 gap-4">
               <Input
                 id="client_company"
@@ -223,14 +215,12 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                 disabled={updateMutation.isPending}
               />
             </div>
-            <div className="h-px w-full" style={{ backgroundColor: '#E5E7EB' }} />
+            <div className="h-px w-full bg-gray-200" />
           </div>
 
           {/* Timeline Section */}
           <div className="space-y-4">
-            <h3 className="text-base font-medium" style={{ color: '#1A1A1A' }}>
-              Timeline
-            </h3>
+            <h3 className="text-dark-950 text-base font-medium">Timeline</h3>
             <div className="flex items-center gap-4">
               <div className="flex-1">
                 <DateSelect
@@ -270,7 +260,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                 </Label>
               </div>
             </div>
-            <div className="h-px w-full" style={{ backgroundColor: '#E5E7EB' }} />
+            <div className="h-px w-full bg-gray-200" />
           </div>
 
           {/* Description Section */}
@@ -301,15 +291,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
           variant="outline"
           onClick={onClose}
           disabled={updateMutation.isPending}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: '#6B7280',
-            color: '#FFFFFF',
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
           Cancel
         </Button>
@@ -318,15 +300,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
           form="edit-project-form"
           variant="primary"
           disabled={updateMutation.isPending}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: '#A7E8BD',
-            color: '#1A1A1A',
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="text-dark-950 h-[45px] flex-1 rounded-md border-none bg-[#A7E8BD] text-sm font-medium"
         >
           {updateMutation.isPending ? 'Saving...' : 'Save'}
         </Button>
@@ -344,7 +318,7 @@ export function EditProjectModal({ project, open, onClose, onSuccess }: EditProj
         icon={
           <div
             className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: '#A7E8BD' }}
+            className="bg-[#A7E8BD]"
           >
             <Icons.PencilEdit size={20} color="#1A1A1A" strokeWidth={2} />
           </div>
