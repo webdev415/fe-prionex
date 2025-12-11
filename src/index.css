@@ -1,6 +1,180 @@
 @import 'tailwindcss';
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
 
+@theme {
+  /* PRIMARY (Light Blue #0CA8EB) - CTAs, links, focus states, interactive elements */
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-200: #b9e7fe;
+  --color-primary-300: #7cd4fd;
+  --color-primary-400: #36c0fa;
+  --color-primary-500: #0ca8eb;
+  --color-primary-600: #008fd6;
+  --color-primary-700: #016aa3;
+  --color-primary-800: #065a86;
+  --color-primary-900: #0b4b6f;
+  --color-primary-950: #07304a;
+
+  /* INFORMATION (Blue #3B82F6) - Info messages, secondary actions, informational badges */
+  --color-information-50: #eff6ff;
+  --color-information-100: #dbeafe;
+  --color-information-200: #bfdbfe;
+  --color-information-300: #93c5fd;
+  --color-information-400: #60a5fa;
+  --color-information-500: #3b82f6;
+  --color-information-600: #2563eb;
+  --color-information-700: #1d4ed8;
+  --color-information-800: #1e40af;
+  --color-information-900: #1e3a8a;
+  --color-information-950: #172e54;
+
+  /* DARK (Dark Gray/Black) - Text, dark backgrounds, headers */
+  --color-dark-50: #366a80;
+  --color-dark-100: #28576a;
+  --color-dark-200: #1f4150;
+  --color-dark-300: #152f3a;
+  --color-dark-400: #0b1b22;
+  --color-dark-500: #050d11;
+  --color-dark-600: #040b0e;
+  --color-dark-700: #02090b;
+  --color-dark-800: #02090b;
+  --color-dark-900: #000000;
+  --color-dark-950: #000000;
+
+  /* GRAY (Neutral Gray) - Borders, dividers, disabled states, secondary text */
+  --color-gray-50: #f7f7f7;
+  --color-gray-100: #ededed;
+  --color-gray-200: #dfdfdf;
+  --color-gray-300: #c8c8c8;
+  --color-gray-400: #adadad;
+  --color-gray-500: #a1a1a1;
+  --color-gray-600: #888888;
+  --color-gray-700: #7b7b7b;
+  --color-gray-800: #676767;
+  --color-gray-900: #545454;
+  --color-gray-950: #363636;
+
+  /* LIGHT (Light Gray/White) - Light backgrounds, cards, panels */
+  --color-light-50: #f2f3f0;
+  --color-light-100: #ebece8;
+  --color-light-200: #cdcfd4;
+  --color-light-300: #abafb5;
+  --color-light-400: #81858f;
+  --color-light-500: #6d727d;
+  --color-light-600: #575a63;
+  --color-light-700: #4a4d54;
+  --color-light-800: #424448;
+  --color-light-900: #3a3b3f;
+  --color-light-950: #242528;
+
+  /* SUCCESS (Green #22C55E) - Success messages, positive feedback, completed states */
+  --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
+  --color-success-200: #bbf7d0;
+  --color-success-300: #86efac;
+  --color-success-400: #4ade80;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+  --color-success-700: #15803d;
+  --color-success-800: #166534;
+  --color-success-900: #14532d;
+  --color-success-950: #052e14;
+
+  /* WARNING (Yellow #EAB308) - Warning messages, caution states, pending actions */
+  --color-warning-50: #fefce8;
+  --color-warning-100: #fef9c3;
+  --color-warning-200: #fef08a;
+  --color-warning-300: #fde047;
+  --color-warning-400: #facc15;
+  --color-warning-500: #eab308;
+  --color-warning-600: #ca8a04;
+  --color-warning-700: #a16207;
+  --color-warning-800: #854d0e;
+  --color-warning-900: #713f12;
+  --color-warning-950: #422306;
+
+  /* ERROR (Red #EF4444) - Error messages, destructive actions, validation failures */
+  --color-error-50: #fef2f2;
+  --color-error-100: #fee2e2;
+  --color-error-200: #fecaca;
+  --color-error-300: #fca5a5;
+  --color-error-400: #f87171;
+  --color-error-500: #ef4444;
+  --color-error-600: #dc2626;
+  --color-error-700: #b91c1c;
+  --color-error-800: #991b1b;
+  --color-error-900: #7f1d1d;
+  --color-error-950: #450a0a;
+
+  --color-secondary-50: #ecfdf5;
+  --color-secondary-100: #d1fae5;
+  --color-secondary-200: #a7f3d0;
+  --color-secondary-300: #6ee7b7;
+  --color-secondary-400: #34d399;
+  --color-secondary-500: #10b981;
+  --color-secondary-600: #059669;
+  --color-secondary-700: #047857;
+  --color-secondary-800: #065f46;
+  --color-secondary-900: #064e3b;
+  --color-secondary-950: #022c22;
+
+  --color-tertiary-50: #faf5ff;
+  --color-tertiary-100: #f3e8ff;
+  --color-tertiary-200: #e9d5ff;
+  --color-tertiary-300: #d8b4fe;
+  --color-tertiary-400: #c084fc;
+  --color-tertiary-500: #8b5cf6;
+  --color-tertiary-600: #7c3aed;
+  --color-tertiary-700: #6d28d9;
+  --color-tertiary-800: #5b21b6;
+  --color-tertiary-900: #4c1d95;
+  --color-tertiary-950: #2e1065;
+
+  /* Font Family */
+  --font-family-sans: 'Lexend', sans-serif;
+
+  /* Font Sizes - Display */
+  --font-size-2xl-display: 72px;
+  --line-height-2xl-display: 125%;
+  --font-size-xl-display: 60px;
+  --line-height-xl-display: 125%;
+  --font-size-lg-display: 48px;
+  --line-height-lg-display: 126%;
+  --font-size-md-display: 36px;
+  --line-height-md-display: 129%;
+  --font-size-sm-display: 30px;
+  --line-height-sm-display: 120%;
+  --font-size-xs-display: 24px;
+  --line-height-xs-display: 132%;
+
+  /* Font Sizes - Text */
+  --font-size-text-xl: 20px;
+  --line-height-text-xl: 150%;
+  --font-size-text-lg: 18px;
+  --line-height-text-lg: 155%;
+  --font-size-text-md: 16px;
+  --line-height-text-md: 150%;
+  --font-size-text-sm: 14px;
+  --line-height-text-sm: 140%;
+  --font-size-text-xs: 12px;
+  --line-height-text-xs: 150%;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+
+  /* Box Shadow */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-card: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
 @layer base {
   :root {
     font-family: 'Lexend', sans-serif;
