@@ -144,18 +144,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
       {/* Project Name (Always Read-only) */}
       <div>
         <Label>Project</Label>
-        <div
-          className="rounded-lg border bg-white px-4 py-2"
-          style={{
-            borderColor: '#F2F3F0',
-            fontSize: '14px',
-            fontWeight: 300,
-            color: '#030712',
-            height: '45px',
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
+        <div className="border-light-50 flex h-[45px] items-center rounded-lg border bg-white px-4 py-2 text-sm font-light text-gray-950">
           {projectName}
         </div>
       </div>
@@ -165,18 +154,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
         <Label required={!isDefaultRole}>Role Name</Label>
         {isDefaultRole ? (
           // Default role: read-only (backend prevents changes)
-          <div
-            className="rounded-lg border bg-white px-4 py-2"
-            style={{
-              borderColor: '#F2F3F0',
-              fontSize: '14px',
-              fontWeight: 300,
-              color: '#030712',
-              height: '45px',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
+          <div className="border-light-50 flex h-[45px] items-center rounded-lg border bg-white px-4 py-2 text-sm font-light text-gray-950">
             {role.name}
           </div>
         ) : (
@@ -189,7 +167,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
               disabled={updateMutation.isPending}
             />
             {errors.name && (
-              <p className="mt-1 text-sm" style={{ color: '#EF4444' }}>
+              <p className="text-error-500 mt-1 text-sm">
                 {(errors.name as { message?: string })?.message}
               </p>
             )}
@@ -202,19 +180,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
         <Label>Description</Label>
         {isDefaultRole ? (
           // Default role: read-only
-          <div
-            className="rounded-lg border bg-white px-4 py-2"
-            style={{
-              borderColor: '#F2F3F0',
-              fontSize: '14px',
-              fontWeight: 300,
-              color: '#030712',
-              minHeight: '80px',
-              display: 'flex',
-              alignItems: 'flex-start',
-              paddingTop: '12px',
-            }}
-          >
+          <div className="border-light-50 flex min-h-[80px] items-start rounded-lg border bg-white px-4 py-2 pt-3 text-sm font-light text-gray-950">
             {role.description || '—'}
           </div>
         ) : (
@@ -232,38 +198,22 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
       <div>
         <Label>
           Permissions
-          <span className="ml-2 font-light" style={{ fontSize: '14px', color: '#6B7280' }}>
+          <span className="ml-2 text-sm font-light text-gray-500">
             (Selected: {selectedPermissions.length} of {permissions.length} permissions)
           </span>
         </Label>
 
-        <div
-          className="max-h-96 overflow-y-auto rounded-xl"
-          style={{
-            backgroundColor: '#FFFFFF',
-            padding: '24px',
-          }}
-        >
+        <div className="max-h-96 overflow-y-auto rounded-xl bg-white p-6">
           {loadingPermissions ? (
-            <div className="py-4 text-sm" style={{ color: '#6B7280' }}>
-              Loading permissions...
-            </div>
+            <div className="py-4 text-sm text-gray-500">Loading permissions...</div>
           ) : (
             <div>
               {Object.entries(permissionsByCategory).map(([category, categoryPerms]) => {
                 return (
                   <div key={category} className="mb-6 last:mb-0">
-                    <div
-                      className="mb-3 flex items-center justify-between"
-                      style={{ backgroundColor: 'transparent' }}
-                    >
-                      <span
-                        className="font-light"
-                        style={{ fontSize: '14px', fontWeight: 300, color: '#030712' }}
-                      >
-                        {category}
-                      </span>
-                      <span className="text-xs" style={{ color: '#6B7280' }}>
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="text-sm font-light text-gray-950">{category}</span>
+                      <span className="text-xs text-gray-500">
                         {categoryPerms.filter((p) => selectedPermissions.includes(p.id)).length}/
                         {categoryPerms.length}
                       </span>
@@ -280,21 +230,9 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
                             aria-label={perm.name}
                           />
                           <div className="flex-1">
-                            <span
-                              className="font-light"
-                              style={{ fontSize: '14px', fontWeight: 300, color: '#030712' }}
-                            >
-                              {perm.name}
-                            </span>
+                            <span className="text-sm font-light text-gray-950">{perm.name}</span>
                             {perm.description && (
-                              <span
-                                className="ml-2 font-light"
-                                style={{
-                                  fontSize: '14px',
-                                  fontWeight: 300,
-                                  color: '#6B7280',
-                                }}
-                              >
+                              <span className="ml-2 text-sm font-light text-gray-500">
                                 {perm.description}
                               </span>
                             )}
@@ -309,9 +247,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
           )}
         </div>
         {errors.permission_ids && (
-          <p className="mt-1 text-sm" style={{ color: '#EF4444' }}>
-            {errors.permission_ids.message}
-          </p>
+          <p className="text-error-500 mt-1 text-sm">{errors.permission_ids.message}</p>
         )}
       </div>
 

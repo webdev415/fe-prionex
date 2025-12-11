@@ -127,7 +127,7 @@ export function UserManagementPage() {
           // Show all roles, separated by comma if multiple
           return <span>{user.projects.map((p) => p.role_name).join(', ')}</span>
         }
-        return <span style={{ color: '#6B7280' }}>No role</span>
+        return <span className="text-gray-500">No role</span>
       },
     },
     {
@@ -144,24 +144,14 @@ export function UserManagementPage() {
         <div className="flex items-center justify-center gap-4">
           <button
             onClick={() => handleView(user)}
-            className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
-            style={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: '#05040D',
-            }}
+            className="text-dark-950 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
           >
             <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
             View
           </button>
           <button
             onClick={() => handleEdit(user)}
-            className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
-            style={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: '#05040D',
-            }}
+            className="text-dark-950 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
           >
             <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
             Edit
@@ -170,28 +160,14 @@ export function UserManagementPage() {
             <button
               onClick={() => handleImpersonate(user)}
               disabled={authLoading || impersonatingUserId !== null}
-              className="flex items-center gap-1 font-medium transition-colors hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
-              style={{
-                fontSize: '12px',
-                fontWeight: 500,
-                color: '#05040D',
-              }}
+              className="text-dark-950 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />
               {impersonatingUserId === user.id ? 'Impersonating...' : 'Impersonate'}
             </button>
           )}
           <div className="flex items-center gap-2">
-            <label
-              className="font-medium"
-              style={{
-                fontSize: '12px',
-                fontWeight: 500,
-                color: '#05040D',
-              }}
-            >
-              Unlock
-            </label>
+            <label className="text-dark-950 text-xs font-medium">Unlock</label>
             <ToggleSwitch
               checked={isUnlocked(user)}
               onChange={(checked) => handleUnlockToggle(user, checked)}
@@ -208,55 +184,19 @@ export function UserManagementPage() {
       {/* Page Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1
-            className="font-light"
-            style={{
-              fontSize: '24px',
-              fontWeight: 300,
-              color: '#1A1A1A',
-            }}
-          >
-            User Management
-          </h1>
-          <span
-            className="font-light"
-            style={{
-              fontSize: '16px',
-              fontWeight: 300,
-              color: '#6B7280',
-            }}
-          >
-            {totalUsers}
-          </span>
+          <h1 className="text-dark-950 text-2xl font-light">User Management</h1>
+          <span className="text-base font-light text-gray-500">{totalUsers}</span>
         </div>
 
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-          style={{
-            backgroundColor: '#164E63',
-          }}
+          className="flex items-center rounded-full bg-[#164E63] shadow-md transition-all duration-200 hover:shadow-lg"
           aria-label="Add new user"
         >
-          <div
-            className="flex items-center justify-center rounded-full"
-            style={{
-              width: '40px',
-              height: '40px',
-              backgroundColor: '#A7E8BD',
-              marginLeft: '4px',
-            }}
-          >
+          <div className="ml-1 flex h-10 w-10 items-center justify-center rounded-full bg-[#A7E8BD]">
             <Icons.Add size={20} color={'#1A1A1A'} strokeWidth={2} />
           </div>
-          <span
-            className="px-4 py-3 font-medium text-white"
-            style={{
-              fontSize: '14px',
-            }}
-          >
-            Add New User
-          </span>
+          <span className="px-4 py-3 text-sm font-medium text-white">Add New User</span>
         </button>
       </div>
 
