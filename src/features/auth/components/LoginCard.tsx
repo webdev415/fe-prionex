@@ -13,7 +13,7 @@ export function LoginCard({ onSubmit, isLoading, error }: LoginCardProps) {
   return (
     <div className="w-full">
       <div className="mb-6 flex w-full flex-col items-center text-center sm:mb-8">
-        <h1 className="text-display-xs sm:text-display-sm text-primary-950 flex items-center gap-2 font-medium">
+        <h1 className="text-display-xs sm:text-display-sm text-dark-500 flex items-center gap-2 font-medium">
           Welcome to Prionex
           <span>👋🏻</span>
         </h1>

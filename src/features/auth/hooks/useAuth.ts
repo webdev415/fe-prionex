@@ -56,8 +56,9 @@ export function useAuth() {
   const startImpersonation = useCallback(
     async (userId: number) => {
       await storeStartImpersonation(userId)
+      navigate('/dashboard')
     },
-    [storeStartImpersonation]
+    [storeStartImpersonation, navigate]
   )
 
   const exitImpersonation = useCallback(async () => {

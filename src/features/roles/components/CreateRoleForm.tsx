@@ -16,7 +16,6 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Label } from '@/components/ui/Label'
 import { Alert } from '@/components/ui/Alert'
 import { Checkbox } from '@/components/ui/Checkbox'
-import { colors } from '@/lib/colors'
 
 interface CreateRoleFormProps {
   projectId: number
@@ -108,11 +107,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
           placeholder="Enter Role Name"
           disabled={createMutation.isPending}
         />
-        {errors.name && (
-          <p className="mt-1 text-sm" style={{ color: '#EF4444' }}>
-            {errors.name.message}
-          </p>
-        )}
+        {errors.name && <p className="text-error-500 mt-1 text-sm">{errors.name.message}</p>}
       </div>
 
       {/* Description */}
@@ -128,9 +123,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
           disabled={createMutation.isPending}
         />
         {errors.description && (
-          <p className="mt-1 text-sm" style={{ color: '#EF4444' }}>
-            {errors.description.message}
-          </p>
+          <p className="text-error-500 mt-1 text-sm">{errors.description.message}</p>
         )}
       </div>
 
@@ -138,38 +131,22 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
       <div>
         <Label>
           Permissions
-          <span className="ml-2 font-light" style={{ fontSize: '14px', color: colors.gray[500] }}>
+          <span className="ml-2 text-sm font-light text-gray-500">
             (Selected: {selectedPermissions.length} of {permissions.length} permissions)
           </span>
         </Label>
 
-        <div
-          className="max-h-96 overflow-y-auto rounded-xl"
-          style={{
-            backgroundColor: '#FFFFFF',
-            padding: '24px',
-          }}
-        >
+        <div className="max-h-96 overflow-y-auto rounded-xl bg-white p-6">
           {loadingPermissions ? (
-            <div className="py-4 text-sm" style={{ color: colors.gray[500] }}>
-              Loading permissions...
-            </div>
+            <div className="py-4 text-sm text-gray-500">Loading permissions...</div>
           ) : (
             <div>
               {Object.entries(permissionsByCategory).map(([category, categoryPerms]) => {
                 return (
                   <div key={category} className="mb-6 last:mb-0">
-                    <div
-                      className="mb-3 flex items-center justify-between"
-                      style={{ backgroundColor: 'transparent' }}
-                    >
-                      <span
-                        className="font-light"
-                        style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
-                      >
-                        {category}
-                      </span>
-                      <span className="text-xs" style={{ color: colors.gray[500] }}>
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="text-sm font-light text-gray-950">{category}</span>
+                      <span className="text-xs text-gray-500">
                         {categoryPerms.filter((p) => selectedPermissions.includes(p.id)).length}/
                         {categoryPerms.length}
                       </span>
@@ -186,21 +163,9 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
                             aria-label={perm.name}
                           />
                           <div className="flex-1">
-                            <span
-                              className="font-light"
-                              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
-                            >
-                              {perm.name}
-                            </span>
+                            <span className="text-sm font-light text-gray-950">{perm.name}</span>
                             {perm.description && (
-                              <span
-                                className="ml-2 font-light"
-                                style={{
-                                  fontSize: '14px',
-                                  fontWeight: 300,
-                                  color: colors.gray[500],
-                                }}
-                              >
+                              <span className="ml-2 text-sm font-light text-gray-500">
                                 {perm.description}
                               </span>
                             )}
@@ -215,9 +180,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
           )}
         </div>
         {errors.permission_ids && (
-          <p className="mt-1 text-sm" style={{ color: '#EF4444' }}>
-            {errors.permission_ids.message}
-          </p>
+          <p className="text-error-500 mt-1 text-sm">{errors.permission_ids.message}</p>
         )}
       </div>
 

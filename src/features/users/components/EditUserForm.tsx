@@ -22,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
-import { colors } from '@/lib/colors'
 import type { UserDetailResponse } from '../types'
 import { useProjects } from '@/features/projects'
 import { useRoles } from '@/features/roles'
@@ -147,16 +146,8 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="username">Username:</Label>
-            <Input
-              id="username"
-              value={user.username}
-              disabled
-              className="mt-1"
-              style={{ backgroundColor: '#F9FAFB' }}
-            />
-            <p className="mt-1 text-xs" style={{ color: colors.gray[500] }}>
-              Username cannot be changed
-            </p>
+            <Input id="username" value={user.username} disabled className="mt-1 bg-gray-50" />
+            <p className="mt-1 text-xs text-gray-500">Username cannot be changed</p>
           </div>
 
           <div>
@@ -259,14 +250,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
               control={control}
               render={({ field }) => (
                 <Select value={field.value || 'uk'} onValueChange={field.onChange}>
-                  <SelectTrigger
-                    className="mt-1 w-full border"
-                    style={{
-                      borderColor: colors.light[100],
-                      fontSize: '14px',
-                      color: colors.neutral.dark[500],
-                    }}
-                  >
+                  <SelectTrigger className="border-light-50 text-dark-500 mt-1 w-full border text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -291,14 +275,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
               control={control}
               render={({ field }) => (
                 <Select value={field.value || 'Europe/Kyiv'} onValueChange={field.onChange}>
-                  <SelectTrigger
-                    className="mt-1 w-full border"
-                    style={{
-                      borderColor: colors.light[100],
-                      fontSize: '14px',
-                      color: colors.neutral.dark[500],
-                    }}
-                  >
+                  <SelectTrigger className="border-light-50 text-dark-500 mt-1 w-full border text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -328,20 +305,14 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
       {/* Assign Projects Section (editable, similar to CreateUserForm) */}
       <div className="mt-4 mb-0 space-y-4">
-        <h3
-          className="text-sm font-semibold"
-          style={{ color: colors.neutral.dark[500], fontSize: '14px' }}
-        >
-          Assign Projects:
-        </h3>
+        <h3 className="text-dark-500 text-sm font-semibold">Assign Projects:</h3>
         <div className="flex flex-wrap gap-4">
           {projects.map((project) => {
             const isChecked = selectedProjects.includes(project.id)
             return (
               <label
                 key={project.id}
-                className="flex cursor-pointer items-center gap-2 text-sm font-light"
-                style={{ color: colors.neutral.dark[500] }}
+                className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm font-light"
               >
                 <Checkbox
                   checked={isChecked}
@@ -369,12 +340,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       {/* Role per Project Section (editable) */}
       {selectedProjects.length > 0 && (
         <div className="mt-4 mb-0 space-y-4">
-          <h3
-            className="text-sm font-semibold"
-            style={{ color: colors.neutral.dark[500], fontSize: '14px' }}
-          >
-            Role per Project:
-          </h3>
+          <h3 className="text-dark-500 text-sm font-semibold">Role per Project:</h3>
           <div className="space-y-3">
             {selectedProjects.map((projectId) => {
               const project = projects.find((p) => p.id === projectId)
@@ -383,9 +349,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
               return (
                 <div key={projectId} className="grid w-full grid-cols-2 items-center gap-4">
-                  <span className="text-sm font-light" style={{ color: colors.neutral.dark[500] }}>
-                    {project?.name}:
-                  </span>
+                  <span className="text-dark-500 text-sm font-light">{project?.name}:</span>
                   <Select
                     value={selectedRoleId?.toString() || ''}
                     onValueChange={(value) => {
@@ -393,14 +357,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
                       setProjectRoles((prev) => ({ ...prev, [projectId]: roleId }))
                     }}
                   >
-                    <SelectTrigger
-                      className="mt-1 w-full border"
-                      style={{
-                        borderColor: colors.light[100],
-                        fontSize: '14px',
-                        color: colors.neutral.dark[500],
-                      }}
-                    >
+                    <SelectTrigger className="border-light-50 text-dark-500 mt-1 w-full border text-sm">
                       <SelectValue placeholder="Not assigned" />
                     </SelectTrigger>
                     <SelectContent>

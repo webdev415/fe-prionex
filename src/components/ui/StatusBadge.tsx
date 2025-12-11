@@ -17,28 +17,12 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 text-xs font-medium ${className || ''}`}
-      style={{
-        height: '33px',
-        backgroundColor: isActive ? '#204E4D' : '#ADADAD', // Color/Secondary/800 for active, Color/Gray/400 for disabled
-        color: '#FFFFFF',
-      }}
+      className={`inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white ${isActive ? 'bg-[#204E4D]' : 'bg-[#ADADAD]'} ${className || ''}`}
     >
       {isActive ? (
-        <span
-          className="h-2 w-2 rounded-full"
-          style={{
-            backgroundColor: '#FFFFFF',
-          }}
-        />
+        <span className="h-2 w-2 rounded-full bg-white" />
       ) : (
-        <span
-          className="h-2 w-2 rounded-full border"
-          style={{
-            borderColor: '#DFDFDF', // Color/Gray/200
-            backgroundColor: 'transparent',
-          }}
-        />
+        <span className="h-2 w-2 rounded-full border border-[#DFDFDF] bg-transparent" />
       )}
       {isActive
         ? 'Active'

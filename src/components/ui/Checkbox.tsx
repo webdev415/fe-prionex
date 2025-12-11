@@ -8,7 +8,6 @@
 import * as React from 'react'
 import * as CheckboxPrimitive from '@radix-ui/react-checkbox'
 import { cn } from '@/lib/utils'
-import { colors } from '@/lib/colors'
 
 export interface CheckboxProps extends React.ComponentPropsWithoutRef<
   typeof CheckboxPrimitive.Root
@@ -22,23 +21,15 @@ const Checkbox = React.forwardRef<React.ElementRef<typeof CheckboxPrimitive.Root
       <CheckboxPrimitive.Root
         ref={ref}
         className={cn(
-          'peer ring-offset-background focus-visible:ring-ring h-4 w-4 shrink-0 rounded border focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+          'peer ring-offset-background focus-visible:ring-ring h-4 w-4 shrink-0 rounded border border-gray-300 bg-transparent focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
           className
         )}
-        style={{
-          backgroundColor: 'transparent',
-          borderColor: colors.gray[300],
-        }}
         {...props}
       >
         <CheckboxPrimitive.Indicator
-          className={cn('flex items-center justify-center text-current')}
-          style={{
-            backgroundColor: colors.primary[500],
-            borderRadius: '4px',
-            width: '100%',
-            height: '100%',
-          }}
+          className={cn(
+            'bg-primary-500 flex h-full w-full items-center justify-center rounded text-current'
+          )}
         >
           <svg
             width="12"

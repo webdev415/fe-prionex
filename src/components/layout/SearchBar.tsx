@@ -6,7 +6,6 @@
 
 import { useState } from 'react'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import {
   Select,
   SelectContent,
@@ -62,45 +61,27 @@ export function SearchBar({
         onChange={(e) => setSearchQuery(e.target.value)}
         onKeyPress={handleKeyPress}
         placeholder={placeholder}
-        className="flex-1 bg-transparent text-sm outline-none placeholder:font-light placeholder:text-gray-400"
-        style={{
-          color: colors.neutral.dark[500],
-        }}
+        className="text-dark-500 flex-1 bg-transparent text-sm outline-none placeholder:font-light placeholder:text-gray-400"
       />
       <div className="h-5 w-px bg-gray-300" />
       <Select value={searchType} onValueChange={setSearchType}>
-        <SelectTrigger
-          className="h-auto border-0 bg-transparent p-0 shadow-none focus:ring-0"
-          style={{
-            width: 'auto',
-            minWidth: '120px',
-            fontSize: '12px',
-            color: colors.neutral.dark[500],
-          }}
-        >
+        <SelectTrigger className="text-dark-500 h-auto w-auto min-w-[120px] border-0 bg-transparent p-0 text-xs shadow-none focus:ring-0">
           <SelectValue />
         </SelectTrigger>
         <SelectContent className="bg-white">
           {searchOptions.map((option) => (
-            <SelectItem
-              key={option.value}
-              value={option.value}
-              style={{ fontSize: '12px', color: colors.neutral.dark[500] }}
-            >
+            <SelectItem key={option.value} value={option.value} className="text-dark-500 text-xs">
               {option.label}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       <button
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105"
+        className="bg-primary-300 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105"
         aria-label="Search"
         onClick={handleSearch}
-        style={{
-          backgroundColor: colors.primary[300],
-        }}
       >
-        <Icons.Search size={20} color={colors.neutral.dark[500]} strokeWidth={1.5} />
+        <Icons.Search size={20} color="#05040D" strokeWidth={1.5} />
       </button>
     </div>
   )

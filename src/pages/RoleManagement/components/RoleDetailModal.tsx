@@ -10,7 +10,6 @@ import { useRole } from '@/features/roles/hooks/useRole'
 import { useProject } from '@/features/projects/hooks/useProject'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
-import { colors } from '@/lib/colors'
 
 interface RoleDetailModalProps {
   open: boolean
@@ -30,11 +29,8 @@ export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps)
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.primary[400] }}
-          >
-            <Icons.View size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.View size={20} color="#05040D" strokeWidth={2} />
           </div>
         }
         title={role ? `View Role: ${role.name}${role.is_default ? ' (Default)' : ''}` : 'View Role'}
@@ -54,17 +50,9 @@ export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps)
       <ModalFooter>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={onClose}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: colors.gray[500],
-            color: '#FFFFFF',
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
           Close
         </Button>

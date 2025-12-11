@@ -9,7 +9,6 @@ import { CreateUserForm } from '@/features/users/components/CreateUserForm'
 import { useProjects } from '@/features/projects'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
-import { colors } from '@/lib/colors'
 
 interface CreateUserModalProps {
   open: boolean
@@ -33,11 +32,8 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: '#A0F229' }}
-          >
-            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.Add size={20} color="#05040D" strokeWidth={2} />
           </div>
         }
         title="Create New User"
@@ -56,17 +52,9 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
       <ModalFooter>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={onClose}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: colors.gray[500],
-            color: '#FFFFFF',
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
           Cancel
         </Button>
@@ -75,15 +63,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
           form="create-user-form"
           variant="primary"
           disabled={isLoading}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="text-dark-500 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
         >
           Save
         </Button>

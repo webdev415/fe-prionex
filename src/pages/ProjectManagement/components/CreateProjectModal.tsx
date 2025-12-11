@@ -17,7 +17,6 @@ import { Label } from '@/components/ui/Label'
 import { useCreateProject } from '@/features/projects/hooks/useProjectMutations'
 import type { CreateProjectInput } from '@/features/projects/types'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 
 interface CreateProjectModalProps {
   open: boolean
@@ -117,11 +116,8 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.primary[300] }}
-          >
-            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.Add size={20} color="#05040D" strokeWidth={2} />
           </div>
         }
         title="Create New Project"
@@ -139,9 +135,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
 
           {/* Project Information Section */}
           <div className="space-y-4">
-            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
-              Project Information
-            </h3>
+            <h3 className="text-dark-500 text-base font-medium">Project Information</h3>
             <div className="grid grid-cols-2 gap-4">
               <Input
                 id="name"
@@ -165,14 +159,12 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 error={errors.code}
               />
             </div>
-            <div className="h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+            <div className="h-px w-full bg-gray-200" />
           </div>
 
           {/* Client & Contract Section */}
           <div className="space-y-4">
-            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
-              Client & Contract
-            </h3>
+            <h3 className="text-dark-500 text-base font-medium">Client & Contract</h3>
             <div className="grid grid-cols-2 gap-4">
               <Input
                 id="client_company"
@@ -192,14 +184,12 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 disabled={createMutation.isPending}
               />
             </div>
-            <div className="h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+            <div className="h-px w-full bg-gray-200" />
           </div>
 
           {/* Timeline Section */}
           <div className="space-y-4">
-            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
-              Timeline
-            </h3>
+            <h3 className="text-dark-500 text-base font-medium">Timeline</h3>
             <div className="flex items-center gap-4">
               <div className="flex-1">
                 <DateSelect
@@ -239,7 +229,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 </Label>
               </div>
             </div>
-            <div className="h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+            <div className="h-px w-full bg-gray-200" />
           </div>
 
           {/* Description Section */}
@@ -259,18 +249,10 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
       <ModalFooter>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={onClose}
           disabled={createMutation.isPending}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: colors.gray[500],
-            color: '#FFFFFF',
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
           Cancel
         </Button>
@@ -279,15 +261,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
           form="create-project-form"
           variant="primary"
           disabled={createMutation.isPending}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
         >
           {createMutation.isPending ? 'Creating...' : 'Create Project'}
         </Button>
