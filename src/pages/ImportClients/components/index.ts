@@ -5,3 +5,4 @@ export {
   type DatasetFile,
 } from './Step2VendorDump'
 export { ImportHistoryModal, type ImportHistoryData, type ImportStatus } from './ImportHistoryModal'
+export { ImportHistoryFiltersBar, type ImportHistoryFilters } from './ImportHistoryFiltersBar'

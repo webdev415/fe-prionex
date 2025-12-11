@@ -68,6 +68,9 @@ import {
   FileRemoveIcon,
   Csv02Icon,
   Sorting01Icon,
+  PivotIcon,
+  FolderRemoveIcon,
+  ReloadIcon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -173,6 +176,9 @@ export const Icons = {
   ArrowLeft02: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowLeft02Icon} {...props} />,
   FileRemove: (props: Omit<IconProps, 'icon'>) => <Icon icon={FileRemoveIcon} {...props} />,
   Csv02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Csv02Icon} {...props} />,
+  Pivot: (props: Omit<IconProps, 'icon'>) => <Icon icon={PivotIcon} {...props} />,
+  FolderRemove: (props: Omit<IconProps, 'icon'>) => <Icon icon={FolderRemoveIcon} {...props} />,
+  Reload: (props: Omit<IconProps, 'icon'>) => <Icon icon={ReloadIcon} {...props} />,
 }
 
 /**
@@ -232,6 +238,9 @@ export {
   ArrowLeft02Icon,
   FileRemoveIcon,
   Csv02Icon,
+  PivotIcon,
+  FolderRemoveIcon,
+  ReloadIcon,
 }
 
 /**

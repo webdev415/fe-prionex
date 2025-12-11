@@ -11,6 +11,8 @@ import { PermissionRoute } from './PermissionRoute'
 import { GuestRoute } from './GuestRoute'
 import { DashboardLayout } from '@/components/layout'
 import { PERMISSIONS } from '@/constants/permissions'
+import { ImportHistoryPage } from '@/pages/ImportClients/ImportHistoryPage'
+import { ImportDetailsPage } from '@/pages/ImportClients/ImportDetailsPage'
 
 function DashboardContent() {
   return (
@@ -68,6 +70,26 @@ export const router = createBrowserRouter([
       <ProtectedRoute>
         <DashboardLayout>
           <ImportClientsPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/import/history/:id',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ImportDetailsPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/import/history',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ImportHistoryPage />
         </DashboardLayout>
       </ProtectedRoute>
     ),

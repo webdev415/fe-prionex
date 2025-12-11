@@ -14,8 +14,10 @@ import { Step2VendorDump, type Step2VendorDumpData } from './components/Step2Ven
 import { colors } from '@/lib/colors'
 import { Icons } from '@/lib/icons'
 import { ImportHistoryModal, type ImportHistoryData } from './components/ImportHistoryModal'
+import { useNavigate } from 'react-router-dom'
 
 export function ImportClientsPage() {
+  const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(1)
   const [isImportInProgress] = useState(false) // Add this state
   const [showImportHistory, setShowImportHistory] = useState(false)
@@ -80,8 +82,7 @@ export function ImportClientsPage() {
   }
 
   const handleViewHistory = () => {
-    // TODO: Implement view history functionality
-    console.log('View History clicked')
+    navigate('/dashboard/import/history')
   }
 
   const handleGoToImportHistory = () => {
