@@ -10,23 +10,29 @@ import { StepIndicator, type Step } from '@/components/ui/StepIndicator'
 import { Button } from '@/components/ui/Button'
 import { Step1LoanSource, type Step1Data } from './components/Step1LoanSource'
 import { Step2FileUpload, type Step2Data } from './components/Step2FileUpload'
+import { Step2VendorDump, type Step2VendorDumpData } from './components/Step2VendorDump'
 import { colors } from '@/lib/colors'
 import { Icons } from '@/lib/icons'
-
-const STEPS: Step[] = [
-  {
-    number: 1,
-    label: 'Loan source & import type',
-  },
-  {
-    number: 2,
-    label: 'Files (Simple CSV)',
-  },
-]
+import { ImportHistoryModal, type ImportHistoryData } from './components/ImportHistoryModal'
 
 export function ImportClientsPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [isImportInProgress] = useState(false) // Add this state
+  const [showImportHistory, setShowImportHistory] = useState(false)
+  
+  // Mock data for import history - in real app, this would come from API
+  const [importHistoryData] = useState<ImportHistoryData | null>({
+    file: 'clients_batch_2024-11-20.csv',
+    uploadedBy: 'Supervisor Olena K.',
+    uploadedAt: '10:03',
+    status: 'failed', // Can be 'completed', 'completed_with_errors', or 'failed'
+    totalRows: 10000,
+    newClients: 7500,
+    updatedClients: 2500,
+    errors: 0,
+    processingTime: '7 min 42 s',
+  })
+
   const [step1Data, setStep1Data] = useState<Step1Data>({
     sellerCreditor: '',
     projectCode: '',
@@ -39,14 +45,19 @@ export function ImportClientsPage() {
     invalidFile: null,
     csvValidationError: null, 
   })
+  const [step2VendorData, setStep2VendorData] = useState<Step2VendorDumpData>({
+    files: [],
+    zipFile: null,
+    isZipUpload: false,
+  })
 
   const handleStep1Change = (data: Partial<Step1Data>) => {
     setStep1Data((prev) => ({ ...prev, ...data }))
   }
 
-  const handleStep2Change = (data: Partial<Step2Data>) => {
-    setStep2Data((prev) => ({ ...prev, ...data }))
-  }
+//   const handleStep2Change = (data: Partial<Step2Data>) => {
+//     setStep2Data((prev) => ({ ...prev, ...data }))
+//   }
 
   const handleNextStep = () => {
     if (currentStep < STEPS.length) {
@@ -72,6 +83,32 @@ export function ImportClientsPage() {
     // TODO: Implement view history functionality
     console.log('View History clicked')
   }
+
+  const handleGoToImportHistory = () => {
+    // TODO: Fetch actual import history data from API
+    // For now, using mock data
+    setShowImportHistory(true)
+  }
+
+  // Get steps based on import type
+  const getSteps = (): Step[] => {
+    const step2Label = step1Data.importType === 'vendor' 
+      ? 'Files (Vendor Dump)' 
+      : 'Files (Simple CSV)'
+    
+    return [
+      {
+        number: 1,
+        label: 'Loan source & import type',
+      },
+      {
+        number: 2,
+        label: step2Label,
+      },
+    ]
+  }
+
+  const STEPS = getSteps()
 
   return (
     <div>
@@ -155,25 +192,33 @@ export function ImportClientsPage() {
           >
             {currentStep === 1 && <Step1LoanSource data={step1Data} onChange={handleStep1Change} />}
 
-            {currentStep === 2 && (
+            {currentStep === 2 && step1Data.importType === 'simple' && (
               <Step2FileUpload 
                 data={step2Data} 
-                onChange={handleStep2Change}
-                isImportInProgress={isImportInProgress} // Pass the prop
+                onChange={(data) => setStep2Data((prev) => ({ ...prev, ...data }))}
+                isImportInProgress={isImportInProgress}
+              />
+            )}
+
+            {currentStep === 2 && step1Data.importType === 'vendor' && (
+              <Step2VendorDump 
+                data={step2VendorData} 
+                onChange={(data) => setStep2VendorData((prev) => ({ ...prev, ...data }))}
+                isImportInProgress={isImportInProgress}
               />
             )}
 
             {/* Navigation Buttons */}
             <div className="mt-8 flex justify-center">
-              {currentStep < STEPS.length ? (
+              {currentStep < STEPS.length && currentStep === 1 && (
                 <Button
                   variant="primary"
                   onClick={handleNextStep}
                   disabled={!isStep1Valid()}
                   style={{
-                    backgroundColor: colors.secondary[800], // #204E4D
+                    backgroundColor: colors.secondary[800],
                     color: '#FFFFFF',
-                    borderRadius: '9999px', // Pill shape
+                    borderRadius: '9999px',
                     padding: '4px 4px 4px 24px',
                     height: '48px',
                     display: 'flex',
@@ -183,13 +228,12 @@ export function ImportClientsPage() {
                   }}
                 >
                   <span>Next Step</span>
-                  {/* Circular icon with arrow - matching SVG design */}
                   <div
                     style={{
                       width: '40px',
                       height: '40px',
                       borderRadius: '50%',
-                      backgroundColor: colors.primary[300], // #BBFB5B
+                      backgroundColor: colors.primary[300],
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -199,13 +243,91 @@ export function ImportClientsPage() {
                     <Icons.ArrowRight02 size={24} color={colors.neutral.dark[500]} />
                   </div>
                 </Button>
-              ) : (
-                ''
               )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Import Progress Banner */}
+      {isImportInProgress && (
+      <div
+          className="flex items-center justify-between px-6 py-4 z-50 mx-50 my-10"
+          style={{      
+            backgroundColor: '#FFFFFF',
+            borderRadius: '10px',
+            border: '1px solid #ECEFF3',
+            boxShadow: '0 12px 16px -4px rgba(16, 24, 40, 0.08), 0 4px 6px -2px rgba(16, 24, 40, 0.03)',
+            gap: '16px',
+          }}
+        >
+          <div 
+            className="flex items-center"
+            style={{
+                gap: '10px',
+                padding:'4px 0 4px 12px',
+                color: '#EAB308',
+            }}
+          >
+            {/* Icon - document with refresh symbol */}
+            <Icons.FileImport size={20}  />
+            <span
+              style={{
+                fontSize: '14px',
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Import in progress
+            </span>
+          </div>
+        <span className='text-[#05040D] font-lexend text-sm font-light leading-[150%] tracking-[-0.28px]'>File: <span className='text-[#05040D] font-lexend text-sm font-medium leading-[150%] tracking-[-0.28px]'>clients_batch_2024-11-20.csv</span></span>
+        <span className='text-[#05040D] font-lexend text-sm font-light leading-[150%] tracking-[-0.28px]'>Started: <span className='text-[#05040D] font-lexend text-sm font-medium leading-[150%] tracking-[-0.28px]'>10:03</span></span>
+        <span className='text-[#05040D] font-lexend text-sm font-light leading-[150%] tracking-[-0.28px]'>Status: <span className='text-[#05040D] font-lexend text-sm font-medium leading-[150%] tracking-[-0.28px]'>45% complete</span></span>
+        <Button
+            variant="primary"
+            onClick={() => {
+            // TODO: Implement view details functionality
+            console.log('View Details clicked')
+            }}
+            style={{
+            backgroundColor: colors.secondary[800],
+            color: '#FFFFFF',
+            gap: '10px',
+            borderRadius: '8px',
+            padding: '10px 16px',
+            fontSize: '14px',
+            fontWeight: 500,
+            height: '40px',
+            }}
+        >
+            View Details
+        </Button>
+        <Button
+            variant="outline"
+            onClick={handleGoToImportHistory}
+            style={{
+            borderColor: colors.secondary[800],
+            backgroundColor: '#FFFFFF',
+            color: colors.secondary[800],
+            borderRadius: '8px',
+            gap: '10px',
+            padding: '10px 16px',
+            fontSize: '14px',
+            fontWeight: 500,
+            }}
+        >
+            Go to Import History
+        </Button>
+        </div>
+      )}
+
+      {/* Import History Modal */}
+      <ImportHistoryModal
+        open={showImportHistory}
+        onClose={() => setShowImportHistory(false)}
+        data={importHistoryData}
+      />
     </div>
   )
 }
