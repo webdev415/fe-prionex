@@ -48,7 +48,7 @@ export function ProjectDetailPanel({
   if (!hasProjects) {
     return (
       <div className="flex h-full flex-col items-center justify-center rounded-lg border border-gray-200 bg-white/50 p-6">
-        <Icons.View size={48} color="#D1D5DB" strokeWidth={1} />
+        <Icons.View size={48} className="text-gray-300" strokeWidth={1} />
         <p className="mt-4 text-sm text-gray-500">There is no project</p>
       </div>
     )
@@ -149,9 +149,9 @@ export function ProjectDetailPanel({
               onClick={() => navigate('/dashboard/roles')}
               className="bg-secondary-800 mt-3 flex items-center gap-1.5 rounded p-2.5 text-xs font-[500] text-white"
             >
-              <Icons.UserCircle02Icon size={20} color="#A0F229" />
+              <Icons.UserCircle02Icon size={20} className="text-primary-400" />
               Manage users & roles
-              <Icons.ArrowRight size={20} color="#A0F229" />
+              <Icons.ArrowRight size={20} className="text-primary-400" />
             </button>
           </div>
         </div>
@@ -191,14 +191,14 @@ export function ProjectDetailPanel({
           onClick={onEdit}
           className="bg-primary-300 text-dark-500 flex h-[45px] flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium"
         >
-          <Icons.PencilEdit size={20} color="#05040D" strokeWidth={2} />
+          <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
           Edit
         </button>
         <button
           onClick={onDelete}
           className="bg-error-500 flex h-[45px] flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium text-white"
         >
-          <Icons.Delete size={20} color="#FFFFFF" strokeWidth={2} />
+          <Icons.Delete size={20} className="text-white" strokeWidth={2} />
           Delete
         </button>
       </div>

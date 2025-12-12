@@ -30,7 +30,7 @@ export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps)
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.View size={20} color="#05040D" strokeWidth={2} />
+            <Icons.View size={20} className="text-white" strokeWidth={2} />
           </div>
         }
         title={role ? `View Role: ${role.name}${role.is_default ? ' (Default)' : ''}` : 'View Role'}

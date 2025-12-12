@@ -127,7 +127,7 @@ export function ImportHistoryFiltersBar({
         <div className="mx-2 h-5 w-px bg-gray-200" />
 
         {/* Inline Filters */}
-        <div className="flex items-center gap-4 text-xs text-gray-700">
+        <div className="flex items-center gap-4 text-xs text-gray-600">
           {/* Date Range Filter */}
           <div className="flex items-center gap-1">
             <Select

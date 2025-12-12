@@ -117,7 +117,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Add size={20} color="#05040D" strokeWidth={2} />
+            <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
         title="Create New Project"

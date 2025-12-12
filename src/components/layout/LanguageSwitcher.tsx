@@ -39,12 +39,7 @@ export function LanguageSwitcher() {
         >
           <span className="text-base leading-none">{LANGUAGE_FLAGS[currentLanguage]}</span>
           <span className="font-medium">{LANGUAGE_SHORT_NAMES[currentLanguage]}</span>
-          <Icons.ArrowDown
-            size={14}
-            color="currentColor"
-            strokeWidth={1.5}
-            className="opacity-70"
-          />
+          <Icons.ArrowDown size={14} className="opacity-70" strokeWidth={1.5} />
         </button>
       </DropdownMenuTrigger>
 
@@ -61,7 +56,7 @@ export function LanguageSwitcher() {
             <span className="text-base leading-none">{LANGUAGE_FLAGS[lang]}</span>
             <span>{LANGUAGE_SHORT_NAMES[lang]}</span>
             {currentLanguage === lang && (
-              <Icons.Checkmark size={16} color="#0369A1" strokeWidth={2} className="ml-auto" />
+              <Icons.Checkmark size={16} className="text-information-700 ml-auto" strokeWidth={2} />
             )}
           </DropdownMenuItem>
         ))}

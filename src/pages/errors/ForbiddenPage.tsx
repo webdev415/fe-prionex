@@ -48,7 +48,7 @@ export function ForbiddenPage() {
           <div className="h-[40px] w-full gap-1">
             <div className="text-dark-500 flex h-full w-full items-center gap-4 text-[30px] font-light">
               <div className="bg-error-500 flex h-12 w-12 items-center justify-center rounded-full">
-                <Icons.LockedIcon01 size={24} color="#FFFFFF" strokeWidth={2} />
+                <Icons.LockedIcon01 size={24} className="text-white" strokeWidth={2} />
               </div>
               <span className="text-dark-500 text-[30px] font-medium">Access Denied</span>
               <span className="font-light">(403)</span>
@@ -56,7 +56,7 @@ export function ForbiddenPage() {
           </div>
 
           <div className="flex h-[72px] w-full items-center justify-center gap-1 rounded-[8px] bg-white text-sm font-medium">
-            <Icons.Warning size={24} color="#EF4444" strokeWidth={2} />
+            <Icons.Warning size={24} className="text-error-500" strokeWidth={2} />
             <p className="text-error-500 text-sm font-medium">
               You do not have permission to view this page or perform this action.
             </p>

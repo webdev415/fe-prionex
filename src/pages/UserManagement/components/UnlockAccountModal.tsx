@@ -121,19 +121,19 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
             <p className="text-dark-500 text-base font-light">This will:</p>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Icons.ArrowRight size={14} color="#05040D" strokeWidth={1.5} />
+                <Icons.ArrowRight size={14} className="text-dark-500" strokeWidth={1.5} />
                 <span className="text-dark-500 text-base font-light">
                   Immediately restore login access
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Icons.ArrowRight size={14} color="#05040D" strokeWidth={1.5} />
+                <Icons.ArrowRight size={14} className="text-dark-500" strokeWidth={1.5} />
                 <span className="text-dark-500 text-base font-light">
                   Reset failed attempt counter
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Icons.ArrowRight size={14} color="#05040D" strokeWidth={1.5} />
+                <Icons.ArrowRight size={14} className="text-dark-500" strokeWidth={1.5} />
                 <span className="text-dark-500 text-base font-light">
                   Be recorded in the audit log
                 </span>

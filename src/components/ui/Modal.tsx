@@ -56,7 +56,7 @@ export function Modal({ open, onClose, children, className, maxWidth = 'md' }: M
                 className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
                 aria-label="Close modal"
               >
-                <Icon icon={Cancel01Icon} size={20} color="#05040D" strokeWidth={1.5} />
+                <Icon icon={Cancel01Icon} size={20} className="text-dark-500" strokeWidth={1.5} />
               </button>
             </DialogPrimitive.Close>
             {children}

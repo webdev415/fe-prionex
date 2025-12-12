@@ -177,8 +177,8 @@ export function Step2FileUpload({
       {/* Warning Alert - shown when import is in progress */}
       {isImportInProgress && (
         <div className="flex items-center justify-center gap-3 rounded-lg bg-white p-6">
-          <Icons.Warning size={24} className="text-red-500" />
-          <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-red-500">
+          <Icons.Warning size={24} className="text-error-500" />
+          <span className="text-error-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
             You cannot start another import until this one finishes.
           </span>
         </div>
@@ -198,14 +198,14 @@ export function Step2FileUpload({
         {/* CSV Error Icon - shown when invalid CSV structure */}
         {hasInvalidCSVStructure && (
           <div className="flex aspect-square items-center justify-center px-1 py-1.5">
-            <Icons.Csv02 size={48} strokeWidth={0.5} className="text-red-500" />
+            <Icons.Csv02 size={48} strokeWidth={0.5} className="text-error-500" />
           </div>
         )}
 
         {/* Error Icon - shown when invalid file type */}
         {hasInvalidFile && !hasInvalidCSVStructure && (
           <div className="flex aspect-square items-center justify-center px-1 py-1.5">
-            <Icons.FileRemove size={48} strokeWidth={0.5} className="text-red-500" />
+            <Icons.FileRemove size={48} strokeWidth={0.5} className="text-error-500" />
           </div>
         )}
 
@@ -219,14 +219,14 @@ export function Step2FileUpload({
         <div className="align-self-stretch flex flex-col items-center justify-center gap-4">
           {/* Invalid CSV Structure Error Message */}
           {hasInvalidCSVStructure && (
-            <div className="text-center text-2xl leading-[120%] font-light tracking-[-0.48px] text-red-500">
+            <div className="text-error-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
               Invalid CSV structure
             </div>
           )}
 
           {/* Invalid File Type Error Message */}
           {hasInvalidFile && !hasInvalidCSVStructure && (
-            <div className="text-center text-2xl leading-[120%] font-light tracking-[-0.48px] text-red-500">
+            <div className="text-error-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
               Invalid file type
             </div>
           )}
@@ -262,8 +262,8 @@ export function Step2FileUpload({
                 <div className="flex w-full flex-wrap items-center justify-center gap-2">
                   {data.csvValidationError.missingColumns.map((column) => (
                     <div key={column} className="flex items-center gap-2 rounded-full px-3 py-1.5">
-                      <Icons.Close size={16} className="text-red-500" />
-                      <span className="text-base leading-[155%] font-light tracking-[-0.32px] text-red-500 capitalize">
+                      <Icons.Close size={16} className="text-error-500" />
+                      <span className="text-error-500 text-base leading-[155%] font-light tracking-[-0.32px] capitalize">
                         {column.replace(/_/g, ' ')}
                       </span>
                     </div>

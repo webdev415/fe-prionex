@@ -29,7 +29,7 @@ export function DeleteProjectConfirmationModal({
       <ModalHeader
         icon={
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#B0EDC7]">
-            <Icons.Delete size={20} color="#05040D" strokeWidth={2} />
+            <Icons.Delete size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
         title={`Delete Project: ${projectName}`}

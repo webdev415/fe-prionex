@@ -107,7 +107,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Delete size={20} color="#05040D" strokeWidth={2} />
+            <Icons.Delete size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
         title={role ? `Archive Role: ${role.name}` : 'Archive Role'}
@@ -266,7 +266,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
             {hasUsers && !canArchive && (
               <Alert variant="error">
                 <div className="flex items-center gap-2">
-                  <Icons.Warning size={16} color="#EF4444" />
+                  <Icons.Warning size={16} className="text-error-500" />
                   <p className="text-error-500 text-sm">
                     You cannot archive a role until all users are reassigned.
                   </p>

@@ -183,7 +183,7 @@ export function Step2VendorDump({
           <span
             className={cn(
               'h-2 w-2 rounded-full',
-              item.status === 'required' ? 'bg-red-500' : 'bg-gray-500'
+              item.status === 'required' ? 'bg-error-500' : 'bg-gray-500'
             )}
           />
           <span className="text-dark-500 text-xs font-medium">
@@ -210,7 +210,7 @@ export function Step2VendorDump({
                 variant="outline"
                 onClick={() => handleBrowseClick(item.type)}
                 disabled={isImportInProgress}
-                className="text-dark-500 h-8 rounded-full border-[#888] bg-white px-3 py-1.5 text-xs font-medium"
+                className="text-dark-500 h-8 rounded-full border-gray-600 bg-white px-3 py-1.5 text-xs font-medium"
               >
                 {isDocuments ? 'Choose ZIP' : 'Choose file'}
               </Button>
@@ -255,7 +255,7 @@ export function Step2VendorDump({
       >
         {/* Cloud Icon */}
         <div className="flex aspect-square items-center justify-center px-1 py-1.5">
-          <Icons.CloudDownload size={48} color="#1F2937" strokeWidth={0.5} stroke="#1F2937" />
+          <Icons.CloudDownload size={48} className="text-dark-500" strokeWidth={0.5} />
         </div>
 
         <div className="align-self-stretch flex flex-col items-center justify-center gap-4">
@@ -268,7 +268,7 @@ export function Step2VendorDump({
             variant="outline"
             onClick={() => handleBrowseClick()}
             disabled={isImportInProgress}
-            className="text-dark-500 flex h-12 flex-col items-center justify-center gap-[10px] rounded-full border border-[#888] px-5 py-3 text-sm"
+            className="text-dark-500 flex h-12 flex-col items-center justify-center gap-[10px] rounded-full border border-gray-600 px-5 py-3 text-sm"
           >
             Browse File
           </Button>
@@ -312,7 +312,9 @@ export function Step2VendorDump({
           >
             <Icons.ArrowRight02
               size={24}
-              color={requiredFilesSelected && !isImportInProgress ? '#1F2937' : '#6B7280'}
+              className={cn(
+                requiredFilesSelected && !isImportInProgress ? 'text-dark-500' : 'text-gray-500'
+              )}
             />
           </div>
         </Button>

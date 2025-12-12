@@ -25,7 +25,7 @@ export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps)
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.View size={20} color="#05040D" strokeWidth={2} />
+            <Icons.View size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
         title="View User"

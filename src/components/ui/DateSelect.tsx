@@ -68,7 +68,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
         )}
         <div className="relative">
           <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3">
-            <Icons.Calendar size={18} color="#6B7280" strokeWidth={1.5} />
+            <Icons.Calendar size={18} className="text-gray-500" strokeWidth={1.5} />
           </div>
           <style>{`
             .date-select-wrapper .react-datepicker-wrapper {

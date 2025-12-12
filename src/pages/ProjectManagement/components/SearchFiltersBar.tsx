@@ -141,7 +141,7 @@ export function SearchFiltersBar({
                 className="flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
                 type="button"
               >
-                <Icons.Close size={14} color="#6B7280" />
+                <Icons.Close size={14} color="text-gray-500" />
               </button>
             )}
           </div>
@@ -224,7 +224,7 @@ export function SearchFiltersBar({
             className="bg-primary-300 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
             aria-label="Search projects"
           >
-            <Icons.Search size={18} color="#05040D" strokeWidth={1.5} />
+            <Icons.Search size={18} color="text-dark-500" strokeWidth={1.5} />
           </button>
         </div>
       </div>
@@ -237,7 +237,7 @@ export function SearchFiltersBar({
           aria-label="Add new project"
         >
           <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-            <Icons.Add size={20} color="#05040D" strokeWidth={2} />
+            <Icons.Add size={20} color="text-dark-500" strokeWidth={2} />
           </div>
           <span className="px-4 py-3 text-sm font-medium text-white">New Project</span>
         </button>
@@ -258,7 +258,7 @@ export function SearchFiltersBar({
           type="button"
           className="text-dark-500 bg-primary-300 flex h-[45px] items-center gap-2 rounded-full px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
         >
-          <Icons.FileImport size={16} color="#05040D" />
+          <Icons.FileImport size={16} color="text-dark-500" />
           Export
         </button>
       </div>

@@ -187,27 +187,27 @@ export function ImportClientsPage() {
 
       {/* Import Progress Banner */}
       {isImportInProgress && (
-        <div className="z-50 mx-50 my-10 flex items-center justify-between gap-4 rounded-[10px] border border-[#ECEFF3] bg-white px-6 py-4 shadow-[0_12px_16px_-4px_rgba(16,24,40,0.08),0_4px_6px_-2px_rgba(16,24,40,0.03)]">
-          <div className="flex items-center gap-2.5 py-1 pl-3 text-[#EAB308]">
+        <div className="z-50 mx-50 my-10 flex items-center justify-between gap-4 rounded-[10px] border border-gray-200 bg-white px-6 py-4 shadow-[0_12px_16px_-4px_rgba(16,24,40,0.08),0_4px_6px_-2px_rgba(16,24,40,0.03)]">
+          <div className="text-warning-500 flex items-center gap-2.5 py-1 pl-3">
             {/* Icon - document with refresh symbol */}
             <Icons.FileImport size={20} />
             <span className="text-sm font-medium whitespace-nowrap">Import in progress</span>
           </div>
-          <span className="font-lexend text-sm leading-[150%] font-light tracking-[-0.28px] text-[#05040D]">
+          <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
             File:{' '}
-            <span className="font-lexend text-sm leading-[150%] font-medium tracking-[-0.28px] text-[#05040D]">
+            <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
               clients_batch_2024-11-20.csv
             </span>
           </span>
-          <span className="font-lexend text-sm leading-[150%] font-light tracking-[-0.28px] text-[#05040D]">
+          <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
             Started:{' '}
-            <span className="font-lexend text-sm leading-[150%] font-medium tracking-[-0.28px] text-[#05040D]">
+            <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
               10:03
             </span>
           </span>
-          <span className="font-lexend text-sm leading-[150%] font-light tracking-[-0.28px] text-[#05040D]">
+          <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
             Status:{' '}
-            <span className="font-lexend text-sm leading-[150%] font-medium tracking-[-0.28px] text-[#05040D]">
+            <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
               45% complete
             </span>
           </span>

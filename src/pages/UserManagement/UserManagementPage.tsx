@@ -172,7 +172,7 @@ export function UserManagementPage() {
             onClick={() => handleView(user)}
             className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
           >
-            <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
+            <Icons.View size={16} className="text-dark-500" strokeWidth={1.5} />
             View
           </button>
 
@@ -181,7 +181,7 @@ export function UserManagementPage() {
               onClick={() => handleEdit(user)}
               className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
             >
-              <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
+              <Icons.PencilEdit size={16} className="text-dark-500" strokeWidth={1.5} />
               Edit
             </button>
           </PermissionGuard>
@@ -193,7 +193,7 @@ export function UserManagementPage() {
                 disabled={authLoading || impersonatingUserId !== null}
                 className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />
+                <Icons.SecurityValidation size={16} className="text-dark-500" strokeWidth={1.5} />
                 {impersonatingUserId === user.id ? 'Impersonating...' : 'Impersonate'}
               </button>
             )}
@@ -227,7 +227,7 @@ export function UserManagementPage() {
             aria-label="Add new user"
           >
             <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-              <Icons.Add size={20} color={'#05040D'} strokeWidth={2} />
+              <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
             </div>
             <span className="px-4 py-3 text-sm font-medium text-white">Add New User</span>
           </button>

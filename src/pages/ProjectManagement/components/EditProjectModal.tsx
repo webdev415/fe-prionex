@@ -315,7 +315,7 @@ export function EditProjectModal({ project, open, onClose, onSuccess }: EditProj
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.PencilEdit size={20} color="#05040D" strokeWidth={2} />
+            <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
         title="Edit Project"

@@ -47,7 +47,7 @@ function StatusBadge({ status }: { status: ImportStatus }) {
     return (
       <div className="flex flex-1">
         <div className="inline-flex items-center gap-2 rounded-full bg-gray-600 px-3 py-1.5 text-white">
-          <Icons.Warning size={14} color="#FFFFFF" />
+          <Icons.Warning size={14} className="text-white" />
           <span className="text-xs font-medium">Completed with errors</span>
         </div>
       </div>
@@ -160,7 +160,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
           {/* Error Messages */}
           {status === 'failed' && (
             <div className="flex items-center justify-center gap-2 self-stretch rounded-xl border border-white bg-white/50 p-6">
-              <Icons.Warning size={20} color="#EF4444" />
+              <Icons.Warning size={20} className="text-error-500" />
               <span className="text-error-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                 The import failed due to a system error. No rows were processed.
               </span>
@@ -169,7 +169,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
 
           {status === 'completed_with_errors' && (
             <div className="flex items-center justify-center gap-2 self-stretch rounded-xl border border-white bg-white/50 p-6">
-              <Icons.Warning size={24} color="#EF4444" />
+              <Icons.Warning size={24} className="text-error-500" />
               <span className="text-error-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                 Some rows failed. Download error report for details.
               </span>

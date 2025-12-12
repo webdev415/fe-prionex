@@ -101,7 +101,7 @@ export function RoleManagementPage() {
             onClick={() => setSelectedRoleId(role.id)}
             className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
           >
-            <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
+            <Icons.View size={16} className="text-dark-500" strokeWidth={1.5} />
             View
           </button>
           <button
@@ -109,7 +109,7 @@ export function RoleManagementPage() {
             className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
             onClick={() => setEditRoleId(role.id)}
           >
-            <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
+            <Icons.PencilEdit size={16} className="text-dark-500" strokeWidth={1.5} />
             Edit
           </button>
           {!role.is_default && (
@@ -118,7 +118,7 @@ export function RoleManagementPage() {
               className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
               onClick={() => setArchiveRoleId(role.id)}
             >
-              <Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />
+              <Icons.Delete size={16} className="text-dark-500" strokeWidth={1.5} />
               Delete
             </button>
           )}
@@ -142,7 +142,7 @@ export function RoleManagementPage() {
           aria-label="New role"
         >
           <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-            <Icons.Add size={20} color="#05040D" strokeWidth={2} />
+            <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
           </div>
           <span className="px-4 py-3 text-sm font-medium text-white">New Role</span>
         </button>
@@ -161,7 +161,7 @@ export function RoleManagementPage() {
               className="text-dark-500 text-xl font-light"
             />
             <div className="bg-primary-300 flex h-6 w-6 items-center justify-center rounded-md">
-              <Icons.ArrowDown size={16} color="#05040D" strokeWidth={1.5} />
+              <Icons.ArrowDown size={16} className="text-current" />
             </div>
           </SelectTrigger>
           <SelectContent>
