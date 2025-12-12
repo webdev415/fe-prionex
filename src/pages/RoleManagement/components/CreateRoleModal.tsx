@@ -4,6 +4,7 @@
  * Modal wrapper for CreateRoleForm using the same structure as CreateUserModal.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { CreateRoleForm } from '@/features/roles/components/CreateRoleForm'
 import { Icons } from '@/lib/icons'
@@ -17,6 +18,8 @@ interface CreateRoleModalProps {
 }
 
 export function CreateRoleModal({ open, projectId, onClose, onSuccess }: CreateRoleModalProps) {
+  const { t } = useTranslation('common')
+
   const handleSuccess = () => {
     onSuccess()
     onClose()
@@ -30,7 +33,7 @@ export function CreateRoleModal({ open, projectId, onClose, onSuccess }: CreateR
             <Icons.Add size={20} color="#05040D" strokeWidth={2} />
           </div>
         }
-        title="Create Role"
+        title={t('pages.roles.modals.create.title')}
         onClose={onClose}
       />
       <ModalContent>
@@ -43,7 +46,7 @@ export function CreateRoleModal({ open, projectId, onClose, onSuccess }: CreateR
           onClick={onClose}
           className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button
           type="submit"
@@ -51,7 +54,7 @@ export function CreateRoleModal({ open, projectId, onClose, onSuccess }: CreateR
           variant="primary"
           className="text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
         >
-          Create Role
+          {t('pages.roles.modals.create.createRole')}
         </Button>
       </ModalFooter>
     </Modal>

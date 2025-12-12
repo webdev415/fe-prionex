@@ -5,6 +5,7 @@
  * Uses the global Modal component for consistent styling.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -24,19 +25,21 @@ export function DeleteProjectConfirmationModal({
   onCancel,
   isLoading = false,
 }: DeleteProjectConfirmationModalProps) {
+  const { t } = useTranslation('common')
+
   return (
-    <Modal open={open} onClose={onCancel} maxWidth="md">
+    <Modal open={open} onClose={onCancel} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#B0EDC7]">
+          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
             <Icons.Delete size={20} color="#05040D" strokeWidth={2} />
           </div>
         }
-        title={`Delete Project: ${projectName}`}
+        title={t('pages.projects.modals.delete.title', { projectName })}
       />
       <ModalContent>
         <p className="text-dark-500 text-base font-light">
-          Are you sure you want to delete this project? This action cannot be undone.
+          {t('pages.projects.modals.delete.confirmMessage')}
         </p>
       </ModalContent>
       <ModalFooter>
@@ -47,7 +50,7 @@ export function DeleteProjectConfirmationModal({
           disabled={isLoading}
           className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button
           type="button"
@@ -55,7 +58,9 @@ export function DeleteProjectConfirmationModal({
           disabled={isLoading}
           className="bg-error-500 h-[45px] flex-1 rounded-md border-none text-sm font-medium text-white"
         >
-          {isLoading ? 'Deleting...' : 'Delete Project'}
+          {isLoading
+            ? t('pages.projects.modals.delete.deleting')
+            : t('pages.projects.modals.delete.deleteProject')}
         </Button>
       </ModalFooter>
     </Modal>

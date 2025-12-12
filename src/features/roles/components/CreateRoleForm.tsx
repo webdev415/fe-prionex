@@ -6,6 +6,7 @@
  */
 
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -32,6 +33,7 @@ const createRoleSchema = z.object({
 type CreateRoleFormData = z.infer<typeof createRoleSchema>
 
 export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: CreateRoleFormProps) {
+  const { t } = useTranslation('common')
   const createMutation = useCreateRole()
   const { data: permissionsData, isLoading: loadingPermissions } = usePermissions()
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
@@ -99,12 +101,12 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
       {/* Role Name */}
       <div>
         <Label htmlFor="name" required>
-          Role Name:
+          {t('pages.roles.forms.roleName')}
         </Label>
         <Input
           id="name"
           {...register('name')}
-          placeholder="Enter Role Name"
+          placeholder={t('pages.roles.forms.placeholders.roleName')}
           disabled={createMutation.isPending}
         />
         {errors.name && <p className="text-error-500 mt-1 text-sm">{errors.name.message}</p>}
@@ -113,12 +115,12 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
       {/* Description */}
       <div>
         <Label htmlFor="description" required>
-          Description
+          {t('pages.roles.forms.description')}
         </Label>
         <Textarea
           id="description"
           {...register('description')}
-          placeholder="Describe this role"
+          placeholder={t('pages.roles.forms.placeholders.description')}
           rows={3}
           disabled={createMutation.isPending}
         />
@@ -130,7 +132,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
       {/* Permissions Section */}
       <div>
         <Label>
-          Permissions
+          {t('pages.roles.forms.permissions')}
           <span className="ml-2 text-sm font-light text-gray-500">
             (Selected: {selectedPermissions.length} of {permissions.length} permissions)
           </span>
@@ -138,7 +140,9 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
 
         <div className="max-h-96 overflow-y-auto rounded-xl bg-white p-6">
           {loadingPermissions ? (
-            <div className="py-4 text-sm text-gray-500">Loading permissions...</div>
+            <div className="py-4 text-sm text-gray-500">
+              {t('pages.roles.forms.loadingPermissions')}
+            </div>
           ) : (
             <div>
               {Object.entries(permissionsByCategory).map(([category, categoryPerms]) => {
@@ -188,7 +192,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
       {createMutation.isError && (
         <Alert variant="error">
           <p className="text-sm">
-            {createMutation.error?.message || 'Failed to create role. Please try again.'}
+            {createMutation.error?.message || t('pages.roles.forms.errors.failedToCreate')}
           </p>
         </Alert>
       )}

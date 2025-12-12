@@ -14,7 +14,7 @@ export function LoginCard({ onSubmit, isLoading, error }: LoginCardProps) {
     <div className="w-full">
       <div className="mb-6 flex w-full flex-col items-center text-center sm:mb-8">
         <h1 className="text-display-xs sm:text-display-sm text-dark-500 flex items-center gap-2 font-medium">
-          Welcome to Prionex
+          {t('login.welcome')}
           <span>👋🏻</span>
         </h1>
         <p className="text-body-sm sm:text-body-md mt-2 text-gray-500">{t('login.subtitle')}</p>

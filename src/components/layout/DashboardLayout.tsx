@@ -1,5 +1,6 @@
-import { type ReactNode, useState, useMemo } from 'react'
+import { type ReactNode, useState, useMemo, useCallback } from 'react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
 import { useAuthStore } from '@/stores/authStore'
 import { usePermissionRefresh } from '@/hooks'
@@ -8,6 +9,7 @@ import { LogoutConfirmationModal } from './LogoutConfirmationModal'
 import { Sidebar, type SidebarItem, type SidebarAction } from './Sidebar'
 import { SearchBar } from './SearchBar'
 import { UserProfile } from './UserProfile'
+import { LanguageSwitcher } from './LanguageSwitcher'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
 
@@ -31,6 +33,7 @@ interface ExtendedSidebarItem extends SidebarItem {
  * - Dark teal/green gradient background
  */
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { t } = useTranslation('common')
   const { logout, isImpersonating, impersonatedUser, exitImpersonation } = useAuth()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -39,9 +42,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // Automatically refresh permissions every 5 minutes
   usePermissionRefresh()
 
-  const handleLogoutClick = () => {
+  const handleLogoutClick = useCallback(() => {
     setShowLogoutModal(true)
-  }
+  }, [])
 
   const handleLogoutConfirm = async () => {
     setIsLoggingOut(true)
@@ -61,11 +64,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     setIsExitingImpersonation(true)
     try {
       await exitImpersonation()
-      toast.success('Exited impersonation mode')
+      toast.success(t('pages.users.messages.exitedImpersonation'))
     } catch (error: unknown) {
       console.error('Failed to exit impersonation:', error)
       const err = error as { message?: string }
-      toast.error(err.message || 'Failed to exit impersonation')
+      toast.error(err.message || t('pages.users.messages.failedToExitImpersonation'))
     } finally {
       setIsExitingImpersonation(false)
     }
@@ -77,9 +80,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Search type options
   const searchOptions = [
-    { value: 'phone', label: 'Phone number' },
-    { value: 'email', label: 'Email' },
-    { value: 'username', label: 'Username' },
+    { value: 'phone', label: t('search.phoneNumber') },
+    { value: 'email', label: t('search.email') },
+    { value: 'username', label: t('search.username') },
   ]
 
   const user = useAuthStore((state) => state.user)
@@ -89,33 +92,38 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navItems: SidebarItem[] = useMemo(() => {
     // All navigation items with required permissions
     const allNavItems: ExtendedSidebarItem[] = [
-      { path: '/dashboard', icon: 'home-04', label: 'Dashboard' },
-      { path: '/dashboard', icon: 'activity-01', label: 'Activity', disabled: true }, // Route doesn't exist
+      { path: '/dashboard', icon: 'home-04', label: t('navigation.dashboard') },
+      { path: '/dashboard', icon: 'activity-01', label: t('navigation.activity'), disabled: true }, // Route doesn't exist
       {
         path: '/dashboard/importclients',
         icon: 'file-import',
-        label: 'Import Clients',
+        label: t('navigation.importClients'),
         requiredPermission: PERMISSIONS.DATA.IMPORT_DATA,
       },
       {
         path: '/dashboard/projects',
         icon: 'chart-ring',
-        label: 'Projects',
+        label: t('navigation.projects'),
         requiredPermission: PERMISSIONS.PROJECTS.MANAGE,
       },
       {
         path: '/dashboard/users',
         icon: 'community',
-        label: 'Users',
+        label: t('navigation.users'),
         requiredPermission: PERMISSIONS.USERS.VIEW,
       },
       {
         path: '/dashboard/roles',
         icon: 'user-status',
-        label: 'Roles',
+        label: t('navigation.roles'),
         requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
       },
-      { path: '/dashboard', icon: 'transaction-history', label: 'Transactions', disabled: true }, // Route doesn't exist
+      {
+        path: '/dashboard',
+        icon: 'transaction-history',
+        label: t('navigation.transactions'),
+        disabled: true,
+      }, // Route doesn't exist
     ]
 
     return allNavItems.filter((item) => {
@@ -150,24 +158,27 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       // Default: show the item
       return true
     })
-  }, [user?.permissions])
+  }, [user?.permissions, t])
 
   // Bottom action buttons
-  const sidebarActions: SidebarAction[] = [
-    {
-      icon: 'setting-07',
-      label: 'Settings',
-      onClick: () => {
-        // Navigate to settings or open settings modal
-        console.log('Settings clicked')
+  const sidebarActions: SidebarAction[] = useMemo(
+    () => [
+      {
+        icon: 'setting-07',
+        label: t('navigation.settings'),
+        onClick: () => {
+          // Navigate to settings or open settings modal
+          console.log('Settings clicked')
+        },
       },
-    },
-    {
-      icon: 'logout-square-01',
-      label: 'Logout',
-      onClick: handleLogoutClick,
-    },
-  ]
+      {
+        icon: 'logout-square-01',
+        label: t('navigation.logout'),
+        onClick: handleLogoutClick,
+      },
+    ],
+    [t, handleLogoutClick]
+  )
 
   return (
     <div className="bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center bg-no-repeat">
@@ -187,14 +198,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <header className="bg-light-50 fixed top-0 right-0 left-16 z-20 flex h-[60px] items-center justify-between border-l border-white/10 px-6 shadow-sm">
           {/* Search Bar */}
           <SearchBar
-            placeholder="Search"
+            placeholder={t('search.placeholder')}
             searchOptions={searchOptions}
             defaultSearchType="phone"
             onSearch={handleSearch}
           />
 
-          {/* User Profile */}
-          <UserProfile onLogoutClick={handleLogoutClick} />
+          {/* Right side: Language Switcher and User Profile */}
+          <div className="flex items-center gap-3">
+            <LanguageSwitcher variant="dashboard" />
+            <UserProfile onLogoutClick={handleLogoutClick} />
+          </div>
         </header>
 
         {/* Scrollable Page Content with top padding for fixed header */}

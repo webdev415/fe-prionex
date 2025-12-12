@@ -5,6 +5,7 @@
  * Uses the global Modal component for consistent styling.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -22,6 +23,8 @@ export function LogoutConfirmationModal({
   onCancel,
   isLoading = false,
 }: LogoutConfirmationModalProps) {
+  const { t } = useTranslation('common')
+
   return (
     <Modal open={open} onClose={onCancel} maxWidth="md">
       <ModalHeader
@@ -30,12 +33,10 @@ export function LogoutConfirmationModal({
             <Icons.LogoutSquare01 size={20} color="#05040D" strokeWidth={2} />
           </div>
         }
-        title="Confirm Logout"
+        title={t('logout.confirmTitle')}
       />
       <ModalContent>
-        <p className="text-dark-500 text-base font-light">
-          Are you sure you want to logout? You will need to login again to access the system.
-        </p>
+        <p className="text-dark-500 text-base font-light">{t('logout.confirmMessage')}</p>
       </ModalContent>
       <ModalFooter>
         <Button
@@ -45,7 +46,7 @@ export function LogoutConfirmationModal({
           disabled={isLoading}
           className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button
           type="button"
@@ -54,7 +55,7 @@ export function LogoutConfirmationModal({
           variant="danger"
           className="h-[45px] flex-1 rounded-md border-none text-sm font-medium text-white"
         >
-          {isLoading ? 'Logging out...' : 'Logout'}
+          {isLoading ? t('actions.loggingOut') : t('actions.logout')}
         </Button>
       </ModalFooter>
     </Modal>

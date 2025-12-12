@@ -8,7 +8,19 @@
     "dashboard": "Dashboard",
     "clients": "Clients",
     "settings": "Settings",
-    "logout": "Logout"
+    "logout": "Logout",
+    "activity": "Activity",
+    "importClients": "Import Clients",
+    "projects": "Projects",
+    "users": "Users",
+    "roles": "Roles",
+    "transactions": "Transactions"
+  },
+  "search": {
+    "placeholder": "Search",
+    "phoneNumber": "Phone number",
+    "email": "Email",
+    "username": "Username"
   },
   "actions": {
     "save": "Save",
@@ -20,7 +32,9 @@
     "confirm": "Confirm",
     "back": "Back",
     "next": "Next",
-    "close": "Close"
+    "close": "Close",
+    "logout": "Logout",
+    "loggingOut": "Logging out..."
   },
   "status": {
     "loading": "Loading...",
@@ -33,5 +47,315 @@
     "en": "English",
     "uk": "Ukrainian",
     "ru": "Russian"
+  },
+  "logout": {
+    "confirmTitle": "Confirm Logout",
+    "confirmMessage": "Are you sure you want to logout? You will need to login again to access the system."
+  },
+  "pages": {
+    "users": {
+      "title": "User Management",
+      "addNewUser": "New User",
+      "noUsersFound": "No users found",
+      "errorLoading": "Error loading users",
+      "tableHeaders": {
+        "username": "Username",
+        "fullName": "Full Name",
+        "email": "Email",
+        "projectRole": "Project & Role",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "actions": {
+        "view": "View",
+        "edit": "Edit",
+        "impersonate": "Impersonate",
+        "impersonating": "Impersonating...",
+        "unlock": "Unlock",
+        "lock": "Lock"
+      },
+      "messages": {
+        "nowViewingAs": "Now viewing as {{username}}",
+        "failedToImpersonate": "Failed to impersonate user",
+        "failedToExitImpersonation": "Failed to exit impersonation",
+        "exitedImpersonation": "Exited impersonation mode"
+      },
+      "noAssignment": "No assignment",
+      "unknownProject": "Unknown Project",
+      "noRole": "No Role",
+      "modals": {
+        "create": {
+          "title": "Create New User",
+          "loadingFormData": "Loading form data...",
+          "save": "Save"
+        },
+        "edit": {
+          "title": "Edit User",
+          "loadingUserData": "Loading user data...",
+          "userNotFound": "User not found",
+          "save": "Save"
+        },
+        "view": {
+          "title": "View User",
+          "loadingUserData": "Loading user data...",
+          "userNotFound": "User not found"
+        },
+        "unlock": {
+          "title": "Account Status:",
+          "locked": "Locked",
+          "unlockAccount": "Unlock Account:",
+          "failedAttempts": "Failed Attempts:",
+          "lockedAt": "Locked At:",
+          "autoUnlockAt": "Auto-Unlock At:",
+          "minRemaining": "min remaining",
+          "confirmTitle": "Are you sure you want to unlock this account?",
+          "thisWill": "This will:",
+          "restoreAccess": "Immediately restore login access",
+          "resetCounter": "Reset failed attempt counter",
+          "recordAudit": "Be recorded in the audit log",
+          "failedToUnlock": "Failed to unlock account",
+          "unlocking": "Unlocking...",
+          "unlockAccountButton": "Unlock Account"
+        }
+      },
+      "forms": {
+        "username": "Username:",
+        "email": "Email:",
+        "password": "Password:",
+        "confirmPassword": "Confirm Password:",
+        "mustChangePassword": "Must change password on first login",
+        "firstName": "First Name:",
+        "lastName": "Last Name:",
+        "middleName": "Middle Name:",
+        "phone": "Phone:",
+        "language": "Language:",
+        "timezone": "Timezone:",
+        "assignProjects": "Assign Projects:",
+        "rolePerProject": "Role per Project:",
+        "notAssigned": "Not assigned",
+        "noRolesAvailable": "No roles available",
+        "errorCreating": "Error creating user",
+        "placeholders": {
+          "username": "Enter your username",
+          "email": "Enter your email",
+          "password": "Enter your password",
+          "confirmPassword": "Confirm your password",
+          "firstName": "Enter first name",
+          "lastName": "Enter last name",
+          "middleName": "Enter middle name (optional)",
+          "phone": "+1-555-0101 (optional)"
+        },
+        "errors": {
+          "failedToCreate": "Failed to create user",
+          "passwordsDontMatch": "Passwords don't match",
+          "selectAtLeastOneProject": "Please select at least one project",
+          "assignRoleForEachProject": "Please assign a role for each selected project"
+        }
+      },
+      "editForm": {
+        "errorUpdating": "Error updating user",
+        "failedToUpdate": "Failed to update user",
+        "usernameCannotBeChanged": "Username cannot be changed"
+      }
+    },
+    "projects": {
+      "title": "Project Management",
+      "noProjectsFound": "No projects found",
+      "errorLoading": "Error loading projects",
+      "tableHeaders": {
+        "users": "Users",
+        "projectCode": "Project / Code",
+        "client": "Client",
+        "period": "Period",
+        "debt": "Debt",
+        "status": "Status"
+      },
+      "searchFilters": {
+        "placeholder": "Search by name, code, clients",
+        "status": "Status",
+        "client": "Client",
+        "period": "Period",
+        "newProject": "New Project",
+        "export": "Export",
+        "searchProjects": "Search projects",
+        "addNewProject": "Add new project",
+        "statusOptions": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "archived": "Archived",
+          "all": "All"
+        },
+        "periodOptions": {
+          "any": "Any time",
+          "last30Days": "Last 30 days",
+          "last90Days": "Last 90 days",
+          "thisYear": "This year"
+        },
+        "allClients": "All Clients"
+      },
+      "detailPanel": {
+        "noProject": "There is no project",
+        "code": "Code",
+        "contract": "Contract",
+        "client": "Client",
+        "users": "Users",
+        "metrics": "Metrics",
+        "clients": "Clients",
+        "totalDebt": "Total Debt",
+        "description": "Description",
+        "showLess": "Show less",
+        "readMore": "Read more",
+        "accessAndRoles": "Access and Roles",
+        "assignedUsers": "Assigned users:",
+        "defaultRoles": "Default roles:",
+        "none": "None",
+        "manageUsersRoles": "Manage users & roles",
+        "audit": "Audit",
+        "createdBy": "Created by",
+        "created": "Created",
+        "lastUpdated": "Last updated",
+        "system": "System",
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "modals": {
+        "create": {
+          "title": "Create New Project",
+          "projectInformation": "Project Information",
+          "projectName": "Project Name:",
+          "projectCode": "Project Code:",
+          "description": "Description:",
+          "clientContract": "Client & Contract",
+          "clientCompany": "Client Company:",
+          "contractNumber": "Contract Number:",
+          "timeline": "Timeline",
+          "startDate": "Start Date",
+          "endDate": "End Date",
+          "noEndDate": "No end date",
+          "creating": "Creating...",
+          "createProject": "Create Project",
+          "errorCreating": "Error creating project",
+          "failedToCreate": "Failed to create project. Please try again.",
+          "placeholders": {
+            "projectName": "Enter Project Name",
+            "projectCode": "Enter Project Code",
+            "clientCompany": "Client Company",
+            "contractNumber": "Contract Number",
+            "description": "Placeholder text"
+          },
+          "errors": {
+            "nameMinLength": "Name must be at least 3 characters",
+            "codeMinLength": "Code must be at least 2 characters",
+            "endDateAfterStart": "End date must be after start date"
+          }
+        },
+        "edit": {
+          "title": "Edit Project",
+          "projectInformation": "Project Information",
+          "projectName": "Project Name:",
+          "projectCode": "Project Code:",
+          "codeCannotBeChanged": "Code cannot be changed after creation",
+          "status": "Status:",
+          "active": "Active",
+          "inactive": "Inactive",
+          "clientContract": "Client & Contract",
+          "clientCompany": "Client Company:",
+          "contractNumber": "Contract Number:",
+          "timeline": "Timeline",
+          "startDate": "Start Date",
+          "endDate": "End Date",
+          "noEndDate": "No end date",
+          "saving": "Saving...",
+          "save": "Save",
+          "errorUpdating": "Error updating project",
+          "failedToUpdate": "Failed to update project. Please try again.",
+          "archivedWarning": "This project is archived. Use the Restore action to reactivate it.",
+          "placeholders": {
+            "projectName": "Enter Project Name",
+            "clientCompany": "Client Company",
+            "contractNumber": "Contract Number",
+            "description": "Placeholder text"
+          },
+          "errors": {
+            "nameMinLength": "Name must be at least 3 characters",
+            "endDateAfterStart": "End date must be after start date"
+          }
+        },
+        "delete": {
+          "title": "Delete Project: {{projectName}}",
+          "confirmMessage": "Are you sure you want to delete this project? This action cannot be undone.",
+          "deleting": "Deleting...",
+          "deleteProject": "Delete Project"
+        }
+      }
+    },
+    "roles": {
+      "title": "Role Management",
+      "newRole": "New Role",
+      "selectProject": "Select project",
+      "project": "Project:",
+      "noActiveProjects": "No active projects found. Please create a project first.",
+      "errorLoading": "Error loading roles",
+      "defaultRoles": "Default Roles",
+      "customRoles": "Custom Roles",
+      "noDefaultRoles": "No default roles",
+      "noCustomRoles": "No custom roles",
+      "tableHeaders": {
+        "role": "Role",
+        "description": "Description",
+        "users": "Users",
+        "actions": "Actions"
+      },
+      "actions": {
+        "view": "View",
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "modals": {
+        "create": {
+          "title": "Create Role",
+          "createRole": "Create Role"
+        },
+        "edit": {
+          "title": "Edit Role"
+        },
+        "view": {
+          "title": "View Role",
+          "loadingPermissions": "Loading permissions..."
+        },
+        "archive": {
+          "title": "Archive Role: {{roleName}}",
+          "defaultTitle": "Archive Role",
+          "loadingRoleData": "Loading role data...",
+          "failedToLoad": "Failed to load role data. Please try again.",
+          "hasUsersAssigned": "This role has users assigned:",
+          "reassignmentOptions": "Reassignment Options",
+          "useDefaultRole": "Use Default Role (Operator)",
+          "reassignToRole": "Reassign to Role",
+          "selectRole": "Select a role",
+          "noUsersCanArchive": "No users assigned. This role can be archived immediately.",
+          "archiving": "Archiving...",
+          "archiveRole": "Archive Role",
+          "reassignTo": "Reassign to:",
+          "setToDefault": "Set to default:",
+          "cannotArchiveUntilReassigned": "You cannot archive a role until all users are reassigned.",
+          "failedToArchive": "Failed to archive role. Please try again.",
+          "roleNotFound": "Role not found"
+        }
+      },
+      "forms": {
+        "roleName": "Role Name",
+        "description": "Description",
+        "permissions": "Permissions",
+        "loadingPermissions": "Loading permissions...",
+        "placeholders": {
+          "roleName": "Enter Role Name",
+          "description": "Describe this role"
+        },
+        "errors": {
+          "failedToCreate": "Failed to create role. Please try again."
+        }
+      }
+    }
   }
 }
