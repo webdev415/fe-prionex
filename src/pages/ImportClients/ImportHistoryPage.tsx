@@ -6,21 +6,15 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/Select'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
 import {
   ImportHistoryFiltersBar,
   type ImportHistoryFilters,
 } from './components/ImportHistoryFiltersBar'
+import { generateMockImportHistory } from './mockImportData'
 
 // Types for import history data
 export interface ImportHistoryItem {
@@ -28,53 +22,36 @@ export interface ImportHistoryItem {
   dateTime: string
   fileName: string
   uploadedBy: string
-  status: 'done' | 'failed'
+  status: 'done' | 'failed' | 'in_progress'
   errors: number
 }
 
-// Generate 50 mock data items with variety
-const generateMockData = (): ImportHistoryItem[] => {
-  const users = ['Olena', 'Maria', 'John', 'Anna', 'David']
-  const statuses: ('done' | 'failed')[] = ['done', 'failed']
-  const data: ImportHistoryItem[] = []
-
-  for (let i = 1; i <= 50; i++) {
-    const date = new Date(2024, 10, Math.floor(Math.random() * 30) + 1) // November 2024
-    const hours = Math.floor(Math.random() * 24)
-    const minutes = Math.floor(Math.random() * 60)
-    const dateTime = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
-
-    const user = users[Math.floor(Math.random() * users.length)]
-    const status = statuses[Math.floor(Math.random() * statuses.length)]
-    const errors =
-      status === 'failed' ? Math.floor(Math.random() * 100) + 1 : Math.floor(Math.random() * 100)
-
-    data.push({
-      id: i,
-      dateTime,
-      fileName: `clients_batch_${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}_${i}.csv`,
-      uploadedBy: user,
-      status,
-      errors,
-    })
-  }
-
-  return data
-}
-
-const mockImportHistory = generateMockData()
+const mockImportHistory = generateMockImportHistory()
 
 // Status Badge Component for Import History
-function ImportStatusBadge({ status }: { status: 'done' | 'failed' }) {
-  const isDone = status === 'done'
+function ImportStatusBadge({ status }: { status: 'done' | 'failed' | 'in_progress' }) {
+  if (status === 'done') {
+    return (
+      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-[#204E4D] px-3 text-xs font-medium text-white">
+        <span className="h-2 w-2 rounded-full bg-white" />
+        Done
+      </span>
+    )
+  }
+
+  if (status === 'in_progress') {
+    return (
+      <span className="bg-secondary-800 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
+        <span className="h-2 w-2 rounded-full bg-white" />
+        In progress
+      </span>
+    )
+  }
+
   return (
-    <span
-      className={`inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white ${
-        isDone ? 'bg-[#204E4D]' : 'bg-red-600'
-      }`}
-    >
+    <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-red-600 px-3 text-xs font-medium text-white">
       <span className="h-2 w-2 rounded-full bg-white" />
-      {isDone ? 'Done' : 'Failed'}
+      Failed
     </span>
   )
 }
@@ -82,7 +59,7 @@ function ImportStatusBadge({ status }: { status: 'done' | 'failed' }) {
 export function ImportHistoryPage() {
   const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
-  const [rowsPerPage, setRowsPerPage] = useState(10)
+  const rowsPerPage = 10 // Changed from useState to constant
   const [sortConfig, setSortConfig] = useState<SortConfig | undefined>(undefined)
 
   // Filter state - using the same pattern as SearchFiltersBar
@@ -249,11 +226,6 @@ export function ImportHistoryPage() {
     setCurrentPage(validPage)
   }
 
-  const handleRowsPerPageChange = (value: string) => {
-    setRowsPerPage(Number(value))
-    setCurrentPage(1) // Reset to first page when changing rows per page
-  }
-
   const handleViewDetails = () => {
     // TODO: Implement view details functionality
     console.log('View Details clicked')
@@ -337,16 +309,17 @@ export function ImportHistoryPage() {
       align: 'center',
       render: (item) => (
         <div className="flex items-center justify-center">
-          <Link
-            to={`/dashboard/import/history/${item.id}`}
+          <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation()
+              navigate(`/dashboard/import/history/${item.id}`)
             }}
-            className="text-dark-500 flex items-center gap-1 text-xs font-medium no-underline transition-colors hover:opacity-80"
+            className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
           >
             <Icons.View size={16} className="text-dark-500" strokeWidth={1.5} />
             View
-          </Link>
+          </button>
         </div>
       ),
     },
@@ -460,34 +433,13 @@ export function ImportHistoryPage() {
 
       {/* Pagination Footer - Only show if there's data */}
       {filteredAndSortedData.length > 0 && (
-        <div className="mt-6 flex items-center justify-between">
-          {/* Rows per page selector */}
-          <div className="flex items-center gap-2">
-            <span className="text-dark-500 text-sm font-normal">Rows per page:</span>
-            <Select value={String(rowsPerPage)} onValueChange={handleRowsPerPageChange}>
-              <SelectTrigger className="h-10 w-20">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="25">25</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
+        <div className="mt-6 flex items-center justify-center">
           {/* Pagination */}
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={handlePageChange}
           />
-
-          {/* Page info */}
-          <div className="text-dark-500 text-sm font-normal">
-            Page {currentPage} of {totalPages}
-          </div>
         </div>
       )}
     </div>

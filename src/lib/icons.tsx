@@ -71,6 +71,7 @@ import {
   PivotIcon,
   FolderRemoveIcon,
   ReloadIcon,
+  SettingsError02Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -179,6 +180,9 @@ export const Icons = {
   Pivot: (props: Omit<IconProps, 'icon'>) => <Icon icon={PivotIcon} {...props} />,
   FolderRemove: (props: Omit<IconProps, 'icon'>) => <Icon icon={FolderRemoveIcon} {...props} />,
   Reload: (props: Omit<IconProps, 'icon'>) => <Icon icon={ReloadIcon} {...props} />,
+  SettingsError02: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={SettingsError02Icon} {...props} />
+  ),
 }
 
 /**
@@ -241,6 +245,7 @@ export {
   PivotIcon,
   FolderRemoveIcon,
   ReloadIcon,
+  SettingsError02Icon,
 }
 
 /**
