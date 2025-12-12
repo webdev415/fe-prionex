@@ -9,6 +9,7 @@
  */
 
 import { useState, useMemo, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -43,6 +44,7 @@ const customRoleSchema = z.object({
 type CustomRoleFormData = z.infer<typeof customRoleSchema>
 
 export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps) {
+  const { t } = useTranslation('common')
   const updateMutation = useUpdateRole()
   const { data: permissionsData, isLoading: loadingPermissions } = usePermissions()
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
@@ -143,7 +145,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
     <form id="edit-role-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Project Name (Always Read-only) */}
       <div>
-        <Label>Project</Label>
+        <Label>{t('pages.roles.forms.roleName')}</Label>
         <div className="border-light-50 flex h-[45px] items-center rounded-lg border bg-white px-4 py-2 text-sm font-light text-gray-950">
           {projectName}
         </div>
@@ -151,7 +153,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
 
       {/* Role Name */}
       <div>
-        <Label required={!isDefaultRole}>Role Name</Label>
+        <Label required={!isDefaultRole}>{t('pages.roles.forms.roleName')}</Label>
         {isDefaultRole ? (
           // Default role: read-only (backend prevents changes)
           <div className="border-light-50 flex h-[45px] items-center rounded-lg border bg-white px-4 py-2 text-sm font-light text-gray-950">
@@ -163,7 +165,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
             <Input
               id="name"
               {...register('name' as const)}
-              placeholder="Enter Role Name"
+              placeholder={t('pages.roles.forms.placeholders.roleName')}
               disabled={updateMutation.isPending}
             />
             {errors.name && (
@@ -177,7 +179,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
 
       {/* Description */}
       <div>
-        <Label>Description</Label>
+        <Label>{t('pages.roles.forms.description')}</Label>
         {isDefaultRole ? (
           // Default role: read-only
           <div className="border-light-50 flex min-h-[80px] items-start rounded-lg border bg-white px-4 py-2 pt-3 text-sm font-light text-gray-950">
@@ -188,7 +190,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
           <Textarea
             id="description"
             {...register('description' as const)}
-            placeholder="Enter role description"
+            placeholder={t('pages.roles.forms.placeholders.description')}
             disabled={updateMutation.isPending}
           />
         )}
@@ -197,7 +199,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
       {/* Permissions Section (Always Editable - No Backend Restriction) */}
       <div>
         <Label>
-          Permissions
+          {t('pages.roles.forms.permissions')}
           <span className="ml-2 text-sm font-light text-gray-500">
             (Selected: {selectedPermissions.length} of {permissions.length} permissions)
           </span>
@@ -205,7 +207,9 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
 
         <div className="max-h-96 overflow-y-auto rounded-xl bg-white p-6">
           {loadingPermissions ? (
-            <div className="py-4 text-sm text-gray-500">Loading permissions...</div>
+            <div className="py-4 text-sm text-gray-500">
+              {t('pages.roles.forms.loadingPermissions')}
+            </div>
           ) : (
             <div>
               {Object.entries(permissionsByCategory).map(([category, categoryPerms]) => {

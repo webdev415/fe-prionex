@@ -4,6 +4,7 @@
  * User profile dropdown with user info and logout option.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { useAuth } from '@/features/auth'
 import {
@@ -18,6 +19,7 @@ interface UserProfileProps {
 }
 
 export function UserProfile({ onLogoutClick }: UserProfileProps) {
+  const { t } = useTranslation('common')
   const { user } = useAuth()
 
   // Get display name: prefer firstName + lastName, fallback to username
@@ -43,7 +45,7 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
           className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
         >
           <Icons.Logout size={16} color="#05040D" />
-          <span>Logout</span>
+          <span>{t('actions.logout')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -6,6 +6,7 @@
  */
 
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { useRole } from '@/features/roles/hooks/useRole'
 import { useRoleUsers, useArchiveRole } from '@/features/roles/hooks/useRoleMutations'
@@ -32,6 +33,7 @@ interface ArchiveRoleModalProps {
 type ReassignmentOption = 'reassign' | 'default'
 
 export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRoleModalProps) {
+  const { t } = useTranslation('common')
   const { data: role, isLoading: roleLoading, error: roleError } = useRole(roleId)
   // Users query is optional - if it fails, we'll just show empty list
   const { data: usersData, isLoading: usersLoading, error: usersError } = useRoleUsers(roleId)
@@ -110,20 +112,26 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
             <Icons.Delete size={20} color="#05040D" strokeWidth={2} />
           </div>
         }
-        title={role ? `Archive Role: ${role.name}` : 'Archive Role'}
+        title={
+          role
+            ? t('pages.roles.modals.archive.title', { roleName: role.name })
+            : t('pages.roles.modals.archive.defaultTitle')
+        }
       />
       <ModalContent>
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-teal-600" />
-            <span className="ml-3 text-gray-600">Loading role data...</span>
+            <span className="ml-3 text-gray-600">
+              {t('pages.roles.modals.archive.loadingRoleData')}
+            </span>
           </div>
         ) : roleError || usersError ? (
           <Alert variant="error">
             <p className="text-sm">
               {roleError?.message ||
                 usersError?.message ||
-                'Failed to load role data. Please try again.'}
+                t('pages.roles.modals.archive.failedToLoad')}
             </p>
           </Alert>
         ) : role ? (
@@ -132,7 +140,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
             {hasUsers ? (
               <div>
                 <p className="mb-3 text-sm font-light text-gray-950">
-                  This role has users assigned:
+                  {t('pages.roles.modals.archive.hasUsersAssigned')}
                 </p>
                 <div className="space-y-2">
                   {users.map((user) => (
@@ -151,7 +159,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
             ) : (
               <div>
                 <p className="text-sm font-light text-gray-950">
-                  This role has no users assigned. You can archive it directly.
+                  {t('pages.roles.modals.archive.noUsersCanArchive')}
                 </p>
               </div>
             )}
@@ -160,7 +168,9 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
             {hasUsers && (
               <div className="space-y-4">
                 <hr className="border-light-50 border-t" />
-                <p className="text-sm font-light text-gray-950">Role per Project:</p>
+                <p className="text-sm font-light text-gray-950">
+                  {t('pages.roles.modals.archive.reassignmentOptions')}
+                </p>
 
                 <div className="space-y-4">
                   {/* Reassign to option - first line */}
@@ -190,7 +200,9 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                       role="button"
                       tabIndex={0}
                     >
-                      <span className="w-1/2 text-sm font-light text-gray-950">Reassign to:</span>
+                      <span className="w-1/2 text-sm font-light text-gray-950">
+                        {t('pages.roles.modals.archive.reassignTo')}
+                      </span>
                       <div
                         className="w-1/2"
                         onClick={(e) => e.stopPropagation()}
@@ -209,7 +221,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                           <SelectTrigger
                             className={`w-full ${reassignmentOption !== 'reassign' ? 'cursor-default opacity-50' : 'cursor-pointer'}`}
                           >
-                            <SelectValue placeholder="Select Role" />
+                            <SelectValue placeholder={t('pages.roles.modals.archive.selectRole')} />
                           </SelectTrigger>
                           <SelectContent>
                             {availableRoles.map((r) => (
@@ -251,7 +263,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                       tabIndex={0}
                     >
                       <span className="w-1/2 text-sm font-light text-gray-950">
-                        Set to default:
+                        {t('pages.roles.modals.archive.setToDefault')}
                       </span>
                       <span className="w-1/2 text-sm font-light text-gray-950">
                         {defaultOperatorRole?.name || 'Operator'}
@@ -268,7 +280,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                 <div className="flex items-center gap-2">
                   <Icons.Warning size={16} color="#EF4444" />
                   <p className="text-error-500 text-sm">
-                    You cannot archive a role until all users are reassigned.
+                    {t('pages.roles.modals.archive.cannotArchiveUntilReassigned')}
                   </p>
                 </div>
               </Alert>
@@ -278,13 +290,16 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
             {archiveMutation.isError && (
               <Alert variant="error">
                 <p className="text-sm">
-                  {archiveMutation.error?.message || 'Failed to archive role. Please try again.'}
+                  {archiveMutation.error?.message ||
+                    t('pages.roles.modals.archive.failedToArchive')}
                 </p>
               </Alert>
             )}
           </div>
         ) : (
-          <div className="py-8 text-center text-gray-600">Role not found</div>
+          <div className="py-8 text-center text-gray-600">
+            {t('pages.roles.modals.archive.roleNotFound')}
+          </div>
         )}
       </ModalContent>
       <ModalFooter>
@@ -294,7 +309,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
           onClick={onClose}
           className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button
           type="button"
@@ -303,7 +318,9 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
           disabled={!canArchive || archiveMutation.isPending || isLoading}
           className={`text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium ${!canArchive ? 'opacity-50' : ''}`}
         >
-          Archive Role
+          {archiveMutation.isPending
+            ? t('pages.roles.modals.archive.archiving')
+            : t('pages.roles.modals.archive.archiveRole')}
         </Button>
       </ModalFooter>
     </Modal>

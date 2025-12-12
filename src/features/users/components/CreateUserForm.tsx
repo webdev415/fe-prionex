@@ -7,6 +7,7 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -44,14 +45,15 @@ interface CreateUserFormProps {
 }
 
 // Extended schema to support multiple projects with roles
+// Note: Validation messages will be translated in the component
 const createUserFormSchema = createUserSchema
   .extend({
     confirmPassword: z.string(),
-    selectedProjects: z.array(z.number()).min(1, 'Please select at least one project'),
+    selectedProjects: z.array(z.number()).min(1, 'SELECT_AT_LEAST_ONE_PROJECT'),
     projectRoles: z.record(z.string(), z.number()),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
+    message: 'PASSWORDS_DONT_MATCH',
     path: ['confirmPassword'],
   })
   .refine(
@@ -63,7 +65,7 @@ const createUserFormSchema = createUserSchema
       })
     },
     {
-      message: 'Please assign a role for each selected project',
+      message: 'ASSIGN_ROLE_FOR_EACH_PROJECT',
       path: ['projectRoles'],
     }
   )
@@ -71,6 +73,7 @@ const createUserFormSchema = createUserSchema
 type CreateUserFormData = z.infer<typeof createUserFormSchema>
 
 export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
+  const { t } = useTranslation('common')
   const { mutate, isError, error } = useCreateUser()
   const [selectedProjects, setSelectedProjects] = useState<number[]>([])
   const [projectRoles, setProjectRoles] = useState<Record<number, number>>({})
@@ -184,8 +187,10 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
       {isError && (
         <Alert variant="error">
           <div>
-            <h3 className="font-semibold">Error creating user</h3>
-            <p className="mt-1 text-sm">{error?.message || 'Failed to create user'}</p>
+            <h3 className="font-semibold">{t('pages.users.forms.errorCreating')}</h3>
+            <p className="mt-1 text-sm">
+              {error?.message || t('pages.users.forms.errors.failedToCreate')}
+            </p>
           </div>
         </Alert>
       )}
@@ -195,11 +200,11 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="username" required>
-              Username:
+              {t('pages.users.forms.username')}
             </Label>
             <Input
               id="username"
-              placeholder="Enter your username"
+              placeholder={t('pages.users.forms.placeholders.username')}
               {...register('username')}
               aria-invalid={!!errors.username}
               variant={errors.username ? 'error' : 'default'}
@@ -212,12 +217,12 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
           <div>
             <Label htmlFor="email" required>
-              Email:
+              {t('pages.users.forms.email')}
             </Label>
             <Input
               id="email"
               type="email"
-              placeholder="Enter your email"
+              placeholder={t('pages.users.forms.placeholders.email')}
               {...register('email')}
               aria-invalid={!!errors.email}
               variant={errors.email ? 'error' : 'default'}
@@ -230,12 +235,12 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="password" required>
-              Password:
+              {t('pages.users.forms.password')}
             </Label>
             <Input
               id="password"
               type="password"
-              placeholder="Enter your password"
+              placeholder={t('pages.users.forms.placeholders.password')}
               {...register('password')}
               aria-invalid={!!errors.password}
               variant={errors.password ? 'error' : 'default'}
@@ -248,19 +253,23 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
           <div>
             <Label htmlFor="confirmPassword" required>
-              Confirm Password:
+              {t('pages.users.forms.confirmPassword')}
             </Label>
             <Input
               id="confirmPassword"
               type="password"
-              placeholder="Confirm your password"
+              placeholder={t('pages.users.forms.placeholders.confirmPassword')}
               {...register('confirmPassword')}
               aria-invalid={!!errors.confirmPassword}
               variant={errors.confirmPassword ? 'error' : 'default'}
               className="mt-1"
             />
             {errors.confirmPassword && (
-              <p className="mt-1 text-sm text-red-500">{errors.confirmPassword.message}</p>
+              <p className="mt-1 text-sm text-red-500">
+                {errors.confirmPassword.message === 'PASSWORDS_DONT_MATCH'
+                  ? t('pages.users.forms.errors.passwordsDontMatch')
+                  : errors.confirmPassword.message}
+              </p>
             )}
           </div>
         </div>
@@ -272,7 +281,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
             onCheckedChange={(checked) => setValue('must_change_password', checked === true)}
           />
           <Label htmlFor="must_change_password" className="mb-0 cursor-pointer">
-            Must change password on first login
+            {t('pages.users.forms.mustChangePassword')}
           </Label>
         </div>
       </div>
@@ -282,11 +291,11 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="first_name" required>
-              First Name:
+              {t('pages.users.forms.firstName')}
             </Label>
             <Input
               id="first_name"
-              placeholder="Enter first name"
+              placeholder={t('pages.users.forms.placeholders.firstName')}
               {...register('first_name')}
               aria-invalid={!!errors.first_name}
               variant={errors.first_name ? 'error' : 'default'}
@@ -299,11 +308,11 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
           <div>
             <Label htmlFor="last_name" required>
-              Last Name:
+              {t('pages.users.forms.lastName')}
             </Label>
             <Input
               id="last_name"
-              placeholder="Enter last name"
+              placeholder={t('pages.users.forms.placeholders.lastName')}
               {...register('last_name')}
               aria-invalid={!!errors.last_name}
               variant={errors.last_name ? 'error' : 'default'}
@@ -317,10 +326,10 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="middle_name">Middle Name:</Label>
+            <Label htmlFor="middle_name">{t('pages.users.forms.middleName')}</Label>
             <Input
               id="middle_name"
-              placeholder="Enter middle name (optional)"
+              placeholder={t('pages.users.forms.placeholders.middleName')}
               {...register('middle_name')}
               aria-invalid={!!errors.middle_name}
               variant={errors.middle_name ? 'error' : 'default'}
@@ -332,11 +341,11 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
           </div>
 
           <div>
-            <Label htmlFor="phone">Phone:</Label>
+            <Label htmlFor="phone">{t('pages.users.forms.phone')}</Label>
             <Input
               id="phone"
               type="tel"
-              placeholder="+1-555-0101 (optional)"
+              placeholder={t('pages.users.forms.placeholders.phone')}
               {...register('phone')}
               aria-invalid={!!errors.phone}
               variant={errors.phone ? 'error' : 'default'}
@@ -352,7 +361,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="language" required>
-              Language:
+              {t('pages.users.forms.language')}
             </Label>
             <Controller
               name="language"
@@ -363,9 +372,9 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="uk">Ukrainian</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="ru">Russian</SelectItem>
+                    <SelectItem value="uk">{t('language.uk')}</SelectItem>
+                    <SelectItem value="en">{t('language.en')}</SelectItem>
+                    <SelectItem value="ru">{t('language.ru')}</SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -377,7 +386,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
           <div>
             <Label htmlFor="timezone" required>
-              Timezone:
+              {t('pages.users.forms.timezone')}
             </Label>
             <Controller
               name="timezone"
@@ -413,7 +422,9 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
       {/* Assign Projects Section */}
       <div className="mt-4 mb-0 space-y-4">
-        <h3 className="text-dark-500 text-sm font-semibold">Assign Projects:</h3>
+        <h3 className="text-dark-500 text-sm font-semibold">
+          {t('pages.users.forms.assignProjects')}
+        </h3>
         <div className="flex flex-wrap gap-4">
           {projects.map((project) => {
             const isChecked = selectedProjects.includes(project.id)
@@ -432,14 +443,20 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
           })}
         </div>
         {errors.selectedProjects && (
-          <p className="text-sm text-red-500">{errors.selectedProjects.message}</p>
+          <p className="text-sm text-red-500">
+            {errors.selectedProjects.message === 'SELECT_AT_LEAST_ONE_PROJECT'
+              ? t('pages.users.forms.errors.selectAtLeastOneProject')
+              : errors.selectedProjects.message}
+          </p>
         )}
       </div>
 
       {/* Role per Project Section */}
       {selectedProjects.length > 0 && (
         <div className="mt-4 mb-0 space-y-4">
-          <h3 className="text-dark-500 text-sm font-semibold">Role per Project:</h3>
+          <h3 className="text-dark-500 text-sm font-semibold">
+            {t('pages.users.forms.rolePerProject')}
+          </h3>
           <div className="space-y-3">
             {selectedProjects.map((projectId) => {
               const project = projects.find((p) => p.id === projectId)
@@ -457,7 +474,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
                     }}
                   >
                     <SelectTrigger className="border-light-50 text-dark-500 mt-1 w-full border text-sm">
-                      <SelectValue placeholder="Not assigned" />
+                      <SelectValue placeholder={t('pages.users.forms.notAssigned')} />
                     </SelectTrigger>
                     <SelectContent>
                       {availableRoles.length > 0 ? (
@@ -469,7 +486,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
                       ) : (
                         // Radix Select does not allow empty-string values for items
                         <SelectItem value="no-roles-available" disabled>
-                          No roles available
+                          {t('pages.users.forms.noRolesAvailable')}
                         </SelectItem>
                       )}
                     </SelectContent>
@@ -480,9 +497,12 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
           </div>
           {errors.projectRoles && (
             <p className="text-sm text-red-500">
-              {typeof errors.projectRoles.message === 'string'
-                ? errors.projectRoles.message
-                : 'Please assign a role for each selected project'}
+              {typeof errors.projectRoles.message === 'string' &&
+              errors.projectRoles.message === 'ASSIGN_ROLE_FOR_EACH_PROJECT'
+                ? t('pages.users.forms.errors.assignRoleForEachProject')
+                : typeof errors.projectRoles.message === 'string'
+                  ? errors.projectRoles.message
+                  : t('pages.users.forms.errors.assignRoleForEachProject')}
             </p>
           )}
         </div>

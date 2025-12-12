@@ -7,6 +7,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useUpdateUser } from '../hooks/useUpdateUser'
@@ -36,6 +37,7 @@ interface EditUserFormProps {
 }
 
 export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
+  const { t } = useTranslation('common')
   const { mutate, isError, error } = useUpdateUser()
 
   // Project/role assignment state (UI only, similar to CreateUserForm)
@@ -340,7 +342,9 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       {/* Role per Project Section (editable) */}
       {selectedProjects.length > 0 && (
         <div className="mt-4 mb-0 space-y-4">
-          <h3 className="text-dark-500 text-sm font-semibold">Role per Project:</h3>
+          <h3 className="text-dark-500 text-sm font-semibold">
+            {t('pages.users.forms.rolePerProject')}
+          </h3>
           <div className="space-y-3">
             {selectedProjects.map((projectId) => {
               const project = projects.find((p) => p.id === projectId)
@@ -358,7 +362,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
                     }}
                   >
                     <SelectTrigger className="border-light-50 text-dark-500 mt-1 w-full border text-sm">
-                      <SelectValue placeholder="Not assigned" />
+                      <SelectValue placeholder={t('pages.users.forms.notAssigned')} />
                     </SelectTrigger>
                     <SelectContent>
                       {availableRoles.length > 0 ? (
@@ -370,7 +374,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
                       ) : (
                         // Radix Select does not allow empty-string values for items
                         <SelectItem value="no-roles-available" disabled>
-                          No roles available
+                          {t('pages.users.forms.noRolesAvailable')}
                         </SelectItem>
                       )}
                     </SelectContent>
