@@ -9,6 +9,7 @@
  */
 
 import { useState, useMemo, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -19,7 +20,6 @@ import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Alert } from '@/components/ui/Alert'
 import { Checkbox } from '@/components/ui/Checkbox'
-import { colors } from '@/lib/colors'
 import type { RoleDetailResponse } from '../types'
 
 interface EditRoleFormProps {
@@ -44,6 +44,7 @@ const customRoleSchema = z.object({
 type CustomRoleFormData = z.infer<typeof customRoleSchema>
 
 export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps) {
+  const { t } = useTranslation('common')
   const updateMutation = useUpdateRole()
   const { data: permissionsData, isLoading: loadingPermissions } = usePermissions()
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
@@ -144,40 +145,18 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
     <form id="edit-role-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Project Name (Always Read-only) */}
       <div>
-        <Label>Project</Label>
-        <div
-          className="rounded-lg border bg-white px-4 py-2"
-          style={{
-            borderColor: colors.light[100],
-            fontSize: '14px',
-            fontWeight: 300,
-            color: colors.gray[950],
-            height: '45px',
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
+        <Label>{t('pages.roles.forms.roleName')}</Label>
+        <div className="border-light-50 flex h-[45px] items-center rounded-lg border bg-white px-4 py-2 text-sm font-light text-gray-950">
           {projectName}
         </div>
       </div>
 
       {/* Role Name */}
       <div>
-        <Label required={!isDefaultRole}>Role Name</Label>
+        <Label required={!isDefaultRole}>{t('pages.roles.forms.roleName')}</Label>
         {isDefaultRole ? (
           // Default role: read-only (backend prevents changes)
-          <div
-            className="rounded-lg border bg-white px-4 py-2"
-            style={{
-              borderColor: colors.light[100],
-              fontSize: '14px',
-              fontWeight: 300,
-              color: colors.gray[950],
-              height: '45px',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
+          <div className="border-light-50 flex h-[45px] items-center rounded-lg border bg-white px-4 py-2 text-sm font-light text-gray-950">
             {role.name}
           </div>
         ) : (
@@ -186,11 +165,11 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
             <Input
               id="name"
               {...register('name' as const)}
-              placeholder="Enter Role Name"
+              placeholder={t('pages.roles.forms.placeholders.roleName')}
               disabled={updateMutation.isPending}
             />
             {errors.name && (
-              <p className="mt-1 text-sm" style={{ color: '#EF4444' }}>
+              <p className="text-error-500 mt-1 text-sm">
                 {(errors.name as { message?: string })?.message}
               </p>
             )}
@@ -200,22 +179,10 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
 
       {/* Description */}
       <div>
-        <Label>Description</Label>
+        <Label>{t('pages.roles.forms.description')}</Label>
         {isDefaultRole ? (
           // Default role: read-only
-          <div
-            className="rounded-lg border bg-white px-4 py-2"
-            style={{
-              borderColor: colors.light[100],
-              fontSize: '14px',
-              fontWeight: 300,
-              color: colors.gray[950],
-              minHeight: '80px',
-              display: 'flex',
-              alignItems: 'flex-start',
-              paddingTop: '12px',
-            }}
-          >
+          <div className="border-light-50 flex min-h-[80px] items-start rounded-lg border bg-white px-4 py-2 pt-3 text-sm font-light text-gray-950">
             {role.description || '—'}
           </div>
         ) : (
@@ -223,7 +190,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
           <Textarea
             id="description"
             {...register('description' as const)}
-            placeholder="Enter role description"
+            placeholder={t('pages.roles.forms.placeholders.description')}
             disabled={updateMutation.isPending}
           />
         )}
@@ -232,39 +199,25 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
       {/* Permissions Section (Always Editable - No Backend Restriction) */}
       <div>
         <Label>
-          Permissions
-          <span className="ml-2 font-light" style={{ fontSize: '14px', color: colors.gray[500] }}>
+          {t('pages.roles.forms.permissions')}
+          <span className="ml-2 text-sm font-light text-gray-500">
             (Selected: {selectedPermissions.length} of {permissions.length} permissions)
           </span>
         </Label>
 
-        <div
-          className="max-h-96 overflow-y-auto rounded-xl"
-          style={{
-            backgroundColor: '#FFFFFF',
-            padding: '24px',
-          }}
-        >
+        <div className="max-h-96 overflow-y-auto rounded-xl bg-white p-6">
           {loadingPermissions ? (
-            <div className="py-4 text-sm" style={{ color: colors.gray[500] }}>
-              Loading permissions...
+            <div className="py-4 text-sm text-gray-500">
+              {t('pages.roles.forms.loadingPermissions')}
             </div>
           ) : (
             <div>
               {Object.entries(permissionsByCategory).map(([category, categoryPerms]) => {
                 return (
                   <div key={category} className="mb-6 last:mb-0">
-                    <div
-                      className="mb-3 flex items-center justify-between"
-                      style={{ backgroundColor: 'transparent' }}
-                    >
-                      <span
-                        className="font-light"
-                        style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
-                      >
-                        {category}
-                      </span>
-                      <span className="text-xs" style={{ color: colors.gray[500] }}>
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="text-sm font-light text-gray-950">{category}</span>
+                      <span className="text-xs text-gray-500">
                         {categoryPerms.filter((p) => selectedPermissions.includes(p.id)).length}/
                         {categoryPerms.length}
                       </span>
@@ -281,21 +234,9 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
                             aria-label={perm.name}
                           />
                           <div className="flex-1">
-                            <span
-                              className="font-light"
-                              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
-                            >
-                              {perm.name}
-                            </span>
+                            <span className="text-sm font-light text-gray-950">{perm.name}</span>
                             {perm.description && (
-                              <span
-                                className="ml-2 font-light"
-                                style={{
-                                  fontSize: '14px',
-                                  fontWeight: 300,
-                                  color: colors.gray[500],
-                                }}
-                              >
+                              <span className="ml-2 text-sm font-light text-gray-500">
                                 {perm.description}
                               </span>
                             )}
@@ -310,9 +251,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
           )}
         </div>
         {errors.permission_ids && (
-          <p className="mt-1 text-sm" style={{ color: '#EF4444' }}>
-            {errors.permission_ids.message}
-          </p>
+          <p className="text-error-500 mt-1 text-sm">{errors.permission_ids.message}</p>
         )}
       </div>
 

@@ -5,11 +5,11 @@
  * Uses the global Modal component for consistent styling.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import type { ApiUser } from '@/features/users/types'
 import { useAdminUnlockAccount } from '@/features/users/hooks'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -22,6 +22,7 @@ interface UnlockAccountModalProps {
 }
 
 export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalProps) {
+  const { t } = useTranslation('common')
   const { mutate, isPending, isError, error } = useAdminUnlockAccount()
 
   const failedAttempts = user.failed_login_attempts
@@ -56,17 +57,14 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
     <Modal open={open} onClose={onClose} maxWidth="lg">
       <ModalHeader
         icon={
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.primary[400] }}
-          >
-            <HugeiconsIcon icon={LockedIcon} size={20} color={colors.neutral.dark[500]} />
+          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <HugeiconsIcon icon={LockedIcon} size={20} color="#05040D" />
           </div>
         }
         title={
           <span className="flex items-baseline gap-2">
-            <span>Account Status:</span>
-            <span style={{ color: '#EF4444' }}>Locked</span>
+            <span>{t('pages.users.modals.unlock.title')}</span>
+            <span className="text-error-500">{t('pages.users.modals.unlock.locked')}</span>
           </span>
         }
       />
@@ -74,63 +72,23 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
         {/* Account summary */}
         <div className="space-y-1 text-sm">
           <p>
-            <span
-              style={{
-                fontWeight: 500,
-                fontSize: '16px',
-                color: colors.neutral.dark[500],
-              }}
-            >
-              Unlock Account:
+            <span className="text-dark-500 text-base font-medium">
+              {t('pages.users.modals.unlock.unlockAccount')}
             </span>{' '}
-            <span
-              style={{
-                fontWeight: 300,
-                fontSize: '16px',
-                color: colors.neutral.dark[500],
-              }}
-            >
-              {user.username}
-            </span>
+            <span className="text-dark-500 text-base font-light">{user.username}</span>
           </p>
           <p>
-            <span
-              style={{
-                fontWeight: 300,
-                fontSize: '16px',
-                color: colors.neutral.dark[500],
-              }}
-            >
-              Failed Attempts:
+            <span className="text-dark-500 text-base font-light">
+              {t('pages.users.modals.unlock.failedAttempts')}
             </span>{' '}
-            <span
-              style={{
-                fontWeight: 500,
-                fontSize: '16px',
-                color: colors.neutral.dark[500],
-              }}
-            >
-              {failedAttempts}
-            </span>
+            <span className="text-dark-500 text-base font-medium">{failedAttempts}</span>
           </p>
           {lockedAt && (
             <p>
-              <span
-                style={{
-                  fontWeight: 300,
-                  fontSize: '16px',
-                  color: colors.neutral.dark[500],
-                }}
-              >
-                Locked At:
+              <span className="text-dark-500 text-base font-light">
+                {t('pages.users.modals.unlock.lockedAt')}
               </span>{' '}
-              <span
-                style={{
-                  fontWeight: 500,
-                  fontSize: '16px',
-                  color: colors.neutral.dark[500],
-                }}
-              >
+              <span className="text-dark-500 text-base font-medium">
                 {lockedAt.toLocaleString(undefined, {
                   year: 'numeric',
                   month: 'short',
@@ -143,22 +101,10 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
           )}
           {autoUnlockAt && (
             <p>
-              <span
-                style={{
-                  fontWeight: 300,
-                  fontSize: '16px',
-                  color: colors.neutral.dark[500],
-                }}
-              >
-                Auto-Unlock At:
+              <span className="text-dark-500 text-base font-light">
+                {t('pages.users.modals.unlock.autoUnlockAt')}
               </span>{' '}
-              <span
-                style={{
-                  fontWeight: 500,
-                  fontSize: '16px',
-                  color: colors.neutral.dark[500],
-                }}
-              >
+              <span className="text-dark-500 text-base font-medium">
                 {autoUnlockAt.toLocaleString(undefined, {
                   year: 'numeric',
                   month: 'short',
@@ -168,59 +114,40 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
                 })}
               </span>
               {remainingMinutes !== null && remainingMinutes > 0 && (
-                <span
-                  style={{
-                    fontWeight: 300,
-                    fontSize: '14px',
-                    color: colors.neutral.dark[500],
-                    marginLeft: '4px',
-                  }}
-                >{`(${remainingMinutes} min remaining)`}</span>
+                <span className="text-dark-500 ml-1 text-sm font-light">{`(${remainingMinutes} ${t('pages.users.modals.unlock.minRemaining')})`}</span>
               )}
             </p>
           )}
         </div>
 
-        <hr className="border-t" style={{ borderColor: colors.light[100] }} />
+        <hr className="border-light-50 border-t" />
 
         {/* Confirmation copy */}
         <div className="space-y-3 text-sm">
-          <p
-            className="font-medium"
-            style={{ color: colors.neutral.dark[500], fontSize: '18px', fontWeight: 500 }}
-          >
-            Are you sure you want to unlock this account?
+          <p className="text-dark-500 text-lg font-medium">
+            {t('pages.users.modals.unlock.confirmTitle')}
           </p>
           <div className="space-y-2">
-            <p className="font-light" style={{ color: colors.neutral.dark[500], fontSize: '16px' }}>
-              This will:
+            <p className="text-dark-500 text-base font-light">
+              {t('pages.users.modals.unlock.thisWill')}
             </p>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Icons.ArrowRight size={14} color={colors.neutral.dark[500]} strokeWidth={1.5} />
-                <span
-                  className="font-light"
-                  style={{ color: colors.neutral.dark[500], fontSize: '16px' }}
-                >
-                  Immediately restore login access
+                <Icons.ArrowRight size={14} className="text-dark-500" strokeWidth={1.5} />
+                <span className="text-dark-500 text-base font-light">
+                  {t('pages.users.modals.unlock.restoreAccess')}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Icons.ArrowRight size={14} color={colors.neutral.dark[500]} strokeWidth={1.5} />
-                <span
-                  className="font-light"
-                  style={{ color: colors.neutral.dark[500], fontSize: '16px' }}
-                >
-                  Reset failed attempt counter
+                <Icons.ArrowRight size={14} className="text-dark-500" strokeWidth={1.5} />
+                <span className="text-dark-500 text-base font-light">
+                  {t('pages.users.modals.unlock.resetCounter')}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Icons.ArrowRight size={14} color={colors.neutral.dark[500]} strokeWidth={1.5} />
-                <span
-                  className="font-light"
-                  style={{ color: colors.neutral.dark[500], fontSize: '16px' }}
-                >
-                  Be recorded in the audit log
+                <Icons.ArrowRight size={14} className="text-dark-500" strokeWidth={1.5} />
+                <span className="text-dark-500 text-base font-light">
+                  {t('pages.users.modals.unlock.recordAudit')}
                 </span>
               </div>
             </div>
@@ -228,7 +155,9 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
 
           {isError && (
             <Alert variant="error">
-              <p className="text-sm">{error?.message || 'Failed to unlock account'}</p>
+              <p className="text-sm">
+                {error?.message || t('pages.users.modals.unlock.failedToUnlock')}
+              </p>
             </Alert>
           )}
         </div>
@@ -236,38 +165,22 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
       <ModalFooter>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={onClose}
           disabled={isPending}
-          className="flex-1"
-          style={{
-            border: 'none',
-            backgroundColor: colors.gray[500],
-            color: '#FFFFFF',
-            height: '45px',
-            borderRadius: '8px',
-            fontWeight: 500,
-            fontSize: '14px',
-          }}
+          className="h-[45px] flex-1 rounded-lg border-none bg-gray-500 text-sm font-medium text-white"
         >
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button
           type="button"
           onClick={handleUnlock}
           disabled={isPending}
-          className="flex-1"
-          style={{
-            border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
-            borderRadius: '8px',
-            fontWeight: 500,
-            height: '45px',
-            fontSize: '14px',
-          }}
+          className="text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-lg border-none text-sm font-medium"
         >
-          {isPending ? 'Unlocking...' : 'Unlock Account'}
+          {isPending
+            ? t('pages.users.modals.unlock.unlocking')
+            : t('pages.users.modals.unlock.unlockAccountButton')}
         </Button>
       </ModalFooter>
     </Modal>

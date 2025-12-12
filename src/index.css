@@ -2,51 +2,59 @@
 @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
 
 @theme {
-  /* Font Family */
-  --font-sans: 'Lexend', sans-serif;
+  /* PRIMARY (Green #80D80A) - CTAs, links, focus states, interactive elements */
+  --color-primary-50: #f7ffe5;
+  --color-primary-100: #ebffc8;
+  --color-primary-200: #ceff7d;
+  --color-primary-300: #bbfb5b;
+  --color-primary-400: #a0f229;
+  --color-primary-500: #80d80a;
+  --color-primary-600: #62ad03;
+  --color-primary-700: #4a8308;
+  --color-primary-800: #3d670d;
+  --color-primary-900: #345710;
+  --color-primary-950: #193102;
 
-  /* Font Sizes - Display (use: text-display-2xl, text-display-xl, etc.) */
-  --font-size-display-2xl: 72px;
-  --font-size-display-xl: 60px;
-  --font-size-display-lg: 48px;
-  --font-size-display-md: 36px;
-  --font-size-display-sm: 30px;
-  --font-size-display-xs: 24px;
+  /* SECONDARY (Teal/Blue-Green #359791) - Secondary actions, accents */
+  --color-secondary-50: #f3faf9;
+  --color-secondary-100: #d5f2ed;
+  --color-secondary-200: #abe4db;
+  --color-secondary-300: #7acec5;
+  --color-secondary-400: #4eb3aa;
+  --color-secondary-500: #359791;
+  --color-secondary-600: #287975;
+  --color-secondary-700: #236260;
+  --color-secondary-800: #204e4d;
+  --color-secondary-900: #1f4242;
+  --color-secondary-950: #0d2526;
 
-  /* Font Sizes - Body Text (use: text-body-xl, text-body-lg, etc.) */
-  --font-size-body-xl: 20px;
-  --font-size-body-lg: 18px;
-  --font-size-body-md: 16px;
-  --font-size-body-sm: 14px;
-  --font-size-body-xs: 12px;
+  /* INFORMATION (Blue #3B82F6) - Info messages, secondary actions, informational badges */
+  --color-information-50: #eff6ff;
+  --color-information-100: #dbeafe;
+  --color-information-200: #bfdbfe;
+  --color-information-300: #93c5fd;
+  --color-information-400: #60a5fa;
+  --color-information-500: #3b82f6;
+  --color-information-600: #2563eb;
+  --color-information-700: #1d4ed8;
+  --color-information-800: #1e40af;
+  --color-information-900: #1e3a8a;
+  --color-information-950: #172e54;
 
-  /* Primary Colors */
-  --color-primary-50: #f0f9ff;
-  --color-primary-100: #e0f2fe;
-  --color-primary-200: #b9e7fe;
-  --color-primary-300: #7cd4fd;
-  --color-primary-400: #36c0fa;
-  --color-primary-500: #0ca8eb;
-  --color-primary-600: #008fd6;
-  --color-primary-700: #016aa3;
-  --color-primary-800: #065a86;
-  --color-primary-900: #0b4b6f;
-  --color-primary-950: #05040d;
-
-  /* Dark Colors */
-  --color-dark-50: #366a80;
-  --color-dark-100: #28576a;
-  --color-dark-200: #1f4150;
-  --color-dark-300: #152f3a;
-  --color-dark-400: #0b1b22;
-  --color-dark-500: #050d11;
-  --color-dark-600: #040b0e;
-  --color-dark-700: #02090b;
-  --color-dark-800: #02090b;
+  /* DARK (Dark #05040D) - Text, dark backgrounds, headers */
+  --color-dark-50: #272166;
+  --color-dark-100: #231e5b;
+  --color-dark-200: #1d194d;
+  --color-dark-300: #0c0a20;
+  --color-dark-400: #080716;
+  --color-dark-500: #05040d;
+  --color-dark-600: #04030a;
+  --color-dark-700: #030209;
+  --color-dark-800: #020107;
   --color-dark-900: #000000;
   --color-dark-950: #000000;
 
-  /* Gray Colors */
+  /* GRAY (Neutral Gray) - Borders, dividers, disabled states, secondary text */
   --color-gray-50: #f7f7f7;
   --color-gray-100: #ededed;
   --color-gray-200: #dfdfdf;
@@ -59,23 +67,20 @@
   --color-gray-900: #545454;
   --color-gray-950: #363636;
 
-  /* Text Colors */
-  --color-text-dark: #05040d;
-
-  /* Light Colors */
+  /* LIGHT (Grey-Green #90947B) - Light backgrounds, cards, panels */
   --color-light-50: #f2f3f0;
-  --color-light-100: #e5e6e8;
-  --color-light-200: #cdcfd4;
-  --color-light-300: #abafb5;
-  --color-light-400: #81858f;
-  --color-light-500: #6d727d;
-  --color-light-600: #575a63;
-  --color-light-700: #4a4d54;
-  --color-light-800: #424448;
-  --color-light-900: #3a3b3f;
-  --color-light-950: #242528;
+  --color-light-100: #ebece8;
+  --color-light-200: #d6d9cf;
+  --color-light-300: #bbc0b1;
+  --color-light-400: #a2a691;
+  --color-light-500: #90947b;
+  --color-light-600: #84876f;
+  --color-light-700: #6f715d;
+  --color-light-800: #5e5e4e;
+  --color-light-900: #4d4d41;
+  --color-light-950: #282822;
 
-  /* Success Colors */
+  /* SUCCESS (Green #22C55E) - Success messages, positive feedback, completed states */
   --color-success-50: #f0fdf4;
   --color-success-100: #dcfce7;
   --color-success-200: #bbf7d0;
@@ -88,7 +93,7 @@
   --color-success-900: #14532d;
   --color-success-950: #052e14;
 
-  /* Warning Colors */
+  /* WARNING (Yellow/Orange #EAB308) - Warning messages, caution states, pending actions */
   --color-warning-50: #fefce8;
   --color-warning-100: #fef9c3;
   --color-warning-200: #fef08a;
@@ -99,9 +104,9 @@
   --color-warning-700: #a16207;
   --color-warning-800: #854d0e;
   --color-warning-900: #713f12;
-  --color-warning-950: #422306;
+  --color-warning-950: #423306;
 
-  /* Error Colors */
+  /* ERROR (Red #EF4444) - Error messages, destructive actions, validation failures */
   --color-error-50: #fef2f2;
   --color-error-100: #fee2e2;
   --color-error-200: #fecaca;
@@ -114,46 +119,49 @@
   --color-error-900: #7f1d1d;
   --color-error-950: #450a0a;
 
-  /* Accent Colors (lime green for CTAs) */
-  --color-accent-50: #f7fee7;
-  --color-accent-100: #ecfccb;
-  --color-accent-200: #d9f99d;
-  --color-accent-300: #bef264;
-  --color-accent-400: #bbfb5b;
-  --color-accent-500: #a8e250;
-  --color-accent-600: #95c946;
-  --color-accent-700: #65a30d;
-  --color-accent-800: #4d7c0f;
-  --color-accent-900: #3f6212;
-  --color-accent-950: #1a2e05;
+  /* Font Family */
+  --font-family-sans: 'Lexend', sans-serif;
 
-  /* Info Colors */
-  --color-info-50: #eff6ff;
-  --color-info-100: #dbeafe;
-  --color-info-200: #bfdbfe;
-  --color-info-300: #93c5fd;
-  --color-info-400: #60a5fa;
-  --color-info-500: #3b82f6;
-  --color-info-600: #2563eb;
-  --color-info-700: #1d4ed8;
-  --color-info-800: #1e40af;
-  --color-info-900: #1e3a8a;
-  --color-info-950: #172e54;
+  /* Font Sizes - Display */
+  --font-size-2xl-display: 72px;
+  --line-height-2xl-display: 125%;
+  --font-size-xl-display: 60px;
+  --line-height-xl-display: 125%;
+  --font-size-lg-display: 48px;
+  --line-height-lg-display: 126%;
+  --font-size-md-display: 36px;
+  --line-height-md-display: 129%;
+  --font-size-sm-display: 30px;
+  --line-height-sm-display: 120%;
+  --font-size-xs-display: 24px;
+  --line-height-xs-display: 132%;
 
-  /* Box Shadows */
+  /* Font Sizes - Text */
+  --font-size-text-xl: 20px;
+  --line-height-text-xl: 150%;
+  --font-size-text-lg: 18px;
+  --line-height-text-lg: 155%;
+  --font-size-text-md: 16px;
+  --line-height-text-md: 150%;
+  --font-size-text-sm: 14px;
+  --line-height-text-sm: 140%;
+  --font-size-text-xs: 12px;
+  --line-height-text-xs: 150%;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+
+  /* Box Shadow */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
   --shadow-card: 0 25px 50px -12px rgb(0 0 0 / 0.25);
-
-  /* Border Radius */
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 16px;
-  --radius-2xl: 24px;
 }
 
 @layer base {
@@ -177,6 +185,11 @@
 }
 
 @layer utilities {
+  /* Dashboard background image */
+  .bg-dashboard-light {
+    background-image: url(/assets/images/dashboard-light-bg.svg);
+  }
+
   /* Button text color for light backgrounds */
   .text-btn-dark {
     color: #05040d !important;
@@ -241,49 +254,52 @@
 }
 
 @layer components {
+  /* NOTE: These utility classes have been replaced by CVA components */
+  /* Keeping minimal CSS definitions for backwards compatibility */
+
   .btn-primary {
-    background-color: var(--color-primary-500);
+    background-color: #0ca8eb;
     color: white;
     padding: 0.5rem 1rem;
-    border-radius: var(--radius-lg);
-    transition: background-color 0.2s;
+    border-radius: 0.5rem;
+    transition: colors 200ms;
   }
   .btn-primary:hover {
-    background-color: var(--color-primary-600);
+    background-color: #008fd6;
   }
 
   .btn-secondary {
-    background-color: var(--color-gray-700);
+    background-color: #7b7b7b;
     color: white;
     padding: 0.5rem 1rem;
-    border-radius: var(--radius-lg);
-    transition: background-color 0.2s;
+    border-radius: 0.5rem;
+    transition: colors 200ms;
   }
   .btn-secondary:hover {
-    background-color: var(--color-gray-600);
+    background-color: #888888;
   }
 
   .input-field {
-    background-color: var(--color-dark-400);
-    border: 1px solid var(--color-dark-200);
-    border-radius: var(--radius-lg);
+    background-color: #81858f;
+    border: 1px solid #cdcfd4;
+    border-radius: 0.5rem;
     padding: 0.5rem 1rem;
     color: white;
     outline: none;
-    transition: all 0.2s;
+    transition: all 200ms;
   }
   .input-field::placeholder {
-    color: var(--color-gray-500);
+    color: #a1a1a1;
   }
   .input-field:focus {
-    border-color: var(--color-primary-500);
-    box-shadow: 0 0 0 1px var(--color-primary-500);
+    border-color: #0ca8eb;
+    box-shadow: 0 0 0 1px #0ca8eb;
   }
 
   .card {
-    background-color: var(--color-dark-400);
-    border-radius: var(--radius-2xl);
-    box-shadow: var(--shadow-card);
+    background-color: #81858f;
+    border-radius: 1.5rem;
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
     padding: 1.5rem;
   }
 }

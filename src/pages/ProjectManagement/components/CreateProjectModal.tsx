@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
@@ -17,7 +18,6 @@ import { Label } from '@/components/ui/Label'
 import { useCreateProject } from '@/features/projects/hooks/useProjectMutations'
 import type { CreateProjectInput } from '@/features/projects/types'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 
 interface CreateProjectModalProps {
   open: boolean
@@ -26,6 +26,7 @@ interface CreateProjectModalProps {
 }
 
 export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectModalProps) {
+  const { t } = useTranslation('common')
   const [formData, setFormData] = useState<CreateProjectInput>({
     name: '',
     code: '',
@@ -44,18 +45,18 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
     const newErrors: Record<string, string> = {}
 
     if (!formData.name || formData.name.length < 3) {
-      newErrors.name = 'Name must be at least 3 characters'
+      newErrors.name = t('pages.projects.modals.create.errors.nameMinLength')
     }
 
     if (!formData.code || formData.code.length < 2) {
-      newErrors.code = 'Code must be at least 2 characters'
+      newErrors.code = t('pages.projects.modals.create.errors.codeMinLength')
     }
 
     if (formData.start_date && formData.end_date && !noEndDate) {
       const start = new Date(formData.start_date)
       const end = new Date(formData.end_date)
       if (end < start) {
-        newErrors.end_date = 'End date must be after start date'
+        newErrors.end_date = t('pages.projects.modals.create.errors.endDateAfterStart')
       }
     }
 
@@ -117,38 +118,35 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.primary[300] }}
-          >
-            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
-        title="Create New Project"
+        title={t('pages.projects.modals.create.title')}
       />
       <ModalContent>
         <form id="create-project-form" onSubmit={handleSubmit} className="space-y-6">
           {createMutation.isError && (
             <Alert variant="error">
               <div>
-                <p className="font-semibold">Error creating project</p>
-                <p className="mt-1 text-sm">Failed to create project. Please try again.</p>
+                <p className="font-semibold">{t('pages.projects.modals.create.errorCreating')}</p>
+                <p className="mt-1 text-sm">{t('pages.projects.modals.create.failedToCreate')}</p>
               </div>
             </Alert>
           )}
 
           {/* Project Information Section */}
           <div className="space-y-4">
-            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
-              Project Information
+            <h3 className="text-dark-500 text-base font-medium">
+              {t('pages.projects.modals.create.projectInformation')}
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <Input
                 id="name"
-                label="Project Name:"
+                label={t('pages.projects.modals.create.projectName')}
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
-                placeholder="Enter Project Name"
+                placeholder={t('pages.projects.modals.create.placeholders.projectName')}
                 disabled={createMutation.isPending}
                 variant={errors.name ? 'error' : 'default'}
                 error={errors.name}
@@ -156,49 +154,49 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
 
               <Input
                 id="code"
-                label="Project Code:"
+                label={t('pages.projects.modals.create.projectCode')}
                 value={formData.code}
                 onChange={(e) => handleChange('code', e.target.value)}
-                placeholder="Enter Project Code"
+                placeholder={t('pages.projects.modals.create.placeholders.projectCode')}
                 disabled={createMutation.isPending}
                 variant={errors.code ? 'error' : 'default'}
                 error={errors.code}
               />
             </div>
-            <div className="h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+            <div className="h-px w-full bg-gray-200" />
           </div>
 
           {/* Client & Contract Section */}
           <div className="space-y-4">
-            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
-              Client & Contract
+            <h3 className="text-dark-500 text-base font-medium">
+              {t('pages.projects.modals.create.clientContract')}
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <Input
                 id="client_company"
-                label="Client Company:"
+                label={t('pages.projects.modals.create.clientCompany')}
                 value={formData.client_company}
                 onChange={(e) => handleChange('client_company', e.target.value)}
-                placeholder="Client Company"
+                placeholder={t('pages.projects.modals.create.placeholders.clientCompany')}
                 disabled={createMutation.isPending}
               />
 
               <Input
                 id="contract_number"
-                label="Contract Number:"
+                label={t('pages.projects.modals.create.contractNumber')}
                 value={formData.contract_number}
                 onChange={(e) => handleChange('contract_number', e.target.value)}
-                placeholder="Contract Number"
+                placeholder={t('pages.projects.modals.create.placeholders.contractNumber')}
                 disabled={createMutation.isPending}
               />
             </div>
-            <div className="h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+            <div className="h-px w-full bg-gray-200" />
           </div>
 
           {/* Timeline Section */}
           <div className="space-y-4">
-            <h3 className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
-              Timeline
+            <h3 className="text-dark-500 text-base font-medium">
+              {t('pages.projects.modals.create.timeline')}
             </h3>
             <div className="flex items-center gap-4">
               <div className="flex-1">
@@ -211,7 +209,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                   }}
                   disabled={createMutation.isPending}
                   error={errors.start_date}
-                  placeholder="Start Date"
+                  placeholder={t('pages.projects.modals.create.startDate')}
                 />
               </div>
               <div className="flex-1">
@@ -224,7 +222,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                   }}
                   disabled={createMutation.isPending || noEndDate}
                   error={errors.end_date}
-                  placeholder="End Date"
+                  placeholder={t('pages.projects.modals.create.endDate')}
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -235,21 +233,21 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                   disabled={createMutation.isPending}
                 />
                 <Label htmlFor="no_end_date" className="mb-0 cursor-pointer">
-                  No end date
+                  {t('pages.projects.modals.create.noEndDate')}
                 </Label>
               </div>
             </div>
-            <div className="h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+            <div className="h-px w-full bg-gray-200" />
           </div>
 
           {/* Description Section */}
           <div className="space-y-4">
             <Textarea
               id="description"
-              label="Description:"
+              label={t('pages.projects.modals.create.description')}
               value={formData.description}
               onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="Placeholder text"
+              placeholder={t('pages.projects.modals.create.placeholders.description')}
               rows={3}
               disabled={createMutation.isPending}
             />
@@ -259,37 +257,23 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
       <ModalFooter>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={onClose}
           disabled={createMutation.isPending}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: colors.gray[500],
-            color: '#FFFFFF',
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button
           type="submit"
           form="create-project-form"
           variant="primary"
           disabled={createMutation.isPending}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
         >
-          {createMutation.isPending ? 'Creating...' : 'Create Project'}
+          {createMutation.isPending
+            ? t('pages.projects.modals.create.creating')
+            : t('pages.projects.modals.create.createProject')}
         </Button>
       </ModalFooter>
     </Modal>

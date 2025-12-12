@@ -11,7 +11,6 @@
 
 import { NavLink, useLocation } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
 
@@ -44,7 +43,7 @@ export interface SidebarProps {
  */
 const iconMap: Record<
   string,
-  (props: { size: number; color: string; strokeWidth: number }) => React.ReactElement
+  (props: { size: number; className: string; strokeWidth: number }) => React.ReactElement
 > = {
   'home-04': (props) => <Icons.Home04 {...props} />,
   'activity-01': (props) => <Icons.Activity01 {...props} />,
@@ -83,15 +82,15 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
           className
         )}
       >
-        {/* Menu icon at top - 22px, color secondary-700 */}
+        {/* Menu icon at top - 22px, color gray-700 */}
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               onClick={onMenuClick}
-              className="focus:ring-secondary-700 mb-8 rounded-md p-1 transition-all duration-200 hover:scale-110 focus:ring-2 focus:ring-offset-2 focus:outline-none"
+              className="focus:ring-primary-500 mb-4 rounded-md p-1 transition-all duration-200 hover:scale-110 focus:ring-2 focus:ring-offset-2 focus:outline-none"
               aria-label="Menu"
             >
-              <Icons.Menu11 size={22} color={colors.secondary[700]} strokeWidth={1.5} />
+              <Icons.Menu11 size={22} className="text-gray-700" strokeWidth={1.5} />
             </button>
           </TooltipTrigger>
           <TooltipContent side="right">
@@ -100,7 +99,7 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
         </Tooltip>
 
         {/* Navigation Icons */}
-        <nav className="flex w-full flex-1 flex-col items-center gap-6 overflow-x-hidden overflow-y-auto px-0">
+        <nav className="flex w-full flex-1 flex-col items-center gap-6 overflow-x-hidden overflow-y-auto px-0 py-4">
           {items.map((item, index) => {
             const IconComponent = iconMap[item.icon]
 
@@ -121,7 +120,7 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
                   className="mx-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-md opacity-50"
                   aria-label={item.label}
                 >
-                  <IconComponent size={20} color={colors.gray[400]} strokeWidth={1.5} />
+                  <IconComponent size={20} className="text-gray-400" strokeWidth={1.5} />
                 </div>
               )
             }
@@ -133,15 +132,16 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
                     to={item.path}
                     end={item.path === '/dashboard'}
                     className={cn(
-                      'focus:ring-secondary-700 mx-auto flex shrink-0 items-center justify-center transition-all duration-200 focus:ring-2 focus:ring-offset-2 focus:outline-none',
-                      isActive ? 'h-10 w-11 rounded-lg' : 'h-10 w-10 rounded-md hover:bg-gray-50'
+                      'focus:ring-primary-500 mx-auto flex shrink-0 items-center justify-center transition-all duration-200 focus:ring-2 focus:ring-offset-2 focus:outline-none',
+                      isActive
+                        ? 'bg-secondary-800 h-10 w-11 rounded-lg'
+                        : 'h-10 w-10 rounded-md hover:bg-gray-50'
                     )}
-                    style={isActive ? { backgroundColor: colors.secondary[800] } : undefined}
                     aria-label={item.label}
                   >
                     <IconComponent
                       size={20}
-                      color={isActive ? colors.accent[500] : colors.gray[700]}
+                      className={isActive ? 'text-primary-300' : 'text-gray-700'}
                       strokeWidth={1.5}
                     />
                   </NavLink>
@@ -170,10 +170,10 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
                   <TooltipTrigger asChild>
                     <button
                       onClick={action.onClick}
-                      className="focus:ring-secondary-700 flex items-center justify-center rounded-md p-1 transition-all duration-200 hover:scale-110 focus:ring-2 focus:ring-offset-2 focus:outline-none"
+                      className="focus:ring-primary-500 flex items-center justify-center rounded-md p-1 transition-all duration-200 hover:scale-110 focus:ring-2 focus:ring-offset-2 focus:outline-none"
                       aria-label={action.label}
                     >
-                      <ActionIcon size={20} color={colors.gray[700]} strokeWidth={1.5} />
+                      <ActionIcon size={20} className="text-gray-700" strokeWidth={1.5} />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="right">

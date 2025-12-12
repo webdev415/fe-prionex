@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useRoles } from '@/features/roles'
 import type { ApiRole } from '@/features/roles/types'
 import { useProjects } from '@/features/projects'
@@ -20,7 +21,6 @@ import {
 } from '@/components/ui'
 import { ErrorState } from '@/components/ErrorState'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import { CreateRoleModal } from './components/CreateRoleModal'
 import { RoleDetailModal } from './components/RoleDetailModal'
 import { EditRoleModal } from './components/EditRoleModal'
@@ -28,6 +28,7 @@ import { ArchiveRoleModal } from './components/ArchiveRoleModal'
 import { RoleManagementPageSkeleton } from './components/RoleManagementPageSkeleton'
 
 export function RoleManagementPage() {
+  const { t } = useTranslation('common')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null)
   const [editRoleId, setEditRoleId] = useState<number | null>(null)
@@ -77,65 +78,50 @@ export function RoleManagementPage() {
   const columns: Column<ApiRole>[] = [
     {
       key: 'name',
-      header: 'Role',
+      header: t('pages.roles.tableHeaders.role'),
       render: (role) => <span className="font-medium">{role.name}</span>,
     },
     {
       key: 'description',
-      header: 'Description',
+      header: t('pages.roles.tableHeaders.description'),
       render: (role) => <span className="font-medium">{role.description || '—'}</span>,
     },
     {
       key: 'user_count',
-      header: 'Users',
+      header: t('pages.roles.tableHeaders.users'),
       align: 'center',
       render: (role) => <span>{role.user_count}</span>,
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('pages.roles.tableHeaders.actions'),
       align: 'center',
       render: (role) => (
         <div className="flex items-center justify-center gap-4">
           <button
             type="button"
             onClick={() => setSelectedRoleId(role.id)}
-            className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
-            style={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: '#05040D',
-            }}
+            className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
           >
             <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
-            View
+            {t('pages.roles.actions.view')}
           </button>
           <button
             type="button"
-            className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
-            style={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: '#05040D',
-            }}
+            className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
             onClick={() => setEditRoleId(role.id)}
           >
             <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
-            Edit
+            {t('pages.roles.actions.edit')}
           </button>
           {!role.is_default && (
             <button
               type="button"
-              className="flex items-center gap-1 font-medium transition-colors hover:opacity-80"
-              style={{
-                fontSize: '12px',
-                fontWeight: 500,
-                color: '#05040D',
-              }}
+              className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
               onClick={() => setArchiveRoleId(role.id)}
             >
               <Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />
-              Delete
+              {t('pages.roles.actions.delete')}
             </button>
           )}
         </div>
@@ -148,90 +134,38 @@ export function RoleManagementPage() {
       {/* Page Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1
-            className="font-light"
-            style={{
-              fontSize: '24px',
-              fontWeight: 300,
-              color: colors.neutral.dark[500],
-            }}
-          >
-            Role Management
-          </h1>
+          <h1 className="text-dark-500 text-2xl font-light">{t('pages.roles.title')}</h1>
         </div>
 
         <button
           onClick={() => setShowCreateModal(true)}
           disabled={!selectedProjectId}
-          className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
-          style={{
-            backgroundColor: colors.secondary[800],
-          }}
-          aria-label="Create role"
+          className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label={t('pages.roles.newRole')}
         >
-          <div
-            className="flex items-center justify-center rounded-full"
-            style={{
-              width: '40px',
-              height: '40px',
-              backgroundColor: colors.primary[300],
-              marginLeft: '4px',
-            }}
-          >
-            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
+            <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
           </div>
-          <span
-            className="px-4 py-3 font-medium text-white"
-            style={{
-              fontSize: '14px',
-            }}
-          >
-            Create Role
+          <span className="px-4 py-3 text-sm font-medium text-white">
+            {t('pages.roles.newRole')}
           </span>
         </button>
       </div>
 
       {/* Project Selector */}
       <div className="mb-6 flex items-center gap-3">
-        <span
-          className="font-light"
-          style={{
-            fontSize: '20px',
-            fontWeight: 300,
-            color: '#7B7B7B',
-          }}
-        >
-          Project:
-        </span>
+        <span className="text-xl font-light text-gray-500">{t('pages.roles.project')}</span>
         <Select
           value={selectedProjectId ? String(selectedProjectId) : ''}
           onValueChange={(value) => setSelectedProjectId(Number(value))}
         >
-          <SelectTrigger
-            className="flex h-auto items-center gap-2 border-0 bg-transparent p-0 shadow-none focus:ring-0 [&>div.opacity-50]:hidden"
-            style={{
-              width: 'auto',
-              minWidth: 'auto',
-              fontSize: '20px',
-              fontWeight: 300,
-              color: '#05040D',
-            }}
-          >
+          <SelectTrigger className="text-dark-500 flex h-auto w-auto min-w-0 items-center gap-2 border-0 bg-transparent p-0 text-xl font-light shadow-none focus:ring-0 [&>div.opacity-50]:hidden">
             <SelectValue
-              placeholder="Select project"
-              style={{
-                fontSize: '20px',
-                fontWeight: 300,
-                color: '#05040D',
-              }}
+              placeholder={t('pages.roles.selectProject')}
+              className="text-dark-500 text-xl font-light"
             />
-            <div
-              className="flex h-6 w-6 items-center justify-center rounded-md"
-              style={{
-                backgroundColor: colors.primary[300],
-              }}
-            >
-              <Icons.ArrowDown size={16} color={colors.neutral.dark[500]} strokeWidth={1.5} />
+            <div className="bg-primary-300 flex h-6 w-6 items-center justify-center rounded-md">
+              <Icons.ArrowDown size={16} className="text-current" />
             </div>
           </SelectTrigger>
           <SelectContent>
@@ -250,66 +184,34 @@ export function RoleManagementPage() {
       {/* Error States */}
       {!loadingProjects && !loadingRoles && projects.length === 0 && (
         <div className="rounded-lg bg-white p-8 text-center shadow-sm">
-          <p className="text-sm" style={{ color: colors.gray[500] }}>
-            No active projects found. Please create a project first.
-          </p>
+          <p className="text-sm text-gray-500">{t('pages.roles.noActiveProjects')}</p>
         </div>
       )}
 
       {!loadingProjects && !loadingRoles && projects.length > 0 && isError && (
-        <ErrorState error={error} onRetry={() => refetch()} title="Error loading roles" />
+        <ErrorState error={error} onRetry={() => refetch()} title={t('pages.roles.errorLoading')} />
       )}
 
       {/* Content */}
       {!loadingProjects && !loadingRoles && projects.length > 0 && !isError && (
         <div className="space-y-8">
           {/* Default Roles */}
-          <section
-            className="rounded-xl"
-            style={{
-              backgroundColor: '#FFFFFF80',
-              padding: '24px',
-            }}
-          >
-            <h2
-              className="mb-3 font-light"
-              style={{
-                fontSize: '20px',
-                fontWeight: 300,
-                color: '#000000',
-              }}
-            >
-              Default Roles
-            </h2>
+          <section className="rounded-xl bg-white/50 p-6">
+            <h2 className="mb-3 text-xl font-light text-black">{t('pages.roles.defaultRoles')}</h2>
             <DataTable<ApiRole>
               columns={columns}
               data={defaultRoles}
-              emptyMessage="No default roles"
+              emptyMessage={t('pages.roles.noDefaultRoles')}
             />
           </section>
 
           {/* Custom Roles */}
-          <section
-            className="rounded-xl"
-            style={{
-              backgroundColor: '#FFFFFF80',
-              padding: '24px',
-            }}
-          >
-            <h2
-              className="mb-3 font-light"
-              style={{
-                fontSize: '20px',
-                fontWeight: 300,
-                color: '#000000',
-              }}
-            >
-              Custom Roles
-            </h2>
+          <section className="rounded-xl bg-white/50 p-6">
+            <h2 className="mb-3 text-xl font-light text-black">{t('pages.roles.customRoles')}</h2>
             <DataTable<ApiRole>
               columns={columns}
               data={customRoles}
-              emptyMessage="No custom roles"
+              emptyMessage={t('pages.roles.noCustomRoles')}
             />
           </section>
         </div>

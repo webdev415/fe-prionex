@@ -6,8 +6,8 @@
  */
 
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { usePermissions } from '../hooks/useRoleMutations'
-import { colors } from '@/lib/colors'
 import type { RoleDetailResponse } from '../types'
 
 interface ViewRoleFormProps {
@@ -16,6 +16,7 @@ interface ViewRoleFormProps {
 }
 
 export function ViewRoleForm({ role }: ViewRoleFormProps) {
+  const { t } = useTranslation('common')
   const { data: permissionsData, isLoading: loadingPermissions } = usePermissions()
 
   // Get selected permission IDs from role
@@ -51,124 +52,62 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
     <div className="space-y-4">
       {/* Role Name */}
       <div className="flex items-center gap-2">
-        <span
-          className="font-light"
-          style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-        >
-          Role Name:
-        </span>
-        <span
-          className="font-semibold"
-          style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
-        >
-          {role.name}
-        </span>
+        <span className="text-sm font-light text-gray-500">{t('pages.roles.forms.roleName')}:</span>
+        <span className="text-sm font-semibold text-gray-950">{role.name}</span>
       </div>
 
       {/* Description */}
       <div className="flex items-center gap-2">
-        <span
-          className="font-light"
-          style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-        >
-          Description:
+        <span className="text-sm font-light text-gray-500">
+          {t('pages.roles.forms.description')}:
         </span>
-        <span
-          className="font-semibold"
-          style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
-        >
-          {role.description || '—'}
-        </span>
+        <span className="text-sm font-semibold text-gray-950">{role.description || '—'}</span>
       </div>
 
       {/* Type */}
       <div className="flex items-center gap-2">
-        <span
-          className="font-light"
-          style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-        >
-          Type:
-        </span>
-        <span
-          className="font-semibold"
-          style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
-        >
+        <span className="text-sm font-light text-gray-500">Type:</span>
+        <span className="text-sm font-semibold text-gray-950">
           {role.is_default ? 'System Default' : 'Custom Role'}
         </span>
       </div>
 
       {/* Users */}
       <div className="flex items-center gap-2">
-        <span
-          className="font-light"
-          style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-        >
-          Users:
+        <span className="text-sm font-light text-gray-500">
+          {t('pages.roles.tableHeaders.users')}:
         </span>
-        <span
-          className="font-semibold"
-          style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
-        >
-          {role.user_count || 0}
-        </span>
+        <span className="text-sm font-semibold text-gray-950">{role.user_count || 0}</span>
       </div>
 
       {/* Permissions Section (Read-only) */}
       <div className="mt-6">
         <div className="mb-4">
-          <span
-            className="font-light"
-            style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-          >
-            Permissions:
+          <span className="text-sm font-light text-gray-500">
+            {t('pages.roles.forms.permissions')}:
           </span>
-          <span
-            className="ml-2 font-light"
-            style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-          >
+          <span className="text-sm font-light text-gray-500">
             ({selectedPermissionIds.size} of {permissions.length} permissions)
           </span>
         </div>
 
-        <div
-          className="max-h-96 overflow-y-auto rounded-xl"
-          style={{
-            backgroundColor: '#FFFFFF',
-            padding: '24px',
-          }}
-        >
+        <div className="max-h-96 overflow-y-auto rounded-xl bg-white p-6">
           {loadingPermissions ? (
-            <div className="py-4 text-sm" style={{ color: colors.gray[500] }}>
-              Loading permissions...
+            <div className="py-4 text-sm text-gray-500">
+              {t('pages.roles.forms.loadingPermissions')}
             </div>
           ) : (
             <div>
               {Object.entries(permissionsByCategory).map(([category, categoryPerms]) => (
                 <div key={category} className="mb-6 last:mb-0">
-                  <div
-                    className="mb-3 flex items-center justify-between"
-                    style={{ backgroundColor: 'transparent' }}
-                  >
-                    <span
-                      className="font-light"
-                      style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
-                    >
-                      {category}
-                    </span>
-                    <span className="text-xs" style={{ color: colors.gray[500] }}>
-                      {categoryPerms.length}
-                    </span>
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="text-sm font-light text-gray-950">{category}</span>
+                    <span className="text-xs text-gray-500">{categoryPerms.length}</span>
                   </div>
                   <div className="space-y-2">
                     {categoryPerms.map((perm) => (
                       <div key={perm.id} className="flex items-center gap-3 rounded p-2">
-                        <div
-                          className="flex h-4 w-4 items-center justify-center rounded border"
-                          style={{
-                            borderColor: colors.primary[500],
-                            backgroundColor: colors.primary[500],
-                          }}
-                        >
+                        <div className="border-primary-500 bg-primary-500 flex h-4 w-4 items-center justify-center rounded border">
                           <svg
                             width="12"
                             height="12"
@@ -186,25 +125,9 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
                           </svg>
                         </div>
                         <div className="flex-1">
-                          <span
-                            className="font-light"
-                            style={{
-                              fontSize: '14px',
-                              fontWeight: 300,
-                              color: colors.gray[950],
-                            }}
-                          >
-                            {perm.name}
-                          </span>
+                          <span className="text-sm font-light text-gray-950">{perm.name}</span>
                           {perm.description && (
-                            <span
-                              className="ml-2 font-light"
-                              style={{
-                                fontSize: '14px',
-                                fontWeight: 300,
-                                color: colors.gray[500],
-                              }}
-                            >
+                            <span className="ml-2 text-sm font-light text-gray-500">
                               {perm.description}
                             </span>
                           )}

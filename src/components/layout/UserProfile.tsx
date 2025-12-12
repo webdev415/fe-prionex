@@ -4,8 +4,8 @@
  * User profile dropdown with user info and logout option.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import { useAuth } from '@/features/auth'
 import {
   DropdownMenu,
@@ -19,6 +19,7 @@ interface UserProfileProps {
 }
 
 export function UserProfile({ onLogoutClick }: UserProfileProps) {
+  const { t } = useTranslation('common')
   const { user } = useAuth()
 
   // Get display name: prefer firstName + lastName, fallback to username
@@ -30,36 +31,21 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button
-          className="flex h-10 w-[175px] items-center gap-2 rounded-md px-3 transition-all duration-200 hover:opacity-90"
-          style={{
-            backgroundColor: colors.primary[300],
-          }}
-        >
-          <Icons.User02 size={20} color={colors.neutral.dark[500]} strokeWidth={1.5} />
-          <span
-            className="flex-1 truncate text-left font-medium"
-            style={{
-              fontSize: '12px',
-              color: colors.neutral.dark[500],
-            }}
-          >
+        <button className="bg-primary-300 flex h-10 w-[175px] items-center gap-2 rounded-md px-3 transition-all duration-200 hover:opacity-90">
+          <Icons.User02 size={20} className="text-dark-500" strokeWidth={1.5} />
+          <span className="text-dark-500 flex-1 truncate text-left text-xs font-medium">
             {displayName}
           </span>
-          <Icons.ArrowDown size={16} color={colors.neutral.dark[500]} strokeWidth={1.5} />
+          <Icons.ArrowDown size={16} className="text-dark-500" strokeWidth={1.5} />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[175px] bg-white">
         <DropdownMenuItem
           onClick={onLogoutClick}
-          className="flex cursor-pointer items-center gap-2"
-          style={{
-            color: colors.neutral.dark[500],
-            fontSize: '14px',
-          }}
+          className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
         >
-          <Icons.Logout size={16} color={colors.neutral.dark[500]} />
-          <span>Logout</span>
+          <Icons.Logout size={16} color="#05040D" />
+          <span>{t('actions.logout')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

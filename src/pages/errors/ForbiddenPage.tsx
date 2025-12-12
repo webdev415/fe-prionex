@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import { LogoutConfirmationModal } from '@/components/layout/LogoutConfirmationModal'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 
@@ -44,62 +43,27 @@ export function ForbiddenPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
       {/* Access Denied */}
-      <div
-        className="flex h-[383px] w-[600px] items-center justify-center rounded-[12px] border bg-white"
-        style={{
-          marginLeft: '100px',
-          padding: '24px',
-        }}
-      >
+      <div className="ml-[100px] flex h-[383px] w-[600px] items-center justify-center rounded-[12px] border bg-white p-6">
         <div className="flex h-[303px] w-[520px] flex-col items-center justify-between">
           <div className="h-[40px] w-full gap-1">
-            <div
-              className="flex h-full w-full items-center gap-4"
-              style={{
-                color: colors.neutral.dark[500],
-                fontSize: '30px',
-                fontWeight: 300,
-              }}
-            >
+            <div className="text-dark-500 flex h-full w-full items-center gap-4 text-[30px] font-light">
               <div className="bg-error-500 flex h-12 w-12 items-center justify-center rounded-full">
-                <Icons.LockedIcon01 size={24} color="#FFFFFF" strokeWidth={2} />
+                <Icons.LockedIcon01 size={24} className="text-white" strokeWidth={2} />
               </div>
-              <span
-                className="font-bold"
-                style={{
-                  color: colors.neutral.dark[500],
-                  fontSize: '30px',
-                  fontWeight: 500,
-                }}
-              >
-                Access Denied
-              </span>
+              <span className="text-dark-500 text-[30px] font-medium">Access Denied</span>
               <span className="font-light">(403)</span>
             </div>
           </div>
 
-          <div
-            className="font-size-14 flex h-[72px] w-full items-center justify-center gap-1 rounded-[8px] bg-white font-medium"
-            style={{
-              fontSize: '14px',
-              fontWeight: 500,
-            }}
-          >
-            <Icons.Warning size={24} color="#EF4444" strokeWidth={2} />
+          <div className="flex h-[72px] w-full items-center justify-center gap-1 rounded-[8px] bg-white text-sm font-medium">
+            <Icons.Warning size={24} className="text-error-500" strokeWidth={2} />
             <p className="text-error-500 text-sm font-medium">
               You do not have permission to view this page or perform this action.
             </p>
           </div>
 
-          <div
-            className="font-weight-500 font-size-16 flex h-[50px] w-full items-center justify-center"
-            style={{
-              color: colors.neutral.dark[500],
-              fontSize: '16px',
-              fontWeight: 500,
-            }}
-          >
-            <p className="text-neutral-dark-500 text-center text-base font-medium">
+          <div className="text-dark-500 flex h-[50px] w-full items-center justify-center text-base font-medium">
+            <p className="text-dark-500 text-center text-base font-medium">
               If you believe this is a mistake, please contact your supervisor or administrator.
             </p>
           </div>
@@ -114,11 +78,7 @@ export function ForbiddenPage() {
               </button>
               <button
                 onClick={handleGoHome}
-                className="bg-primary-300 text-neutral-dark-500 h-[45px] w-[224px] rounded-lg px-6 py-3 text-sm font-medium transition-colors hover:opacity-90"
-                style={{
-                  backgroundColor: colors.primary[300],
-                  color: colors.neutral.dark[500],
-                }}
+                className="text-dark-500 bg-primary-300 h-[45px] w-[224px] rounded-lg px-6 py-3 text-sm font-medium transition-colors hover:opacity-90"
               >
                 Go to Home
               </button>

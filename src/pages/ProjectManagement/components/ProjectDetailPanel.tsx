@@ -7,8 +7,8 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { formatCurrency, formatNumber, formatDateTime, truncateText } from '@/lib/formatters'
 import type { ApiProjectDetail } from '@/features/projects/types'
@@ -28,6 +28,7 @@ export function ProjectDetailPanel({
   onDelete,
   isLoading = false,
 }: ProjectDetailPanelProps) {
+  const { t } = useTranslation('common')
   const [isExpanded, setIsExpanded] = useState(false)
   const navigate = useNavigate()
 
@@ -48,17 +49,9 @@ export function ProjectDetailPanel({
   // Empty state when there are no projects
   if (!hasProjects) {
     return (
-      <div
-        className="flex h-full flex-col items-center justify-center rounded-lg p-6"
-        style={{
-          backgroundColor: '#FFFFFF80',
-          border: `1px solid ${colors.gray[200]}`,
-        }}
-      >
-        <Icons.View size={48} color={colors.gray[300]} strokeWidth={1} />
-        <p className="mt-4 text-sm" style={{ color: colors.gray[500] }}>
-          There is no project
-        </p>
+      <div className="flex h-full flex-col items-center justify-center rounded-lg border border-gray-200 bg-white/50 p-6">
+        <Icons.View size={48} className="text-gray-300" strokeWidth={1} />
+        <p className="mt-4 text-sm text-gray-500">{t('pages.projects.detailPanel.noProject')}</p>
       </div>
     )
   }
@@ -66,36 +59,20 @@ export function ProjectDetailPanel({
   // Loading state
   if (isLoading || !project) {
     return (
-      <div
-        className="flex h-full items-center justify-center rounded-lg"
-        style={{
-          backgroundColor: '#FFFFFF',
-          border: `1px solid ${colors.gray[200]}`,
-        }}
-      >
-        <div
-          className="h-8 w-8 animate-spin rounded-full border-b-2"
-          style={{ borderColor: colors.primary[500] }}
-        />
+      <div className="flex h-full items-center justify-center rounded-lg border border-gray-200 bg-white">
+        <div className="border-primary-500 h-8 w-8 animate-spin rounded-full border-b-2" />
       </div>
     )
   }
 
   return (
-    <div
-      className="flex h-full flex-col overflow-hidden rounded-lg p-6"
-      style={{
-        backgroundColor: '#FFFFFF80',
-        border: `1px solid ${colors.gray[200]}`,
-      }}
-    >
+    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white/50 p-6">
       {/* Header */}
       <div className="flex items-center border-none">
         <div className="flex items-center gap-2">
           <StatusBadge status={getStatusType(project.status)} />
           <h2
-            className="max-w-[180px] truncate text-base font-medium"
-            style={{ color: colors.neutral.dark[500] }}
+            className="text-dark-500 max-w-[180px] truncate text-base font-medium"
             title={project.name}
           >
             {project.name}
@@ -107,49 +84,59 @@ export function ProjectDetailPanel({
       <div className="mt-2 flex flex-1 flex-col gap-2 overflow-y-auto">
         {/* Basic Info */}
         <div className="grid grid-cols-2 gap-1">
-          <InfoItem label="Code" value={project.code} />
-          <InfoItem label="Contract" value={project.contract_number} />
-          <InfoItem label="Client" value={project.client_company} />
-          <InfoItem label="Users" value={project.user_count?.toString()} />
+          <InfoItem label={t('pages.projects.detailPanel.code')} value={project.code} />
+          <InfoItem
+            label={t('pages.projects.detailPanel.contract')}
+            value={project.contract_number}
+          />
+          <InfoItem label={t('pages.projects.detailPanel.client')} value={project.client_company} />
+          <InfoItem
+            label={t('pages.projects.detailPanel.users')}
+            value={project.user_count?.toString()}
+          />
         </div>
 
         {/* Divider */}
-        <div className="my-1 h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+        <div className="my-1 h-px w-full bg-gray-200" />
 
         {/* Metrics */}
         <div className="flex flex-col gap-2">
-          <h3 className="text-base font-light" style={{ color: colors.neutral.dark[500] }}>
-            Metrics
+          <h3 className="text-dark-500 text-base font-light">
+            {t('pages.projects.detailPanel.metrics')}
           </h3>
           <div className="grid grid-cols-2 gap-3">
-            <MetricCard label="Clients" value={formatNumber(project.total_clients)} />
-            <MetricCard label="Total Debt" value={formatCurrency(project.total_debt_amount)} />
+            <MetricCard
+              label={t('pages.projects.detailPanel.clients')}
+              value={formatNumber(project.total_clients)}
+            />
+            <MetricCard
+              label={t('pages.projects.detailPanel.totalDebt')}
+              value={formatCurrency(project.total_debt_amount)}
+            />
           </div>
         </div>
 
         {/* Divider */}
-        <div className="my-1 h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+        <div className="my-1 h-px w-full bg-gray-200" />
 
         {/* Description */}
         {project.description && (
           <div className="flex flex-col gap-2">
-            <h3 className="text-sm font-light" style={{ color: colors.neutral.dark[500] }}>
-              Description
+            <h3 className="text-dark-500 text-sm font-light">
+              {t('pages.projects.detailPanel.description')}
             </h3>
-            <p
-              className="text-sm leading-relaxed font-light"
-              style={{ color: colors.neutral.dark[500] }}
-            >
+            <p className="text-dark-500 text-sm leading-relaxed font-light">
               {isExpanded ? project.description : truncateText(project.description, 120)}
             </p>
             {project.description.length > 120 && (
               <div className="flex">
                 <button
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-xs font-medium"
-                  style={{ color: colors.secondary[800] }}
+                  className="text-secondary-800 text-xs font-medium"
                 >
-                  {isExpanded ? 'Show less' : 'Read more'}
+                  {isExpanded
+                    ? t('pages.projects.detailPanel.showLess')
+                    : t('pages.projects.detailPanel.readMore')}
                 </button>
               </div>
             )}
@@ -157,76 +144,74 @@ export function ProjectDetailPanel({
         )}
 
         {/* Divider */}
-        <div className="my-1 h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+        <div className="my-1 h-px w-full bg-gray-200" />
 
         {/* Access and Roles */}
         <div className="flex flex-col gap-2">
-          <h3 className="text-base font-light" style={{ color: colors.neutral.dark[500] }}>
-            Access and Roles
+          <h3 className="text-dark-500 text-base font-light">
+            {t('pages.projects.detailPanel.accessAndRoles')}
           </h3>
           <div className="flex items-center justify-start gap-2">
-            <span className="text-xs font-light" style={{ color: colors.gray[600] }}>
-              Assigned users:
+            <span className="text-xs font-light text-gray-600">
+              {t('pages.projects.detailPanel.assignedUsers')}
             </span>
-            <span className="text-sm font-medium" style={{ color: colors.neutral.dark[500] }}>
+            <span className="text-dark-500 text-sm font-medium">
               {project.assigned_users_count || project.statistics?.user_count || 0}
             </span>
           </div>
           <div className="flex items-center justify-start gap-2">
-            <span className="text-xs font-light" style={{ color: colors.gray[600] }}>
-              Default roles:
+            <span className="text-xs font-light text-gray-600">
+              {t('pages.projects.detailPanel.defaultRoles')}
             </span>
             <span
-              className="text-right text-xs font-medium"
-              style={{ color: colors.neutral.dark[500] }}
+              className="text-dark-500 text-right text-xs font-medium"
               title={project.default_roles?.join(', ')}
             >
-              {project.default_roles?.join(', ') || 'None'}
+              {project.default_roles?.join(', ') || t('pages.projects.detailPanel.none')}
             </span>
           </div>
           <div className="flex">
             <button
               onClick={() => navigate('/dashboard/roles')}
-              className="mt-3 flex items-center gap-1.5 rounded p-2.5 text-xs font-[500] text-white"
-              style={{ backgroundColor: colors.secondary[800] }}
+              className="bg-secondary-800 mt-3 flex items-center gap-1.5 rounded p-2.5 text-xs font-[500] text-white"
             >
-              <Icons.UserCircle02Icon size={20} color={colors.primary[500]} />
-              Manage users & roles
-              <Icons.ArrowRight size={20} color={colors.primary[500]} />
+              <Icons.UserCircle02Icon size={20} className="text-primary-400" />
+              {t('pages.projects.detailPanel.manageUsersRoles')}
+              <Icons.ArrowRight size={20} className="text-primary-400" />
             </button>
           </div>
         </div>
 
         {/* Divider */}
-        <div className="my-1 h-px w-full" style={{ backgroundColor: colors.gray[200] }} />
+        <div className="my-1 h-px w-full bg-gray-200" />
 
         {/* Audit */}
         <div className="flex flex-col gap-3">
-          <h3 className="text-base font-light" style={{ color: colors.neutral.dark[500] }}>
-            Audit
+          <h3 className="text-dark-500 text-base font-light">
+            {t('pages.projects.detailPanel.audit')}
           </h3>
           <div className="space-y-1">
             <div className="flex justify-between">
-              <span className="text-xs font-light" style={{ color: colors.gray[700] }}>
-                Created by
+              <span className="text-xs font-light text-gray-700">
+                {t('pages.projects.detailPanel.createdBy')}
               </span>
-              <span className="text-xs font-medium" style={{ color: colors.neutral.dark[500] }}>
-                {project.created_by?.username || 'System'}
+              <span className="text-dark-500 text-xs font-medium">
+                {project.created_by?.username || t('pages.projects.detailPanel.system')}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-xs font-light" style={{ color: colors.gray[700] }}>
-                Created
+              <span className="text-xs font-light text-gray-700">
+                {t('pages.projects.detailPanel.created')}
               </span>
-              <span className="text-xs font-medium" style={{ color: colors.neutral.dark[500] }}>
+              <span className="text-dark-500 text-xs font-medium">
                 {formatDateTime(project.created_at)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-xs font-light" style={{ color: colors.gray[700] }}>
-                Last updated
+              <span className="text-xs font-light text-gray-700">
+                {t('pages.projects.detailPanel.lastUpdated')}
               </span>
-              <span className="text-xs font-medium" style={{ color: colors.neutral.dark[500] }}>
+              <span className="text-dark-500 text-xs font-medium">
                 {formatDateTime(project.updated_at)}
               </span>
             </div>
@@ -238,33 +223,17 @@ export function ProjectDetailPanel({
       <div className="flex gap-3 pt-3">
         <button
           onClick={onEdit}
-          className="flex flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="bg-primary-300 text-dark-500 flex h-[45px] flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium"
         >
-          <Icons.PencilEdit size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
-          Edit
+          <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
+          {t('pages.projects.detailPanel.edit')}
         </button>
         <button
           onClick={onDelete}
-          className="flex flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: '#EF4444',
-            color: '#FFFFFF',
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="bg-error-500 flex h-[45px] flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium text-white"
         >
-          <Icons.Delete size={20} color="#FFFFFF" strokeWidth={2} />
-          Delete
+          <Icons.Delete size={20} className="text-white" strokeWidth={2} />
+          {t('pages.projects.detailPanel.delete')}
         </button>
       </div>
     </div>
@@ -275,12 +244,8 @@ export function ProjectDetailPanel({
 function InfoItem({ label, value }: { label: string; value?: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs font-light" style={{ color: colors.gray[700] }}>
-        {label}:
-      </span>
-      <span className="text-base font-medium" style={{ color: colors.neutral.dark[500] }}>
-        {value || '—'}
-      </span>
+      <span className="text-xs font-light text-gray-700">{label}:</span>
+      <span className="text-dark-500 text-base font-medium">{value || '—'}</span>
     </div>
   )
 }
@@ -289,12 +254,8 @@ function InfoItem({ label, value }: { label: string; value?: string }) {
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs font-light" style={{ color: colors.gray[700] }}>
-        {label}:
-      </span>
-      <span className="text-xs font-medium" style={{ color: colors.neutral.dark[500] }}>
-        {value}
-      </span>
+      <span className="text-xs font-light text-gray-700">{label}:</span>
+      <span className="text-dark-500 text-xs font-medium">{value}</span>
     </div>
   )
 }

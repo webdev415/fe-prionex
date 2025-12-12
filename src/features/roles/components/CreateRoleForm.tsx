@@ -6,6 +6,7 @@
  */
 
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -16,7 +17,6 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Label } from '@/components/ui/Label'
 import { Alert } from '@/components/ui/Alert'
 import { Checkbox } from '@/components/ui/Checkbox'
-import { colors } from '@/lib/colors'
 
 interface CreateRoleFormProps {
   projectId: number
@@ -33,6 +33,7 @@ const createRoleSchema = z.object({
 type CreateRoleFormData = z.infer<typeof createRoleSchema>
 
 export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: CreateRoleFormProps) {
+  const { t } = useTranslation('common')
   const createMutation = useCreateRole()
   const { data: permissionsData, isLoading: loadingPermissions } = usePermissions()
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
@@ -100,76 +101,56 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
       {/* Role Name */}
       <div>
         <Label htmlFor="name" required>
-          Role Name:
+          {t('pages.roles.forms.roleName')}
         </Label>
         <Input
           id="name"
           {...register('name')}
-          placeholder="Enter Role Name"
+          placeholder={t('pages.roles.forms.placeholders.roleName')}
           disabled={createMutation.isPending}
         />
-        {errors.name && (
-          <p className="mt-1 text-sm" style={{ color: '#EF4444' }}>
-            {errors.name.message}
-          </p>
-        )}
+        {errors.name && <p className="text-error-500 mt-1 text-sm">{errors.name.message}</p>}
       </div>
 
       {/* Description */}
       <div>
         <Label htmlFor="description" required>
-          Description
+          {t('pages.roles.forms.description')}
         </Label>
         <Textarea
           id="description"
           {...register('description')}
-          placeholder="Describe this role"
+          placeholder={t('pages.roles.forms.placeholders.description')}
           rows={3}
           disabled={createMutation.isPending}
         />
         {errors.description && (
-          <p className="mt-1 text-sm" style={{ color: '#EF4444' }}>
-            {errors.description.message}
-          </p>
+          <p className="text-error-500 mt-1 text-sm">{errors.description.message}</p>
         )}
       </div>
 
       {/* Permissions Section */}
       <div>
         <Label>
-          Permissions
-          <span className="ml-2 font-light" style={{ fontSize: '14px', color: colors.gray[500] }}>
+          {t('pages.roles.forms.permissions')}
+          <span className="ml-2 text-sm font-light text-gray-500">
             (Selected: {selectedPermissions.length} of {permissions.length} permissions)
           </span>
         </Label>
 
-        <div
-          className="max-h-96 overflow-y-auto rounded-xl"
-          style={{
-            backgroundColor: '#FFFFFF',
-            padding: '24px',
-          }}
-        >
+        <div className="max-h-96 overflow-y-auto rounded-xl bg-white p-6">
           {loadingPermissions ? (
-            <div className="py-4 text-sm" style={{ color: colors.gray[500] }}>
-              Loading permissions...
+            <div className="py-4 text-sm text-gray-500">
+              {t('pages.roles.forms.loadingPermissions')}
             </div>
           ) : (
             <div>
               {Object.entries(permissionsByCategory).map(([category, categoryPerms]) => {
                 return (
                   <div key={category} className="mb-6 last:mb-0">
-                    <div
-                      className="mb-3 flex items-center justify-between"
-                      style={{ backgroundColor: 'transparent' }}
-                    >
-                      <span
-                        className="font-light"
-                        style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
-                      >
-                        {category}
-                      </span>
-                      <span className="text-xs" style={{ color: colors.gray[500] }}>
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="text-sm font-light text-gray-950">{category}</span>
+                      <span className="text-xs text-gray-500">
                         {categoryPerms.filter((p) => selectedPermissions.includes(p.id)).length}/
                         {categoryPerms.length}
                       </span>
@@ -186,21 +167,9 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
                             aria-label={perm.name}
                           />
                           <div className="flex-1">
-                            <span
-                              className="font-light"
-                              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
-                            >
-                              {perm.name}
-                            </span>
+                            <span className="text-sm font-light text-gray-950">{perm.name}</span>
                             {perm.description && (
-                              <span
-                                className="ml-2 font-light"
-                                style={{
-                                  fontSize: '14px',
-                                  fontWeight: 300,
-                                  color: colors.gray[500],
-                                }}
-                              >
+                              <span className="ml-2 text-sm font-light text-gray-500">
                                 {perm.description}
                               </span>
                             )}
@@ -215,9 +184,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
           )}
         </div>
         {errors.permission_ids && (
-          <p className="mt-1 text-sm" style={{ color: '#EF4444' }}>
-            {errors.permission_ids.message}
-          </p>
+          <p className="text-error-500 mt-1 text-sm">{errors.permission_ids.message}</p>
         )}
       </div>
 
@@ -225,7 +192,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
       {createMutation.isError && (
         <Alert variant="error">
           <p className="text-sm">
-            {createMutation.error?.message || 'Failed to create role. Please try again.'}
+            {createMutation.error?.message || t('pages.roles.forms.errors.failedToCreate')}
           </p>
         </Alert>
       )}

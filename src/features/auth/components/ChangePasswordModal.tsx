@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 
 export interface ChangePasswordModalProps {
   open: boolean
@@ -79,11 +78,8 @@ export function ChangePasswordModal({
     <Modal open={open} onClose={handleClose} maxWidth="md">
       <ModalHeader
         icon={
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.primary[300] }}
-          >
-            <Icons.Lock size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#A7E8BD]">
+            <Icons.Lock size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
         title="Change Password"
@@ -111,7 +107,7 @@ export function ChangePasswordModal({
               >
                 <Icons.Eye
                   size={18}
-                  color={showCurrentPassword ? colors.primary[500] : colors.gray[400]}
+                  className={showCurrentPassword ? 'text-information-400' : 'text-gray-400'}
                 />
               </button>
             </div>
@@ -141,7 +137,7 @@ export function ChangePasswordModal({
               >
                 <Icons.Eye
                   size={18}
-                  color={showNewPassword ? colors.primary[500] : colors.gray[400]}
+                  className={showNewPassword ? 'text-information-400' : 'text-gray-400'}
                 />
               </button>
             </div>
@@ -175,15 +171,7 @@ export function ChangePasswordModal({
           variant="outline"
           onClick={handleClose}
           disabled={isLoading}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: colors.gray[500],
-            color: '#FFFFFF',
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
           Cancel
         </Button>
@@ -192,15 +180,7 @@ export function ChangePasswordModal({
           form="change-password-form"
           variant="primary"
           disabled={isLoading}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="text-dark-500 h-[45px] flex-1 rounded-md border-none bg-[#A7E8BD] text-sm font-medium"
         >
           {isLoading ? 'Changing...' : 'Change Password'}
         </Button>

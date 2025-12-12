@@ -2,7 +2,6 @@ import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 
 const Select = SelectPrimitive.Root
 
@@ -14,13 +13,8 @@ const SelectValue = React.forwardRef<
 >(({ className, style, ...props }, ref) => (
   <SelectPrimitive.Value
     ref={ref}
-    className={cn('font-light', className)}
-    style={{
-      fontSize: '14px',
-      fontWeight: 300,
-      color: colors.gray[950],
-      ...style,
-    }}
+    className={cn('text-dark-500 text-sm font-light', className)}
+    style={style}
     {...props}
   />
 ))
@@ -33,22 +27,16 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      'ring-offset-background data-[placeholder]:text-muted-foreground flex h-[45px] w-full items-center justify-between rounded-lg border bg-white px-3 py-2 text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none disabled:opacity-50 [&>span]:line-clamp-1',
+      'ring-offset-background data-[placeholder]:text-muted-foreground text-dark-500 flex h-[45px] w-full items-center justify-between rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light whitespace-nowrap shadow-none focus:ring-0 focus:outline-none disabled:opacity-50 [&>span]:line-clamp-1',
+      props.disabled ? 'cursor-default' : 'cursor-pointer',
       className
     )}
-    style={{
-      fontSize: '14px',
-      fontWeight: 300,
-      color: colors.gray[950],
-      borderColor: colors.gray[400],
-      cursor: props.disabled ? 'default' : 'pointer',
-      ...style,
-    }}
+    style={style}
     {...props}
   >
     {children}
     <div className="opacity-50">
-      <Icons.ArrowDown size={16} color="currentColor" />
+      <Icons.ArrowDown size={16} className="text-current" />
     </div>
   </SelectPrimitive.Trigger>
 ))
@@ -133,14 +121,9 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      'relative flex w-full cursor-default items-center rounded-sm py-1.5 pr-8 pl-2 font-light outline-none select-none focus:bg-gray-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+      'text-dark-500 relative flex w-full cursor-default items-center rounded-sm py-1.5 pr-8 pl-2 text-sm font-light outline-none select-none focus:bg-gray-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
       className
     )}
-    style={{
-      fontSize: '14px',
-      fontWeight: 300,
-      color: colors.gray[950],
-    }}
     {...props}
   >
     <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">

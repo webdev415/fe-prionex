@@ -54,13 +54,24 @@ import {
   TransactionHistoryIcon,
   Setting07Icon,
   LogoutSquare01Icon,
-  ChartRingIcon,
   UserCircle02Icon,
+  ChartRingIcon,
   // Additional icons for UI enhancements
   MultiplicationSignIcon,
   Download01Icon,
   File01Icon,
+  ArrowRight02Icon,
+  Tick01Icon,
+  CloudDownloadIcon,
+  FileDownloadIcon,
+  ArrowLeft02Icon,
+  FileRemoveIcon,
+  Csv02Icon,
   Sorting01Icon,
+  PivotIcon,
+  FolderRemoveIcon,
+  ReloadIcon,
+  SettingsError02Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -159,6 +170,19 @@ export const Icons = {
   Close: (props: Omit<IconProps, 'icon'>) => <Icon icon={MultiplicationSignIcon} {...props} />,
   Download: (props: Omit<IconProps, 'icon'>) => <Icon icon={Download01Icon} {...props} />,
   File: (props: Omit<IconProps, 'icon'>) => <Icon icon={File01Icon} {...props} />,
+  ArrowRight02: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowRight02Icon} {...props} />,
+  Tick01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Tick01Icon} {...props} />,
+  CloudDownload: (props: Omit<IconProps, 'icon'>) => <Icon icon={CloudDownloadIcon} {...props} />,
+  FileDownload: (props: Omit<IconProps, 'icon'>) => <Icon icon={FileDownloadIcon} {...props} />,
+  ArrowLeft02: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowLeft02Icon} {...props} />,
+  FileRemove: (props: Omit<IconProps, 'icon'>) => <Icon icon={FileRemoveIcon} {...props} />,
+  Csv02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Csv02Icon} {...props} />,
+  Pivot: (props: Omit<IconProps, 'icon'>) => <Icon icon={PivotIcon} {...props} />,
+  FolderRemove: (props: Omit<IconProps, 'icon'>) => <Icon icon={FolderRemoveIcon} {...props} />,
+  Reload: (props: Omit<IconProps, 'icon'>) => <Icon icon={ReloadIcon} {...props} />,
+  SettingsError02: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={SettingsError02Icon} {...props} />
+  ),
 }
 
 /**
@@ -211,6 +235,17 @@ export {
   ChartRingIcon,
   Sorting01Icon,
   UserCircle02Icon,
+  ArrowRight02Icon,
+  Tick01Icon,
+  CloudDownloadIcon,
+  FileDownloadIcon,
+  ArrowLeft02Icon,
+  FileRemoveIcon,
+  Csv02Icon,
+  PivotIcon,
+  FolderRemoveIcon,
+  ReloadIcon,
+  SettingsError02Icon,
 }
 
 /**

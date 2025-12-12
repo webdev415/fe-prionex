@@ -6,8 +6,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 import {
   Select,
   SelectContent,
@@ -35,6 +35,7 @@ export function SearchFiltersBar({
   clients,
   isLoading = false,
 }: SearchFiltersBarProps) {
+  const { t } = useTranslation('common')
   const [searchValue, setSearchValue] = useState(filters.search || '')
   const [period, setPeriod] = useState<PeriodOption>('any')
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -125,24 +126,16 @@ export function SearchFiltersBar({
     <div className="mb-6 flex w-full items-center justify-between gap-3">
       {/* Search + Filters pill - styled to match dashboard header search bar */}
       <div className="flex w-[70%] items-center justify-between">
-        <div
-          className="flex flex-1 items-center gap-3 rounded-full border bg-white pr-2 pl-4 shadow-sm"
-          style={{
-            borderColor: colors.gray[200],
-          }}
-        >
+        <div className="flex flex-1 items-center gap-3 rounded-full border border-gray-200 bg-white pr-2 pl-4 shadow-sm">
           {/* Search Input */}
           <div className="flex flex-1 items-center gap-2 py-1">
             <input
               type="text"
-              placeholder="Search by name, code, clients"
+              placeholder={t('pages.projects.searchFilters.placeholder')}
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               disabled={isLoading}
-              className="h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500 disabled:opacity-60"
-              style={{
-                color: colors.neutral.dark[500],
-              }}
+              className="text-dark-500 h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500 disabled:opacity-60"
             />
             {searchValue && (
               <button
@@ -150,7 +143,7 @@ export function SearchFiltersBar({
                 className="flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
                 type="button"
               >
-                <Icons.Close size={14} color={colors.gray[500]} />
+                <Icons.Close size={14} className="text-gray-500" />
               </button>
             )}
           </div>
@@ -162,37 +155,51 @@ export function SearchFiltersBar({
           <div className="hidden items-center gap-4 text-xs text-gray-700 md:flex">
             {/* Status Filter */}
             <div className="flex items-center gap-1">
-              <span className="text-[14px] text-gray-500">Status:</span>
+              <span className="text-[14px] text-gray-500">
+                {t('pages.projects.searchFilters.status')}:
+              </span>
               <Select
                 value={filters.status || 'active'}
                 onValueChange={handleStatusChange}
                 disabled={isLoading}
               >
                 <SelectTrigger className="h-auto border-0 bg-transparent p-0 text-[11px] font-medium shadow-none focus:ring-0">
-                  <SelectValue placeholder="Status" />
+                  <SelectValue placeholder={t('pages.projects.searchFilters.status')} />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
-                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="active">
+                    {t('pages.projects.searchFilters.statusOptions.active')}
+                  </SelectItem>
+                  <SelectItem value="inactive">
+                    {t('pages.projects.searchFilters.statusOptions.inactive')}
+                  </SelectItem>
+                  <SelectItem value="archived">
+                    {t('pages.projects.searchFilters.statusOptions.archived')}
+                  </SelectItem>
+                  <SelectItem value="all">
+                    {t('pages.projects.searchFilters.statusOptions.all')}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Client Filter */}
             <div className="flex items-center gap-1">
-              <span className="text-[14px] text-gray-500">Client</span>
+              <span className="text-[14px] text-gray-500">
+                {t('pages.projects.searchFilters.client')}
+              </span>
               <Select
                 value={filters.client_company || 'all'}
                 onValueChange={handleClientChange}
                 disabled={isLoading || clients.length === 0}
               >
                 <SelectTrigger className="h-auto border-0 bg-transparent p-0 text-[11px] font-medium shadow-none focus:ring-0">
-                  <SelectValue placeholder="Client" />
+                  <SelectValue placeholder={t('pages.projects.searchFilters.client')} />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  <SelectItem value="all">All Clients</SelectItem>
+                  <SelectItem value="all">
+                    {t('pages.projects.searchFilters.allClients')}
+                  </SelectItem>
                   {clients.map((client) => (
                     <SelectItem key={client} value={client}>
                       {client}
@@ -204,20 +211,30 @@ export function SearchFiltersBar({
 
             {/* Period Filter */}
             <div className="flex items-center gap-1">
-              <span className="text-[14px] text-gray-500">Period</span>
+              <span className="text-[14px] text-gray-500">
+                {t('pages.projects.searchFilters.period')}
+              </span>
               <Select
                 value={period}
                 onValueChange={(value) => handlePeriodChange(value as PeriodOption)}
                 disabled={isLoading}
               >
                 <SelectTrigger className="h-auto border-0 bg-transparent p-0 text-[11px] font-medium shadow-none focus:ring-0">
-                  <SelectValue placeholder="Any" />
+                  <SelectValue placeholder={t('pages.projects.searchFilters.periodOptions.any')} />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  <SelectItem value="any">Any time</SelectItem>
-                  <SelectItem value="last_30_days">Last 30 days</SelectItem>
-                  <SelectItem value="last_90_days">Last 90 days</SelectItem>
-                  <SelectItem value="this_year">This year</SelectItem>
+                  <SelectItem value="any">
+                    {t('pages.projects.searchFilters.periodOptions.any')}
+                  </SelectItem>
+                  <SelectItem value="last_30_days">
+                    {t('pages.projects.searchFilters.periodOptions.last30Days')}
+                  </SelectItem>
+                  <SelectItem value="last_90_days">
+                    {t('pages.projects.searchFilters.periodOptions.last90Days')}
+                  </SelectItem>
+                  <SelectItem value="this_year">
+                    {t('pages.projects.searchFilters.periodOptions.thisYear')}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -230,13 +247,10 @@ export function SearchFiltersBar({
               onFilterChange({ ...filters, search: searchValue || undefined })
             }}
             disabled={isLoading}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
-            style={{
-              backgroundColor: colors.primary[300],
-            }}
-            aria-label="Search projects"
+            className="bg-primary-300 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
+            aria-label={t('pages.projects.searchFilters.searchProjects')}
           >
-            <Icons.Search size={18} color={colors.neutral.dark[500]} strokeWidth={1.5} />
+            <Icons.Search size={18} className="text-dark-500" strokeWidth={1.5} />
           </button>
         </div>
       </div>
@@ -245,30 +259,14 @@ export function SearchFiltersBar({
         {/* Add New Project Button */}
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-          style={{
-            backgroundColor: colors.secondary[800],
-          }}
-          aria-label="Add new project"
+          className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+          aria-label={t('pages.projects.searchFilters.addNewProject')}
         >
-          <div
-            className="flex items-center justify-center rounded-full"
-            style={{
-              width: '40px',
-              height: '40px',
-              backgroundColor: colors.primary[300],
-              marginLeft: '4px',
-            }}
-          >
-            <Icons.Add size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
+            <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
           </div>
-          <span
-            className="px-4 py-3 font-medium text-white"
-            style={{
-              fontSize: '14px',
-            }}
-          >
-            New Project
+          <span className="px-4 py-3 text-sm font-medium text-white">
+            {t('pages.projects.searchFilters.newProject')}
           </span>
         </button>
 
@@ -286,15 +284,10 @@ export function SearchFiltersBar({
           onClick={onExport}
           disabled={isLoading}
           type="button"
-          className="flex items-center gap-2 rounded-full bg-white px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
-          style={{
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
-            height: '45px',
-          }}
+          className="text-dark-500 bg-primary-300 flex h-[45px] items-center gap-2 rounded-full px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
         >
-          <Icons.FileImport size={16} color={colors.neutral.dark[500]} />
-          Export
+          <Icons.FileImport size={16} className="text-dark-500" />
+          {t('pages.projects.searchFilters.export')}
         </button>
       </div>
     </div>

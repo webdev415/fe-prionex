@@ -8,7 +8,6 @@
 
 import { type ReactNode } from 'react'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 
 export interface Column<T> {
   key: string
@@ -65,52 +64,42 @@ export function DataTable<T extends { id: number | string }>({
     if (!isActive) {
       return (
         <span className="ml-1 opacity-40">
-          <Icons.Sorting01Icon size={14} color={colors.gray[500]} strokeWidth={1.5} />
+          <Icons.Sorting01Icon size={14} className="text-gray-500" strokeWidth={1.5} />
         </span>
       )
     }
 
     return sortConfig.order === 'asc' ? (
-      <span className="ml-1" style={{ transform: 'rotate(180deg)', display: 'inline-block' }}>
-        <Icons.Sorting01Icon size={14} color={colors.primary[500]} strokeWidth={2} />
+      <span className="ml-1 inline-block rotate-180">
+        <Icons.Sorting01Icon size={14} className="text-information-400" strokeWidth={2} />
       </span>
     ) : (
       <span className="ml-1">
-        <Icons.Sorting01Icon size={14} color={colors.primary[500]} strokeWidth={2} />
+        <Icons.Sorting01Icon size={14} className="text-information-400" strokeWidth={2} />
       </span>
     )
   }
 
   return (
     <div
-      className={`overflow-hidden rounded-xl ${className || ''}`}
-      style={{
-        border: '1px solid #EBECE8',
-        backgroundColor: '#EBECE8',
-        boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
-      }}
+      className={`overflow-hidden rounded-xl border border-[#EBECE8] bg-[#EBECE8] shadow-sm ${className || ''}`}
     >
       <table className="min-w-full border-collapse">
         <thead>
-          <tr style={{ backgroundColor: '#FFFFFF' }}>
+          <tr className="bg-white">
             {columns.map((column, index) => (
               <th
                 key={column.key}
                 scope="col"
-                className={`px-6 font-medium ${
+                className={`h-[49px] px-6 text-xs font-medium text-[#05040D] ${
                   column.align === 'center'
                     ? 'text-center'
                     : column.align === 'right'
                       ? 'text-right'
                       : 'text-left'
-                } ${column.sortable ? 'cursor-pointer select-none hover:bg-gray-50' : ''}`}
-                style={{
-                  height: '49px',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  color: '#05040D',
-                  borderRight: index < columns.length - 1 ? '1px solid #EBECE8' : 'none',
-                }}
+                } ${column.sortable ? 'cursor-pointer select-none hover:bg-gray-50' : ''} ${
+                  index < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''
+                }`}
                 onClick={() => handleSort(column)}
               >
                 <span className="inline-flex items-center">
@@ -126,13 +115,7 @@ export function DataTable<T extends { id: number | string }>({
             <tr>
               <td
                 colSpan={columns.length}
-                className="px-6 text-center font-medium"
-                style={{
-                  height: '49px',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  color: '#05040D',
-                }}
+                className="h-[49px] px-6 text-center text-xs font-medium text-[#05040D]"
               >
                 {emptyMessage}
               </td>
@@ -141,29 +124,21 @@ export function DataTable<T extends { id: number | string }>({
             data.map((item, rowIndex) => (
               <tr
                 key={item.id}
-                className={`transition-colors ${onRowClick ? 'cursor-pointer' : ''}`}
-                style={{
-                  backgroundColor: rowIndex % 2 === 0 ? '#F2F3F0' : '#FFFFFF', // Changed zebra order: first row is #F2F3F0
-                }}
+                className={`transition-colors ${
+                  rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
+                } ${onRowClick ? 'cursor-pointer' : ''}`}
                 onClick={() => onRowClick?.(item)}
               >
                 {columns.map((column, colIndex) => (
                   <td
                     key={column.key}
-                    className={`px-6 font-medium ${
+                    className={`text-dark-500 h-[49px] px-6 text-xs font-medium ${
                       column.align === 'center'
                         ? 'text-center'
                         : column.align === 'right'
                           ? 'text-right'
                           : 'text-left'
-                    } ${column.className || ''}`}
-                    style={{
-                      height: '49px',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      color: colors.neutral.dark[500],
-                      borderRight: colIndex < columns.length - 1 ? '1px solid #EBECE8' : 'none',
-                    }}
+                    } ${colIndex < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''} ${column.className || ''}`}
                   >
                     {column.render
                       ? column.render(item)

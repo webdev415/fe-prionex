@@ -17,62 +17,34 @@ export interface TableSkeletonProps {
 export function TableSkeleton({ columns, rows = 5, className }: TableSkeletonProps) {
   return (
     <div
-      className={`overflow-hidden rounded-xl ${className || ''}`}
-      style={{
-        border: '1px solid #EBECE8',
-        backgroundColor: '#EBECE8',
-        boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
-      }}
+      className={`overflow-hidden rounded-xl border border-[#EBECE8] bg-[#EBECE8] shadow-sm ${className || ''}`}
     >
       <table className="min-w-full border-collapse">
         <thead>
-          <tr style={{ backgroundColor: '#FFFFFF' }}>
+          <tr className="bg-white">
             {Array.from({ length: columns }).map((_, index) => (
               <th
                 key={index}
                 scope="col"
-                className="px-6 font-medium"
-                style={{
-                  height: '49px',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  color: '#05040D',
-                  borderRight: index < columns - 1 ? '1px solid #EBECE8' : 'none',
-                }}
+                className={`h-[49px] px-6 text-xs font-medium text-[#05040D] ${index < columns - 1 ? 'border-r border-[#EBECE8]' : ''}`}
               >
-                <div
-                  className="h-4 w-20 animate-pulse rounded"
-                  style={{
-                    backgroundColor: '#E5E7EB',
-                  }}
-                />
+                <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {Array.from({ length: rows }).map((_, rowIndex) => (
-            <tr
-              key={rowIndex}
-              style={{
-                backgroundColor: rowIndex % 2 === 0 ? '#F2F3F0' : '#FFFFFF',
-              }}
-            >
+            <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'}>
               {Array.from({ length: columns }).map((_, colIndex) => (
                 <td
                   key={colIndex}
-                  className="px-6"
-                  style={{
-                    height: '49px',
-                    borderRight: colIndex < columns - 1 ? '1px solid #EBECE8' : 'none',
-                  }}
+                  className={`h-[49px] px-6 ${colIndex < columns - 1 ? 'border-r border-[#EBECE8]' : ''}`}
                 >
                   <div
-                    className="h-4 animate-pulse rounded"
-                    style={{
-                      backgroundColor: '#E5E7EB',
-                      width: colIndex === 0 ? '60%' : colIndex === columns - 1 ? '40%' : '80%',
-                    }}
+                    className={`h-4 animate-pulse rounded bg-gray-200 ${
+                      colIndex === 0 ? 'w-[60%]' : colIndex === columns - 1 ? 'w-[40%]' : 'w-[80%]'
+                    }`}
                   />
                 </td>
               ))}

@@ -6,6 +6,7 @@
  */
 
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { useRole } from '@/features/roles/hooks/useRole'
 import { useRoleUsers, useArchiveRole } from '@/features/roles/hooks/useRoleMutations'
@@ -21,7 +22,6 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
-import { colors } from '@/lib/colors'
 
 interface ArchiveRoleModalProps {
   open: boolean
@@ -33,6 +33,7 @@ interface ArchiveRoleModalProps {
 type ReassignmentOption = 'reassign' | 'default'
 
 export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRoleModalProps) {
+  const { t } = useTranslation('common')
   const { data: role, isLoading: roleLoading, error: roleError } = useRole(roleId)
   // Users query is optional - if it fails, we'll just show empty list
   const { data: usersData, isLoading: usersLoading, error: usersError } = useRoleUsers(roleId)
@@ -107,27 +108,30 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.primary[400] }}
-          >
-            <Icons.Delete size={20} color={colors.neutral.dark[500]} strokeWidth={2} />
+          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.Delete size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
-        title={role ? `Archive Role: ${role.name}` : 'Archive Role'}
+        title={
+          role
+            ? t('pages.roles.modals.archive.title', { roleName: role.name })
+            : t('pages.roles.modals.archive.defaultTitle')
+        }
       />
       <ModalContent>
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-teal-600" />
-            <span className="ml-3 text-gray-600">Loading role data...</span>
+            <span className="ml-3 text-gray-600">
+              {t('pages.roles.modals.archive.loadingRoleData')}
+            </span>
           </div>
         ) : roleError || usersError ? (
           <Alert variant="error">
             <p className="text-sm">
               {roleError?.message ||
                 usersError?.message ||
-                'Failed to load role data. Please try again.'}
+                t('pages.roles.modals.archive.failedToLoad')}
             </p>
           </Alert>
         ) : role ? (
@@ -135,20 +139,14 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
             {/* Assigned Users Section */}
             {hasUsers ? (
               <div>
-                <p
-                  className="mb-3 font-light"
-                  style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
-                >
-                  This role has users assigned:
+                <p className="mb-3 text-sm font-light text-gray-950">
+                  {t('pages.roles.modals.archive.hasUsersAssigned')}
                 </p>
                 <div className="space-y-2">
                   {users.map((user) => (
                     <div key={user.id} className="flex items-center gap-3">
                       <Checkbox checked={true} disabled />
-                      <span
-                        className="font-light"
-                        style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
-                      >
+                      <span className="text-sm font-light text-gray-950">
                         {user.username}
                         {user.first_name || user.last_name
                           ? ` (${[user.first_name, user.last_name].filter(Boolean).join(' ')})`
@@ -160,11 +158,8 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
               </div>
             ) : (
               <div>
-                <p
-                  className="font-light"
-                  style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
-                >
-                  This role has no users assigned. You can archive it directly.
+                <p className="text-sm font-light text-gray-950">
+                  {t('pages.roles.modals.archive.noUsersCanArchive')}
                 </p>
               </div>
             )}
@@ -172,12 +167,9 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
             {/* Role per Project Section */}
             {hasUsers && (
               <div className="space-y-4">
-                <hr className="border-t" style={{ borderColor: colors.light[100] }} />
-                <p
-                  className="font-light"
-                  style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
-                >
-                  Role per Project:
+                <hr className="border-light-50 border-t" />
+                <p className="text-sm font-light text-gray-950">
+                  {t('pages.roles.modals.archive.reassignmentOptions')}
                 </p>
 
                 <div className="space-y-4">
@@ -185,22 +177,15 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
-                      className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 focus:outline-none"
-                      style={{
-                        borderColor:
-                          reassignmentOption === 'reassign'
-                            ? colors.primary[500]
-                            : colors.gray[300],
-                        backgroundColor:
-                          reassignmentOption === 'reassign' ? colors.primary[500] : 'transparent',
-                      }}
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 focus:outline-none ${
+                        reassignmentOption === 'reassign'
+                          ? 'border-primary-500 bg-primary-500'
+                          : 'border-gray-300 bg-transparent'
+                      }`}
                       onClick={() => setReassignmentOption('reassign')}
                     >
                       {reassignmentOption === 'reassign' && (
-                        <div
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: '#FFFFFF' }}
-                        />
+                        <div className="h-2 w-2 rounded-full bg-white" />
                       )}
                     </button>
                     <div
@@ -215,11 +200,8 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                       role="button"
                       tabIndex={0}
                     >
-                      <span
-                        className="w-1/2 font-light"
-                        style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
-                      >
-                        Reassign to:
+                      <span className="w-1/2 text-sm font-light text-gray-950">
+                        {t('pages.roles.modals.archive.reassignTo')}
                       </span>
                       <div
                         className="w-1/2"
@@ -237,13 +219,9 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                           disabled={reassignmentOption !== 'reassign'}
                         >
                           <SelectTrigger
-                            className="w-full"
-                            style={{
-                              opacity: reassignmentOption !== 'reassign' ? 0.5 : 1,
-                              cursor: reassignmentOption !== 'reassign' ? 'default' : 'pointer',
-                            }}
+                            className={`w-full ${reassignmentOption !== 'reassign' ? 'cursor-default opacity-50' : 'cursor-pointer'}`}
                           >
-                            <SelectValue placeholder="Select Role" />
+                            <SelectValue placeholder={t('pages.roles.modals.archive.selectRole')} />
                           </SelectTrigger>
                           <SelectContent>
                             {availableRoles.map((r) => (
@@ -261,20 +239,15 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
-                      className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 focus:outline-none"
-                      style={{
-                        borderColor:
-                          reassignmentOption === 'default' ? colors.primary[500] : colors.gray[300],
-                        backgroundColor:
-                          reassignmentOption === 'default' ? colors.primary[500] : 'transparent',
-                      }}
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 focus:outline-none ${
+                        reassignmentOption === 'default'
+                          ? 'border-primary-500 bg-primary-500'
+                          : 'border-gray-300 bg-transparent'
+                      }`}
                       onClick={() => setReassignmentOption('default')}
                     >
                       {reassignmentOption === 'default' && (
-                        <div
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: '#FFFFFF' }}
-                        />
+                        <div className="h-2 w-2 rounded-full bg-white" />
                       )}
                     </button>
                     <div
@@ -289,16 +262,10 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                       role="button"
                       tabIndex={0}
                     >
-                      <span
-                        className="w-1/2 font-light"
-                        style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
-                      >
-                        Set to default:
+                      <span className="w-1/2 text-sm font-light text-gray-950">
+                        {t('pages.roles.modals.archive.setToDefault')}
                       </span>
-                      <span
-                        className="w-1/2 font-light"
-                        style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[950] }}
-                      >
+                      <span className="w-1/2 text-sm font-light text-gray-950">
                         {defaultOperatorRole?.name || 'Operator'}
                       </span>
                     </div>
@@ -311,9 +278,9 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
             {hasUsers && !canArchive && (
               <Alert variant="error">
                 <div className="flex items-center gap-2">
-                  <Icons.Warning size={16} color="#EF4444" />
-                  <p className="text-sm" style={{ color: '#EF4444' }}>
-                    You cannot archive a role until all users are reassigned.
+                  <Icons.Warning size={16} className="text-error-500" />
+                  <p className="text-error-500 text-sm">
+                    {t('pages.roles.modals.archive.cannotArchiveUntilReassigned')}
                   </p>
                 </div>
               </Alert>
@@ -323,49 +290,37 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
             {archiveMutation.isError && (
               <Alert variant="error">
                 <p className="text-sm">
-                  {archiveMutation.error?.message || 'Failed to archive role. Please try again.'}
+                  {archiveMutation.error?.message ||
+                    t('pages.roles.modals.archive.failedToArchive')}
                 </p>
               </Alert>
             )}
           </div>
         ) : (
-          <div className="py-8 text-center text-gray-600">Role not found</div>
+          <div className="py-8 text-center text-gray-600">
+            {t('pages.roles.modals.archive.roleNotFound')}
+          </div>
         )}
       </ModalContent>
       <ModalFooter>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={onClose}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: colors.gray[500],
-            color: '#FFFFFF',
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-          }}
+          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button
           type="button"
           variant="primary"
           onClick={handleArchive}
           disabled={!canArchive || archiveMutation.isPending || isLoading}
-          className="flex-1 rounded-md text-sm font-medium"
-          style={{
-            border: 'none',
-            backgroundColor: colors.primary[300],
-            color: colors.neutral.dark[500],
-            height: '45px',
-            fontSize: '14px',
-            fontWeight: 500,
-            opacity: !canArchive ? 0.5 : 1,
-          }}
+          className={`text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium ${!canArchive ? 'opacity-50' : ''}`}
         >
-          Archive Role
+          {archiveMutation.isPending
+            ? t('pages.roles.modals.archive.archiving')
+            : t('pages.roles.modals.archive.archiveRole')}
         </Button>
       </ModalFooter>
     </Modal>

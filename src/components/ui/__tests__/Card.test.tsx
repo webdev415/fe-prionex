@@ -150,3 +150,26 @@ describe('Card composition', () => {
     expect(screen.getByText('Footer content')).toBeInTheDocument()
   })
 })
+
+// STYLING STANDARDIZATION TESTS (Phase 2)
+
+describe('Card styling standardization', () => {
+  it('Card should NOT have inline style attribute', () => {
+    render(<Card data-testid="card">Content</Card>)
+    expect(screen.getByTestId('card')).not.toHaveAttribute('style')
+  })
+
+  it('CardTitle should use standard Tailwind text size (not custom text-xs-display)', () => {
+    render(<CardTitle>Title</CardTitle>)
+    const title = screen.getByRole('heading')
+    // Should use standard Tailwind text size instead of custom text-xs-display
+    expect(title).toHaveClass('text-xl')
+  })
+
+  it('CardDescription should use standard Tailwind text size (not custom text-text-sm)', () => {
+    render(<CardDescription data-testid="desc">Description</CardDescription>)
+    const desc = screen.getByTestId('desc')
+    // Should use standard Tailwind text-sm instead of custom text-text-sm
+    expect(desc).toHaveClass('text-sm')
+  })
+})

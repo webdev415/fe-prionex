@@ -5,7 +5,7 @@
  * Displays information as plain text with the same 2-column layout as CreateUserForm.
  */
 
-import { colors } from '@/lib/colors'
+import { useTranslation } from 'react-i18next'
 import type { UserDetailResponse } from '../types'
 
 interface ViewUserFormProps {
@@ -13,19 +13,25 @@ interface ViewUserFormProps {
 }
 
 export function ViewUserForm({ user }: ViewUserFormProps) {
+  const { t } = useTranslation('common')
+
   // Check if user data is available
   if (!user) {
-    return <div className="py-8 text-center text-gray-600">No user data available</div>
+    return (
+      <div className="py-8 text-center text-gray-600">
+        {t('pages.users.modals.view.userNotFound')}
+      </div>
+    )
   }
 
   const getLanguageLabel = (lang: string) => {
     switch (lang) {
       case 'uk':
-        return 'Ukrainian'
+        return t('language.uk')
       case 'ru':
-        return 'Russian'
+        return t('language.ru')
       case 'en':
-        return 'English'
+        return t('language.en')
       default:
         return lang
     }
@@ -37,33 +43,15 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="flex items-center gap-2">
-            <span
-              className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-            >
-              Username:
+            <span className="text-sm font-light text-gray-500">
+              {t('pages.users.forms.username')}
             </span>
-            <span
-              className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
-            >
-              {user.username || '—'}
-            </span>
+            <span className="text-sm font-semibold text-gray-950">{user.username || '—'}</span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span
-              className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-            >
-              Email:
-            </span>
-            <span
-              className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
-            >
-              {user.email || '—'}
-            </span>
+            <span className="text-sm font-light text-gray-500">{t('pages.users.forms.email')}</span>
+            <span className="text-sm font-semibold text-gray-950">{user.email || '—'}</span>
           </div>
         </div>
       </div>
@@ -72,65 +60,31 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="flex items-center gap-2">
-            <span
-              className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-            >
-              First Name:
+            <span className="text-sm font-light text-gray-500">
+              {t('pages.users.forms.firstName')}
             </span>
-            <span
-              className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
-            >
-              {user.first_name || '—'}
-            </span>
+            <span className="text-sm font-semibold text-gray-950">{user.first_name || '—'}</span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span
-              className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-            >
-              Last Name:
+            <span className="text-sm font-light text-gray-500">
+              {t('pages.users.forms.lastName')}
             </span>
-            <span
-              className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
-            >
-              {user.last_name || '—'}
-            </span>
+            <span className="text-sm font-semibold text-gray-950">{user.last_name || '—'}</span>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div className="flex items-center gap-2">
-            <span
-              className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-            >
-              Middle Name:
+            <span className="text-sm font-light text-gray-500">
+              {t('pages.users.forms.middleName')}
             </span>
-            <span
-              className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
-            >
-              {user.middle_name || '—'}
-            </span>
+            <span className="text-sm font-semibold text-gray-950">{user.middle_name || '—'}</span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span
-              className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-            >
-              Phone:
-            </span>
-            <span
-              className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
-            >
-              {user.phone || '—'}
-            </span>
+            <span className="text-sm font-light text-gray-500">{t('pages.users.forms.phone')}</span>
+            <span className="text-sm font-semibold text-gray-950">{user.phone || '—'}</span>
           </div>
         </div>
       </div>
@@ -139,33 +93,19 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="flex items-center gap-2">
-            <span
-              className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-            >
-              Language:
+            <span className="text-sm font-light text-gray-500">
+              {t('pages.users.forms.language')}
             </span>
-            <span
-              className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
-            >
+            <span className="text-sm font-semibold text-gray-950">
               {getLanguageLabel(user.language || '')}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span
-              className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-            >
-              Timezone:
+            <span className="text-sm font-light text-gray-500">
+              {t('pages.users.forms.timezone')}
             </span>
-            <span
-              className="font-semibold"
-              style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
-            >
-              {user.timezone || '—'}
-            </span>
+            <span className="text-sm font-semibold text-gray-950">{user.timezone || '—'}</span>
           </div>
         </div>
       </div>
@@ -174,28 +114,15 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
       {user.projects && user.projects.length > 0 && (
         <div className="space-y-4">
           <div>
-            <span
-              className="font-light"
-              style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-            >
-              Assigned Projects:
+            <span className="text-sm font-light text-gray-500">
+              {t('pages.users.forms.assignProjects')}
             </span>
           </div>
           <div className="space-y-3">
             {user.projects.map((project) => (
               <div key={project.project_id} className="grid w-full grid-cols-2 items-center gap-4">
-                <span
-                  className="font-light"
-                  style={{ fontSize: '14px', fontWeight: 300, color: colors.gray[500] }}
-                >
-                  {project.project_name}:
-                </span>
-                <span
-                  className="font-semibold"
-                  style={{ fontSize: '14px', fontWeight: 600, color: colors.gray[950] }}
-                >
-                  {project.role_name}
-                </span>
+                <span className="text-sm font-light text-gray-500">{project.project_name}:</span>
+                <span className="text-sm font-semibold text-gray-950">{project.role_name}</span>
               </div>
             ))}
           </div>

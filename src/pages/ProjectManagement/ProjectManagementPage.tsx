@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useProjects, useProjectDetail } from '@/features/projects/hooks/useProjects'
 import { useProjectExport, useDeleteProject } from '@/features/projects/hooks/useProjectMutations'
 import { EditProjectModal } from './components/EditProjectModal'
@@ -13,7 +14,6 @@ import { ProjectDetailPanel } from './components/ProjectDetailPanel'
 import { DeleteProjectConfirmationModal } from './components/DeleteProjectConfirmationModal'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import type { ApiProject, ApiProjectDetail, ProjectFilters } from '@/features/projects/types'
-import { colors } from '@/lib/colors'
 import { formatPeriod, formatCurrency } from '@/lib/formatters'
 import { DataTable, type Column, type SortConfig, type SortOrder } from '@/components/ui/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -24,6 +24,7 @@ import { ProjectManagementPageSkeleton } from './components/ProjectManagementPag
 const ITEMS_PER_PAGE = 10
 
 export function ProjectManagementPage() {
+  const { t } = useTranslation('common')
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [editingProject, setEditingProject] = useState<ApiProjectDetail | null>(null)
@@ -155,19 +156,12 @@ export function ProjectManagementPage() {
   const columns: Column<ApiProject>[] = [
     {
       key: 'user_count',
-      header: 'Users',
+      header: t('pages.projects.tableHeaders.users'),
       align: 'center',
       sortable: true,
       render: (project) => (
         <div className="flex items-center justify-center">
-          <span
-            className="flex items-center justify-center"
-            style={{
-              color: colors.neutral.dark[500],
-              fontSize: '12px',
-              fontWeight: 500,
-            }}
-          >
+          <span className="text-dark-500 flex items-center justify-center text-xs font-medium">
             {project.user_count || 0}
           </span>
         </div>
@@ -175,28 +169,23 @@ export function ProjectManagementPage() {
     },
     {
       key: 'name',
-      header: 'Project / Code',
+      header: t('pages.projects.tableHeaders.projectCode'),
       sortable: true,
       render: (project) => (
         <div className="flex flex-col">
-          <span style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}>
-            {project.name}
-          </span>
-          <span style={{ color: colors.gray[700], fontSize: '12px', fontWeight: 500 }}>
-            {project.code}
-          </span>
+          <span className="text-dark-500 text-xs font-medium">{project.name}</span>
+          <span className="text-xs font-medium text-gray-700">{project.code}</span>
         </div>
       ),
     },
     {
       key: 'client_company',
-      header: 'Client',
+      header: t('pages.projects.tableHeaders.client'),
       sortable: true,
       render: (project) => (
         <span
-          className="block max-w-[180px] truncate"
+          className="text-dark-500 block max-w-[180px] truncate text-xs font-medium"
           title={project.client_company}
-          style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}
         >
           {project.client_company || '—'}
         </span>
@@ -204,28 +193,28 @@ export function ProjectManagementPage() {
     },
     {
       key: 'start_date',
-      header: 'Period',
+      header: t('pages.projects.tableHeaders.period'),
       sortable: true,
       render: (project) => (
-        <span style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}>
+        <span className="text-dark-500 text-xs font-medium">
           {formatPeriod(project.start_date, project.end_date)}
         </span>
       ),
     },
     {
       key: 'total_debt_amount',
-      header: 'Debt',
+      header: t('pages.projects.tableHeaders.debt'),
       align: 'right',
       sortable: true,
       render: (project) => (
-        <span style={{ color: colors.neutral.dark[500], fontSize: '12px', fontWeight: 500 }}>
+        <span className="text-dark-500 text-xs font-medium">
           {formatCurrency(project.total_debt_amount)}
         </span>
       ),
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('pages.projects.tableHeaders.status'),
       align: 'center',
       sortable: true,
       render: (project) => <StatusBadge status={getStatusType(project.status)} />,
@@ -236,16 +225,7 @@ export function ProjectManagementPage() {
     <div className="flex h-full flex-col">
       {/* Page Header */}
       <div className="mb-4 flex items-center justify-between">
-        <h1
-          className="font-light"
-          style={{
-            fontSize: '24px',
-            fontWeight: 300,
-            color: colors.neutral.dark[500],
-          }}
-        >
-          Project Management
-        </h1>
+        <h1 className="text-dark-500 text-2xl font-light">{t('pages.projects.title')}</h1>
       </div>
 
       {/* Search & Filters */}
@@ -265,7 +245,11 @@ export function ProjectManagementPage() {
         {/* Error State */}
         {!isLoading && isError && (
           <div className="flex flex-1 flex-col">
-            <ErrorState error={error} onRetry={() => refetch()} title="Error loading projects" />
+            <ErrorState
+              error={error}
+              onRetry={() => refetch()}
+              title={t('pages.projects.errorLoading')}
+            />
           </div>
         )}
 
@@ -274,16 +258,11 @@ export function ProjectManagementPage() {
           <div className="flex flex-1 flex-col">
             <div className="flex w-full flex-1 items-start justify-between overflow-y-auto">
               <div className="w-[70%]">
-                <div
-                  className="rounded-xl p-6"
-                  style={{
-                    backgroundColor: '#FFFFFF80',
-                  }}
-                >
+                <div className="rounded-xl bg-white/50 p-6">
                   <DataTable
                     columns={columns}
                     data={projects}
-                    emptyMessage="No projects found"
+                    emptyMessage={t('pages.projects.noProjectsFound')}
                     onRowClick={handleRowClick}
                     sortConfig={sortConfig}
                     onSort={handleSort}
