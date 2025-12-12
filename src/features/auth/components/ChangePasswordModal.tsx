@@ -79,7 +79,7 @@ export function ChangePasswordModal({
       <ModalHeader
         icon={
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#A7E8BD]">
-            <Icons.Lock size={20} color="#05040D" strokeWidth={2} />
+            <Icons.Lock size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
         title="Change Password"
@@ -105,7 +105,10 @@ export function ChangePasswordModal({
                 className="absolute inset-y-0 right-0 flex items-center px-3"
                 aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
               >
-                <Icons.Eye size={18} color={showCurrentPassword ? '#0CA8EB' : '#9CA3AF'} />
+                <Icons.Eye
+                  size={18}
+                  className={showCurrentPassword ? 'text-information-400' : 'text-gray-400'}
+                />
               </button>
             </div>
             {errors.currentPassword && (
@@ -132,7 +135,10 @@ export function ChangePasswordModal({
                 className="absolute inset-y-0 right-0 flex items-center px-3"
                 aria-label={showNewPassword ? 'Hide password' : 'Show password'}
               >
-                <Icons.Eye size={18} color={showNewPassword ? '#0CA8EB' : '#9CA3AF'} />
+                <Icons.Eye
+                  size={18}
+                  className={showNewPassword ? 'text-information-400' : 'text-gray-400'}
+                />
               </button>
             </div>
             {errors.newPassword && (

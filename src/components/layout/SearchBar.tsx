@@ -81,7 +81,7 @@ export function SearchBar({
         aria-label="Search"
         onClick={handleSearch}
       >
-        <Icons.Search size={20} color="#05040D" strokeWidth={1.5} />
+        <Icons.Search size={20} className="text-dark-500" strokeWidth={1.5} />
       </button>
     </div>
   )

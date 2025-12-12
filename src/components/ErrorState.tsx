@@ -23,7 +23,7 @@ export function ErrorState({ error, onRetry, title, className }: ErrorStateProps
   return (
     <div className={`rounded-lg bg-white p-8 text-center shadow-sm ${className || ''}`}>
       <div className="mb-4 flex justify-center">
-        <Icons.Warning size={48} color="#EF4444" strokeWidth={1.5} />
+        <Icons.Warning size={48} className="text-error-500" strokeWidth={1.5} />
       </div>
       {title && <h3 className="text-dark-500 mb-2 text-lg font-semibold">{title}</h3>}
       <p className="mb-6 text-sm text-gray-600">{errorMessage}</p>

@@ -4,6 +4,7 @@
  * Modal wrapper for EditRoleForm using the same structure as EditUserModal.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { EditRoleForm } from '@/features/roles/components/EditRoleForm'
 import { useRole } from '@/features/roles/hooks/useRole'
@@ -19,6 +20,7 @@ interface EditRoleModalProps {
 }
 
 export function EditRoleModal({ open, roleId, onClose, onSuccess }: EditRoleModalProps) {
+  const { t } = useTranslation('common')
   const { data: role, isLoading: roleLoading } = useRole(roleId)
   // Only fetch project if we have a valid project_id
   const { data: project, isLoading: projectLoading } = useProject(role?.project_id ?? 0, {
@@ -37,16 +39,18 @@ export function EditRoleModal({ open, roleId, onClose, onSuccess }: EditRoleModa
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.PencilEdit size={20} color="#05040D" strokeWidth={2} />
+            <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
-        title={role ? `Edit Role: ${role.name}${role.is_default ? ' (Default)' : ''}` : 'Edit Role'}
+        title={t('pages.roles.modals.edit.title')}
       />
       <ModalContent>
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-teal-600" />
-            <span className="ml-3 text-gray-600">Loading role data...</span>
+            <span className="ml-3 text-gray-600">
+              {t('pages.roles.modals.archive.loadingRoleData')}
+            </span>
           </div>
         ) : role && project ? (
           <EditRoleForm
@@ -56,7 +60,9 @@ export function EditRoleModal({ open, roleId, onClose, onSuccess }: EditRoleModa
             onCancel={onClose}
           />
         ) : (
-          <div className="py-8 text-center text-gray-600">Role not found</div>
+          <div className="py-8 text-center text-gray-600">
+            {t('pages.roles.modals.archive.failedToLoad')}
+          </div>
         )}
       </ModalContent>
       <ModalFooter>
@@ -66,7 +72,7 @@ export function EditRoleModal({ open, roleId, onClose, onSuccess }: EditRoleModa
           onClick={onClose}
           className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button
           type="submit"
@@ -75,7 +81,7 @@ export function EditRoleModal({ open, roleId, onClose, onSuccess }: EditRoleModa
           disabled={isLoading}
           className="text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
         >
-          Save
+          {t('actions.save')}
         </Button>
       </ModalFooter>
     </Modal>

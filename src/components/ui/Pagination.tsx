@@ -75,7 +75,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
         className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
         aria-label="Previous page"
       >
-        <Icons.ArrowLeft size={16} color="#05040D" strokeWidth={1.5} />
+        <Icons.ArrowLeft size={16} className="text-dark-500" strokeWidth={1.5} />
       </button>
 
       {/* First page */}
@@ -158,7 +158,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
         className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
         aria-label="Next page"
       >
-        <Icons.ArrowRight size={16} color="#05040D" strokeWidth={1.5} />
+        <Icons.ArrowRight size={16} className="text-dark-500" strokeWidth={1.5} />
       </button>
     </div>
   )

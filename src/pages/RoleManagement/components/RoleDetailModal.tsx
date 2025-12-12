@@ -4,6 +4,7 @@
  * Modal for viewing role details using the same structure as EditRoleModal.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { ViewRoleForm } from '@/features/roles/components/ViewRoleForm'
 import { useRole } from '@/features/roles/hooks/useRole'
@@ -18,6 +19,7 @@ interface RoleDetailModalProps {
 }
 
 export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps) {
+  const { t } = useTranslation('common')
   const { data: role, isLoading: roleLoading } = useRole(roleId)
   const { data: project, isLoading: projectLoading } = useProject(role?.project_id ?? 0, {
     enabled: !!role?.project_id && role.project_id > 0,
@@ -30,21 +32,25 @@ export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps)
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.View size={20} color="#05040D" strokeWidth={2} />
+            <Icons.View size={20} className="text-white" strokeWidth={2} />
           </div>
         }
-        title={role ? `View Role: ${role.name}${role.is_default ? ' (Default)' : ''}` : 'View Role'}
+        title={t('pages.roles.modals.view.title')}
       />
       <ModalContent>
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-teal-600" />
-            <span className="ml-3 text-gray-600">Loading role data...</span>
+            <span className="ml-3 text-gray-600">
+              {t('pages.roles.modals.archive.loadingRoleData')}
+            </span>
           </div>
         ) : role && project ? (
           <ViewRoleForm role={role} projectName={project.name} />
         ) : (
-          <div className="py-8 text-center text-gray-600">Role not found</div>
+          <div className="py-8 text-center text-gray-600">
+            {t('pages.roles.modals.archive.failedToLoad')}
+          </div>
         )}
       </ModalContent>
       <ModalFooter>
@@ -54,7 +60,7 @@ export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps)
           onClick={onClose}
           className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
-          Close
+          {t('actions.close')}
         </Button>
       </ModalFooter>
     </Modal>

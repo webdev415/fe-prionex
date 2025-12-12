@@ -64,18 +64,18 @@ export function DataTable<T extends { id: number | string }>({
     if (!isActive) {
       return (
         <span className="ml-1 opacity-40">
-          <Icons.Sorting01Icon size={14} color="#6B7280" strokeWidth={1.5} />
+          <Icons.Sorting01Icon size={14} className="text-gray-500" strokeWidth={1.5} />
         </span>
       )
     }
 
     return sortConfig.order === 'asc' ? (
       <span className="ml-1 inline-block rotate-180">
-        <Icons.Sorting01Icon size={14} color="#0CA8EB" strokeWidth={2} />
+        <Icons.Sorting01Icon size={14} className="text-information-400" strokeWidth={2} />
       </span>
     ) : (
       <span className="ml-1">
-        <Icons.Sorting01Icon size={14} color="#0CA8EB" strokeWidth={2} />
+        <Icons.Sorting01Icon size={14} className="text-information-400" strokeWidth={2} />
       </span>
     )
   }

@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
@@ -33,6 +34,7 @@ interface EditProjectFormProps {
 }
 
 function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) {
+  const { t } = useTranslation('common')
   const [formData, setFormData] = useState<UpdateProjectInput>({
     name: project.name,
     description: project.description || '',
@@ -51,14 +53,14 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
     const newErrors: Record<string, string> = {}
 
     if (!formData.name || formData.name.length < 3) {
-      newErrors.name = 'Name must be at least 3 characters'
+      newErrors.name = t('pages.projects.modals.edit.errors.nameMinLength')
     }
 
     if (formData.start_date && formData.end_date && !noEndDate) {
       const start = new Date(formData.start_date)
       const end = new Date(formData.end_date)
       if (end < start) {
-        newErrors.end_date = 'End date must be after start date'
+        newErrors.end_date = t('pages.projects.modals.edit.errors.endDateAfterStart')
       }
     }
 
@@ -126,22 +128,24 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
           {updateMutation.isError && (
             <Alert variant="error">
               <div>
-                <p className="font-semibold">Error updating project</p>
-                <p className="mt-1 text-sm">Failed to update project. Please try again.</p>
+                <p className="font-semibold">{t('pages.projects.modals.edit.errorUpdating')}</p>
+                <p className="mt-1 text-sm">{t('pages.projects.modals.edit.failedToUpdate')}</p>
               </div>
             </Alert>
           )}
 
           {/* Project Information Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">Project Information</h3>
+            <h3 className="text-dark-500 text-base font-medium">
+              {t('pages.projects.modals.edit.projectInformation')}
+            </h3>
             <div className="grid grid-cols-2 gap-4">
               <Input
                 id="name"
-                label="Project Name:"
+                label={t('pages.projects.modals.edit.projectName')}
                 value={formData.name || ''}
                 onChange={(e) => handleChange('name', e.target.value)}
-                placeholder="Enter Project Name"
+                placeholder={t('pages.projects.modals.edit.placeholders.projectName')}
                 disabled={updateMutation.isPending}
                 variant={errors.name ? 'error' : 'default'}
                 error={errors.name}
@@ -150,17 +154,21 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
               <div>
                 <Input
                   id="code"
-                  label="Project Code:"
+                  label={t('pages.projects.modals.edit.projectCode')}
                   value={project.code}
                   disabled
                   className="bg-gray-100"
                 />
-                <p className="mt-1 text-xs text-gray-500">Code cannot be changed after creation</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {t('pages.projects.modals.edit.codeCannotBeChanged')}
+                </p>
               </div>
             </div>
             {project.status !== 'archived' && (
               <div>
-                <Label className="mb-2 block text-sm font-light">Status:</Label>
+                <Label className="mb-2 block text-sm font-light">
+                  {t('pages.projects.modals.edit.status')}
+                </Label>
                 <RadioGroup
                   value={formData.status}
                   onValueChange={(value) => handleChange('status', value)}
@@ -173,7 +181,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                       htmlFor="status-active"
                       className="mb-0 cursor-pointer text-sm font-light"
                     >
-                      Active
+                      {t('pages.projects.modals.edit.active')}
                     </Label>
                   </div>
                   <div className="flex items-center gap-2">
@@ -182,7 +190,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                       htmlFor="status-inactive"
                       className="mb-0 cursor-pointer text-sm font-light"
                     >
-                      Inactive
+                      {t('pages.projects.modals.edit.inactive')}
                     </Label>
                   </div>
                 </RadioGroup>
@@ -193,23 +201,25 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
 
           {/* Client & Contract Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">Client & Contract</h3>
+            <h3 className="text-dark-500 text-base font-medium">
+              {t('pages.projects.modals.edit.clientContract')}
+            </h3>
             <div className="grid grid-cols-2 gap-4">
               <Input
                 id="client_company"
-                label="Client Company:"
+                label={t('pages.projects.modals.edit.clientCompany')}
                 value={formData.client_company || ''}
                 onChange={(e) => handleChange('client_company', e.target.value)}
-                placeholder="Client Company"
+                placeholder={t('pages.projects.modals.edit.placeholders.clientCompany')}
                 disabled={updateMutation.isPending}
               />
 
               <Input
                 id="contract_number"
-                label="Contract Number:"
+                label={t('pages.projects.modals.edit.contractNumber')}
                 value={formData.contract_number || ''}
                 onChange={(e) => handleChange('contract_number', e.target.value)}
-                placeholder="Contract Number"
+                placeholder={t('pages.projects.modals.edit.placeholders.contractNumber')}
                 disabled={updateMutation.isPending}
               />
             </div>
@@ -218,7 +228,9 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
 
           {/* Timeline Section */}
           <div className="space-y-4">
-            <h3 className="text-dark-500 text-base font-medium">Timeline</h3>
+            <h3 className="text-dark-500 text-base font-medium">
+              {t('pages.projects.modals.edit.timeline')}
+            </h3>
             <div className="flex items-center gap-4">
               <div className="flex-1">
                 <DateSelect
@@ -230,7 +242,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                   }}
                   disabled={updateMutation.isPending}
                   error={errors.start_date}
-                  placeholder="Start Date"
+                  placeholder={t('pages.projects.modals.edit.startDate')}
                 />
               </div>
               <div className="flex-1">
@@ -243,7 +255,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                   }}
                   disabled={updateMutation.isPending || noEndDate}
                   error={errors.end_date}
-                  placeholder="End Date"
+                  placeholder={t('pages.projects.modals.edit.endDate')}
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -254,7 +266,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                   disabled={updateMutation.isPending}
                 />
                 <Label htmlFor="no_end_date" className="mb-0 cursor-pointer">
-                  No end date
+                  {t('pages.projects.modals.edit.noEndDate')}
                 </Label>
               </div>
             </div>
@@ -265,10 +277,10 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
           <div className="space-y-4">
             <Textarea
               id="description"
-              label="Description:"
+              label={t('pages.projects.modals.edit.description')}
               value={formData.description || ''}
               onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="Placeholder text"
+              placeholder={t('pages.projects.modals.edit.placeholders.description')}
               rows={3}
               disabled={updateMutation.isPending}
             />
@@ -276,9 +288,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
 
           {project.status === 'archived' && (
             <Alert variant="warning">
-              <p className="text-sm">
-                This project is archived. Use the Restore action to reactivate it.
-              </p>
+              <p className="text-sm">{t('pages.projects.modals.edit.archivedWarning')}</p>
             </Alert>
           )}
         </form>
@@ -291,7 +301,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
           disabled={updateMutation.isPending}
           className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button
           type="submit"
@@ -300,7 +310,9 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
           disabled={updateMutation.isPending}
           className="text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
         >
-          {updateMutation.isPending ? 'Saving...' : 'Save'}
+          {updateMutation.isPending
+            ? t('pages.projects.modals.edit.saving')
+            : t('pages.projects.modals.edit.save')}
         </Button>
       </ModalFooter>
     </>
@@ -308,6 +320,8 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
 }
 
 export function EditProjectModal({ project, open, onClose, onSuccess }: EditProjectModalProps) {
+  const { t } = useTranslation('common')
+
   if (!project) return null
 
   return (
@@ -315,10 +329,10 @@ export function EditProjectModal({ project, open, onClose, onSuccess }: EditProj
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.PencilEdit size={20} color="#05040D" strokeWidth={2} />
+            <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
-        title="Edit Project"
+        title={t('pages.projects.modals.edit.title')}
       />
       <EditProjectForm key={project.id} project={project} onClose={onClose} onSuccess={onSuccess} />
     </Modal>

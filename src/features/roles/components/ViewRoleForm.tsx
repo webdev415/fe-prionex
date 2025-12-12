@@ -6,6 +6,7 @@
  */
 
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { usePermissions } from '../hooks/useRoleMutations'
 import type { RoleDetailResponse } from '../types'
 
@@ -15,6 +16,7 @@ interface ViewRoleFormProps {
 }
 
 export function ViewRoleForm({ role }: ViewRoleFormProps) {
+  const { t } = useTranslation('common')
   const { data: permissionsData, isLoading: loadingPermissions } = usePermissions()
 
   // Get selected permission IDs from role
@@ -50,13 +52,15 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
     <div className="space-y-4">
       {/* Role Name */}
       <div className="flex items-center gap-2">
-        <span className="text-sm font-light text-gray-500">Role Name:</span>
+        <span className="text-sm font-light text-gray-500">{t('pages.roles.forms.roleName')}:</span>
         <span className="text-sm font-semibold text-gray-950">{role.name}</span>
       </div>
 
       {/* Description */}
       <div className="flex items-center gap-2">
-        <span className="text-sm font-light text-gray-500">Description:</span>
+        <span className="text-sm font-light text-gray-500">
+          {t('pages.roles.forms.description')}:
+        </span>
         <span className="text-sm font-semibold text-gray-950">{role.description || '—'}</span>
       </div>
 
@@ -70,14 +74,18 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
 
       {/* Users */}
       <div className="flex items-center gap-2">
-        <span className="text-sm font-light text-gray-500">Users:</span>
+        <span className="text-sm font-light text-gray-500">
+          {t('pages.roles.tableHeaders.users')}:
+        </span>
         <span className="text-sm font-semibold text-gray-950">{role.user_count || 0}</span>
       </div>
 
       {/* Permissions Section (Read-only) */}
       <div className="mt-6">
         <div className="mb-4">
-          <span className="text-sm font-light text-gray-500">Permissions:</span>
+          <span className="text-sm font-light text-gray-500">
+            {t('pages.roles.forms.permissions')}:
+          </span>
           <span className="text-sm font-light text-gray-500">
             ({selectedPermissionIds.size} of {permissions.length} permissions)
           </span>
@@ -85,7 +93,9 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
 
         <div className="max-h-96 overflow-y-auto rounded-xl bg-white p-6">
           {loadingPermissions ? (
-            <div className="py-4 text-sm text-gray-500">Loading permissions...</div>
+            <div className="py-4 text-sm text-gray-500">
+              {t('pages.roles.forms.loadingPermissions')}
+            </div>
           ) : (
             <div>
               {Object.entries(permissionsByCategory).map(([category, categoryPerms]) => (

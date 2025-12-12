@@ -4,6 +4,7 @@
  * User profile dropdown with user info and logout option.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { useAuth } from '@/features/auth'
 import {
@@ -18,6 +19,7 @@ interface UserProfileProps {
 }
 
 export function UserProfile({ onLogoutClick }: UserProfileProps) {
+  const { t } = useTranslation('common')
   const { user } = useAuth()
 
   // Get display name: prefer firstName + lastName, fallback to username
@@ -30,11 +32,11 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="bg-primary-300 flex h-10 w-[175px] items-center gap-2 rounded-md px-3 transition-all duration-200 hover:opacity-90">
-          <Icons.User02 size={20} color="#05040D" strokeWidth={1.5} />
+          <Icons.User02 size={20} className="text-dark-500" strokeWidth={1.5} />
           <span className="text-dark-500 flex-1 truncate text-left text-xs font-medium">
             {displayName}
           </span>
-          <Icons.ArrowDown size={16} color="#05040D" strokeWidth={1.5} />
+          <Icons.ArrowDown size={16} className="text-dark-500" strokeWidth={1.5} />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[175px] bg-white">
@@ -43,7 +45,7 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
           className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
         >
           <Icons.Logout size={16} color="#05040D" />
-          <span>Logout</span>
+          <span>{t('actions.logout')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useProjects, useProjectDetail } from '@/features/projects/hooks/useProjects'
 import { useProjectExport, useDeleteProject } from '@/features/projects/hooks/useProjectMutations'
 import { EditProjectModal } from './components/EditProjectModal'
@@ -23,6 +24,7 @@ import { ProjectManagementPageSkeleton } from './components/ProjectManagementPag
 const ITEMS_PER_PAGE = 10
 
 export function ProjectManagementPage() {
+  const { t } = useTranslation('common')
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [editingProject, setEditingProject] = useState<ApiProjectDetail | null>(null)
@@ -154,7 +156,7 @@ export function ProjectManagementPage() {
   const columns: Column<ApiProject>[] = [
     {
       key: 'user_count',
-      header: 'Users',
+      header: t('pages.projects.tableHeaders.users'),
       align: 'center',
       sortable: true,
       render: (project) => (
@@ -167,7 +169,7 @@ export function ProjectManagementPage() {
     },
     {
       key: 'name',
-      header: 'Project / Code',
+      header: t('pages.projects.tableHeaders.projectCode'),
       sortable: true,
       render: (project) => (
         <div className="flex flex-col">
@@ -178,7 +180,7 @@ export function ProjectManagementPage() {
     },
     {
       key: 'client_company',
-      header: 'Client',
+      header: t('pages.projects.tableHeaders.client'),
       sortable: true,
       render: (project) => (
         <span
@@ -191,7 +193,7 @@ export function ProjectManagementPage() {
     },
     {
       key: 'start_date',
-      header: 'Period',
+      header: t('pages.projects.tableHeaders.period'),
       sortable: true,
       render: (project) => (
         <span className="text-dark-500 text-xs font-medium">
@@ -201,7 +203,7 @@ export function ProjectManagementPage() {
     },
     {
       key: 'total_debt_amount',
-      header: 'Debt',
+      header: t('pages.projects.tableHeaders.debt'),
       align: 'right',
       sortable: true,
       render: (project) => (
@@ -212,7 +214,7 @@ export function ProjectManagementPage() {
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('pages.projects.tableHeaders.status'),
       align: 'center',
       sortable: true,
       render: (project) => <StatusBadge status={getStatusType(project.status)} />,
@@ -223,7 +225,7 @@ export function ProjectManagementPage() {
     <div className="flex h-full flex-col">
       {/* Page Header */}
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-dark-500 text-2xl font-light">Project Management</h1>
+        <h1 className="text-dark-500 text-2xl font-light">{t('pages.projects.title')}</h1>
       </div>
 
       {/* Search & Filters */}
@@ -243,7 +245,11 @@ export function ProjectManagementPage() {
         {/* Error State */}
         {!isLoading && isError && (
           <div className="flex flex-1 flex-col">
-            <ErrorState error={error} onRetry={() => refetch()} title="Error loading projects" />
+            <ErrorState
+              error={error}
+              onRetry={() => refetch()}
+              title={t('pages.projects.errorLoading')}
+            />
           </div>
         )}
 
@@ -256,7 +262,7 @@ export function ProjectManagementPage() {
                   <DataTable
                     columns={columns}
                     data={projects}
-                    emptyMessage="No projects found"
+                    emptyMessage={t('pages.projects.noProjectsFound')}
                     onRowClick={handleRowClick}
                     sortConfig={sortConfig}
                     onSort={handleSort}

@@ -7,6 +7,7 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAuth } from '@/features/auth'
 import { useUsers } from '@/features/users/hooks/useUsers'
@@ -28,6 +29,7 @@ import { ErrorState } from '@/components/ErrorState'
 const ITEMS_PER_PAGE = 10
 
 export function UserManagementPage() {
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
   const { startImpersonation, user: currentUser, isLoading: authLoading } = useAuth()
   const [currentPage, setCurrentPage] = useState(1)
@@ -75,7 +77,7 @@ export function UserManagementPage() {
     setImpersonatingUserId(user.id)
     try {
       await startImpersonation(user.id)
-      toast.success(`Now viewing as ${user.username}`)
+      toast.success(t('pages.users.messages.nowViewingAs', { username: user.username }))
 
       // Redirect to dashboard to avoid permission issues
       // (impersonated user may not have access to current page)
@@ -83,7 +85,7 @@ export function UserManagementPage() {
     } catch (error: unknown) {
       console.error('Failed to impersonate user:', error)
       const err = error as { message?: string }
-      toast.error(err.message || 'Failed to impersonate user')
+      toast.error(err.message || t('pages.users.messages.failedToImpersonate'))
     } finally {
       setImpersonatingUserId(null)
     }
@@ -116,12 +118,12 @@ export function UserManagementPage() {
   const columns: Column<ApiUser>[] = [
     {
       key: 'username',
-      header: 'Username',
+      header: t('pages.users.tableHeaders.username'),
       render: (user) => <span className="font-medium">{user.username}</span>,
     },
     {
       key: 'fullName',
-      header: 'Full Name',
+      header: t('pages.users.tableHeaders.fullName'),
       render: (user) => (
         <span>
           {user.first_name && user.last_name
@@ -132,18 +134,18 @@ export function UserManagementPage() {
     },
     {
       key: 'email',
-      header: 'Email',
+      header: t('pages.users.tableHeaders.email'),
       render: (user) => <span className="text-gray-700">{user.email || '-'}</span>,
     },
     {
       key: 'projectRole',
-      header: 'Project & Role',
+      header: t('pages.users.tableHeaders.projectRole'),
       render: (user) => {
         // Display project name with role: "Project Name (Role)"
         if (user.projects && user.projects.length > 0) {
           const projectRoles = user.projects.map((p) => {
-            const projectName = p.project_name || 'Unknown Project'
-            const roleName = p.role_name || 'No Role'
+            const projectName = p.project_name || t('pages.users.unknownProject')
+            const roleName = p.role_name || t('pages.users.noRole')
             return (
               <div key={`${p.project_id}-${p.role_id}`} className="py-0.5">
                 <span className="font-medium">{projectName}</span>
@@ -153,18 +155,18 @@ export function UserManagementPage() {
           })
           return <div className="flex flex-col gap-0.5">{projectRoles}</div>
         }
-        return <span className="text-gray-500">No assignment</span>
+        return <span className="text-gray-500">{t('pages.users.noAssignment')}</span>
       },
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('pages.users.tableHeaders.status'),
       align: 'center',
       render: (user) => <StatusBadge status={getStatusType(user.status)} />,
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('pages.users.tableHeaders.actions'),
       align: 'center',
       render: (user) => (
         <div className="flex items-center justify-center gap-4">
@@ -173,7 +175,7 @@ export function UserManagementPage() {
             className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
           >
             <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
-            View
+            {t('pages.users.actions.view')}
           </button>
 
           <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
@@ -182,7 +184,7 @@ export function UserManagementPage() {
               className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
             >
               <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
-              Edit
+              {t('pages.users.actions.edit')}
             </button>
           </PermissionGuard>
 
@@ -194,16 +196,20 @@ export function UserManagementPage() {
                 className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />
-                {impersonatingUserId === user.id ? 'Impersonating...' : 'Impersonate'}
+                {impersonatingUserId === user.id
+                  ? t('pages.users.actions.impersonating')
+                  : t('pages.users.actions.impersonate')}
               </button>
             )}
           </PermissionGuard>
           <div className="flex items-center gap-2">
-            <label className="text-dark-500 text-xs font-medium">Unlock</label>
+            <label className="text-dark-500 text-xs font-medium">
+              {t('pages.users.actions.unlock')}
+            </label>
             <ToggleSwitch
               checked={isUnlocked(user)}
               onChange={(checked) => handleUnlockToggle(user, checked)}
-              ariaLabel={`${isUnlocked(user) ? 'Lock' : 'Unlock'} user ${user.username}`}
+              ariaLabel={`${isUnlocked(user) ? t('pages.users.actions.lock') : t('pages.users.actions.unlock')} user ${user.username}`}
             />
           </div>
         </div>
@@ -216,7 +222,7 @@ export function UserManagementPage() {
       {/* Page Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-dark-500 text-2xl font-light">User Management</h1>
+          <h1 className="text-dark-500 text-2xl font-light">{t('pages.users.title')}</h1>
           <span className="text-base font-light text-gray-500">{totalUsers}</span>
         </div>
 
@@ -224,12 +230,14 @@ export function UserManagementPage() {
           <button
             onClick={() => setShowCreateModal(true)}
             className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-            aria-label="Add new user"
+            aria-label={t('pages.users.addNewUser')}
           >
             <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-              <Icons.Add size={20} color={'#05040D'} strokeWidth={2} />
+              <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
             </div>
-            <span className="px-4 py-3 text-sm font-medium text-white">Add New User</span>
+            <span className="px-4 py-3 text-sm font-medium text-white">
+              {t('pages.users.addNewUser')}
+            </span>
           </button>
         </PermissionGuard>
       </div>
@@ -242,13 +250,13 @@ export function UserManagementPage() {
         <ErrorState
           error={error}
           onRetry={() => window.location.reload()}
-          title="Error loading users"
+          title={t('pages.users.errorLoading')}
         />
       )}
 
       {/* User Table */}
       {!isLoading && !isError && (
-        <DataTable columns={columns} data={users} emptyMessage="No users found" />
+        <DataTable columns={columns} data={users} emptyMessage={t('pages.users.noUsersFound')} />
       )}
 
       {/* Pagination */}

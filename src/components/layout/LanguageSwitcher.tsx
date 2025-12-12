@@ -14,14 +14,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
-import {
-  SUPPORTED_LANGUAGES,
-  LANGUAGE_SHORT_NAMES,
-  LANGUAGE_FLAGS,
-  type SupportedLanguage,
-} from '@/lib/i18n'
+import { SUPPORTED_LANGUAGES, LANGUAGE_NAMES, type SupportedLanguage } from '@/lib/i18n'
 
-export function LanguageSwitcher() {
+interface LanguageSwitcherProps {
+  variant?: 'auth' | 'dashboard'
+}
+
+export function LanguageSwitcher({ variant = 'auth' }: LanguageSwitcherProps) {
   const { i18n } = useTranslation('common')
 
   const currentLanguage = i18n.language as SupportedLanguage
@@ -30,25 +29,31 @@ export function LanguageSwitcher() {
     i18n.changeLanguage(lang)
   }
 
+  const isAuth = variant === 'auth'
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1.5 text-sm text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors',
+            isAuth
+              ? 'bg-white/10 text-white backdrop-blur-sm hover:bg-white/20'
+              : 'bg-primary-300 text-dark-500 hover:opacity-90'
+          )}
         >
-          <span className="text-base leading-none">{LANGUAGE_FLAGS[currentLanguage]}</span>
-          <span className="font-medium">{LANGUAGE_SHORT_NAMES[currentLanguage]}</span>
+          <span className="font-medium">{LANGUAGE_NAMES[currentLanguage]}</span>
           <Icons.ArrowDown
             size={14}
-            color="currentColor"
+            color={isAuth ? 'currentColor' : '#05040D'}
             strokeWidth={1.5}
             className="opacity-70"
           />
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-32">
+      <DropdownMenuContent align="end" className="w-40">
         {SUPPORTED_LANGUAGES.map((lang) => (
           <DropdownMenuItem
             key={lang}
@@ -58,10 +63,9 @@ export function LanguageSwitcher() {
               currentLanguage === lang ? 'text-primary-600 font-medium' : 'text-gray-700'
             )}
           >
-            <span className="text-base leading-none">{LANGUAGE_FLAGS[lang]}</span>
-            <span>{LANGUAGE_SHORT_NAMES[lang]}</span>
+            <span>{LANGUAGE_NAMES[lang]}</span>
             {currentLanguage === lang && (
-              <Icons.Checkmark size={16} color="#0369A1" strokeWidth={2} className="ml-auto" />
+              <Icons.Checkmark size={16} className="text-information-700 ml-auto" strokeWidth={2} />
             )}
           </DropdownMenuItem>
         ))}
