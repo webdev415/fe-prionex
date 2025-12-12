@@ -8,7 +8,19 @@
     "dashboard": "Панель управління",
     "clients": "Клієнти",
     "settings": "Налаштування",
-    "logout": "Вийти"
+    "logout": "Вийти",
+    "activity": "Активність",
+    "importClients": "Імпорт клієнтів",
+    "projects": "Проєкти",
+    "users": "Користувачі",
+    "roles": "Ролі",
+    "transactions": "Транзакції"
+  },
+  "search": {
+    "placeholder": "Пошук",
+    "phoneNumber": "Номер телефону",
+    "email": "Електронна пошта",
+    "username": "Ім'я користувача"
   },
   "actions": {
     "save": "Зберегти",
@@ -20,7 +32,9 @@
     "confirm": "Підтвердити",
     "back": "Назад",
     "next": "Далі",
-    "close": "Закрити"
+    "close": "Закрити",
+    "logout": "Вийти",
+    "loggingOut": "Вихід..."
   },
   "status": {
     "loading": "Завантаження...",
@@ -33,5 +47,315 @@
     "en": "Англійська",
     "uk": "Українська",
     "ru": "Російська"
+  },
+  "logout": {
+    "confirmTitle": "Підтвердити вихід",
+    "confirmMessage": "Ви впевнені, що хочете вийти? Вам потрібно буде знову увійти, щоб отримати доступ до системи."
+  },
+  "pages": {
+    "users": {
+      "title": "Управління користувачами",
+      "addNewUser": "Новий користувач",
+      "noUsersFound": "Користувачів не знайдено",
+      "errorLoading": "Помилка завантаження користувачів",
+      "tableHeaders": {
+        "username": "Ім'я користувача",
+        "fullName": "Повне ім'я",
+        "email": "Електронна пошта",
+        "projectRole": "Проєкт та роль",
+        "status": "Статус",
+        "actions": "Дії"
+      },
+      "actions": {
+        "view": "Переглянути",
+        "edit": "Редагувати",
+        "impersonate": "Переглянути як",
+        "impersonating": "Перегляд...",
+        "unlock": "Розблокувати",
+        "lock": "Заблокувати"
+      },
+      "messages": {
+        "nowViewingAs": "Тепер перегляд як {{username}}",
+        "failedToImpersonate": "Не вдалося переглянути як користувача",
+        "failedToExitImpersonation": "Не вдалося вийти з режиму перегляду",
+        "exitedImpersonation": "Вийдено з режиму перегляду"
+      },
+      "noAssignment": "Немає призначення",
+      "unknownProject": "Невідомий проєкт",
+      "noRole": "Немає ролі",
+      "modals": {
+        "create": {
+          "title": "Створити нового користувача",
+          "loadingFormData": "Завантаження даних форми...",
+          "save": "Зберегти"
+        },
+        "edit": {
+          "title": "Редагувати користувача",
+          "loadingUserData": "Завантаження даних користувача...",
+          "userNotFound": "Користувача не знайдено",
+          "save": "Зберегти"
+        },
+        "view": {
+          "title": "Переглянути користувача",
+          "loadingUserData": "Завантаження даних користувача...",
+          "userNotFound": "Користувача не знайдено"
+        },
+        "unlock": {
+          "title": "Статус облікового запису:",
+          "locked": "Заблоковано",
+          "unlockAccount": "Розблокувати обліковий запис:",
+          "failedAttempts": "Невдалі спроби:",
+          "lockedAt": "Заблоковано о:",
+          "autoUnlockAt": "Автоматичне розблокування о:",
+          "minRemaining": "хв залишилось",
+          "confirmTitle": "Ви впевнені, що хочете розблокувати цей обліковий запис?",
+          "thisWill": "Це:",
+          "restoreAccess": "Негайно відновить доступ для входу",
+          "resetCounter": "Скине лічильник невдалих спроб",
+          "recordAudit": "Буде записано в журнал аудиту",
+          "failedToUnlock": "Не вдалося розблокувати обліковий запис",
+          "unlocking": "Розблокування...",
+          "unlockAccountButton": "Розблокувати обліковий запис"
+        }
+      },
+      "forms": {
+        "username": "Ім'я користувача:",
+        "email": "Електронна пошта:",
+        "password": "Пароль:",
+        "confirmPassword": "Підтвердити пароль:",
+        "mustChangePassword": "Користувач повинен змінити пароль при першому вході",
+        "firstName": "Ім'я:",
+        "lastName": "Прізвище:",
+        "middleName": "По батькові:",
+        "phone": "Телефон:",
+        "language": "Мова:",
+        "timezone": "Часовий пояс:",
+        "assignProjects": "Призначити проєкти:",
+        "rolePerProject": "Роль на проєкт:",
+        "notAssigned": "Не призначено",
+        "noRolesAvailable": "Ролей недоступно",
+        "errorCreating": "Помилка створення користувача",
+        "placeholders": {
+          "username": "Введіть ім'я користувача",
+          "email": "Введіть електронну пошту",
+          "password": "Введіть пароль",
+          "confirmPassword": "Підтвердіть пароль",
+          "firstName": "Введіть ім'я",
+          "lastName": "Введіть прізвище",
+          "middleName": "Введіть по батькові (необов'язково)",
+          "phone": "+1-555-0101 (необов'язково)"
+        },
+        "errors": {
+          "failedToCreate": "Не вдалося створити користувача",
+          "passwordsDontMatch": "Паролі не співпадають",
+          "selectAtLeastOneProject": "Будь ласка, виберіть хоча б один проєкт",
+          "assignRoleForEachProject": "Будь ласка, призначте роль для кожного вибраного проєкту"
+        }
+      },
+      "editForm": {
+        "errorUpdating": "Помилка оновлення користувача",
+        "failedToUpdate": "Не вдалося оновити користувача",
+        "usernameCannotBeChanged": "Ім'я користувача не можна змінити"
+      }
+    },
+    "projects": {
+      "title": "Управління проєктами",
+      "noProjectsFound": "Проєктів не знайдено",
+      "errorLoading": "Помилка завантаження проєктів",
+      "tableHeaders": {
+        "users": "Користувачі",
+        "projectCode": "Проєкт / Код",
+        "client": "Клієнт",
+        "period": "Період",
+        "debt": "Заборгованість",
+        "status": "Статус"
+      },
+      "searchFilters": {
+        "placeholder": "Пошук за назвою, кодом, клієнтами",
+        "status": "Статус",
+        "client": "Клієнт",
+        "period": "Період",
+        "newProject": "Новий проєкт",
+        "export": "Експорт",
+        "searchProjects": "Пошук проєктів",
+        "addNewProject": "Додати новий проєкт",
+        "statusOptions": {
+          "active": "Активний",
+          "inactive": "Неактивний",
+          "archived": "Архівований",
+          "all": "Всі"
+        },
+        "periodOptions": {
+          "any": "Будь-коли",
+          "last30Days": "Останні 30 днів",
+          "last90Days": "Останні 90 днів",
+          "thisYear": "Цього року"
+        },
+        "allClients": "Всі клієнти"
+      },
+      "detailPanel": {
+        "noProject": "Немає проєкту",
+        "code": "Код",
+        "contract": "Контракт",
+        "client": "Клієнт",
+        "users": "Користувачі",
+        "metrics": "Метрики",
+        "clients": "Клієнти",
+        "totalDebt": "Загальна заборгованість",
+        "description": "Опис",
+        "showLess": "Показати менше",
+        "readMore": "Читати далі",
+        "accessAndRoles": "Доступ та ролі",
+        "assignedUsers": "Призначені користувачі:",
+        "defaultRoles": "Ролі за замовчуванням:",
+        "none": "Немає",
+        "manageUsersRoles": "Управління користувачами та ролями",
+        "audit": "Аудит",
+        "createdBy": "Створено",
+        "created": "Створено",
+        "lastUpdated": "Останнє оновлення",
+        "system": "Система",
+        "edit": "Редагувати",
+        "delete": "Видалити"
+      },
+      "modals": {
+        "create": {
+          "title": "Створити новий проєкт",
+          "projectInformation": "Інформація про проєкт",
+          "projectName": "Назва проєкту:",
+          "projectCode": "Код проєкту:",
+          "description": "Опис:",
+          "clientContract": "Клієнт та контракт",
+          "clientCompany": "Компанія клієнта:",
+          "contractNumber": "Номер контракту:",
+          "timeline": "Терміни",
+          "startDate": "Дата початку",
+          "endDate": "Дата закінчення",
+          "noEndDate": "Без дати закінчення",
+          "creating": "Створення...",
+          "createProject": "Створити проєкт",
+          "errorCreating": "Помилка створення проєкту",
+          "failedToCreate": "Не вдалося створити проєкт. Будь ласка, спробуйте ще раз.",
+          "placeholders": {
+            "projectName": "Введіть назву проєкту",
+            "projectCode": "Введіть код проєкту",
+            "clientCompany": "Компанія клієнта",
+            "contractNumber": "Номер контракту",
+            "description": "Текст-заповнювач"
+          },
+          "errors": {
+            "nameMinLength": "Назва має містити щонайменше 3 символи",
+            "codeMinLength": "Код має містити щонайменше 2 символи",
+            "endDateAfterStart": "Дата закінчення має бути після дати початку"
+          }
+        },
+        "edit": {
+          "title": "Редагувати проєкт",
+          "projectInformation": "Інформація про проєкт",
+          "projectName": "Назва проєкту:",
+          "projectCode": "Код проєкту:",
+          "codeCannotBeChanged": "Код не можна змінити після створення",
+          "status": "Статус:",
+          "active": "Активний",
+          "inactive": "Неактивний",
+          "clientContract": "Клієнт та контракт",
+          "clientCompany": "Компанія клієнта:",
+          "contractNumber": "Номер контракту:",
+          "timeline": "Терміни",
+          "startDate": "Дата початку",
+          "endDate": "Дата закінчення",
+          "noEndDate": "Без дати закінчення",
+          "saving": "Збереження...",
+          "save": "Зберегти",
+          "errorUpdating": "Помилка оновлення проєкту",
+          "failedToUpdate": "Не вдалося оновити проєкт. Будь ласка, спробуйте ще раз.",
+          "archivedWarning": "Цей проєкт архівовано. Використайте дію Відновити, щоб активувати його.",
+          "placeholders": {
+            "projectName": "Введіть назву проєкту",
+            "clientCompany": "Компанія клієнта",
+            "contractNumber": "Номер контракту",
+            "description": "Текст-заповнювач"
+          },
+          "errors": {
+            "nameMinLength": "Назва має містити щонайменше 3 символи",
+            "endDateAfterStart": "Дата закінчення має бути після дати початку"
+          }
+        },
+        "delete": {
+          "title": "Видалити проєкт: {{projectName}}",
+          "confirmMessage": "Ви впевнені, що хочете видалити цей проєкт? Цю дію неможливо скасувати.",
+          "deleting": "Видалення...",
+          "deleteProject": "Видалити проєкт"
+        }
+      }
+    },
+    "roles": {
+      "title": "Управління ролями",
+      "newRole": "Нова роль",
+      "selectProject": "Виберіть проєкт",
+      "project": "Проєкт:",
+      "noActiveProjects": "Активних проєктів не знайдено. Будь ласка, спочатку створіть проєкт.",
+      "errorLoading": "Помилка завантаження ролей",
+      "defaultRoles": "Ролі за замовчуванням",
+      "customRoles": "Користувацькі ролі",
+      "noDefaultRoles": "Немає ролей за замовчуванням",
+      "noCustomRoles": "Немає користувацьких ролей",
+      "tableHeaders": {
+        "role": "Роль",
+        "description": "Опис",
+        "users": "Користувачі",
+        "actions": "Дії"
+      },
+      "actions": {
+        "view": "Переглянути",
+        "edit": "Редагувати",
+        "delete": "Видалити"
+      },
+      "modals": {
+        "create": {
+          "title": "Створити роль",
+          "createRole": "Створити роль"
+        },
+        "edit": {
+          "title": "Редагувати роль"
+        },
+        "view": {
+          "title": "Переглянути роль",
+          "loadingPermissions": "Завантаження дозволів..."
+        },
+        "archive": {
+          "title": "Архівувати роль: {{roleName}}",
+          "defaultTitle": "Архівувати роль",
+          "loadingRoleData": "Завантаження даних ролі...",
+          "failedToLoad": "Не вдалося завантажити дані ролі. Будь ласка, спробуйте ще раз.",
+          "hasUsersAssigned": "Цій ролі призначені користувачі:",
+          "reassignmentOptions": "Варіанти переназначення",
+          "useDefaultRole": "Використати роль за замовчуванням (Оператор)",
+          "reassignToRole": "Переназначити на роль",
+          "selectRole": "Виберіть роль",
+          "noUsersCanArchive": "Користувачів не призначено. Цю роль можна архівувати негайно.",
+          "archiving": "Архівування...",
+          "archiveRole": "Архівувати роль",
+          "reassignTo": "Переназначити на:",
+          "setToDefault": "Встановити за замовчуванням:",
+          "cannotArchiveUntilReassigned": "Ви не можете архівувати роль, поки всі користувачі не будуть переназначені.",
+          "failedToArchive": "Не вдалося архівувати роль. Будь ласка, спробуйте ще раз.",
+          "roleNotFound": "Роль не знайдено"
+        }
+      },
+      "forms": {
+        "roleName": "Назва ролі",
+        "description": "Опис",
+        "permissions": "Дозволи",
+        "loadingPermissions": "Завантаження дозволів...",
+        "placeholders": {
+          "roleName": "Введіть назву ролі",
+          "description": "Опишіть цю роль"
+        },
+        "errors": {
+          "failedToCreate": "Не вдалося створити роль. Будь ласка, спробуйте ще раз."
+        }
+      }
+    }
   }
 }

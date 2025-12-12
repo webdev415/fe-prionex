@@ -8,7 +8,19 @@
     "dashboard": "Панель управления",
     "clients": "Клиенты",
     "settings": "Настройки",
-    "logout": "Выйти"
+    "logout": "Выйти",
+    "activity": "Активность",
+    "importClients": "Импорт клиентов",
+    "projects": "Проекты",
+    "users": "Пользователи",
+    "roles": "Роли",
+    "transactions": "Транзакции"
+  },
+  "search": {
+    "placeholder": "Поиск",
+    "phoneNumber": "Номер телефона",
+    "email": "Электронная почта",
+    "username": "Имя пользователя"
   },
   "actions": {
     "save": "Сохранить",
@@ -20,7 +32,9 @@
     "confirm": "Подтвердить",
     "back": "Назад",
     "next": "Далее",
-    "close": "Закрыть"
+    "close": "Закрыть",
+    "logout": "Выйти",
+    "loggingOut": "Выход..."
   },
   "status": {
     "loading": "Загрузка...",
@@ -33,5 +47,315 @@
     "en": "Английский",
     "uk": "Украинский",
     "ru": "Русский"
+  },
+  "logout": {
+    "confirmTitle": "Подтвердить выход",
+    "confirmMessage": "Вы уверены, что хотите выйти? Вам нужно будет снова войти, чтобы получить доступ к системе."
+  },
+  "pages": {
+    "users": {
+      "title": "Управление пользователями",
+      "addNewUser": "Новый пользователь",
+      "noUsersFound": "Пользователи не найдены",
+      "errorLoading": "Ошибка загрузки пользователей",
+      "tableHeaders": {
+        "username": "Имя пользователя",
+        "fullName": "Полное имя",
+        "email": "Электронная почта",
+        "projectRole": "Проект и роль",
+        "status": "Статус",
+        "actions": "Действия"
+      },
+      "actions": {
+        "view": "Просмотреть",
+        "edit": "Редактировать",
+        "impersonate": "Просмотреть как",
+        "impersonating": "Просмотр...",
+        "unlock": "Разблокировать",
+        "lock": "Заблокировать"
+      },
+      "messages": {
+        "nowViewingAs": "Теперь просмотр как {{username}}",
+        "failedToImpersonate": "Не удалось просмотреть как пользователя",
+        "failedToExitImpersonation": "Не удалось выйти из режима просмотра",
+        "exitedImpersonation": "Выход из режима просмотра"
+      },
+      "noAssignment": "Нет назначения",
+      "unknownProject": "Неизвестный проект",
+      "noRole": "Нет роли",
+      "modals": {
+        "create": {
+          "title": "Создать нового пользователя",
+          "loadingFormData": "Загрузка данных формы...",
+          "save": "Сохранить"
+        },
+        "edit": {
+          "title": "Редактировать пользователя",
+          "loadingUserData": "Загрузка данных пользователя...",
+          "userNotFound": "Пользователь не найден",
+          "save": "Сохранить"
+        },
+        "view": {
+          "title": "Просмотреть пользователя",
+          "loadingUserData": "Загрузка данных пользователя...",
+          "userNotFound": "Пользователь не найден"
+        },
+        "unlock": {
+          "title": "Статус учетной записи:",
+          "locked": "Заблокировано",
+          "unlockAccount": "Разблокировать учетную запись:",
+          "failedAttempts": "Неудачные попытки:",
+          "lockedAt": "Заблокировано в:",
+          "autoUnlockAt": "Автоматическая разблокировка в:",
+          "minRemaining": "мин осталось",
+          "confirmTitle": "Вы уверены, что хотите разблокировать эту учетную запись?",
+          "thisWill": "Это:",
+          "restoreAccess": "Немедленно восстановит доступ для входа",
+          "resetCounter": "Сбросит счетчик неудачных попыток",
+          "recordAudit": "Будет записано в журнал аудита",
+          "failedToUnlock": "Не удалось разблокировать учетную запись",
+          "unlocking": "Разблокировка...",
+          "unlockAccountButton": "Разблокировать учетную запись"
+        }
+      },
+      "forms": {
+        "username": "Имя пользователя:",
+        "email": "Электронная почта:",
+        "password": "Пароль:",
+        "confirmPassword": "Подтвердить пароль:",
+        "mustChangePassword": "Пользователь должен изменить пароль при первом входе",
+        "firstName": "Имя:",
+        "lastName": "Фамилия:",
+        "middleName": "Отчество:",
+        "phone": "Телефон:",
+        "language": "Язык:",
+        "timezone": "Часовой пояс:",
+        "assignProjects": "Назначить проекты:",
+        "rolePerProject": "Роль на проект:",
+        "notAssigned": "Не назначено",
+        "noRolesAvailable": "Роли недоступны",
+        "errorCreating": "Ошибка создания пользователя",
+        "placeholders": {
+          "username": "Введите имя пользователя",
+          "email": "Введите электронную почту",
+          "password": "Введите пароль",
+          "confirmPassword": "Подтвердите пароль",
+          "firstName": "Введите имя",
+          "lastName": "Введите фамилию",
+          "middleName": "Введите отчество (необязательно)",
+          "phone": "+1-555-0101 (необязательно)"
+        },
+        "errors": {
+          "failedToCreate": "Не удалось создать пользователя",
+          "passwordsDontMatch": "Пароли не совпадают",
+          "selectAtLeastOneProject": "Пожалуйста, выберите хотя бы один проект",
+          "assignRoleForEachProject": "Пожалуйста, назначьте роль для каждого выбранного проекта"
+        }
+      },
+      "editForm": {
+        "errorUpdating": "Ошибка обновления пользователя",
+        "failedToUpdate": "Не удалось обновить пользователя",
+        "usernameCannotBeChanged": "Имя пользователя нельзя изменить"
+      }
+    },
+    "projects": {
+      "title": "Управление проектами",
+      "noProjectsFound": "Проекты не найдены",
+      "errorLoading": "Ошибка загрузки проектов",
+      "tableHeaders": {
+        "users": "Пользователи",
+        "projectCode": "Проект / Код",
+        "client": "Клиент",
+        "period": "Период",
+        "debt": "Задолженность",
+        "status": "Статус"
+      },
+      "searchFilters": {
+        "placeholder": "Поиск по названию, коду, клиентам",
+        "status": "Статус",
+        "client": "Клиент",
+        "period": "Период",
+        "newProject": "Новый проект",
+        "export": "Экспорт",
+        "searchProjects": "Поиск проектов",
+        "addNewProject": "Добавить новый проект",
+        "statusOptions": {
+          "active": "Активный",
+          "inactive": "Неактивный",
+          "archived": "Архивированный",
+          "all": "Все"
+        },
+        "periodOptions": {
+          "any": "Любое время",
+          "last30Days": "Последние 30 дней",
+          "last90Days": "Последние 90 дней",
+          "thisYear": "В этом году"
+        },
+        "allClients": "Все клиенты"
+      },
+      "detailPanel": {
+        "noProject": "Нет проекта",
+        "code": "Код",
+        "contract": "Контракт",
+        "client": "Клиент",
+        "users": "Пользователи",
+        "metrics": "Метрики",
+        "clients": "Клиенты",
+        "totalDebt": "Общая задолженность",
+        "description": "Описание",
+        "showLess": "Показать меньше",
+        "readMore": "Читать далее",
+        "accessAndRoles": "Доступ и роли",
+        "assignedUsers": "Назначенные пользователи:",
+        "defaultRoles": "Роли по умолчанию:",
+        "none": "Нет",
+        "manageUsersRoles": "Управление пользователями и ролями",
+        "audit": "Аудит",
+        "createdBy": "Создано",
+        "created": "Создано",
+        "lastUpdated": "Последнее обновление",
+        "system": "Система",
+        "edit": "Редактировать",
+        "delete": "Удалить"
+      },
+      "modals": {
+        "create": {
+          "title": "Создать новый проект",
+          "projectInformation": "Информация о проекте",
+          "projectName": "Название проекта:",
+          "projectCode": "Код проекта:",
+          "description": "Описание:",
+          "clientContract": "Клиент и контракт",
+          "clientCompany": "Компания клиента:",
+          "contractNumber": "Номер контракта:",
+          "timeline": "Сроки",
+          "startDate": "Дата начала",
+          "endDate": "Дата окончания",
+          "noEndDate": "Без даты окончания",
+          "creating": "Создание...",
+          "createProject": "Создать проект",
+          "errorCreating": "Ошибка создания проекта",
+          "failedToCreate": "Не удалось создать проект. Пожалуйста, попробуйте снова.",
+          "placeholders": {
+            "projectName": "Введите название проекта",
+            "projectCode": "Введите код проекта",
+            "clientCompany": "Компания клиента",
+            "contractNumber": "Номер контракта",
+            "description": "Текст-заполнитель"
+          },
+          "errors": {
+            "nameMinLength": "Название должно содержать минимум 3 символа",
+            "codeMinLength": "Код должен содержать минимум 2 символа",
+            "endDateAfterStart": "Дата окончания должна быть после даты начала"
+          }
+        },
+        "edit": {
+          "title": "Редактировать проект",
+          "projectInformation": "Информация о проекте",
+          "projectName": "Название проекта:",
+          "projectCode": "Код проекта:",
+          "codeCannotBeChanged": "Код нельзя изменить после создания",
+          "status": "Статус:",
+          "active": "Активный",
+          "inactive": "Неактивный",
+          "clientContract": "Клиент и контракт",
+          "clientCompany": "Компания клиента:",
+          "contractNumber": "Номер контракта:",
+          "timeline": "Сроки",
+          "startDate": "Дата начала",
+          "endDate": "Дата окончания",
+          "noEndDate": "Без даты окончания",
+          "saving": "Сохранение...",
+          "save": "Сохранить",
+          "errorUpdating": "Ошибка обновления проекта",
+          "failedToUpdate": "Не удалось обновить проект. Пожалуйста, попробуйте снова.",
+          "archivedWarning": "Этот проект архивирован. Используйте действие Восстановить, чтобы активировать его.",
+          "placeholders": {
+            "projectName": "Введите название проекта",
+            "clientCompany": "Компания клиента",
+            "contractNumber": "Номер контракта",
+            "description": "Текст-заполнитель"
+          },
+          "errors": {
+            "nameMinLength": "Название должно содержать минимум 3 символа",
+            "endDateAfterStart": "Дата окончания должна быть после даты начала"
+          }
+        },
+        "delete": {
+          "title": "Удалить проект: {{projectName}}",
+          "confirmMessage": "Вы уверены, что хотите удалить этот проект? Это действие нельзя отменить.",
+          "deleting": "Удаление...",
+          "deleteProject": "Удалить проект"
+        }
+      }
+    },
+    "roles": {
+      "title": "Управление ролями",
+      "newRole": "Новая роль",
+      "selectProject": "Выберите проект",
+      "project": "Проект:",
+      "noActiveProjects": "Активных проектов не найдено. Пожалуйста, сначала создайте проект.",
+      "errorLoading": "Ошибка загрузки ролей",
+      "defaultRoles": "Роли по умолчанию",
+      "customRoles": "Пользовательские роли",
+      "noDefaultRoles": "Нет ролей по умолчанию",
+      "noCustomRoles": "Нет пользовательских ролей",
+      "tableHeaders": {
+        "role": "Роль",
+        "description": "Описание",
+        "users": "Пользователи",
+        "actions": "Действия"
+      },
+      "actions": {
+        "view": "Просмотреть",
+        "edit": "Редактировать",
+        "delete": "Удалить"
+      },
+      "modals": {
+        "create": {
+          "title": "Создать роль",
+          "createRole": "Создать роль"
+        },
+        "edit": {
+          "title": "Редактировать роль"
+        },
+        "view": {
+          "title": "Просмотреть роль",
+          "loadingPermissions": "Загрузка разрешений..."
+        },
+        "archive": {
+          "title": "Архивировать роль: {{roleName}}",
+          "defaultTitle": "Архивировать роль",
+          "loadingRoleData": "Загрузка данных роли...",
+          "failedToLoad": "Не удалось загрузить данные роли. Пожалуйста, попробуйте снова.",
+          "hasUsersAssigned": "Этой роли назначены пользователи:",
+          "reassignmentOptions": "Варианты переназначения",
+          "useDefaultRole": "Использовать роль по умолчанию (Оператор)",
+          "reassignToRole": "Переназначить на роль",
+          "selectRole": "Выберите роль",
+          "noUsersCanArchive": "Пользователи не назначены. Эту роль можно архивировать немедленно.",
+          "archiving": "Архивирование...",
+          "archiveRole": "Архивировать роль",
+          "reassignTo": "Переназначить на:",
+          "setToDefault": "Установить по умолчанию:",
+          "cannotArchiveUntilReassigned": "Вы не можете архивировать роль, пока все пользователи не будут переназначены.",
+          "failedToArchive": "Не удалось архивировать роль. Пожалуйста, попробуйте снова.",
+          "roleNotFound": "Роль не найдена"
+        }
+      },
+      "forms": {
+        "roleName": "Название роли",
+        "description": "Описание",
+        "permissions": "Разрешения",
+        "loadingPermissions": "Загрузка разрешений...",
+        "placeholders": {
+          "roleName": "Введите название роли",
+          "description": "Опишите эту роль"
+        },
+        "errors": {
+          "failedToCreate": "Не удалось создать роль. Пожалуйста, попробуйте снова."
+        }
+      }
+    }
   }
 }

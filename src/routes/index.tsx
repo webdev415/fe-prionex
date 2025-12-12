@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import LoginPage from '@/pages/auth/LoginPage'
 import { UserManagementPage } from '@/pages/UserManagement'
 import { ImportClientsPage } from '@/pages/ImportClients/ImportClientsPage'
@@ -15,11 +16,13 @@ import { ImportHistoryPage } from '@/pages/ImportClients/ImportHistoryPage'
 import { ImportDetailsPage } from '@/pages/ImportClients/ImportDetailsPage'
 
 function DashboardContent() {
+  const { t } = useTranslation('common')
+
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-bold text-gray-900">Dashboard</h1>
+      <h1 className="mb-4 text-2xl font-bold text-gray-900">{t('navigation.dashboard')}</h1>
       <div className="rounded-lg bg-white p-6 shadow">
-        <p className="text-gray-600">Welcome to Prionex CRM. Dashboard content coming soon...</p>
+        <p className="text-gray-600">{t('app.description')}</p>
       </div>
     </div>
   )

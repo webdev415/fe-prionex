@@ -4,6 +4,7 @@
  * Modal wrapper for CreateUserForm with project data fetching.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { CreateUserForm } from '@/features/users/components/CreateUserForm'
 import { useProjects } from '@/features/projects'
@@ -17,6 +18,7 @@ interface CreateUserModalProps {
 }
 
 export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalProps) {
+  const { t } = useTranslation('common')
   // Fetch projects
   const { data: projectsData, isLoading: projectsLoading } = useProjects()
 
@@ -36,14 +38,16 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
             <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
-        title="Create New User"
+        title={t('pages.users.modals.create.title')}
         onClose={onClose}
       />
       <ModalContent>
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-teal-600" />
-            <span className="ml-3 text-gray-600">Loading form data...</span>
+            <span className="ml-3 text-gray-600">
+              {t('pages.users.modals.create.loadingFormData')}
+            </span>
           </div>
         ) : (
           <CreateUserForm projects={projects} onSuccess={handleSuccess} onCancel={onClose} />
@@ -56,7 +60,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
           onClick={onClose}
           className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
         >
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button
           type="submit"
@@ -65,7 +69,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
           disabled={isLoading}
           className="text-dark-500 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
         >
-          Save
+          {t('pages.users.modals.create.save')}
         </Button>
       </ModalFooter>
     </Modal>
