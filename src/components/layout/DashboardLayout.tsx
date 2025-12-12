@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { usePermissionRefresh } from '@/hooks'
 import { ImpersonationBanner } from '@/features/auth/components/ImpersonationBanner'
 import { LogoutConfirmationModal } from './LogoutConfirmationModal'
-import { Sidebar, type SidebarItem, type SidebarAction } from './Sidebar'
+import { Sidebar, type SidebarItem } from './Sidebar'
 import { SearchBar } from './SearchBar'
 import { UserProfile } from './UserProfile'
 import { LanguageSwitcher } from './LanguageSwitcher'
@@ -160,32 +160,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     })
   }, [user?.permissions, t])
 
-  // Bottom action buttons
-  const sidebarActions: SidebarAction[] = useMemo(
-    () => [
-      {
-        icon: 'setting-07',
-        label: t('navigation.settings'),
-        onClick: () => {
-          // Navigate to settings or open settings modal
-          console.log('Settings clicked')
-        },
-      },
-      {
-        icon: 'logout-square-01',
-        label: t('navigation.logout'),
-        onClick: handleLogoutClick,
-      },
-    ],
-    [t, handleLogoutClick]
-  )
-
   return (
     <div className="bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center bg-no-repeat">
       {/* Sidebar */}
       <Sidebar
         items={navItems}
-        actions={sidebarActions}
         onMenuClick={() => {
           // Handle menu click (e.g., toggle sidebar, open menu, etc.)
           console.log('Menu clicked')
