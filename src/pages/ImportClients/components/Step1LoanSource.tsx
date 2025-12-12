@@ -12,9 +12,9 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { Label } from '@/components/ui/Label'
+import { DateSelect } from '@/components/ui/DateSelect'
 import { RadioCard } from './RadioCard'
 import { useProjects } from '@/features/projects'
-import { Icons } from '@/lib/icons'
 
 export interface Step1Data {
   sellerCreditor: string
@@ -77,15 +77,15 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
 
           {/* Purchase Date */}
           <div>
-            <Label htmlFor="purchase-date" className="mb-1.5 block">
-              Purchase date:
-            </Label>
-            <Input
+            <DateSelect
               id="purchase-date"
-              type="date"
+              label="Purchase date:"
               value={data.purchaseDate}
-              onChange={(e) => onChange({ purchaseDate: e.target.value })}
-              rightIcon={<Icons.Calendar size={20} className="text-gray-500" />}
+              onChange={(args) => {
+                const dateStr = args.value ? args.value.toISOString().split('T')[0] : ''
+                onChange({ purchaseDate: dateStr })
+              }}
+              placeholder="Select purchase date"
             />
           </div>
 

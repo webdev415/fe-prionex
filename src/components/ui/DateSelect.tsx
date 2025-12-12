@@ -92,8 +92,8 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               transition: all 0.2s;
             }
             .date-select-wrapper .react-datepicker__input-container input:focus {
-              border-color: ${error ? '#EF4444' : '#0CA8EB'};
-              box-shadow: 0 0 0 2px ${error ? 'rgba(239, 68, 68, 0.2)' : 'rgba(12, 168, 235, 0.2)'};
+              border-color: ${error ? '#EF4444' : 'var(--color-primary-500)'};
+              box-shadow: 0 0 0 2px ${error ? 'rgba(239, 68, 68, 0.2)' : 'rgba(128, 216, 10, 0.2)'};
             }
             .date-select-wrapper .react-datepicker__input-container input:disabled {
               opacity: 0.5;
@@ -136,13 +136,13 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
             }
             .react-datepicker__day--selected,
             .react-datepicker__day--keyboard-selected {
-              background-color: #0CA8EB !important;
+              background-color: var(--color-primary-500) !important;
               color: white !important;
               border-radius: 0.375rem;
             }
             .react-datepicker__day--today {
               font-weight: 600;
-              color: #0CA8EB;
+              color: var(--color-primary-500);
             }
             .react-datepicker__day--disabled {
               color: #D1D5DB;
