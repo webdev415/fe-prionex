@@ -258,6 +258,7 @@
           "projectName": "Project Name:",
           "projectCode": "Project Code:",
           "codeCannotBeChanged": "Code cannot be changed after creation",
+          "description": "Description:",
           "status": "Status:",
           "active": "Active",
           "inactive": "Inactive",

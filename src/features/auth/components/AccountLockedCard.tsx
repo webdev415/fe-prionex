@@ -14,7 +14,7 @@ export function AccountLockedCard({ lockoutMinutes, onBackToLogin }: AccountLock
   return (
     <div className="w-full">
       <div className="mb-6 flex w-full flex-col items-center text-center sm:mb-8">
-        <h1 className="text-display-xs sm:text-display-sm text-primary-950 font-medium">
+        <h1 className="text-display-xs sm:text-display-sm text-dark-500 font-medium">
           {t('accountLocked.title')}
         </h1>
       </div>

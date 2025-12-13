@@ -54,7 +54,7 @@ export function CreateRoleModal({ open, projectId, onClose, onSuccess }: CreateR
           variant="primary"
           className="text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
         >
-          {t('pages.roles.modals.create.createRole')}
+          {t('actions.create')}
         </Button>
       </ModalFooter>
     </Modal>

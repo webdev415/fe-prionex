@@ -258,6 +258,7 @@
           "projectName": "Назва проєкту:",
           "projectCode": "Код проєкту:",
           "codeCannotBeChanged": "Код не можна змінити після створення",
+          "description": "Опис:",
           "status": "Статус:",
           "active": "Активний",
           "inactive": "Неактивний",
