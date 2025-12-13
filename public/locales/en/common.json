@@ -78,8 +78,11 @@
         "nowViewingAs": "Now viewing as {{username}}",
         "failedToImpersonate": "Failed to impersonate user",
         "failedToExitImpersonation": "Failed to exit impersonation",
-        "exitedImpersonation": "Exited impersonation mode"
+        "exitedImpersonation": "Exited impersonation mode",
+        "projectSwitched": "Switched to {{projectName}}",
+        "failedToSwitchProject": "Failed to switch project"
       },
+      "activeProject": "Active Project",
       "noAssignment": "No assignment",
       "unknownProject": "Unknown Project",
       "noRole": "No Role",
