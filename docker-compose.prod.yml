@@ -1,4 +1,4 @@
-# Frontend Production Docker Compose
+# Frontend Production Docker Compose 
 # For production deployment with nginx
 
 name: fe-prionex
