@@ -107,7 +107,11 @@ jobs:
             # Set compose file and env file based on environment
             if [ "$ENV_TYPE" == "production" ]; then
               COMPOSE_FILE="docker-compose.prod.yml"
+              # Try multiple possible env file names
               ENV_FILE=".env.prod"
+              if [ ! -f "$ENV_FILE" ]; then
+                ENV_FILE=".env.production"
+              fi
             elif [ "$ENV_TYPE" == "staging" ]; then
               COMPOSE_FILE="docker-compose.staging.yml"
               ENV_FILE=".env.staging"
@@ -123,8 +127,15 @@ jobs:
             # Export image name for docker compose to use
             export DOCKER_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
             
-            # Use docker compose to deploy (no --build since we're using pre-built image)
-            docker compose --env-file $ENV_FILE -f $COMPOSE_FILE up -d
+            # Use docker compose to deploy
+            # Only use --env-file if the file exists, otherwise use defaults from compose file
+            if [ -f "$ENV_FILE" ]; then
+              echo "Using env file: $ENV_FILE"
+              docker compose --env-file $ENV_FILE -f $COMPOSE_FILE up -d
+            else
+              echo "Warning: Env file $ENV_FILE not found, using defaults from compose file"
+              docker compose -f $COMPOSE_FILE up -d
+            fi
 
       - name: Deploy notification
         if: always()
