@@ -129,71 +129,77 @@ export function RoleManagementPage() {
     },
   ]
 
+  const isLoading = loadingProjects || loadingRoles
+
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-dark-500 text-2xl font-light">{t('pages.roles.title')}</h1>
-        </div>
-
-        <button
-          onClick={() => setShowCreateModal(true)}
-          disabled={!selectedProjectId}
-          className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
-          aria-label={t('pages.roles.newRole')}
-        >
-          <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-            <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+      {!isLoading && (
+        <div className="mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-dark-500 text-2xl font-light">{t('pages.roles.title')}</h1>
           </div>
-          <span className="px-4 py-3 text-sm font-medium text-white">
-            {t('pages.roles.newRole')}
-          </span>
-        </button>
-      </div>
+
+          <button
+            onClick={() => setShowCreateModal(true)}
+            disabled={!selectedProjectId}
+            className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label={t('pages.roles.newRole')}
+          >
+            <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
+              <Icons.Add size={20} color="#05040D" strokeWidth={2} />
+            </div>
+            <span className="px-4 py-3 text-sm font-medium text-white">
+              {t('pages.roles.newRole')}
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* Project Selector */}
-      <div className="mb-6 flex items-center gap-3">
-        <span className="text-xl font-light text-gray-500">{t('pages.roles.project')}</span>
-        <Select
-          value={selectedProjectId ? String(selectedProjectId) : ''}
-          onValueChange={(value) => setSelectedProjectId(Number(value))}
-        >
-          <SelectTrigger className="text-dark-500 flex h-auto w-auto min-w-0 items-center gap-2 border-0 bg-transparent p-0 text-xl font-light shadow-none focus:ring-0 [&>div.opacity-50]:hidden">
-            <SelectValue
-              placeholder={t('pages.roles.selectProject')}
-              className="text-dark-500 text-xl font-light"
-            />
-            <div className="bg-primary-300 flex h-6 w-6 items-center justify-center rounded-md">
-              <Icons.ArrowDown size={16} className="text-current" />
-            </div>
-          </SelectTrigger>
-          <SelectContent>
-            {projects.map((project) => (
-              <SelectItem key={project.id} value={String(project.id)}>
-                {project.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {!isLoading && (
+        <div className="mb-6 flex items-center gap-3">
+          <span className="text-xl font-light text-gray-500">{t('pages.roles.project')}</span>
+          <Select
+            value={selectedProjectId ? String(selectedProjectId) : ''}
+            onValueChange={(value) => setSelectedProjectId(Number(value))}
+          >
+            <SelectTrigger className="text-dark-500 flex h-auto w-auto min-w-0 items-center gap-2 border-0 bg-transparent p-0 text-xl font-light shadow-none focus:ring-0 [&>div.opacity-50]:hidden">
+              <SelectValue
+                placeholder={t('pages.roles.selectProject')}
+                className="text-dark-500 text-xl font-light"
+              />
+              <div className="bg-primary-300 flex h-6 w-6 items-center justify-center rounded-md">
+                <Icons.ArrowDown size={16} color="#05040D" strokeWidth={1.5} />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {projects.map((project) => (
+                <SelectItem key={project.id} value={String(project.id)}>
+                  {project.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Loading States */}
-      {(loadingProjects || loadingRoles) && <RoleManagementPageSkeleton />}
+      {isLoading && <RoleManagementPageSkeleton />}
 
       {/* Error States */}
-      {!loadingProjects && !loadingRoles && projects.length === 0 && (
+      {!isLoading && projects.length === 0 && (
         <div className="rounded-lg bg-white p-8 text-center shadow-sm">
           <p className="text-sm text-gray-500">{t('pages.roles.noActiveProjects')}</p>
         </div>
       )}
 
-      {!loadingProjects && !loadingRoles && projects.length > 0 && isError && (
+      {!isLoading && projects.length > 0 && isError && (
         <ErrorState error={error} onRetry={() => refetch()} title={t('pages.roles.errorLoading')} />
       )}
 
       {/* Content */}
-      {!loadingProjects && !loadingRoles && projects.length > 0 && !isError && (
+      {!isLoading && projects.length > 0 && !isError && (
         <div className="space-y-8">
           {/* Default Roles */}
           <section className="rounded-xl bg-white/50 p-6">

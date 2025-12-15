@@ -26,13 +26,14 @@ import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { ErrorState } from '@/components/ErrorState'
 
-const ITEMS_PER_PAGE = 10
+const DEFAULT_PAGE_SIZE = 10
 
 export function UserManagementPage() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
   const { startImpersonation, user: currentUser, isLoading: authLoading } = useAuth()
   const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [viewUserId, setViewUserId] = useState<number | null>(null)
   const [editUserId, setEditUserId] = useState<number | null>(null)
@@ -42,7 +43,7 @@ export function UserManagementPage() {
   // Fetch users with pagination
   const { data, isLoading, isError, error } = useUsers({
     page: currentPage,
-    page_size: ITEMS_PER_PAGE,
+    page_size: pageSize,
   })
 
   const users = data?.users || []
@@ -243,7 +244,7 @@ export function UserManagementPage() {
       </div>
 
       {/* Loading State */}
-      {isLoading && <TableSkeleton columns={columns.length} rows={ITEMS_PER_PAGE} />}
+      {isLoading && <TableSkeleton columns={columns.length} rows={pageSize} />}
 
       {/* Error State */}
       {isError && (
@@ -264,7 +265,12 @@ export function UserManagementPage() {
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
+          pageSize={pageSize}
           onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize)
+            setCurrentPage(1) // Reset to first page when changing page size
+          }}
         />
       )}
 

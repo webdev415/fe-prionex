@@ -6,6 +6,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
+import { ModalSkeleton } from '@/components/ui/ModalSkeleton'
 import { CreateUserForm } from '@/features/users/components/CreateUserForm'
 import { useProjects } from '@/features/projects'
 import { Icons } from '@/lib/icons'
@@ -43,12 +44,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
       />
       <ModalContent>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-teal-600" />
-            <span className="ml-3 text-gray-600">
-              {t('pages.users.modals.create.loadingFormData')}
-            </span>
-          </div>
+          <ModalSkeleton />
         ) : (
           <CreateUserForm projects={projects} onSuccess={handleSuccess} onCancel={onClose} />
         )}
@@ -69,7 +65,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
           disabled={isLoading}
           className="text-dark-500 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
         >
-          {t('pages.users.modals.create.save')}
+          {t('actions.create')}
         </Button>
       </ModalFooter>
     </Modal>

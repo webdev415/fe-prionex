@@ -439,6 +439,8 @@ export function ImportHistoryPage() {
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={handlePageChange}
+            pageSize={rowsPerPage}
+            onPageSizeChange={() => {}} // TODO: Implement page size change
           />
         </div>
       )}

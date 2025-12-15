@@ -8,6 +8,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
+import { ModalSkeleton } from '@/components/ui/ModalSkeleton'
 import { useRole } from '@/features/roles/hooks/useRole'
 import { useRoleUsers, useArchiveRole } from '@/features/roles/hooks/useRoleMutations'
 import { useRoles } from '@/features/roles/hooks/useRoles'
@@ -120,12 +121,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
       />
       <ModalContent>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-teal-600" />
-            <span className="ml-3 text-gray-600">
-              {t('pages.roles.modals.archive.loadingRoleData')}
-            </span>
-          </div>
+          <ModalSkeleton />
         ) : roleError || usersError ? (
           <Alert variant="error">
             <p className="text-sm">

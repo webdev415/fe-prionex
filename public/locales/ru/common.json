@@ -78,8 +78,11 @@
         "nowViewingAs": "Теперь просмотр как {{username}}",
         "failedToImpersonate": "Не удалось просмотреть как пользователя",
         "failedToExitImpersonation": "Не удалось выйти из режима просмотра",
-        "exitedImpersonation": "Выход из режима просмотра"
+        "exitedImpersonation": "Выход из режима просмотра",
+        "projectSwitched": "Переключено на {{projectName}}",
+        "failedToSwitchProject": "Не удалось переключить проект"
       },
+      "activeProject": "Активный проект",
       "noAssignment": "Нет назначения",
       "unknownProject": "Неизвестный проект",
       "noRole": "Нет роли",
@@ -255,6 +258,7 @@
           "projectName": "Название проекта:",
           "projectCode": "Код проекта:",
           "codeCannotBeChanged": "Код нельзя изменить после создания",
+          "description": "Описание:",
           "status": "Статус:",
           "active": "Активный",
           "inactive": "Неактивный",

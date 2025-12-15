@@ -81,6 +81,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Copy docker-compose files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          source: "docker-compose.prod.yml,docker-compose.staging.yml,docker-compose.dev-env.yml"
+          target: "~/crm-prionex/fe-prionex/"
+
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
         with:
@@ -89,21 +99,43 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
           script: |
+            cd ~/crm-prionex/fe-prionex
+            
+            # Determine environment based on workflow input or branch
+            ENV_TYPE="${{ github.event.inputs.environment || 'production' }}"
+            
+            # Set compose file and env file based on environment
+            if [ "$ENV_TYPE" == "production" ]; then
+              COMPOSE_FILE="docker-compose.prod.yml"
+              # Try multiple possible env file names
+              ENV_FILE=".env.prod"
+              if [ ! -f "$ENV_FILE" ]; then
+                ENV_FILE=".env.production"
+              fi
+            elif [ "$ENV_TYPE" == "staging" ]; then
+              COMPOSE_FILE="docker-compose.staging.yml"
+              ENV_FILE=".env.staging"
+            else
+              echo "Unknown environment: $ENV_TYPE"
+              exit 1
+            fi
+            
             # Pull the latest image
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
             docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             
-            # Stop and remove old container
-            docker stop fe-prionex-prod || true
-            docker rm fe-prionex-prod || true
+            # Export image name for docker compose to use
+            export DOCKER_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
             
-            # Run new container
-            docker run -d \
-              --name fe-prionex-prod \
-              --network crm-network \
-              -p 8080:80 \
-              --restart always \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            # Use docker compose to deploy
+            # Only use --env-file if the file exists, otherwise use defaults from compose file
+            if [ -f "$ENV_FILE" ]; then
+              echo "Using env file: $ENV_FILE"
+              docker compose --env-file $ENV_FILE -f $COMPOSE_FILE up -d
+            else
+              echo "Warning: Env file $ENV_FILE not found, using defaults from compose file"
+              docker compose -f $COMPOSE_FILE up -d
+            fi
 
       - name: Deploy notification
         if: always()
