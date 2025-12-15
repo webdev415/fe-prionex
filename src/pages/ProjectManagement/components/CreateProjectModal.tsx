@@ -273,7 +273,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
         >
           {createMutation.isPending
             ? t('pages.projects.modals.create.creating')
-            : t('pages.projects.modals.create.createProject')}
+            : t('actions.create')}
         </Button>
       </ModalFooter>
     </Modal>

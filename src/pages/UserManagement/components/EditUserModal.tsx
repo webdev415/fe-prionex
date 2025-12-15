@@ -7,6 +7,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
+import { ModalSkeleton } from '@/components/ui/ModalSkeleton'
 import { EditUserForm } from '@/features/users/components/EditUserForm'
 import { useUser } from '@/features/users/hooks/useUser'
 import { Icons } from '@/lib/icons'
@@ -40,12 +41,7 @@ export function EditUserModal({ open, userId, onClose, onSuccess }: EditUserModa
       />
       <ModalContent>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-teal-600" />
-            <span className="ml-3 text-gray-600">
-              {t('pages.users.modals.edit.loadingUserData')}
-            </span>
-          </div>
+          <ModalSkeleton />
         ) : user ? (
           <EditUserForm user={user} onSuccess={handleSuccess} onCancel={onClose} />
         ) : (

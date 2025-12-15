@@ -4,7 +4,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const textareaVariants = cva(
-  'flex w-full rounded-lg border bg-white px-4 py-2 text-body-sm font-light text-primary-950 placeholder:text-gray-500 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none',
+  'flex w-full rounded-lg border bg-white px-4 py-2 text-sm font-light text-dark-500 placeholder:text-gray-500 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none',
   {
     variants: {
       variant: {
@@ -13,9 +13,9 @@ const textareaVariants = cva(
         success: 'border-success-500 focus:border-success-500 focus:ring-success-500',
       },
       textareaSize: {
-        sm: 'min-h-20 text-body-xs',
-        md: 'min-h-24 text-body-sm',
-        lg: 'min-h-32 text-body-md',
+        sm: 'min-h-20 text-xs',
+        md: 'min-h-24 text-sm',
+        lg: 'min-h-32 text-base',
       },
     },
     defaultVariants: {
@@ -46,17 +46,14 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="w-full">
         {label && (
-          <label
-            htmlFor={textareaId}
-            className="text-body-sm text-primary-950 mb-1.5 block font-light"
-          >
+          <label htmlFor={textareaId} className="text-dark-500 mb-1.5 block text-sm font-light">
             {label}
           </label>
         )}
         <textarea
           id={textareaId}
           className={cn(textareaVariants({ variant: effectiveVariant, textareaSize }), className)}
-          style={style}
+          style={{ color: '#05040D', ...style }}
           ref={ref}
           aria-invalid={!!error}
           aria-describedby={error ? errorId : helperText ? helperId : undefined}
