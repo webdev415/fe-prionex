@@ -15,6 +15,7 @@ on:
         options:
           - production
           - staging
+          - dev
 
 env:
   REGISTRY: ghcr.io
@@ -115,6 +116,9 @@ jobs:
             elif [ "$ENV_TYPE" == "staging" ]; then
               COMPOSE_FILE="docker-compose.staging.yml"
               ENV_FILE=".env.staging"
+            elif [ "$ENV_TYPE" == "dev" ]; then
+              COMPOSE_FILE="docker-compose.dev-env.yml"
+              ENV_FILE=".env.dev"
             else
               echo "Unknown environment: $ENV_TYPE"
               exit 1
