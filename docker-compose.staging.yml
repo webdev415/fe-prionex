@@ -1,0 +1,43 @@
+# Frontend Staging Docker Compose
+# For staging deployment with nginx on the same server
+
+name: fe-prionex-staging
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      args:
+        # Staging environment API URL (public, behind Nginx)
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://api.staging.crm-prionex.com}
+    container_name: fe-prionex-staging
+    ports:
+      # Staging frontend on host port 8180
+      - "8180:80"
+    networks:
+      - crm-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  crm-network:
+    external: true
+    name: crm-network
+
