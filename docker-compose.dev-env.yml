@@ -5,12 +5,14 @@ name: fe-prionex-dev-env
 
 services:
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
-      args:
-        # Dev environment API URL (public, behind Nginx)
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://api.dev.crm-prionex.com}
+    # Use image from registry (built by CI/CD) instead of building locally
+    image: ${DOCKER_IMAGE:-ghcr.io/crm-prionex/fe-prionex:latest}
+    # Uncomment below if you need to build locally instead
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile.prod
+    #   args:
+    #     - VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://api.dev.crm-prionex.com}
     container_name: fe-prionex-dev-env
     ports:
       # Dev frontend on host port 8280
