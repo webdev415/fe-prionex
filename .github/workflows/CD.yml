@@ -2,7 +2,7 @@ name: CD
 
 on:
   push:
-    branches: [main]
+    branches: [main, staging, development]
     tags:
       - 'v*'
   workflow_dispatch:
@@ -71,12 +71,12 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy:
-    name: Deploy to Production
+    name: Deploy Frontend
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging' || startsWith(github.ref, 'refs/tags/v')
     environment:
-      name: ${{ github.event.inputs.environment || 'production' }}
+      name: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
 
     steps:
       - name: Checkout code
@@ -93,17 +93,24 @@ jobs:
           target: "~/crm-prionex/fe-prionex/"
 
       - name: Deploy to server
+        env:
+          DEPLOY_ENV: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/staging' && 'staging' || github.ref == 'refs/heads/development' && 'dev' || 'production') }}
+          GITHUB_REF: ${{ github.ref }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.DEPLOY_SSH_HOST }}
           username: ${{ secrets.DEPLOY_SSH_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          envs: DEPLOY_ENV,GITHUB_REF
           script: |
             cd ~/crm-prionex/fe-prionex
             
-            # Determine environment based on workflow input or branch
-            ENV_TYPE="${{ github.event.inputs.environment || 'production' }}"
+            # Use environment from GitHub Actions
+            ENV_TYPE="$DEPLOY_ENV"
+            
+            echo "📋 Branch: $GITHUB_REF"
+            echo "📋 Deploying to: $ENV_TYPE"
             
             # Set compose file and env file based on environment
             if [ "$ENV_TYPE" == "production" ]; then
