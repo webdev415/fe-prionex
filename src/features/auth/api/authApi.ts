@@ -6,6 +6,7 @@ import type {
   CurrentUserResponse,
   ImpersonationResponse,
   ExitImpersonationResponse,
+  SwitchProjectResponse,
 } from '@/types/api'
 
 export const authApi = {
@@ -19,8 +20,8 @@ export const authApi = {
 
   me: () => api.get<CurrentUserResponse>('/api/v1/users/me'),
 
-  switchProject: (projectId: string) =>
-    api.post<LoginResponse>('/api/v1/auth/switch-project', { project_id: projectId }),
+  switchProject: (projectId: number) =>
+    api.post<SwitchProjectResponse>('/api/v1/auth/switch-project', { project_id: projectId }),
 
   impersonate: (userId: string) =>
     api.post<ImpersonationResponse>('/api/v1/auth/impersonate', { user_id: userId }),

@@ -436,6 +436,8 @@ export function ImportHistoryPage() {
         <div className="mt-6 flex items-center justify-center">
           {/* Pagination */}
           <Pagination
+            pageSize={1}
+            onPageSizeChange={() => {}}
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={handlePageChange}

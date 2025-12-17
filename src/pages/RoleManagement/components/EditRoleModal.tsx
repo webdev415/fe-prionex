@@ -6,6 +6,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
+import { ModalSkeleton } from '@/components/ui/ModalSkeleton'
 import { EditRoleForm } from '@/features/roles/components/EditRoleForm'
 import { useRole } from '@/features/roles/hooks/useRole'
 import { useProject } from '@/features/projects/hooks/useProject'
@@ -46,12 +47,7 @@ export function EditRoleModal({ open, roleId, onClose, onSuccess }: EditRoleModa
       />
       <ModalContent>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-teal-600" />
-            <span className="ml-3 text-gray-600">
-              {t('pages.roles.modals.archive.loadingRoleData')}
-            </span>
-          </div>
+          <ModalSkeleton />
         ) : role && project ? (
           <EditRoleForm
             role={role}

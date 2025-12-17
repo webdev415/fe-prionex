@@ -125,6 +125,31 @@ export interface ExitImpersonationResponse {
   }
 }
 
+export interface ActiveProjectInfo {
+  project_id: number
+  project_name: string
+  project_code: string
+  role_id: number
+  role_name: string
+  permissions: string[]
+}
+
+export interface AvailableProject {
+  project_id: number
+  project_name: string
+  role_name: string
+}
+
+export interface SwitchProjectResponse {
+  success: boolean
+  message: string
+  access_token: string
+  token_type: string
+  expires_in: number
+  active_project: ActiveProjectInfo
+  available_projects: AvailableProject[]
+}
+
 export interface TokenValidatePayload {
   user_id: number
   username: string
