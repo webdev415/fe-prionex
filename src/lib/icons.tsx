@@ -103,6 +103,8 @@ import {
   TypeCursorIcon,
   Money04Icon,
   MailBlock02Icon,
+  CallDone02Icon,
+  Clock01Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -248,6 +250,8 @@ export const Icons = {
   TypeCursor: (props: Omit<IconProps, 'icon'>) => <Icon icon={TypeCursorIcon} {...props} />,
   Money04: (props: Omit<IconProps, 'icon'>) => <Icon icon={Money04Icon} {...props} />,
   MailBlock02: (props: Omit<IconProps, 'icon'>) => <Icon icon={MailBlock02Icon} {...props} />,
+  CallDone02: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallDone02Icon} {...props} />,
+  Clock01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Clock01Icon} {...props} />,
 }
 
 /**
@@ -342,6 +346,8 @@ export {
   TypeCursorIcon,
   Money04Icon,
   MailBlock02Icon,
+  CallDone02Icon,
+  Clock01Icon,
 }
 
 /**

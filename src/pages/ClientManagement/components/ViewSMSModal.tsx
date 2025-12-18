@@ -197,7 +197,7 @@ export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
 
             {/* Delivery Timestamps */}
             <div className="flex items-start gap-3 self-stretch">
-              <div className="flex flex-1 items-start gap-2">
+              <div className="flex flex-1 items-center gap-2">
                 <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
                   Sent:
                 </span>
@@ -205,7 +205,7 @@ export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
                   {dateTime}
                 </span>
               </div>
-              <div className="flex flex-1 items-start gap-2">
+              <div className="flex flex-1 items-center gap-2">
                 <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
                   Delivered:
                 </span>

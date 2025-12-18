@@ -2088,57 +2088,69 @@ export function ClientDetailPage() {
                   {activeCallSmsTab === 'calls' && (
                     <div className="flex flex-col items-start gap-4 self-stretch">
                       {/* Summary Statistics */}
-                      <div className="flex w-full gap-4">
-                        <div className="flex flex-1 items-center gap-3 rounded-lg border border-gray-200 bg-white p-4">
-                          <Icons.Phone size={20} className="text-primary-500" />
-                          <div>
-                            <div className="text-xs text-gray-600">Total Calls</div>
-                            <div className="text-dark-500 text-lg font-semibold">
-                              {client.callSmsHistory.calls.length}
+                      <div className="flex h-14 w-full items-start gap-5 p-0">
+                        <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-2 pl-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
+                              <Icons.Call02 size={24} className="text-gray-700" />
+                            </div>
+                            <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                              Total Calls
                             </div>
                           </div>
-                        </div>
-                        <div className="flex flex-1 items-center gap-3 rounded-lg border border-gray-200 bg-white p-4">
-                          <Icons.Success size={20} className="text-success-500" />
-                          <div>
-                            <div className="text-xs text-gray-600">Answered</div>
-                            <div className="text-dark-500 text-lg font-semibold">
-                              {(() => {
-                                const answered = client.callSmsHistory.calls.filter(
-                                  (c) => c.status === 'Answered'
-                                ).length
-                                const total = client.callSmsHistory.calls.length
-                                const percentage =
-                                  total > 0 ? Math.round((answered / total) * 100) : 0
-                                return `${answered} (${percentage}%)`
-                              })()}
-                            </div>
+                          <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                            {client.callSmsHistory.calls.length}
                           </div>
                         </div>
-                        <div className="flex flex-1 items-center gap-3 rounded-lg border border-gray-200 bg-white p-4">
-                          <Icons.Calendar size={20} className="text-primary-500" />
-                          <div>
-                            <div className="text-xs text-gray-600">Avg. Duration</div>
-                            <div className="text-dark-500 text-lg font-semibold">
-                              {(() => {
-                                const durations = client.callSmsHistory.calls
-                                  .filter((c) => c.duration)
-                                  .map((c) => {
-                                    const match = c.duration?.match(/(\d+)m (\d+)s/)
-                                    if (match) {
-                                      return parseInt(match[1]) * 60 + parseInt(match[2])
-                                    }
-                                    return 0
-                                  })
-                                if (durations.length === 0) return '0m 0s'
-                                const avg = Math.round(
-                                  durations.reduce((a, b) => a + b, 0) / durations.length
-                                )
-                                const minutes = Math.floor(avg / 60)
-                                const seconds = avg % 60
-                                return `${minutes}m ${seconds}s`
-                              })()}
+                        <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-2 pl-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
+                              <Icons.CallDone02 size={24} className="text-gray-700" />
                             </div>
+                            <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                              Answered
+                            </div>
+                          </div>
+                          <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                            {(() => {
+                              const answered = client.callSmsHistory.calls.filter(
+                                (c) => c.status === 'Answered'
+                              ).length
+                              const total = client.callSmsHistory.calls.length
+                              const percentage =
+                                total > 0 ? Math.round((answered / total) * 100) : 0
+                              return `${answered} (${percentage}%)`
+                            })()}
+                          </div>
+                        </div>
+                        <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-2 pl-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
+                              <Icons.Clock01 size={24} className="text-gray-700" />
+                            </div>
+                            <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                              Avg. Duration
+                            </div>
+                          </div>
+                          <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                            {(() => {
+                              const durations = client.callSmsHistory.calls
+                                .filter((c) => c.duration)
+                                .map((c) => {
+                                  const match = c.duration?.match(/(\d+)m (\d+)s/)
+                                  if (match) {
+                                    return parseInt(match[1]) * 60 + parseInt(match[2])
+                                  }
+                                  return 0
+                                })
+                              if (durations.length === 0) return '0m 0s'
+                              const avg = Math.round(
+                                durations.reduce((a, b) => a + b, 0) / durations.length
+                              )
+                              const minutes = Math.floor(avg / 60)
+                              const seconds = avg % 60
+                              return `${minutes}m ${seconds}s`
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -2240,36 +2252,36 @@ export function ClientDetailPage() {
                   {activeCallSmsTab === 'sms' && (
                     <div className="flex flex-col items-start gap-4 self-stretch">
                       {/* Summary Statistics */}
-                      <div className="flex w-full gap-4">
-                        <div className="flex flex-1 items-center gap-3 rounded-lg border border-gray-200 bg-white p-4">
-                          <Icons.File size={20} className="text-primary-500" />
-                          <div>
-                            <div className="text-xs text-gray-600">Total Cost</div>
-                            <div className="text-dark-500 text-lg font-semibold">
-                              ₹15.00 ({client.callSmsHistory.sms.length} SMS parts)
-                            </div>
+                      <div className="flex h-14 w-full items-start gap-5 p-0">
+                        <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-4 pl-3">
+                          <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                            Total Cost
+                          </div>
+
+                          <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                            ₹15.00 ({client.callSmsHistory.sms.length} SMS parts)
                           </div>
                         </div>
-                        <div className="flex flex-1 items-center gap-3 rounded-lg border border-gray-200 bg-white p-4">
-                          <Icons.PieChart02 size={20} className="text-primary-500" />
-                          <div>
-                            <div className="text-xs text-gray-600">Delivery Rate</div>
-                            <div className="text-dark-500 text-lg font-semibold">
-                              {(() => {
-                                const delivered = client.callSmsHistory.sms.filter(
-                                  (s) => s.status === 'Delivered'
-                                ).length
-                                const failed = client.callSmsHistory.sms.filter(
-                                  (s) => (s.status as string) === 'Failed'
-                                ).length
-                                const pending = client.callSmsHistory.sms.filter(
-                                  (s) => (s.status as string) === 'Pending'
-                                ).length
-                                const total = client.callSmsHistory.sms.length
-                                const rate = total > 0 ? Math.round((delivered / total) * 100) : 0
-                                return `${rate}% (${delivered} delivered, ${failed} failed, ${pending} pending)`
-                              })()}
-                            </div>
+                        <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-4 pl-3">
+                          <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                            Delivery Rate
+                          </div>
+
+                          <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                            {(() => {
+                              const delivered = client.callSmsHistory.sms.filter(
+                                (s) => s.status === 'Delivered'
+                              ).length
+                              const failed = client.callSmsHistory.sms.filter(
+                                (s) => (s.status as string) === 'Failed'
+                              ).length
+                              const pending = client.callSmsHistory.sms.filter(
+                                (s) => (s.status as string) === 'Pending'
+                              ).length
+                              const total = client.callSmsHistory.sms.length
+                              const rate = total > 0 ? Math.round((delivered / total) * 100) : 0
+                              return `${rate}% (${delivered} delivered, ${failed} failed, ${pending} pending)`
+                            })()}
                           </div>
                         </div>
                       </div>
