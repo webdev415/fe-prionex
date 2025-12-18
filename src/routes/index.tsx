@@ -14,6 +14,11 @@ import { DashboardLayout } from '@/components/layout'
 import { PERMISSIONS } from '@/constants/permissions'
 import { ImportHistoryPage } from '@/pages/ImportClients/ImportHistoryPage'
 import { ImportDetailsPage } from '@/pages/ImportClients/ImportDetailsPage'
+import {
+  ClientManagementPage,
+  ClientDetailPage,
+  ActivityTimelinePage,
+} from '@/pages/ClientManagement'
 
 function DashboardContent() {
   const { t } = useTranslation('common')
@@ -51,6 +56,36 @@ export const router = createBrowserRouter([
       <ProtectedRoute>
         <DashboardLayout>
           <DashboardContent />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/client',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ClientManagementPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/client/:id',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ClientDetailPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/client/:id/activity',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ActivityTimelinePage />
         </DashboardLayout>
       </ProtectedRoute>
     ),
@@ -123,10 +158,10 @@ export const router = createBrowserRouter([
   },
   {
     path: '/',
-    element: <Navigate to="/dashboard" replace />,
+    element: <Navigate to="/dashboard/client" replace />,
   },
   {
     path: '*',
-    element: <Navigate to="/dashboard" replace />,
+    element: <Navigate to="/dashboard/client" replace />,
   },
 ])

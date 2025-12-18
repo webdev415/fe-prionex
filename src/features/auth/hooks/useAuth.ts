@@ -31,7 +31,7 @@ export function useAuth() {
     async (credentials: LoginRequest) => {
       try {
         await storeLogin(credentials)
-        navigate('/dashboard')
+        navigate('/dashboard/client')
       } catch {
         // Error is handled by the store
       }
@@ -47,7 +47,7 @@ export function useAuth() {
   const forceLogin = useCallback(async () => {
     try {
       await storeForceLogin()
-      navigate('/dashboard')
+      navigate('/dashboard/client')
     } catch {
       // Error is handled by the store
     }
@@ -56,7 +56,7 @@ export function useAuth() {
   const startImpersonation = useCallback(
     async (userId: number) => {
       await storeStartImpersonation(userId)
-      navigate('/dashboard')
+      navigate('/dashboard/client')
     },
     [storeStartImpersonation, navigate]
   )
