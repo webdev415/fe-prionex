@@ -12,6 +12,7 @@ import { Icons } from '@/lib/icons'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { formatCurrency, formatNumber, formatDateTime, truncateText } from '@/lib/formatters'
 import type { ApiProjectDetail } from '@/features/projects/types'
+import { ProjectDetailPanelSkeleton } from './ProjectDetailPanelSkeleton'
 
 interface ProjectDetailPanelProps {
   project: ApiProjectDetail | null
@@ -58,11 +59,7 @@ export function ProjectDetailPanel({
 
   // Loading state
   if (isLoading || !project) {
-    return (
-      <div className="flex h-full items-center justify-center rounded-lg border border-gray-200 bg-white">
-        <div className="border-primary-500 h-8 w-8 animate-spin rounded-full border-b-2" />
-      </div>
-    )
+    return <ProjectDetailPanelSkeleton />
   }
 
   return (

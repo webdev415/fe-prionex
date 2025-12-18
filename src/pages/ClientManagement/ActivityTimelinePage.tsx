@@ -29,7 +29,7 @@ export function ActivityTimelinePage() {
   const [dateFrom, setDateFrom] = useState<Date | null>(new Date('2024-11-20'))
   const [dateTo, setDateTo] = useState<Date | null>(new Date('2024-11-27'))
   const [currentPage, setCurrentPage] = useState(1)
-  const [rowsPerPage] = useState(15)
+  const [rowsPerPage, setRowsPerPage] = useState(15)
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
 
@@ -301,7 +301,9 @@ export function ActivityTimelinePage() {
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
+            pageSize={rowsPerPage}
             onPageChange={setCurrentPage}
+            onPageSizeChange={setRowsPerPage}
           />
         </div>
       )}

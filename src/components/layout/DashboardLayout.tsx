@@ -10,6 +10,7 @@ import { Sidebar, type SidebarItem } from './Sidebar'
 import { SearchBar } from './SearchBar'
 import { UserProfile } from './UserProfile'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { ProjectSelector } from './ProjectSelector'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
@@ -338,8 +339,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             )}
           </div>
 
-          {/* Right side: Language Switcher and User Profile */}
+          {/* Right side: Project Selector, Language Switcher and User Profile */}
           <div className="flex items-center gap-3">
+            <ProjectSelector />
             <LanguageSwitcher variant="dashboard" />
             <UserProfile onLogoutClick={handleLogoutClick} />
           </div>

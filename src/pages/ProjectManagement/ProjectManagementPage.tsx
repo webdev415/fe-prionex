@@ -21,11 +21,12 @@ import { ErrorState } from '@/components/ErrorState'
 import { Pagination } from '@/components/ui/Pagination'
 import { ProjectManagementPageSkeleton } from './components/ProjectManagementPageSkeleton'
 
-const ITEMS_PER_PAGE = 10
+const DEFAULT_PAGE_SIZE = 10
 
 export function ProjectManagementPage() {
   const { t } = useTranslation('common')
   const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [editingProject, setEditingProject] = useState<ApiProjectDetail | null>(null)
   const [deletingProject, setDeletingProject] = useState<ApiProjectDetail | null>(null)
@@ -40,7 +41,7 @@ export function ProjectManagementPage() {
   // Fetch projects with pagination, filters, and sorting
   const { data, isLoading, isError, error, refetch } = useProjects({
     page: currentPage,
-    page_size: ITEMS_PER_PAGE,
+    page_size: pageSize,
     ...filters,
     sort_by: sortConfig.key,
     sort_order: sortConfig.order,
@@ -286,7 +287,12 @@ export function ProjectManagementPage() {
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
+                pageSize={pageSize}
                 onPageChange={setCurrentPage}
+                onPageSizeChange={(newSize) => {
+                  setPageSize(newSize)
+                  setCurrentPage(1) // Reset to first page when changing page size
+                }}
               />
             </div>
           </div>

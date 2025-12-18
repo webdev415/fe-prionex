@@ -45,7 +45,7 @@ export function ClientManagementPage() {
     status: ['Active', 'Defaulted'],
   })
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
-  const [rowsPerPage] = useState(15)
+  const [rowsPerPage, setRowsPerPage] = useState(15)
   const [sortConfig, setSortConfig] = useState<SortConfig | undefined>()
   const [currentPage, setCurrentPage] = useState(1)
   const prevSearchQueryRef = useRef(searchQuery)
@@ -377,7 +377,9 @@ export function ClientManagementPage() {
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
+          pageSize={rowsPerPage}
           onPageChange={setCurrentPage}
+          onPageSizeChange={setRowsPerPage}
         />
       </div>
     </div>
