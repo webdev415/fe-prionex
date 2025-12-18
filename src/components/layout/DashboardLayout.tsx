@@ -257,6 +257,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
       },
       {
+        path: '/dashboard/sms-templates',
+        icon: 'mail-send',
+        label: t('navigation.smsTemplates'),
+      },
+      {
         path: '/dashboard',
         icon: 'transaction-history',
         label: t('navigation.transactions'),

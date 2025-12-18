@@ -19,6 +19,7 @@ import {
   ClientDetailPage,
   ActivityTimelinePage,
 } from '@/pages/ClientManagement'
+import { SmsTemplatesPage } from '@/pages/SmsTemplates'
 
 function DashboardContent() {
   const { t } = useTranslation('common')
@@ -153,6 +154,16 @@ export const router = createBrowserRouter([
             <RoleManagementPage />
           </DashboardLayout>
         </PermissionRoute>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/sms-templates',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <SmsTemplatesPage />
+        </DashboardLayout>
       </ProtectedRoute>
     ),
   },

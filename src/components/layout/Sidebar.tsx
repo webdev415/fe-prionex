@@ -55,6 +55,7 @@ const iconMap: Record<
   'transaction-history': (props) => <Icons.TransactionHistory {...props} />,
   'setting-07': (props) => <Icons.Setting07 {...props} />,
   'logout-square-01': (props) => <Icons.LogoutSquare01 {...props} />,
+  'mail-send': (props) => <Icons.MailSend01 {...props} />,
 }
 
 /**
