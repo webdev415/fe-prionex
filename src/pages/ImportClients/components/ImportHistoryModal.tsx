@@ -10,6 +10,8 @@
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
+import { useNavigate } from 'react-router-dom'
+import { useExportImportErrors } from '@/features/imports'
 
 export type ImportStatus = 'completed' | 'completed_with_errors' | 'failed'
 
@@ -23,6 +25,7 @@ export interface ImportHistoryData {
   updatedClients?: number
   errors?: number
   processingTime?: string
+  jobId?: number | string
 }
 
 export interface ImportHistoryModalProps {
@@ -66,9 +69,25 @@ function StatusBadge({ status }: { status: ImportStatus }) {
 }
 
 export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalProps) {
+  const navigate = useNavigate()
+  const exportErrorsMutation = useExportImportErrors()
+
   if (!data) return null
 
-  const { status } = data
+  const { status, jobId } = data
+
+  const handleViewDetails = () => {
+    if (jobId) {
+      navigate(`/dashboard/import/history/${jobId}`)
+      onClose()
+    }
+  }
+
+  const handleDownloadErrors = () => {
+    if (jobId) {
+      exportErrorsMutation.mutate(jobId)
+    }
+  }
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="lg" className="w-[600px] max-w-none">
@@ -184,33 +203,27 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
             <>
               <Button
                 variant="outline"
-                onClick={() => {
-                  // TODO: Implement view details functionality
-                  console.log('View Details clicked')
-                }}
+                onClick={handleViewDetails}
+                disabled={!jobId}
                 className="text-dark-500 flex flex-1 items-center rounded-lg border-white bg-white px-5 py-3 text-sm font-medium"
               >
                 View Details
               </Button>
               <Button
                 variant="primary"
-                onClick={() => {
-                  // TODO: Implement download error report functionality
-                  console.log('Download Error Report CSV clicked')
-                }}
+                onClick={handleDownloadErrors}
+                disabled={!jobId || exportErrorsMutation.isPending}
                 leftIcon={<Icons.FileDownload size={20} className="text-dark-500" />}
                 className="bg-primary-300 text-dark-500 flex flex-1 items-center rounded-lg px-5 py-3 text-sm font-medium"
               >
-                Download Error Report CSV
+                {exportErrorsMutation.isPending ? 'Exporting...' : 'Download Error Report CSV'}
               </Button>
             </>
           ) : (
             <Button
               variant="primary"
-              onClick={() => {
-                // TODO: Implement view details functionality
-                console.log('View Details clicked')
-              }}
+              onClick={handleViewDetails}
+              disabled={!jobId}
               className="bg-primary-300 text-dark-500 w-full rounded-lg px-5 py-3 text-sm font-medium"
             >
               View Details
