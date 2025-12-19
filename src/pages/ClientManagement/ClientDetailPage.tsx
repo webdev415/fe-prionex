@@ -13,6 +13,7 @@ import { CallDialogModal, type CallType, type CallStatus } from './components/Ca
 import { CallRecordingModal } from './components/CallRecordingModal'
 import { ViewSMSModal } from './components/ViewSMSModal'
 import { SendSMSModal } from './components/SendSMSModal'
+import { CallLogCard } from './components/CallLogCard'
 import { cn } from '@/lib/utils'
 
 // Helper function to create mock client detail
@@ -1957,127 +1958,49 @@ export function ClientDetailPage() {
                               <div className="grid grid-cols-2 gap-4">
                                 {/* Calls for this date */}
                                 {items.calls.map((call) => (
-                                  <div
+                                  <CallLogCard
                                     key={`call-${call.id}`}
-                                    className="rounded-lg border border-gray-200 bg-white p-4"
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-dark-500 text-sm">{call.time}</span>
-                                      <div className="flex items-center gap-2">
-                                        {call.duration && (
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => {
-                                              setSelectedCallData({
-                                                type:
-                                                  call.type === 'Incoming'
-                                                    ? 'Incoming Call'
-                                                    : call.type,
-                                                clientName: client.fullName,
-                                                date: call.date,
-                                                time: call.time,
-                                                operator: call.operator,
-                                                duration: call.duration || '',
-                                                phone:
-                                                  call.phone +
-                                                  (call.phoneLabel ? ` (${call.phoneLabel})` : ''),
-                                              })
-                                              setIsCallRecordingModalOpen(true)
-                                            }}
-                                          >
-                                            Play ({call.duration})
-                                          </Button>
-                                        )}
-                                        <span
-                                          className={cn(
-                                            'h-2.5 w-2.5 flex-shrink-0 rounded-full',
-                                            call.status === 'Answered'
-                                              ? 'bg-success-500'
-                                              : 'bg-error-500'
-                                          )}
-                                        />
-                                        <span
-                                          className={cn(
-                                            'text-xs font-medium',
-                                            call.status === 'Answered'
-                                              ? 'text-success-500'
-                                              : 'text-error-500'
-                                          )}
-                                        >
-                                          {call.status}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <div className="mt-2 text-xs text-gray-600">
-                                      Type: {call.type === 'Incoming' ? 'Incoming Call' : call.type}{' '}
-                                      | Operator: {call.operator} | Phone: {call.phone}
-                                      {call.phoneLabel && ` (${call.phoneLabel})`} | Line:{' '}
-                                      {call.line}
-                                    </div>
-                                  </div>
+                                    clientName={client.fullName}
+                                    title={`Play (${call.duration})`}
+                                    time={call.time}
+                                    date={call.date}
+                                    duration={call.duration}
+                                    status={call.status}
+                                    type={call.type}
+                                    phone={call.phone}
+                                    line={call.line}
+                                    operator={call.operator}
+                                    icon={
+                                      <Icons.PlayCircle02
+                                        size={20}
+                                        className="text-secondary-800"
+                                      />
+                                    }
+                                    setSelectedCallData={setSelectedCallData}
+                                    setIsCallRecordingModalOpen={setIsCallRecordingModalOpen}
+                                  />
                                 ))}
                                 {/* SMS for this date */}
                                 {items.sms.map((sms) => (
-                                  <div
+                                  <CallLogCard
                                     key={`sms-${sms.id}`}
-                                    className="rounded-lg border border-gray-200 bg-white p-4"
-                                  >
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-dark-500 text-sm">{sms.time}</span>
-                                      <div className="flex items-center gap-2">
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => {
-                                            setSelectedSMSData({
-                                              date: sms.date,
-                                              time: sms.time,
-                                              template: sms.template || 'Payment Reminder',
-                                              operator: sms.operator || 'Svitlana',
-                                              status: sms.status,
-                                              message:
-                                                sms.message ||
-                                                'Dear Ivan, this is a reminder about your loan payment.',
-                                              phone:
-                                                (sms as typeof sms & { phone?: string }).phone ||
-                                                client.phones?.[0]?.number ||
-                                                '',
-                                            })
-                                            setIsViewSMSModalOpen(true)
-                                          }}
-                                        >
-                                          View Sms
-                                        </Button>
-                                        <span
-                                          className={cn(
-                                            'h-2.5 w-2.5 flex-shrink-0 rounded-full',
-                                            sms.status === 'Delivered'
-                                              ? 'bg-success-500'
-                                              : sms.status === 'Failed'
-                                                ? 'bg-error-500'
-                                                : 'bg-gray-500'
-                                          )}
-                                        />
-                                        <span
-                                          className={cn(
-                                            'text-xs font-medium',
-                                            sms.status === 'Delivered'
-                                              ? 'text-success-500'
-                                              : sms.status === 'Failed'
-                                                ? 'text-error-500'
-                                                : 'text-gray-500'
-                                          )}
-                                        >
-                                          {sms.status}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <p className="text-dark-500 mt-2 text-sm">{sms.message}</p>
-                                    <div className="mt-2 text-xs text-gray-600">
-                                      Template: {sms.template} | Operator: {sms.operator}
-                                    </div>
-                                  </div>
+                                    clientName={client.fullName}
+                                    title="View Sms"
+                                    time={sms.time}
+                                    date={sms.date}
+                                    status={sms.status}
+                                    template={sms.template}
+                                    message={sms.message}
+                                    operator={sms.operator}
+                                    icon={
+                                      <Icons.ChatFeedback01
+                                        size={20}
+                                        className="text-secondary-800"
+                                      />
+                                    }
+                                    setSelectedSMSData={setSelectedSMSData}
+                                    setIsViewSMSModalOpen={setIsViewSMSModalOpen}
+                                  />
                                 ))}
                               </div>
                             </div>
@@ -2179,68 +2102,27 @@ export function ClientDetailPage() {
                                 <h3 className="text-dark-500 text-base font-semibold">{date}</h3>
                                 <div className="grid grid-cols-2 gap-4">
                                   {calls.map((call) => (
-                                    <div
+                                    <CallLogCard
                                       key={call.id}
-                                      className="rounded-lg border border-gray-200 bg-white p-4"
-                                    >
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-dark-500 text-sm">{call.time}</span>
-                                        <div className="flex items-center gap-2">
-                                          {call.duration && (
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() => {
-                                                setSelectedCallData({
-                                                  type:
-                                                    call.type === 'Incoming'
-                                                      ? 'Incoming Call'
-                                                      : call.type,
-                                                  clientName: client.fullName,
-                                                  date: call.date,
-                                                  time: call.time,
-                                                  operator: call.operator,
-                                                  duration: call.duration || '',
-                                                  phone:
-                                                    call.phone +
-                                                    (call.phoneLabel
-                                                      ? ` (${call.phoneLabel})`
-                                                      : ''),
-                                                })
-                                                setIsCallRecordingModalOpen(true)
-                                              }}
-                                            >
-                                              Play ({call.duration})
-                                            </Button>
-                                          )}
-                                          <span
-                                            className={cn(
-                                              'h-2.5 w-2.5 flex-shrink-0 rounded-full',
-                                              call.status === 'Answered'
-                                                ? 'bg-success-500'
-                                                : 'bg-error-500'
-                                            )}
-                                          />
-                                          <span
-                                            className={cn(
-                                              'text-xs font-medium',
-                                              call.status === 'Answered'
-                                                ? 'text-success-500'
-                                                : 'text-error-500'
-                                            )}
-                                          >
-                                            {call.status}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      <div className="mt-2 text-xs text-gray-600">
-                                        Type:{' '}
-                                        {call.type === 'Incoming' ? 'Incoming Call' : call.type} |
-                                        Operator: {call.operator} | Phone: {call.phone}
-                                        {call.phoneLabel && ` (${call.phoneLabel})`} | Line:{' '}
-                                        {call.line}
-                                      </div>
-                                    </div>
+                                      clientName={client.fullName}
+                                      title={`Play (${call.duration})`}
+                                      time={call.time}
+                                      date={call.date}
+                                      duration={call.duration}
+                                      status={call.status}
+                                      type={call.type}
+                                      phone={call.phone}
+                                      line={call.line}
+                                      operator={call.operator}
+                                      icon={
+                                        <Icons.PlayCircle02
+                                          size={20}
+                                          className="text-secondary-800"
+                                        />
+                                      }
+                                      setSelectedCallData={setSelectedCallData}
+                                      setIsCallRecordingModalOpen={setIsCallRecordingModalOpen}
+                                    />
                                   ))}
                                 </div>
                               </div>
@@ -2310,71 +2192,25 @@ export function ClientDetailPage() {
                                 <h3 className="text-dark-500 text-base font-semibold">{date}</h3>
                                 <div className="grid grid-cols-2 gap-4">
                                   {smsList.map((sms) => (
-                                    <div
+                                    <CallLogCard
                                       key={sms.id}
-                                      className="rounded-lg border border-gray-200 bg-white p-4"
-                                    >
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-dark-500 text-sm">{sms.time}</span>
-                                        <div className="flex items-center gap-2">
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => {
-                                              const smsWithPhone = sms as typeof sms & {
-                                                phone?: string
-                                                phoneLabel?: string
-                                              }
-                                              setSelectedSMSData({
-                                                date: sms.date,
-                                                time: sms.time,
-                                                template: sms.template || 'Payment Reminder',
-                                                operator: sms.operator || 'Svitlana',
-                                                status: sms.status,
-                                                message:
-                                                  sms.message ||
-                                                  'Dear Ivan, this is a reminder about your loan payment.',
-                                                phone: smsWithPhone.phone
-                                                  ? smsWithPhone.phone +
-                                                    (smsWithPhone.phoneLabel
-                                                      ? ` (${smsWithPhone.phoneLabel})`
-                                                      : '')
-                                                  : client.phones?.[0]?.number || '',
-                                              })
-                                              setIsViewSMSModalOpen(true)
-                                            }}
-                                          >
-                                            View Sms
-                                          </Button>
-                                          <span
-                                            className={cn(
-                                              'h-2.5 w-2.5 flex-shrink-0 rounded-full',
-                                              sms.status === 'Delivered'
-                                                ? 'bg-success-500'
-                                                : sms.status === 'Failed'
-                                                  ? 'bg-error-500'
-                                                  : 'bg-gray-500'
-                                            )}
-                                          />
-                                          <span
-                                            className={cn(
-                                              'text-xs font-medium',
-                                              sms.status === 'Delivered'
-                                                ? 'text-success-500'
-                                                : sms.status === 'Failed'
-                                                  ? 'text-error-500'
-                                                  : 'text-gray-500'
-                                            )}
-                                          >
-                                            {sms.status}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      <p className="text-dark-500 mt-2 text-sm">{sms.message}</p>
-                                      <div className="mt-2 text-xs text-gray-600">
-                                        Template: {sms.template} | Operator: {sms.operator}
-                                      </div>
-                                    </div>
+                                      clientName={client.fullName}
+                                      title="View Sms"
+                                      time={sms.time}
+                                      date={sms.date}
+                                      status={sms.status}
+                                      template={sms.template}
+                                      message={sms.message}
+                                      operator={sms.operator}
+                                      icon={
+                                        <Icons.ChatFeedback01
+                                          size={20}
+                                          className="text-secondary-800"
+                                        />
+                                      }
+                                      setSelectedSMSData={setSelectedSMSData}
+                                      setIsViewSMSModalOpen={setIsViewSMSModalOpen}
+                                    />
                                   ))}
                                 </div>
                               </div>
