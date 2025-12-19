@@ -47,9 +47,9 @@ export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps)
       <ModalFooter>
         <Button
           type="button"
-          variant="secondary"
+          variant="cancel"
           onClick={onClose}
-          className="h-[45px] flex-1 rounded-lg border-none bg-gray-500 text-sm font-medium text-white"
+          className="h-[45px] flex-1 text-sm"
         >
           {t('actions.close')}
         </Button>

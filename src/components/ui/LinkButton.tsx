@@ -21,6 +21,10 @@ const linkButtonVariants = cva(
         'regular-red':
           'text-error-500 hover:text-error-700 active:text-error-800 disabled:text-gray-700',
 
+        // Regular Red: error-500 (default), error-700 (hover), gray-700 (disabled)
+        'regular-black':
+          'text-dark-500 hover:text-dark-500 active:text-dark-500 disabled:text-gray-700',
+
         // Medium Primary: primary-700 (default), primary-500 (hover), gray-700 (disabled)
         'medium-primary':
           'text-primary-700 hover:text-primary-500 active:text-primary-600 disabled:text-gray-700',
@@ -32,6 +36,10 @@ const linkButtonVariants = cva(
         // Medium Red: error-500 (default), error-700 (hover), gray-700 (disabled)
         'medium-red':
           'text-error-500 hover:text-error-700 active:text-error-800 disabled:text-gray-700',
+
+        // Medium Black: dark-500 (default), dark-500 (hover), gray-700 (disabled)
+        'medium-black':
+          'text-dark-500 hover:text-dark-500 active:text-dark-500 disabled:text-gray-700',
       },
       size: {
         xs: 'h-8 px-2 text-xs gap-1.5',

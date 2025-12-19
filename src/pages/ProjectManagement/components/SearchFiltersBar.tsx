@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/Select'
 import type { ProjectFilters } from '@/features/projects/types'
 import { CreateProjectModal } from './CreateProjectModal'
+import { Button } from '@/components/ui/Button'
+import { DoubleButton } from '@/components/ui/DoubleButton'
 
 interface SearchFiltersBarProps {
   filters: ProjectFilters
@@ -257,18 +259,15 @@ export function SearchFiltersBar({
 
       <div className="flex w-[30%] items-center justify-end gap-2">
         {/* Add New Project Button */}
-        <button
+        <DoubleButton
+          size="md"
+          icon={<Icons.Add size={20} strokeWidth={2} />}
+          iconPosition="left"
           onClick={() => setShowCreateModal(true)}
-          className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-          aria-label={t('pages.projects.searchFilters.addNewProject')}
+          className="h-[45px]"
         >
-          <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-            <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
-          </div>
-          <span className="px-4 py-3 text-sm font-medium text-white">
-            {t('pages.projects.searchFilters.newProject')}
-          </span>
-        </button>
+          {t('pages.projects.searchFilters.newProject')}
+        </DoubleButton>
 
         {/* Create Modal */}
         {showCreateModal && (
@@ -280,15 +279,16 @@ export function SearchFiltersBar({
         )}
 
         {/* Export Button */}
-        <button
+        <Button
+          variant="primary"
+          size="md"
           onClick={onExport}
           disabled={isLoading}
-          type="button"
-          className="text-dark-500 bg-primary-300 flex h-[45px] items-center gap-2 rounded-full px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
+          leftIcon={<Icons.FileImport size={16} className="text-dark-500" />}
+          className="h-[45px] rounded-full text-xs"
         >
-          <Icons.FileImport size={16} className="text-dark-500" />
           {t('pages.projects.searchFilters.export')}
-        </button>
+        </Button>
       </div>
     </div>
   )

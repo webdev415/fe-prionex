@@ -257,10 +257,10 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
       <ModalFooter>
         <Button
           type="button"
-          variant="secondary"
+          variant="cancel"
           onClick={onClose}
           disabled={createMutation.isPending}
-          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
+          className="h-[45px] flex-1 text-sm"
         >
           {t('actions.cancel')}
         </Button>
@@ -269,7 +269,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
           form="create-project-form"
           variant="primary"
           disabled={createMutation.isPending}
-          className="text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
+          className="h-[45px] flex-1 text-sm"
         >
           {createMutation.isPending
             ? t('pages.projects.modals.create.creating')

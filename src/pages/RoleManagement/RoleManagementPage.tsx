@@ -26,6 +26,7 @@ import { RoleDetailModal } from './components/RoleDetailModal'
 import { EditRoleModal } from './components/EditRoleModal'
 import { ArchiveRoleModal } from './components/ArchiveRoleModal'
 import { RoleManagementPageSkeleton } from './components/RoleManagementPageSkeleton'
+import { DoubleButton } from '@/components/ui/DoubleButton'
 
 export function RoleManagementPage() {
   const { t } = useTranslation('common')
@@ -139,20 +140,15 @@ export function RoleManagementPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-dark-500 text-2xl font-light">{t('pages.roles.title')}</h1>
           </div>
-
-          <button
+          <DoubleButton
+            size="md"
+            icon={<Icons.Add size={20} strokeWidth={2} />}
+            iconPosition="left"
             onClick={() => setShowCreateModal(true)}
             disabled={!selectedProjectId}
-            className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
-            aria-label={t('pages.roles.newRole')}
           >
-            <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-              <Icons.Add size={20} color="#05040D" strokeWidth={2} />
-            </div>
-            <span className="px-4 py-3 text-sm font-medium text-white">
-              {t('pages.roles.newRole')}
-            </span>
-          </button>
+            {t('pages.roles.newRole')}
+          </DoubleButton>
         </div>
       )}
 
