@@ -27,11 +27,19 @@ const buttonVariants = cva(
         success: 'bg-success-500 text-white hover:bg-success-600 active:bg-success-700',
       },
       size: {
-        sm: 'h-8 px-3 text-xs',
-        md: 'h-10 px-4',
-        lg: 'h-12 px-6 text-base',
+        // Text + Icons sizes
+        '2xs': 'h-6 px-2 text-[10px] gap-1',
+        xs: 'h-7 px-3 text-xs gap-1.5',
+        sm: 'h-8 px-4 text-xs gap-2',
+        md: 'h-10 px-5 text-sm gap-2',
+        lg: 'h-12 px-6 text-sm gap-2.5',
         xl: 'h-[45px] px-6',
-        icon: 'h-10 w-10',
+        // Icon-only sizes (square, no padding)
+        'icon-2xs': 'h-6 w-6 p-0',
+        'icon-xs': 'h-7 w-7 p-0',
+        'icon-sm': 'h-8 w-8 p-0',
+        'icon-md': 'h-10 w-10 p-0',
+        'icon-lg': 'h-12 w-12 p-0',
       },
     },
     defaultVariants: {
@@ -47,6 +55,7 @@ export interface ButtonProps
   isLoading?: boolean
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
+  iconOnly?: boolean
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -61,15 +70,25 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       rightIcon,
       disabled,
       children,
+      iconOnly = false,
       ...props
     },
     ref
   ) => {
     const Comp = asChild ? Slot : 'button'
 
+    // Determine if this should be an icon-only button
+    const isIconOnly = iconOnly || (!children && (leftIcon || rightIcon))
+
+    // Map size to icon-only size if needed
+    const actualSize =
+      isIconOnly && size && typeof size === 'string' && !size.startsWith('icon-')
+        ? (`icon-${size}` as typeof size)
+        : size
+
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(buttonVariants({ variant, size: actualSize, className }))}
         ref={ref}
         disabled={disabled || isLoading}
         {...props}
@@ -77,7 +96,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {isLoading ? (
           <>
             <svg
-              className="mr-2 h-4 w-4 animate-spin"
+              className={cn(isIconOnly ? 'h-4 w-4' : 'mr-2 h-4 w-4 animate-spin')}
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -97,13 +116,14 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               />
             </svg>
-            Loading...
+            {!isIconOnly && <span>Loading...</span>}
           </>
         ) : (
           <>
-            {leftIcon && <span className="mr-2">{leftIcon}</span>}
-            {children}
-            {rightIcon && <span className="ml-2">{rightIcon}</span>}
+            {leftIcon && <span>{leftIcon}</span>}
+            {!isIconOnly && children}
+            {rightIcon && <span>{rightIcon}</span>}
+            {isIconOnly && !leftIcon && !rightIcon && children}
           </>
         )}
       </Comp>
