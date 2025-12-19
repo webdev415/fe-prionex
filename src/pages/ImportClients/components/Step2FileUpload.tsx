@@ -53,26 +53,26 @@ export function Step2FileUpload({
   // Validate CSV structure with backend API
   const validateCSVStructure = async (file: File) => {
     try {
-      // const result = await validateCSVMutation.mutateAsync(file)
+      const result = await validateCSVMutation.mutateAsync(file)
 
-      // if (result.is_valid) {
-      //   // CSV structure is valid - backend confirmed
-      onChange({
-        csvFile: file,
-        invalidFile: null,
-        csvValidationError: null,
-      })
-      // } else {
-      //   // CSV structure is invalid - backend returned missing columns
-      //   onChange({
-      //     csvFile: file, // Store the file so we can display its name
-      //     invalidFile: null,
-      //     csvValidationError: {
-      //       isValid: false,
-      //       missingColumns: result.missing_columns || [], // Use backend response
-      //     },
-      //   })
-      // }
+      if (result.is_valid) {
+        // CSV structure is valid - backend confirmed
+        onChange({
+          csvFile: file,
+          invalidFile: null,
+          csvValidationError: null,
+        })
+      } else {
+        // CSV structure is invalid - backend returned missing columns
+        onChange({
+          csvFile: file, // Store the file so we can display its name
+          invalidFile: null,
+          csvValidationError: {
+            isValid: false,
+            missingColumns: result.missing_columns || [], // Use backend response
+          },
+        })
+      }
     } catch (error) {
       // Handle API error - backend validation failed
       console.error('CSV validation error:', error)
@@ -182,18 +182,18 @@ export function Step2FileUpload({
     setImportError(null)
 
     try {
-      // const result = await uploadImportMutation.mutateAsync({
-      //   file: data.csvFile,
-      //   seller_creditor: step1Data.sellerCreditor,
-      //   project_code: step1Data.projectCode,
-      //   purchase_date: step1Data.purchaseDate,
-      //   comment: step1Data.comment || undefined,
-      //   import_type: 'simple',
-      // })
+      const result = await uploadImportMutation.mutateAsync({
+        file: data.csvFile,
+        seller_creditor: step1Data.sellerCreditor,
+        project_code: step1Data.projectCode,
+        purchase_date: step1Data.purchaseDate,
+        comment: step1Data.comment || undefined,
+        import_type: 'simple',
+      })
 
-      // if (onImportStarted && result.job_id) {
-      //   onImportStarted(result.job_id)
-      // }
+      if (onImportStarted && result.job_id) {
+        onImportStarted(result.job_id)
+      }
       onImportStarted?.('123' as unknown as string)
     } catch (error) {
       setImportError(getErrorMessage(error))
