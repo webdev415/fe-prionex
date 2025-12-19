@@ -9,61 +9,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Icons } from '@/lib/icons'
-import type { ImportHistoryItem } from './ImportHistoryPage'
-import { generateImportHistoryItem } from './mockImportData'
 import { SemiCircularProgress } from './components'
-
-// Generate mock error details that match the import history data
-const generateMockErrorDetails = (importHistoryItem: ImportHistoryItem) => {
-  const errorTypes = ['Missing phone', 'Invalid debt', 'Duplicate entry', 'Invalid email']
-  const errorCount = importHistoryItem.errors
-  const errorList: Array<{ id: number; row: number; error: string }> = []
-
-  // Generate errors based on the error count from the history item
-  for (let j = 0; j < Math.min(errorCount, 100); j++) {
-    errorList.push({
-      id: j + 1,
-      row: Math.floor(Math.random() * 10000) + 1,
-      error: errorTypes[Math.floor(Math.random() * errorTypes.length)],
-    })
-  }
-
-  // Determine status based on error count and history status
-  let status: 'done' | 'failed' | 'completed_with_errors' | 'in_progress'
-  if (importHistoryItem.status === 'failed') {
-    status = 'failed'
-  } else if (importHistoryItem.status === 'in_progress') {
-    status = 'in_progress'
-  } else if (errorCount > 0) {
-    status = 'completed_with_errors'
-  } else {
-    status = 'done'
-  }
-
-  // Extract time from dateTime string
-  const [, timePart] = importHistoryItem.dateTime.split(' ')
-  const uploadedAt = timePart || '10:03'
-
-  // Calculate progress for in_progress status (80% for demo)
-  const progressPercentage = status === 'in_progress' ? 80 : 0
-  const processingRow = status === 'in_progress' ? 800 : 0
-
-  return {
-    id: importHistoryItem.id,
-    file: importHistoryItem.fileName,
-    uploadedBy: importHistoryItem.uploadedBy,
-    uploadedAt,
-    status,
-    totalRows: 10000,
-    newClients: Math.floor(10000 * 0.75),
-    updatedClients: Math.floor(10000 * 0.25),
-    errors: errorCount,
-    processingTime: '7 min 42 s',
-    errorList: errorList.slice(0, 10), // Show first 10 errors
-    progressPercentage,
-    processingRow,
-  }
-}
+import { useImportJob, useImportJobErrors, useExportImportErrors } from '@/features/imports'
 
 // Status Badge Component
 function ImportDetailStatusBadge({
@@ -122,13 +69,78 @@ export function ImportDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
-  // Get the import history item using the same generator
-  const importHistoryItem = id ? generateImportHistoryItem(Number(id)) : null
+  // Fetch import job detail from API
+  const { data: jobDetail, isLoading: isLoadingJob } = useImportJob(id, {
+    refetchInterval: (query) => {
+      // Poll every 5 seconds if job is in progress
+      const data = query.state.data
+      return data?.status === 'in_progress' ? 5000 : false
+    },
+  })
 
-  // Generate details based on the history item
-  const importDetail = importHistoryItem ? generateMockErrorDetails(importHistoryItem) : null
+  // Fetch import errors
+  const { data: errorsData } = useImportJobErrors(id, {
+    page: 1,
+    page_size: 100, // Get first 100 errors
+  })
 
-  if (!importDetail || !importHistoryItem) {
+  // Export errors mutation
+  const exportErrorsMutation = useExportImportErrors()
+
+  // Convert API data to component format
+  const importDetail = jobDetail
+    ? {
+        id: jobDetail.id,
+        file: jobDetail.file_name,
+        uploadedBy: jobDetail.uploaded_by,
+        uploadedAt: new Date(jobDetail.uploaded_at).toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        status:
+          jobDetail.status === 'completed'
+            ? jobDetail.errors_count > 0
+              ? ('completed_with_errors' as
+                  | 'done'
+                  | 'failed'
+                  | 'completed_with_errors'
+                  | 'in_progress')
+              : ('done' as 'done' | 'failed' | 'completed_with_errors' | 'in_progress')
+            : jobDetail.status === 'failed'
+              ? ('failed' as 'done' | 'failed' | 'completed_with_errors' | 'in_progress')
+              : jobDetail.status === 'in_progress'
+                ? ('in_progress' as 'done' | 'failed' | 'completed_with_errors' | 'in_progress')
+                : ('done' as 'done' | 'failed' | 'completed_with_errors' | 'in_progress'),
+        totalRows: jobDetail.total_rows,
+        newClients: jobDetail.new_clients,
+        updatedClients: jobDetail.updated_clients,
+        errors: jobDetail.errors_count,
+        processingTime: jobDetail.processing_time,
+        errorList: (errorsData?.items || []).map((err) => ({
+          id: err.id,
+          row: err.row,
+          error: err.error,
+        })),
+        progressPercentage: jobDetail.progress_percentage || 0,
+        processingRow: jobDetail.processing_row || 0,
+      }
+    : null
+
+  const handleDownloadErrors = () => {
+    if (id) {
+      exportErrorsMutation.mutate(id)
+    }
+  }
+
+  if (isLoadingJob) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <p className="text-gray-600">Loading import details...</p>
+      </div>
+    )
+  }
+
+  if (!importDetail || !jobDetail) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <p className="text-gray-600">Import not found</p>
@@ -175,14 +187,12 @@ export function ImportDetailsPage() {
 
         <Button
           variant="primary"
-          onClick={() => {
-            // TODO: Implement download error CSV
-            console.log('Download Error CSV clicked')
-          }}
+          onClick={handleDownloadErrors}
+          disabled={exportErrorsMutation.isPending || importDetail.errors === 0}
           leftIcon={<Icons.FileDownload size={20} className="text-dark-500" />}
           className="bg-primary-300 text-dark-500 h-12 rounded-full px-4 py-2.5 text-sm font-medium"
         >
-          Download Error CSV
+          {exportErrorsMutation.isPending ? 'Exporting...' : 'Download Error CSV'}
         </Button>
       </div>
 
