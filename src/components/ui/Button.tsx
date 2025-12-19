@@ -5,15 +5,23 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap rounded-lg text-text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-dark-500 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center whitespace-nowrap rounded-lg text-text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-dark-500 disabled:pointer-events-none cursor-pointer',
   {
     variants: {
       variant: {
-        primary: 'bg-primary-300 text-dark-500 hover:bg-primary-400 active:bg-primary-500',
-        secondary: 'bg-gray-700 text-white hover:bg-gray-600 active:bg-gray-500',
+        primary:
+          'bg-primary-300 text-dark-500 hover:bg-primary-500 disabled:bg-gray-200 disabled:text-gray-600 active:bg-primary-600',
+        secondary:
+          'bg-secondary-800 text-white hover:bg-secondary-600 disabled:bg-gray-200 disabled:text-gray-600 active:bg-secondary-900',
+        'white-primary':
+          'bg-white text-primary-500 hover:bg-primary-500 hover:text-dark-500 disabled:bg-gray-200 disabled:text-gray-600 active:bg-primary-600',
+        'white-secondary':
+          'bg-white text-secondary-800 hover:bg-secondary-800 hover:text-white disabled:bg-gray-200 disabled:text-gray-600 active:bg-secondary-500',
         light: 'bg-gray-200 text-gray-700 hover:bg-gray-300 active:bg-gray-400',
+        cancel:
+          'bg-gray-500 text-white hover:bg-secondary-800 active:bg-secondary-900 disabled:bg-gray-200 disabled:text-gray-600',
         outline:
-          'border border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white active:bg-primary-600',
+          'border border-gray-600 text-dark-500 hover:bg-secondary-800 hover:text-white hover:border-secondary-800 disabled:bg-gray-200 disabled:text-gray-600 disabled:border-gray-600 active:bg-primary-600 active:border-secondary-500 active:bg-secondary-900 active:text-white',
         ghost: 'text-gray-300 hover:bg-dark-300 hover:text-white active:bg-dark-200',
         danger: 'bg-error-500 text-white hover:bg-error-600 active:bg-error-700',
         success: 'bg-success-500 text-white hover:bg-success-600 active:bg-success-700',
