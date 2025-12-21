@@ -2,6 +2,7 @@
  * Step 1: Loan Source & Import Type
  */
 
+import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import {
@@ -30,6 +31,7 @@ interface Step1LoanSourceProps {
 }
 
 export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
+  const { t } = useTranslation('common')
   const { data: projectsData } = useProjects({ page: 1, page_size: 100 })
   const projects = projectsData?.projects || []
 
@@ -37,7 +39,9 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
     <div className="space-y-6">
       {/* Loan Source / Metadata Section */}
       <div>
-        <h2 className="text-dark-500 mb-4 text-sm font-medium">Loan Source / Metadata</h2>
+        <h2 className="text-dark-500 mb-4 text-sm font-medium">
+          {t('pages.imports.step1.loanSourceMetadata')}
+        </h2>
 
         <div className="space-y-4">
           {/* First Row: Seller/Creditor and Project Code side by side */}
@@ -45,14 +49,16 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
             {/* Seller / Creditor */}
             <div className="flex-1">
               <Label htmlFor="seller-creditor" required className="mb-1.5 block">
-                Seller / Creditor
+                {t('pages.imports.step1.sellerCreditor')}
               </Label>
               <Select
                 value={data.sellerCreditor}
                 onValueChange={(value) => onChange({ sellerCreditor: value })}
               >
                 <SelectTrigger className="w-full" id="seller-creditor">
-                  <SelectValue placeholder="Enter Project Name" />
+                  <SelectValue
+                    placeholder={t('pages.imports.step1.placeholders.enterProjectName')}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {projects.map((project) => (
@@ -67,8 +73,8 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
             {/* Project Code */}
             <div className="flex-1">
               <Input
-                label="Project Code:"
-                placeholder="Enter Project Code"
+                label={t('pages.imports.step1.projectCode')}
+                placeholder={t('pages.imports.step1.placeholders.enterProjectCode')}
                 value={data.projectCode}
                 onChange={(e) => onChange({ projectCode: e.target.value })}
               />
@@ -79,21 +85,21 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
           <div>
             <DateSelect
               id="purchase-date"
-              label="Purchase date:"
+              label={t('pages.imports.step1.purchaseDate')}
               value={data.purchaseDate}
               onChange={(args) => {
                 const dateStr = args.value ? args.value.toISOString().split('T')[0] : ''
                 onChange({ purchaseDate: dateStr })
               }}
-              placeholder="Select purchase date"
+              placeholder={t('pages.imports.step1.placeholders.selectPurchaseDate')}
             />
           </div>
 
           {/* Comment */}
           <div className="relative">
             <Textarea
-              label="Comment:"
-              placeholder="Placeholder text"
+              label={t('pages.imports.step1.comment')}
+              placeholder={t('pages.imports.step1.placeholders.placeholderText')}
               value={data.comment}
               onChange={(e) => onChange({ comment: e.target.value })}
               maxLength={100}
@@ -108,7 +114,9 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
 
       {/* Import Type Section */}
       <div>
-        <h2 className="text-dark-500 mb-4 text-sm font-medium">Import Type:</h2>
+        <h2 className="text-dark-500 mb-4 text-sm font-medium">
+          {t('pages.imports.step1.importType')}
+        </h2>
 
         <div className="flex gap-4">
           <RadioCard
@@ -116,8 +124,8 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
             value="simple"
             checked={data.importType === 'simple'}
             onChange={(value) => onChange({ importType: value as 'simple' | 'vendor' })}
-            title="Simple client CSV"
-            description="One CSV with basic client data."
+            title={t('pages.imports.step1.simpleClientCsv')}
+            description={t('pages.imports.step1.simpleClientCsvDesc')}
             className="flex-1"
           />
 
@@ -126,8 +134,8 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
             value="vendor"
             checked={data.importType === 'vendor'}
             onChange={(value) => onChange({ importType: value as 'simple' | 'vendor' })}
-            title="Vendor dump (4 CSVs + documents)"
-            description="Raw export from seller: users.csv, loans.csv, charges.csv, payments.csv + contracts/photos."
+            title={t('pages.imports.step1.vendorDump')}
+            description={t('pages.imports.step1.vendorDumpDesc')}
             className="flex-1"
           />
         </div>

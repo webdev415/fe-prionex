@@ -6,6 +6,7 @@
  */
 
 import { useParams, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Icons } from '@/lib/icons'
@@ -18,11 +19,13 @@ function ImportDetailStatusBadge({
 }: {
   status: 'done' | 'failed' | 'completed_with_errors' | 'in_progress'
 }) {
+  const { t } = useTranslation('common')
+
   if (status === 'done') {
     return (
       <span className="bg-secondary-800 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
         <span className="h-2 w-2 rounded-full bg-white" />
-        Completed
+        {t('pages.imports.details.statuses.completed')}
       </span>
     )
   }
@@ -31,7 +34,7 @@ function ImportDetailStatusBadge({
     return (
       <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-gray-600 px-3 text-xs font-medium text-white">
         <Icons.Warning size={14} className="text-white" />
-        Completed with errors
+        {t('pages.imports.details.statuses.completedWithErrors')}
       </span>
     )
   }
@@ -40,7 +43,7 @@ function ImportDetailStatusBadge({
     return (
       <span className="bg-secondary-800 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
         <span className="h-2 w-2 rounded-full bg-white" />
-        In progress
+        {t('pages.imports.details.statuses.inProgress')}
       </span>
     )
   }
@@ -48,7 +51,7 @@ function ImportDetailStatusBadge({
   return (
     <span className="bg-error-600 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
       <span className="h-2 w-2 rounded-full bg-white" />
-      Failed
+      {t('pages.imports.details.statuses.failed')}
     </span>
   )
 }
@@ -66,6 +69,7 @@ function SemiCircularProgressBar({ percentage }: { percentage: number }) {
 }
 
 export function ImportDetailsPage() {
+  const { t } = useTranslation('common')
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
@@ -135,7 +139,7 @@ export function ImportDetailsPage() {
   if (isLoadingJob) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-gray-600">Loading import details...</p>
+        <p className="text-gray-600">{t('pages.imports.details.loadingDetails')}</p>
       </div>
     )
   }
@@ -143,13 +147,13 @@ export function ImportDetailsPage() {
   if (!importDetail || !jobDetail) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-gray-600">Import not found</p>
+        <p className="text-gray-600">{t('pages.imports.details.importNotFound')}</p>
         <Button
           variant="outline"
           onClick={() => navigate('/dashboard/import/history')}
           className="mt-4"
         >
-          Back to History
+          {t('pages.imports.details.backToHistory')}
         </Button>
       </div>
     )
@@ -158,13 +162,13 @@ export function ImportDetailsPage() {
   const errorColumns: Column<{ id: number; row: number; error: string }>[] = [
     {
       key: 'row',
-      header: 'Row',
+      header: t('pages.imports.details.row'),
       align: 'center',
       render: (item) => <span>{item.row}</span>,
     },
     {
       key: 'error',
-      header: 'Error',
+      header: t('pages.imports.details.error'),
       render: (item) => <span>{item.error}</span>,
     },
   ]
@@ -175,14 +179,14 @@ export function ImportDetailsPage() {
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
-            variant="outline"
+            variant="white-secondary"
             onClick={() => navigate('/dashboard/import/history')}
-            leftIcon={<Icons.ArrowLeft02 size={20} className="text-secondary-800" />}
-            className="text-secondary-800 h-12 rounded-full border-white bg-white px-4 py-2.5 text-sm font-medium"
+            leftIcon={<Icons.ArrowLeft02 size={20} />}
+            className="flex h-12 flex-row items-center justify-center rounded-full text-sm leading-[150%] font-medium"
           >
-            Back to History
+            {t('pages.imports.details.backToHistory')}
           </Button>
-          <h1 className="text-dark-500 text-2xl font-light">Import Details</h1>
+          <h1 className="text-dark-500 text-2xl font-light">{t('pages.imports.details.title')}</h1>
         </div>
 
         <Button
@@ -190,9 +194,11 @@ export function ImportDetailsPage() {
           onClick={handleDownloadErrors}
           disabled={exportErrorsMutation.isPending || importDetail.errors === 0}
           leftIcon={<Icons.FileDownload size={20} className="text-dark-500" />}
-          className="bg-primary-300 text-dark-500 h-12 rounded-full px-4 py-2.5 text-sm font-medium"
+          className="h-12 rounded-full text-sm font-medium"
         >
-          {exportErrorsMutation.isPending ? 'Exporting...' : 'Download Error CSV'}
+          {exportErrorsMutation.isPending
+            ? t('pages.imports.details.exporting')
+            : t('pages.imports.details.downloadErrorCsv')}
         </Button>
       </div>
 
@@ -201,7 +207,7 @@ export function ImportDetailsPage() {
         {/* Last Import Summary Card */}
         <div className="flex flex-1 flex-col gap-3 rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
           <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
-            Last Import Summary
+            {t('pages.imports.details.lastImportSummary')}
           </h2>
 
           {/* Divider */}
@@ -210,7 +216,7 @@ export function ImportDetailsPage() {
           <div className="flex flex-col items-start gap-3 self-stretch">
             <div className="flex items-center gap-6 self-stretch">
               <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
-                File:{' '}
+                {t('pages.imports.details.file')}{' '}
               </span>
               <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
                 {importDetail.file}
@@ -219,7 +225,7 @@ export function ImportDetailsPage() {
 
             <div className="flex items-center gap-6 self-stretch">
               <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
-                Uploaded by:{' '}
+                {t('pages.imports.details.uploadedBy')}{' '}
               </span>
               <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
                 {importDetail.uploadedBy} at {importDetail.uploadedAt}
@@ -228,7 +234,7 @@ export function ImportDetailsPage() {
 
             <div className="flex items-center gap-6 self-stretch">
               <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
-                Status:{' '}
+                {t('pages.imports.details.status')}{' '}
               </span>
               <div className="flex flex-1">
                 <ImportDetailStatusBadge status={importDetail.status} />
@@ -245,7 +251,7 @@ export function ImportDetailsPage() {
               <div className="flex flex-col items-start gap-3 self-stretch">
                 <div className="flex items-center gap-6 self-stretch">
                   <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
-                    Total rows:
+                    {t('pages.imports.details.totalRows')}
                   </span>
                   <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
                     {importDetail.totalRows.toLocaleString()}
@@ -254,7 +260,7 @@ export function ImportDetailsPage() {
 
                 <div className="flex items-center gap-6 self-stretch">
                   <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
-                    New clients:
+                    {t('pages.imports.details.newClients')}
                   </span>
                   <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
                     {importDetail.newClients.toLocaleString()}
@@ -263,7 +269,7 @@ export function ImportDetailsPage() {
 
                 <div className="flex items-center gap-6 self-stretch">
                   <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
-                    Updated clients:
+                    {t('pages.imports.details.updatedClients')}
                   </span>
                   <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
                     {importDetail.updatedClients.toLocaleString()}
@@ -272,7 +278,7 @@ export function ImportDetailsPage() {
 
                 <div className="flex items-center gap-6 self-stretch">
                   <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
-                    Errors:
+                    {t('pages.imports.details.errors')}
                   </span>
                   <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
                     {importDetail.errors}
@@ -283,7 +289,7 @@ export function ImportDetailsPage() {
               {/* Processing time - separate from grid */}
               <div className="flex items-center gap-6 self-stretch">
                 <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
-                  Processing time:
+                  {t('pages.imports.details.processingTime')}
                 </span>
                 <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
                   {importDetail.processingTime}
@@ -297,7 +303,7 @@ export function ImportDetailsPage() {
         {importDetail.status === 'failed' ? (
           <div className="flex min-h-[448px] flex-1 flex-col items-center gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
             <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
-              Progress
+              {t('pages.imports.details.progress')}
             </h2>
 
             {/* Divider */}
@@ -307,10 +313,10 @@ export function ImportDetailsPage() {
               <Icons.SettingsError02 size={48} className="text-error-500" strokeWidth={1} />
               <div className="flex flex-col items-center gap-2">
                 <span className="text-error-500 text-2xl leading-[150%] font-light tracking-[-0.28px]">
-                  System error while processing file.
+                  {t('pages.imports.details.systemError')}
                 </span>
                 <span className="text-error-500 text-2xl leading-[150%] font-light tracking-[-0.28px]">
-                  No rows imported.
+                  {t('pages.imports.details.noRowsImported')}
                 </span>
               </div>
             </div>
@@ -318,7 +324,7 @@ export function ImportDetailsPage() {
         ) : importDetail.status === 'in_progress' ? (
           <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
             <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
-              Progress
+              {t('pages.imports.details.progress')}
             </h2>
 
             {/* Divider */}
@@ -328,7 +334,7 @@ export function ImportDetailsPage() {
               <SemiCircularProgressBar percentage={importDetail.progressPercentage} />
               <div className="flex flex-col items-center gap-1">
                 <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
-                  Processing row:{' '}
+                  {t('pages.imports.details.processingRow')}{' '}
                   <span className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
                     {importDetail.processingRow}
                   </span>
@@ -339,12 +345,14 @@ export function ImportDetailsPage() {
         ) : (
           importDetail.errorList.length > 0 && (
             <div className="rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
-              <h2 className="text-dark-500 mb-6 text-xl font-light">Errors</h2>
+              <h2 className="text-dark-500 mb-6 text-xl font-light">
+                {t('pages.imports.details.errorsTitle')}
+              </h2>
 
               <DataTable
                 columns={errorColumns}
                 data={importDetail.errorList}
-                emptyMessage="No errors"
+                emptyMessage={t('pages.imports.details.noErrors')}
               />
             </div>
           )

@@ -49,6 +49,9 @@
     "uk": "Ukrainian",
     "ru": "Russian"
   },
+  "common": {
+    "step": "Step"
+  },
   "logout": {
     "confirmTitle": "Confirm Logout",
     "confirmMessage": "Are you sure you want to logout? You will need to login again to access the system."
@@ -359,6 +362,179 @@
         },
         "errors": {
           "failedToCreate": "Failed to create role. Please try again."
+        }
+      }
+    },
+    "imports": {
+      "title": "Import Clients",
+      "viewHistory": "View History",
+      "back": "Back",
+      "nextStep": "Next Step",
+      "importInProgress": "Import in progress",
+      "file": "File",
+      "started": "Started",
+      "status": "Status",
+      "complete": "complete",
+      "viewDetails": "View Details",
+      "cancelImport": "Cancel Import",
+      "cancelling": "Cancelling...",
+      "goToImportHistory": "Go to Import History",
+      "steps": {
+        "loanSource": "Loan source & import type",
+        "filesSimple": "Files (Simple CSV)",
+        "filesVendor": "Files (Vendor Dump)"
+      },
+      "step1": {
+        "loanSourceMetadata": "Loan Source / Metadata",
+        "sellerCreditor": "Seller / Creditor",
+        "projectCode": "Project Code:",
+        "purchaseDate": "Purchase date:",
+        "comment": "Comment:",
+        "importType": "Import Type:",
+        "simpleClientCsv": "Simple client CSV",
+        "simpleClientCsvDesc": "One CSV with basic client data.",
+        "vendorDump": "Vendor dump (4 CSVs + documents)",
+        "vendorDumpDesc": "Raw export from seller: users.csv, loans.csv, charges.csv, payments.csv + contracts/photos.",
+        "placeholders": {
+          "enterProjectName": "Enter Project Name",
+          "enterProjectCode": "Enter Project Code",
+          "selectPurchaseDate": "Select purchase date",
+          "placeholderText": "Placeholder text"
+        }
+      },
+      "step2": {
+        "simple": {
+          "title": "Import Client Data (Simple CSV)",
+          "cannotStartAnother": "You cannot start another import until this one finishes.",
+          "invalidCsvStructure": "Invalid CSV structure",
+          "invalidFileType": "Invalid file type",
+          "chooseCsvFile": "Choose CSV File",
+          "missingRequiredColumns": "Missing required columns:",
+          "onlyCsvSupported": "Only .csv files are supported in this version.",
+          "fileRequirements": "File Requirements:",
+          "oneCsvOnly": "One CSV only,",
+          "maxRows": "max 50,000 rows",
+          "required": "Required:",
+          "requiredColumns": "name, phone, debt_amount",
+          "optional": "Optional:",
+          "optionalColumns": "address, inn, contract...",
+          "browseFile": "Browse File",
+          "downloadSampleTemplate": "Download Sample CSV Template",
+          "startImport": "Start Import",
+          "uploading": "Uploading...",
+          "errorOccurred": "An error occurred during upload. Please check the file and try again.",
+          "csvValidationFailed": "CSV validation failed. Please check the file structure.",
+          "fillAllFields": "Please fill in all required fields and select a CSV file"
+        },
+        "vendor": {
+          "title": "Upload raw export from seller.",
+          "dragCsvs": "Drag the CSVs and contracts folder, or one .zip.",
+          "dragDropFiles": "Drag & drop files/folder here",
+          "browseFile": "Browse File",
+          "startImport": "Start Import",
+          "dataset": "Dataset",
+          "status": "Status",
+          "file": "File",
+          "required": "Required",
+          "optional": "Optional",
+          "chooseFile": "Choose file",
+          "chooseZip": "Choose ZIP",
+          "fillAllFields": "Please fill in all required fields in Step 1",
+          "selectAllRequired": "Please select all required files",
+          "noDatasetsConfigured": "No datasets configured"
+        }
+      },
+      "history": {
+        "title": "Import History",
+        "loading": "Loading import history...",
+        "noImportsFound": "No imports found for selected filters.",
+        "clearFilters": "Clear filters",
+        "noHistoryYet": "No import history yet.",
+        "runFirstImport": "Run your first CSV import to see history here.",
+        "goToImportClients": "Go to Import Clients",
+        "noHistoryFound": "No import history found",
+        "tableHeaders": {
+          "dateTime": "Date/Time",
+          "fileName": "File name",
+          "status": "Status",
+          "errors": "Errors",
+          "actions": "Actions"
+        },
+        "uploadedBy": "Uploaded by:",
+        "view": "View",
+        "downloadErrors": "Download Errors",
+        "exporting": "Exporting...",
+        "statuses": {
+          "done": "Done",
+          "inProgress": "In progress",
+          "failed": "Failed"
+        },
+        "filters": {
+          "searchFilename": "Search filename",
+          "dateRange": "Date range",
+          "allDates": "All dates",
+          "today": "Today",
+          "last7Days": "Last 7 days",
+          "last30Days": "Last 30 days",
+          "last90Days": "Last 90 days",
+          "status": "Status",
+          "allStatuses": "All statuses",
+          "uploadedBy": "Uploaded by",
+          "allUsers": "All users"
+        }
+      },
+      "details": {
+        "title": "Import Details",
+        "backToHistory": "Back to History",
+        "downloadErrorCsv": "Download Error CSV",
+        "exporting": "Exporting...",
+        "lastImportSummary": "Last Import Summary",
+        "file": "File:",
+        "uploadedBy": "Uploaded by:",
+        "status": "Status:",
+        "totalRows": "Total rows:",
+        "newClients": "New clients:",
+        "updatedClients": "Updated clients:",
+        "errors": "Errors:",
+        "processingTime": "Processing time:",
+        "progress": "Progress",
+        "systemError": "System error while processing file.",
+        "noRowsImported": "No rows imported.",
+        "processingRow": "Processing row:",
+        "errorsTitle": "Errors",
+        "row": "Row",
+        "error": "Error",
+        "noErrors": "No errors",
+        "importNotFound": "Import not found",
+        "loadingDetails": "Loading import details...",
+        "statuses": {
+          "completed": "Completed",
+          "completedWithErrors": "Completed with errors",
+          "inProgress": "In progress",
+          "failed": "Failed"
+        }
+      },
+      "modal": {
+        "lastImportSummary": "Last Import Summary",
+        "file": "File:",
+        "uploadedBy": "Uploaded by:",
+        "status": "Status:",
+        "totalRows": "Total rows:",
+        "newClients": "New clients:",
+        "updatedClients": "Updated clients:",
+        "error": "Error:",
+        "processingTime": "Processing time:",
+        "viewDetails": "View Details",
+        "downloadErrorReport": "Download Error Report CSV",
+        "exporting": "Exporting...",
+        "statuses": {
+          "completed": "Completed",
+          "completedWithErrors": "Completed with errors",
+          "failed": "Failed"
+        },
+        "messages": {
+          "importFailed": "The import failed due to a system error. No rows were processed.",
+          "someRowsFailed": "Some rows failed. Download error report for details."
         }
       }
     }

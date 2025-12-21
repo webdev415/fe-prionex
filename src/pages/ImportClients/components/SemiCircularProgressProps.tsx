@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
 interface SemiCircularProgressProps {
@@ -15,6 +16,7 @@ const SemiCircularProgress = ({
   completedColor = '#2d9d92',
   incompleteColor = '#d4d7dc',
 }: SemiCircularProgressProps) => {
+  const { t } = useTranslation('common')
   const clampedPercentage = Math.min(100, Math.max(0, percentage))
   const segments = 15
   const filledSegments = Math.round((clampedPercentage / 100) * segments)
@@ -84,7 +86,7 @@ const SemiCircularProgress = ({
           textAnchor="middle"
           className="text-dark-500 text-2xl leading-tight font-light tracking-[-0.48px]"
         >
-          Completed
+          {t('pages.imports.details.statuses.completed')}
         </text>
       </svg>
     </div>

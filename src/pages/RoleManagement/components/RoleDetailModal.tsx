@@ -52,9 +52,9 @@ export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps)
       <ModalFooter>
         <Button
           type="button"
-          variant="secondary"
+          variant="cancel"
           onClick={onClose}
-          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
+          className="h-[45px] flex-1 text-sm"
         >
           {t('actions.close')}
         </Button>

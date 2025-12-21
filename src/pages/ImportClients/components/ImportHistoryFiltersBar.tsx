@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import {
   Select,
@@ -35,6 +36,7 @@ export function ImportHistoryFiltersBar({
   availableUsers = [],
   isLoading = false,
 }: ImportHistoryFiltersBarProps) {
+  const { t } = useTranslation('common')
   const [searchValue, setSearchValue] = useState(filters.searchFilename || '')
   const prevSearchFilenameRef = useRef(filters.searchFilename)
 
@@ -101,7 +103,7 @@ export function ImportHistoryFiltersBar({
         <div className="flex flex-1 items-center gap-2 py-1">
           <input
             type="text"
-            placeholder="Search filename"
+            placeholder={t('pages.imports.history.filters.searchFilename')}
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             onKeyDown={(e) => {
@@ -136,14 +138,20 @@ export function ImportHistoryFiltersBar({
               disabled={isLoading}
             >
               <SelectTrigger className="h-8 rounded-none border-0 p-0 px-2 text-[11px] font-medium shadow-none focus:ring-0">
-                <SelectValue placeholder="Date range" />
+                <SelectValue placeholder={t('pages.imports.history.filters.dateRange')} />
               </SelectTrigger>
               <SelectContent className="bg-white">
-                <SelectItem value="all">All dates</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="last_7_days">Last 7 days</SelectItem>
-                <SelectItem value="last_30_days">Last 30 days</SelectItem>
-                <SelectItem value="last_90_days">Last 90 days</SelectItem>
+                <SelectItem value="all">{t('pages.imports.history.filters.allDates')}</SelectItem>
+                <SelectItem value="today">{t('pages.imports.history.filters.today')}</SelectItem>
+                <SelectItem value="last_7_days">
+                  {t('pages.imports.history.filters.last7Days')}
+                </SelectItem>
+                <SelectItem value="last_30_days">
+                  {t('pages.imports.history.filters.last30Days')}
+                </SelectItem>
+                <SelectItem value="last_90_days">
+                  {t('pages.imports.history.filters.last90Days')}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -159,12 +167,14 @@ export function ImportHistoryFiltersBar({
               disabled={isLoading}
             >
               <SelectTrigger className="h-8 rounded-none border-0 p-0 px-2 text-[11px] font-medium shadow-none focus:ring-0">
-                <SelectValue placeholder="Status" />
+                <SelectValue placeholder={t('pages.imports.history.filters.status')} />
               </SelectTrigger>
               <SelectContent className="bg-white">
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="done">Done</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="all">
+                  {t('pages.imports.history.filters.allStatuses')}
+                </SelectItem>
+                <SelectItem value="done">{t('pages.imports.history.statuses.done')}</SelectItem>
+                <SelectItem value="failed">{t('pages.imports.history.statuses.failed')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -180,10 +190,10 @@ export function ImportHistoryFiltersBar({
               disabled={isLoading || availableUsers.length === 0}
             >
               <SelectTrigger className="h-8 rounded-none border-0 p-0 px-2 text-[11px] font-medium shadow-none focus:ring-0">
-                <SelectValue placeholder="Uploaded by" />
+                <SelectValue placeholder={t('pages.imports.history.filters.uploadedBy')} />
               </SelectTrigger>
               <SelectContent className="bg-white">
-                <SelectItem value="all">All users</SelectItem>
+                <SelectItem value="all">{t('pages.imports.history.filters.allUsers')}</SelectItem>
                 {availableUsers.map((user) => (
                   <SelectItem key={user} value={user}>
                     {user}

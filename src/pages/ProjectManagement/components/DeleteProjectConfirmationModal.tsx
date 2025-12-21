@@ -45,18 +45,19 @@ export function DeleteProjectConfirmationModal({
       <ModalFooter>
         <Button
           type="button"
-          variant="outline"
+          variant="cancel"
           onClick={onCancel}
           disabled={isLoading}
-          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
+          className="h-[45px] flex-1 text-sm"
         >
           {t('actions.cancel')}
         </Button>
         <Button
           type="button"
+          variant="danger"
           onClick={onConfirm}
           disabled={isLoading}
-          className="bg-error-500 h-[45px] flex-1 rounded-md border-none text-sm font-medium text-white"
+          className="h-[45px] flex-1 text-sm"
         >
           {isLoading
             ? t('pages.projects.modals.delete.deleting')

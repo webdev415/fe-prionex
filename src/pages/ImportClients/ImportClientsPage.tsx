@@ -6,8 +6,10 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { StepIndicator, type Step } from '@/components/ui/StepIndicator'
 import { Button } from '@/components/ui/Button'
+import { DoubleButton } from '@/components/ui/DoubleButton'
 import { Step1LoanSource, type Step1Data } from './components/Step1LoanSource'
 import { Step2FileUpload, type Step2Data } from './components/Step2FileUpload'
 import { Step2VendorDump, type Step2VendorDumpData } from './components/Step2VendorDump'
@@ -17,6 +19,7 @@ import { useNavigate } from 'react-router-dom'
 import { useImportJobs, useImportJob, useCancelImport } from '@/features/imports'
 
 export function ImportClientsPage() {
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(1)
   const [showImportHistory, setShowImportHistory] = useState(false) // Change from true to false
@@ -126,7 +129,7 @@ export function ImportClientsPage() {
         }
       : currentJobId
         ? {
-            fileName: 'Uploading...',
+            fileName: t('pages.imports.step2.simple.uploading'),
             startedAt: new Date().toLocaleTimeString('en-US', {
               hour: '2-digit',
               minute: '2-digit',
@@ -248,12 +251,14 @@ export function ImportClientsPage() {
   // Get steps based on import type
   const getSteps = (): Step[] => {
     const step2Label =
-      step1Data.importType === 'vendor' ? 'Files (Vendor Dump)' : 'Files (Simple CSV)'
+      step1Data.importType === 'vendor'
+        ? t('pages.imports.steps.filesVendor')
+        : t('pages.imports.steps.filesSimple')
 
     return [
       {
         number: 1,
-        label: 'Loan source & import type',
+        label: t('pages.imports.steps.loanSource'),
       },
       {
         number: 2,
@@ -291,24 +296,24 @@ export function ImportClientsPage() {
         <div className="flex items-center gap-6">
           {currentStep > 1 && (
             <Button
-              variant="outline"
+              variant="white-secondary"
               onClick={handlePreviousStep}
-              leftIcon={<Icons.ArrowLeft02 size={20} className="text-secondary-800" />}
-              className="text-secondary-800 flex h-12 flex-row items-center justify-center rounded-full border-white bg-white px-4 py-2.5 text-sm leading-[150%] font-medium"
+              leftIcon={<Icons.ArrowLeft02 size={20} />}
+              className="flex h-12 flex-row items-center justify-center rounded-full text-sm leading-[150%] font-medium"
             >
-              Back
+              {t('pages.imports.back')}
             </Button>
           )}
-          <h1 className="text-dark-500 text-2xl font-light">Import Clients</h1>
+          <h1 className="text-dark-500 text-2xl font-light">{t('pages.imports.title')}</h1>
         </div>
 
         <Button
           variant="primary"
           onClick={handleViewHistory}
           leftIcon={<Icons.TransactionHistory size={20} className="text-dark-500" />}
-          className="bg-primary-300 text-dark-500 flex h-12 flex-row items-center justify-center rounded-full px-4 py-2.5 text-center text-xs"
+          className="flex h-12 flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium"
         >
-          View History
+          {t('pages.imports.viewHistory')}
         </Button>
       </div>
 
@@ -355,17 +360,16 @@ export function ImportClientsPage() {
             {/* Navigation Buttons */}
             <div className="mt-8 flex justify-center">
               {currentStep < STEPS.length && currentStep === 1 && (
-                <Button
-                  variant="primary"
+                <DoubleButton
+                  size="md"
+                  icon={<Icons.ArrowRight02 size={24} />}
+                  iconPosition="right"
                   onClick={handleNextStep}
                   disabled={!isStep1Valid()}
-                  className="bg-secondary-800 flex h-12 items-center gap-2.5 rounded-full py-1 pr-1 pl-6 text-sm text-white"
+                  className="h-12 rounded-full text-sm leading-[150%] font-medium"
                 >
-                  <span>Next Step</span>
-                  <div className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
-                    <Icons.ArrowRight02 size={24} className="text-dark-500" />
-                  </div>
-                </Button>
+                  {t('pages.imports.nextStep')}
+                </DoubleButton>
               )}
             </div>
           </div>
@@ -378,47 +382,51 @@ export function ImportClientsPage() {
           <div className="text-warning-500 flex items-center gap-2.5 py-1 pl-3">
             {/* Icon - document with refresh symbol */}
             <Icons.FileImport size={20} />
-            <span className="text-sm font-medium whitespace-nowrap">Import in progress</span>
+            <span className="text-sm font-medium whitespace-nowrap">
+              {t('pages.imports.importInProgress')}
+            </span>
           </div>
           <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-            File:{' '}
+            {t('pages.imports.file')}:{' '}
             <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {importProgress.fileName}
             </span>
           </span>
           <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-            Started:{' '}
+            {t('pages.imports.started')}:{' '}
             <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {importProgress.startedAt}
             </span>
           </span>
           <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-            Status:{' '}
+            {t('pages.imports.status')}:{' '}
             <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              {importProgress.progressPercentage}% complete
+              {importProgress.progressPercentage}% {t('pages.imports.complete')}
             </span>
           </span>
           <Button
-            variant="primary"
+            variant="secondary"
             onClick={handleViewDetails}
-            className="bg-secondary-800 h-10 gap-2.5 rounded-lg px-4 py-2.5 text-sm font-medium text-white"
+            className="h-10 rounded-lg text-sm font-medium"
           >
-            View Details
+            {t('pages.imports.viewDetails')}
           </Button>
           <Button
-            variant="danger"
+            variant="cancel"
             onClick={handleCancelImport}
             disabled={cancelImportMutation.isPending}
-            className="h-10 gap-2.5 rounded-lg px-4 py-2.5 text-sm font-medium"
+            className="h-10 rounded-lg text-sm font-medium"
           >
-            {cancelImportMutation.isPending ? 'Cancelling...' : 'Cancel Import'}
+            {cancelImportMutation.isPending
+              ? t('pages.imports.cancelling')
+              : t('pages.imports.cancelImport')}
           </Button>
           <Button
             variant="outline"
             onClick={handleGoToImportHistory}
-            className="border-secondary-800 text-secondary-800 gap-2.5 rounded-lg bg-white px-4 py-2.5 text-sm font-medium"
+            className="h-10 rounded-lg text-sm font-medium"
           >
-            Go to Import History
+            {t('pages.imports.goToImportHistory')}
           </Button>
         </div>
       ) : null}

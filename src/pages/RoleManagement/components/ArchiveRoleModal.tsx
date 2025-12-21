@@ -299,12 +299,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
         )}
       </ModalContent>
       <ModalFooter>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onClose}
-          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
-        >
+        <Button type="button" variant="cancel" onClick={onClose}>
           {t('actions.cancel')}
         </Button>
         <Button

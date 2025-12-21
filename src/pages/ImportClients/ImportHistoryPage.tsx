@@ -6,10 +6,14 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
+import { LinkButton } from '@/components/ui/LinkButton'
+import { DoubleButton } from '@/components/ui/DoubleButton'
+import { Button } from '@/components/ui/Button'
 import {
   ImportHistoryFiltersBar,
   type ImportHistoryFilters,
@@ -42,11 +46,13 @@ function mapImportJobToHistoryItem(job: ImportJob): ImportHistoryItem {
 
 // Status Badge Component for Import History
 function ImportStatusBadge({ status }: { status: 'done' | 'failed' | 'in_progress' }) {
+  const { t } = useTranslation('common')
+
   if (status === 'done') {
     return (
       <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-[#204E4D] px-3 text-xs font-medium text-white">
         <span className="h-2 w-2 rounded-full bg-white" />
-        Done
+        {t('pages.imports.history.statuses.done')}
       </span>
     )
   }
@@ -55,7 +61,7 @@ function ImportStatusBadge({ status }: { status: 'done' | 'failed' | 'in_progres
     return (
       <span className="bg-secondary-800 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
         <span className="h-2 w-2 rounded-full bg-white" />
-        In progress
+        {t('pages.imports.history.statuses.inProgress')}
       </span>
     )
   }
@@ -63,12 +69,13 @@ function ImportStatusBadge({ status }: { status: 'done' | 'failed' | 'in_progres
   return (
     <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-red-600 px-3 text-xs font-medium text-white">
       <span className="h-2 w-2 rounded-full bg-white" />
-      Failed
+      {t('pages.imports.history.statuses.failed')}
     </span>
   )
 }
 
 export function ImportHistoryPage() {
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
   const rowsPerPage = 10 // Changed from useState to constant
@@ -339,52 +346,54 @@ export function ImportHistoryPage() {
   const columns: Column<ImportHistoryItem>[] = [
     {
       key: 'dateTime',
-      header: 'Date/Time',
+      header: t('pages.imports.history.tableHeaders.dateTime'),
       sortable: true,
       render: (item) => <span>{item.dateTime}</span>,
     },
     {
       key: 'fileName',
-      header: 'File name',
+      header: t('pages.imports.history.tableHeaders.fileName'),
       sortable: true,
       render: (item) => (
         <div className="flex flex-col">
           <span className="font-medium">{item.fileName}</span>
-          <span className="mt-0.5 text-[11px] text-gray-600">Uploaded by: {item.uploadedBy}</span>
+          <span className="mt-0.5 text-[11px] text-gray-600">
+            {t('pages.imports.history.uploadedBy')} {item.uploadedBy}
+          </span>
         </div>
       ),
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('pages.imports.history.tableHeaders.status'),
       sortable: true,
       render: (item) => <ImportStatusBadge status={item.status} />,
     },
     {
       key: 'errors',
-      header: 'Errors',
+      header: t('pages.imports.history.tableHeaders.errors'),
       sortable: true,
       align: 'center',
       render: (item) => <span>{item.errors}</span>,
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('pages.imports.history.tableHeaders.actions'),
       align: 'center',
       render: (item) => (
         <div className="flex items-center justify-center">
-          <button
-            type="button"
+          <LinkButton
+            variant="regular-black"
+            size="xs"
             onClick={(e) => {
               e.stopPropagation()
               setSelectedJobId(item.id)
               navigate(`/dashboard/import/history/${item.id}`)
             }}
-            className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+            leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
           >
-            <Icons.View size={16} className="text-dark-500" strokeWidth={1.5} />
-            View
-          </button>
+            {t('pages.imports.history.view')}
+          </LinkButton>
         </div>
       ),
     },
@@ -394,7 +403,9 @@ export function ImportHistoryPage() {
     <div>
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-dark-500 mb-6 text-2xl font-light">Import History</h1>
+        <h1 className="text-dark-500 mb-6 text-2xl font-light">
+          {t('pages.imports.history.title')}
+        </h1>
         <div className="mb-6 flex w-full items-center justify-between gap-3">
           {/* Filters Section - using the reusable component */}
           <ImportHistoryFiltersBar
@@ -406,9 +417,11 @@ export function ImportHistoryPage() {
 
           {/* Action Buttons */}
           <div className="flex w-[30%] items-center justify-end gap-2">
-            <button
+            <Button
               onClick={handleDownloadErrors}
-              type="button"
+              variant="primary"
+              size="xs"
+              leftIcon={<Icons.FileDownload size={20} />}
               disabled={
                 exportErrorsMutation.isPending ||
                 (!selectedJobId && paginatedData.length === 0) ||
@@ -416,11 +429,12 @@ export function ImportHistoryPage() {
                   ? !paginatedData.find((item) => item.id === selectedJobId)?.errors
                   : !paginatedData[0]?.errors)
               }
-              className="bg-primary-300 text-dark-500 flex h-[45px] items-center gap-2 rounded-full px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-12 items-center rounded-full text-xs font-medium"
             >
-              <Icons.FileDownload size={20} className="text-dark-500" />
-              {exportErrorsMutation.isPending ? 'Exporting...' : 'Download Errors'}
-            </button>
+              {exportErrorsMutation.isPending
+                ? t('pages.imports.history.exporting')
+                : t('pages.imports.history.downloadErrors')}
+            </Button>
           </div>
         </div>
       </div>
@@ -431,7 +445,7 @@ export function ImportHistoryPage() {
           // Loading State - Show while fetching data
           <div className="flex min-h-[448px] flex-col items-center justify-center gap-6 p-6">
             <div className="text-dark-500 text-center text-base leading-[150%] font-light tracking-[-0.32px]">
-              Loading import history...
+              {t('pages.imports.history.loading')}
             </div>
           </div>
         ) : filteredAndSortedData.length === 0 && hasActiveFilters ? (
@@ -444,19 +458,18 @@ export function ImportHistoryPage() {
 
             {/* Message */}
             <h3 className="text-dark-500 flex flex-col items-center justify-center gap-6 p-6 text-2xl leading-[120%] font-light tracking-[-0.48px]">
-              No imports found for selected filters.
+              {t('pages.imports.history.noImportsFound')}
             </h3>
 
             {/* Clear Filters Button */}
-            <button
+            <DoubleButton
+              icon={<Icons.Reload size={22} />}
+              iconPosition="left"
               onClick={handleClearFilters}
-              className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+              className="text-sm font-medium"
             >
-              <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-                <Icons.Reload size={22} className="text-dark-500" strokeWidth={1.5} />
-              </div>
-              <span className="px-4 py-3 text-sm font-medium text-white">Clear filters</span>
-            </button>
+              {t('pages.imports.history.clearFilters')}
+            </DoubleButton>
           </div>
         ) : hasNoData ? (
           // Empty State - No import history at all
@@ -468,24 +481,23 @@ export function ImportHistoryPage() {
 
             {/* Primary Message */}
             <h3 className="text-dark-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
-              No import history yet.
+              {t('pages.imports.history.noHistoryYet')}
             </h3>
 
             {/* Secondary Message */}
             <p className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.32px]">
-              Run your first CSV import to see history here.
+              {t('pages.imports.history.runFirstImport')}
             </p>
 
             {/* Go to Import Clients Button */}
-            <button
+            <DoubleButton
+              icon={<Icons.FileImport size={20} />}
+              iconPosition="left"
               onClick={handleGoToImportClients}
-              className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+              className="text-sm font-medium"
             >
-              <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-                <Icons.FileImport size={20} className="text-dark-500" strokeWidth={1.5} />
-              </div>
-              <span className="px-4 py-3 text-sm font-medium text-white">Go to Import Clients</span>
-            </button>
+              {t('pages.imports.history.goToImportClients')}
+            </DoubleButton>
           </div>
         ) : (
           // Data Table
@@ -494,7 +506,7 @@ export function ImportHistoryPage() {
             data={paginatedData}
             sortConfig={sortConfig}
             onSort={handleSort}
-            emptyMessage="No import history found"
+            emptyMessage={t('pages.imports.history.noHistoryFound')}
           />
         )}
       </div>

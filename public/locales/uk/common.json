@@ -49,6 +49,9 @@
     "uk": "Українська",
     "ru": "Російська"
   },
+  "common": {
+    "step": "Крок"
+  },
   "logout": {
     "confirmTitle": "Підтвердити вихід",
     "confirmMessage": "Ви впевнені, що хочете вийти? Вам потрібно буде знову увійти, щоб отримати доступ до системи."
@@ -359,6 +362,179 @@
         },
         "errors": {
           "failedToCreate": "Не вдалося створити роль. Будь ласка, спробуйте ще раз."
+        }
+      }
+    },
+    "imports": {
+      "title": "Імпорт клієнтів",
+      "viewHistory": "Перегляд історії",
+      "back": "Назад",
+      "nextStep": "Наступний крок",
+      "importInProgress": "Імпорт в процесі",
+      "file": "Файл",
+      "started": "Почато",
+      "status": "Статус",
+      "complete": "завершено",
+      "viewDetails": "Перегляд деталей",
+      "cancelImport": "Скасувати імпорт",
+      "cancelling": "Скасування...",
+      "goToImportHistory": "Перейти до історії імпорту",
+      "steps": {
+        "loanSource": "Джерело позики та тип імпорту",
+        "filesSimple": "Файли (Простий CSV)",
+        "filesVendor": "Файли (Дамп постачальника)"
+      },
+      "step1": {
+        "loanSourceMetadata": "Джерело позики / Метадані",
+        "sellerCreditor": "Продавець / Кредитор",
+        "projectCode": "Код проєкту:",
+        "purchaseDate": "Дата покупки:",
+        "comment": "Коментар:",
+        "importType": "Тип імпорту:",
+        "simpleClientCsv": "Простий CSV клієнтів",
+        "simpleClientCsvDesc": "Один CSV з базовими даними клієнтів.",
+        "vendorDump": "Дамп постачальника (4 CSV + документи)",
+        "vendorDumpDesc": "Сирий експорт від продавця: users.csv, loans.csv, charges.csv, payments.csv + контракти/фото.",
+        "placeholders": {
+          "enterProjectName": "Введіть назву проєкту",
+          "enterProjectCode": "Введіть код проєкту",
+          "selectPurchaseDate": "Виберіть дату покупки",
+          "placeholderText": "Текст-заповнювач"
+        }
+      },
+      "step2": {
+        "simple": {
+          "title": "Імпорт даних клієнтів (Простий CSV)",
+          "cannotStartAnother": "Ви не можете розпочати інший імпорт, поки цей не завершиться.",
+          "invalidCsvStructure": "Невірна структура CSV",
+          "invalidFileType": "Невірний тип файлу",
+          "chooseCsvFile": "Виберіть CSV файл",
+          "missingRequiredColumns": "Відсутні обов'язкові стовпці:",
+          "onlyCsvSupported": "У цій версії підтримуються лише файли .csv.",
+          "fileRequirements": "Вимоги до файлу:",
+          "oneCsvOnly": "Лише один CSV,",
+          "maxRows": "максимум 50,000 рядків",
+          "required": "Обов'язково:",
+          "requiredColumns": "name, phone, debt_amount",
+          "optional": "Необов'язково:",
+          "optionalColumns": "address, inn, contract...",
+          "browseFile": "Вибрати файл",
+          "downloadSampleTemplate": "Завантажити зразок шаблону CSV",
+          "startImport": "Розпочати імпорт",
+          "uploading": "Завантаження...",
+          "errorOccurred": "Сталася помилка під час завантаження. Будь ласка, перевірте файл і спробуйте ще раз.",
+          "csvValidationFailed": "Перевірка CSV не пройдена. Будь ласка, перевірте структуру файлу.",
+          "fillAllFields": "Будь ласка, заповніть всі обов'язкові поля та виберіть CSV файл"
+        },
+        "vendor": {
+          "title": "Завантажити сирий експорт від продавця.",
+          "dragCsvs": "Перетягніть CSV файли та папку з контрактами, або один .zip.",
+          "dragDropFiles": "Перетягніть файли/папку сюди",
+          "browseFile": "Вибрати файл",
+          "startImport": "Розпочати імпорт",
+          "dataset": "Набір даних",
+          "status": "Статус",
+          "file": "Файл",
+          "required": "Обов'язково",
+          "optional": "Необов'язково",
+          "chooseFile": "Вибрати файл",
+          "chooseZip": "Вибрати ZIP",
+          "fillAllFields": "Будь ласка, заповніть всі обов'язкові поля в Кроку 1",
+          "selectAllRequired": "Будь ласка, виберіть всі обов'язкові файли",
+          "noDatasetsConfigured": "Набори даних не налаштовані"
+        }
+      },
+      "history": {
+        "title": "Історія імпорту",
+        "loading": "Завантаження історії імпорту...",
+        "noImportsFound": "Імпорти не знайдено для вибраних фільтрів.",
+        "clearFilters": "Очистити фільтри",
+        "noHistoryYet": "Історії імпорту поки немає.",
+        "runFirstImport": "Запустіть перший CSV імпорт, щоб побачити історію тут.",
+        "goToImportClients": "Перейти до імпорту клієнтів",
+        "noHistoryFound": "Історія імпорту не знайдена",
+        "tableHeaders": {
+          "dateTime": "Дата/Час",
+          "fileName": "Ім'я файлу",
+          "status": "Статус",
+          "errors": "Помилки",
+          "actions": "Дії"
+        },
+        "uploadedBy": "Завантажено:",
+        "view": "Перегляд",
+        "downloadErrors": "Завантажити помилки",
+        "exporting": "Експорт...",
+        "statuses": {
+          "done": "Готово",
+          "inProgress": "В процесі",
+          "failed": "Не вдалося"
+        },
+        "filters": {
+          "searchFilename": "Пошук за ім'ям файлу",
+          "dateRange": "Діапазон дат",
+          "allDates": "Всі дати",
+          "today": "Сьогодні",
+          "last7Days": "Останні 7 днів",
+          "last30Days": "Останні 30 днів",
+          "last90Days": "Останні 90 днів",
+          "status": "Статус",
+          "allStatuses": "Всі статуси",
+          "uploadedBy": "Завантажено",
+          "allUsers": "Всі користувачі"
+        }
+      },
+      "details": {
+        "title": "Деталі імпорту",
+        "backToHistory": "Назад до історії",
+        "downloadErrorCsv": "Завантажити CSV з помилками",
+        "exporting": "Експорт...",
+        "lastImportSummary": "Підсумок останнього імпорту",
+        "file": "Файл:",
+        "uploadedBy": "Завантажено:",
+        "status": "Статус:",
+        "totalRows": "Всього рядків:",
+        "newClients": "Нових клієнтів:",
+        "updatedClients": "Оновлено клієнтів:",
+        "errors": "Помилки:",
+        "processingTime": "Час обробки:",
+        "progress": "Прогрес",
+        "systemError": "Системна помилка під час обробки файлу.",
+        "noRowsImported": "Рядки не імпортовані.",
+        "processingRow": "Обробка рядка:",
+        "errorsTitle": "Помилки",
+        "row": "Рядок",
+        "error": "Помилка",
+        "noErrors": "Немає помилок",
+        "importNotFound": "Імпорт не знайдено",
+        "loadingDetails": "Завантаження деталей імпорту...",
+        "statuses": {
+          "completed": "Завершено",
+          "completedWithErrors": "Завершено з помилками",
+          "inProgress": "В процесі",
+          "failed": "Не вдалося"
+        }
+      },
+      "modal": {
+        "lastImportSummary": "Підсумок останнього імпорту",
+        "file": "Файл:",
+        "uploadedBy": "Завантажено:",
+        "status": "Статус:",
+        "totalRows": "Всього рядків:",
+        "newClients": "Нових клієнтів:",
+        "updatedClients": "Оновлено клієнтів:",
+        "error": "Помилка:",
+        "processingTime": "Час обробки:",
+        "viewDetails": "Перегляд деталей",
+        "downloadErrorReport": "Завантажити звіт про помилки CSV",
+        "exporting": "Експорт...",
+        "statuses": {
+          "completed": "Завершено",
+          "completedWithErrors": "Завершено з помилками",
+          "failed": "Не вдалося"
+        },
+        "messages": {
+          "importFailed": "Імпорт не вдався через системну помилку. Рядки не були оброблені.",
+          "someRowsFailed": "Деякі рядки не вдалися. Завантажте звіт про помилки для деталей."
         }
       }
     }

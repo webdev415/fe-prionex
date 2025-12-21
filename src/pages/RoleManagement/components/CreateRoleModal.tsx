@@ -42,9 +42,9 @@ export function CreateRoleModal({ open, projectId, onClose, onSuccess }: CreateR
       <ModalFooter>
         <Button
           type="button"
-          variant="secondary"
+          variant="cancel"
           onClick={onClose}
-          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
+          className="h-[45px] flex-1 text-sm"
         >
           {t('actions.cancel')}
         </Button>
@@ -52,7 +52,7 @@ export function CreateRoleModal({ open, projectId, onClose, onSuccess }: CreateR
           type="submit"
           form="create-role-form"
           variant="primary"
-          className="text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
+          className="h-[45px] flex-1 text-sm"
         >
           {t('actions.create')}
         </Button>
