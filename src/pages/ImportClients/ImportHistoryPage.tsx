@@ -90,13 +90,13 @@ export function ImportHistoryPage() {
   const prevFiltersRef = useRef(filters)
 
   // Build API params from filters
-  // IMPORTANT: Always exclude 'in_progress' and 'pending' jobs from Import History page
+  // IMPORTANT: Always exclude 'in_progress', 'pending', and 'cancelled' jobs from Import History page
   const apiParams = useMemo(() => {
     const params: ImportJobsListParams = {
       page: currentPage,
       page_size: rowsPerPage,
-      // Always exclude in_progress and pending jobs from history page
-      exclude_status: ['in_progress', 'pending'],
+      // Always exclude in_progress, pending, and cancelled jobs from history page
+      exclude_status: ['in_progress', 'pending', 'cancelled'],
     }
 
     if (filters.searchFilename) {
@@ -120,34 +120,36 @@ export function ImportHistoryPage() {
 
     // Handle date range
     if (filters.dateRange && filters.dateRange !== 'all') {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
+      // Use UTC dates to avoid timezone issues
+      const now = new Date()
+      const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
 
       switch (filters.dateRange) {
         case 'today': {
-          params.date_from = today.toISOString().split('T')[0]
-          params.date_to = today.toISOString().split('T')[0]
+          const todayStr = todayUTC.toISOString().split('T')[0]
+          params.date_from = todayStr
+          params.date_to = todayStr
           break
         }
         case 'last_7_days': {
-          const sevenDaysAgo = new Date(today)
-          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+          const sevenDaysAgo = new Date(todayUTC)
+          sevenDaysAgo.setUTCDate(sevenDaysAgo.getUTCDate() - 7)
           params.date_from = sevenDaysAgo.toISOString().split('T')[0]
-          params.date_to = today.toISOString().split('T')[0]
+          params.date_to = todayUTC.toISOString().split('T')[0]
           break
         }
         case 'last_30_days': {
-          const thirtyDaysAgo = new Date(today)
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+          const thirtyDaysAgo = new Date(todayUTC)
+          thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30)
           params.date_from = thirtyDaysAgo.toISOString().split('T')[0]
-          params.date_to = today.toISOString().split('T')[0]
+          params.date_to = todayUTC.toISOString().split('T')[0]
           break
         }
         case 'last_90_days': {
-          const ninetyDaysAgo = new Date(today)
-          ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+          const ninetyDaysAgo = new Date(todayUTC)
+          ninetyDaysAgo.setUTCDate(ninetyDaysAgo.getUTCDate() - 90)
           params.date_from = ninetyDaysAgo.toISOString().split('T')[0]
-          params.date_to = today.toISOString().split('T')[0]
+          params.date_to = todayUTC.toISOString().split('T')[0]
           break
         }
       }
@@ -160,27 +162,34 @@ export function ImportHistoryPage() {
   const { data: importJobsData, isLoading } = useImportJobs(apiParams)
 
   // Convert API data to ImportHistoryItem format
-  // Filter out any in_progress jobs as a safety measure (should be handled by API, but filter client-side too)
+  // Filter out any in_progress, pending, and cancelled jobs as a safety measure (should be handled by API, but filter client-side too)
   const importHistory = useMemo(() => {
     const jobs = (importJobsData?.items || []).filter(
-      (job) => job.status !== 'in_progress' && job.status !== 'pending'
+      (job) =>
+        job.status !== 'in_progress' && job.status !== 'pending' && job.status !== 'cancelled'
     )
     return jobs.map(mapImportJobToHistoryItem)
   }, [importJobsData])
 
   // Extract unique users from all import history (for filter dropdown)
-  // We need to fetch all jobs without filters to get all users
-  // Exclude in_progress jobs when fetching for user list
+  // Fetch all jobs without any filters to get all users who have import histories
+  // Exclude in_progress, pending, and cancelled jobs when fetching for user list
   const { data: allJobsData } = useImportJobs({
     page: 1,
     page_size: 1000,
-    exclude_status: ['in_progress', 'pending'],
+    exclude_status: ['in_progress', 'pending', 'cancelled'],
+    // Don't send any other filters - we want ALL users' data
   })
+
   const availableUsers = useMemo(() => {
     const allJobs = (allJobsData?.items || []).filter(
-      (job) => job.status !== 'in_progress' && job.status !== 'pending'
+      (job) =>
+        job.status !== 'in_progress' && job.status !== 'pending' && job.status !== 'cancelled'
     )
-    const users = new Set(allJobs.map((job) => job.uploaded_by))
+    // Extract unique usernames and filter out null/undefined
+    const users = new Set(
+      allJobs.map((job) => job.uploaded_by).filter((username): username is string => !!username)
+    )
     return Array.from(users).sort()
   }, [allJobsData])
 
@@ -275,14 +284,14 @@ export function ImportHistoryPage() {
     setCurrentPage(validPage)
   }
 
-  const handleViewDetails = () => {
-    if (selectedJobId) {
-      navigate(`/dashboard/import/history/${selectedJobId}`)
-    } else if (paginatedData.length > 0) {
-      // If no selection, use first item
-      navigate(`/dashboard/import/history/${paginatedData[0].id}`)
-    }
-  }
+  // const handleViewDetails = () => {
+  //   if (selectedJobId) {
+  //     navigate(`/dashboard/import/history/${selectedJobId}`)
+  //   } else if (paginatedData.length > 0) {
+  //     // If no selection, use first item
+  //     navigate(`/dashboard/import/history/${paginatedData[0].id}`)
+  //   }
+  // }
 
   const handleDownloadErrors = () => {
     const jobId = selectedJobId || paginatedData[0]?.id
@@ -397,18 +406,6 @@ export function ImportHistoryPage() {
 
           {/* Action Buttons */}
           <div className="flex w-[30%] items-center justify-end gap-2">
-            {filteredAndSortedData.length > 0 && (
-              <button
-                onClick={handleViewDetails}
-                disabled={!selectedJobId && paginatedData.length === 0}
-                className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-                  <Icons.File size={20} className="text-dark-500" strokeWidth={1.5} />
-                </div>
-                <span className="px-4 py-3 text-sm font-medium text-white">View Details</span>
-              </button>
-            )}
             <button
               onClick={handleDownloadErrors}
               type="button"

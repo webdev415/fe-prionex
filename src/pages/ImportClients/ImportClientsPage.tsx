@@ -5,7 +5,7 @@
  * Uses reusable components following the same pattern as other pages.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { StepIndicator, type Step } from '@/components/ui/StepIndicator'
 import { Button } from '@/components/ui/Button'
 import { Step1LoanSource, type Step1Data } from './components/Step1LoanSource'
@@ -14,13 +14,17 @@ import { Step2VendorDump, type Step2VendorDumpData } from './components/Step2Ven
 import { Icons } from '@/lib/icons'
 import { ImportHistoryModal, type ImportHistoryData } from './components/ImportHistoryModal'
 import { useNavigate } from 'react-router-dom'
-import { useImportJobs, useImportJob } from '@/features/imports'
+import { useImportJobs, useImportJob, useCancelImport } from '@/features/imports'
 
 export function ImportClientsPage() {
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(1)
-  const [showImportHistory, setShowImportHistory] = useState(true)
+  const [showImportHistory, setShowImportHistory] = useState(false) // Change from true to false
   const [currentJobId, setCurrentJobId] = useState<number | string | null>(null)
+
+  // Track previous status to detect transitions
+  const previousStatusRef = useRef<string | null>(null)
+  const lastShownJobIdRef = useRef<number | string | null>(null)
 
   // Fetch latest in-progress import job (check both currentJobId and latest in-progress)
   const { data: importJobsData, refetch: refetchImportJobs } = useImportJobs({
@@ -57,15 +61,40 @@ export function ImportClientsPage() {
 
   // Show ImportHistoryModal when import job completes
   useEffect(() => {
-    if (jobDetail?.status && jobDetail.status !== 'in_progress' && jobDetail.status !== 'pending') {
-      // Job has completed (either 'completed' or 'failed')
+    // Only show modal when a job transitions from in_progress/pending to completed/failed
+    // AND we haven't shown the modal for this job yet
+    // Do NOT show modal for cancelled jobs
+    if (
+      jobDetail?.status &&
+      jobDetail.status !== 'in_progress' &&
+      jobDetail.status !== 'pending' &&
+      jobDetail.status !== 'cancelled' && // Don't show modal for cancelled jobs
+      currentJobId === jobDetail.id && // Only show if this is the job we just started
+      lastShownJobIdRef.current !== jobDetail.id && // Only show if we haven't shown it for this job yet
+      previousStatusRef.current && // Only show if we had a previous status (detects transition)
+      (previousStatusRef.current === 'in_progress' || previousStatusRef.current === 'pending') // Previous status was in progress
+    ) {
+      // Job has transitioned from in_progress/pending to completed/failed
       // Automatically show the import history modal
-      // Use setTimeout to avoid synchronous setState in effect
       setTimeout(() => {
         setShowImportHistory(true)
+        lastShownJobIdRef.current = jobDetail.id // Mark that we've shown the modal for this job
       }, 0)
     }
-  }, [jobDetail?.status])
+
+    // Update previous status ref for next comparison
+    if (jobDetail?.status) {
+      previousStatusRef.current = jobDetail.status
+    }
+  }, [jobDetail?.status, jobDetail?.id, currentJobId])
+
+  // Reset refs when currentJobId changes (new upload started)
+  useEffect(() => {
+    if (currentJobId) {
+      previousStatusRef.current = null // Reset to detect new transition
+      lastShownJobIdRef.current = null // Reset to allow showing modal for new job
+    }
+  }, [currentJobId])
 
   // Determine if import is in progress
   // Show progress bar if we have an active job ID and either:
@@ -235,6 +264,26 @@ export function ImportClientsPage() {
 
   const STEPS = getSteps()
 
+  // Add cancel import mutation
+  const cancelImportMutation = useCancelImport()
+
+  // Add cancel handler
+  const handleCancelImport = async () => {
+    if (!activeJobId) {
+      return
+    }
+
+    try {
+      await cancelImportMutation.mutateAsync(activeJobId)
+      // Clear the current job ID and refetch jobs
+      setCurrentJobId(null)
+      refetchImportJobs()
+    } catch (error) {
+      // Error is already handled by the mutation hook (toast notification)
+      console.error('Failed to cancel import:', error)
+    }
+  }
+
   return (
     <div>
       {/* Page Header */}
@@ -355,6 +404,14 @@ export function ImportClientsPage() {
             className="bg-secondary-800 h-10 gap-2.5 rounded-lg px-4 py-2.5 text-sm font-medium text-white"
           >
             View Details
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleCancelImport}
+            disabled={cancelImportMutation.isPending}
+            className="h-10 gap-2.5 rounded-lg px-4 py-2.5 text-sm font-medium"
+          >
+            {cancelImportMutation.isPending ? 'Cancelling...' : 'Cancel Import'}
           </Button>
           <Button
             variant="outline"

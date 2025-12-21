@@ -55,7 +55,7 @@ export function ImportHistoryFiltersBar({
       if (searchValue !== (filters.searchFilename || '')) {
         onFilterChange({ ...filters, searchFilename: searchValue || undefined })
       }
-    }, 300)
+    }, 2000)
     return () => clearTimeout(timer)
   }, [searchValue, filters, onFilterChange])
 
@@ -144,7 +144,6 @@ export function ImportHistoryFiltersBar({
                 <SelectItem value="last_7_days">Last 7 days</SelectItem>
                 <SelectItem value="last_30_days">Last 30 days</SelectItem>
                 <SelectItem value="last_90_days">Last 90 days</SelectItem>
-                <SelectItem value="custom">Custom range</SelectItem>
               </SelectContent>
             </Select>
           </div>
