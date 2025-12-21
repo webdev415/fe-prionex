@@ -49,6 +49,9 @@
     "uk": "Украинский",
     "ru": "Русский"
   },
+  "common": {
+    "step": "Шаг"
+  },
   "logout": {
     "confirmTitle": "Подтвердить выход",
     "confirmMessage": "Вы уверены, что хотите выйти? Вам нужно будет снова войти, чтобы получить доступ к системе."
@@ -359,6 +362,179 @@
         },
         "errors": {
           "failedToCreate": "Не удалось создать роль. Пожалуйста, попробуйте снова."
+        }
+      }
+    },
+    "imports": {
+      "title": "Импорт клиентов",
+      "viewHistory": "Просмотр истории",
+      "back": "Назад",
+      "nextStep": "Следующий шаг",
+      "importInProgress": "Импорт в процессе",
+      "file": "Файл",
+      "started": "Начато",
+      "status": "Статус",
+      "complete": "завершено",
+      "viewDetails": "Просмотр деталей",
+      "cancelImport": "Отменить импорт",
+      "cancelling": "Отмена...",
+      "goToImportHistory": "Перейти к истории импорта",
+      "steps": {
+        "loanSource": "Источник займа и тип импорта",
+        "filesSimple": "Файлы (Простой CSV)",
+        "filesVendor": "Файлы (Дамп поставщика)"
+      },
+      "step1": {
+        "loanSourceMetadata": "Источник займа / Метаданные",
+        "sellerCreditor": "Продавец / Кредитор",
+        "projectCode": "Код проекта:",
+        "purchaseDate": "Дата покупки:",
+        "comment": "Комментарий:",
+        "importType": "Тип импорта:",
+        "simpleClientCsv": "Простой CSV клиентов",
+        "simpleClientCsvDesc": "Один CSV с базовыми данными клиентов.",
+        "vendorDump": "Дамп поставщика (4 CSV + документы)",
+        "vendorDumpDesc": "Сырой экспорт от продавца: users.csv, loans.csv, charges.csv, payments.csv + контракты/фото.",
+        "placeholders": {
+          "enterProjectName": "Введите название проекта",
+          "enterProjectCode": "Введите код проекта",
+          "selectPurchaseDate": "Выберите дату покупки",
+          "placeholderText": "Текст-заполнитель"
+        }
+      },
+      "step2": {
+        "simple": {
+          "title": "Импорт данных клиентов (Простой CSV)",
+          "cannotStartAnother": "Вы не можете начать другой импорт, пока этот не завершится.",
+          "invalidCsvStructure": "Неверная структура CSV",
+          "invalidFileType": "Неверный тип файла",
+          "chooseCsvFile": "Выберите CSV файл",
+          "missingRequiredColumns": "Отсутствуют обязательные столбцы:",
+          "onlyCsvSupported": "В этой версии поддерживаются только файлы .csv.",
+          "fileRequirements": "Требования к файлу:",
+          "oneCsvOnly": "Только один CSV,",
+          "maxRows": "максимум 50,000 строк",
+          "required": "Обязательно:",
+          "requiredColumns": "name, phone, debt_amount",
+          "optional": "Необязательно:",
+          "optionalColumns": "address, inn, contract...",
+          "browseFile": "Выбрать файл",
+          "downloadSampleTemplate": "Скачать образец шаблона CSV",
+          "startImport": "Начать импорт",
+          "uploading": "Загрузка...",
+          "errorOccurred": "Произошла ошибка при загрузке. Пожалуйста, проверьте файл и попробуйте снова.",
+          "csvValidationFailed": "Проверка CSV не пройдена. Пожалуйста, проверьте структуру файла.",
+          "fillAllFields": "Пожалуйста, заполните все обязательные поля и выберите CSV файл"
+        },
+        "vendor": {
+          "title": "Загрузить сырой экспорт от продавца.",
+          "dragCsvs": "Перетащите CSV файлы и папку с контрактами, или один .zip.",
+          "dragDropFiles": "Перетащите файлы/папку сюда",
+          "browseFile": "Выбрать файл",
+          "startImport": "Начать импорт",
+          "dataset": "Набор данных",
+          "status": "Статус",
+          "file": "Файл",
+          "required": "Обязательно",
+          "optional": "Необязательно",
+          "chooseFile": "Выбрать файл",
+          "chooseZip": "Выбрать ZIP",
+          "fillAllFields": "Пожалуйста, заполните все обязательные поля в Шаге 1",
+          "selectAllRequired": "Пожалуйста, выберите все обязательные файлы",
+          "noDatasetsConfigured": "Наборы данных не настроены"
+        }
+      },
+      "history": {
+        "title": "История импорта",
+        "loading": "Загрузка истории импорта...",
+        "noImportsFound": "Импорты не найдены для выбранных фильтров.",
+        "clearFilters": "Очистить фильтры",
+        "noHistoryYet": "Истории импорта пока нет.",
+        "runFirstImport": "Запустите первый CSV импорт, чтобы увидеть историю здесь.",
+        "goToImportClients": "Перейти к импорту клиентов",
+        "noHistoryFound": "История импорта не найдена",
+        "tableHeaders": {
+          "dateTime": "Дата/Время",
+          "fileName": "Имя файла",
+          "status": "Статус",
+          "errors": "Ошибки",
+          "actions": "Действия"
+        },
+        "uploadedBy": "Загружено:",
+        "view": "Просмотр",
+        "downloadErrors": "Скачать ошибки",
+        "exporting": "Экспорт...",
+        "statuses": {
+          "done": "Готово",
+          "inProgress": "В процессе",
+          "failed": "Не удалось"
+        },
+        "filters": {
+          "searchFilename": "Поиск по имени файла",
+          "dateRange": "Диапазон дат",
+          "allDates": "Все даты",
+          "today": "Сегодня",
+          "last7Days": "Последние 7 дней",
+          "last30Days": "Последние 30 дней",
+          "last90Days": "Последние 90 дней",
+          "status": "Статус",
+          "allStatuses": "Все статусы",
+          "uploadedBy": "Загружено",
+          "allUsers": "Все пользователи"
+        }
+      },
+      "details": {
+        "title": "Детали импорта",
+        "backToHistory": "Назад к истории",
+        "downloadErrorCsv": "Скачать CSV с ошибками",
+        "exporting": "Экспорт...",
+        "lastImportSummary": "Сводка последнего импорта",
+        "file": "Файл:",
+        "uploadedBy": "Загружено:",
+        "status": "Статус:",
+        "totalRows": "Всего строк:",
+        "newClients": "Новых клиентов:",
+        "updatedClients": "Обновлено клиентов:",
+        "errors": "Ошибки:",
+        "processingTime": "Время обработки:",
+        "progress": "Прогресс",
+        "systemError": "Системная ошибка при обработке файла.",
+        "noRowsImported": "Строки не импортированы.",
+        "processingRow": "Обработка строки:",
+        "errorsTitle": "Ошибки",
+        "row": "Строка",
+        "error": "Ошибка",
+        "noErrors": "Нет ошибок",
+        "importNotFound": "Импорт не найден",
+        "loadingDetails": "Загрузка деталей импорта...",
+        "statuses": {
+          "completed": "Завершено",
+          "completedWithErrors": "Завершено с ошибками",
+          "inProgress": "В процессе",
+          "failed": "Не удалось"
+        }
+      },
+      "modal": {
+        "lastImportSummary": "Сводка последнего импорта",
+        "file": "Файл:",
+        "uploadedBy": "Загружено:",
+        "status": "Статус:",
+        "totalRows": "Всего строк:",
+        "newClients": "Новых клиентов:",
+        "updatedClients": "Обновлено клиентов:",
+        "error": "Ошибка:",
+        "processingTime": "Время обработки:",
+        "viewDetails": "Просмотр деталей",
+        "downloadErrorReport": "Скачать отчет об ошибках CSV",
+        "exporting": "Экспорт...",
+        "statuses": {
+          "completed": "Завершено",
+          "completedWithErrors": "Завершено с ошибками",
+          "failed": "Не удалось"
+        },
+        "messages": {
+          "importFailed": "Импорт не удался из-за системной ошибки. Строки не были обработаны.",
+          "someRowsFailed": "Некоторые строки не удались. Скачайте отчет об ошибках для деталей."
         }
       }
     }

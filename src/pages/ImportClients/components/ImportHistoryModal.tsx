@@ -7,6 +7,7 @@
  * - Failed
  */
 
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -35,12 +36,14 @@ export interface ImportHistoryModalProps {
 }
 
 function StatusBadge({ status }: { status: ImportStatus }) {
+  const { t } = useTranslation('common')
+
   if (status === 'completed') {
     return (
       <div className="flex flex-1">
         <div className="bg-secondary-800 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-white">
           <span className="h-2 w-2 rounded-full bg-white" />
-          <span className="text-xs font-medium">Completed</span>
+          <span className="text-xs font-medium">{t('pages.imports.modal.statuses.completed')}</span>
         </div>
       </div>
     )
@@ -51,7 +54,9 @@ function StatusBadge({ status }: { status: ImportStatus }) {
       <div className="flex flex-1">
         <div className="inline-flex items-center gap-2 rounded-full bg-gray-600 px-3 py-1.5 text-white">
           <Icons.Warning size={14} className="text-white" />
-          <span className="text-xs font-medium">Completed with errors</span>
+          <span className="text-xs font-medium">
+            {t('pages.imports.modal.statuses.completedWithErrors')}
+          </span>
         </div>
       </div>
     )
@@ -62,13 +67,14 @@ function StatusBadge({ status }: { status: ImportStatus }) {
     <div className="flex flex-1">
       <div className="bg-error-500 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-white">
         <span className="h-2 w-2 rounded-full bg-white" />
-        <span className="text-xs font-medium">Failed</span>
+        <span className="text-xs font-medium">{t('pages.imports.modal.statuses.failed')}</span>
       </div>
     </div>
   )
 }
 
 export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalProps) {
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
   const exportErrorsMutation = useExportImportErrors()
 
@@ -93,7 +99,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
     <Modal open={open} onClose={onClose} maxWidth="lg" className="w-[600px] max-w-none">
       <ModalHeader
         icon={<Icons.CloudDownload size={24} className="text-dark-500" strokeWidth={1.5} />}
-        title="Last Import Summary"
+        title={t('pages.imports.modal.lastImportSummary')}
       />
 
       <ModalContent>
@@ -102,7 +108,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
           <div className="space-y-4">
             <div className="flex flex-row justify-between">
               <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
-                File:{' '}
+                {t('pages.imports.modal.file')}:{' '}
               </span>
               <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
                 {data.file}
@@ -111,7 +117,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
 
             <div className="flex flex-row justify-between">
               <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
-                Uploaded by:{' '}
+                {t('pages.imports.modal.uploadedBy')}:{' '}
               </span>
               <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
                 {data.uploadedBy} at {data.uploadedAt}
@@ -120,7 +126,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
 
             <div className="flex flex-row justify-between">
               <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
-                Status:{' '}
+                {t('pages.imports.modal.status')}:{' '}
               </span>
               <StatusBadge status={status} />
             </div>
@@ -131,7 +137,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
-                  Total rows:
+                  {t('pages.imports.modal.totalRows')}:
                 </span>
                 <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
                   {data.totalRows.toLocaleString()}
@@ -140,7 +146,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
 
               <div className="flex justify-between">
                 <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
-                  New clients:
+                  {t('pages.imports.modal.newClients')}:
                 </span>
                 <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
                   {data.newClients?.toLocaleString() || 0}
@@ -149,7 +155,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
 
               <div className="flex justify-between">
                 <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
-                  Updated clients:
+                  {t('pages.imports.modal.updatedClients')}:
                 </span>
                 <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
                   {data.updatedClients?.toLocaleString() || 0}
@@ -158,7 +164,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
 
               <div className="flex justify-between">
                 <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
-                  Error:
+                  {t('pages.imports.modal.error')}:
                 </span>
                 <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
                   {data.errors || 0}
@@ -167,7 +173,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
 
               <div className="flex justify-between">
                 <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
-                  Processing time:
+                  {t('pages.imports.modal.processingTime')}:
                 </span>
                 <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
                   {data.processingTime || 'N/A'}
@@ -181,7 +187,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
             <div className="flex items-center justify-center gap-2 self-stretch rounded-xl border border-white bg-white/50 p-6">
               <Icons.Warning size={20} className="text-error-500" />
               <span className="text-error-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                The import failed due to a system error. No rows were processed.
+                {t('pages.imports.modal.messages.importFailed')}
               </span>
             </div>
           )}
@@ -190,7 +196,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
             <div className="flex items-center justify-center gap-2 self-stretch rounded-xl border border-white bg-white/50 p-6">
               <Icons.Warning size={24} className="text-error-500" />
               <span className="text-error-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                Some rows failed. Download error report for details.
+                {t('pages.imports.modal.messages.someRowsFailed')}
               </span>
             </div>
           )}
@@ -207,7 +213,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
                 disabled={!jobId}
                 className="flex flex-1 items-center text-sm font-medium"
               >
-                View Details
+                {t('pages.imports.modal.viewDetails')}
               </Button>
               <Button
                 variant="primary"
@@ -216,7 +222,9 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
                 leftIcon={<Icons.FileDownload size={20} className="text-dark-500" />}
                 className="flex flex-1 items-center text-sm font-medium"
               >
-                {exportErrorsMutation.isPending ? 'Exporting...' : 'Download Error Report CSV'}
+                {exportErrorsMutation.isPending
+                  ? t('pages.imports.modal.exporting')
+                  : t('pages.imports.modal.downloadErrorReport')}
               </Button>
             </>
           ) : (
@@ -226,7 +234,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
               disabled={!jobId}
               className="w-full text-sm font-medium"
             >
-              View Details
+              {t('pages.imports.modal.viewDetails')}
             </Button>
           )}
         </div>

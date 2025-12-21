@@ -6,6 +6,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -54,6 +55,7 @@ export function Step2VendorDump({
   step1Data,
   onImportStarted,
 }: Step2VendorDumpProps) {
+  const { t } = useTranslation('common')
   const [isDragging, setIsDragging] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
@@ -169,7 +171,7 @@ export function Step2VendorDump({
 
   const handleStartImport = async () => {
     if (!step1Data.sellerCreditor || !step1Data.projectCode || !step1Data.purchaseDate) {
-      setImportError('Please fill in all required fields in Step 1')
+      setImportError(t('pages.imports.step2.vendor.fillAllFields'))
       return
     }
 
@@ -178,7 +180,7 @@ export function Step2VendorDump({
     const missingRequired = requiredFiles.some((f) => !f.file)
 
     if (missingRequired) {
-      setImportError('Please select all required files')
+      setImportError(t('pages.imports.step2.vendor.selectAllRequired'))
       return
     }
 
@@ -225,12 +227,12 @@ export function Step2VendorDump({
   const columns: Column<DatasetFile>[] = [
     {
       key: 'name',
-      header: 'Dataset',
+      header: t('pages.imports.step2.vendor.dataset'),
       render: (item) => <span className="text-dark-500 text-xs font-medium">{item.name}</span>,
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('pages.imports.step2.vendor.status'),
       render: (item) => (
         <div className="flex items-center gap-2">
           <span
@@ -240,14 +242,16 @@ export function Step2VendorDump({
             )}
           />
           <span className="text-dark-500 text-xs font-medium">
-            {item.status === 'required' ? 'Required' : 'Optional'}
+            {item.status === 'required'
+              ? t('pages.imports.step2.vendor.required')
+              : t('pages.imports.step2.vendor.optional')}
           </span>
         </div>
       ),
     },
     {
       key: 'file',
-      header: 'File',
+      header: t('pages.imports.step2.vendor.file'),
       render: (item) => {
         const isDocuments = item.type === 'documents'
         const hasFile = item.file !== null
@@ -265,7 +269,9 @@ export function Step2VendorDump({
                 disabled={isImportInProgress}
                 className="h-8 text-xs font-medium"
               >
-                {isDocuments ? 'Choose ZIP' : 'Choose file'}
+                {isDocuments
+                  ? t('pages.imports.step2.vendor.chooseZip')
+                  : t('pages.imports.step2.vendor.chooseFile')}
               </Button>
             )}
             <input
@@ -287,7 +293,7 @@ export function Step2VendorDump({
     <div className="space-y-6">
       {/* Section Title */}
       <h2 className="text-dark-500 mb-6 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
-        Upload raw export from seller.
+        {t('pages.imports.step2.vendor.title')}
       </h2>
 
       {/* Error Alert - shown when import fails */}
@@ -302,7 +308,7 @@ export function Step2VendorDump({
 
       {/* Instructions */}
       <p className="text-dark-500 mb-6 text-center text-base leading-[155%] font-light tracking-[-0.32px]">
-        Drag the CSVs and contracts folder, or one .zip.
+        {t('pages.imports.step2.vendor.dragCsvs')}
       </p>
 
       {/* File Upload Drop Zone */}
@@ -323,7 +329,7 @@ export function Step2VendorDump({
 
         <div className="align-self-stretch flex flex-col items-center justify-center gap-4">
           <div className="text-dark-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
-            Drag & drop files/folder here
+            {t('pages.imports.step2.vendor.dragDropFiles')}
           </div>
 
           {/* Browse File Button */}
@@ -333,7 +339,7 @@ export function Step2VendorDump({
             disabled={isImportInProgress}
             className="flex h-12 flex-col items-center justify-center rounded-full text-sm"
           >
-            Browse File
+            {t('pages.imports.step2.vendor.browseFile')}
           </Button>
         </div>
       </div>
@@ -350,7 +356,11 @@ export function Step2VendorDump({
 
       {/* Dataset Table */}
       <div className="mt-6">
-        <DataTable columns={columns} data={data.files} emptyMessage="No datasets configured" />
+        <DataTable
+          columns={columns}
+          data={data.files}
+          emptyMessage={t('pages.imports.step2.vendor.noDatasetsConfigured')}
+        />
       </div>
 
       {/* Start Import Button */}
@@ -361,7 +371,7 @@ export function Step2VendorDump({
           onClick={handleStartImport}
           disabled={!requiredFilesSelected || isImportInProgress || isStartingImport}
         >
-          Start Import
+          {t('pages.imports.step2.vendor.startImport')}
         </DoubleButton>
       </div>
     </div>

@@ -6,6 +6,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { Icons } from '@/lib/icons'
@@ -39,6 +40,7 @@ export function Step2FileUpload({
   step1Data,
   onImportStarted,
 }: Step2FileUploadProps) {
+  const { t } = useTranslation('common')
   const [isDragging, setIsDragging] = useState(false)
   const [importError, setImportError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -279,7 +281,7 @@ export function Step2FileUpload({
       !step1Data.projectCode ||
       !step1Data.purchaseDate
     ) {
-      setImportError('Please fill in all required fields and select a CSV file')
+      setImportError(t('pages.imports.step2.simple.fillAllFields'))
       return
     }
 
@@ -447,7 +449,7 @@ export function Step2FileUpload({
       // Ensure we have an error message - fallback if extraction failed
       if (!errorMessage) {
         console.warn('Error caught but no error message extracted!', error)
-        setImportError('An unknown error occurred during upload. Please try again.')
+        setImportError(t('pages.imports.step2.simple.errorOccurred'))
       }
     }
   }
@@ -596,7 +598,7 @@ export function Step2FileUpload({
     <div className="space-y-6">
       {/* Section Title */}
       <h2 className="text-dark-500 mb-6 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
-        Import Client Data (Simple CSV)
+        {t('pages.imports.step2.simple.title')}
       </h2>
 
       {/* Warning Alert - shown when import is in progress */}
@@ -604,7 +606,7 @@ export function Step2FileUpload({
         <div className="flex items-center justify-center gap-3 rounded-lg bg-white p-6">
           <Icons.Warning size={24} className="text-error-500" />
           <span className="text-error-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-            You cannot start another import until this one finishes.
+            {t('pages.imports.step2.simple.cannotStartAnother')}
           </span>
         </div>
       )}
@@ -621,12 +623,12 @@ export function Step2FileUpload({
               mutationErrorMsg ||
               data.csvValidationError?.errorMessage ||
               (uploadImportMutation.isError
-                ? 'An error occurred during upload. Please check the file and try again.'
+                ? t('pages.imports.step2.simple.errorOccurred')
                 : null) ||
               (hasInvalidCSVStructure
-                ? 'CSV validation failed. Please check the file structure.'
+                ? t('pages.imports.step2.simple.csvValidationFailed')
                 : null) ||
-              'An error occurred during upload'}
+              t('pages.imports.step2.simple.errorOccurred')}
           </span>
         </div>
       )}
@@ -667,14 +669,14 @@ export function Step2FileUpload({
           {/* Invalid CSV Structure Error Message */}
           {hasInvalidCSVStructure && (
             <div className="text-error-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
-              Invalid CSV structure
+              {t('pages.imports.step2.simple.invalidCsvStructure')}
             </div>
           )}
 
           {/* Invalid File Type Error Message */}
           {hasInvalidFile && !hasInvalidCSVStructure && (
             <div className="text-error-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
-              Invalid file type
+              {t('pages.imports.step2.simple.invalidFileType')}
             </div>
           )}
 
@@ -686,7 +688,7 @@ export function Step2FileUpload({
           ) : (
             !hasInvalidCSVStructure && (
               <div className="text-dark-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
-                Choose CSV File
+                {t('pages.imports.step2.simple.chooseCsvFile')}
               </div>
             )
           )}
@@ -694,7 +696,7 @@ export function Step2FileUpload({
           {/* Show "Choose CSV File" text even when invalid CSV structure */}
           {hasInvalidCSVStructure && (
             <div className="text-dark-500 text-center text-base leading-[155%] font-light tracking-[-0.32px]">
-              Choose CSV File
+              {t('pages.imports.step2.simple.chooseCsvFile')}
             </div>
           )}
 
@@ -704,7 +706,7 @@ export function Step2FileUpload({
             data.csvValidationError.missingColumns.length > 0 && (
               <div className="flex w-full flex-col items-center gap-3">
                 <div className="text-dark-500 text-center text-base leading-[155%] font-bold tracking-[-0.32px]">
-                  Missing required columns:
+                  {t('pages.imports.step2.simple.missingRequiredColumns')}
                 </div>
                 <div className="flex w-full flex-wrap items-center justify-center gap-3">
                   {data.csvValidationError.missingColumns.map((column) => {
@@ -740,7 +742,7 @@ export function Step2FileUpload({
           {/* Error Message - Only .csv files supported */}
           {hasInvalidFile && !hasInvalidCSVStructure && (
             <div className="text-dark-500 text-center text-base leading-[155%] font-medium tracking-[-0.32px]">
-              Only .csv files are supported in this version.
+              {t('pages.imports.step2.simple.onlyCsvSupported')}
             </div>
           )}
 
@@ -748,28 +750,27 @@ export function Step2FileUpload({
           {!hasInvalidFile && !hasInvalidCSVStructure && (
             <>
               <div className="text-dark-500 text-center text-base leading-[155%] font-light tracking-[-0.32px]">
-                File Requirements:
+                {t('pages.imports.step2.simple.fileRequirements')}
               </div>
               <div className="text-dark-500 flex items-center justify-center gap-1 self-stretch">
                 <span className="text-base leading-[155%] font-medium tracking-[-0.32px]">
-                  One CSV
-                </span>{' '}
-                only,{' '}
+                  {t('pages.imports.step2.simple.oneCsvOnly')}
+                </span>
                 <span className="text-base leading-[155%] font-light tracking-[-0.32px]">
-                  max 50,000 rows
+                  {t('pages.imports.step2.simple.maxRows')}
                 </span>
               </div>
               <div className="text-dark-500 flex items-center justify-center gap-1 self-stretch">
                 <span className="text-base leading-[155%] font-medium tracking-[-0.32px]">
-                  Required:
+                  {t('pages.imports.step2.simple.required')}:
                 </span>{' '}
-                name, phone, debt_amount
+                {t('pages.imports.step2.simple.requiredColumns')}
               </div>
               <div className="text-dark-500 flex items-center justify-center gap-1 self-stretch">
                 <span className="text-base leading-[155%] font-medium tracking-[-0.32px]">
-                  Optional:
+                  {t('pages.imports.step2.simple.optional')}:
                 </span>{' '}
-                address, inn, contract...
+                {t('pages.imports.step2.simple.optionalColumns')}
               </div>
             </>
           )}
@@ -782,7 +783,7 @@ export function Step2FileUpload({
           disabled={isImportInProgress}
           className="flex h-12 flex-col items-center justify-center rounded-full text-sm"
         >
-          Browse File
+          {t('pages.imports.step2.simple.browseFile')}
         </Button>
 
         {/* Hidden File Input - removed accept restriction to allow all file types */}
@@ -799,7 +800,7 @@ export function Step2FileUpload({
           leftIcon={<Icons.FileDownload size={20} />}
           className="flex h-12 items-center justify-center rounded-full text-sm leading-[150%] font-medium"
         >
-          Download Sample CSV Template
+          {t('pages.imports.step2.simple.downloadSampleTemplate')}
         </Button>
 
         {/* Start Import Button - disabled when invalid file, invalid CSV structure, or no file */}
@@ -811,7 +812,7 @@ export function Step2FileUpload({
             !hasValidFile || hasInvalidCSVStructure || isImportInProgress || isStartingImport
           }
         >
-          Start Import
+          {t('pages.imports.step2.simple.startImport')}
         </DoubleButton>
       </div>
     </div>
