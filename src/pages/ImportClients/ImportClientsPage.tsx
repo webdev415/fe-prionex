@@ -5,7 +5,7 @@
  * Uses reusable components following the same pattern as other pages.
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { StepIndicator, type Step } from '@/components/ui/StepIndicator'
 import { Button } from '@/components/ui/Button'
 import { Step1LoanSource, type Step1Data } from './components/Step1LoanSource'
@@ -14,30 +14,178 @@ import { Step2VendorDump, type Step2VendorDumpData } from './components/Step2Ven
 import { Icons } from '@/lib/icons'
 import { ImportHistoryModal, type ImportHistoryData } from './components/ImportHistoryModal'
 import { useNavigate } from 'react-router-dom'
+import { useImportJobs, useImportJob, useCancelImport } from '@/features/imports'
 
 export function ImportClientsPage() {
   const navigate = useNavigate()
   const [currentStep, setCurrentStep] = useState(1)
-  const [isImportInProgress] = useState(false) // Add this state
-  const [showImportHistory, setShowImportHistory] = useState(false)
+  const [showImportHistory, setShowImportHistory] = useState(false) // Change from true to false
+  const [currentJobId, setCurrentJobId] = useState<number | string | null>(null)
 
-  // Mock data for import history - in real app, this would come from API
-  const [importHistoryData] = useState<ImportHistoryData | null>({
-    file: 'clients_batch_2024-11-20.csv',
-    uploadedBy: 'Supervisor Olena K.',
-    uploadedAt: '10:03',
-    status: 'failed', // Can be 'completed', 'completed_with_errors', or 'failed'
-    totalRows: 10000,
-    newClients: 7500,
-    updatedClients: 2500,
-    errors: 0,
-    processingTime: '7 min 42 s',
+  // Track previous status to detect transitions
+  const previousStatusRef = useRef<string | null>(null)
+  const lastShownJobIdRef = useRef<number | string | null>(null)
+
+  // Fetch latest in-progress import job (check both currentJobId and latest in-progress)
+  const { data: importJobsData, refetch: refetchImportJobs } = useImportJobs({
+    page: 1,
+    page_size: 1,
+    status: 'in_progress',
   })
+
+  // Get the latest in-progress job
+  const latestInProgressJob = importJobsData?.items?.[0]
+
+  // Use currentJobId if set, otherwise use latest in-progress job ID
+  const activeJobId = currentJobId || latestInProgressJob?.id || null
+
+  // Fetch detail of the active job for progress updates
+  const { data: jobDetail } = useImportJob(activeJobId, {
+    enabled: !!activeJobId,
+    refetchInterval: (query) => {
+      // Poll every 5 seconds if job is in progress
+      const data = query.state.data
+      return data?.status === 'in_progress' ? 5000 : false
+    },
+  })
+
+  // Track current job ID for progress banner
+  useEffect(() => {
+    if (jobDetail?.id && jobDetail.id !== currentJobId) {
+      // Use setTimeout to avoid synchronous setState in effect
+      setTimeout(() => {
+        setCurrentJobId(jobDetail.id)
+      }, 0)
+    }
+  }, [jobDetail?.id, currentJobId])
+
+  // Show ImportHistoryModal when import job completes
+  useEffect(() => {
+    // Only show modal when a job transitions from in_progress/pending to completed/failed
+    // AND we haven't shown the modal for this job yet
+    // Do NOT show modal for cancelled jobs
+    if (
+      jobDetail?.status &&
+      jobDetail.status !== 'in_progress' &&
+      jobDetail.status !== 'pending' &&
+      jobDetail.status !== 'cancelled' && // Don't show modal for cancelled jobs
+      currentJobId === jobDetail.id && // Only show if this is the job we just started
+      lastShownJobIdRef.current !== jobDetail.id && // Only show if we haven't shown it for this job yet
+      previousStatusRef.current && // Only show if we had a previous status (detects transition)
+      (previousStatusRef.current === 'in_progress' || previousStatusRef.current === 'pending') // Previous status was in progress
+    ) {
+      // Job has transitioned from in_progress/pending to completed/failed
+      // Automatically show the import history modal
+      setTimeout(() => {
+        setShowImportHistory(true)
+        lastShownJobIdRef.current = jobDetail.id // Mark that we've shown the modal for this job
+      }, 0)
+    }
+
+    // Update previous status ref for next comparison
+    if (jobDetail?.status) {
+      previousStatusRef.current = jobDetail.status
+    }
+  }, [jobDetail?.status, jobDetail?.id, currentJobId])
+
+  // Reset refs when currentJobId changes (new upload started)
+  useEffect(() => {
+    if (currentJobId) {
+      previousStatusRef.current = null // Reset to detect new transition
+      lastShownJobIdRef.current = null // Reset to allow showing modal for new job
+    }
+  }, [currentJobId])
+
+  // Determine if import is in progress
+  // Show progress bar if we have an active job ID and either:
+  // - Job detail shows status is 'in_progress', OR
+  // - Job detail hasn't loaded yet (but we have the ID from upload response)
+  const isImportInProgress = !!activeJobId && (jobDetail?.status === 'in_progress' || !jobDetail)
+
+  // Import progress data from API
+  // If jobDetail is not loaded yet, use basic info from latestInProgressJob or currentJobId
+  const importProgress = jobDetail
+    ? {
+        fileName: jobDetail.file_name,
+        startedAt: new Date(jobDetail.uploaded_at).toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        progressPercentage: jobDetail.progress_percentage || 0,
+        jobId: jobDetail.id,
+      }
+    : latestInProgressJob
+      ? {
+          fileName: latestInProgressJob.file_name,
+          startedAt: new Date(latestInProgressJob.uploaded_at).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          progressPercentage: 0, // Will update when jobDetail loads
+          jobId: latestInProgressJob.id,
+        }
+      : currentJobId
+        ? {
+            fileName: 'Uploading...',
+            startedAt: new Date().toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+            progressPercentage: 0,
+            jobId: currentJobId,
+          }
+        : null
+
+  // Import history data for modal - get latest completed/failed job (excluding in_progress)
+  const { data: latestJobData } = useImportJobs({
+    page: 1,
+    page_size: 1,
+  })
+  const latestJob = latestJobData?.items?.find(
+    (job) => job.status !== 'in_progress' && job.status !== 'pending'
+  )
+
+  // Fetch full job detail for the modal if we have a job
+  const { data: latestJobDetail } = useImportJob(latestJob?.id || null, {
+    enabled: !!latestJob?.id && showImportHistory,
+  })
+
+  // Convert job detail to ImportHistoryData format
+  // Prefer jobDetail (current job) if available and completed, otherwise use latestJobDetail
+  const jobDetailForModal =
+    jobDetail && jobDetail.status !== 'in_progress' && jobDetail.status !== 'pending'
+      ? jobDetail
+      : latestJobDetail
+
+  const importHistoryData: ImportHistoryData | null = jobDetailForModal
+    ? {
+        file: jobDetailForModal.file_name,
+        uploadedBy: jobDetailForModal.uploaded_by,
+        uploadedAt: new Date(jobDetailForModal.uploaded_at).toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        status:
+          jobDetailForModal.status === 'completed'
+            ? jobDetailForModal.errors_count > 0
+              ? 'completed_with_errors'
+              : 'completed'
+            : jobDetailForModal.status === 'failed'
+              ? 'failed'
+              : 'completed',
+        totalRows: jobDetailForModal.total_rows,
+        newClients: jobDetailForModal.new_clients,
+        updatedClients: jobDetailForModal.updated_clients,
+        errors: jobDetailForModal.errors_count,
+        processingTime: jobDetailForModal.processing_time,
+        jobId: jobDetailForModal.id,
+      }
+    : null
 
   const [step1Data, setStep1Data] = useState<Step1Data>({
     sellerCreditor: '',
     projectCode: '',
-    purchaseDate: '2024-11-20',
+    purchaseDate: new Date().toISOString().split('T')[0], // Today's date
     comment: '',
     importType: 'simple',
   })
@@ -85,9 +233,16 @@ export function ImportClientsPage() {
   }
 
   const handleGoToImportHistory = () => {
-    // TODO: Fetch actual import history data from API
-    // For now, using mock data
-    setShowImportHistory(true)
+    // Navigate to Import History page
+    navigate('/dashboard/import/history')
+  }
+
+  const handleViewDetails = () => {
+    // Navigate to the in-progress job detail page
+    const jobIdToView = currentJobId || latestInProgressJob?.id
+    if (jobIdToView) {
+      navigate(`/dashboard/import/history/${jobIdToView}`)
+    }
   }
 
   // Get steps based on import type
@@ -108,6 +263,26 @@ export function ImportClientsPage() {
   }
 
   const STEPS = getSteps()
+
+  // Add cancel import mutation
+  const cancelImportMutation = useCancelImport()
+
+  // Add cancel handler
+  const handleCancelImport = async () => {
+    if (!activeJobId) {
+      return
+    }
+
+    try {
+      await cancelImportMutation.mutateAsync(activeJobId)
+      // Clear the current job ID and refetch jobs
+      setCurrentJobId(null)
+      refetchImportJobs()
+    } catch (error) {
+      // Error is already handled by the mutation hook (toast notification)
+      console.error('Failed to cancel import:', error)
+    }
+  }
 
   return (
     <div>
@@ -154,6 +329,12 @@ export function ImportClientsPage() {
                 data={step2Data}
                 onChange={(data) => setStep2Data((prev) => ({ ...prev, ...data }))}
                 isImportInProgress={isImportInProgress}
+                step1Data={step1Data}
+                onImportStarted={(jobId) => {
+                  setCurrentJobId(jobId)
+                  // Refetch import jobs to get the new job and show progress bar
+                  refetchImportJobs()
+                }}
               />
             )}
 
@@ -162,6 +343,12 @@ export function ImportClientsPage() {
                 data={step2VendorData}
                 onChange={(data) => setStep2VendorData((prev) => ({ ...prev, ...data }))}
                 isImportInProgress={isImportInProgress}
+                step1Data={step1Data}
+                onImportStarted={(jobId) => {
+                  setCurrentJobId(jobId)
+                  // Refetch import jobs to get the new job and show progress bar
+                  refetchImportJobs()
+                }}
               />
             )}
 
@@ -186,7 +373,7 @@ export function ImportClientsPage() {
       </div>
 
       {/* Import Progress Banner */}
-      {isImportInProgress && (
+      {isImportInProgress && importProgress ? (
         <div className="z-50 mx-50 my-10 flex items-center justify-between gap-4 rounded-[10px] border border-gray-200 bg-white px-6 py-4 shadow-[0_12px_16px_-4px_rgba(16,24,40,0.08),0_4px_6px_-2px_rgba(16,24,40,0.03)]">
           <div className="text-warning-500 flex items-center gap-2.5 py-1 pl-3">
             {/* Icon - document with refresh symbol */}
@@ -196,30 +383,35 @@ export function ImportClientsPage() {
           <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
             File:{' '}
             <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              clients_batch_2024-11-20.csv
+              {importProgress.fileName}
             </span>
           </span>
           <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
             Started:{' '}
             <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              10:03
+              {importProgress.startedAt}
             </span>
           </span>
           <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
             Status:{' '}
             <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              45% complete
+              {importProgress.progressPercentage}% complete
             </span>
           </span>
           <Button
             variant="primary"
-            onClick={() => {
-              // TODO: Implement view details functionality
-              console.log('View Details clicked')
-            }}
+            onClick={handleViewDetails}
             className="bg-secondary-800 h-10 gap-2.5 rounded-lg px-4 py-2.5 text-sm font-medium text-white"
           >
             View Details
+          </Button>
+          <Button
+            variant="danger"
+            onClick={handleCancelImport}
+            disabled={cancelImportMutation.isPending}
+            className="h-10 gap-2.5 rounded-lg px-4 py-2.5 text-sm font-medium"
+          >
+            {cancelImportMutation.isPending ? 'Cancelling...' : 'Cancel Import'}
           </Button>
           <Button
             variant="outline"
@@ -229,7 +421,7 @@ export function ImportClientsPage() {
             Go to Import History
           </Button>
         </div>
-      )}
+      ) : null}
 
       {/* Import History Modal */}
       <ImportHistoryModal

@@ -5,11 +5,13 @@
  * Handles CSV file upload with drag and drop functionality
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import api from '@/lib/api'
+import { useUploadImport } from '@/features/imports'
+import type { Step1Data } from './Step1LoanSource'
+import { getErrorMessage } from '@/lib/errors'
 
 export interface Step2Data {
   csvFile: File | null
@@ -17,76 +19,170 @@ export interface Step2Data {
   csvValidationError: {
     isValid: boolean
     missingColumns: string[]
+    errorMessage?: string // Optional error message from API
   } | null // Track CSV structure validation errors
 }
 
 export interface Step2FileUploadProps {
   data: Step2Data
   onChange: (data: Partial<Step2Data>) => void
-  isImportInProgress?: boolean // Add this prop to track active imports
+  isImportInProgress?: boolean
+  step1Data: Step1Data
+  onImportStarted?: (importId: number | string) => void
 }
 
 export function Step2FileUpload({
   data,
   onChange,
   isImportInProgress = false,
+  step1Data,
+  onImportStarted,
 }: Step2FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
-  const [isValidating, setIsValidating] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Import mutations
+  const uploadImportMutation = useUploadImport()
 
   const isFileValid = (file: File): boolean => {
     return file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')
   }
 
-  // Validate CSV structure with backend
-  const validateCSVStructure = async (file: File) => {
-    setIsValidating(true)
-    try {
-      const formData = new FormData()
-      formData.append('file', file)
+  // Validate CSV file structure (headers) when file is selected
+  const validateCSVFile = async (
+    file: File
+  ): Promise<{ isValid: boolean; missingColumns?: string[] }> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
 
-      const response = await api.post<{
-        is_valid: boolean
-        missing_columns?: string[]
-      }>('/api/v1/clients/validate-csv', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
+      reader.onload = (e) => {
+        try {
+          const text = e.target?.result as string
+          if (!text) {
+            resolve({ isValid: false, missingColumns: [] })
+            return
+          }
 
-      if (response.data.is_valid) {
-        // CSV structure is valid
-        onChange({
-          csvFile: file,
-          invalidFile: null,
-          csvValidationError: null,
-        })
-      } else {
-        // CSV structure is invalid - missing required columns
-        onChange({
-          csvFile: file, // Store the file so we can display its name
-          invalidFile: null,
-          csvValidationError: {
-            isValid: false,
-            missingColumns: response.data.missing_columns || [],
-          },
-        })
+          // Read first line (header)
+          const lines = text.split('\n')
+          if (lines.length === 0) {
+            resolve({ isValid: false, missingColumns: [] })
+            return
+          }
+
+          const headerLine = lines[0].trim()
+          if (!headerLine) {
+            resolve({ isValid: false, missingColumns: [] })
+            return
+          }
+
+          // Parse header columns
+          // Try comma first, then semicolon, then tab
+          let delimiter = ','
+          if (headerLine.includes(';') && !headerLine.includes(',')) {
+            delimiter = ';'
+          } else if (headerLine.includes('\t')) {
+            delimiter = '\t'
+          }
+
+          const headers = headerLine
+            .split(delimiter)
+            .map((h) => h.trim().toLowerCase())
+            .filter((h) => h.length > 0)
+
+          // Required columns (matching backend requirements - exact column names only)
+          const requiredColumns = [
+            'first_name',
+            'last_name',
+            'date of birth',
+            'tin',
+            'registration_address',
+            'personal_address',
+            'number of family members',
+            'job: organization name',
+            'job: position',
+            'income level',
+            'passport type',
+            'who issued the passport',
+            'contract number',
+            'start date',
+            'last return date',
+            'loan amount (uah)',
+            'body debt (uah)',
+            'total to refund',
+            'loan term (days)',
+          ]
+
+          // Conditionally required: at least one phone column
+          const phoneColumns = [
+            'phone number from registry',
+            'phone_number_from_registry',
+            'phone number of client',
+            'phone_number_of_client',
+            'phone',
+          ]
+
+          // Check for required columns
+          const missingColumns: string[] = []
+          const headerSet = new Set(headers)
+
+          for (const reqCol of requiredColumns) {
+            if (!headerSet.has(reqCol)) {
+              // Check if we already found this column (e.g., first_name vs First Name)
+              const found = headers.some(
+                (h) =>
+                  h.replace(/\s+/g, '_') === reqCol ||
+                  h.replace(/\s+/g, '_') === reqCol.replace(/_/g, ' ') ||
+                  reqCol.replace(/_/g, ' ') === h
+              )
+              if (!found) {
+                // Only add if not already in missingColumns (avoid duplicates)
+                const colName = reqCol.replace(/_/g, ' ')
+                if (!missingColumns.includes(colName) && !missingColumns.includes(reqCol)) {
+                  missingColumns.push(reqCol)
+                }
+              }
+            }
+          }
+
+          // Check for at least one phone column
+          const hasPhone = phoneColumns.some((col) => headerSet.has(col))
+          if (!hasPhone) {
+            // Check if any phone column exists with different formatting
+            const hasPhoneFormatted = headers.some((h) =>
+              phoneColumns.some(
+                (pc) =>
+                  h.replace(/\s+/g, '_') === pc ||
+                  h.replace(/\s+/g, '_') === pc.replace(/_/g, ' ') ||
+                  pc.replace(/_/g, ' ') === h ||
+                  h.includes('phone')
+              )
+            )
+            if (!hasPhoneFormatted) {
+              // Don't add phone to missing columns as it's conditionally required
+              // Backend will handle this during upload
+            }
+          }
+
+          resolve({
+            isValid: missingColumns.length === 0,
+            missingColumns: missingColumns.length > 0 ? missingColumns : undefined,
+          })
+        } catch (error) {
+          console.error('Error validating CSV file:', error)
+          resolve({ isValid: false, missingColumns: [] })
+        }
       }
-    } catch (error) {
-      // Handle API error - treat as invalid structure for now
-      console.error('CSV validation error:', error)
-      onChange({
-        csvFile: null,
-        invalidFile: null,
-        csvValidationError: {
-          isValid: false,
-          missingColumns: ['name', 'phone', 'debt_amount'], // Default missing columns
-        },
-      })
-    } finally {
-      setIsValidating(false)
-    }
+
+      reader.onerror = () => {
+        resolve({ isValid: false, missingColumns: [] })
+      }
+
+      // Read only first 10KB to get header (enough for header row)
+      const blob = file.slice(0, 10240)
+      reader.readAsText(blob)
+    })
   }
 
   const handleFileSelect = async (file: File | null) => {
@@ -106,8 +202,31 @@ export function Step2FileUpload({
       return
     }
 
-    // Valid CSV file - validate structure with backend
-    await validateCSVStructure(file)
+    // Valid CSV file - validate structure immediately
+    onChange({
+      csvFile: file,
+      invalidFile: null,
+      csvValidationError: null, // Clear previous error while validating
+    })
+
+    // Validate CSV structure (headers) immediately
+    const validationResult = await validateCSVFile(file)
+
+    if (!validationResult.isValid && validationResult.missingColumns) {
+      // Set validation error immediately
+      onChange({
+        csvValidationError: {
+          isValid: false,
+          missingColumns: validationResult.missingColumns,
+          errorMessage: undefined,
+        },
+      })
+    } else {
+      // File is valid, clear any previous errors
+      onChange({
+        csvValidationError: null,
+      })
+    }
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -137,13 +256,199 @@ export function Step2FileUpload({
   }
 
   const handleDownloadTemplate = () => {
-    // TODO: Implement template download
-    console.log('Download template')
+    // Template download functionality
+    // This would typically fetch a template file from the backend
+    // For now, we'll create a simple CSV template with required columns
+    const templateContent = 'name,phone,debt_amount\n'
+    const blob = new Blob([templateContent], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'client_import_template.csv'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
-  const handleStartImport = () => {
-    // TODO: Implement import functionality
-    console.log('Start import with file:', data.csvFile)
+  const handleStartImport = async () => {
+    if (
+      !data.csvFile ||
+      !step1Data.sellerCreditor ||
+      !step1Data.projectCode ||
+      !step1Data.purchaseDate
+    ) {
+      setImportError('Please fill in all required fields and select a CSV file')
+      return
+    }
+
+    // Don't clear errors here - errors will be set in catch block if upload fails
+    // This ensures previous errors remain visible until a new error occurs or upload succeeds
+    console.log('=== STARTING UPLOAD ===')
+    console.log('Current importError:', importError)
+    console.log('Mutation error:', uploadImportMutation.error)
+    console.log('Mutation isError:', uploadImportMutation.isError)
+
+    try {
+      const result = await uploadImportMutation.mutateAsync({
+        file: data.csvFile,
+        seller_creditor: step1Data.sellerCreditor,
+        project_code: step1Data.projectCode,
+        purchase_date: step1Data.purchaseDate,
+        comment: step1Data.comment || undefined,
+        import_type: 'simple',
+      })
+
+      // Clear errors on success
+      setImportError(null)
+      // Only clear validation error on success, not before
+      onChange({ csvValidationError: null })
+
+      if (onImportStarted && result.job_id) {
+        onImportStarted(result.job_id)
+      }
+    } catch (error) {
+      // Log error for debugging
+      console.error('=== UPLOAD ERROR CAUGHT ===', error)
+      console.error('Error type:', typeof error)
+      console.error('Error keys:', error && typeof error === 'object' ? Object.keys(error) : 'N/A')
+
+      // Handle validation errors from backend upload endpoint
+      const errorMessage = getErrorMessage(error)
+      console.log('Error message extracted:', errorMessage)
+
+      // CRITICAL: Set error state IMMEDIATELY - this must happen first
+      console.log('Setting error state to:', errorMessage)
+      setImportError(errorMessage)
+
+      // Extract validation details from error response
+      // Check if it's an Axios error (has response property)
+      const isAxiosError = error && typeof error === 'object' && 'response' in error
+
+      if (isAxiosError) {
+        console.log('Error has response structure')
+        const apiError = error as {
+          response?: {
+            data?: {
+              detail?: string | string[]
+              message?: string
+              missing_columns?: string[]
+            }
+            status?: number
+          }
+        }
+
+        const responseData = apiError.response?.data
+        const status = apiError.response?.status
+
+        console.log('Response data:', JSON.stringify(responseData, null, 2))
+        console.log('Status:', status)
+
+        // Handle 401 Unauthorized - authentication error
+        if (status === 401) {
+          console.log('401 Unauthorized - authentication required')
+          // Don't set csvValidationError for auth errors
+          // The error message is already set in importError
+          return // Exit early, don't process as validation error
+        }
+
+        // Handle FastAPI validation error format
+        let detail = ''
+        let missingColumns: string[] = []
+
+        if (responseData) {
+          console.log('Processing response data...')
+          // FastAPI returns detail as string or array
+          if (typeof responseData.detail === 'string') {
+            detail = responseData.detail
+          } else if (Array.isArray(responseData.detail)) {
+            // ValidationError format: array of error objects
+            detail = responseData.detail
+              .map((err: { msg?: string; message?: string } | string) => {
+                if (typeof err === 'string') return err
+                return err.msg || err.message || String(err)
+              })
+              .join(', ')
+          }
+
+          // PRIORITY 1: Check if missing_columns is directly in response (backend now provides this)
+          if (responseData.missing_columns && Array.isArray(responseData.missing_columns)) {
+            missingColumns = responseData.missing_columns
+            console.log('Found missing_columns in response:', missingColumns)
+          } else if (detail.includes('Missing required columns:')) {
+            // PRIORITY 2: Extract missing columns from detail message (fallback for old format)
+            // Backend format: "Missing required columns: first_name, last_name. Required columns: ..."
+            const match = detail.match(/Missing required columns:\s*([^.]+?)(?:\.|$)/i)
+            if (!match) {
+              // Try without requiring period
+              const match2 = detail.match(/Missing required columns:\s*([^,]+(?:,\s*[^,]+)*)/i)
+              if (match2 && match2[1]) {
+                missingColumns = match2[1]
+                  .split(',')
+                  .map((col) => col.trim())
+                  .filter((col) => col.length > 0)
+                console.log('Extracted missing_columns from detail:', missingColumns)
+              }
+            }
+          }
+        }
+
+        // CRITICAL: ALWAYS set csvValidationError for ANY 400 error
+        // This ensures csvValidationError is never null when there's a validation error
+        if (status === 400) {
+          // Extract missing columns if not already extracted
+          if (missingColumns.length === 0 && detail.includes('Missing required columns:')) {
+            const match = detail.match(/Missing required columns:\s*([^.]+?)(?:\.|$)/i)
+            if (match && match[1]) {
+              missingColumns = match[1]
+                .split(',')
+                .map((c) => c.trim())
+                .filter((c) => c.length > 0)
+            }
+          }
+
+          // Set CSV validation error state - ALWAYS for 400 errors
+          const validationError = {
+            isValid: false,
+            missingColumns: missingColumns,
+            errorMessage: missingColumns.length === 0 ? detail : undefined,
+          }
+
+          console.log('=== SETTING csvValidationError ===', validationError)
+          console.log('Current data state:', {
+            csvFile: data.csvFile,
+            csvValidationError: data.csvValidationError,
+          })
+
+          // CRITICAL: Always call onChange to set csvValidationError
+          onChange({
+            csvValidationError: validationError,
+            csvFile: data.csvFile, // Keep the file so error is visible
+          })
+
+          console.log('=== onChange CALLED ===')
+        } else {
+          console.log('Not a 400 error. Status:', status, 'Detail:', detail)
+        }
+      } else {
+        console.log('Error does not have response structure')
+        // Check if error message indicates authentication issue
+        if (
+          errorMessage &&
+          (errorMessage.includes('401') || errorMessage.includes('Unauthorized'))
+        ) {
+          console.log('Authentication error detected in error message')
+          // Don't set csvValidationError for auth errors
+          return
+        }
+      }
+
+      // Ensure we have an error message - fallback if extraction failed
+      if (!errorMessage) {
+        console.warn('Error caught but no error message extracted!', error)
+        setImportError('An unknown error occurred during upload. Please try again.')
+      }
+    }
   }
 
   // Format file size to MB
@@ -155,17 +460,136 @@ export function Step2FileUpload({
   const hasValidFile = !!data.csvFile
   const hasInvalidFile = !!data.invalidFile
   const hasInvalidCSVStructure = !!data.csvValidationError && !data.csvValidationError.isValid
+  const isStartingImport = uploadImportMutation.isPending
 
-  // Get the file from validation error state - we need to track it separately
-  // For now, we'll show the error but need to store the file reference
+  // Get current error from mutation - this is the source of truth
+  const mutationError = uploadImportMutation.error
+  const mutationErrorMsg = mutationError ? getErrorMessage(mutationError) : null
+
+  // DEBUG: Log state on render to help diagnose
+  if (mutationError || uploadImportMutation.isError) {
+    console.log('RENDER: Mutation has error!', {
+      importError,
+      mutationErrorMsg,
+      isError: uploadImportMutation.isError,
+      hasInvalidCSV: hasInvalidCSVStructure,
+    })
+  }
+
+  // Sync mutation error state with component error state - ALWAYS keep them in sync
+  useEffect(() => {
+    const mutationError = uploadImportMutation.error
+    if (mutationError) {
+      const errorMsg = getErrorMessage(mutationError)
+      console.log('useEffect: Setting error from mutation error state:', errorMsg)
+      // Defer state update to avoid cascading renders
+      setTimeout(() => {
+        setImportError(errorMsg)
+      }, 0)
+
+      // Also extract validation details if it's a validation error
+      if (typeof mutationError === 'object' && 'response' in mutationError) {
+        const apiError = mutationError as {
+          response?: {
+            data?: {
+              detail?: string | string[]
+              missing_columns?: string[]
+            }
+            status?: number
+          }
+        }
+
+        const responseData = apiError.response?.data
+        const status = apiError.response?.status
+
+        if (responseData && status === 400) {
+          let detail = ''
+          let missingColumns: string[] = []
+
+          if (typeof responseData.detail === 'string') {
+            detail = responseData.detail
+          } else if (Array.isArray(responseData.detail)) {
+            detail = responseData.detail
+              .map((err: { msg?: string; message?: string } | string) => {
+                if (typeof err === 'string') return err
+                return err.msg || err.message || String(err)
+              })
+              .join(', ')
+          }
+
+          // Extract missing columns
+          if (detail.includes('Missing required columns:')) {
+            const match = detail.match(/Missing required columns:\s*([^.]+?)(?:\.|$)/i)
+            if (!match) {
+              const match2 = detail.match(/Missing required columns:\s*([^,]+(?:,\s*[^,]+)*)/i)
+              if (match2 && match2[1]) {
+                missingColumns = match2[1]
+                  .split(',')
+                  .map((col) => col.trim())
+                  .filter((col) => col.length > 0)
+              }
+            } else if (match[1]) {
+              missingColumns = match[1]
+                .split(',')
+                .map((col) => col.trim())
+                .filter((col) => col.length > 0)
+            }
+          }
+
+          if (responseData.missing_columns && Array.isArray(responseData.missing_columns)) {
+            missingColumns = responseData.missing_columns
+          }
+
+          // Check if it's a CSV validation error
+          const isValidationError =
+            detail.includes('CSV') ||
+            detail.includes('header') ||
+            detail.includes('column') ||
+            detail.includes('Missing required') ||
+            missingColumns.length > 0
+
+          if (isValidationError) {
+            onChange({
+              csvValidationError: {
+                isValid: false,
+                missingColumns: missingColumns,
+                errorMessage: missingColumns.length === 0 ? detail : undefined,
+              },
+              csvFile: data.csvFile,
+            })
+          }
+        }
+      }
+    } else if (!uploadImportMutation.isPending && !uploadImportMutation.isError) {
+      // Clear error when mutation succeeds or resets
+      // But only if we're not in the middle of handling an error
+    }
+  }, [
+    uploadImportMutation.error,
+    uploadImportMutation.isPending,
+    uploadImportMutation.isError,
+    data.csvFile,
+    onChange,
+  ])
+
+  // Track the file that caused the error
   const [errorFile, setErrorFile] = useState<File | null>(null)
 
   // Update errorFile when validation error occurs
-  if (hasInvalidCSVStructure && !errorFile && data.csvFile) {
-    setErrorFile(data.csvFile)
-  }
+  useEffect(() => {
+    if (hasInvalidCSVStructure && data.csvFile && !errorFile) {
+      // Defer state update to avoid cascading renders
+      setTimeout(() => {
+        setErrorFile(data.csvFile)
+      }, 0)
+    } else if (!hasInvalidCSVStructure) {
+      setTimeout(() => {
+        setErrorFile(null)
+      }, 0)
+    }
+  }, [hasInvalidCSVStructure, data.csvFile, errorFile])
 
-  const displayFile = data.csvFile || data.invalidFile
+  const displayFile = data.csvFile || data.invalidFile || errorFile
 
   return (
     <div className="space-y-6">
@@ -180,6 +604,28 @@ export function Step2FileUpload({
           <Icons.Warning size={24} className="text-error-500" />
           <span className="text-error-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
             You cannot start another import until this one finishes.
+          </span>
+        </div>
+      )}
+
+      {/* Error Alert - shown when import fails - SIMPLIFIED CONDITION */}
+      {(importError ||
+        mutationErrorMsg ||
+        uploadImportMutation.isError ||
+        hasInvalidCSVStructure) && (
+        <div className="mb-4 flex items-center justify-center gap-3 rounded-lg border-2 border-red-500 bg-white p-6">
+          <Icons.Warning size={24} className="text-error-500" />
+          <span className="text-error-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            {importError ||
+              mutationErrorMsg ||
+              data.csvValidationError?.errorMessage ||
+              (uploadImportMutation.isError
+                ? 'An error occurred during upload. Please check the file and try again.'
+                : null) ||
+              (hasInvalidCSVStructure
+                ? 'CSV validation failed. Please check the file structure.'
+                : null) ||
+              'An error occurred during upload'}
           </span>
         </div>
       )}
@@ -251,24 +697,42 @@ export function Step2FileUpload({
             </div>
           )}
 
-          {/* Missing Required Columns - shown when invalid CSV structure */}
+          {/* Missing Required Columns - shown when invalid CSV structure and backend provides columns */}
           {hasInvalidCSVStructure &&
             data.csvValidationError?.missingColumns &&
             data.csvValidationError.missingColumns.length > 0 && (
               <div className="flex w-full flex-col items-center gap-3">
-                <div className="text-dark-500 text-center text-base leading-[155%] font-medium tracking-[-0.32px]">
+                <div className="text-dark-500 text-center text-base leading-[155%] font-bold tracking-[-0.32px]">
                   Missing required columns:
                 </div>
-                <div className="flex w-full flex-wrap items-center justify-center gap-2">
-                  {data.csvValidationError.missingColumns.map((column) => (
-                    <div key={column} className="flex items-center gap-2 rounded-full px-3 py-1.5">
-                      <Icons.Close size={16} className="text-error-500" />
-                      <span className="text-error-500 text-base leading-[155%] font-light tracking-[-0.32px] capitalize">
-                        {column.replace(/_/g, ' ')}
-                      </span>
-                    </div>
-                  ))}
+                <div className="flex w-full flex-wrap items-center justify-center gap-3">
+                  {data.csvValidationError.missingColumns.map((column) => {
+                    // Format column name: first_name -> First Name, debt_amount -> Debt Amount
+                    const formattedName = column
+                      .split('_')
+                      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                      .join(' ')
+
+                    return (
+                      <div key={column} className="flex items-center gap-2">
+                        <Icons.Close size={16} className="text-error-500" />
+                        <span className="text-error-500 text-base leading-[155%] font-light tracking-[-0.32px]">
+                          {formattedName}
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
+              </div>
+            )}
+
+          {/* Generic Error Message - shown when API error but no specific columns provided */}
+          {hasInvalidCSVStructure &&
+            data.csvValidationError?.errorMessage &&
+            (!data.csvValidationError.missingColumns ||
+              data.csvValidationError.missingColumns.length === 0) && (
+              <div className="text-error-500 text-center text-base leading-[155%] font-medium tracking-[-0.32px]">
+                {data.csvValidationError.errorMessage}
               </div>
             )}
 
@@ -314,10 +778,10 @@ export function Step2FileUpload({
         <Button
           variant="outline"
           onClick={handleBrowseClick}
-          disabled={isValidating}
+          disabled={isImportInProgress}
           className="text-dark-500 flex h-12 flex-col items-center justify-center gap-[10px] rounded-full border border-gray-600 px-5 py-3 text-sm"
         >
-          {isValidating ? 'Validating...' : 'Browse File'}
+          Browse File
         </Button>
 
         {/* Hidden File Input - removed accept restriction to allow all file types */}
@@ -343,23 +807,23 @@ export function Step2FileUpload({
         {/* Start Import Button - disabled when invalid file, invalid CSV structure, or no file */}
         <Button
           variant="primary"
-          onClick={() => {
-            if (hasValidFile && !hasInvalidCSVStructure && !isImportInProgress) handleStartImport()
-          }}
-          //   disabled={!hasValidFile || hasInvalidCSVStructure || isImportInProgress}
+          onClick={handleStartImport}
+          disabled={
+            !hasValidFile || hasInvalidCSVStructure || isImportInProgress || isStartingImport
+          }
           className={cn(
             'flex h-12 items-center justify-center gap-2.5 rounded-full py-1 pr-1 pl-6 text-sm leading-[150%] font-medium',
-            hasValidFile && !hasInvalidCSVStructure && !isImportInProgress
+            hasValidFile && !hasInvalidCSVStructure && !isImportInProgress && !isStartingImport
               ? 'bg-secondary-800 cursor-pointer text-white'
               : 'cursor-not-allowed bg-gray-200 text-gray-600'
           )}
         >
-          <span>Start Import</span>
+          <span>{isStartingImport ? 'Starting Import...' : 'Start Import'}</span>
           {/* Circular icon with arrow - matching Next Step button design */}
           <div
             className={cn(
               'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
-              hasValidFile && !hasInvalidCSVStructure && !isImportInProgress
+              hasValidFile && !hasInvalidCSVStructure && !isImportInProgress && !isStartingImport
                 ? 'bg-primary-300'
                 : 'bg-gray-600'
             )}
@@ -367,7 +831,7 @@ export function Step2FileUpload({
             <Icons.ArrowRight02
               size={24}
               className={cn(
-                hasValidFile && !hasInvalidCSVStructure && !isImportInProgress
+                hasValidFile && !hasInvalidCSVStructure && !isImportInProgress && !isStartingImport
                   ? 'text-dark-500'
                   : 'text-gray-500'
               )}

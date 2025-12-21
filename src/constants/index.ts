@@ -27,6 +27,7 @@ export const QUERY = {
 export const ROUTES = {
   LOGIN: '/login',
   DASHBOARD: '/dashboard',
+  CLIENT: '/dashboard/client',
   USERS: '/dashboard/users',
   PROJECTS: '/dashboard/projects',
   ROLES: '/dashboard/roles',
