@@ -202,10 +202,10 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
           {status === 'completed_with_errors' ? (
             <>
               <Button
-                variant="outline"
+                variant="white-secondary"
                 onClick={handleViewDetails}
                 disabled={!jobId}
-                className="text-dark-500 flex flex-1 items-center rounded-lg border-white bg-white px-5 py-3 text-sm font-medium"
+                className="flex flex-1 items-center text-sm font-medium"
               >
                 View Details
               </Button>
@@ -214,7 +214,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
                 onClick={handleDownloadErrors}
                 disabled={!jobId || exportErrorsMutation.isPending}
                 leftIcon={<Icons.FileDownload size={20} className="text-dark-500" />}
-                className="bg-primary-300 text-dark-500 flex flex-1 items-center rounded-lg px-5 py-3 text-sm font-medium"
+                className="flex flex-1 items-center text-sm font-medium"
               >
                 {exportErrorsMutation.isPending ? 'Exporting...' : 'Download Error Report CSV'}
               </Button>
@@ -224,7 +224,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
               variant="primary"
               onClick={handleViewDetails}
               disabled={!jobId}
-              className="bg-primary-300 text-dark-500 w-full rounded-lg px-5 py-3 text-sm font-medium"
+              className="w-full text-sm font-medium"
             >
               View Details
             </Button>

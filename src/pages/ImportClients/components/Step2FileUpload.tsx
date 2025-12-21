@@ -7,6 +7,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
+import { DoubleButton } from '@/components/ui/DoubleButton'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useUploadImport } from '@/features/imports'
@@ -779,7 +780,7 @@ export function Step2FileUpload({
           variant="outline"
           onClick={handleBrowseClick}
           disabled={isImportInProgress}
-          className="text-dark-500 flex h-12 flex-col items-center justify-center gap-[10px] rounded-full border border-gray-600 px-5 py-3 text-sm"
+          className="flex h-12 flex-col items-center justify-center rounded-full text-sm"
         >
           Browse File
         </Button>
@@ -792,52 +793,26 @@ export function Step2FileUpload({
       <div className="flex items-start justify-center gap-6">
         {/* Download Template Button */}
         <Button
-          variant="outline"
+          variant="white-secondary"
           onClick={handleDownloadTemplate}
           disabled={isImportInProgress}
-          leftIcon={<Icons.FileDownload size={20} className="text-secondary-800" />}
-          className={cn(
-            'text-secondary-800 flex h-12 items-center justify-center rounded-full border-white bg-white px-4 py-2.5 text-sm leading-[150%] font-medium',
-            isImportInProgress && 'opacity-50'
-          )}
+          leftIcon={<Icons.FileDownload size={20} />}
+          className="flex h-12 items-center justify-center rounded-full text-sm leading-[150%] font-medium"
         >
           Download Sample CSV Template
         </Button>
 
         {/* Start Import Button - disabled when invalid file, invalid CSV structure, or no file */}
-        <Button
-          variant="primary"
+        <DoubleButton
+          icon={<Icons.ArrowRight02 size={24} />}
+          iconPosition="right"
           onClick={handleStartImport}
           disabled={
             !hasValidFile || hasInvalidCSVStructure || isImportInProgress || isStartingImport
           }
-          className={cn(
-            'flex h-12 items-center justify-center gap-2.5 rounded-full py-1 pr-1 pl-6 text-sm leading-[150%] font-medium',
-            hasValidFile && !hasInvalidCSVStructure && !isImportInProgress && !isStartingImport
-              ? 'bg-secondary-800 cursor-pointer text-white'
-              : 'cursor-not-allowed bg-gray-200 text-gray-600'
-          )}
         >
-          <span>{isStartingImport ? 'Starting Import...' : 'Start Import'}</span>
-          {/* Circular icon with arrow - matching Next Step button design */}
-          <div
-            className={cn(
-              'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
-              hasValidFile && !hasInvalidCSVStructure && !isImportInProgress && !isStartingImport
-                ? 'bg-primary-300'
-                : 'bg-gray-600'
-            )}
-          >
-            <Icons.ArrowRight02
-              size={24}
-              className={cn(
-                hasValidFile && !hasInvalidCSVStructure && !isImportInProgress && !isStartingImport
-                  ? 'text-dark-500'
-                  : 'text-gray-500'
-              )}
-            />
-          </div>
-        </Button>
+          Start Import
+        </DoubleButton>
       </div>
     </div>
   )

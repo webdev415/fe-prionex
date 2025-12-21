@@ -175,10 +175,10 @@ export function ImportDetailsPage() {
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
-            variant="outline"
+            variant="white-secondary"
             onClick={() => navigate('/dashboard/import/history')}
-            leftIcon={<Icons.ArrowLeft02 size={20} className="text-secondary-800" />}
-            className="text-secondary-800 h-12 rounded-full border-white bg-white px-4 py-2.5 text-sm font-medium"
+            leftIcon={<Icons.ArrowLeft02 size={20} />}
+            className="flex h-12 flex-row items-center justify-center rounded-full text-sm leading-[150%] font-medium"
           >
             Back to History
           </Button>
@@ -190,7 +190,7 @@ export function ImportDetailsPage() {
           onClick={handleDownloadErrors}
           disabled={exportErrorsMutation.isPending || importDetail.errors === 0}
           leftIcon={<Icons.FileDownload size={20} className="text-dark-500" />}
-          className="bg-primary-300 text-dark-500 h-12 rounded-full px-4 py-2.5 text-sm font-medium"
+          className="h-12 rounded-full text-sm font-medium"
         >
           {exportErrorsMutation.isPending ? 'Exporting...' : 'Download Error CSV'}
         </Button>

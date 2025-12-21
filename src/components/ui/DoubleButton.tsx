@@ -100,7 +100,7 @@ const DoubleButton = forwardRef<HTMLButtonElement, DoubleButtonProps>(
           // DEFAULT: bg-secondary-800 (dark green/teal)
           // HOVER: lighter, more vibrant green (bg-secondary-600)
           // DISABLED: bg-gray-200 (light gray)
-          'bg-secondary-800 hover:bg-primary-300 active:bg-primary-500 text-white disabled:bg-gray-200 disabled:text-gray-600',
+          'bg-secondary-800 hover:bg-primary-300 hover:text-dark-500 active:bg-primary-500 disabled:bg-gray-200 disabled:text-gray-600',
           className
         )}
         ref={ref}
@@ -125,7 +125,7 @@ const DoubleButton = forwardRef<HTMLButtonElement, DoubleButtonProps>(
         <span
           className={cn(
             textContainerVariants({ size }),
-            'text-white group-hover:text-white group-disabled:text-gray-600'
+            'group-hover:text-dark-500 text-white group-disabled:text-gray-600'
           )}
         >
           {children}

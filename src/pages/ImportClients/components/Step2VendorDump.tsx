@@ -7,6 +7,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
+import { DoubleButton } from '@/components/ui/DoubleButton'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
@@ -262,7 +263,7 @@ export function Step2VendorDump({
                 variant="outline"
                 onClick={() => handleBrowseClick(item.type)}
                 disabled={isImportInProgress}
-                className="text-dark-500 h-8 rounded-full border-gray-600 bg-white px-3 py-1.5 text-xs font-medium"
+                className="h-8 text-xs font-medium"
               >
                 {isDocuments ? 'Choose ZIP' : 'Choose file'}
               </Button>
@@ -330,7 +331,7 @@ export function Step2VendorDump({
             variant="outline"
             onClick={() => handleBrowseClick()}
             disabled={isImportInProgress}
-            className="text-dark-500 flex h-12 flex-col items-center justify-center gap-[10px] rounded-full border border-gray-600 px-5 py-3 text-sm"
+            className="flex h-12 flex-col items-center justify-center rounded-full text-sm"
           >
             Browse File
           </Button>
@@ -354,32 +355,14 @@ export function Step2VendorDump({
 
       {/* Start Import Button */}
       <div className="mt-8 flex justify-center">
-        <Button
-          variant="primary"
+        <DoubleButton
+          icon={<Icons.ArrowRight02 size={24} />}
+          iconPosition="right"
           onClick={handleStartImport}
           disabled={!requiredFilesSelected || isImportInProgress || isStartingImport}
-          className={cn(
-            'flex h-12 items-center justify-center gap-2.5 rounded-full py-1 pr-1 pl-6 text-sm leading-[150%] font-medium',
-            requiredFilesSelected && !isImportInProgress && !isStartingImport
-              ? 'bg-secondary-800 cursor-pointer text-white'
-              : 'cursor-not-allowed bg-gray-200 text-gray-600'
-          )}
         >
-          <span>{isStartingImport ? 'Starting Import...' : 'Start Import'}</span>
-          <div
-            className={cn(
-              'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full',
-              requiredFilesSelected && !isImportInProgress ? 'bg-primary-300' : 'bg-gray-600'
-            )}
-          >
-            <Icons.ArrowRight02
-              size={24}
-              className={cn(
-                requiredFilesSelected && !isImportInProgress ? 'text-dark-500' : 'text-gray-500'
-              )}
-            />
-          </div>
-        </Button>
+          Start Import
+        </DoubleButton>
       </div>
     </div>
   )

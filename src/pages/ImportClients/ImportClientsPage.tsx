@@ -8,6 +8,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { StepIndicator, type Step } from '@/components/ui/StepIndicator'
 import { Button } from '@/components/ui/Button'
+import { DoubleButton } from '@/components/ui/DoubleButton'
 import { Step1LoanSource, type Step1Data } from './components/Step1LoanSource'
 import { Step2FileUpload, type Step2Data } from './components/Step2FileUpload'
 import { Step2VendorDump, type Step2VendorDumpData } from './components/Step2VendorDump'
@@ -291,10 +292,10 @@ export function ImportClientsPage() {
         <div className="flex items-center gap-6">
           {currentStep > 1 && (
             <Button
-              variant="outline"
+              variant="white-secondary"
               onClick={handlePreviousStep}
-              leftIcon={<Icons.ArrowLeft02 size={20} className="text-secondary-800" />}
-              className="text-secondary-800 flex h-12 flex-row items-center justify-center rounded-full border-white bg-white px-4 py-2.5 text-sm leading-[150%] font-medium"
+              leftIcon={<Icons.ArrowLeft02 size={20} />}
+              className="flex h-12 flex-row items-center justify-center rounded-full text-sm leading-[150%] font-medium"
             >
               Back
             </Button>
@@ -306,7 +307,7 @@ export function ImportClientsPage() {
           variant="primary"
           onClick={handleViewHistory}
           leftIcon={<Icons.TransactionHistory size={20} className="text-dark-500" />}
-          className="bg-primary-300 text-dark-500 flex h-12 flex-row items-center justify-center rounded-full px-4 py-2.5 text-center text-xs"
+          className="flex h-12 flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium"
         >
           View History
         </Button>
@@ -355,17 +356,16 @@ export function ImportClientsPage() {
             {/* Navigation Buttons */}
             <div className="mt-8 flex justify-center">
               {currentStep < STEPS.length && currentStep === 1 && (
-                <Button
-                  variant="primary"
+                <DoubleButton
+                  size="md"
+                  icon={<Icons.ArrowRight02 size={24} />}
+                  iconPosition="right"
                   onClick={handleNextStep}
                   disabled={!isStep1Valid()}
-                  className="bg-secondary-800 flex h-12 items-center gap-2.5 rounded-full py-1 pr-1 pl-6 text-sm text-white"
+                  className="h-12 rounded-full text-sm leading-[150%] font-medium"
                 >
-                  <span>Next Step</span>
-                  <div className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
-                    <Icons.ArrowRight02 size={24} className="text-dark-500" />
-                  </div>
-                </Button>
+                  Next Step
+                </DoubleButton>
               )}
             </div>
           </div>
@@ -399,24 +399,24 @@ export function ImportClientsPage() {
             </span>
           </span>
           <Button
-            variant="primary"
+            variant="secondary"
             onClick={handleViewDetails}
-            className="bg-secondary-800 h-10 gap-2.5 rounded-lg px-4 py-2.5 text-sm font-medium text-white"
+            className="h-10 rounded-lg text-sm font-medium"
           >
             View Details
           </Button>
           <Button
-            variant="danger"
+            variant="cancel"
             onClick={handleCancelImport}
             disabled={cancelImportMutation.isPending}
-            className="h-10 gap-2.5 rounded-lg px-4 py-2.5 text-sm font-medium"
+            className="h-10 rounded-lg text-sm font-medium"
           >
             {cancelImportMutation.isPending ? 'Cancelling...' : 'Cancel Import'}
           </Button>
           <Button
             variant="outline"
             onClick={handleGoToImportHistory}
-            className="border-secondary-800 text-secondary-800 gap-2.5 rounded-lg bg-white px-4 py-2.5 text-sm font-medium"
+            className="h-10 rounded-lg text-sm font-medium"
           >
             Go to Import History
           </Button>

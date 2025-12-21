@@ -10,6 +10,9 @@ import { useNavigate } from 'react-router-dom'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
+import { LinkButton } from '@/components/ui/LinkButton'
+import { DoubleButton } from '@/components/ui/DoubleButton'
+import { Button } from '@/components/ui/Button'
 import {
   ImportHistoryFiltersBar,
   type ImportHistoryFilters,
@@ -373,18 +376,18 @@ export function ImportHistoryPage() {
       align: 'center',
       render: (item) => (
         <div className="flex items-center justify-center">
-          <button
-            type="button"
+          <LinkButton
+            variant="regular-black"
+            size="xs"
             onClick={(e) => {
               e.stopPropagation()
               setSelectedJobId(item.id)
               navigate(`/dashboard/import/history/${item.id}`)
             }}
-            className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+            leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
           >
-            <Icons.View size={16} className="text-dark-500" strokeWidth={1.5} />
             View
-          </button>
+          </LinkButton>
         </div>
       ),
     },
@@ -406,9 +409,11 @@ export function ImportHistoryPage() {
 
           {/* Action Buttons */}
           <div className="flex w-[30%] items-center justify-end gap-2">
-            <button
+            <Button
               onClick={handleDownloadErrors}
-              type="button"
+              variant="primary"
+              size="xs"
+              leftIcon={<Icons.FileDownload size={20} />}
               disabled={
                 exportErrorsMutation.isPending ||
                 (!selectedJobId && paginatedData.length === 0) ||
@@ -416,11 +421,10 @@ export function ImportHistoryPage() {
                   ? !paginatedData.find((item) => item.id === selectedJobId)?.errors
                   : !paginatedData[0]?.errors)
               }
-              className="bg-primary-300 text-dark-500 flex h-[45px] items-center gap-2 rounded-full px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-12 items-center rounded-full text-xs font-medium"
             >
-              <Icons.FileDownload size={20} className="text-dark-500" />
               {exportErrorsMutation.isPending ? 'Exporting...' : 'Download Errors'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -448,15 +452,14 @@ export function ImportHistoryPage() {
             </h3>
 
             {/* Clear Filters Button */}
-            <button
+            <DoubleButton
+              icon={<Icons.Reload size={22} />}
+              iconPosition="left"
               onClick={handleClearFilters}
-              className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+              className="text-sm font-medium"
             >
-              <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-                <Icons.Reload size={22} className="text-dark-500" strokeWidth={1.5} />
-              </div>
-              <span className="px-4 py-3 text-sm font-medium text-white">Clear filters</span>
-            </button>
+              Clear filters
+            </DoubleButton>
           </div>
         ) : hasNoData ? (
           // Empty State - No import history at all
@@ -477,15 +480,14 @@ export function ImportHistoryPage() {
             </p>
 
             {/* Go to Import Clients Button */}
-            <button
+            <DoubleButton
+              icon={<Icons.FileImport size={20} />}
+              iconPosition="left"
               onClick={handleGoToImportClients}
-              className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+              className="text-sm font-medium"
             >
-              <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-                <Icons.FileImport size={20} className="text-dark-500" strokeWidth={1.5} />
-              </div>
-              <span className="px-4 py-3 text-sm font-medium text-white">Go to Import Clients</span>
-            </button>
+              Go to Import Clients
+            </DoubleButton>
           </div>
         ) : (
           // Data Table
