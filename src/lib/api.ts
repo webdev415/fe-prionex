@@ -27,7 +27,16 @@ export const setAccessToken = (token: string | null) => {
   }
 }
 
-export const getAccessToken = () => accessToken
+export const getAccessToken = () => {
+  // Always check sessionStorage as source of truth
+  // This ensures we get the latest token even if in-memory variable is stale
+  const tokenFromStorage = sessionStorage.getItem(TOKEN_KEY)
+  if (tokenFromStorage && tokenFromStorage !== accessToken) {
+    // Sync in-memory token with sessionStorage
+    accessToken = tokenFromStorage
+  }
+  return accessToken || tokenFromStorage
+}
 
 // Race condition handling for token refresh
 let isRefreshing = false
@@ -45,8 +54,22 @@ const onTokenRefreshed = (token: string) => {
 // Request interceptor - add token to requests
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`
+    // Refresh token from sessionStorage in case it was updated elsewhere
+    // This ensures we always have the latest token
+    const currentToken = sessionStorage.getItem(TOKEN_KEY) || accessToken
+    if (currentToken) {
+      // Update in-memory token if it changed
+      if (currentToken !== accessToken) {
+        accessToken = currentToken
+      }
+      config.headers.Authorization = `Bearer ${currentToken}`
+      console.log('Request interceptor: Added Authorization header', {
+        url: config.url,
+        hasToken: !!currentToken,
+        tokenLength: currentToken.length,
+      })
+    } else {
+      console.warn('Request interceptor: No token available', { url: config.url })
     }
     return config
   },
@@ -88,22 +111,41 @@ api.interceptors.response.use(
       isRefreshing = true
 
       try {
+        // Get current token to validate
+        const currentToken = getAccessToken()
+        if (!currentToken) {
+          throw new Error('No token available for validation')
+        }
+
         // Attempt to validate the token
         const validateResponse = await axios.post(
           `${API_BASE_URL}/api/v1/auth/validate`,
           {},
-          { withCredentials: true }
+          {
+            withCredentials: true,
+            headers: {
+              Authorization: `Bearer ${currentToken}`,
+            },
+          }
         )
 
-        const newToken = validateResponse.data.token
-        setAccessToken(newToken)
+        // Check if token is valid
+        // The validate endpoint returns { valid: true, payload: {...}, expires_in: ... }
+        // or { valid: false, error: "...", message: "..." }
+        // It does NOT return a new token
+        if (validateResponse.data.valid === true) {
+          // Token is still valid - retry the original request with current token
+          // This can happen if the 401 was due to a temporary issue
+          originalRequest.headers.Authorization = `Bearer ${currentToken}`
 
-        // Notify all waiting requests
-        onTokenRefreshed(newToken)
+          // Notify all waiting requests with current token
+          onTokenRefreshed(currentToken)
 
-        // Retry the original request with new token
-        originalRequest.headers.Authorization = `Bearer ${newToken}`
-        return api(originalRequest)
+          return api(originalRequest)
+        } else {
+          // Token is invalid or expired - clear and redirect
+          throw new Error(validateResponse.data.message || 'Token validation failed')
+        }
       } catch (refreshError) {
         // Refresh failed - clear token and redirect to login
         setAccessToken(null)
