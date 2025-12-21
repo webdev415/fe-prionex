@@ -55,6 +55,7 @@ const iconMap: Record<
   'transaction-history': (props) => <Icons.TransactionHistory {...props} />,
   'setting-07': (props) => <Icons.Setting07 {...props} />,
   'logout-square-01': (props) => <Icons.LogoutSquare01 {...props} />,
+  'mail-send': (props) => <Icons.MailSend01 {...props} />,
 }
 
 /**
@@ -67,6 +68,9 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
    * Check if a path is active
    */
   const isActivePath = (path: string) => {
+    if (path === '/dashboard/client') {
+      return location.pathname === '/dashboard/client' || location.pathname === '/dashboard'
+    }
     if (path === '/dashboard') {
       return location.pathname === '/dashboard'
     }
@@ -130,7 +134,7 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
                 <TooltipTrigger asChild>
                   <NavLink
                     to={item.path}
-                    end={item.path === '/dashboard'}
+                    end={item.path === '/dashboard/client'}
                     className={cn(
                       'focus:ring-primary-500 mx-auto flex shrink-0 items-center justify-center transition-all duration-200 focus:ring-2 focus:ring-offset-2 focus:outline-none',
                       isActive
