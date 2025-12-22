@@ -56,6 +56,8 @@ import {
   LogoutSquare01Icon,
   UserCircle02Icon,
   ChartRingIcon,
+  UserSearch01Icon,
+  BrochureIcon,
   // Additional icons for UI enhancements
   MultiplicationSignIcon,
   Download01Icon,
@@ -197,9 +199,10 @@ export const Icons = {
   Setting07: (props: Omit<IconProps, 'icon'>) => <Icon icon={Setting07Icon} {...props} />,
   LogoutSquare01: (props: Omit<IconProps, 'icon'>) => <Icon icon={LogoutSquare01Icon} {...props} />,
   ChartRing: (props: Omit<IconProps, 'icon'>) => <Icon icon={ChartRingIcon} {...props} />,
+  Brochure: (props: Omit<IconProps, 'icon'>) => <Icon icon={BrochureIcon} {...props} />,
 
   UserCircle02Icon: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserCircle02Icon} {...props} />,
-
+  UserSearch01: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserSearch01Icon} {...props} />,
   // Additional icons for UI enhancements
   Close: (props: Omit<IconProps, 'icon'>) => <Icon icon={MultiplicationSignIcon} {...props} />,
   Download: (props: Omit<IconProps, 'icon'>) => <Icon icon={Download01Icon} {...props} />,
@@ -348,6 +351,8 @@ export {
   MailBlock02Icon,
   CallDone02Icon,
   Clock01Icon,
+  UserSearch01Icon,
+  BrochureIcon,
 }
 
 /**

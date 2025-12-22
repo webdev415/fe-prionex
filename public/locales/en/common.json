@@ -15,13 +15,15 @@
     "users": "Users",
     "roles": "Roles",
     "smsTemplates": "SMS Templates",
-    "transactions": "Transactions"
+    "transactions": "Transactions",
+    "reports": "Reports"
   },
   "search": {
     "placeholder": "Search",
     "phoneNumber": "Phone number",
     "email": "Email",
-    "username": "Username"
+    "username": "Username",
+    "error": "Could not search clients. Please try again."
   },
   "actions": {
     "save": "Save",
