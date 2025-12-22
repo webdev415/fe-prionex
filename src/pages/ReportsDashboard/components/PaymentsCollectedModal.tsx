@@ -196,12 +196,14 @@ export function PaymentsCollectedModal({ open, onClose, period }: PaymentsCollec
                     <span className="text-dark-500 w-20 text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {method.label}
                     </span>
-                    <ProgressBar
-                      percentage={methodData.percentage}
-                      height="lg"
-                      barClassName="bg-primary-400"
-                      className="flex-1"
-                    />
+                    <div className="flex-1">
+                      <ProgressBar
+                        percentage={methodData.percentage}
+                        height="lg"
+                        barClassName="bg-primary-400"
+                        showBackground={false}
+                      />
+                    </div>
                     <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                       {formatCurrency(methodData.amount)}{' '}
                       <span className="font-light">({methodData.percentage}%)</span>
