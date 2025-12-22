@@ -450,30 +450,416 @@ h-full     // height: 100%
 
 ## Component Patterns
 
-### Button Patterns
+### Button Components
 
-#### Primary Action Button
+The project uses three specialized button components: `Button`, `LinkButton`, and `DoubleButton`. All components support variants, sizes, and icon integration.
+
+#### Button Component
+
+The `Button` component is the primary button component with multiple variants and sizes. It supports text buttons, icon buttons, and buttons with icons.
+
+**Import:**
 ```tsx
-<button className="bg-secondary-800 text-white h-12 rounded-full px-6 py-3 text-sm font-medium hover:opacity-90">
+import { Button } from '@/components/ui/Button'
+```
+
+**Props:**
+- `variant`: Button style variant (default: `'primary'`)
+- `size`: Button size (default: `'md'`)
+- `leftIcon`: React node for left-side icon
+- `rightIcon`: React node for right-side icon
+- `iconOnly`: Boolean to force icon-only mode
+- `isLoading`: Boolean to show loading state
+- `asChild`: Boolean to render as child component (Radix Slot)
+- `disabled`: Boolean to disable button
+- All standard HTML button attributes
+
+**Variants:**
+
+| Variant | Description | Use Case |
+|---------|-------------|----------|
+| `primary` | Green background (`bg-primary-300`), dark text | Primary actions, CTAs |
+| `secondary` | Teal background (`bg-secondary-800`), white text | Secondary actions, submit buttons |
+| `white-primary` | White background, primary text, hover to primary | Alternative primary style |
+| `white-secondary` | White background, secondary text, hover to secondary | Alternative secondary style |
+| `transparent-black` | Transparent background, dark text | Subtle actions |
+| `light` | Gray background (`bg-gray-200`) | Lightweight actions |
+| `cancel` | Gray background (`bg-gray-500`), white text | Cancel actions |
+| `outline` | Border only, dark text, hover to secondary | Outlined actions |
+| `ghost` | Transparent, gray text, hover to dark | Minimal actions |
+| `danger` | Red background (`bg-error-500`), white text | Destructive actions |
+| `success` | Green background (`bg-success-500`), white text | Success confirmations |
+
+**Sizes (Text + Icons):**
+
+| Size | Height | Padding | Text Size | Gap |
+|------|--------|---------|-----------|-----|
+| `2xs` | 24px (h-6) | 8px (px-2) | 10px | 4px |
+| `xs` | 28px (h-7) | 12px (px-3) | 12px (text-xs) | 6px |
+| `sm` | 32px (h-8) | 16px (px-4) | 12px (text-xs) | 8px |
+| `md` | 40px (h-10) | 20px (px-5) | 14px (text-sm) | 8px |
+| `lg` | 48px (h-12) | 24px (px-6) | 14px (text-sm) | 10px |
+| `xl` | 45px (h-[45px]) | 24px (px-6) | - | - |
+
+**Sizes (Icon-Only):**
+
+| Size | Dimensions | Use Case |
+|------|------------|----------|
+| `icon-2xs` | 24x24px | Very small icon buttons |
+| `icon-xs` | 28x28px | Small icon buttons |
+| `icon-sm` | 32x32px | Standard icon buttons |
+| `icon-md` | 40x40px | Medium icon buttons |
+| `icon-lg` | 48x48px | Large icon buttons |
+
+**Usage Examples:**
+
+```tsx
+// Primary button (default)
+<Button onClick={handleSubmit}>Submit</Button>
+
+// Secondary button
+<Button variant="secondary" onClick={handleSave}>
+  Save Changes
+</Button>
+
+// Button with left icon
+<Button 
+  variant="primary" 
+  leftIcon={<Icons.Add size={16} className="text-dark-500" />}
+  onClick={handleAdd}
+>
+  Add New
+</Button>
+
+// Button with right icon
+<Button 
+  variant="secondary" 
+  rightIcon={<Icons.ArrowRight size={16} className="text-white" />}
+  onClick={handleNext}
+>
+  Next Step
+</Button>
+
+// Icon-only button (automatic detection)
+<Button 
+  variant="ghost" 
+  size="sm"
+  onClick={handleEdit}
+>
+  <Icons.PencilEdit size={16} className="text-dark-500" />
+</Button>
+
+// Icon-only button (explicit)
+<Button 
+  variant="ghost" 
+  size="icon-md"
+  iconOnly
+  onClick={handleDelete}
+>
+  <Icons.Trash size={20} className="text-error-500" />
+</Button>
+
+// Loading state
+<Button 
+  variant="secondary" 
+  isLoading 
+  onClick={handleSubmit}
+>
   Submit
-</button>
-```
+</Button>
 
-#### Secondary Action Button
-```tsx
-<button className="bg-primary-300 text-dark-500 h-12 rounded-full px-6 py-3 text-sm font-medium hover:opacity-90">
+// Disabled state
+<Button 
+  variant="primary" 
+  disabled 
+  onClick={handleClick}
+>
+  Disabled Button
+</Button>
+
+// Danger button
+<Button 
+  variant="danger" 
+  onClick={handleDelete}
+>
+  Delete Account
+</Button>
+
+// Outline button
+<Button 
+  variant="outline" 
+  onClick={handleCancel}
+>
   Cancel
-</button>
+</Button>
+
+// Using asChild (for routing)
+<Button 
+  variant="primary" 
+  asChild
+>
+  <Link to="/dashboard">Go to Dashboard</Link>
+</Button>
 ```
 
-#### Button with Icon (Nested Circle Pattern)
+#### LinkButton Component
+
+The `LinkButton` component provides text-only button styling with transparent background. Perfect for link-like actions that need button semantics.
+
+**Import:**
 ```tsx
-<button className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg">
-  <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-    <Icons.Add size={20} className="text-dark-500" />
-  </div>
-  <span className="px-4 py-3 text-sm font-medium text-white">Add New User</span>
-</button>
+import { LinkButton } from '@/components/ui/LinkButton'
+```
+
+**Props:**
+- `variant`: Link style variant (default: `'regular-primary'`)
+- `size`: Button size (default: `'sm'`)
+- `leftIcon`: React node for left-side icon
+- `rightIcon`: React node for right-side icon
+- `asChild`: Boolean to render as child component (Radix Slot)
+- `disabled`: Boolean to disable button
+- All standard HTML button attributes (except `children` is required)
+
+**Variants:**
+
+| Variant | Default Color | Hover Color | Use Case |
+|---------|---------------|-------------|----------|
+| `regular-primary` | `text-primary-700` | `text-primary-500` | Primary link actions |
+| `regular-secondary` | `text-secondary-800` | `text-primary-500` | Secondary link actions |
+| `regular-red` | `text-error-500` | `text-error-700` | Destructive link actions |
+| `regular-black` | `text-dark-500` | `text-dark-500` | Neutral link actions |
+| `medium-primary` | `text-primary-700` | `text-primary-500` | Medium weight primary |
+| `medium-secondary` | `text-secondary-800` | `text-primary-500` | Medium weight secondary |
+| `medium-red` | `text-error-500` | `text-error-700` | Medium weight red |
+| `medium-black` | `text-dark-500` | `text-dark-500` | Medium weight black |
+
+**Sizes:**
+
+| Size | Height | Padding | Text Size | Gap |
+|------|--------|---------|-----------|-----|
+| `xs` | 32px (h-8) | 8px (px-2) | 12px (text-xs) | 6px |
+| `sm` | 36px (h-9) | 12px (px-3) | 14px (text-sm) | 8px |
+| `md` | 40px (h-10) | 16px (px-4) | 14px (text-sm) | 8px |
+
+**Usage Examples:**
+
+```tsx
+// Primary link button (default)
+<LinkButton onClick={handleView}>View Details</LinkButton>
+
+// Link button with left icon
+<LinkButton 
+  variant="regular-secondary" 
+  leftIcon={<Icons.Download size={16} className="text-secondary-800" />}
+  onClick={handleDownload}
+>
+  Download File
+</LinkButton>
+
+// Link button with right icon
+<LinkButton 
+  variant="regular-primary" 
+  rightIcon={<Icons.ArrowRight size={16} className="text-primary-700" />}
+  onClick={handleNext}
+>
+  Learn More
+</LinkButton>
+
+// Red link button (destructive)
+<LinkButton 
+  variant="regular-red" 
+  onClick={handleDelete}
+>
+  Delete Item
+</LinkButton>
+
+// Black link button (neutral)
+<LinkButton 
+  variant="regular-black" 
+  onClick={handleCancel}
+>
+  Cancel
+</LinkButton>
+
+// Disabled link button
+<LinkButton 
+  variant="regular-primary" 
+  disabled 
+  onClick={handleClick}
+>
+  Disabled Link
+</LinkButton>
+
+// Using asChild (for routing)
+<LinkButton 
+  variant="regular-secondary" 
+  asChild
+>
+  <Link to="/settings">Go to Settings</Link>
+</LinkButton>
+```
+
+#### DoubleButton Component
+
+The `DoubleButton` component provides a special nested circle pattern with an icon in a circular container and text. This creates a distinctive two-part button design.
+
+**Import:**
+```tsx
+import { DoubleButton } from '@/components/ui/DoubleButton'
+```
+
+**Props:**
+- `size`: Button size (default: `'md'`)
+- `icon`: React node for the icon (required for visual design)
+- `iconPosition`: Position of icon - `'left'` or `'right'` (default: `'left'`)
+- `iconSize`: Optional icon size (deprecated, use icon component size prop)
+- `asChild`: Boolean to render as child component (Radix Slot)
+- `disabled`: Boolean to disable button
+- All standard HTML button attributes (except `children` is required)
+
+**Sizes:**
+
+| Size | Button Height | Icon Container | Text Padding | Text Size |
+|------|---------------|----------------|--------------|-----------|
+| `sm` | 40px (h-10) | 32x32px | 12px (px-3) | 12px (text-xs) |
+| `md` | 48px (h-12) | 40x40px | 16px (px-4) | 14px (text-sm) |
+| `lg` | 56px (h-14) | 48x48px | 24px (px-6) | 16px (text-base) |
+
+**Styling:**
+- Button background: `bg-secondary-800` (default), `bg-primary-300` (hover), `bg-gray-200` (disabled)
+- Icon container: `bg-primary-300` with circular background
+- Text color: `text-white` (default), `text-dark-500` (hover), `text-gray-600` (disabled)
+
+**Usage Examples:**
+
+```tsx
+// DoubleButton with left icon (default)
+<DoubleButton 
+  icon={<Icons.Add size={20} className="text-dark-500" />}
+  onClick={handleAdd}
+>
+  Add New User
+</DoubleButton>
+
+// DoubleButton with right icon
+<DoubleButton 
+  icon={<Icons.ArrowRight size={20} className="text-dark-500" />}
+  iconPosition="right"
+  onClick={handleNext}
+>
+  Continue
+</DoubleButton>
+
+// Small size
+<DoubleButton 
+  size="sm"
+  icon={<Icons.Plus size={16} className="text-dark-500" />}
+  onClick={handleAdd}
+>
+  Add Item
+</DoubleButton>
+
+// Large size
+<DoubleButton 
+  size="lg"
+  icon={<Icons.Upload size={24} className="text-dark-500" />}
+  onClick={handleUpload}
+>
+  Upload File
+</DoubleButton>
+
+// Disabled state
+<DoubleButton 
+  icon={<Icons.Add size={20} className="text-dark-500" />}
+  disabled
+  onClick={handleAdd}
+>
+  Add New User
+</DoubleButton>
+
+// Using asChild (for routing)
+<DoubleButton 
+  icon={<Icons.Dashboard size={20} className="text-dark-500" />}
+  asChild
+>
+  <Link to="/dashboard">Go to Dashboard</Link>
+</DoubleButton>
+```
+
+#### Button Selection Guide
+
+**Use `Button` when:**
+- You need a solid background button
+- You need multiple style variants (primary, secondary, danger, etc.)
+- You need icon-only buttons
+- You need loading states
+- You need standard button interactions
+
+**Use `LinkButton` when:**
+- You need text-only, link-like styling
+- You want transparent background
+- You need subtle actions that don't compete with primary buttons
+- You're creating navigation-like buttons
+
+**Use `DoubleButton` when:**
+- You need a distinctive, prominent action button
+- You want the nested circle icon pattern
+- You're creating primary CTAs (Call-to-Actions)
+- You want to emphasize an important action with visual hierarchy
+
+#### Common Button Patterns
+
+```tsx
+// Modal footer buttons
+<ModalFooter>
+  <Button variant="outline" onClick={handleClose}>
+    Cancel
+  </Button>
+  <Button variant="secondary" onClick={handleSubmit}>
+    Save
+  </Button>
+</ModalFooter>
+
+// Form action buttons
+<div className="flex items-center gap-3">
+  <Button variant="cancel" onClick={handleCancel}>
+    Cancel
+  </Button>
+  <Button variant="secondary" onClick={handleSubmit}>
+    Submit
+  </Button>
+</div>
+
+// Destructive action with confirmation
+<Button variant="danger" onClick={handleDelete}>
+  Delete Account
+</Button>
+
+// Icon-only action buttons in toolbar
+<div className="flex items-center gap-2">
+  <Button 
+    variant="ghost" 
+    size="icon-sm"
+    onClick={handleEdit}
+  >
+    <Icons.PencilEdit size={16} className="text-dark-500" />
+  </Button>
+  <Button 
+    variant="ghost" 
+    size="icon-sm"
+    onClick={handleDelete}
+  >
+    <Icons.Trash size={16} className="text-error-500" />
+  </Button>
+</div>
+
+// Primary CTA with DoubleButton
+<DoubleButton 
+  icon={<Icons.Add size={20} className="text-dark-500" />}
+  onClick={handleCreate}
+>
+  Create New Project
+</DoubleButton>
 ```
 
 ### Card Patterns

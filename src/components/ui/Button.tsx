@@ -17,6 +17,8 @@ const buttonVariants = cva(
           'bg-white text-primary-500 hover:bg-primary-500 hover:text-dark-500 disabled:bg-gray-200 disabled:text-gray-600 active:bg-primary-600',
         'white-secondary':
           'bg-white text-secondary-800 hover:bg-secondary-800 hover:text-white disabled:bg-gray-200 disabled:text-gray-600 active:bg-secondary-500',
+        'transparent-black':
+          'bg-transparent text-dark-500 hover:bg-gray-500 hover:text-white disabled:text-gray-600 active:bg-gray-700',
         light: 'bg-gray-200 text-gray-700 hover:bg-gray-300 active:bg-gray-400',
         cancel:
           'bg-gray-500 text-white hover:bg-secondary-800 active:bg-secondary-900 disabled:bg-gray-200 disabled:text-gray-600',
