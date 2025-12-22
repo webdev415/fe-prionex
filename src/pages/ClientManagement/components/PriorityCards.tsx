@@ -4,6 +4,8 @@
  * Displays four priority overview cards with total debt and client count.
  */
 
+import { useTranslation } from 'react-i18next'
+
 interface PriorityStats {
   Critical: { totalDebt: number; count: number }
   High: { totalDebt: number; count: number }
@@ -16,6 +18,8 @@ interface PriorityCardsProps {
 }
 
 export function PriorityCards({ priorityStats }: PriorityCardsProps) {
+  const { t } = useTranslation('common')
+
   const formatCurrency = (amount: number) => {
     const formatted = new Intl.NumberFormat('uk-UA', {
       minimumFractionDigits: 0,
@@ -35,29 +39,29 @@ export function PriorityCards({ priorityStats }: PriorityCardsProps) {
 
   const priorityCards = [
     {
-      label: 'Critical Priority',
-      badge: 'Critical',
+      label: t('pages.clients.priorityCards.criticalPriority'),
+      badge: t('pages.clients.priorities.critical'),
       totalDebt: priorityStats.Critical.totalDebt,
       clientCount: priorityStats.Critical.count,
       color: 'error' as const,
     },
     {
-      label: 'High Priority',
-      badge: 'High',
+      label: t('pages.clients.priorityCards.highPriority'),
+      badge: t('pages.clients.priorities.high'),
       totalDebt: priorityStats.High.totalDebt,
       clientCount: priorityStats.High.count,
       color: 'warning' as const,
     },
     {
-      label: 'Medium Priority',
-      badge: 'Medium',
+      label: t('pages.clients.priorityCards.mediumPriority'),
+      badge: t('pages.clients.priorities.medium'),
       totalDebt: priorityStats.Medium.totalDebt,
       clientCount: priorityStats.Medium.count,
       color: 'success' as const,
     },
     {
-      label: 'Low Priority',
-      badge: 'Low',
+      label: t('pages.clients.priorityCards.lowPriority'),
+      badge: t('pages.clients.priorities.low'),
       totalDebt: priorityStats.Low.totalDebt,
       clientCount: priorityStats.Low.count,
       color: 'gray' as const,
@@ -112,7 +116,7 @@ export function PriorityCards({ priorityStats }: PriorityCardsProps) {
             <div className="flex items-start justify-between self-stretch">
               <div className="flex flex-row items-start gap-1">
                 <p className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-800">
-                  Total Debt:
+                  {t('pages.clients.priorityCards.totalDebt')}
                 </p>
                 <p className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                   {formatCurrency(card.totalDebt)} UAH
@@ -120,7 +124,7 @@ export function PriorityCards({ priorityStats }: PriorityCardsProps) {
               </div>
               <div className="flex flex-row items-start gap-1">
                 <p className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-800">
-                  Client:
+                  {t('pages.clients.priorityCards.client')}
                 </p>
                 <p className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                   {card.clientCount}

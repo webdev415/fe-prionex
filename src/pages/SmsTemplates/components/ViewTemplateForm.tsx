@@ -4,6 +4,7 @@
  * Read-only form for viewing SMS template details.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -14,11 +15,13 @@ interface ViewTemplateFormProps {
 }
 
 export function ViewTemplateForm({ template }: ViewTemplateFormProps) {
+  const { t } = useTranslation('common')
+
   return (
     <div className="space-y-6">
       {/* Template Name */}
       <div className="space-y-2">
-        <Label>Template Name</Label>
+        <Label>{t('pages.smsTemplates.forms.templateName')}</Label>
         <div className="text-dark-500 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
           {template.name}
         </div>
@@ -26,7 +29,7 @@ export function ViewTemplateForm({ template }: ViewTemplateFormProps) {
 
       {/* Category */}
       <div className="space-y-2">
-        <Label>Category</Label>
+        <Label>{t('pages.smsTemplates.forms.category')}</Label>
         <div className="text-dark-500 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
           {template.category}
         </div>
@@ -34,18 +37,22 @@ export function ViewTemplateForm({ template }: ViewTemplateFormProps) {
 
       {/* Status */}
       <div className="space-y-2">
-        <Label>Status</Label>
+        <Label>{t('pages.smsTemplates.forms.status')}</Label>
         <div>
           <StatusBadge status={template.isEnabled ? 'active' : 'disabled'} />
           {template.isSystem && (
-            <span className="ml-2 text-xs text-gray-500">(System Template)</span>
+            <span className="ml-2 text-xs text-gray-500">
+              ({t('pages.smsTemplates.forms.systemTemplate')})
+            </span>
           )}
         </div>
       </div>
 
       {/* Variables */}
       <div className="space-y-2">
-        <Label>Variables ({template.variables.length})</Label>
+        <Label>
+          {t('pages.smsTemplates.forms.variables')} ({template.variables.length})
+        </Label>
         <div className="flex flex-wrap gap-2">
           {template.variables.map((variable, index) => (
             <span
@@ -60,15 +67,15 @@ export function ViewTemplateForm({ template }: ViewTemplateFormProps) {
 
       {/* Usage Count */}
       <div className="space-y-2">
-        <Label>Usage Count</Label>
+        <Label>{t('pages.smsTemplates.forms.usageCount')}</Label>
         <div className="text-dark-500 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm">
-          {template.usageCount} times
+          {template.usageCount} {t('pages.smsTemplates.times')}
         </div>
       </div>
 
       {/* Message Text */}
       <div className="space-y-2">
-        <Label>Message Text</Label>
+        <Label>{t('pages.smsTemplates.forms.messageText')}</Label>
         <Textarea value={template.messageText} readOnly rows={6} className="bg-gray-50" />
       </div>
     </div>

@@ -5,6 +5,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -31,6 +32,7 @@ const formatTime = (seconds: number): string => {
 }
 
 export function CallRecordingModal({ open, onClose, callData }: CallRecordingModalProps) {
+  const { t } = useTranslation('common')
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0)
@@ -43,18 +45,18 @@ export function CallRecordingModal({ open, onClose, callData }: CallRecordingMod
     try {
       const date = new Date(dateStr)
       const monthNames = [
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December',
+        t('pages.clients.modals.callRecording.months.january'),
+        t('pages.clients.modals.callRecording.months.february'),
+        t('pages.clients.modals.callRecording.months.march'),
+        t('pages.clients.modals.callRecording.months.april'),
+        t('pages.clients.modals.callRecording.months.may'),
+        t('pages.clients.modals.callRecording.months.june'),
+        t('pages.clients.modals.callRecording.months.july'),
+        t('pages.clients.modals.callRecording.months.august'),
+        t('pages.clients.modals.callRecording.months.september'),
+        t('pages.clients.modals.callRecording.months.october'),
+        t('pages.clients.modals.callRecording.months.november'),
+        t('pages.clients.modals.callRecording.months.december'),
       ]
       const month = monthNames[date.getMonth()]
       const day = date.getDate()
@@ -143,7 +145,7 @@ export function CallRecordingModal({ open, onClose, callData }: CallRecordingMod
 
         {/* Title */}
         <h2 className="text-dark-500 self-stretch text-center text-2xl leading-tight font-medium">
-          Call Recording
+          {t('pages.clients.modals.callRecording.title')}
         </h2>
 
         {/* Call Details */}
@@ -157,7 +159,7 @@ export function CallRecordingModal({ open, onClose, callData }: CallRecordingMod
           <div className="flex items-start gap-2 self-stretch">
             <div className="flex flex-1 items-start gap-2">
               <span className="text-base leading-[155%] font-light tracking-[-0.32px] text-gray-700">
-                Operator:{' '}
+                {t('pages.clients.modals.callRecording.operator')}:{' '}
               </span>
               <span className="text-dark-500 flex-1 text-base leading-[155%] font-light tracking-[-0.32px]">
                 {callData.operator}
@@ -165,7 +167,7 @@ export function CallRecordingModal({ open, onClose, callData }: CallRecordingMod
             </div>
             <div className="flex flex-1 items-start gap-2">
               <span className="text-base leading-[155%] font-light tracking-[-0.32px] text-gray-700">
-                Duration:{' '}
+                {t('pages.clients.modals.callRecording.duration')}:{' '}
               </span>
               <span className="text-dark-500 flex-1 text-base leading-[155%] font-light tracking-[-0.32px]">
                 {callData.duration}
@@ -173,7 +175,7 @@ export function CallRecordingModal({ open, onClose, callData }: CallRecordingMod
             </div>
             <div className="flex flex-1 items-start gap-2">
               <span className="text-base leading-[155%] font-light tracking-[-0.32px] text-gray-700">
-                Phone:{' '}
+                {t('pages.clients.modals.callRecording.phone')}:{' '}
               </span>
               <span className="text-dark-500 flex-1 text-base leading-[155%] font-light tracking-[-0.32px]">
                 {callData.phone}
@@ -206,7 +208,7 @@ export function CallRecordingModal({ open, onClose, callData }: CallRecordingMod
               }}
               role="slider"
               tabIndex={0}
-              aria-label="Audio progress"
+              aria-label={t('pages.clients.modals.callRecording.audioProgress')}
               aria-valuemin={0}
               aria-valuemax={recordingDuration}
               aria-valuenow={currentTime}
@@ -228,45 +230,45 @@ export function CallRecordingModal({ open, onClose, callData }: CallRecordingMod
         {/* Control Buttons */}
         <div className="flex items-start gap-3 self-stretch">
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleSkipBackward}
-            className="bg-secondary-800 flex h-[45px] flex-1 items-center justify-center gap-2.5 rounded border-none px-4 py-2.5 text-white"
+            className="flex h-[45px] flex-1 rounded"
           >
             <Icons.Backward02 size={16} className="mr-1" />
             -10s
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handlePlayPause}
-            className="bg-secondary-800 flex h-[45px] flex-1 items-center justify-center gap-2.5 rounded border-none px-4 py-2.5 text-white"
+            className="flex h-[45px] flex-1 rounded"
           >
             {isPlaying ? (
               <>
                 <Icons.Pause size={16} className="mr-1" />
-                Pause
+                {t('pages.clients.modals.callRecording.pause')}
               </>
             ) : (
               <>
                 <Icons.PlayCircle02 size={16} className="mr-1 ml-0.5" />
-                Play
+                {t('pages.clients.modals.callRecording.play')}
               </>
             )}
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleSkipForward}
-            className="bg-secondary-800 flex h-[45px] flex-1 items-center justify-center gap-2.5 rounded border-none px-4 py-2.5 text-white"
+            className="flex h-[45px] flex-1 rounded"
           >
             <Icons.Forward02 size={16} className="mr-1" />
             +10s
           </Button>
           <div className="relative">
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-              className="bg-secondary-800 flex h-[45px] flex-1 items-center justify-center gap-2.5 rounded border-none px-4 py-2.5 text-white"
+              className="flex h-[45px] flex-1 rounded"
             >
-              Speed: {playbackSpeed.toFixed(1)}x
+              {t('pages.clients.modals.callRecording.speed')}: {playbackSpeed.toFixed(1)}x
               <Icons.ArrowDown size={16} className="ml-1" />
             </Button>
             {showSpeedMenu && (
@@ -290,25 +292,20 @@ export function CallRecordingModal({ open, onClose, callData }: CallRecordingMod
 
         {/* Footer Buttons */}
         <ModalFooter>
-          <Button
-            variant="outline"
-            size="md"
-            onClick={onClose}
-            className="text-dark-500 border-gray-400 bg-white hover:bg-gray-50"
-          >
-            Close
+          <Button variant="cancel" size="md" onClick={onClose} className="flex-1">
+            {t('actions.close')}
           </Button>
           <Button
             variant="primary"
             size="md"
-            className="bg-primary-300 text-dark-500 hover:bg-primary-400"
+            className="flex-1"
             onClick={() => {
               // TODO: Implement download functionality
               console.log('Download recording')
             }}
           >
             <Icons.Mp301 size={20} className="mr-2" />
-            Download
+            {t('pages.clients.modals.callRecording.download')}
           </Button>
         </ModalFooter>
       </div>

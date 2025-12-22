@@ -6,6 +6,7 @@
  */
 
 import { useState, useMemo, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import {
@@ -62,6 +63,7 @@ export function SendSMSModal({
   debtAmount = 0,
   onSend,
 }: SendSMSModalProps) {
+  const { t } = useTranslation('common')
   const [template, setTemplate] = useState<string>('Payment Reminder')
   const [message, setMessage] = useState<string>('')
   const [clientNameField, setClientNameField] = useState<string>(clientName)
@@ -139,7 +141,9 @@ export function SendSMSModal({
             <div className="bg-primary-300 flex h-12 w-12 items-center justify-center rounded-full">
               <Icons.ChatFeedback01 size={24} className="text-dark-500" strokeWidth={1.5} />
             </div>
-            <span className="text-dark-500 text-2xl font-medium">Send SMS</span>
+            <span className="text-dark-500 text-2xl font-medium">
+              {t('pages.clients.modals.sendSMS.title')}
+            </span>
           </div>
           <div className="flex items-center justify-end gap-1 pr-4">
             <div
@@ -149,7 +153,7 @@ export function SendSMSModal({
               )}
             />
             <span className="text-dark-500 text-base font-light">
-              SMS sent today:{' '}
+              {t('pages.clients.modals.sendSMS.smsSentToday')}:{' '}
               <span className="font-medium">
                 {smsSentToday}/{DAILY_SMS_LIMIT}
               </span>
@@ -163,7 +167,7 @@ export function SendSMSModal({
             {/* Recipient Info */}
             <div className="flex items-start justify-between self-stretch">
               <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
-                Send SMS to {clientName}
+                {t('pages.clients.modals.sendSMS.sendSMSTo')} {clientName}
               </span>
               <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
                 {phoneNumber}
@@ -174,10 +178,12 @@ export function SendSMSModal({
               <div className="flex flex-col items-center gap-5 self-stretch rounded-xl border border-white bg-white/50 px-6 py-5">
                 <Icons.MailBlock02 size={48} className="text-error-500" strokeWidth={0.5} />
                 <p className="text-error-500 self-stretch text-center text-xl leading-[132%] font-light tracking-[-0.4px]">
-                  Daily limit reached: {smsSentToday}/{DAILY_SMS_LIMIT} SMS sent to this number
+                  {t('pages.clients.modals.sendSMS.dailyLimitReached')}: {smsSentToday}/
+                  {DAILY_SMS_LIMIT} {t('pages.clients.modals.sendSMS.smsSentToThisNumber')}
                 </p>
                 <p className="text-dark-500 self-stretch text-center text-[18px] leading-[150%] font-light tracking-[-0.36px]">
-                  Next SMS available tomorrow at <span className="font-medium">00:00</span>
+                  {t('pages.clients.modals.sendSMS.nextSMSAvailableTomorrow')}{' '}
+                  <span className="font-medium">00:00</span>
                 </p>
               </div>
             ) : (
@@ -185,11 +191,11 @@ export function SendSMSModal({
                 {/* Template */}
                 <div className="flex flex-col gap-2">
                   <label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
-                    Template:
+                    {t('pages.clients.modals.sendSMS.template')}:
                   </label>
                   <Select value={template} onValueChange={setTemplate}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select template" />
+                      <SelectValue placeholder={t('pages.clients.modals.sendSMS.selectTemplate')} />
                     </SelectTrigger>
                     <SelectContent>
                       {SMS_TEMPLATES.map((tpl) => (
@@ -204,12 +210,12 @@ export function SendSMSModal({
                 {/* Message */}
                 <div className="flex flex-col gap-2">
                   <label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
-                    Message:
+                    {t('pages.clients.modals.sendSMS.message')}:
                   </label>
                   <textarea
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Type your message here..."
+                    placeholder={t('pages.clients.modals.sendSMS.typeYourMessageHere')}
                     className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[120px] resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none"
                   />
                 </div>
@@ -225,15 +231,18 @@ export function SendSMSModal({
                         )}
                       />
                       <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                        {messageMetrics.charCount}/{messageMetrics.maxChars} characters
+                        {messageMetrics.charCount}/{messageMetrics.maxChars}{' '}
+                        {t('pages.clients.modals.sendSMS.characters')}
                       </span>
                     </div>
                     <div className="flex flex-1 items-center gap-2">
                       <Icons.TypeCursor size={20} className="text-gray-600" />
                       <span className="text-dark-500 text-sm font-light">
-                        Script:{' '}
+                        {t('pages.clients.modals.sendSMS.script')}:{' '}
                         <span className="text-dark-500 font-medium">
-                          {messageMetrics.hasCyrillic ? 'Cyrillic' : 'Latin'}
+                          {messageMetrics.hasCyrillic
+                            ? t('pages.clients.modals.sendSMS.cyrillic')
+                            : t('pages.clients.modals.sendSMS.latin')}
                         </span>
                       </span>
                     </div>
@@ -244,14 +253,16 @@ export function SendSMSModal({
                       <span className="text-dark-500 text-sm font-medium">
                         {messageMetrics.smsParts}{' '}
                         <span className="font-light">
-                          {messageMetrics.smsParts !== 1 ? 'SMS parts' : 'SMS part'}
+                          {messageMetrics.smsParts !== 1
+                            ? t('pages.clients.modals.sendSMS.smsParts')
+                            : t('pages.clients.modals.sendSMS.smsPart')}
                         </span>
                       </span>
                     </div>
                     <div className="flex flex-1 items-center gap-2">
                       <Icons.Money04 size={20} className="text-gray-600" />
                       <span className="text-dark-500 text-sm font-light">
-                        Cost:{' '}
+                        {t('pages.clients.modals.sendSMS.cost')}:{' '}
                         <span className="text-dark-500 font-medium">
                           ₴{formatCurrency(messageMetrics.cost)}
                         </span>
@@ -263,7 +274,8 @@ export function SendSMSModal({
                     <div className="flex items-center justify-center gap-2 self-stretch">
                       <Icons.Warning size={20} className="text-warning-500" strokeWidth={2} />
                       <span className="text-error-500 text-sm font-medium">
-                        Message will be split into {messageMetrics.smsParts} SMS parts
+                        {t('pages.clients.modals.sendSMS.messageWillBeSplit')}{' '}
+                        {messageMetrics.smsParts} {t('pages.clients.modals.sendSMS.smsParts')}
                       </span>
                     </div>
                   )}
@@ -273,7 +285,7 @@ export function SendSMSModal({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
                     <label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
-                      Client name:
+                      {t('pages.clients.modals.sendSMS.clientName')}:
                     </label>
                     <input
                       type="text"
@@ -284,7 +296,7 @@ export function SendSMSModal({
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
-                      Debt amount:
+                      {t('pages.clients.modals.sendSMS.debtAmount')}:
                     </label>
                     <input
                       type="text"
@@ -301,26 +313,18 @@ export function SendSMSModal({
 
         {/* Footer */}
         <ModalFooter>
-          <Button
-            variant="outline"
-            size="md"
-            onClick={onClose}
-            className="text-dark-500 border-gray-400 bg-white hover:bg-gray-50"
-          >
-            Cancel
+          <Button variant="cancel" size="md" onClick={onClose} className="flex-1">
+            {t('actions.cancel')}
           </Button>
           <Button
             variant="primary"
             size="md"
             onClick={handleSend}
             disabled={!canSend}
-            className={cn(
-              'bg-primary-300 text-dark-500 hover:bg-primary-400',
-              !canSend && 'cursor-not-allowed opacity-50'
-            )}
+            className="flex-1"
+            leftIcon={<Icons.MailSend01 size={20} className="mr-2" />}
           >
-            <Icons.MailSend01 size={20} className="mr-2" />
-            Send SMS
+            {t('pages.clients.modals.sendSMS.sendSMS')}
           </Button>
         </ModalFooter>
       </div>

@@ -1,4 +1,5 @@
 import React, { useId } from 'react'
+import { useTranslation } from 'react-i18next'
 
 function cn(...parts: Array<string | undefined | false>) {
   return parts.filter(Boolean).join(' ')
@@ -119,6 +120,25 @@ export function CallLogCard({
   setSelectedSMSData,
   setIsViewSMSModalOpen,
 }: CallLogCardProps) {
+  const { t } = useTranslation('common')
+
+  const getTranslatedStatus = (status: string) => {
+    switch (status) {
+      case 'Answered':
+        return t('pages.clients.statuses.answered')
+      case 'No Answer':
+        return t('pages.clients.statuses.noAnswer')
+      case 'Delivered':
+        return t('pages.clients.statuses.delivered')
+      case 'Failed':
+        return t('pages.clients.statuses.failed')
+      case 'Pending':
+        return t('pages.clients.statuses.pending')
+      default:
+        return status
+    }
+  }
+
   return (
     <div
       className={cn(
@@ -211,7 +231,7 @@ export function CallLogCard({
                           : 'text-gray-500'
                     )}
                   >
-                    {status}
+                    {status ? getTranslatedStatus(status) : ''}
                   </div>
                 </div>
               </div>
@@ -222,7 +242,7 @@ export function CallLogCard({
               <div className="flex flex-col items-start gap-4 self-stretch">
                 <div className="flex items-start gap-6 self-stretch">
                   <div className="w-[70px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    Message:
+                    {t('pages.clients.modals.callLogCard.message')}:
                   </div>
                   <div className="text-dark-500 line-clamp-2 flex-1 overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px]">
                     {message}
@@ -231,7 +251,7 @@ export function CallLogCard({
 
                 <div className="flex items-start gap-6 self-stretch">
                   <div className="w-[70px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    Template:
+                    {t('pages.clients.modals.callLogCard.template')}:
                   </div>
                   <div className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
                     {template}
@@ -240,7 +260,7 @@ export function CallLogCard({
 
                 <div className="flex items-start gap-6 self-stretch">
                   <div className="w-[70px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    Operator:
+                    {t('pages.clients.modals.callLogCard.operator')}:
                   </div>
                   <div className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
                     {operator}
@@ -254,7 +274,7 @@ export function CallLogCard({
               <div className="flex flex-col items-start gap-4 self-stretch">
                 <div className="flex items-start gap-6 self-stretch">
                   <div className="w-[70px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    Type:
+                    {t('pages.clients.modals.callLogCard.type')}:
                   </div>
                   <div className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
                     {type}
@@ -263,7 +283,7 @@ export function CallLogCard({
 
                 <div className="flex items-start gap-6 self-stretch">
                   <div className="w-[70px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    Operator:
+                    {t('pages.clients.modals.callLogCard.operator')}:
                   </div>
                   <div className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
                     {operator}
@@ -272,7 +292,7 @@ export function CallLogCard({
 
                 <div className="flex items-start gap-6 self-stretch">
                   <div className="w-[70px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    Phone:
+                    {t('pages.clients.modals.callLogCard.phone')}:
                   </div>
                   <div className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
                     {phone}
@@ -281,7 +301,7 @@ export function CallLogCard({
 
                 <div className="flex items-start gap-6 self-stretch">
                   <div className="w-[70px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    Line:
+                    {t('pages.clients.modals.callLogCard.line')}:
                   </div>
                   <div className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
                     {line}
