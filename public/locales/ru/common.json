@@ -923,6 +923,61 @@
           "deleting": "Удаление..."
         }
       }
+    },
+    "reports": {
+      "title": "Панель отчетов",
+      "periods": {
+        "today": "Сегодня",
+        "thisWeek": "Эта неделя",
+        "thisMonth": "Этот месяц"
+      },
+      "kpi": {
+        "callsMade": "Сделано звонков",
+        "contactRate": "Контактность",
+        "smsSent": "Отправлено SMS",
+        "vs": "по сравнению с",
+        "yesterday": "вчера",
+        "lastWeek": "прошлой недели",
+        "lastMonth": "прошлого месяца",
+        "vsYesterday": "по сравнению с вчера",
+        "viewDetails": "Просмотреть детали"
+      },
+      "agentPerformance": {
+        "title": "Производительность операторов ({{count}} операторов)",
+        "exportTable": "Экспортировать таблицу"
+      },
+      "tableHeaders": {
+        "operator": "Оператор",
+        "calls": "Звонки",
+        "contactRate": "Контактность",
+        "avgDuration": "Средняя длительность",
+        "sms": "SMS",
+        "payments": "Платежи",
+        "total": "Всего"
+      },
+      "filters": {
+        "responsibleOperator": "Ответственный оператор:",
+        "clientPhone": "Телефон клиента:",
+        "selectEmployee": "Выберите сотрудника",
+        "typePhoneNumber": "Введите номер телефона",
+        "dateOfSale": "Дата продажи:"
+      },
+      "exportCsv": "Экспортировать CSV",
+      "currencySymbol": "₴",
+      "paymentsModal": {
+        "title": "Собранные платежи",
+        "payments": "платежей",
+        "vsYesterday": "по сравнению с вчера",
+        "verified": "Подтверждено",
+        "pending": "В ожидании",
+        "paymentMethods": "Способы оплаты",
+        "bankTransfer": "Банковский перевод",
+        "card": "Карта",
+        "other": "Другое",
+        "averagePayment": "Средний платеж",
+        "topCollector": "Лучший сборщик",
+        "largestPmt": "Самый большой платеж"
+      }
     }
   }
 }

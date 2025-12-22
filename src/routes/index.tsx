@@ -20,6 +20,7 @@ import {
   ActivityTimelinePage,
 } from '@/pages/ClientManagement'
 import { SmsTemplatesPage } from '@/pages/SmsTemplates'
+import { ReportsDashboardPage } from '@/pages/ReportsDashboard'
 
 function DashboardContent() {
   const { t } = useTranslation('common')
@@ -164,6 +165,18 @@ export const router = createBrowserRouter([
         <DashboardLayout>
           <SmsTemplatesPage />
         </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/reports',
+    element: (
+      <ProtectedRoute>
+        <PermissionRoute requiredPermission={PERMISSIONS.REPORTS.VIEW_ALL_REPORTS}>
+          <DashboardLayout>
+            <ReportsDashboardPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },

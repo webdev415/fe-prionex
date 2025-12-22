@@ -923,6 +923,61 @@
           "deleting": "Видалення..."
         }
       }
+    },
+    "reports": {
+      "title": "Панель звітів",
+      "periods": {
+        "today": "Сьогодні",
+        "thisWeek": "Цей тиждень",
+        "thisMonth": "Цей місяць"
+      },
+      "kpi": {
+        "callsMade": "Зроблено дзвінків",
+        "contactRate": "Контактність",
+        "smsSent": "Відправлено SMS",
+        "vs": "порівняно з",
+        "yesterday": "вчора",
+        "lastWeek": "минулого тижня",
+        "lastMonth": "минулого місяця",
+        "vsYesterday": "порівняно з вчора",
+        "viewDetails": "Переглянути деталі"
+      },
+      "agentPerformance": {
+        "title": "Продуктивність операторів ({{count}} операторів)",
+        "exportTable": "Експортувати таблицю"
+      },
+      "tableHeaders": {
+        "operator": "Оператор",
+        "calls": "Дзвінки",
+        "contactRate": "Контактність",
+        "avgDuration": "Середня тривалість",
+        "sms": "SMS",
+        "payments": "Платежі",
+        "total": "Всього"
+      },
+      "filters": {
+        "responsibleOperator": "Відповідальний оператор:",
+        "clientPhone": "Телефон клієнта:",
+        "selectEmployee": "Виберіть співробітника",
+        "typePhoneNumber": "Введіть номер телефону",
+        "dateOfSale": "Дата продажу:"
+      },
+      "exportCsv": "Експортувати CSV",
+      "currencySymbol": "₴",
+      "paymentsModal": {
+        "title": "Зібрані платежі",
+        "payments": "платежів",
+        "vsYesterday": "порівняно з вчора",
+        "verified": "Підтверджено",
+        "pending": "В очікуванні",
+        "paymentMethods": "Способи оплати",
+        "bankTransfer": "Банківський переказ",
+        "card": "Картка",
+        "other": "Інше",
+        "averagePayment": "Середній платіж",
+        "topCollector": "Найкращий збирач",
+        "largestPmt": "Найбільший платіж"
+      }
     }
   }
 }

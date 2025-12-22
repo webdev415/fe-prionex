@@ -107,6 +107,9 @@ import {
   MailBlock02Icon,
   CallDone02Icon,
   Clock01Icon,
+  ArrowUp02Icon,
+  ArrowDown02Icon,
+  Chart01Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -255,6 +258,9 @@ export const Icons = {
   MailBlock02: (props: Omit<IconProps, 'icon'>) => <Icon icon={MailBlock02Icon} {...props} />,
   CallDone02: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallDone02Icon} {...props} />,
   Clock01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Clock01Icon} {...props} />,
+  ArrowUp02: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowUp02Icon} {...props} />,
+  ArrowDown02: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowDown02Icon} {...props} />,
+  Chart01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Chart01Icon} {...props} />,
 }
 
 /**
@@ -353,6 +359,9 @@ export {
   Clock01Icon,
   UserSearch01Icon,
   BrochureIcon,
+  ArrowUp02Icon,
+  ArrowDown02Icon,
+  Chart01Icon,
 }
 
 /**
