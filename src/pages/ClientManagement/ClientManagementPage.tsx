@@ -216,7 +216,7 @@ export function ClientManagementPage() {
       align: 'left',
       render: (client) => (
         <button
-          onClick={() => navigate(`/dashboard/client/${client.id}`)}
+          onClick={() => navigate(`/dashboard/${client.id}`)}
           className="text-dark-500 cursor-pointer text-left"
         >
           {client.fullName}

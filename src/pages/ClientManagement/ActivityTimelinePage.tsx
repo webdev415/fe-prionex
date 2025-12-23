@@ -156,7 +156,7 @@ export function ActivityTimelinePage() {
       <div className="flex items-center justify-between self-stretch">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate(`/dashboard/client/${client.id}`)}
+            onClick={() => navigate(`/dashboard/${client.id}`)}
             className="flex h-6 w-6 items-center justify-center"
           >
             <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
