@@ -230,7 +230,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navItems: SidebarItem[] = useMemo(() => {
     // All navigation items with required permissions
     const allNavItems: ExtendedSidebarItem[] = [
-      { path: '/dashboard/client', icon: 'home-04', label: t('navigation.clients') },
+      { path: '/dashboard', icon: 'home-04', label: t('navigation.dashboard') },
       { path: '/dashboard', icon: 'activity-01', label: t('navigation.activity'), disabled: true }, // Route doesn't exist
       {
         path: '/dashboard/import',
