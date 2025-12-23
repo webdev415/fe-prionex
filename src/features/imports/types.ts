@@ -52,6 +52,7 @@ export interface ImportError {
   row: number
   error: string
   column?: string
+  suggested_fix?: string | null
 }
 
 // Import Jobs List Response (from GET /api/import/jobs)

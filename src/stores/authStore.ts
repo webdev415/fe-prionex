@@ -85,6 +85,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             backendUser.projects?.map((p) => ({
               id: String(p.id),
               name: p.name,
+              code: p.code, // Preserve project code from backend
               roles: [{ id: String(p.id), name: p.role_name }],
             })) || [],
           active_project_id: backendUser.active_project
@@ -250,6 +251,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             backendUser.projects?.map((p) => ({
               id: String(p.id),
               name: p.name,
+              code: p.code, // Preserve project code from backend
               roles: [{ id: String(p.id), name: p.role_name }],
             })) || [],
           active_project_id: backendUser.active_project

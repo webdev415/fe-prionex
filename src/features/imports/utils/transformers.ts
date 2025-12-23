@@ -179,8 +179,9 @@ export function transformImportJobDetail(backend: BackendImportJobResponse): Imp
     purchase_date: metadata.purchase_date,
     comment: metadata.comment,
     progress_percentage:
-      status === 'in_progress'
-        ? calculateProgressPercentage(backend.processed_records, backend.total_records)
+      status === 'in_progress' || status === 'pending'
+        ? ((backend.import_options?.progress_percentage as number | undefined) ??
+          calculateProgressPercentage(backend.processed_records, backend.total_records))
         : undefined,
     processing_row: status === 'in_progress' ? backend.processed_records : undefined,
   }
@@ -195,6 +196,7 @@ export function transformImportError(backend: BackendImportErrorResponse): Impor
     row: backend.line_number,
     error: backend.error_message,
     column: backend.record_data?.field as string | undefined,
+    suggested_fix: backend.suggested_fix || null,
   }
 }
 

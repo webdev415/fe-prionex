@@ -375,6 +375,7 @@
       "started": "Started",
       "status": "Status",
       "complete": "complete",
+      "queued": "Queued",
       "viewDetails": "View Details",
       "cancelImport": "Cancel Import",
       "cancelling": "Cancelling...",
@@ -398,9 +399,13 @@
         "placeholders": {
           "enterProjectName": "Enter Project Name",
           "enterProjectCode": "Enter Project Code",
+          "selectProjectCode": "Select Project Code",
           "selectPurchaseDate": "Select purchase date",
-          "placeholderText": "Placeholder text"
-        }
+          "placeholderText": "Placeholder text",
+          "enterSellerCreditor": "Enter Seller/Creditor Name",
+          "loadingProjects": "Loading projects..."
+        },
+        "noProjectsAvailable": "No projects available"
       },
       "step2": {
         "simple": {
@@ -504,6 +509,7 @@
         "errorsTitle": "Errors",
         "row": "Row",
         "error": "Error",
+        "suggestedFix": "Suggested fix",
         "noErrors": "No errors",
         "importNotFound": "Import not found",
         "loadingDetails": "Loading import details...",

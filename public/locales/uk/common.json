@@ -375,6 +375,7 @@
       "started": "Почато",
       "status": "Статус",
       "complete": "завершено",
+      "queued": "В черзі",
       "viewDetails": "Перегляд деталей",
       "cancelImport": "Скасувати імпорт",
       "cancelling": "Скасування...",
@@ -398,9 +399,13 @@
         "placeholders": {
           "enterProjectName": "Введіть назву проєкту",
           "enterProjectCode": "Введіть код проєкту",
+          "selectProjectCode": "Виберіть код проєкту",
           "selectPurchaseDate": "Виберіть дату покупки",
-          "placeholderText": "Текст-заповнювач"
-        }
+          "placeholderText": "Текст-заповнювач",
+          "enterSellerCreditor": "Введіть назву продавця/кредитора",
+          "loadingProjects": "Завантаження проєктів..."
+        },
+        "noProjectsAvailable": "Немає доступних проєктів"
       },
       "step2": {
         "simple": {
@@ -504,6 +509,7 @@
         "errorsTitle": "Помилки",
         "row": "Рядок",
         "error": "Помилка",
+        "suggestedFix": "Запропоноване виправлення",
         "noErrors": "Немає помилок",
         "importNotFound": "Імпорт не знайдено",
         "loadingDetails": "Завантаження деталей імпорту...",
