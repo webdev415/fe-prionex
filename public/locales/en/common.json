@@ -15,13 +15,15 @@
     "users": "Users",
     "roles": "Roles",
     "smsTemplates": "SMS Templates",
-    "transactions": "Transactions"
+    "transactions": "Transactions",
+    "reports": "Reports"
   },
   "search": {
     "placeholder": "Search",
     "phoneNumber": "Phone number",
     "email": "Email",
-    "username": "Username"
+    "username": "Username",
+    "error": "Could not search clients. Please try again."
   },
   "actions": {
     "save": "Save",
@@ -920,6 +922,61 @@
           "templateWillBePermanentlyRemoved": "The template will be permanently removed from the system.",
           "deleting": "Deleting..."
         }
+      }
+    },
+    "reports": {
+      "title": "Reports Dashboard",
+      "periods": {
+        "today": "Today",
+        "thisWeek": "This Week",
+        "thisMonth": "This Month"
+      },
+      "kpi": {
+        "callsMade": "Calls Made",
+        "contactRate": "Contact Rate",
+        "smsSent": "SMS Sent",
+        "vs": "vs",
+        "yesterday": "yesterday",
+        "lastWeek": "last week",
+        "lastMonth": "last month",
+        "vsYesterday": "vs yesterday",
+        "viewDetails": "View Details"
+      },
+      "agentPerformance": {
+        "title": "Agent Performance ({{count}} operators)",
+        "exportTable": "Export Table"
+      },
+      "tableHeaders": {
+        "operator": "Operator",
+        "calls": "Calls",
+        "contactRate": "Contact Rate",
+        "avgDuration": "Avg Duration",
+        "sms": "SMS",
+        "payments": "Payments",
+        "total": "Total"
+      },
+      "filters": {
+        "responsibleOperator": "Responsible Operator:",
+        "clientPhone": "Client Phone:",
+        "selectEmployee": "Select employee",
+        "typePhoneNumber": "Type phone number",
+        "dateOfSale": "Date of sale:"
+      },
+      "exportCsv": "Export CSV",
+      "currencySymbol": "₴",
+      "paymentsModal": {
+        "title": "Payments Collected",
+        "payments": "payments",
+        "vsYesterday": "vs yesterday",
+        "verified": "Verified",
+        "pending": "Pending",
+        "paymentMethods": "Payment Methods",
+        "bankTransfer": "Bank Transfer",
+        "card": "Card",
+        "other": "Other",
+        "averagePayment": "Average Payment",
+        "topCollector": "Top Collector",
+        "largestPmt": "Largest Pmt"
       }
     }
   }

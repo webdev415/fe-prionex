@@ -56,6 +56,8 @@ import {
   LogoutSquare01Icon,
   UserCircle02Icon,
   ChartRingIcon,
+  UserSearch01Icon,
+  BrochureIcon,
   // Additional icons for UI enhancements
   MultiplicationSignIcon,
   Download01Icon,
@@ -105,6 +107,9 @@ import {
   MailBlock02Icon,
   CallDone02Icon,
   Clock01Icon,
+  ArrowUp02Icon,
+  ArrowDown02Icon,
+  Chart01Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -197,9 +202,10 @@ export const Icons = {
   Setting07: (props: Omit<IconProps, 'icon'>) => <Icon icon={Setting07Icon} {...props} />,
   LogoutSquare01: (props: Omit<IconProps, 'icon'>) => <Icon icon={LogoutSquare01Icon} {...props} />,
   ChartRing: (props: Omit<IconProps, 'icon'>) => <Icon icon={ChartRingIcon} {...props} />,
+  Brochure: (props: Omit<IconProps, 'icon'>) => <Icon icon={BrochureIcon} {...props} />,
 
   UserCircle02Icon: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserCircle02Icon} {...props} />,
-
+  UserSearch01: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserSearch01Icon} {...props} />,
   // Additional icons for UI enhancements
   Close: (props: Omit<IconProps, 'icon'>) => <Icon icon={MultiplicationSignIcon} {...props} />,
   Download: (props: Omit<IconProps, 'icon'>) => <Icon icon={Download01Icon} {...props} />,
@@ -252,6 +258,9 @@ export const Icons = {
   MailBlock02: (props: Omit<IconProps, 'icon'>) => <Icon icon={MailBlock02Icon} {...props} />,
   CallDone02: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallDone02Icon} {...props} />,
   Clock01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Clock01Icon} {...props} />,
+  ArrowUp02: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowUp02Icon} {...props} />,
+  ArrowDown02: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowDown02Icon} {...props} />,
+  Chart01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Chart01Icon} {...props} />,
 }
 
 /**
@@ -348,6 +357,11 @@ export {
   MailBlock02Icon,
   CallDone02Icon,
   Clock01Icon,
+  UserSearch01Icon,
+  BrochureIcon,
+  ArrowUp02Icon,
+  ArrowDown02Icon,
+  Chart01Icon,
 }
 
 /**
