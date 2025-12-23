@@ -48,7 +48,7 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: '/dashboard/client/:id',
+    path: '/dashboard/:id',
     element: (
       <ProtectedRoute>
         <DashboardLayout>
@@ -58,7 +58,7 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: '/dashboard/client/:id/activity',
+    path: '/dashboard/:id/activity',
     element: (
       <ProtectedRoute>
         <DashboardLayout>
@@ -157,10 +157,10 @@ export const router = createBrowserRouter([
   },
   {
     path: '/',
-    element: <Navigate to="/dashboard/client" replace />,
+    element: <Navigate to="/dashboard" replace />,
   },
   {
     path: '*',
-    element: <Navigate to="/dashboard/client" replace />,
+    element: <Navigate to="/dashboard" replace />,
   },
 ])

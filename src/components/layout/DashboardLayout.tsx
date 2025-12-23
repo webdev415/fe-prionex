@@ -204,14 +204,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleResultClick = (result: SearchResult) => {
     // Navigate to client detail page or filter by this client
-    navigate(`/dashboard/client?id=${result.id}`)
+    navigate(`/dashboard?id=${result.id}`)
     setSearchQuery('')
     setSearchResults([])
   }
 
   const handleViewAllResults = () => {
     // Navigate to client management page with search query
-    navigate(`/dashboard/client?search=${encodeURIComponent(searchQuery)}&type=${searchType}`)
+    navigate(`/dashboard?search=${encodeURIComponent(searchQuery)}&type=${searchType}`)
     setSearchQuery('')
     setSearchResults([])
   }

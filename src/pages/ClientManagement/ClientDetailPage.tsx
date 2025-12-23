@@ -886,7 +886,7 @@ export function ClientDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <p className="text-gray-600">{t('pages.clients.detail.clientNotFound')}</p>
-        <Button variant="outline" onClick={() => navigate('/dashboard/client')} className="mt-4">
+        <Button variant="outline" onClick={() => navigate('/dashboard')} className="mt-4">
           {t('pages.clients.detail.backToClients')}
         </Button>
       </div>
@@ -1222,7 +1222,7 @@ export function ClientDetailPage() {
       <div className="flex items-center justify-between self-stretch">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate('/dashboard/client')}
+            onClick={() => navigate('/dashboard')}
             className="flex h-6 w-6 items-center justify-center"
           >
             <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
@@ -2420,7 +2420,7 @@ export function ClientDetailPage() {
           <LinkButton
             variant="regular-secondary"
             size="xs"
-            onClick={() => navigate(`/dashboard/client/${client.id}/activity`)}
+            onClick={() => navigate(`/dashboard/${client.id}/activity`)}
             rightIcon={<Icons.ArrowRight size={18} />}
           >
             {t('pages.clients.detail.viewAll')}

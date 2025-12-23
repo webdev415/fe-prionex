@@ -19,8 +19,7 @@ export function GuestRoute({ children }: GuestRouteProps) {
 
   // If authenticated or has valid token, redirect to dashboard
   if (isAuthenticated || hasToken) {
-    const from =
-      (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard/client'
+    const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard'
     return <Navigate to={from} replace />
   }
 
