@@ -7,6 +7,7 @@
 import { useState, useMemo, useEffect, useRef, startTransition } from 'react'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { PriorityCards } from './components/PriorityCards'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { Icons } from '@/lib/icons'
@@ -16,6 +17,7 @@ import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import type { Client as APIClient } from '@/features/clients/api/types'
 import type { PriorityThresholds } from '@/features/clients/api/configApi'
+import { useDebounce } from '@/hooks/useDebounce'
 
 // Display type matching page requirements
 interface DisplayClient {
@@ -88,24 +90,51 @@ export function ClientManagementPage() {
   const searchType = searchParams.get('type') || 'phone'
 
   const [filters, setFilters] = useState<ClientFilters>({
-    portfolio: ['Portfolio A'],
-    status: ['Active', 'Defaulted'],
+    // Start with no filters applied - user can select what they want
+    portfolio: [],
+    status: [],
   })
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
-  const [rowsPerPage, setRowsPerPage] = useState(15)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
   const [sortConfig, setSortConfig] = useState<SortConfig | undefined>()
   const [currentPage, setCurrentPage] = useState(1)
   const prevSearchQueryRef = useRef(searchQuery)
 
+  // Debounce filters to avoid triggering API calls on every keystroke
+  const debouncedFilters = useDebounce(filters, 500)
+
+  // Convert frontend filters to API parameters
+  const apiParams = useMemo(() => {
+    const params: Record<string, unknown> = {
+      sort_by_priority: true,
+    }
+
+    // Debt range filtering - use debtRangeFrom/To for filtering
+    if (debouncedFilters.debtRangeFrom !== undefined) {
+      params.debt_min = debouncedFilters.debtRangeFrom
+    }
+    if (debouncedFilters.debtRangeTo !== undefined) {
+      params.debt_max = debouncedFilters.debtRangeTo
+    }
+
+    // Status filtering - join array into comma-separated string
+    if (debouncedFilters.status && debouncedFilters.status.length > 0) {
+      params.status = debouncedFilters.status.join(',')
+    }
+
+    // Date range filtering
+    if (debouncedFilters.dateOfSaleFrom) {
+      params.date_from = debouncedFilters.dateOfSaleFrom
+    }
+    if (debouncedFilters.dateOfSaleTo) {
+      params.date_to = debouncedFilters.dateOfSaleTo
+    }
+
+    return params
+  }, [debouncedFilters])
+
   // Fetch clients from API
-  const {
-    data: apiClients = [],
-    isLoading,
-    isError,
-    error,
-  } = useClients({
-    sort_by_priority: true,
-  })
+  const { data: apiClients = [], isLoading, isFetching, isError, error } = useClients(apiParams)
   const { data: totalCount = 0 } = useClientCount()
 
   // Fetch priority thresholds configuration
@@ -130,13 +159,17 @@ export function ClientManagementPage() {
   const appliedFiltersCount = useMemo(() => {
     let count = 0
     if (filters.debtRangeFrom || filters.debtRangeTo) count++
-    if (filters.amountOfDebtRangeFrom || filters.amountOfDebtRangeTo) count++
-    if (filters.dpdRangeFrom || filters.dpdRangeTo) count++
+    // Note: amountOfDebtRange is same as debtRange (both filter on total_debt)
+    // Not counting amountOfDebtRange separately to avoid double-counting
+    // DPD Range not yet implemented (days past due not calculated)
+    // if (filters.dpdRangeFrom || filters.dpdRangeTo) count++
     if (filters.dateOfSaleFrom || filters.dateOfSaleTo) count++
-    if (filters.portfolio && filters.portfolio.length > 0) count++
+    // Portfolio not yet implemented in schema
+    // if (filters.portfolio && filters.portfolio.length > 0) count++
     if (filters.status && filters.status.length > 0) count++
-    if (filters.responsibleEmployee) count++
-    if (filters.responsibleSearcher) count++
+    // Responsible employee/searcher not yet assigned to clients
+    // if (filters.responsibleEmployee) count++
+    // if (filters.responsibleSearcher) count++
     return count
   }, [filters])
 
@@ -179,8 +212,8 @@ export function ClientManagementPage() {
       })
     }
 
-    // Apply other filters (simplified - add actual filtering logic)
-    // TODO: Implement actual filtering logic
+    // Note: Debt, status, and date filters are now handled server-side
+    // Only client-side search filter is applied here
 
     // Apply sorting
     if (sortConfig) {
@@ -230,10 +263,26 @@ export function ClientManagementPage() {
   }
 
   const handleClearAll = () => {
+    // Reset filters to initial state
     setFilters({
+      // Clear all filter fields
+      debtRangeFrom: undefined,
+      debtRangeTo: undefined,
+      amountOfDebtRangeFrom: undefined,
+      amountOfDebtRangeTo: undefined,
+      dpdRangeFrom: undefined,
+      dpdRangeTo: undefined,
+      dateOfSaleFrom: undefined,
+      dateOfSaleTo: undefined,
       portfolio: [],
       status: [],
+      responsibleEmployee: undefined,
+      responsibleSearcher: undefined,
     })
+
+    // Reset to first page
+    setCurrentPage(1)
+
     // Clear search params
     const newParams = new URLSearchParams(searchParams)
     newParams.delete('search')
@@ -375,8 +424,8 @@ export function ClientManagementPage() {
     },
   ]
 
-  // Show loading state
-  if (isLoading) {
+  // Show initial loading state (only when no data exists yet)
+  if (isLoading && apiClients.length === 0) {
     return (
       <div className="flex w-full flex-col items-center justify-center gap-4 pt-20">
         <div className="border-primary-500 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
@@ -386,7 +435,7 @@ export function ClientManagementPage() {
   }
 
   // Show error state
-  if (isError) {
+  if (isError && apiClients.length === 0) {
     return (
       <div className="flex w-full flex-col items-center justify-center gap-4 pt-20">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
@@ -416,18 +465,16 @@ export function ClientManagementPage() {
         <div className="flex items-center justify-end gap-5">
           <button
             onClick={handleClearAll}
-            className="flex flex-col items-start gap-2.5 rounded-full bg-white/5 px-4 py-2.5"
+            className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2.5 transition-colors hover:bg-white/10"
           >
-            <div className="flex items-center gap-2">
-              <Icons.Cancel01
-                size={20}
-                className="stroke-secondary-800 text-secondary-800"
-                strokeWidth={1.5}
-              />
-              <span className="text-center text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
-                Clear All
-              </span>
-            </div>
+            <Icons.Cancel01
+              size={20}
+              className="stroke-secondary-800 text-secondary-800"
+              strokeWidth={1.5}
+            />
+            <span className="text-center text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
+              Clear All
+            </span>
           </button>
           <button
             onClick={() => setIsFiltersOpen(!isFiltersOpen)}
@@ -449,26 +496,34 @@ export function ClientManagementPage() {
       {/* Filters Bar */}
       {isFiltersOpen && <ClientFiltersBar filters={filters} onFilterChange={setFilters} />}
 
-      {/* Data Table */}
-      <DataTable
-        columns={columns}
-        data={paginatedClients}
-        sortConfig={sortConfig}
-        onSort={handleSort}
-        emptyMessage="No clients found"
-        className="flex flex-col items-start gap-8 self-stretch"
-      />
+      {/* Data Table - Show skeleton when fetching */}
+      {isFetching && !isLoading ? (
+        <div className="flex flex-col items-start gap-8 self-stretch">
+          <TableSkeleton columns={columns.length} rows={rowsPerPage} className="w-full" />
+        </div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={paginatedClients}
+          sortConfig={sortConfig}
+          onSort={handleSort}
+          emptyMessage="No clients found"
+          className="flex flex-col items-start gap-8 self-stretch"
+        />
+      )}
 
       {/* Pagination */}
-      <div className="flex flex-col items-center gap-8 self-stretch">
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageSize={rowsPerPage}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={setRowsPerPage}
-        />
-      </div>
+      {!isFetching && (
+        <div className="flex flex-col items-center gap-8 self-stretch">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={rowsPerPage}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setRowsPerPage}
+          />
+        </div>
+      )}
     </div>
   )
 }

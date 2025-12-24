@@ -110,6 +110,12 @@ export interface GetClientsParams {
   skip?: number
   limit?: number
   sort_by_priority?: boolean
+  // Filtering parameters
+  debt_min?: number
+  debt_max?: number
+  status?: string // Comma-separated status values
+  date_from?: string // YYYY-MM-DD format
+  date_to?: string // YYYY-MM-DD format
 }
 
 export interface ManualPriorityRequest {

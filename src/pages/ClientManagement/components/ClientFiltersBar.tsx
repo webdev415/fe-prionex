@@ -34,7 +34,9 @@ const portfolioOptions = [
   'Portfolio G',
   'Portfolio H',
 ]
-const statusOptions = ['Active', 'In Progress', 'Paid', 'Defaulted']
+// Status options matching backend Client.status field
+// TODO: Update these when proper status workflow is implemented
+const statusOptions = ['new', 'active', 'contacted', 'in_progress', 'paid', 'defaulted', 'closed']
 
 export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarProps) {
   const [portfolioDropdownOpen, setPortfolioDropdownOpen] = useState(false)
@@ -275,7 +277,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
                 Status
               </label>
-              <div className="flex flex-1 items-center gap-8">
+              <div className="flex flex-1 items-center gap-2">
                 {statusOptions.map((status) => (
                   <label key={status} className="flex cursor-pointer items-center gap-2">
                     <Checkbox
