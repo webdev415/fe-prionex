@@ -10,14 +10,61 @@ import { Pagination } from '@/components/ui/Pagination'
 import { PriorityCards } from './components/PriorityCards'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { Icons } from '@/lib/icons'
-import type { Client } from './types'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useClients, useClientCount } from '@/features/clients/hooks/useClients'
+import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
+import { mapScoreToPriority } from '@/features/clients/api/configApi'
+import type { Client as APIClient } from '@/features/clients/api/types'
+import type { PriorityThresholds } from '@/features/clients/api/configApi'
 
-// Import shared mock data
-import { mockClients } from './mockClients'
+// Display type matching page requirements
+interface DisplayClient {
+  id: number
+  fullName: string
+  taxIdNumber: string
+  tags: string[]
+  phoneNumber: string
+  dateOfSale: string
+  creditor: string
+  debt: number
+  amountOfDebt: number
+  priority: 'Critical' | 'High' | 'Medium' | 'Low'
+  score: number
+}
 
-// Total clients count (from API or mock)
-const TOTAL_CLIENTS_COUNT = 1200
+// Default thresholds (fallback if API not available)
+const DEFAULT_THRESHOLDS: PriorityThresholds = {
+  critical: 75,
+  high: 50,
+  medium: 25,
+  low: 0,
+}
+
+// Helper to map API Client to DisplayClient
+const mapAPIClientToDisplay = (
+  client: APIClient,
+  thresholds: PriorityThresholds
+): DisplayClient => {
+  const fullName = [client.first_name, client.middle_name, client.last_name]
+    .filter(Boolean)
+    .join(' ')
+
+  return {
+    id: client.id,
+    fullName,
+    taxIdNumber: client.tax_id,
+    tags: [], // TODO: Add tags from backend when available
+    phoneNumber: client.phone_primary,
+    dateOfSale: client.created_at ? new Date(client.created_at).toLocaleDateString('uk-UA') : '-',
+    creditor: '-', // TODO: Add creditor info when available
+    debt: 0, // TODO: Calculate from debt_count
+    amountOfDebt: 0, // TODO: Calculate from debts
+    priority:
+      (client.manual_priority as 'Critical' | 'High' | 'Medium' | 'Low') ||
+      mapScoreToPriority(client.priority_score, thresholds),
+    score: client.priority_score,
+  }
+}
 
 export interface ClientFilters {
   debtRangeFrom?: number
@@ -50,6 +97,25 @@ export function ClientManagementPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const prevSearchQueryRef = useRef(searchQuery)
 
+  // Fetch clients from API
+  const {
+    data: apiClients = [],
+    isLoading,
+    isError,
+    error,
+  } = useClients({
+    sort_by_priority: true,
+  })
+  const { data: totalCount = 0 } = useClientCount()
+
+  // Fetch priority thresholds configuration
+  const { data: thresholds = DEFAULT_THRESHOLDS } = usePriorityThresholds()
+
+  // Map API clients to display format
+  const displayClients = useMemo(() => {
+    return apiClients.map((client) => mapAPIClientToDisplay(client, thresholds))
+  }, [apiClients, thresholds])
+
   // Reset to page 1 when search query changes
   useEffect(() => {
     if (searchQuery !== prevSearchQueryRef.current) {
@@ -76,7 +142,7 @@ export function ClientManagementPage() {
 
   // Filter and sort clients
   const filteredClients = useMemo(() => {
-    let result = [...mockClients]
+    let result = [...displayClients]
 
     // Apply search filter
     if (searchQuery.trim()) {
@@ -128,7 +194,7 @@ export function ClientManagementPage() {
     }
 
     return result
-  }, [searchQuery, searchType, sortConfig])
+  }, [displayClients, searchQuery, searchType, sortConfig])
 
   // Calculate priority statistics from filtered clients
   const priorityStats = useMemo(() => {
@@ -197,7 +263,7 @@ export function ClientManagementPage() {
     return null
   }
 
-  const columns: Column<Client>[] = [
+  const columns: Column<DisplayClient>[] = [
     {
       key: 'id',
       header: '#',
@@ -309,6 +375,27 @@ export function ClientManagementPage() {
     },
   ]
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex w-full flex-col items-center justify-center gap-4 pt-20">
+        <div className="border-primary-500 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
+        <p className="text-gray-600">Loading clients...</p>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (isError) {
+    return (
+      <div className="flex w-full flex-col items-center justify-center gap-4 pt-20">
+        <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
+        <p className="font-medium text-gray-900">Failed to load clients</p>
+        <p className="text-sm text-gray-600">{error?.message || 'An error occurred'}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex w-full flex-col items-start gap-5 pt-1 pr-7 pb-6 pl-7">
       {/* Priority Overview Cards */}
@@ -322,7 +409,7 @@ export function ClientManagementPage() {
               List of Clients
             </span>
             <span className="text-center text-base leading-[155%] font-light tracking-[-0.32px] text-gray-700">
-              {TOTAL_CLIENTS_COUNT}
+              {totalCount}
             </span>
           </div>
         </div>
