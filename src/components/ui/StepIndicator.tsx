@@ -5,6 +5,7 @@
  * Matches the design specification with proper styling and spacing
  */
 
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 
@@ -21,6 +22,8 @@ export interface StepIndicatorProps {
 }
 
 export function StepIndicator({ steps, currentStep, className }: StepIndicatorProps) {
+  const { t } = useTranslation('common')
+
   return (
     <div className={cn('flex flex-col', className)}>
       {steps.map((step, index) => {
@@ -68,7 +71,7 @@ export function StepIndicator({ steps, currentStep, className }: StepIndicatorPr
                     isActive || isCompleted ? 'text-secondary-800' : 'text-gray-500'
                   )}
                 >
-                  Step {step.number}
+                  {t('common.step')} {step.number}
                 </div>
 
                 {/* Step Label/Description */}

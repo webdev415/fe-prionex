@@ -13,13 +13,49 @@ import type { AxiosError } from 'axios'
 export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
     // Handle Axios errors
-    const axiosError = error as AxiosError<{ detail?: string; message?: string }>
+    // FastAPI can return detail as string, array of strings, or array of validation objects
+    const axiosError = error as AxiosError<{
+      detail?:
+        | string
+        | string[]
+        | Array<{ type?: string; loc?: unknown[]; msg?: string; input?: unknown; ctx?: unknown }>
+      message?: string
+    }>
 
     if (axiosError.response?.data) {
       // Try to get error message from response
       const data = axiosError.response.data
       if (typeof data === 'string') return data
-      if (data.detail) return data.detail
+
+      // Handle detail field - can be string, array of strings, or array of validation objects
+      if (data.detail) {
+        if (typeof data.detail === 'string') {
+          return data.detail
+        }
+        if (Array.isArray(data.detail)) {
+          // FastAPI validation errors: array of objects with {type, loc, msg, input, ctx}
+          const messages = data.detail
+            .map((item) => {
+              if (typeof item === 'string') {
+                return item
+              }
+              if (
+                typeof item === 'object' &&
+                item !== null &&
+                'msg' in item &&
+                typeof item.msg === 'string'
+              ) {
+                return item.msg
+              }
+              // Fallback: try to stringify if it's an object
+              return typeof item === 'object' ? JSON.stringify(item) : String(item)
+            })
+            .filter((msg) => msg && msg.length > 0)
+
+          return messages.length > 0 ? messages.join('. ') : 'Validation error occurred'
+        }
+      }
+
       if (data.message) return data.message
     }
 
@@ -40,6 +76,9 @@ export function getErrorMessage(error: unknown): string {
     }
     if (axiosError.response?.status === 404) {
       return 'Resource not found.'
+    }
+    if (axiosError.response?.status === 422) {
+      return 'Validation error. Please check your input and try again.'
     }
     if (axiosError.response?.status === 500) {
       return 'Server error. Please try again later.'

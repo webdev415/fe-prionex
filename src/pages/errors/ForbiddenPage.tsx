@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
 import { LogoutConfirmationModal } from '@/components/layout/LogoutConfirmationModal'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { Button } from '@/components/ui/Button'
 
 /**
  * Forbidden (403) page shown when user lacks permissions
@@ -70,18 +71,22 @@ export function ForbiddenPage() {
 
           {isAuthenticated && (
             <div className="flex h-[45px] w-full items-center justify-between gap-8">
-              <button
+              <Button
+                variant="cancel"
+                size="xl"
                 onClick={handleLogoutClick}
-                className="h-[45px] w-[224px] rounded-lg bg-gray-500 px-6 py-3 text-sm font-medium text-white transition-colors hover:opacity-90"
+                className="h-[45px] w-[224px]"
               >
                 Logout
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
+                size="xl"
                 onClick={handleGoHome}
-                className="text-dark-500 bg-primary-300 h-[45px] w-[224px] rounded-lg px-6 py-3 text-sm font-medium transition-colors hover:opacity-90"
+                className="h-[45px] w-[224px]"
               >
                 Go to Home
-              </button>
+              </Button>
             </div>
           )}
         </div>

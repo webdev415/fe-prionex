@@ -2,6 +2,7 @@
  * Step 1: Loan Source & Import Type
  */
 
+import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import {
@@ -30,48 +31,70 @@ interface Step1LoanSourceProps {
 }
 
 export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
-  const { data: projectsData } = useProjects({ page: 1, page_size: 100 })
+  const { t } = useTranslation('common')
+  // Fetch user's accessible projects (filtered by permissions - admins see all, users see only assigned)
+  const { data: projectsData, isLoading: isLoadingProjects } = useProjects({
+    page: 1,
+    page_size: 100, // Get all accessible projects
+    status: 'active', // Only show active projects
+  })
   const projects = projectsData?.projects || []
 
   return (
     <div className="space-y-6">
       {/* Loan Source / Metadata Section */}
       <div>
-        <h2 className="text-dark-500 mb-4 text-sm font-medium">Loan Source / Metadata</h2>
+        <h2 className="text-dark-500 mb-4 text-sm font-medium">
+          {t('pages.imports.step1.loanSourceMetadata')}
+        </h2>
 
         <div className="space-y-4">
           {/* First Row: Seller/Creditor and Project Code side by side */}
           <div className="flex items-end gap-4">
             {/* Seller / Creditor */}
             <div className="flex-1">
-              <Label htmlFor="seller-creditor" required className="mb-1.5 block">
-                Seller / Creditor
-              </Label>
-              <Select
+              <Input
+                label={t('pages.imports.step1.sellerCreditor')}
+                placeholder={t('pages.imports.step1.placeholders.enterSellerCreditor')}
                 value={data.sellerCreditor}
-                onValueChange={(value) => onChange({ sellerCreditor: value })}
-              >
-                <SelectTrigger className="w-full" id="seller-creditor">
-                  <SelectValue placeholder="Enter Project Name" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={String(project.id)}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(e) => onChange({ sellerCreditor: e.target.value })}
+                required
+              />
             </div>
 
             {/* Project Code */}
             <div className="flex-1">
-              <Input
-                label="Project Code:"
-                placeholder="Enter Project Code"
+              <Label htmlFor="project-code" required className="mb-1.5 block">
+                {t('pages.imports.step1.projectCode')}
+              </Label>
+              <Select
                 value={data.projectCode}
-                onChange={(e) => onChange({ projectCode: e.target.value })}
-              />
+                onValueChange={(value) => onChange({ projectCode: value })}
+                disabled={isLoadingProjects}
+              >
+                <SelectTrigger className="w-full" id="project-code">
+                  <SelectValue
+                    placeholder={
+                      isLoadingProjects
+                        ? t('pages.imports.step1.placeholders.loadingProjects')
+                        : t('pages.imports.step1.placeholders.selectProjectCode')
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.length === 0 && !isLoadingProjects ? (
+                    <SelectItem value="" disabled>
+                      {t('pages.imports.step1.noProjectsAvailable')}
+                    </SelectItem>
+                  ) : (
+                    projects.map((project) => (
+                      <SelectItem key={project.id} value={project.code}>
+                        {project.code} - {project.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -79,21 +102,21 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
           <div>
             <DateSelect
               id="purchase-date"
-              label="Purchase date:"
+              label={t('pages.imports.step1.purchaseDate')}
               value={data.purchaseDate}
               onChange={(args) => {
                 const dateStr = args.value ? args.value.toISOString().split('T')[0] : ''
                 onChange({ purchaseDate: dateStr })
               }}
-              placeholder="Select purchase date"
+              placeholder={t('pages.imports.step1.placeholders.selectPurchaseDate')}
             />
           </div>
 
           {/* Comment */}
           <div className="relative">
             <Textarea
-              label="Comment:"
-              placeholder="Placeholder text"
+              label={t('pages.imports.step1.comment')}
+              placeholder={t('pages.imports.step1.placeholders.placeholderText')}
               value={data.comment}
               onChange={(e) => onChange({ comment: e.target.value })}
               maxLength={100}
@@ -108,7 +131,9 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
 
       {/* Import Type Section */}
       <div>
-        <h2 className="text-dark-500 mb-4 text-sm font-medium">Import Type:</h2>
+        <h2 className="text-dark-500 mb-4 text-sm font-medium">
+          {t('pages.imports.step1.importType')}
+        </h2>
 
         <div className="flex gap-4">
           <RadioCard
@@ -116,8 +141,8 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
             value="simple"
             checked={data.importType === 'simple'}
             onChange={(value) => onChange({ importType: value as 'simple' | 'vendor' })}
-            title="Simple client CSV"
-            description="One CSV with basic client data."
+            title={t('pages.imports.step1.simpleClientCsv')}
+            description={t('pages.imports.step1.simpleClientCsvDesc')}
             className="flex-1"
           />
 
@@ -126,8 +151,8 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
             value="vendor"
             checked={data.importType === 'vendor'}
             onChange={(value) => onChange({ importType: value as 'simple' | 'vendor' })}
-            title="Vendor dump (4 CSVs + documents)"
-            description="Raw export from seller: users.csv, loans.csv, charges.csv, payments.csv + contracts/photos."
+            title={t('pages.imports.step1.vendorDump')}
+            description={t('pages.imports.step1.vendorDumpDesc')}
             className="flex-1"
           />
         </div>

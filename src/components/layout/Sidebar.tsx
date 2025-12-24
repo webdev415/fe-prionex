@@ -48,13 +48,15 @@ const iconMap: Record<
   'home-04': (props) => <Icons.Home04 {...props} />,
   'activity-01': (props) => <Icons.Activity01 {...props} />,
   'file-import': (props) => <Icons.FileImport {...props} />,
+  brochure: (props) => <Icons.Brochure {...props} />,
   'chart-ring': (props) => <Icons.ChartRing {...props} />,
   'analytics-01': (props) => <Icons.Analytics01 {...props} />,
-  community: (props) => <Icons.Community {...props} />,
-  'user-status': (props) => <Icons.UserStatus {...props} />,
+  'user-search-01': (props) => <Icons.UserSearch01 {...props} />,
+  'user-circle-02': (props) => <Icons.UserCircle02Icon {...props} />,
   'transaction-history': (props) => <Icons.TransactionHistory {...props} />,
   'setting-07': (props) => <Icons.Setting07 {...props} />,
   'logout-square-01': (props) => <Icons.LogoutSquare01 {...props} />,
+  mail: (props) => <Icons.Mail {...props} />,
 }
 
 /**

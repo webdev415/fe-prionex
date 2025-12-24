@@ -6,17 +6,22 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
+import { LinkButton } from '@/components/ui/LinkButton'
+import { DoubleButton } from '@/components/ui/DoubleButton'
+import { Button } from '@/components/ui/Button'
 import {
   ImportHistoryFiltersBar,
   type ImportHistoryFilters,
 } from './components/ImportHistoryFiltersBar'
-import { generateMockImportHistory } from './mockImportData'
+import { useImportJobs, useExportImportErrors } from '@/features/imports'
+import type { ImportJob, ImportJobsListParams } from '@/features/imports'
 
-// Types for import history data
+// Types for import history data - map from API types
 export interface ImportHistoryItem {
   id: number | string
   dateTime: string
@@ -26,15 +31,28 @@ export interface ImportHistoryItem {
   errors: number
 }
 
-const mockImportHistory = generateMockImportHistory()
+// Helper to convert API ImportJob to ImportHistoryItem
+// Note: Only converts completed or failed jobs (in_progress jobs are filtered out)
+function mapImportJobToHistoryItem(job: ImportJob): ImportHistoryItem {
+  return {
+    id: job.id,
+    dateTime: job.uploaded_at,
+    fileName: job.file_name,
+    uploadedBy: job.uploaded_by,
+    status: job.status === 'completed' ? 'done' : job.status === 'failed' ? 'failed' : 'done', // Default to 'done' for any other status
+    errors: job.errors_count,
+  }
+}
 
 // Status Badge Component for Import History
 function ImportStatusBadge({ status }: { status: 'done' | 'failed' | 'in_progress' }) {
+  const { t } = useTranslation('common')
+
   if (status === 'done') {
     return (
       <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-[#204E4D] px-3 text-xs font-medium text-white">
         <span className="h-2 w-2 rounded-full bg-white" />
-        Done
+        {t('pages.imports.history.statuses.done')}
       </span>
     )
   }
@@ -43,7 +61,7 @@ function ImportStatusBadge({ status }: { status: 'done' | 'failed' | 'in_progres
     return (
       <span className="bg-secondary-800 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
         <span className="h-2 w-2 rounded-full bg-white" />
-        In progress
+        {t('pages.imports.history.statuses.inProgress')}
       </span>
     )
   }
@@ -51,16 +69,21 @@ function ImportStatusBadge({ status }: { status: 'done' | 'failed' | 'in_progres
   return (
     <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-red-600 px-3 text-xs font-medium text-white">
       <span className="h-2 w-2 rounded-full bg-white" />
-      Failed
+      {t('pages.imports.history.statuses.failed')}
     </span>
   )
 }
 
 export function ImportHistoryPage() {
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
   const rowsPerPage = 10 // Changed from useState to constant
   const [sortConfig, setSortConfig] = useState<SortConfig | undefined>(undefined)
+  const [selectedJobId, setSelectedJobId] = useState<number | string | null>(null)
+
+  // Export errors mutation
+  const exportErrorsMutation = useExportImportErrors()
 
   // Filter state - using the same pattern as SearchFiltersBar
   const [filters, setFilters] = useState<ImportHistoryFilters>({
@@ -73,67 +96,115 @@ export function ImportHistoryPage() {
   // Track previous filter values to detect changes
   const prevFiltersRef = useRef(filters)
 
-  // Extract unique users from mock data
-  const availableUsers = useMemo(() => {
-    const users = new Set(mockImportHistory.map((item) => item.uploadedBy))
-    return Array.from(users).sort()
-  }, [])
+  // Build API params from filters
+  // IMPORTANT: Always exclude 'in_progress', 'pending', and 'cancelled' jobs from Import History page
+  const apiParams = useMemo(() => {
+    const params: ImportJobsListParams = {
+      page: currentPage,
+      page_size: rowsPerPage,
+      // Always exclude in_progress, pending, and cancelled jobs from history page
+      exclude_status: ['in_progress', 'pending', 'cancelled'],
+    }
 
-  // Filter and sort data
-  const filteredAndSortedData = useMemo(() => {
-    let result = [...mockImportHistory]
-
-    // Apply search filter
     if (filters.searchFilename) {
-      const searchLower = filters.searchFilename.toLowerCase()
-      result = result.filter((item) => item.fileName.toLowerCase().includes(searchLower))
+      params.search = filters.searchFilename
     }
 
-    // Apply status filter
-    if (filters.status) {
-      result = result.filter((item) => item.status === filters.status)
+    // Only allow filtering by 'completed' or 'failed' status
+    // Don't allow filtering by 'in_progress' in history page
+    if (filters.status && filters.status !== 'all' && filters.status !== 'in_progress') {
+      // Map filter status to API status
+      if (filters.status === 'done') {
+        params.status = 'completed'
+      } else if (filters.status === 'failed') {
+        params.status = 'failed'
+      }
     }
 
-    // Apply uploaded by filter
-    if (filters.uploadedBy) {
-      result = result.filter((item) => item.uploadedBy === filters.uploadedBy)
+    if (filters.uploadedBy && filters.uploadedBy !== 'all') {
+      params.uploaded_by = filters.uploadedBy
     }
 
-    // Apply date range filter
+    // Handle date range
     if (filters.dateRange && filters.dateRange !== 'all') {
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
+      // Use UTC dates to avoid timezone issues
+      const now = new Date()
+      const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
 
-      result = result.filter((item) => {
-        const itemDate = new Date(item.dateTime.split(' ')[0])
-        itemDate.setHours(0, 0, 0, 0)
-
-        switch (filters.dateRange) {
-          case 'today': {
-            return itemDate.getTime() === today.getTime()
-          }
-          case 'last_7_days': {
-            const sevenDaysAgo = new Date(today)
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-            return itemDate >= sevenDaysAgo && itemDate <= today
-          }
-          case 'last_30_days': {
-            const thirtyDaysAgo = new Date(today)
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-            return itemDate >= thirtyDaysAgo && itemDate <= today
-          }
-          case 'last_90_days': {
-            const ninetyDaysAgo = new Date(today)
-            ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
-            return itemDate >= ninetyDaysAgo && itemDate <= today
-          }
-          default:
-            return true
+      switch (filters.dateRange) {
+        case 'today': {
+          const todayStr = todayUTC.toISOString().split('T')[0]
+          params.date_from = todayStr
+          params.date_to = todayStr
+          break
         }
-      })
+        case 'last_7_days': {
+          const sevenDaysAgo = new Date(todayUTC)
+          sevenDaysAgo.setUTCDate(sevenDaysAgo.getUTCDate() - 7)
+          params.date_from = sevenDaysAgo.toISOString().split('T')[0]
+          params.date_to = todayUTC.toISOString().split('T')[0]
+          break
+        }
+        case 'last_30_days': {
+          const thirtyDaysAgo = new Date(todayUTC)
+          thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30)
+          params.date_from = thirtyDaysAgo.toISOString().split('T')[0]
+          params.date_to = todayUTC.toISOString().split('T')[0]
+          break
+        }
+        case 'last_90_days': {
+          const ninetyDaysAgo = new Date(todayUTC)
+          ninetyDaysAgo.setUTCDate(ninetyDaysAgo.getUTCDate() - 90)
+          params.date_from = ninetyDaysAgo.toISOString().split('T')[0]
+          params.date_to = todayUTC.toISOString().split('T')[0]
+          break
+        }
+      }
     }
 
-    // Apply sorting
+    return params
+  }, [currentPage, rowsPerPage, filters])
+
+  // Fetch import jobs from API
+  const { data: importJobsData, isLoading } = useImportJobs(apiParams)
+
+  // Convert API data to ImportHistoryItem format
+  // Filter out any in_progress, pending, and cancelled jobs as a safety measure (should be handled by API, but filter client-side too)
+  const importHistory = useMemo(() => {
+    const jobs = (importJobsData?.items || []).filter(
+      (job) =>
+        job.status !== 'in_progress' && job.status !== 'pending' && job.status !== 'cancelled'
+    )
+    return jobs.map(mapImportJobToHistoryItem)
+  }, [importJobsData])
+
+  // Extract unique users from all import history (for filter dropdown)
+  // Fetch all jobs without any filters to get all users who have import histories
+  // Exclude in_progress, pending, and cancelled jobs when fetching for user list
+  const { data: allJobsData } = useImportJobs({
+    page: 1,
+    page_size: 1000,
+    exclude_status: ['in_progress', 'pending', 'cancelled'],
+    // Don't send any other filters - we want ALL users' data
+  })
+
+  const availableUsers = useMemo(() => {
+    const allJobs = (allJobsData?.items || []).filter(
+      (job) =>
+        job.status !== 'in_progress' && job.status !== 'pending' && job.status !== 'cancelled'
+    )
+    // Extract unique usernames and filter out null/undefined
+    const users = new Set(
+      allJobs.map((job) => job.uploaded_by).filter((username): username is string => !!username)
+    )
+    return Array.from(users).sort()
+  }, [allJobsData])
+
+  // Filter and sort data (client-side sorting only, filtering is done by API)
+  const filteredAndSortedData = useMemo(() => {
+    const result = [...importHistory]
+
+    // Apply sorting (API handles filtering)
     if (sortConfig) {
       result.sort((a, b) => {
         let aValue: string | number
@@ -171,20 +242,14 @@ export function ImportHistoryPage() {
     }
 
     return result
-  }, [filters, sortConfig])
+  }, [sortConfig, importHistory])
 
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredAndSortedData.length / rowsPerPage)
-  const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * rowsPerPage
-    const end = start + rowsPerPage
-    return filteredAndSortedData.slice(start, end)
-  }, [filteredAndSortedData, currentPage, rowsPerPage])
+  // Calculate pagination from API response
+  const totalPages = importJobsData?.total ? Math.ceil(importJobsData.total / rowsPerPage) : 1
+  const paginatedData = filteredAndSortedData // Already paginated by API
 
   // Calculate max valid page
-  const maxPage = useMemo(() => {
-    return Math.max(1, Math.ceil(filteredAndSortedData.length / rowsPerPage))
-  }, [filteredAndSortedData.length, rowsPerPage])
+  const maxPage = totalPages
 
   // Reset to first page when filters change (but not when sort changes)
   // Use ref to track previous values and only update when filters actually change
@@ -226,14 +291,20 @@ export function ImportHistoryPage() {
     setCurrentPage(validPage)
   }
 
-  const handleViewDetails = () => {
-    // TODO: Implement view details functionality
-    console.log('View Details clicked')
-  }
+  // const handleViewDetails = () => {
+  //   if (selectedJobId) {
+  //     navigate(`/dashboard/import/history/${selectedJobId}`)
+  //   } else if (paginatedData.length > 0) {
+  //     // If no selection, use first item
+  //     navigate(`/dashboard/import/history/${paginatedData[0].id}`)
+  //   }
+  // }
 
   const handleDownloadErrors = () => {
-    // TODO: Implement download errors functionality
-    console.log('Download Errors clicked')
+    const jobId = selectedJobId || paginatedData[0]?.id
+    if (jobId) {
+      exportErrorsMutation.mutate(jobId)
+    }
   }
 
   const handleFilterChange = useCallback((newFilters: ImportHistoryFilters) => {
@@ -269,57 +340,60 @@ export function ImportHistoryPage() {
   }, [filters])
 
   // Check if there's any data at all (not just filtered)
-  const hasNoData = mockImportHistory.length === 0
+  const hasNoData = !isLoading && (importJobsData?.total || 0) === 0
 
   // Table columns definition
   const columns: Column<ImportHistoryItem>[] = [
     {
       key: 'dateTime',
-      header: 'Date/Time',
+      header: t('pages.imports.history.tableHeaders.dateTime'),
       sortable: true,
       render: (item) => <span>{item.dateTime}</span>,
     },
     {
       key: 'fileName',
-      header: 'File name',
+      header: t('pages.imports.history.tableHeaders.fileName'),
       sortable: true,
       render: (item) => (
         <div className="flex flex-col">
           <span className="font-medium">{item.fileName}</span>
-          <span className="mt-0.5 text-[11px] text-gray-600">Uploaded by: {item.uploadedBy}</span>
+          <span className="mt-0.5 text-[11px] text-gray-600">
+            {t('pages.imports.history.uploadedBy')} {item.uploadedBy}
+          </span>
         </div>
       ),
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('pages.imports.history.tableHeaders.status'),
       sortable: true,
       render: (item) => <ImportStatusBadge status={item.status} />,
     },
     {
       key: 'errors',
-      header: 'Errors',
+      header: t('pages.imports.history.tableHeaders.errors'),
       sortable: true,
       align: 'center',
       render: (item) => <span>{item.errors}</span>,
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('pages.imports.history.tableHeaders.actions'),
       align: 'center',
       render: (item) => (
         <div className="flex items-center justify-center">
-          <button
-            type="button"
+          <LinkButton
+            variant="regular-black"
+            size="xs"
             onClick={(e) => {
               e.stopPropagation()
+              setSelectedJobId(item.id)
               navigate(`/dashboard/import/history/${item.id}`)
             }}
-            className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+            leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
           >
-            <Icons.View size={16} className="text-dark-500" strokeWidth={1.5} />
-            View
-          </button>
+            {t('pages.imports.history.view')}
+          </LinkButton>
         </div>
       ),
     },
@@ -329,44 +403,52 @@ export function ImportHistoryPage() {
     <div>
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-dark-500 mb-6 text-2xl font-light">Import History</h1>
+        <h1 className="text-dark-500 mb-6 text-2xl font-light">
+          {t('pages.imports.history.title')}
+        </h1>
         <div className="mb-6 flex w-full items-center justify-between gap-3">
           {/* Filters Section - using the reusable component */}
           <ImportHistoryFiltersBar
             filters={filters}
             onFilterChange={handleFilterChange}
             availableUsers={availableUsers}
-            isLoading={false} // TODO: Add loading state from API
+            isLoading={isLoading}
           />
 
           {/* Action Buttons */}
           <div className="flex w-[30%] items-center justify-end gap-2">
-            {filteredAndSortedData.length > 0 && (
-              <button
-                onClick={handleViewDetails}
-                className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-              >
-                <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-                  <Icons.File size={20} className="text-dark-500" strokeWidth={1.5} />
-                </div>
-                <span className="px-4 py-3 text-sm font-medium text-white">View Details</span>
-              </button>
-            )}
-            <button
+            <Button
               onClick={handleDownloadErrors}
-              type="button"
-              className="bg-primary-300 text-dark-500 flex h-[45px] items-center gap-2 rounded-full px-4 text-xs font-medium transition-colors hover:bg-gray-50 disabled:opacity-50"
+              variant="primary"
+              size="xs"
+              leftIcon={<Icons.FileDownload size={20} />}
+              disabled={
+                exportErrorsMutation.isPending ||
+                (!selectedJobId && paginatedData.length === 0) ||
+                (selectedJobId
+                  ? !paginatedData.find((item) => item.id === selectedJobId)?.errors
+                  : !paginatedData[0]?.errors)
+              }
+              className="flex h-12 items-center rounded-full text-xs font-medium"
             >
-              <Icons.FileDownload size={20} className="text-dark-500" />
-              Download Errors
-            </button>
+              {exportErrorsMutation.isPending
+                ? t('pages.imports.history.exporting')
+                : t('pages.imports.history.downloadErrors')}
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Data Table or Empty State */}
       <div className="min-h-[400px] rounded-xl bg-white/50 p-6 shadow-sm">
-        {filteredAndSortedData.length === 0 && hasActiveFilters ? (
+        {isLoading ? (
+          // Loading State - Show while fetching data
+          <div className="flex min-h-[448px] flex-col items-center justify-center gap-6 p-6">
+            <div className="text-dark-500 text-center text-base leading-[150%] font-light tracking-[-0.32px]">
+              {t('pages.imports.history.loading')}
+            </div>
+          </div>
+        ) : filteredAndSortedData.length === 0 && hasActiveFilters ? (
           // Empty State - No results for filters
           <div className="flex flex-col items-center justify-center py-16">
             {/* Icon */}
@@ -376,19 +458,18 @@ export function ImportHistoryPage() {
 
             {/* Message */}
             <h3 className="text-dark-500 flex flex-col items-center justify-center gap-6 p-6 text-2xl leading-[120%] font-light tracking-[-0.48px]">
-              No imports found for selected filters.
+              {t('pages.imports.history.noImportsFound')}
             </h3>
 
             {/* Clear Filters Button */}
-            <button
+            <DoubleButton
+              icon={<Icons.Reload size={22} />}
+              iconPosition="left"
               onClick={handleClearFilters}
-              className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+              className="text-sm font-medium"
             >
-              <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-                <Icons.Reload size={22} className="text-dark-500" strokeWidth={1.5} />
-              </div>
-              <span className="px-4 py-3 text-sm font-medium text-white">Clear filters</span>
-            </button>
+              {t('pages.imports.history.clearFilters')}
+            </DoubleButton>
           </div>
         ) : hasNoData ? (
           // Empty State - No import history at all
@@ -400,24 +481,23 @@ export function ImportHistoryPage() {
 
             {/* Primary Message */}
             <h3 className="text-dark-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
-              No import history yet.
+              {t('pages.imports.history.noHistoryYet')}
             </h3>
 
             {/* Secondary Message */}
             <p className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.32px]">
-              Run your first CSV import to see history here.
+              {t('pages.imports.history.runFirstImport')}
             </p>
 
             {/* Go to Import Clients Button */}
-            <button
+            <DoubleButton
+              icon={<Icons.FileImport size={20} />}
+              iconPosition="left"
               onClick={handleGoToImportClients}
-              className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+              className="text-sm font-medium"
             >
-              <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-                <Icons.FileImport size={20} className="text-dark-500" strokeWidth={1.5} />
-              </div>
-              <span className="px-4 py-3 text-sm font-medium text-white">Go to Import Clients</span>
-            </button>
+              {t('pages.imports.history.goToImportClients')}
+            </DoubleButton>
           </div>
         ) : (
           // Data Table
@@ -426,7 +506,7 @@ export function ImportHistoryPage() {
             data={paginatedData}
             sortConfig={sortConfig}
             onSort={handleSort}
-            emptyMessage="No import history found"
+            emptyMessage={t('pages.imports.history.noHistoryFound')}
           />
         )}
       </div>

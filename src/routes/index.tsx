@@ -1,6 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
 import { createBrowserRouter, Navigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import LoginPage from '@/pages/auth/LoginPage'
 import { UserManagementPage } from '@/pages/UserManagement'
 import { ImportClientsPage } from '@/pages/ImportClients/ImportClientsPage'
@@ -14,19 +12,13 @@ import { DashboardLayout } from '@/components/layout'
 import { PERMISSIONS } from '@/constants/permissions'
 import { ImportHistoryPage } from '@/pages/ImportClients/ImportHistoryPage'
 import { ImportDetailsPage } from '@/pages/ImportClients/ImportDetailsPage'
-
-function DashboardContent() {
-  const { t } = useTranslation('common')
-
-  return (
-    <div>
-      <h1 className="mb-4 text-2xl font-bold text-gray-900">{t('navigation.dashboard')}</h1>
-      <div className="rounded-lg bg-white p-6 shadow">
-        <p className="text-gray-600">{t('app.description')}</p>
-      </div>
-    </div>
-  )
-}
+import {
+  ClientManagementPage,
+  ClientDetailPage,
+  ActivityTimelinePage,
+} from '@/pages/ClientManagement'
+import { SmsTemplatesPage } from '@/pages/SmsTemplates'
+import { ReportsDashboardPage } from '@/pages/ReportsDashboard'
 
 export const router = createBrowserRouter([
   {
@@ -50,7 +42,27 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <DashboardLayout>
-          <DashboardContent />
+          <ClientManagementPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/:id',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ClientDetailPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/:id/activity',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ActivityTimelinePage />
         </DashboardLayout>
       </ProtectedRoute>
     ),
@@ -116,6 +128,28 @@ export const router = createBrowserRouter([
         <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
           <DashboardLayout>
             <RoleManagementPage />
+          </DashboardLayout>
+        </PermissionRoute>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/sms-templates',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <SmsTemplatesPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/reports',
+    element: (
+      <ProtectedRoute>
+        <PermissionRoute requiredPermission={PERMISSIONS.REPORTS.VIEW_ALL_REPORTS}>
+          <DashboardLayout>
+            <ReportsDashboardPage />
           </DashboardLayout>
         </PermissionRoute>
       </ProtectedRoute>

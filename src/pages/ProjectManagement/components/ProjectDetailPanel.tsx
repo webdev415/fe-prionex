@@ -13,6 +13,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { formatCurrency, formatNumber, formatDateTime, truncateText } from '@/lib/formatters'
 import type { ApiProjectDetail } from '@/features/projects/types'
 import { ProjectDetailPanelSkeleton } from './ProjectDetailPanelSkeleton'
+import { Button } from '@/components/ui/Button'
 
 interface ProjectDetailPanelProps {
   project: ApiProjectDetail | null
@@ -218,20 +219,24 @@ export function ProjectDetailPanel({
 
       {/* Footer Actions */}
       <div className="flex gap-3 pt-3">
-        <button
+        <Button
+          variant="primary"
+          size="xl"
           onClick={onEdit}
-          className="bg-primary-300 text-dark-500 flex h-[45px] flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium"
+          className="h-[45px] flex-1 rounded-md text-sm"
+          leftIcon={<Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />}
         >
-          <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
           {t('pages.projects.detailPanel.edit')}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="danger"
+          size="xl"
           onClick={onDelete}
-          className="bg-error-500 flex h-[45px] flex-1 items-center justify-center gap-2 rounded-md text-sm font-medium text-white"
+          className="h-[45px] flex-1 rounded-md text-sm"
+          leftIcon={<Icons.Delete size={20} className="text-white" strokeWidth={2} />}
         >
-          <Icons.Delete size={20} className="text-white" strokeWidth={2} />
           {t('pages.projects.detailPanel.delete')}
-        </button>
+        </Button>
       </div>
     </div>
   )

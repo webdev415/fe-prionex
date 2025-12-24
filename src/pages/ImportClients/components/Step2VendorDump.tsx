@@ -6,10 +6,15 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
+import { DoubleButton } from '@/components/ui/DoubleButton'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { useUploadImport } from '@/features/imports'
+import type { Step1Data } from './Step1LoanSource'
+import { getErrorMessage } from '@/lib/errors'
 
 export type DatasetType = 'users' | 'loans' | 'charges' | 'payments' | 'documents'
 
@@ -31,6 +36,8 @@ export interface Step2VendorDumpProps {
   data: Step2VendorDumpData
   onChange: (data: Partial<Step2VendorDumpData>) => void
   isImportInProgress?: boolean
+  step1Data: Step1Data
+  onImportStarted?: (jobId: number | string) => void
 }
 
 const INITIAL_DATASETS: Omit<DatasetFile, 'id'>[] = [
@@ -45,10 +52,17 @@ export function Step2VendorDump({
   data,
   onChange,
   isImportInProgress = false,
+  step1Data,
+  onImportStarted,
 }: Step2VendorDumpProps) {
+  const { t } = useTranslation('common')
   const [isDragging, setIsDragging] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const browseFileInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Import mutation
+  const uploadImportMutation = useUploadImport()
 
   // Initialize datasets if not already set
   useEffect(() => {
@@ -155,9 +169,48 @@ export function Step2VendorDump({
     }
   }
 
-  const handleStartImport = () => {
-    // TODO: Implement import functionality
-    console.log('Start vendor dump import with files:', data.files, data.zipFile)
+  const handleStartImport = async () => {
+    if (!step1Data.sellerCreditor || !step1Data.projectCode || !step1Data.purchaseDate) {
+      setImportError(t('pages.imports.step2.vendor.fillAllFields'))
+      return
+    }
+
+    // Check required files are selected
+    const requiredFiles = data.files.filter((f) => f.status === 'required')
+    const missingRequired = requiredFiles.some((f) => !f.file)
+
+    if (missingRequired) {
+      setImportError(t('pages.imports.step2.vendor.selectAllRequired'))
+      return
+    }
+
+    setImportError(null)
+
+    try {
+      // Prepare files array (excluding documents if ZIP is uploaded)
+      const filesToUpload: File[] = []
+      data.files.forEach((dataset) => {
+        if (dataset.file && dataset.type !== 'documents') {
+          filesToUpload.push(dataset.file)
+        }
+      })
+
+      const result = await uploadImportMutation.mutateAsync({
+        files: filesToUpload.length > 0 ? filesToUpload : undefined,
+        zip_file: data.zipFile || undefined,
+        seller_creditor: step1Data.sellerCreditor,
+        project_code: step1Data.projectCode,
+        purchase_date: step1Data.purchaseDate,
+        comment: step1Data.comment || undefined,
+        import_type: 'vendor',
+      })
+
+      if (onImportStarted && result.job_id) {
+        onImportStarted(result.job_id)
+      }
+    } catch (error) {
+      setImportError(getErrorMessage(error))
+    }
   }
 
   const formatFileSize = (bytes: number): string => {
@@ -169,15 +222,17 @@ export function Step2VendorDump({
     data.files.length > 0 &&
     data.files.filter((f) => f.status === 'required').every((f) => f.file !== null)
 
+  const isStartingImport = uploadImportMutation.isPending
+
   const columns: Column<DatasetFile>[] = [
     {
       key: 'name',
-      header: 'Dataset',
+      header: t('pages.imports.step2.vendor.dataset'),
       render: (item) => <span className="text-dark-500 text-xs font-medium">{item.name}</span>,
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('pages.imports.step2.vendor.status'),
       render: (item) => (
         <div className="flex items-center gap-2">
           <span
@@ -187,14 +242,16 @@ export function Step2VendorDump({
             )}
           />
           <span className="text-dark-500 text-xs font-medium">
-            {item.status === 'required' ? 'Required' : 'Optional'}
+            {item.status === 'required'
+              ? t('pages.imports.step2.vendor.required')
+              : t('pages.imports.step2.vendor.optional')}
           </span>
         </div>
       ),
     },
     {
       key: 'file',
-      header: 'File',
+      header: t('pages.imports.step2.vendor.file'),
       render: (item) => {
         const isDocuments = item.type === 'documents'
         const hasFile = item.file !== null
@@ -210,9 +267,11 @@ export function Step2VendorDump({
                 variant="outline"
                 onClick={() => handleBrowseClick(item.type)}
                 disabled={isImportInProgress}
-                className="text-dark-500 h-8 rounded-full border-gray-600 bg-white px-3 py-1.5 text-xs font-medium"
+                className="h-8 text-xs font-medium"
               >
-                {isDocuments ? 'Choose ZIP' : 'Choose file'}
+                {isDocuments
+                  ? t('pages.imports.step2.vendor.chooseZip')
+                  : t('pages.imports.step2.vendor.chooseFile')}
               </Button>
             )}
             <input
@@ -234,12 +293,22 @@ export function Step2VendorDump({
     <div className="space-y-6">
       {/* Section Title */}
       <h2 className="text-dark-500 mb-6 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
-        Upload raw export from seller.
+        {t('pages.imports.step2.vendor.title')}
       </h2>
+
+      {/* Error Alert - shown when import fails */}
+      {importError && (
+        <div className="flex items-center justify-center gap-3 rounded-lg bg-white p-6">
+          <Icons.Warning size={24} className="text-error-500" />
+          <span className="text-error-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            {importError}
+          </span>
+        </div>
+      )}
 
       {/* Instructions */}
       <p className="text-dark-500 mb-6 text-center text-base leading-[155%] font-light tracking-[-0.32px]">
-        Drag the CSVs and contracts folder, or one .zip.
+        {t('pages.imports.step2.vendor.dragCsvs')}
       </p>
 
       {/* File Upload Drop Zone */}
@@ -260,7 +329,7 @@ export function Step2VendorDump({
 
         <div className="align-self-stretch flex flex-col items-center justify-center gap-4">
           <div className="text-dark-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
-            Drag & drop files/folder here
+            {t('pages.imports.step2.vendor.dragDropFiles')}
           </div>
 
           {/* Browse File Button */}
@@ -268,9 +337,9 @@ export function Step2VendorDump({
             variant="outline"
             onClick={() => handleBrowseClick()}
             disabled={isImportInProgress}
-            className="text-dark-500 flex h-12 flex-col items-center justify-center gap-[10px] rounded-full border border-gray-600 px-5 py-3 text-sm"
+            className="flex h-12 flex-col items-center justify-center rounded-full text-sm"
           >
-            Browse File
+            {t('pages.imports.step2.vendor.browseFile')}
           </Button>
         </div>
       </div>
@@ -287,37 +356,23 @@ export function Step2VendorDump({
 
       {/* Dataset Table */}
       <div className="mt-6">
-        <DataTable columns={columns} data={data.files} emptyMessage="No datasets configured" />
+        <DataTable
+          columns={columns}
+          data={data.files}
+          emptyMessage={t('pages.imports.step2.vendor.noDatasetsConfigured')}
+        />
       </div>
 
       {/* Start Import Button */}
       <div className="mt-8 flex justify-center">
-        <Button
-          variant="primary"
+        <DoubleButton
+          icon={<Icons.ArrowRight02 size={24} />}
+          iconPosition="right"
           onClick={handleStartImport}
-          disabled={!requiredFilesSelected || isImportInProgress}
-          className={cn(
-            'flex h-12 items-center justify-center gap-2.5 rounded-full py-1 pr-1 pl-6 text-sm leading-[150%] font-medium',
-            requiredFilesSelected && !isImportInProgress
-              ? 'bg-secondary-800 cursor-pointer text-white'
-              : 'cursor-not-allowed bg-gray-200 text-gray-600'
-          )}
+          disabled={!requiredFilesSelected || isImportInProgress || isStartingImport}
         >
-          <span>Start Import</span>
-          <div
-            className={cn(
-              'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full',
-              requiredFilesSelected && !isImportInProgress ? 'bg-primary-300' : 'bg-gray-600'
-            )}
-          >
-            <Icons.ArrowRight02
-              size={24}
-              className={cn(
-                requiredFilesSelected && !isImportInProgress ? 'text-dark-500' : 'text-gray-500'
-              )}
-            />
-          </div>
-        </Button>
+          {t('pages.imports.step2.vendor.startImport')}
+        </DoubleButton>
       </div>
     </div>
   )
