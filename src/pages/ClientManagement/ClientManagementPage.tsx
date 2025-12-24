@@ -56,9 +56,9 @@ const mapAPIClientToDisplay = (
     tags: [], // TODO: Add tags from backend when available
     phoneNumber: client.phone_primary,
     dateOfSale: client.created_at ? new Date(client.created_at).toLocaleDateString('uk-UA') : '-',
-    creditor: '-', // TODO: Add creditor info when available
-    debt: 0, // TODO: Calculate from debt_count
-    amountOfDebt: 0, // TODO: Calculate from debts
+    creditor: client.primary_creditor || '-',
+    debt: client.total_debt || 0,
+    amountOfDebt: client.total_debt || 0,
     priority:
       (client.manual_priority as 'Critical' | 'High' | 'Medium' | 'Low') ||
       mapScoreToPriority(client.priority_score, thresholds),

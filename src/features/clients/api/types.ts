@@ -3,6 +3,23 @@
  * Based on TIN-based brand isolation architecture
  */
 
+export interface DebtDetail {
+  id: number
+  seller_company: string
+  contract_number: string
+  original_debt_amount: number
+  remaining_debt_amount: number
+  debt_currency?: string
+  purchase_date?: string | null
+  debt_start_date?: string | null
+  debt_close_date?: string | null
+  status: string
+  total_paid?: number
+  last_payment_date?: string | null
+  last_payment_amount?: number | null
+  debt_notes?: string | null
+}
+
 export interface Client {
   id: number
   project_id: number
@@ -43,10 +60,17 @@ export interface Client {
 
   // Debt summary
   debt_count: number
+  total_debt: number
+  primary_creditor?: string | null
 }
 
 export interface ClientDetail extends Client {
-  total_debt: number
+  // Detailed debt list
+  debts?: DebtDetail[]
+
+  // Additional manual priority fields
+  manual_priority_set_at?: string | null
+  manual_priority_set_by?: number | null
 }
 
 export interface CreateClientRequest {
