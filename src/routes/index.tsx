@@ -1,6 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
 import { createBrowserRouter, Navigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import LoginPage from '@/pages/auth/LoginPage'
 import { UserManagementPage } from '@/pages/UserManagement'
 import { ImportClientsPage } from '@/pages/ImportClients/ImportClientsPage'
@@ -20,19 +18,7 @@ import {
   ActivityTimelinePage,
 } from '@/pages/ClientManagement'
 import { SmsTemplatesPage } from '@/pages/SmsTemplates'
-
-function DashboardContent() {
-  const { t } = useTranslation('common')
-
-  return (
-    <div>
-      <h1 className="mb-4 text-2xl font-bold text-gray-900">{t('navigation.dashboard')}</h1>
-      <div className="rounded-lg bg-white p-6 shadow">
-        <p className="text-gray-600">{t('app.description')}</p>
-      </div>
-    </div>
-  )
-}
+import { ReportsDashboardPage } from '@/pages/ReportsDashboard'
 
 export const router = createBrowserRouter([
   {
@@ -56,23 +42,13 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <DashboardLayout>
-          <DashboardContent />
-        </DashboardLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/client',
-    element: (
-      <ProtectedRoute>
-        <DashboardLayout>
           <ClientManagementPage />
         </DashboardLayout>
       </ProtectedRoute>
     ),
   },
   {
-    path: '/dashboard/client/:id',
+    path: '/dashboard/:id',
     element: (
       <ProtectedRoute>
         <DashboardLayout>
@@ -82,7 +58,7 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: '/dashboard/client/:id/activity',
+    path: '/dashboard/:id/activity',
     element: (
       <ProtectedRoute>
         <DashboardLayout>
@@ -168,11 +144,23 @@ export const router = createBrowserRouter([
     ),
   },
   {
+    path: '/dashboard/reports',
+    element: (
+      <ProtectedRoute>
+        <PermissionRoute requiredPermission={PERMISSIONS.REPORTS.VIEW_ALL_REPORTS}>
+          <DashboardLayout>
+            <ReportsDashboardPage />
+          </DashboardLayout>
+        </PermissionRoute>
+      </ProtectedRoute>
+    ),
+  },
+  {
     path: '/',
-    element: <Navigate to="/dashboard/client" replace />,
+    element: <Navigate to="/dashboard" replace />,
   },
   {
     path: '*',
-    element: <Navigate to="/dashboard/client" replace />,
+    element: <Navigate to="/dashboard" replace />,
   },
 ])

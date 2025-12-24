@@ -48,14 +48,15 @@ const iconMap: Record<
   'home-04': (props) => <Icons.Home04 {...props} />,
   'activity-01': (props) => <Icons.Activity01 {...props} />,
   'file-import': (props) => <Icons.FileImport {...props} />,
+  brochure: (props) => <Icons.Brochure {...props} />,
   'chart-ring': (props) => <Icons.ChartRing {...props} />,
   'analytics-01': (props) => <Icons.Analytics01 {...props} />,
-  community: (props) => <Icons.Community {...props} />,
-  'user-status': (props) => <Icons.UserStatus {...props} />,
+  'user-search-01': (props) => <Icons.UserSearch01 {...props} />,
+  'user-circle-02': (props) => <Icons.UserCircle02Icon {...props} />,
   'transaction-history': (props) => <Icons.TransactionHistory {...props} />,
   'setting-07': (props) => <Icons.Setting07 {...props} />,
   'logout-square-01': (props) => <Icons.LogoutSquare01 {...props} />,
-  'mail-send': (props) => <Icons.MailSend01 {...props} />,
+  mail: (props) => <Icons.Mail {...props} />,
 }
 
 /**
@@ -68,9 +69,6 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
    * Check if a path is active
    */
   const isActivePath = (path: string) => {
-    if (path === '/dashboard/client') {
-      return location.pathname === '/dashboard/client' || location.pathname === '/dashboard'
-    }
     if (path === '/dashboard') {
       return location.pathname === '/dashboard'
     }
@@ -134,7 +132,7 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
                 <TooltipTrigger asChild>
                   <NavLink
                     to={item.path}
-                    end={item.path === '/dashboard/client'}
+                    end={item.path === '/dashboard'}
                     className={cn(
                       'focus:ring-primary-500 mx-auto flex shrink-0 items-center justify-center transition-all duration-200 focus:ring-2 focus:ring-offset-2 focus:outline-none',
                       isActive

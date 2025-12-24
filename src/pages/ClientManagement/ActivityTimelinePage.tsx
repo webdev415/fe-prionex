@@ -5,6 +5,7 @@
  */
 
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
@@ -16,10 +17,12 @@ import { AddNoteModal } from '@/pages/ClientManagement/components/AddNoteModal'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { mockClientsDetail } from './mockClientDetails'
 import { cn } from '@/lib/utils'
+import { DoubleButton } from '@/components/ui/DoubleButton'
 
 type CommunicationType = 'calls' | 'sms' | 'notes' | 'all'
 
 export function ActivityTimelinePage() {
+  const { t } = useTranslation('common')
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const clientId = id ? Number(id) : 1
@@ -29,7 +32,7 @@ export function ActivityTimelinePage() {
   const [dateFrom, setDateFrom] = useState<Date | null>(new Date('2024-11-20'))
   const [dateTo, setDateTo] = useState<Date | null>(new Date('2024-11-27'))
   const [currentPage, setCurrentPage] = useState(1)
-  const [rowsPerPage, setRowsPerPage] = useState(15)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
 
@@ -105,25 +108,29 @@ export function ActivityTimelinePage() {
   }
 
   const activityColumns: Column<(typeof client.activities)[0]>[] = [
-    { key: 'date', header: 'Date', align: 'left' },
-    { key: 'number', header: 'Number', align: 'left' },
-    { key: 'contactType', header: 'Contact Type', align: 'left' },
-    { key: 'result', header: 'Result', align: 'left' },
+    { key: 'date', header: t('pages.clients.activity.tableHeaders.date'), align: 'left' },
+    { key: 'number', header: t('pages.clients.activity.tableHeaders.number'), align: 'left' },
+    {
+      key: 'contactType',
+      header: t('pages.clients.activity.tableHeaders.contactType'),
+      align: 'left',
+    },
+    { key: 'result', header: t('pages.clients.activity.tableHeaders.result'), align: 'left' },
     {
       key: 'promisedAmount',
-      header: 'Promised Amount',
+      header: t('pages.clients.activity.tableHeaders.promisedAmount'),
       align: 'right',
       render: (activity) =>
         activity.promisedAmount ? `${formatCurrencyWithDecimals(activity.promisedAmount)} ₴` : '-',
     },
     {
       key: 'promisedDate',
-      header: 'Promised Date',
+      header: t('pages.clients.activity.tableHeaders.promisedDate'),
       align: 'left',
       render: (activity) => activity.promisedDate || '-',
     },
-    { key: 'comment', header: 'Comment', align: 'left' },
-    { key: 'employee', header: 'Employee', align: 'left' },
+    { key: 'comment', header: t('pages.clients.activity.tableHeaders.comment'), align: 'left' },
+    { key: 'employee', header: t('pages.clients.activity.tableHeaders.employee'), align: 'left' },
   ]
 
   const hasFilters = communicationType !== 'all' || dateFrom || dateTo
@@ -149,7 +156,7 @@ export function ActivityTimelinePage() {
       <div className="flex items-center justify-between self-stretch">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate(`/dashboard/client/${client.id}`)}
+            onClick={() => navigate(`/dashboard/${client.id}`)}
             className="flex h-6 w-6 items-center justify-center"
           >
             <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
@@ -158,7 +165,7 @@ export function ActivityTimelinePage() {
             {client.fullName}
           </h1>
           <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0">
-            {client.score} Score
+            {client.score} {t('pages.clients.activity.score')}
           </span>
           <span
             className={cn(
@@ -166,32 +173,34 @@ export function ActivityTimelinePage() {
               getPriorityColor(client.priority)
             )}
           >
-            {client.priority}
+            {t(`pages.clients.priorities.${client.priority.toLowerCase()}`)}
           </span>
         </div>
         <div className="flex items-center gap-5">
           <Button
             size="md"
+            variant="transparent-black"
             leftIcon={<Icons.PencilEdit size={20} />}
-            className="text-dark-500 flex flex-row items-start gap-2.5 rounded-full border-none bg-white/5 p-[10px_16px] text-sm font-medium"
+            className="rounded-full text-sm font-medium"
             onClick={() => setIsNoteModalOpen(true)}
           >
-            Add Note about Client
+            {t('pages.clients.activity.addNoteAboutClient')}
           </Button>
           <Button
             size="md"
             leftIcon={<Icons.Headset size={20} />}
-            className="bg-primary-300 flex flex-row items-center gap-1 rounded-full px-4 py-2.5"
+            className="rounded-full"
             onClick={() => setIsCallModalOpen(true)}
           >
-            Call
+            {t('pages.clients.activity.call')}
           </Button>
           <Button
             size="md"
+            variant="secondary"
             leftIcon={<Icons.RemoveMale size={20} />}
-            className="bg-secondary-800 flex flex-row items-center gap-2.5 rounded-full px-4 py-2.5 text-white"
+            className="rounded-full"
           >
-            Delete Client
+            {t('pages.clients.activity.deleteClient')}
           </Button>
         </div>
       </div>
@@ -201,7 +210,7 @@ export function ActivityTimelinePage() {
           {/* Type of communication */}
           <div className="flex flex-1 items-center gap-6">
             <label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
-              Type of communication:
+              {t('pages.clients.activity.typeOfCommunication')}:
             </label>
             <RadioGroup
               value={communicationType}
@@ -211,25 +220,25 @@ export function ActivityTimelinePage() {
               <div className="flex items-center gap-2">
                 <RadioItem value="calls" id="calls" />
                 <label htmlFor="calls" className="text-dark-500 cursor-pointer text-sm font-light">
-                  Calls
+                  {t('pages.clients.activity.calls')}
                 </label>
               </div>
               <div className="flex items-center gap-2">
                 <RadioItem value="sms" id="sms" />
                 <label htmlFor="sms" className="text-dark-500 cursor-pointer text-sm font-light">
-                  SMS
+                  {t('pages.clients.activity.sms')}
                 </label>
               </div>
               <div className="flex items-center gap-2">
                 <RadioItem value="notes" id="notes" />
                 <label htmlFor="notes" className="text-dark-500 cursor-pointer text-sm font-light">
-                  Notes
+                  {t('pages.clients.activity.notes')}
                 </label>
               </div>
               <div className="flex items-center gap-2">
                 <RadioItem value="all" id="all" />
                 <label htmlFor="all" className="text-dark-500 cursor-pointer text-sm font-light">
-                  All
+                  {t('pages.clients.activity.all')}
                 </label>
               </div>
             </RadioGroup>
@@ -238,13 +247,13 @@ export function ActivityTimelinePage() {
           {/* Date range */}
           <div className="flex flex-1 items-center gap-3">
             <label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
-              Date range:
+              {t('pages.clients.activity.dateRange')}:
             </label>
             <div className="flex flex-1 items-start gap-2">
               <DateSelect
                 value={dateFrom}
                 onChange={({ value }) => setDateFrom(value)}
-                placeholder="From date"
+                placeholder={t('pages.clients.activity.fromDate')}
                 format="yyyy-MM-dd"
               />
             </div>
@@ -253,7 +262,7 @@ export function ActivityTimelinePage() {
               <DateSelect
                 value={dateTo}
                 onChange={({ value }) => setDateTo(value)}
-                placeholder="To date"
+                placeholder={t('pages.clients.activity.toDate')}
                 format="yyyy-MM-dd"
               />
             </div>
@@ -262,10 +271,10 @@ export function ActivityTimelinePage() {
             {hasFilters && (
               <button
                 onClick={handleClearFilters}
-                className="ml-auto flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-gray-700 transition-colors hover:bg-white/10"
+                className="ml-auto flex cursor-pointer items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-gray-700 transition-colors hover:bg-white/10"
               >
                 <Icons.Close size={16} className="text-gray-700" />
-                <span className="text-xs font-medium">Clear All</span>
+                <span className="text-xs font-medium">{t('pages.clients.activity.clearAll')}</span>
               </button>
             )}
           </div>
@@ -275,18 +284,16 @@ export function ActivityTimelinePage() {
           <div className="flex flex-col items-center justify-center gap-6 self-stretch">
             <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
             <p className="text-dark-500 text-center text-2xl font-light tracking-[-0.48px]">
-              No activity recorded yet
+              {t('pages.clients.activity.noActivityRecordedYet')}
             </p>
             {hasFilters && (
-              <button
+              <DoubleButton
+                size="md"
                 onClick={handleClearFilters}
-                className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+                icon={<Icons.Close size={20} className="text-dark-500" strokeWidth={2} />}
               >
-                <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-                  <Icons.Close size={20} className="text-dark-500" strokeWidth={2} />
-                </div>
-                <span className="px-4 py-3 text-sm font-medium text-white">Reset filters</span>
-              </button>
+                {t('pages.clients.activity.resetFilters')}
+              </DoubleButton>
             )}
           </div>
         ) : (
@@ -302,6 +309,7 @@ export function ActivityTimelinePage() {
             currentPage={currentPage}
             totalPages={totalPages}
             pageSize={rowsPerPage}
+            pageSizeOptions={[10, 20, 50, 100]}
             onPageChange={setCurrentPage}
             onPageSizeChange={setRowsPerPage}
           />

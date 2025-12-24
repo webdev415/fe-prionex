@@ -4,6 +4,7 @@
  * Modal for viewing SMS template details.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { ModalSkeleton } from '@/components/ui/ModalSkeleton'
 import { ViewTemplateForm } from './ViewTemplateForm'
@@ -18,6 +19,8 @@ interface ViewTemplateModalProps {
 }
 
 export function ViewTemplateModal({ open, templateId, onClose }: ViewTemplateModalProps) {
+  const { t } = useTranslation('common')
+
   // TODO: Replace with actual API hook
   const template = mockSmsTemplates.find((t) => t.id === templateId)
   const isLoading = false // TODO: Replace with actual loading state
@@ -30,7 +33,7 @@ export function ViewTemplateModal({ open, templateId, onClose }: ViewTemplateMod
             <Icons.View size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
-        title="View Template"
+        title={t('pages.smsTemplates.modals.view.title')}
       />
       <ModalContent>
         {isLoading ? (
@@ -38,17 +41,14 @@ export function ViewTemplateModal({ open, templateId, onClose }: ViewTemplateMod
         ) : template ? (
           <ViewTemplateForm template={template} />
         ) : (
-          <div className="py-8 text-center text-gray-600">Template not found</div>
+          <div className="py-8 text-center text-gray-600">
+            {t('pages.smsTemplates.modals.templateNotFound')}
+          </div>
         )}
       </ModalContent>
       <ModalFooter>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onClose}
-          className="h-[45px] flex-1 rounded-lg border-none bg-gray-500 text-sm font-medium text-white"
-        >
-          Close
+        <Button type="button" variant="cancel" onClick={onClose} className="h-[45px] flex-1">
+          {t('actions.close')}
         </Button>
       </ModalFooter>
     </Modal>

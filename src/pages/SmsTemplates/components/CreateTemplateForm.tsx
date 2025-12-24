@@ -8,6 +8,7 @@ import { useMemo, useRef } from 'react'
 import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
@@ -21,34 +22,39 @@ import {
 import { Alert } from '@/components/ui/Alert'
 import { Icons } from '@/lib/icons'
 
-const createTemplateSchema = z.object({
-  name: z.string().min(1, 'Template name is required'),
-  messageText: z.string().min(1, 'Message text is required'),
-  category: z.enum(['Payment Reminder', 'Urgent Contact', 'General']),
-})
-
-type CreateTemplateFormData = z.infer<typeof createTemplateSchema>
+type CreateTemplateFormData = {
+  name: string
+  messageText: string
+  category: 'Payment Reminder' | 'Urgent Contact' | 'General'
+}
 
 interface CreateTemplateFormProps {
   onSuccess: () => void
   onCancel?: () => void
 }
 
-// Available SMS template variables
+// Available SMS template variables - descriptions will be translated in component
 const AVAILABLE_VARIABLES = [
-  { name: 'client_name', description: "Client's first name" },
-  { name: 'debt_amount', description: 'Current debt amount' },
-  { name: 'operator_name', description: "Operator's name" },
-  { name: 'operator_phone', description: "Operator's phone" },
-  { name: 'due_date', description: 'Payment due date' },
-  { name: 'contract_number', description: 'Contract/Loan number' },
+  { name: 'client_name', key: 'clientFirstName' },
+  { name: 'debt_amount', key: 'currentDebtAmount' },
+  { name: 'operator_name', key: 'operatorName' },
+  { name: 'operator_phone', key: 'operatorPhone' },
+  { name: 'due_date', key: 'paymentDueDate' },
+  { name: 'contract_number', key: 'contractLoanNumber' },
 ] as const
 
 // Cyrillic character limit for SMS
 const CYRILLIC_SMS_LIMIT = 70
 
 export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
+  const { t } = useTranslation('common')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const createTemplateSchema = z.object({
+    name: z.string().min(1, t('pages.smsTemplates.forms.validation.templateNameRequired')),
+    messageText: z.string().min(1, t('pages.smsTemplates.forms.validation.messageTextRequired')),
+    category: z.enum(['Payment Reminder', 'Urgent Contact', 'General']),
+  })
 
   const {
     register,
@@ -118,12 +124,13 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
       {/* Template Name */}
       <div className="flex flex-col items-start gap-2 self-stretch">
         <Label htmlFor="name" className="text-dark-500 text-sm font-medium">
-          Template Name<span className="text-error-500 ml-1">*</span>
+          {t('pages.smsTemplates.forms.templateName')}
+          <span className="text-error-500 ml-1">*</span>
         </Label>
         <Input
           id="name"
           {...register('name')}
-          placeholder="Enter template name"
+          placeholder={t('pages.smsTemplates.forms.placeholders.enterTemplateName')}
           error={errors.name?.message}
         />
       </div>
@@ -131,7 +138,7 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
       {/* Category */}
       <div className="flex flex-col items-start gap-2 self-stretch">
         <Label htmlFor="category" className="text-dark-500 text-sm font-medium">
-          Category:
+          {t('pages.smsTemplates.forms.category')}:
         </Label>
         <Controller
           name="category"
@@ -139,12 +146,20 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
           render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
               <SelectTrigger id="category">
-                <SelectValue placeholder="Select category" />
+                <SelectValue
+                  placeholder={t('pages.smsTemplates.forms.placeholders.selectCategory')}
+                />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Payment Reminder">Payment Reminder</SelectItem>
-                <SelectItem value="Urgent Contact">Urgent Contact</SelectItem>
-                <SelectItem value="General">General</SelectItem>
+                <SelectItem value="Payment Reminder">
+                  {t('pages.smsTemplates.categories.paymentReminder')}
+                </SelectItem>
+                <SelectItem value="Urgent Contact">
+                  {t('pages.smsTemplates.categories.urgentContact')}
+                </SelectItem>
+                <SelectItem value="General">
+                  {t('pages.smsTemplates.categories.general')}
+                </SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -155,7 +170,8 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
       {/* Message Text */}
       <div className="flex flex-col items-start gap-2 self-stretch">
         <Label htmlFor="messageText" className="text-dark-500 text-sm font-medium">
-          Message Text<span className="text-error-500 ml-1">*</span>
+          {t('pages.smsTemplates.forms.messageText')}
+          <span className="text-error-500 ml-1">*</span>
         </Label>
         <Controller
           name="messageText"
@@ -168,7 +184,7 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
                 field.ref(e)
               }}
               id="messageText"
-              placeholder="Enter message text. Use {variable_name} for variables."
+              placeholder={t('pages.smsTemplates.forms.placeholders.enterMessageText')}
               rows={6}
               error={errors.messageText?.message}
             />
@@ -178,7 +194,8 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
         <div className="flex items-center justify-end gap-1 self-stretch">
           <span className="bg-success-500 h-2 w-2 rounded-full" />
           <span className="text-dark-500 text-sm font-light">
-            {characterCount}/{CYRILLIC_SMS_LIMIT} characters(Cyrillic limit: {CYRILLIC_SMS_LIMIT})
+            {characterCount}/{CYRILLIC_SMS_LIMIT} {t('pages.smsTemplates.forms.characters')} (
+            {t('pages.smsTemplates.forms.cyrillicLimit')}: {CYRILLIC_SMS_LIMIT})
           </span>
         </div>
       </div>
@@ -186,7 +203,9 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
       {/* Variables Detected */}
       {detectedVariables.length > 0 && (
         <div className="flex flex-col items-start gap-2 self-stretch">
-          <Label className="text-dark-500 text-sm font-medium">Variables Detected:</Label>
+          <Label className="text-dark-500 text-sm font-medium">
+            {t('pages.smsTemplates.forms.variablesDetected')}:
+          </Label>
           <div className="flex flex-wrap gap-2">
             {detectedVariables.map((variable) => (
               <button
@@ -200,7 +219,7 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
             ))}
           </div>
           <span className="text-dark-500 w-full text-right text-sm font-light">
-            Click to insert
+            {t('pages.smsTemplates.forms.clickToInsert')}
           </span>
         </div>
       )}
@@ -208,10 +227,14 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
       {/* Available Variables */}
       <div className="flex flex-col items-start gap-2 self-stretch">
         <div className="flex items-start justify-between self-stretch">
-          <Label className="text-dark-500 text-sm font-medium">Available Variables:</Label>
+          <Label className="text-dark-500 text-sm font-medium">
+            {t('pages.smsTemplates.forms.availableVariables')}:
+          </Label>
           <div className="flex items-center justify-center gap-2.5">
             <span className="bg-success-500 h-2 w-2 rounded-full" />
-            <span className="text-success-500 text-xs font-medium">Active</span>
+            <span className="text-success-500 text-xs font-medium">
+              {t('pages.smsTemplates.forms.active')}
+            </span>
           </div>
         </div>
         <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
@@ -223,7 +246,9 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
               className="text-dark-500 flex items-start gap-6 self-stretch text-left text-xs transition-colors hover:cursor-pointer"
             >
               <span className="w-[130px] font-light">{`{${variable.name}}`}</span>
-              <span className="flex-1 font-medium">{variable.description}</span>
+              <span className="flex-1 font-medium">
+                {t(`pages.smsTemplates.variables.${variable.key}`)}
+              </span>
             </button>
           ))}
         </div>
@@ -231,7 +256,7 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
 
       {/* Error Alert */}
       {Object.keys(errors).length > 0 && (
-        <Alert variant="error" title="Please fix the errors above before submitting." />
+        <Alert variant="error" title={t('pages.smsTemplates.forms.fixErrorsBeforeSubmitting')} />
       )}
     </form>
   )

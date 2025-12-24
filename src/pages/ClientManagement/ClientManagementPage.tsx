@@ -5,6 +5,7 @@
  */
 
 import { useState, useMemo, useEffect, useRef, startTransition } from 'react'
+import { useTranslation } from 'react-i18next'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
@@ -84,6 +85,7 @@ export interface ClientFilters {
 }
 
 export function ClientManagementPage() {
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const searchQuery = searchParams.get('search') || ''
@@ -325,11 +327,11 @@ export function ClientManagementPage() {
     },
     {
       key: 'fullName',
-      header: 'Full name',
+      header: t('pages.clients.tableHeaders.fullName'),
       align: 'left',
       render: (client) => (
         <button
-          onClick={() => navigate(`/dashboard/client/${client.id}`)}
+          onClick={() => navigate(`/dashboard/${client.id}`)}
           className="text-dark-500 cursor-pointer text-left"
         >
           {client.fullName}
@@ -338,12 +340,12 @@ export function ClientManagementPage() {
     },
     {
       key: 'taxIdNumber',
-      header: 'Tax id number',
+      header: t('pages.clients.tableHeaders.taxIdNumber'),
       align: 'left',
     },
     {
       key: 'tags',
-      header: 'Tags',
+      header: t('pages.clients.tableHeaders.tags'),
       align: 'left',
       render: (client) => (
         <div className="flex flex-wrap gap-1">
@@ -364,22 +366,22 @@ export function ClientManagementPage() {
     },
     {
       key: 'phoneNumber',
-      header: 'Phone number',
+      header: t('pages.clients.tableHeaders.phoneNumber'),
       align: 'left',
     },
     {
       key: 'dateOfSale',
-      header: 'Date of sale',
+      header: t('pages.clients.tableHeaders.dateOfSale'),
       align: 'left',
     },
     {
       key: 'creditor',
-      header: 'Creditor',
+      header: t('pages.clients.tableHeaders.creditor'),
       align: 'left',
     },
     {
       key: 'debt',
-      header: 'Debt',
+      header: t('pages.clients.tableHeaders.debt'),
       align: 'right',
       sortable: true,
       sortKey: 'debt',
@@ -387,7 +389,7 @@ export function ClientManagementPage() {
     },
     {
       key: 'amountOfDebt',
-      header: 'Amount of debt',
+      header: t('pages.clients.tableHeaders.amountOfDebt'),
       align: 'right',
       sortable: true,
       sortKey: 'amountOfDebt',
@@ -395,7 +397,7 @@ export function ClientManagementPage() {
     },
     {
       key: 'priority',
-      header: 'Priority',
+      header: t('pages.clients.tableHeaders.priority'),
       align: 'left',
       sortable: true,
       sortKey: 'priority',
@@ -410,14 +412,14 @@ export function ClientManagementPage() {
           <span
             className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-white ${priorityColors[client.priority as keyof typeof priorityColors] || 'bg-gray-500'}`}
           >
-            {client.priority}
+            {t(`pages.clients.priorities.${client.priority.toLowerCase()}`)}
           </span>
         )
       },
     },
     {
       key: 'score',
-      header: 'Score',
+      header: t('pages.clients.tableHeaders.score'),
       align: 'right',
       sortable: true,
       sortKey: 'score',
@@ -455,7 +457,7 @@ export function ClientManagementPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-dark-500 text-center text-2xl leading-tight font-light tracking-[-0.48px]">
-              List of Clients
+              {t('pages.clients.listOfClients')}
             </span>
             <span className="text-center text-base leading-[155%] font-light tracking-[-0.32px] text-gray-700">
               {totalCount}
@@ -473,7 +475,7 @@ export function ClientManagementPage() {
               strokeWidth={1.5}
             />
             <span className="text-center text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
-              Clear All
+              {t('pages.clients.clearAll')}
             </span>
           </button>
           <button
@@ -483,7 +485,10 @@ export function ClientManagementPage() {
             <div className="flex items-center gap-2">
               <Icons.FilterVertical size={20} className="text-gray-700" strokeWidth={1.5} />
               <span className="text-dark-500 text-center text-xs leading-[140%] font-light tracking-[-0.24px]">
-                Filters <span className="font-medium">({appliedFiltersCount} applied)</span>
+                {t('pages.clients.filtersLabel')}{' '}
+                <span className="font-medium">
+                  ({appliedFiltersCount} {t('pages.clients.applied')})
+                </span>
               </span>
               <span className={`transition-transform ${isFiltersOpen ? 'rotate-180' : ''}`}>
                 <Icons.ArrowUp size={18} className="text-dark-500" strokeWidth={1.5} />
@@ -507,7 +512,7 @@ export function ClientManagementPage() {
           data={paginatedClients}
           sortConfig={sortConfig}
           onSort={handleSort}
-          emptyMessage="No clients found"
+          emptyMessage={t('pages.clients.noClientsFound')}
           className="flex flex-col items-start gap-8 self-stretch"
         />
       )}
@@ -519,6 +524,7 @@ export function ClientManagementPage() {
             currentPage={currentPage}
             totalPages={totalPages}
             pageSize={rowsPerPage}
+            pageSizeOptions={[10, 20, 50, 100]}
             onPageChange={setCurrentPage}
             onPageSizeChange={setRowsPerPage}
           />

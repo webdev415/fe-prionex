@@ -7,6 +7,7 @@
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
@@ -20,13 +21,11 @@ import {
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/Alert'
 import type { SmsTemplate } from '../types'
 
-const editTemplateSchema = z.object({
-  name: z.string().min(1, 'Template name is required'),
-  messageText: z.string().min(1, 'Message text is required'),
-  category: z.enum(['Payment Reminder', 'Urgent Contact', 'General']),
-})
-
-type EditTemplateFormData = z.infer<typeof editTemplateSchema>
+type EditTemplateFormData = {
+  name: string
+  messageText: string
+  category: 'Payment Reminder' | 'Urgent Contact' | 'General'
+}
 
 interface EditTemplateFormProps {
   template: SmsTemplate
@@ -35,6 +34,14 @@ interface EditTemplateFormProps {
 }
 
 export function EditTemplateForm({ template, onSuccess }: EditTemplateFormProps) {
+  const { t } = useTranslation('common')
+
+  const editTemplateSchema = z.object({
+    name: z.string().min(1, t('pages.smsTemplates.forms.validation.templateNameRequired')),
+    messageText: z.string().min(1, t('pages.smsTemplates.forms.validation.messageTextRequired')),
+    category: z.enum(['Payment Reminder', 'Urgent Contact', 'General']),
+  })
+
   const {
     register,
     handleSubmit,
@@ -61,30 +68,38 @@ export function EditTemplateForm({ template, onSuccess }: EditTemplateFormProps)
     <form id="edit-template-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Template Name */}
       <div className="space-y-2">
-        <Label htmlFor="name">Template Name</Label>
+        <Label htmlFor="name">{t('pages.smsTemplates.forms.templateName')}</Label>
         <Input
           id="name"
           {...register('name')}
-          placeholder="Enter template name"
+          placeholder={t('pages.smsTemplates.forms.placeholders.enterTemplateName')}
           error={errors.name?.message}
         />
       </div>
 
       {/* Category */}
       <div className="space-y-2">
-        <Label htmlFor="category">Category</Label>
+        <Label htmlFor="category">{t('pages.smsTemplates.forms.category')}</Label>
         <Controller
           name="category"
           control={control}
           render={({ field }) => (
             <Select value={field.value} onValueChange={field.onChange}>
               <SelectTrigger id="category">
-                <SelectValue placeholder="Select category" />
+                <SelectValue
+                  placeholder={t('pages.smsTemplates.forms.placeholders.selectCategory')}
+                />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Payment Reminder">Payment Reminder</SelectItem>
-                <SelectItem value="Urgent Contact">Urgent Contact</SelectItem>
-                <SelectItem value="General">General</SelectItem>
+                <SelectItem value="Payment Reminder">
+                  {t('pages.smsTemplates.categories.paymentReminder')}
+                </SelectItem>
+                <SelectItem value="Urgent Contact">
+                  {t('pages.smsTemplates.categories.urgentContact')}
+                </SelectItem>
+                <SelectItem value="General">
+                  {t('pages.smsTemplates.categories.general')}
+                </SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -94,25 +109,23 @@ export function EditTemplateForm({ template, onSuccess }: EditTemplateFormProps)
 
       {/* Message Text */}
       <div className="space-y-2">
-        <Label htmlFor="messageText">Message Text</Label>
+        <Label htmlFor="messageText">{t('pages.smsTemplates.forms.messageText')}</Label>
         <Textarea
           id="messageText"
           {...register('messageText')}
-          placeholder="Enter message text. Use {variable_name} for variables."
+          placeholder={t('pages.smsTemplates.forms.placeholders.enterMessageText')}
           rows={6}
           error={errors.messageText?.message}
         />
-        <p className="text-xs text-gray-500">
-          Use {'{variable_name}'} format for variables (e.g., {'{debt_amount}'}, {'{client_name}'})
-        </p>
+        <p className="text-xs text-gray-500">{t('pages.smsTemplates.forms.useVariableFormat')}</p>
       </div>
 
       {/* System Template Warning */}
       {template.isSystem && (
         <Alert variant="warning">
-          <AlertTitle>System Template</AlertTitle>
+          <AlertTitle>{t('pages.smsTemplates.forms.systemTemplate')}</AlertTitle>
           <AlertDescription>
-            This is a system template. Some fields may be restricted.
+            {t('pages.smsTemplates.forms.systemTemplateDescription')}
           </AlertDescription>
         </Alert>
       )}
@@ -120,7 +133,7 @@ export function EditTemplateForm({ template, onSuccess }: EditTemplateFormProps)
       {/* Error Alert */}
       {Object.keys(errors).length > 0 && (
         <Alert variant="error">
-          <AlertTitle>Please fix the errors above before submitting.</AlertTitle>
+          <AlertTitle>{t('pages.smsTemplates.forms.fixErrorsBeforeSubmitting')}</AlertTitle>
         </Alert>
       )}
     </form>

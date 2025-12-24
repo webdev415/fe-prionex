@@ -4,6 +4,7 @@
  * Modal for editing an existing SMS template.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { ModalSkeleton } from '@/components/ui/ModalSkeleton'
 import { EditTemplateForm } from './EditTemplateForm'
@@ -24,6 +25,8 @@ export function EditTemplateModal({
   onClose,
   onSuccess,
 }: EditTemplateModalProps) {
+  const { t } = useTranslation('common')
+
   // TODO: Replace with actual API hook
   const template = mockSmsTemplates.find((t) => t.id === templateId)
   const isLoading = false // TODO: Replace with actual loading state
@@ -41,7 +44,7 @@ export function EditTemplateModal({
             <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
-        title="Edit Template"
+        title={t('pages.smsTemplates.modals.edit.title')}
       />
       <ModalContent>
         {isLoading ? (
@@ -49,25 +52,22 @@ export function EditTemplateModal({
         ) : template ? (
           <EditTemplateForm template={template} onSuccess={handleSuccess} onCancel={onClose} />
         ) : (
-          <div className="py-8 text-center text-gray-600">Template not found</div>
+          <div className="py-8 text-center text-gray-600">
+            {t('pages.smsTemplates.modals.templateNotFound')}
+          </div>
         )}
       </ModalContent>
       <ModalFooter>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onClose}
-          className="h-[45px] flex-1 rounded-lg border-none bg-gray-500 text-sm font-medium text-white"
-        >
-          Cancel
+        <Button type="button" variant="cancel" onClick={onClose} className="h-[45px] flex-1">
+          {t('actions.cancel')}
         </Button>
         <Button
           type="submit"
           form="edit-template-form"
           variant="primary"
-          className="text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-lg border-none text-sm font-medium"
+          className="h-[45px] flex-1"
         >
-          Save
+          {t('actions.save')}
         </Button>
       </ModalFooter>
     </Modal>

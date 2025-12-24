@@ -6,7 +6,10 @@
 
 import { useState, useMemo, useEffect, useRef, startTransition } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
+import { LinkButton } from '@/components/ui/LinkButton'
+import { DoubleButton } from '@/components/ui/DoubleButton'
 import { Icons } from '@/lib/icons'
 import type { SmsTemplate } from './types'
 import { mockSmsTemplates } from './mockSmsTemplates'
@@ -21,6 +24,7 @@ import {
 const MESSAGE_EXCERPT_LENGTH = 80
 
 export function SmsTemplatesPage() {
+  const { t } = useTranslation('common')
   const [searchParams] = useSearchParams()
   const searchQuery = searchParams.get('search') || ''
   const searchType = searchParams.get('type') || 'name'
@@ -142,7 +146,7 @@ export function SmsTemplatesPage() {
     },
     {
       key: 'name',
-      header: 'Template Name',
+      header: t('pages.smsTemplates.tableHeaders.templateName'),
       align: 'left',
       sortable: true,
       sortKey: 'name',
@@ -150,14 +154,15 @@ export function SmsTemplatesPage() {
         <div className="flex flex-col gap-1">
           <span className="text-dark-500 font-medium">{template.name}</span>
           <span className="text-xs font-light text-gray-700">
-            Variables: {template.variables.length} Used: {template.usageCount} times
+            {t('pages.smsTemplates.forms.variables')}: {template.variables.length}{' '}
+            {t('pages.smsTemplates.used')}: {template.usageCount} {t('pages.smsTemplates.times')}
           </span>
         </div>
       ),
     },
     {
       key: 'messageText',
-      header: 'Message Text (Excerpt)',
+      header: t('pages.smsTemplates.tableHeaders.messageTextExcerpt'),
       align: 'left',
       render: (template) => (
         <span className="text-dark-500 text-sm">
@@ -167,7 +172,7 @@ export function SmsTemplatesPage() {
     },
     {
       key: 'category',
-      header: 'Category',
+      header: t('pages.smsTemplates.tableHeaders.category'),
       align: 'left',
       sortable: true,
       sortKey: 'category',
@@ -175,35 +180,35 @@ export function SmsTemplatesPage() {
     },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('pages.smsTemplates.tableHeaders.actions'),
       align: 'center',
       render: (template) => (
         <div className="flex items-center justify-center gap-4">
-          <button
+          <LinkButton
+            variant="regular-black"
+            size="xs"
             onClick={() => handleEdit(template)}
-            className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
-            aria-label="Edit template"
+            leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
           >
-            <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
-            Edit
-          </button>
-          <button
+            {t('actions.edit')}
+          </LinkButton>
+          <LinkButton
+            variant="regular-black"
+            size="xs"
             onClick={() => handleView(template)}
-            className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
-            aria-label="View template"
+            leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
           >
-            <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
-            View
-          </button>
-          <button
-            onClick={() => handleDelete(template)}
+            {t('pages.smsTemplates.view')}
+          </LinkButton>
+          <LinkButton
+            variant="regular-black"
+            size="xs"
             disabled={template.isSystem}
-            className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Delete template"
+            onClick={() => handleDelete(template)}
+            leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
           >
-            <Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />
-            Delete
-          </button>
+            {t('actions.delete')}
+          </LinkButton>
         </div>
       ),
     },
@@ -216,23 +221,21 @@ export function SmsTemplatesPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-dark-500 text-center text-2xl leading-tight font-light tracking-[-0.48px]">
-              SMS Templates
+              {t('pages.smsTemplates.title')}
             </span>
             <span className="text-center text-base leading-[155%] font-light tracking-[-0.32px] text-gray-700">
-              {filteredTemplates.length} templates
+              {filteredTemplates.length} {t('pages.smsTemplates.templates')}
             </span>
           </div>
         </div>
-        <button
+        <DoubleButton
+          size="md"
+          icon={<Icons.Add size={20} strokeWidth={2} />}
+          iconPosition="left"
           onClick={() => setShowCreateModal(true)}
-          className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-          aria-label="Create Template"
         >
-          <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-            <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
-          </div>
-          <span className="px-4 py-3 text-sm font-medium text-white">Create Template</span>
-        </button>
+          {t('pages.smsTemplates.createTemplate')}
+        </DoubleButton>
       </div>
 
       {/* Data Table */}
@@ -241,14 +244,15 @@ export function SmsTemplatesPage() {
         data={paginatedTemplates}
         sortConfig={sortConfig}
         onSort={handleSort}
-        emptyMessage="No templates found"
+        emptyMessage={t('pages.smsTemplates.noTemplatesFound')}
         className="flex flex-col items-start gap-8 self-stretch"
       />
 
       {/* Pagination */}
       <div className="flex w-full items-center justify-between self-stretch">
         <span className="text-sm font-light text-gray-700">
-          Showing {paginatedTemplates.length} of {filteredTemplates.length} templates
+          {t('pages.smsTemplates.showing')} {paginatedTemplates.length} {t('pages.smsTemplates.of')}{' '}
+          {filteredTemplates.length} {t('pages.smsTemplates.templates')}
         </span>
         <div className="flex items-center gap-2">
           {/* Previous Arrow */}
@@ -339,7 +343,7 @@ export function SmsTemplatesPage() {
         <div className="flex items-center gap-1">
           <Icons.Info size={16} className="text-gray-500" strokeWidth={1.5} />
           <span className="text-xs font-light text-gray-700">
-            System templates cannot be deleted, only disabled
+            {t('pages.smsTemplates.systemTemplatesCannotBeDeleted')}
           </span>
         </div>
       </div>

@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
@@ -24,6 +25,7 @@ export function DeleteTemplateModal({
   onClose,
   onSuccess,
 }: DeleteTemplateModalProps) {
+  const { t } = useTranslation('common')
   const [isDeleting, setIsDeleting] = useState(false)
   // TODO: Replace with actual API hook
   const template = mockSmsTemplates.find((t) => t.id === templateId)
@@ -57,26 +59,29 @@ export function DeleteTemplateModal({
             <Icons.Delete size={20} className="text-white" strokeWidth={2} />
           </div>
         }
-        title="Delete Template"
+        title={t('pages.smsTemplates.modals.delete.title')}
       />
       <ModalContent>
         <div className="space-y-4">
           <p className="text-dark-500 text-sm">
-            Are you sure you want to delete the template <strong>"{template.name}"</strong>?
+            {t('pages.smsTemplates.modals.delete.confirmMessage')}{' '}
+            <strong>"{template.name}"</strong>?
           </p>
           {template.isSystem && (
             <Alert variant="error">
-              <AlertTitle>Cannot Delete System Template</AlertTitle>
+              <AlertTitle>
+                {t('pages.smsTemplates.modals.delete.cannotDeleteSystemTemplate')}
+              </AlertTitle>
               <AlertDescription>
-                System templates cannot be deleted. You can only disable them.
+                {t('pages.smsTemplates.modals.delete.systemTemplateCannotBeDeleted')}
               </AlertDescription>
             </Alert>
           )}
           {!template.isSystem && (
             <Alert variant="warning">
-              <AlertTitle>This action cannot be undone</AlertTitle>
+              <AlertTitle>{t('pages.smsTemplates.modals.delete.actionCannotBeUndone')}</AlertTitle>
               <AlertDescription>
-                The template will be permanently removed from the system.
+                {t('pages.smsTemplates.modals.delete.templateWillBePermanentlyRemoved')}
               </AlertDescription>
             </Alert>
           )}
@@ -85,22 +90,22 @@ export function DeleteTemplateModal({
       <ModalFooter>
         <Button
           type="button"
-          variant="secondary"
+          variant="cancel"
           onClick={onClose}
           disabled={isDeleting}
-          className="h-[45px] flex-1 rounded-lg border-none bg-gray-500 text-sm font-medium text-white"
+          className="h-[45px] flex-1"
         >
-          Cancel
+          {t('actions.cancel')}
         </Button>
         {!template.isSystem && (
           <Button
             type="button"
-            variant="primary"
+            variant="danger"
             onClick={handleDelete}
             disabled={isDeleting}
-            className="bg-error-500 hover:bg-error-600 h-[45px] flex-1 rounded-lg border-none text-sm font-medium text-white"
+            className="h-[45px] flex-1"
           >
-            {isDeleting ? 'Deleting...' : 'Delete'}
+            {isDeleting ? t('pages.smsTemplates.modals.delete.deleting') : t('actions.delete')}
           </Button>
         )}
       </ModalFooter>

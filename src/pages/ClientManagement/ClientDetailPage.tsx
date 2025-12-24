@@ -4,6 +4,7 @@
  * Full page view for displaying detailed client information.
  */
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
@@ -16,6 +17,7 @@ import { SendSMSModal } from './components/SendSMSModal'
 import { CallLogCard } from './components/CallLogCard'
 import { cn } from '@/lib/utils'
 import { useClient } from '@/features/clients/hooks/useClients'
+import { LinkButton } from '@/components/ui/LinkButton'
 
 // Helper function to create mock client detail
 const createMockClientDetail = (
@@ -824,6 +826,7 @@ const mockClientsDetail = [
 // Legacy mock data removed - use mockClientsDetail array instead
 
 export function ClientDetailPage() {
+  const { t } = useTranslation('common')
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [activeLoanTab, setActiveLoanTab] = useState<'process' | 'closed' | 'rr'>('process')
@@ -950,9 +953,9 @@ export function ClientDetailPage() {
   if (!client) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-gray-600">Client not found</p>
-        <Button variant="outline" onClick={() => navigate('/dashboard/client')} className="mt-4">
-          Back to Clients
+        <p className="text-gray-600">{t('pages.clients.detail.clientNotFound')}</p>
+        <Button variant="outline" onClick={() => navigate('/dashboard')} className="mt-4">
+          {t('pages.clients.detail.backToClients')}
         </Button>
       </div>
     )
@@ -998,66 +1001,86 @@ export function ClientDetailPage() {
   }
 
   const loanColumns: Column<(typeof client.loans)[0]>[] = [
-    { key: 'loanNumber', header: 'Loan Number', align: 'left' },
-    { key: 'counterparty', header: 'Counterparty', align: 'left' },
-    { key: 'saleDate', header: 'Sale Date', align: 'left' },
+    { key: 'loanNumber', header: t('pages.clients.detail.tableHeaders.loanNumber'), align: 'left' },
+    {
+      key: 'counterparty',
+      header: t('pages.clients.detail.tableHeaders.counterparty'),
+      align: 'left',
+    },
+    { key: 'saleDate', header: t('pages.clients.detail.tableHeaders.saleDate'), align: 'left' },
     {
       key: 'loanAmount',
-      header: 'Loan Amount',
+      header: t('pages.clients.detail.tableHeaders.loanAmount'),
       align: 'right',
       render: (loan) => `₴ ${formatCurrency(loan.loanAmount)}`,
     },
     {
       key: 'principalDebt',
-      header: 'Principal Debt',
+      header: t('pages.clients.detail.tableHeaders.principalDebt'),
       align: 'right',
       render: (loan) => `₴ ${formatCurrency(loan.principalDebt)}`,
     },
     {
       key: 'totalToRepay',
-      header: 'Total to be Repaid',
+      header: t('pages.clients.detail.tableHeaders.totalToBeRepaid'),
       align: 'right',
       render: (loan) => `₴ ${formatCurrency(loan.totalToRepay)}`,
     },
   ]
 
   const activityColumns: Column<(typeof client.activities)[0]>[] = [
-    { key: 'date', header: 'Date', align: 'left' },
-    { key: 'number', header: 'Number', align: 'left' },
-    { key: 'contactType', header: 'Contact Type', align: 'left' },
-    { key: 'result', header: 'Result', align: 'left' },
+    { key: 'date', header: t('pages.clients.activity.tableHeaders.date'), align: 'left' },
+    { key: 'number', header: t('pages.clients.activity.tableHeaders.number'), align: 'left' },
+    {
+      key: 'contactType',
+      header: t('pages.clients.activity.tableHeaders.contactType'),
+      align: 'left',
+    },
+    { key: 'result', header: t('pages.clients.activity.tableHeaders.result'), align: 'left' },
     {
       key: 'promisedAmount',
-      header: 'Promised Amount',
+      header: t('pages.clients.activity.tableHeaders.promisedAmount'),
       align: 'right',
       render: (activity) =>
         activity.promisedAmount ? `${formatCurrencyWithDecimals(activity.promisedAmount)}₴` : '-',
     },
     {
       key: 'promisedDate',
-      header: 'Promised Date',
+      header: t('pages.clients.activity.tableHeaders.promisedDate'),
       align: 'left',
       render: (activity) => activity.promisedDate || '-',
     },
-    { key: 'comment', header: 'Comment', align: 'left' },
-    { key: 'employee', header: 'Employee', align: 'left' },
+    { key: 'comment', header: t('pages.clients.activity.tableHeaders.comment'), align: 'left' },
+    { key: 'employee', header: t('pages.clients.activity.tableHeaders.employee'), align: 'left' },
   ]
 
   const paymentColumns: Column<(typeof client.payments)[0]>[] = [
-    { key: 'loanNumber', header: 'Loan Number', align: 'left' },
-    { key: 'counterparty', header: 'Counterparty', align: 'left' },
-    { key: 'saleDate', header: 'Sale Date', align: 'left' },
-    { key: 'paymentDate', header: 'Payment date', align: 'left' },
+    { key: 'loanNumber', header: t('pages.clients.detail.tableHeaders.loanNumber'), align: 'left' },
+    {
+      key: 'counterparty',
+      header: t('pages.clients.detail.tableHeaders.counterparty'),
+      align: 'left',
+    },
+    { key: 'saleDate', header: t('pages.clients.detail.tableHeaders.saleDate'), align: 'left' },
+    {
+      key: 'paymentDate',
+      header: t('pages.clients.detail.tableHeaders.paymentDate'),
+      align: 'left',
+    },
     {
       key: 'amount',
-      header: 'Amount',
+      header: t('pages.clients.detail.tableHeaders.amount'),
       align: 'right',
       render: (payment) => `₴ ${formatCurrency(payment.amount)}`,
     },
-    { key: 'paymentMethod', header: 'Payment method', align: 'left' },
+    {
+      key: 'paymentMethod',
+      header: t('pages.clients.detail.tableHeaders.paymentMethod'),
+      align: 'left',
+    },
     {
       key: 'status',
-      header: 'Status',
+      header: t('pages.clients.detail.tableHeaders.status'),
       align: 'left',
       render: (payment) => {
         const statusColors = {
@@ -1076,66 +1099,152 @@ export function ClientDetailPage() {
         return (
           <div className="flex items-center gap-2">
             <span className={cn('h-2.5 w-2.5 flex-shrink-0 rounded-full', statusColor)} />
-            <span className={cn('text-xs font-medium', textColor)}>{payment.status}</span>
+            <span className={cn('text-xs font-medium', textColor)}>
+              {t(`pages.clients.detail.paymentStatuses.${payment.status.toLowerCase()}`)}
+            </span>
           </div>
         )
       },
     },
-    { key: 'paymentDistribution', header: 'Payment distribution', align: 'left' },
-    { key: 'employee', header: 'Ficsation on (emploee)', align: 'left' },
+    {
+      key: 'paymentDistribution',
+      header: t('pages.clients.detail.tableHeaders.paymentDistribution'),
+      align: 'left',
+    },
+    {
+      key: 'employee',
+      header: t('pages.clients.detail.tableHeaders.fixationOnEmployee'),
+      align: 'left',
+    },
   ]
 
   const writeOffColumns: Column<(typeof client.writesOffs)[0]>[] = [
-    { key: 'loanNumber', header: 'Loan Number', align: 'left' },
-    { key: 'counterparty', header: 'Counterparty', align: 'left' },
-    { key: 'saleDate', header: 'Sale Date', align: 'left' },
-    { key: 'writeOffDate', header: 'Write-off date', align: 'left' },
+    { key: 'loanNumber', header: t('pages.clients.detail.tableHeaders.loanNumber'), align: 'left' },
+    {
+      key: 'counterparty',
+      header: t('pages.clients.detail.tableHeaders.counterparty'),
+      align: 'left',
+    },
+    { key: 'saleDate', header: t('pages.clients.detail.tableHeaders.saleDate'), align: 'left' },
+    {
+      key: 'writeOffDate',
+      header: t('pages.clients.detail.tableHeaders.writeOffDate'),
+      align: 'left',
+    },
     {
       key: 'amount',
-      header: 'Amount',
+      header: t('pages.clients.detail.tableHeaders.amount'),
       align: 'right',
       render: (writeOff) => `₴ ${formatCurrency(writeOff.amount)}`,
     },
-    { key: 'writeOffMethod', header: 'Write-off method', align: 'left' },
-    { key: 'employee', header: 'Ficsation on (emploee)', align: 'left' },
+    {
+      key: 'writeOffMethod',
+      header: t('pages.clients.detail.tableHeaders.writeOffMethod'),
+      align: 'left',
+    },
+    {
+      key: 'employee',
+      header: t('pages.clients.detail.tableHeaders.fixationOnEmployee'),
+      align: 'left',
+    },
   ]
 
   const primaryCreditorPaymentColumns: Column<(typeof client.primaryCreditorPayments)[0]>[] = [
-    { key: 'loanNumber', header: 'Loan Number', align: 'left' },
-    { key: 'counterparty', header: 'Counterparty', align: 'left' },
-    { key: 'saleDate', header: 'Sale Date', align: 'left' },
-    { key: 'paymentDate', header: 'Payment date', align: 'left' },
+    { key: 'loanNumber', header: t('pages.clients.detail.tableHeaders.loanNumber'), align: 'left' },
+    {
+      key: 'counterparty',
+      header: t('pages.clients.detail.tableHeaders.counterparty'),
+      align: 'left',
+    },
+    { key: 'saleDate', header: t('pages.clients.detail.tableHeaders.saleDate'), align: 'left' },
+    {
+      key: 'paymentDate',
+      header: t('pages.clients.detail.tableHeaders.paymentDate'),
+      align: 'left',
+    },
     {
       key: 'amount',
-      header: 'Amount',
+      header: t('pages.clients.detail.tableHeaders.amount'),
       align: 'right',
       render: (payment) => `₴ ${formatCurrency(payment.amount)}`,
     },
-    { key: 'distributionMethod', header: 'Write-off method', align: 'left' },
+    {
+      key: 'distributionMethod',
+      header: t('pages.clients.detail.tableHeaders.writeOffMethod'),
+      align: 'left',
+    },
   ]
 
   const operatorColumns: Column<(typeof client.operators)[0]>[] = [
-    { key: 'creationDate', header: 'Creation date', align: 'left' },
-    { key: 'whoCreated', header: 'Who created', align: 'left' },
-    { key: 'description', header: 'Description', align: 'left' },
-    { key: 'reminderDate', header: 'Date of reminder', align: 'left' },
-    { key: 'reminderRecipient', header: 'Who will receive the reminder', align: 'left' },
+    {
+      key: 'creationDate',
+      header: t('pages.clients.detail.tableHeaders.creationDate'),
+      align: 'left',
+    },
+    { key: 'whoCreated', header: t('pages.clients.detail.tableHeaders.whoCreated'), align: 'left' },
+    {
+      key: 'description',
+      header: t('pages.clients.detail.tableHeaders.description'),
+      align: 'left',
+    },
+    {
+      key: 'reminderDate',
+      header: t('pages.clients.detail.tableHeaders.dateOfReminder'),
+      align: 'left',
+    },
+    {
+      key: 'reminderRecipient',
+      header: t('pages.clients.detail.tableHeaders.whoWillReceiveReminder'),
+      align: 'left',
+    },
   ]
 
   const searcherColumns: Column<(typeof client.searchers)[0]>[] = [
-    { key: 'creationDate', header: 'Creation date', align: 'left' },
-    { key: 'whoCreated', header: 'Who created', align: 'left' },
-    { key: 'description', header: 'Description', align: 'left' },
-    { key: 'reminderDate', header: 'Date of reminder', align: 'left' },
-    { key: 'reminderRecipient', header: 'Who will receive the reminder', align: 'left' },
+    {
+      key: 'creationDate',
+      header: t('pages.clients.detail.tableHeaders.creationDate'),
+      align: 'left',
+    },
+    { key: 'whoCreated', header: t('pages.clients.detail.tableHeaders.whoCreated'), align: 'left' },
+    {
+      key: 'description',
+      header: t('pages.clients.detail.tableHeaders.description'),
+      align: 'left',
+    },
+    {
+      key: 'reminderDate',
+      header: t('pages.clients.detail.tableHeaders.dateOfReminder'),
+      align: 'left',
+    },
+    {
+      key: 'reminderRecipient',
+      header: t('pages.clients.detail.tableHeaders.whoWillReceiveReminder'),
+      align: 'left',
+    },
   ]
 
   const taskColumns: Column<(typeof client.tasks)[0]>[] = [
-    { key: 'creationDate', header: 'Creation date', align: 'left' },
-    { key: 'whoCreated', header: 'Who created', align: 'left' },
-    { key: 'description', header: 'Description', align: 'left' },
-    { key: 'reminderDate', header: 'Date of reminder', align: 'left' },
-    { key: 'reminderRecipient', header: 'Who will receive the reminder', align: 'left' },
+    {
+      key: 'creationDate',
+      header: t('pages.clients.detail.tableHeaders.creationDate'),
+      align: 'left',
+    },
+    { key: 'whoCreated', header: t('pages.clients.detail.tableHeaders.whoCreated'), align: 'left' },
+    {
+      key: 'description',
+      header: t('pages.clients.detail.tableHeaders.description'),
+      align: 'left',
+    },
+    {
+      key: 'reminderDate',
+      header: t('pages.clients.detail.tableHeaders.dateOfReminder'),
+      align: 'left',
+    },
+    {
+      key: 'reminderRecipient',
+      header: t('pages.clients.detail.tableHeaders.whoWillReceiveReminder'),
+      align: 'left',
+    },
   ]
 
   // const documentColumns: Column<(typeof client.documents)[0]>[] = [
@@ -1148,7 +1257,7 @@ export function ClientDetailPage() {
   const callSmsHistoryColumns: Column<(typeof client.callSmsHistory.all)[0]>[] = [
     {
       key: 'number',
-      header: 'Number',
+      header: t('pages.clients.activity.tableHeaders.number'),
       align: 'left',
       render: (item) => (
         <div className="flex items-center gap-2">
@@ -1167,8 +1276,12 @@ export function ClientDetailPage() {
         </div>
       ),
     },
-    { key: 'contactType', header: 'Contact Type', align: 'left' },
-    { key: 'comment', header: 'Comment', align: 'left' },
+    {
+      key: 'contactType',
+      header: t('pages.clients.activity.tableHeaders.contactType'),
+      align: 'left',
+    },
+    { key: 'comment', header: t('pages.clients.activity.tableHeaders.comment'), align: 'left' },
   ]
 
   return (
@@ -1177,7 +1290,7 @@ export function ClientDetailPage() {
       <div className="flex items-center justify-between self-stretch">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate('/dashboard/client')}
+            onClick={() => navigate('/dashboard')}
             className="flex h-6 w-6 items-center justify-center"
           >
             <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
@@ -1186,7 +1299,7 @@ export function ClientDetailPage() {
             {client.fullName}
           </h1>
           <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0">
-            {client.score} Score
+            {client.score} {t('pages.clients.activity.score')}
           </span>
           <span
             className={cn(
@@ -1194,32 +1307,34 @@ export function ClientDetailPage() {
               getPriorityColor(client.priority)
             )}
           >
-            {client.priority}
+            {t(`pages.clients.priorities.${client.priority.toLowerCase()}`)}
           </span>
         </div>
         <div className="flex items-center gap-5">
           <Button
             size="md"
+            variant="transparent-black"
             leftIcon={<Icons.PencilEdit size={20} />}
-            className="text-dark-500 flex flex-row items-start gap-2.5 rounded-full border-none bg-white/5 p-[10px_16px] text-sm font-medium"
+            className="flex flex-row rounded-full text-sm font-medium"
             onClick={() => setIsNoteModalOpen(true)}
           >
-            Add Note about Client
+            {t('pages.clients.activity.addNoteAboutClient')}
           </Button>
           <Button
             size="md"
             leftIcon={<Icons.Headset size={20} />}
-            className="bg-primary-300 flex flex-row items-center gap-1 rounded-full px-4 py-2.5"
+            className="rounded-full"
             onClick={() => setIsCallModalOpen(true)}
           >
-            Call
+            {t('pages.clients.activity.call')}
           </Button>
           <Button
             size="md"
+            variant="secondary"
             leftIcon={<Icons.RemoveMale size={20} />}
-            className="bg-secondary-800 flex flex-row items-center gap-2.5 rounded-full px-4 py-2.5 text-white"
+            className="rounded-full"
           >
-            Delete Client
+            {t('pages.clients.activity.deleteClient')}
           </Button>
         </div>
       </div>
@@ -1254,7 +1369,7 @@ export function ClientDetailPage() {
             <div className="flex flex-col gap-1 self-stretch">
               <div className="flex min-h-8 items-center self-stretch p-0">
                 <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                  Department
+                  {t('pages.clients.detail.department')}
                 </label>
                 <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                   {client.department}
@@ -1262,7 +1377,7 @@ export function ClientDetailPage() {
               </div>
               <div className="flex min-h-8 items-center self-stretch p-0">
                 <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                  Responsible employee
+                  {t('pages.clients.filters.responsibleEmployee')}
                 </label>
                 <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                   {client.responsibleEmployee}
@@ -1270,7 +1385,7 @@ export function ClientDetailPage() {
               </div>
               <div className="flex min-h-8 items-center self-stretch p-0">
                 <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                  Responsible researcher
+                  {t('pages.clients.filters.responsibleSearcher')}
                 </label>
                 <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                   {client.responsibleResearcher}
@@ -1280,7 +1395,7 @@ export function ClientDetailPage() {
             <div className="flex items-start self-stretch p-0">
               <div className="flex w-[131px] items-center gap-2.5">
                 <label className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                  Phones
+                  {t('pages.clients.detail.phones')}
                 </label>
               </div>
               <div className="flex flex-1 flex-col items-start justify-center gap-2">
@@ -1467,7 +1582,7 @@ export function ClientDetailPage() {
                       <div className="flex items-center self-stretch p-0">
                         <div className="flex flex-1 items-center gap-2.5">
                           <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            Full name
+                            {t('pages.clients.detail.fullName')}
                           </label>
                         </div>
                         <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
@@ -1477,7 +1592,7 @@ export function ClientDetailPage() {
                       <div className="flex items-center self-stretch p-0">
                         <div className="flex flex-1 items-center gap-2.5">
                           <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            Relationship to
+                            {t('pages.clients.detail.relationshipTo')}
                           </label>
                         </div>
                         <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
@@ -1487,7 +1602,7 @@ export function ClientDetailPage() {
                       <div className="flex items-center self-stretch p-0">
                         <div className="flex flex-1 items-center gap-2.5">
                           <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            Phone number
+                            {t('pages.clients.detail.phoneNumber')}
                           </label>
                         </div>
                         <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
@@ -1497,7 +1612,7 @@ export function ClientDetailPage() {
                       <div className="flex items-start self-stretch p-0">
                         <div className="flex flex-1 items-center gap-2.5">
                           <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            Comment
+                            {t('pages.clients.detail.comment')}
                           </label>
                         </div>
                         <p className="text-dark-500 flex-1 text-right text-sm leading-[140%] font-medium tracking-[-0.24px]">
@@ -1518,7 +1633,7 @@ export function ClientDetailPage() {
                   <div className="flex items-start self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        Registration address
+                        {t('pages.clients.detail.registrationAddress')}
                       </label>
                     </div>
                     <p className="text-dark-500 flex-1 text-right text-sm leading-[140%] font-medium tracking-[-0.24px]">
@@ -1529,7 +1644,7 @@ export function ClientDetailPage() {
                   <div className="flex items-start self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        Personal address
+                        {t('pages.clients.detail.personalAddress')}
                       </label>
                     </div>
                     <p className="text-dark-500 flex-1 text-right text-sm leading-[140%] font-medium tracking-[-0.24px]">
@@ -1544,7 +1659,7 @@ export function ClientDetailPage() {
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        TIN
+                        {t('pages.clients.detail.tin')}
                       </label>
                     </div>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
@@ -1554,7 +1669,7 @@ export function ClientDetailPage() {
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        Date of birth
+                        {t('pages.clients.detail.dateOfBirth')}
                       </label>
                       <Icons.Info size={14} className="text-gray-800" />
                     </div>
@@ -1565,7 +1680,7 @@ export function ClientDetailPage() {
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        Age
+                        {t('pages.clients.detail.age')}
                       </label>
                       <Icons.Info size={14} className="text-gray-800" />
                     </div>
@@ -1576,7 +1691,7 @@ export function ClientDetailPage() {
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        Passport
+                        {t('pages.clients.detail.passport')}
                       </label>
                       <Icons.Info size={14} className="text-gray-800" />
                     </div>
@@ -1586,7 +1701,7 @@ export function ClientDetailPage() {
                   </div>
                   <div className="flex items-center justify-between self-stretch p-0">
                     <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      Marital status
+                      {t('pages.clients.detail.maritalStatus')}
                     </label>
                     <div className="flex flex-1 items-center justify-end gap-2">
                       <p className="text-dark-500 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
@@ -1597,7 +1712,7 @@ export function ClientDetailPage() {
                   </div>
                   <div className="flex items-center self-stretch p-0">
                     <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      Number of family members
+                      {t('pages.clients.detail.numberOfFamilyMembers')}
                     </label>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {client.personalDetails.familyMembers}
@@ -1737,7 +1852,7 @@ export function ClientDetailPage() {
                           : 'hover:text-dark-500 cursor-pointer text-gray-600'
                       )}
                     >
-                      Loans in Process
+                      {t('pages.clients.detail.loansInProcess')}
                     </button>
                     <button
                       onClick={() => setActiveLoanTab('closed')}
@@ -1748,7 +1863,7 @@ export function ClientDetailPage() {
                           : 'hover:text-dark-500 cursor-pointer text-gray-600'
                       )}
                     >
-                      Closed Loans
+                      {t('pages.clients.detail.closedLoans')}
                     </button>
                     <button
                       onClick={() => setActiveLoanTab('rr')}
@@ -1759,7 +1874,7 @@ export function ClientDetailPage() {
                           : 'hover:text-dark-500 cursor-pointer text-gray-600'
                       )}
                     >
-                      Loans on RR
+                      {t('pages.clients.detail.loansOnRR')}
                     </button>
                   </div>
                   <div className="flex flex-col items-start gap-2.5 self-stretch px-6">
@@ -1767,41 +1882,46 @@ export function ClientDetailPage() {
                   </div>
                   <div className="flex flex-wrap content-start items-start gap-3 self-stretch p-[0_24px_24px_24px]">
                     <Button
+                      variant="secondary"
                       leftIcon={<Icons.MoneyRemove01 size={20} />}
-                      className="bg-secondary-800 hover:bg-secondary-500 flex items-center rounded px-4 py-2.5 text-center text-xs leading-[140%] font-medium text-white"
+                      className="rounded"
                     >
-                      Write-off
+                      {t('pages.clients.detail.writeOff')}
                     </Button>
                     <Button
+                      variant="secondary"
                       leftIcon={<Icons.MoneyNotFound04 size={20} />}
-                      className="bg-secondary-800 hover:bg-secondary-500 flex items-center rounded px-4 py-2.5 text-center text-xs leading-[140%] font-medium text-white"
+                      className="rounded"
                     >
-                      Reversal
+                      {t('pages.clients.detail.reversal')}
                     </Button>
                     <Button
-                      variant="danger"
+                      variant="secondary"
                       leftIcon={<Icons.CancelCircle size={20} />}
-                      className="bg-secondary-800 hover:bg-secondary-500 flex items-center rounded px-4 py-2.5 text-center text-xs leading-[140%] font-medium text-white"
+                      className="rounded"
                     >
-                      Close Loan
+                      {t('pages.clients.detail.closeLoan')}
                     </Button>
                     <Button
+                      variant="secondary"
                       leftIcon={<Icons.MailSend01 size={20} />}
-                      className="bg-secondary-800 hover:bg-secondary-500 flex items-center rounded px-4 py-2.5 text-center text-xs leading-[140%] font-medium text-white"
+                      className="rounded"
                     >
-                      Send to UBCI
+                      {t('pages.clients.detail.sendToUBCI')}
                     </Button>
                     <Button
+                      variant="secondary"
                       leftIcon={<Icons.Calculate size={20} />}
-                      className="bg-secondary-800 hover:bg-secondary-500 flex items-center rounded px-4 py-2.5 text-center text-xs leading-[140%] font-medium text-white"
+                      className="rounded"
                     >
-                      RR Calculator
+                      {t('pages.clients.detail.rrCalculator')}
                     </Button>
                     <Button
+                      variant="secondary"
                       leftIcon={<Icons.PlusSignCircle size={20} />}
-                      className="bg-secondary-800 hover:bg-secondary-500 flex items-center rounded px-4 py-2.5 text-center text-xs leading-[140%] font-medium text-white"
+                      className="rounded"
                     >
-                      Make Payment
+                      {t('pages.clients.detail.makePayment')}
                     </Button>
                   </div>
                 </div>
@@ -1820,7 +1940,7 @@ export function ClientDetailPage() {
                           : 'hover:text-dark-500 cursor-pointer text-gray-600'
                       )}
                     >
-                      Payments
+                      {t('pages.clients.detail.payments')}
                     </button>
                     <button
                       onClick={() => setActivePaymentTab('writes-off')}
@@ -1831,7 +1951,7 @@ export function ClientDetailPage() {
                           : 'hover:text-dark-500 cursor-pointer text-gray-600'
                       )}
                     >
-                      Writes-off
+                      {t('pages.clients.detail.writesOff')}
                     </button>
                     <button
                       onClick={() => setActivePaymentTab('primary-creditor')}
@@ -1842,7 +1962,7 @@ export function ClientDetailPage() {
                           : 'hover:text-dark-500 cursor-pointer text-gray-600'
                       )}
                     >
-                      Payment to the primary creditor
+                      {t('pages.clients.detail.paymentToPrimaryCreditor')}
                     </button>
                   </div>
                   <div className="flex flex-col items-start gap-2.5 self-stretch px-6">
@@ -1884,7 +2004,7 @@ export function ClientDetailPage() {
                           : 'hover:text-dark-500 cursor-pointer text-gray-600'
                       )}
                     >
-                      Operators
+                      {t('pages.clients.detail.operators')}
                     </button>
                     <button
                       onClick={() => setActiveOperatorTab('searchers')}
@@ -1895,7 +2015,7 @@ export function ClientDetailPage() {
                           : 'hover:text-dark-500 cursor-pointer text-gray-600'
                       )}
                     >
-                      Searchers
+                      {t('pages.clients.detail.searchers')}
                     </button>
                   </div>
                   <div className="flex flex-col items-start gap-2.5 self-stretch px-6">
@@ -1923,7 +2043,7 @@ export function ClientDetailPage() {
                   <div className="flex h-[41px] items-center gap-5 self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2.5">
                       <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                        Call and SMS History
+                        {t('pages.clients.detail.callAndSMSHistory')}
                       </span>
                     </div>
                     <div className="flex flex-1 items-center justify-between gap-1 rounded-lg bg-white p-1 shadow-sm">
@@ -1936,7 +2056,7 @@ export function ClientDetailPage() {
                             : 'text-dark-500 hover:text-secondary-800 hover:bg-primary-500/10 cursor-pointer'
                         )}
                       >
-                        All
+                        {t('pages.clients.activity.all')}
                       </button>
                       <button
                         onClick={() => setActiveCallSmsTab('calls')}
@@ -1947,7 +2067,7 @@ export function ClientDetailPage() {
                             : 'text-dark-500 hover:text-secondary-800 hover:bg-primary-500/10 cursor-pointer'
                         )}
                       >
-                        Calls
+                        {t('pages.clients.activity.calls')}
                       </button>
                       <button
                         onClick={() => setActiveCallSmsTab('sms')}
@@ -1958,7 +2078,7 @@ export function ClientDetailPage() {
                             : 'text-dark-500 hover:text-secondary-800 hover:bg-primary-500/10 cursor-pointer'
                         )}
                       >
-                        SMS
+                        {t('pages.clients.activity.sms')}
                       </button>
                     </div>
                     <div className="flex flex-1 flex-col items-end gap-2.5">
@@ -1966,7 +2086,7 @@ export function ClientDetailPage() {
                         leftIcon={<Icons.Download size={20} />}
                         className="bg-secondary-800 flex flex-row items-center gap-1 rounded px-4 py-2.5 text-xs leading-[140%] font-medium tracking-[-0.24px] text-white"
                       >
-                        Export CSV
+                        {t('pages.clients.detail.exportCSV')}
                       </Button>
                     </div>
                   </div>
@@ -2029,7 +2149,7 @@ export function ClientDetailPage() {
                                   <CallLogCard
                                     key={`call-${call.id}`}
                                     clientName={client.fullName}
-                                    title={`Play (${call.duration})`}
+                                    title={`${t('pages.clients.detail.play')} (${call.duration})`}
                                     time={call.time}
                                     date={call.date}
                                     duration={call.duration}
@@ -2053,7 +2173,7 @@ export function ClientDetailPage() {
                                   <CallLogCard
                                     key={`sms-${sms.id}`}
                                     clientName={client.fullName}
-                                    title="View Sms"
+                                    title={t('pages.clients.detail.viewSms')}
                                     time={sms.time}
                                     date={sms.date}
                                     status={sms.status}
@@ -2173,7 +2293,7 @@ export function ClientDetailPage() {
                                     <CallLogCard
                                       key={call.id}
                                       clientName={client.fullName}
-                                      title={`Play (${call.duration})`}
+                                      title={`${t('pages.clients.detail.play')} (${call.duration})`}
                                       time={call.time}
                                       date={call.date}
                                       duration={call.duration}
@@ -2205,16 +2325,17 @@ export function ClientDetailPage() {
                       <div className="flex h-14 w-full items-start gap-5 p-0">
                         <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-4 pl-3">
                           <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                            Total Cost
+                            {t('pages.clients.detail.totalCost')}
                           </div>
 
                           <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                            ₹15.00 ({client.callSmsHistory.sms.length} SMS parts)
+                            ₹15.00 ({client.callSmsHistory.sms.length}{' '}
+                            {t('pages.clients.modals.viewSMS.smsParts')})
                           </div>
                         </div>
                         <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-4 pl-3">
                           <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                            Delivery Rate
+                            {t('pages.clients.detail.deliveryRate')}
                           </div>
 
                           <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
@@ -2230,7 +2351,7 @@ export function ClientDetailPage() {
                               ).length
                               const total = client.callSmsHistory.sms.length
                               const rate = total > 0 ? Math.round((delivered / total) * 100) : 0
-                              return `${rate}% (${delivered} delivered, ${failed} failed, ${pending} pending)`
+                              return `${rate}% (${delivered} ${t('pages.clients.detail.delivered')}, ${failed} ${t('pages.clients.detail.failed')}, ${pending} ${t('pages.clients.detail.pending')})`
                             })()}
                           </div>
                         </div>
@@ -2263,7 +2384,7 @@ export function ClientDetailPage() {
                                     <CallLogCard
                                       key={sms.id}
                                       clientName={client.fullName}
-                                      title="View Sms"
+                                      title={t('pages.clients.detail.viewSms')}
                                       time={sms.time}
                                       date={sms.date}
                                       status={sms.status}
@@ -2325,7 +2446,7 @@ export function ClientDetailPage() {
                   : 'hover:bg-primary-200/10 hover:text-secondary-800'
               )}
             >
-              Comments
+              {t('pages.clients.detail.comments')}
             </button>
             <button
               onClick={() => setActiveCommentTab('primary')}
@@ -2336,7 +2457,7 @@ export function ClientDetailPage() {
                   : 'hover:bg-primary-200/10 hover:text-secondary-800'
               )}
             >
-              Comments from the primary creditor
+              {t('pages.clients.detail.commentsFromPrimaryCreditor')}
             </button>
           </div>
         </div>
@@ -2350,9 +2471,9 @@ export function ClientDetailPage() {
                 {' '}
                 {comment.text}
               </span>
-              <button className="text-secondary-800 text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                Read More
-              </button>
+              <LinkButton variant="regular-secondary" size="xs">
+                {t('pages.clients.detail.readMore')}
+              </LinkButton>
             </div>
           ))}
         </div>
@@ -2361,34 +2482,39 @@ export function ClientDetailPage() {
       {/* Recent Activity Timeline */}
       <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-6">
         <div className="flex items-center justify-between self-stretch">
-          <h2 className="text-dark-500 text-lg font-medium">Recent Activity Timeline</h2>
-          <button
-            onClick={() => navigate(`/dashboard/client/${client.id}/activity`)}
-            className="flex cursor-pointer items-center justify-end gap-1"
+          <h2 className="text-dark-500 text-lg font-medium">
+            {t('pages.clients.detail.recentActivityTimeline')}
+          </h2>
+          <LinkButton
+            variant="regular-secondary"
+            size="xs"
+            onClick={() => navigate(`/dashboard/${client.id}/activity`)}
+            rightIcon={<Icons.ArrowRight size={18} />}
           >
-            <span className="text-secondary-800 text-center text-xs font-medium">View All </span>
-            <Icons.ArrowRight size={18} className="text-secondary-800" />
-          </button>
+            {t('pages.clients.detail.viewAll')}
+          </LinkButton>
         </div>
         {client.activities.length == 0 ? (
           <div className="flex flex-col items-center gap-6 self-stretch">
             <div className="flex items-center justify-center gap-6 self-stretch">
               <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
               <p className="text-dark-500 text-center text-2xl leading-tight font-light tracking-[-0.48px]">
-                No history yet
+                {t('pages.clients.detail.noHistoryYet')}
               </p>
             </div>
             <p className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
-              Start by calling, sending SMS, or adding a note.
+              {t('pages.clients.detail.startByCallingSendingSMSOrAddingNote')}
             </p>
             <button
               className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-              aria-label="Add first note"
+              aria-label={t('pages.clients.detail.addFirstNote')}
             >
               <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
                 <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
               </div>
-              <span className="px-4 py-3 text-sm font-medium text-white">Add first note</span>
+              <span className="px-4 py-3 text-sm font-medium text-white">
+                {t('pages.clients.detail.addFirstNote')}
+              </span>
             </button>
           </div>
         ) : (

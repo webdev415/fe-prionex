@@ -204,14 +204,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleResultClick = (result: SearchResult) => {
     // Navigate to client detail page or filter by this client
-    navigate(`/dashboard/client?id=${result.id}`)
+    navigate(`/dashboard?id=${result.id}`)
     setSearchQuery('')
     setSearchResults([])
   }
 
   const handleViewAllResults = () => {
     // Navigate to client management page with search query
-    navigate(`/dashboard/client?search=${encodeURIComponent(searchQuery)}&type=${searchType}`)
+    navigate(`/dashboard?search=${encodeURIComponent(searchQuery)}&type=${searchType}`)
     setSearchQuery('')
     setSearchResults([])
   }
@@ -230,7 +230,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navItems: SidebarItem[] = useMemo(() => {
     // All navigation items with required permissions
     const allNavItems: ExtendedSidebarItem[] = [
-      { path: '/dashboard/client', icon: 'home-04', label: t('navigation.dashboard') },
+      { path: '/dashboard', icon: 'home-04', label: t('navigation.dashboard') },
       { path: '/dashboard', icon: 'activity-01', label: t('navigation.activity'), disabled: true }, // Route doesn't exist
       {
         path: '/dashboard/import',
@@ -240,26 +240,27 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       },
       {
         path: '/dashboard/projects',
-        icon: 'chart-ring',
+        icon: 'brochure',
         label: t('navigation.projects'),
         requiredPermission: PERMISSIONS.PROJECTS.MANAGE,
       },
       {
+        path: '/dashboard/reports',
+        icon: 'chart-ring',
+        label: t('navigation.reports'),
+        requiredPermission: PERMISSIONS.REPORTS.VIEW_ALL_REPORTS,
+      },
+      {
         path: '/dashboard/users',
-        icon: 'community',
+        icon: 'user-search-01',
         label: t('navigation.users'),
         requiredPermission: PERMISSIONS.USERS.VIEW,
       },
       {
         path: '/dashboard/roles',
-        icon: 'user-status',
+        icon: 'user-circle-02',
         label: t('navigation.roles'),
         requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
-      },
-      {
-        path: '/dashboard/sms-templates',
-        icon: 'mail-send',
-        label: t('navigation.smsTemplates'),
       },
       {
         path: '/dashboard',
@@ -267,6 +268,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         label: t('navigation.transactions'),
         disabled: true,
       }, // Route doesn't exist
+      {
+        path: '/dashboard/sms-templates',
+        icon: 'mail',
+        label: t('navigation.smsTemplates'),
+      },
     ]
 
     return allNavItems.filter((item) => {

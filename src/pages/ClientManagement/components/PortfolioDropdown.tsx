@@ -5,7 +5,9 @@
  */
 
 import { useState, useMemo, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Checkbox } from '@/components/ui/Checkbox'
+import { Button } from '@/components/ui/Button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +29,7 @@ export function PortfolioDropdown({
   onOpenChange,
   trigger,
 }: PortfolioDropdownProps) {
+  const { t } = useTranslation('common')
   const [searchQuery, setSearchQuery] = useState('')
   const [tempSelection, setTempSelection] = useState<string[]>(selectedPortfolios)
   const [isOpen, setIsOpen] = useState(false)
@@ -88,7 +91,7 @@ export function PortfolioDropdown({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search portfolios"
+            placeholder={t('pages.clients.modals.portfolioDropdown.searchPortfolios')}
             className="text-dark-500 focus:border-primary-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-gray-400"
           />
         </div>
@@ -96,7 +99,9 @@ export function PortfolioDropdown({
         {/* Portfolio List */}
         <div className="max-h-[200px] overflow-y-auto p-2">
           {filteredPortfolios.length === 0 ? (
-            <div className="py-4 text-center text-sm text-gray-500">No portfolios found</div>
+            <div className="py-4 text-center text-sm text-gray-500">
+              {t('pages.clients.modals.portfolioDropdown.noPortfoliosFound')}
+            </div>
           ) : (
             <div className="space-y-1">
               {filteredPortfolios.map((portfolio) => (
@@ -118,18 +123,12 @@ export function PortfolioDropdown({
         {/* Action Buttons */}
         <div className="border-t border-gray-200 p-3">
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleClear}
-              className="flex flex-1 items-center justify-center rounded-lg bg-gray-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600"
-            >
-              Clear
-            </button>
-            <button
-              onClick={handleApply}
-              className="bg-primary-300 text-dark-500 hover:bg-primary-400 flex flex-1 items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors"
-            >
-              Apply
-            </button>
+            <Button variant="cancel" onClick={handleClear} className="flex flex-1">
+              {t('pages.clients.modals.portfolioDropdown.clear')}
+            </Button>
+            <Button variant="primary" onClick={handleApply} className="flex flex-1">
+              {t('pages.clients.modals.portfolioDropdown.apply')}
+            </Button>
           </div>
         </div>
       </DropdownMenuContent>

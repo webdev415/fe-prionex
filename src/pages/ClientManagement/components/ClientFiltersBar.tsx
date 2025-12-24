@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { DateSelect } from '@/components/ui/DateSelect'
@@ -39,6 +40,7 @@ const portfolioOptions = [
 const statusOptions = ['new', 'active', 'contacted', 'in_progress', 'paid', 'defaulted', 'closed']
 
 export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarProps) {
+  const { t } = useTranslation('common')
   const [portfolioDropdownOpen, setPortfolioDropdownOpen] = useState(false)
 
   const handleDebtRangeChange = (field: 'debtRangeFrom' | 'debtRangeTo', value: string) => {
@@ -104,7 +106,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             {/* Debt Range */}
             <div className="flex flex-1 items-center gap-3">
               <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                Debt Range
+                {t('pages.clients.filters.debtRange')}
               </label>
               <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
                 ₴
@@ -132,7 +134,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             {/* DPD Range */}
             <div className="flex flex-1 items-center gap-3">
               <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                DPD Range
+                {t('pages.clients.filters.dpdRange')}
               </label>
               <div className="flex flex-1 items-center gap-2">
                 <Input
@@ -153,7 +155,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   className="flex flex-1 flex-col items-start gap-2"
                 />
                 <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
-                  days
+                  {t('pages.clients.filters.days')}
                 </span>
               </div>
             </div>
@@ -162,7 +164,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             {/* Amount of debt range */}
             <div className="flex flex-1 items-center gap-3">
               <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                Amount of debt range
+                {t('pages.clients.filters.amountOfDebtRange')}
               </label>
               <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
                 ₴
@@ -195,7 +197,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             {/* Date of sale */}
             <div className="flex flex-1 items-center gap-3">
               <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                Date of sale
+                {t('pages.clients.filters.dateOfSale')}
               </label>
               <DateSelect
                 value={filters.dateOfSaleFrom || null}
@@ -220,7 +222,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             {/* Portfolio */}
             <div className="flex min-w-[220px] flex-1 items-center gap-3">
               <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                Portfolio
+                {t('pages.clients.filters.portfolio')}
               </label>
               <div className="flex flex-1 flex-wrap items-start gap-3">
                 {displayedPortfolios.map((portfolio) => (
@@ -243,7 +245,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-secondary-800 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                  + {hiddenPortfoliosCount} more
+                  + {hiddenPortfoliosCount} {t('pages.clients.filters.more')}
                 </span>
                 {hiddenPortfoliosCount > 0 && (
                   <PortfolioDropdown
@@ -275,18 +277,25 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             {/* Status */}
             <div className="flex min-w-[220px] flex-1 items-center gap-3">
               <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                Status
+                {t('pages.clients.filters.status')}
               </label>
-              <div className="flex flex-1 items-center gap-2">
-                {statusOptions.map((status) => (
-                  <label key={status} className="flex cursor-pointer items-center gap-2">
-                    <Checkbox
-                      checked={(filters.status || []).includes(status)}
-                      onCheckedChange={(checked) => handleStatusChange(status, checked as boolean)}
-                    />
-                    <span className="text-dark-500 text-sm">{status}</span>
-                  </label>
-                ))}
+              <div className="flex flex-1 items-center gap-8">
+                {statusOptions.map((status) => {
+                  const statusKey = status.toLowerCase().replace(/[\s_]/g, '')
+                  return (
+                    <label key={status} className="flex cursor-pointer items-center gap-2">
+                      <Checkbox
+                        checked={(filters.status || []).includes(status)}
+                        onCheckedChange={(checked) =>
+                          handleStatusChange(status, checked as boolean)
+                        }
+                      />
+                      <span className="text-dark-500 text-sm">
+                        {t(`pages.clients.statuses.${statusKey}`)}
+                      </span>
+                    </label>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -294,7 +303,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             {/* Responsible employee */}
             <div className="flex min-w-[220px] flex-1 items-center gap-3">
               <label className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                Responsible employee
+                {t('pages.clients.filters.responsibleEmployee')}
               </label>
               <div className="flex flex-1 flex-col items-start gap-2">
                 <Select
@@ -307,10 +316,12 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select employee" />
+                    <SelectValue placeholder={t('pages.clients.filters.selectEmployee')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Select employee</SelectItem>
+                    <SelectItem value="none">
+                      {t('pages.clients.filters.selectEmployee')}
+                    </SelectItem>
                     {/* TODO: Add actual employee list */}
                   </SelectContent>
                 </Select>
@@ -320,7 +331,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             {/* Responsible searcher */}
             <div className="flex min-w-[220px] flex-1 items-center gap-3">
               <label className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                Responsible searcher
+                {t('pages.clients.filters.responsibleSearcher')}
               </label>
               <div className="flex flex-1 flex-col items-start gap-2">
                 <Select
@@ -333,10 +344,12 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select searcher" />
+                    <SelectValue placeholder={t('pages.clients.filters.selectSearcher')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Select searcher</SelectItem>
+                    <SelectItem value="none">
+                      {t('pages.clients.filters.selectSearcher')}
+                    </SelectItem>
                     {/* TODO: Add actual searcher list */}
                   </SelectContent>
                 </Select>

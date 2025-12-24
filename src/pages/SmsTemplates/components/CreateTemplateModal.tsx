@@ -4,6 +4,7 @@
  * Modal for creating a new SMS template.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { CreateTemplateForm } from '@/pages/SmsTemplates/components/CreateTemplateForm'
 import { Icons } from '@/lib/icons'
@@ -16,6 +17,8 @@ interface CreateTemplateModalProps {
 }
 
 export function CreateTemplateModal({ open, onClose, onSuccess }: CreateTemplateModalProps) {
+  const { t } = useTranslation('common')
+
   const handleSuccess = () => {
     onSuccess()
     onClose()
@@ -29,27 +32,22 @@ export function CreateTemplateModal({ open, onClose, onSuccess }: CreateTemplate
             <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
-        title="Create SMS Template"
+        title={t('pages.smsTemplates.modals.create.title')}
       />
       <ModalContent>
         <CreateTemplateForm onSuccess={handleSuccess} onCancel={onClose} />
       </ModalContent>
       <ModalFooter>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onClose}
-          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
-        >
-          Cancel
+        <Button type="button" variant="cancel" onClick={onClose} className="h-[45px] flex-1">
+          {t('actions.cancel')}
         </Button>
         <Button
           type="submit"
           form="create-template-form"
           variant="primary"
-          className="text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
+          className="h-[45px] flex-1"
         >
-          Save
+          {t('actions.save')}
         </Button>
       </ModalFooter>
     </Modal>
