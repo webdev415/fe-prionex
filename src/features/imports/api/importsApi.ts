@@ -64,11 +64,20 @@ export async function uploadImport(request: UploadImportRequest): Promise<Upload
     }
   }
 
-  // Store metadata in import_options (backend will need to handle this)
-  // For now, we'll pass it as query params or form data that backend can read
-  // Actually, backend doesn't accept these, so we'll need to store them client-side
-  // or modify backend. Since user said backend is correct, we'll skip metadata for now
-  // and only send what backend expects: project_id, filename, and file
+  // Add metadata to form data for backend
+  if (request.seller_creditor) {
+    formData.append('seller_creditor', request.seller_creditor)
+  }
+  if (request.project_code) {
+    formData.append('project_code', request.project_code)
+  }
+  if (request.purchase_date) {
+    formData.append('purchase_date', request.purchase_date)
+  }
+  if (request.comment) {
+    formData.append('comment', request.comment)
+  }
+  formData.append('import_type', request.import_type)
 
   // Get current token to ensure it's available
   const token = getAccessToken()
@@ -313,10 +322,21 @@ export async function getImportJobErrors(
     },
   })
 
-  // Backend returns array, frontend expects paginated object
+  // Backend now returns paginated object with items and total
+  if (response.data && typeof response.data === 'object' && 'items' in response.data) {
+    const errors = Array.isArray(response.data.items) ? response.data.items : []
+    const transformedErrors = errors.map(transformImportError)
+    return {
+      items: transformedErrors,
+      total: response.data.total || 0,
+      page: response.data.page || params?.page || 1,
+      page_size: response.data.page_size || params?.page_size || 100,
+    }
+  }
+
+  // Fallback for old format (array)
   const errors = Array.isArray(response.data) ? response.data : []
   const transformedErrors = errors.map(transformImportError)
-
   return wrapInPagination(transformedErrors, params?.page || 1, params?.page_size || 100)
 }
 

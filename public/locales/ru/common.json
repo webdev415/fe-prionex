@@ -377,6 +377,7 @@
       "started": "Начато",
       "status": "Статус",
       "complete": "завершено",
+      "queued": "В очереди",
       "viewDetails": "Просмотр деталей",
       "cancelImport": "Отменить импорт",
       "cancelling": "Отмена...",
@@ -400,9 +401,13 @@
         "placeholders": {
           "enterProjectName": "Введите название проекта",
           "enterProjectCode": "Введите код проекта",
+          "selectProjectCode": "Выберите код проекта",
           "selectPurchaseDate": "Выберите дату покупки",
-          "placeholderText": "Текст-заполнитель"
-        }
+          "placeholderText": "Текст-заполнитель",
+          "enterSellerCreditor": "Введите название продавца/кредитора",
+          "loadingProjects": "Загрузка проектов..."
+        },
+        "noProjectsAvailable": "Нет доступных проектов"
       },
       "step2": {
         "simple": {
@@ -506,6 +511,7 @@
         "errorsTitle": "Ошибки",
         "row": "Строка",
         "error": "Ошибка",
+        "suggestedFix": "Предлагаемое исправление",
         "noErrors": "Нет ошибок",
         "importNotFound": "Импорт не найден",
         "loadingDetails": "Загрузка деталей импорта...",
