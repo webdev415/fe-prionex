@@ -20,6 +20,7 @@ import {
 } from './components/ImportHistoryFiltersBar'
 import { useImportJobs, useExportImportErrors } from '@/features/imports'
 import type { ImportJob, ImportJobsListParams } from '@/features/imports'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 
 // Types for import history data - map from API types
 export interface ImportHistoryItem {
@@ -442,12 +443,8 @@ export function ImportHistoryPage() {
       {/* Data Table or Empty State */}
       <div className="min-h-[400px] rounded-xl bg-white/50 p-6 shadow-sm">
         {isLoading ? (
-          // Loading State - Show while fetching data
-          <div className="flex min-h-[448px] flex-col items-center justify-center gap-6 p-6">
-            <div className="text-dark-500 text-center text-base leading-[150%] font-light tracking-[-0.32px]">
-              {t('pages.imports.history.loading')}
-            </div>
-          </div>
+          // Loading State - Show skeleton table while fetching data
+          <TableSkeleton columns={5} rows={rowsPerPage} />
         ) : filteredAndSortedData.length === 0 && hasActiveFilters ? (
           // Empty State - No results for filters
           <div className="flex flex-col items-center justify-center py-16">
