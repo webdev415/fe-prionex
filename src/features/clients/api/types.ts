@@ -109,7 +109,9 @@ export interface GetClientsParams {
   project_id?: number
   skip?: number
   limit?: number
-  sort_by_priority?: boolean
+  sort_by_priority?: boolean // Legacy parameter
+  sort_by?: 'priority_score' | 'created_at' | 'first_name' | 'last_name' | 'id'
+  sort_order?: 'asc' | 'desc'
   // Filtering parameters
   debt_min?: number
   debt_max?: number
