@@ -11,6 +11,7 @@ import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { PriorityCards } from './components/PriorityCards'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
+import { ClientManagementPageSkeleton } from './components/ClientManagementPageSkeleton'
 import { Icons } from '@/lib/icons'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useClients, useClientCount } from '@/features/clients/hooks/useClients'
@@ -101,14 +102,39 @@ export function ClientManagementPage() {
   const [sortConfig, setSortConfig] = useState<SortConfig | undefined>()
   const [currentPage, setCurrentPage] = useState(1)
   const prevSearchQueryRef = useRef(searchQuery)
+  const prevFiltersRef = useRef(filters)
+  const prevRowsPerPageRef = useRef(rowsPerPage)
+  const prevSortConfigRef = useRef(sortConfig)
 
   // Debounce filters to avoid triggering API calls on every keystroke
   const debouncedFilters = useDebounce(filters, 500)
 
   // Convert frontend filters to API parameters
   const apiParams = useMemo(() => {
+    // Map frontend sort keys to backend sort fields
+    // Note: debt/amountOfDebt removed - total_debt is computed post-query and not sortable
+    const sortFieldMap: Record<string, string> = {
+      priority: 'priority_score',
+      score: 'priority_score',
+      fullName: 'first_name',
+      id: 'id',
+    }
+
     const params: Record<string, unknown> = {
-      sort_by_priority: true,
+      // Server-side pagination
+      skip: (currentPage - 1) * rowsPerPage,
+      limit: rowsPerPage,
+    }
+
+    // Add sorting parameters
+    if (sortConfig) {
+      const backendSortField = sortFieldMap[sortConfig.key] || 'priority_score'
+      params.sort_by = backendSortField
+      params.sort_order = sortConfig.order
+    } else {
+      // Default sort: priority_score DESC
+      params.sort_by = 'priority_score'
+      params.sort_order = 'desc'
     }
 
     // Debt range filtering - use debtRangeFrom/To for filtering
@@ -133,7 +159,7 @@ export function ClientManagementPage() {
     }
 
     return params
-  }, [debouncedFilters])
+  }, [debouncedFilters, currentPage, rowsPerPage, sortConfig])
 
   // Fetch clients from API
   const { data: apiClients = [], isLoading, isFetching, isError, error } = useClients(apiParams)
@@ -147,7 +173,7 @@ export function ClientManagementPage() {
     return apiClients.map((client) => mapAPIClientToDisplay(client, thresholds))
   }, [apiClients, thresholds])
 
-  // Reset to page 1 when search query changes
+  // Reset to page 1 when search query or filters change
   useEffect(() => {
     if (searchQuery !== prevSearchQueryRef.current) {
       prevSearchQueryRef.current = searchQuery
@@ -156,6 +182,24 @@ export function ClientManagementPage() {
       })
     }
   }, [searchQuery])
+
+  // Reset to page 1 when filters, page size, or sort changes
+  useEffect(() => {
+    const filtersChanged =
+      JSON.stringify(debouncedFilters) !== JSON.stringify(prevFiltersRef.current)
+    const rowsPerPageChanged = rowsPerPage !== prevRowsPerPageRef.current
+    const sortConfigChanged =
+      JSON.stringify(sortConfig) !== JSON.stringify(prevSortConfigRef.current)
+
+    if (filtersChanged || rowsPerPageChanged || sortConfigChanged) {
+      prevFiltersRef.current = debouncedFilters
+      prevRowsPerPageRef.current = rowsPerPage
+      prevSortConfigRef.current = sortConfig
+      startTransition(() => {
+        setCurrentPage(1)
+      })
+    }
+  }, [debouncedFilters, rowsPerPage, sortConfig])
 
   // Count applied filters
   const appliedFiltersCount = useMemo(() => {
@@ -175,11 +219,11 @@ export function ClientManagementPage() {
     return count
   }, [filters])
 
-  // Filter and sort clients
+  // Filter clients (search only - sorting and pagination handled server-side)
   const filteredClients = useMemo(() => {
     let result = [...displayClients]
 
-    // Apply search filter
+    // Apply search filter (client-side)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim()
       const phoneRegex = /[\s\-()]/g
@@ -214,22 +258,9 @@ export function ClientManagementPage() {
       })
     }
 
-    // Note: Debt, status, and date filters are now handled server-side
-    // Only client-side search filter is applied here
-
-    // Apply sorting
-    if (sortConfig) {
-      result.sort((a, b) => {
-        const aValue = (a as unknown as Record<string, unknown>)[sortConfig.key]
-        const bValue = (b as unknown as Record<string, unknown>)[sortConfig.key]
-        if (aValue === bValue) return 0
-        const comparison = (aValue as number) > (bValue as number) ? 1 : -1
-        return sortConfig.order === 'asc' ? comparison : -comparison
-      })
-    }
-
+    // Note: Sorting, pagination, and filters are handled server-side
     return result
-  }, [displayClients, searchQuery, searchType, sortConfig])
+  }, [displayClients, searchQuery, searchType])
 
   // Calculate priority statistics from filtered clients
   const priorityStats = useMemo(() => {
@@ -251,14 +282,8 @@ export function ClientManagementPage() {
     return stats
   }, [filteredClients])
 
-  // Paginate clients
-  const paginatedClients = useMemo(() => {
-    const start = (currentPage - 1) * rowsPerPage
-    const end = start + rowsPerPage
-    return filteredClients.slice(start, end)
-  }, [filteredClients, currentPage, rowsPerPage])
-
-  const totalPages = Math.ceil(filteredClients.length / rowsPerPage)
+  // Calculate total pages from server-side count
+  const totalPages = Math.ceil(totalCount / rowsPerPage)
 
   const handleSort = (key: string, order: 'asc' | 'desc') => {
     setSortConfig({ key, order })
@@ -320,7 +345,7 @@ export function ClientManagementPage() {
       header: '#',
       align: 'left',
       render: (client) => {
-        const index = paginatedClients.findIndex((c) => c.id === client.id)
+        const index = filteredClients.findIndex((c) => c.id === client.id)
         const rowNumber = (currentPage - 1) * rowsPerPage + index + 1
         return rowNumber
       },
@@ -329,6 +354,8 @@ export function ClientManagementPage() {
       key: 'fullName',
       header: t('pages.clients.tableHeaders.fullName'),
       align: 'left',
+      sortable: true,
+      sortKey: 'fullName',
       render: (client) => (
         <button
           onClick={() => navigate(`/dashboard/${client.id}`)}
@@ -383,16 +410,14 @@ export function ClientManagementPage() {
       key: 'debt',
       header: t('pages.clients.tableHeaders.debt'),
       align: 'right',
-      sortable: true,
-      sortKey: 'debt',
+      sortable: false, // total_debt computed post-query, not sortable
       render: (client) => `${formatCurrency(client.debt)} ₴`,
     },
     {
       key: 'amountOfDebt',
       header: t('pages.clients.tableHeaders.amountOfDebt'),
       align: 'right',
-      sortable: true,
-      sortKey: 'amountOfDebt',
+      sortable: false, // total_debt computed post-query, not sortable
       render: (client) => `${formatCurrency(client.amountOfDebt)} ₴`,
     },
     {
@@ -428,12 +453,7 @@ export function ClientManagementPage() {
 
   // Show initial loading state (only when no data exists yet)
   if (isLoading && apiClients.length === 0) {
-    return (
-      <div className="flex w-full flex-col items-center justify-center gap-4 pt-20">
-        <div className="border-primary-500 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
-        <p className="text-gray-600">Loading clients...</p>
-      </div>
-    )
+    return <ClientManagementPageSkeleton />
   }
 
   // Show error state
@@ -509,7 +529,7 @@ export function ClientManagementPage() {
       ) : (
         <DataTable
           columns={columns}
-          data={paginatedClients}
+          data={filteredClients}
           sortConfig={sortConfig}
           onSort={handleSort}
           emptyMessage={t('pages.clients.noClientsFound')}
