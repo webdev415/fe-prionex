@@ -14,6 +14,7 @@ import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
 import { SemiCircularProgress } from './components'
 import { useImportJob, useImportJobErrors, useExportImportErrors } from '@/features/imports'
+import { ImportDetailsPageSkeleton } from './components/ImportDetailsPageSkeleton'
 
 // Status Badge Component
 function ImportDetailStatusBadge({
@@ -144,11 +145,7 @@ export function ImportDetailsPage() {
   }
 
   if (isLoadingJob) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-gray-600">{t('pages.imports.details.loadingDetails')}</p>
-      </div>
-    )
+    return <ImportDetailsPageSkeleton />
   }
 
   if (!importDetail || !jobDetail) {
@@ -363,30 +360,8 @@ export function ImportDetailsPage() {
               </div>
             </div>
           </div>
-        ) : importDetail.status === 'done' || importDetail.status === 'completed_with_errors' ? (
-          // Show progress bar at 100% for completed imports
-          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
-            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
-              {t('pages.imports.details.progress')}
-            </h2>
-
-            {/* Divider */}
-            <div className="h-px w-full bg-gray-200" />
-
-            <div className="flex flex-1 flex-col items-center justify-center gap-6 self-stretch">
-              <SemiCircularProgressBar percentage={100} />
-              <div className="flex flex-col items-center gap-1">
-                <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
-                  {t('pages.imports.details.totalRows')}{' '}
-                  <span className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
-                    {importDetail.totalRows.toLocaleString()}
-                  </span>
-                </span>
-              </div>
-            </div>
-          </div>
-        ) : // Show errors if there are any, otherwise show empty state
-        importDetail.errors > 0 ? (
+        ) : importDetail.status === 'completed_with_errors' && importDetail.errors > 0 ? (
+          // Show errors panel when completed with errors
           <div className="rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
             <h2 className="text-dark-500 mb-6 text-xl font-light">
               {t('pages.imports.details.errorsTitle')} ({importDetail.errors.toLocaleString()})
@@ -412,7 +387,30 @@ export function ImportDetailsPage() {
               />
             )}
           </div>
+        ) : importDetail.status === 'done' || importDetail.status === 'completed_with_errors' ? (
+          // Show progress bar at 100% for completed imports (without errors)
+          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
+            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+              {t('pages.imports.details.progress')}
+            </h2>
+
+            {/* Divider */}
+            <div className="h-px w-full bg-gray-200" />
+
+            <div className="flex flex-1 flex-col items-center justify-center gap-6 self-stretch">
+              <SemiCircularProgressBar percentage={100} />
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
+                  {t('pages.imports.details.totalRows')}{' '}
+                  <span className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                    {importDetail.totalRows.toLocaleString()}
+                  </span>
+                </span>
+              </div>
+            </div>
+          </div>
         ) : (
+          // Fallback: Show progress bar at 100%
           <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
             <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
               {t('pages.imports.details.progress')}
