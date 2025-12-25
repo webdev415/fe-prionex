@@ -180,12 +180,7 @@ export async function getImportJobs(
   // Return paginated response
   // Note: If backend supports pagination, you might get total count from backend
   // For now, assuming backend returns all matching results
-  return wrapInPagination(
-    filteredJobs,
-    page,
-    pageSize,
-    filteredJobs.length
-  )
+  return wrapInPagination(filteredJobs, page, pageSize, filteredJobs.length)
 }
 
 /**

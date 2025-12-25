@@ -41,7 +41,7 @@ export const importJobsKeys = {
  * @returns React Query result with import jobs data
  *
  * @example
- * 
+ *
  * const { data, isLoading, error } = useImportJobs({ page: 1, status: 'completed' })
  *  */
 export function useImportJobs(params: ImportJobsListParams = {}) {
