@@ -594,7 +594,9 @@
         "days": "days"
       },
       "statuses": {
+        "new": "New",
         "active": "Active",
+        "closed": "Closed",
         "inprogress": "In Progress",
         "paid": "Paid",
         "defaulted": "Defaulted",
