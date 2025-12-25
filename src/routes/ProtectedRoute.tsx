@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { Icons } from '@/lib/icons'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -25,7 +26,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return (
       <div className="bg-dark-500 flex min-h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="border-primary-500 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
+          <Icons.Spinner />
           <p className="text-gray-400">Loading...</p>
         </div>
       </div>
