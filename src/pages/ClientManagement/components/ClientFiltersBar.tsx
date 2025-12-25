@@ -35,9 +35,9 @@ const portfolioOptions = [
   'Portfolio G',
   'Portfolio H',
 ]
-// Status options matching backend Client.status field
-// TODO: Update these when proper status workflow is implemented
-const statusOptions = ['new', 'active', 'contacted', 'in_progress', 'paid', 'defaulted', 'closed']
+// Status options matching backend Client.status field (services/client/app/routers/clients.py:440)
+// Valid statuses: new, active, closed
+const statusOptions = ['new', 'active', 'closed']
 
 export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarProps) {
   const { t } = useTranslation('common')
