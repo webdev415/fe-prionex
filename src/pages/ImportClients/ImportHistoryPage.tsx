@@ -79,7 +79,7 @@ export function ImportHistoryPage() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
-  const rowsPerPage = 10 // Changed from useState to constant
+  const [rowsPerPage, setRowsPerPage] = useState(10) // Change from constant to state
   const [sortConfig, setSortConfig] = useState<SortConfig | undefined>(undefined)
   const [selectedJobId, setSelectedJobId] = useState<number | string | null>(null)
 
@@ -167,7 +167,12 @@ export function ImportHistoryPage() {
   }, [currentPage, rowsPerPage, filters])
 
   // Fetch import jobs from API
-  const { data: importJobsData, isLoading } = useImportJobs(apiParams)
+  const { data: importJobsData, isLoading, refetch } = useImportJobs(apiParams)
+
+  // Optional: Explicitly refetch when apiParams changes (though React Query should do this automatically)
+  useEffect(() => {
+    refetch()
+  }, [apiParams, refetch])
 
   // Convert API data to ImportHistoryItem format
   // Filter out any in_progress, pending, and cancelled jobs as a safety measure (should be handled by API, but filter client-side too)
@@ -290,6 +295,11 @@ export function ImportHistoryPage() {
     // Ensure page is within valid range
     const validPage = Math.max(1, Math.min(page, maxPage))
     setCurrentPage(validPage)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setRowsPerPage(newPageSize)
+    setCurrentPage(1) // Reset to first page when page size changes
   }
 
   // const handleViewDetails = () => {
@@ -517,7 +527,7 @@ export function ImportHistoryPage() {
             totalPages={totalPages}
             onPageChange={handlePageChange}
             pageSize={rowsPerPage}
-            onPageSizeChange={() => {}} // TODO: Implement page size change
+            onPageSizeChange={handlePageSizeChange} // Implement page size change
           />
         </div>
       )}

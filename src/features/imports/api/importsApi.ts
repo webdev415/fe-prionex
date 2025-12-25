@@ -116,63 +116,51 @@ export async function uploadImport(request: UploadImportRequest): Promise<Upload
 export async function getImportJobs(
   params: ImportJobsListParams = {}
 ): Promise<ImportJobsListResponse> {
-  // Check if we need client-side filtering
-  const needsClientSideFiltering =
-    params.exclude_status ||
-    params.search ||
-    params.uploaded_by ||
-    params.date_from ||
-    params.date_to ||
-    (params.status && params.exclude_status) // Status needs client-side filtering when exclude_status is set
-
-  // If client-side filtering is needed, fetch more items (up to backend max of 1000)
-  // Otherwise, use normal pagination
   const page = params.page || 1
   const pageSize = params.page_size || 100
 
-  let limit: number
-  let offset: number
-
-  if (needsClientSideFiltering) {
-    // Fetch maximum allowed by backend to handle client-side filtering
-    limit = 1000
-    offset = 0
-  } else {
-    // Normal pagination
-    limit = pageSize
-    offset = (page - 1) * pageSize
-  }
-
-  // Get active project ID and user ID from auth store
+  // Get active project ID from auth store
   const user = useAuthStore.getState().user
   const activeProjectId = user?.active_project_id ? parseInt(user.active_project_id, 10) : undefined
-  // const userId = user?.id ? parseInt(user.id, 10) : undefined
 
   // Map frontend status to backend status
   let backendStatus: string | undefined
   if (params.status) {
-    // Map 'in_progress' to 'processing'
     backendStatus = params.status === 'in_progress' ? 'processing' : params.status
   }
 
-  // Build backend query parameters (only supported parameters)
+  // Build backend query parameters - send all filter parameters directly
   const backendParams: Record<string, string | number | undefined> = {
-    limit,
-    offset,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
   }
 
-  // Add project_id if available (backend expects this for proper filtering)
+  // Add project_id if available
   if (activeProjectId && !isNaN(activeProjectId)) {
     backendParams.project_id = activeProjectId
   }
 
-  // Don't send user_id - we want to see all users' import histories
-  // The backend will return all users' jobs within the project when user_id is not provided
-  // (After backend fix: router should not default to current_user.user_id)
-
-  // Add status if specified (but skip if we're using exclude_status - we'll filter client-side)
-  if (backendStatus && !params.exclude_status) {
+  // Add status filter
+  if (backendStatus) {
     backendParams.status = backendStatus
+  }
+
+  // Add search parameter (filename search)
+  if (params.search) {
+    backendParams.search = params.search
+  }
+
+  // Add uploaded_by filter
+  if (params.uploaded_by) {
+    backendParams.uploaded_by = params.uploaded_by
+  }
+
+  // Add date range filters
+  if (params.date_from) {
+    backendParams.date_from = params.date_from
+  }
+  if (params.date_to) {
+    backendParams.date_to = params.date_to
   }
 
   const response = await api.get('/api/v1/import/jobs', {
@@ -183,102 +171,20 @@ export async function getImportJobs(
   const jobs = Array.isArray(response.data) ? response.data : []
   const transformedJobs = jobs.map(transformImportJob)
 
-  // Apply client-side filters that backend doesn't support
+  // Only handle exclude_status client-side (if backend doesn't support it)
   let filteredJobs = transformedJobs
-
-  // Filter by exclude_status (client-side)
   if (params.exclude_status && params.exclude_status.length > 0) {
     filteredJobs = filteredJobs.filter((job) => !params.exclude_status!.includes(job.status))
   }
 
-  // Filter by status (client-side) - needed when exclude_status is also set
-  if (params.status && params.exclude_status) {
-    // Map frontend status to match job status
-    let targetStatus: string
-    if (params.status === 'completed') {
-      targetStatus = 'completed'
-    } else if (params.status === 'failed') {
-      targetStatus = 'failed'
-    } else {
-      targetStatus = params.status
-    }
-
-    filteredJobs = filteredJobs.filter((job) => {
-      // Map job status to match filter
-      if (targetStatus === 'completed') {
-        return job.status === 'completed'
-      } else if (targetStatus === 'failed') {
-        return job.status === 'failed'
-      }
-      return job.status === params.status
-    })
-  }
-
-  // Filter by search (filename) - client-side
-  if (params.search) {
-    const searchLower = params.search.toLowerCase()
-    filteredJobs = filteredJobs.filter((job) => job.file_name.toLowerCase().includes(searchLower))
-  }
-
-  // Filter by uploaded_by (username) - client-side
-  if (params.uploaded_by) {
-    filteredJobs = filteredJobs.filter(
-      (job) => job.uploaded_by?.toLowerCase() === params.uploaded_by?.toLowerCase()
-    )
-  }
-
-  // Filter by date range - client-side
-  // Fix: Properly compare dates by comparing actual timestamps against date boundaries
-  if (params.date_from || params.date_to) {
-    filteredJobs = filteredJobs.filter((job) => {
-      // Parse the job's uploaded_at date (ISO string)
-      const jobDate = new Date(job.uploaded_at)
-
-      if (params.date_from) {
-        // Parse date_from (format: YYYY-MM-DD) and create start of day in UTC
-        const fromParts = params.date_from.split('-')
-        const fromYear = parseInt(fromParts[0], 10)
-        const fromMonth = parseInt(fromParts[1], 10) - 1 // Month is 0-indexed
-        const fromDay = parseInt(fromParts[2], 10)
-
-        // Create start of day in UTC for comparison
-        const fromDate = new Date(Date.UTC(fromYear, fromMonth, fromDay, 0, 0, 0, 0))
-
-        // Compare actual job date (with time) against start of day
-        if (jobDate < fromDate) return false
-      }
-
-      if (params.date_to) {
-        // Parse date_to (format: YYYY-MM-DD) and create end of day in UTC
-        const toParts = params.date_to.split('-')
-        const toYear = parseInt(toParts[0], 10)
-        const toMonth = parseInt(toParts[1], 10) - 1 // Month is 0-indexed
-        const toDay = parseInt(toParts[2], 10)
-
-        // Create end of day in UTC for comparison
-        const toDate = new Date(Date.UTC(toYear, toMonth, toDay, 23, 59, 59, 999))
-
-        // Compare actual job date (with time) against end of day
-        if (jobDate > toDate) return false
-      }
-
-      return true
-    })
-  }
-
-  // Apply pagination to filtered results if client-side filtering was used
-  let paginatedJobs = filteredJobs
-  if (needsClientSideFiltering) {
-    const startIndex = (page - 1) * pageSize
-    const endIndex = startIndex + pageSize
-    paginatedJobs = filteredJobs.slice(startIndex, endIndex)
-  }
-
+  // Return paginated response
+  // Note: If backend supports pagination, you might get total count from backend
+  // For now, assuming backend returns all matching results
   return wrapInPagination(
-    paginatedJobs,
+    filteredJobs,
     page,
     pageSize,
-    filteredJobs.length // Total count after client-side filtering
+    filteredJobs.length
   )
 }
 
