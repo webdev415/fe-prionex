@@ -110,6 +110,28 @@ export function ImportClientsPage() {
     }
   }, [jobDetail?.status, jobDetail?.id, currentJobId])
 
+  // Clear currentJobId when import completes/fails/cancels to allow new imports
+  useEffect(() => {
+    if (
+      jobDetail?.id &&
+      currentJobId === jobDetail.id &&
+      (jobDetail.status === 'completed' ||
+        jobDetail.status === 'failed' ||
+        jobDetail.status === 'cancelled')
+    ) {
+      // Import is done, clear currentJobId after a short delay to allow modal to show
+      // This allows new imports to start
+      const timeoutId = setTimeout(() => {
+        setCurrentJobId(null)
+        // Reset refs for next import
+        previousStatusRef.current = null
+        lastShownJobIdRef.current = null
+      }, 1000) // Small delay to ensure modal shows first
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [jobDetail?.status, jobDetail?.id, currentJobId])
+
   // Reset refs when currentJobId changes (new upload started)
   useEffect(() => {
     if (currentJobId) {
@@ -462,7 +484,23 @@ export function ImportClientsPage() {
       {/* Import History Modal */}
       <ImportHistoryModal
         open={showImportHistory}
-        onClose={() => setShowImportHistory(false)}
+        onClose={() => {
+          setShowImportHistory(false)
+          // Reset to Step 1 and clear form data when modal closes
+          setCurrentStep(1)
+          // Clear step 2 data to allow new file upload
+          setStep2Data({
+            csvFile: null,
+            invalidFile: null,
+            csvValidationError: null,
+          })
+          // Reset modal-related state when closing
+          // This ensures the modal can show again for subsequent imports
+          if (jobDetail?.status === 'completed' || jobDetail?.status === 'failed') {
+            // Only reset if import is complete, to allow showing modal again for new imports
+            lastShownJobIdRef.current = null
+          }
+        }}
         data={importHistoryData}
       />
     </div>

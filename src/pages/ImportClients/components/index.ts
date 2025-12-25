@@ -7,3 +7,4 @@ export {
 export { ImportHistoryModal, type ImportHistoryData, type ImportStatus } from './ImportHistoryModal'
 export { ImportHistoryFiltersBar, type ImportHistoryFilters } from './ImportHistoryFiltersBar'
 export { SemiCircularProgress } from './SemiCircularProgressProps'
+export { ImportDetailsPageSkeleton } from './ImportDetailsPageSkeleton'

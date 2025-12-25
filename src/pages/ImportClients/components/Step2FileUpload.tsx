@@ -48,6 +48,14 @@ export function Step2FileUpload({
   // Import mutations
   const uploadImportMutation = useUploadImport()
 
+  // Reset mutation state when import is no longer in progress (allows new imports)
+  useEffect(() => {
+    if (!isImportInProgress && uploadImportMutation.isError) {
+      // Reset mutation when import completes/fails to allow retry
+      uploadImportMutation.reset()
+    }
+  }, [isImportInProgress, uploadImportMutation])
+
   const isFileValid = (file: File): boolean => {
     return file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')
   }
@@ -262,7 +270,7 @@ export function Step2FileUpload({
     // Template download functionality
     // This would typically fetch a template file from the backend
     // For now, we'll create a simple CSV template with required columns
-    const templateContent = 'name,phone,debt_amount\n'
+    const templateContent = 'first_name, last_name, phone, tin, debt_amount\n'
     const blob = new Blob([templateContent], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -805,7 +813,33 @@ export function Step2FileUpload({
 
         {/* Start Import Button - disabled when invalid file, invalid CSV structure, or no file */}
         <DoubleButton
-          icon={<Icons.ArrowRight02 size={24} />}
+          icon={
+            isStartingImport ? (
+              <svg
+                className="h-6 w-6 animate-spin"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+            ) : (
+              <Icons.ArrowRight02 size={24} />
+            )
+          }
           iconPosition="right"
           onClick={handleStartImport}
           disabled={
