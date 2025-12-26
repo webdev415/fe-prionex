@@ -110,6 +110,17 @@ import {
   ArrowUp02Icon,
   ArrowDown02Icon,
   Chart01Icon,
+  MoneyReceive01Icon,
+  PieChart08Icon,
+  Money01Icon,
+  PencilEdit02Icon,
+  Wallet01Icon,
+  Clock04Icon,
+  CheckmarkSquare03Icon,
+  AddInvoiceIcon,
+  Invoice01Icon,
+  Tick02Icon,
+  PrinterIcon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -261,6 +272,19 @@ export const Icons = {
   ArrowUp02: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowUp02Icon} {...props} />,
   ArrowDown02: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowDown02Icon} {...props} />,
   Chart01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Chart01Icon} {...props} />,
+  MoneyReceive01: (props: Omit<IconProps, 'icon'>) => <Icon icon={MoneyReceive01Icon} {...props} />,
+  PieChart08: (props: Omit<IconProps, 'icon'>) => <Icon icon={PieChart08Icon} {...props} />,
+  Money01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Money01Icon} {...props} />,
+  PencilEdit02: (props: Omit<IconProps, 'icon'>) => <Icon icon={PencilEdit02Icon} {...props} />,
+  Wallet01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Wallet01Icon} {...props} />,
+  Clock04: (props: Omit<IconProps, 'icon'>) => <Icon icon={Clock04Icon} {...props} />,
+  CheckmarkSquare03: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={CheckmarkSquare03Icon} {...props} />
+  ),
+  AddInvoice: (props: Omit<IconProps, 'icon'>) => <Icon icon={AddInvoiceIcon} {...props} />,
+  Invoice01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Invoice01Icon} {...props} />,
+  Tick02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Tick02Icon} {...props} />,
+  Printer: (props: Omit<IconProps, 'icon'>) => <Icon icon={PrinterIcon} {...props} />,
 }
 
 /**
@@ -362,6 +386,17 @@ export {
   ArrowUp02Icon,
   ArrowDown02Icon,
   Chart01Icon,
+  MoneyReceive01Icon,
+  PieChart08Icon,
+  Money01Icon,
+  PencilEdit02Icon,
+  Wallet01Icon,
+  Clock04Icon,
+  CheckmarkSquare03Icon,
+  AddInvoiceIcon,
+  Invoice01Icon,
+  Tick02Icon,
+  PrinterIcon,
 }
 
 /**

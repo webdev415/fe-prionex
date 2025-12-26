@@ -16,6 +16,8 @@ import {
   ClientManagementPage,
   ClientDetailPage,
   ActivityTimelinePage,
+  DebtSummaryPage,
+  PaymentHistoryPage,
 } from '@/pages/ClientManagement'
 import { SmsTemplatesPage } from '@/pages/SmsTemplates'
 import { ReportsDashboardPage } from '@/pages/ReportsDashboard'
@@ -53,6 +55,16 @@ export const router = createBrowserRouter([
       <ProtectedRoute>
         <DashboardLayout>
           <ClientDetailPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/:id/debt-summary',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <DebtSummaryPage />
         </DashboardLayout>
       </ProtectedRoute>
     ),
@@ -152,6 +164,16 @@ export const router = createBrowserRouter([
             <ReportsDashboardPage />
           </DashboardLayout>
         </PermissionRoute>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/:id/payment-history',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <PaymentHistoryPage />
+        </DashboardLayout>
       </ProtectedRoute>
     ),
   },

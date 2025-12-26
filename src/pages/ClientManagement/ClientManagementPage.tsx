@@ -18,7 +18,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { mockClients } from './mockClients'
 
 // Total clients count (from API or mock)
-const TOTAL_CLIENTS_COUNT = 1200
+const TOTAL_CLIENTS_COUNT = 0
 
 export interface ClientFilters {
   debtRangeFrom?: number

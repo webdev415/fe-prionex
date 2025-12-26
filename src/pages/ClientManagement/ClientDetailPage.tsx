@@ -1246,6 +1246,14 @@ export function ClientDetailPage() {
           <Button
             size="md"
             variant="transparent-black"
+            className="flex flex-row rounded-full text-sm font-medium"
+            onClick={() => navigate(`/dashboard/${id}/debt-summary`)}
+          >
+            Debt Summary
+          </Button>
+          <Button
+            size="md"
+            variant="transparent-black"
             leftIcon={<Icons.PencilEdit size={20} />}
             className="flex flex-row rounded-full text-sm font-medium"
             onClick={() => setIsNoteModalOpen(true)}
