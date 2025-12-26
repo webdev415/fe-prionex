@@ -14,7 +14,7 @@ import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { ClientManagementPageSkeleton } from './components/ClientManagementPageSkeleton'
 import { Icons } from '@/lib/icons'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useClients, useClientCount } from '@/features/clients/hooks/useClients'
+import { useClients, useClientCount, usePrioritySummary } from '@/features/clients/hooks/useClients'
 import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import type { Client as APIClient } from '@/features/clients/api/types'
@@ -164,6 +164,7 @@ export function ClientManagementPage() {
   // Fetch clients from API
   const { data: apiClients = [], isLoading, isFetching, isError, error } = useClients(apiParams)
   const { data: totalCount = 0 } = useClientCount()
+  const { data: prioritySummaryData } = usePrioritySummary()
 
   // Fetch priority thresholds configuration
   const { data: thresholds = DEFAULT_THRESHOLDS } = usePriorityThresholds()
@@ -262,25 +263,36 @@ export function ClientManagementPage() {
     return result
   }, [displayClients, searchQuery, searchType])
 
-  // Calculate priority statistics from filtered clients
+  // Map API priority summary to component format
   const priorityStats = useMemo(() => {
-    const stats = {
-      Critical: { totalDebt: 0, count: 0 },
-      High: { totalDebt: 0, count: 0 },
-      Medium: { totalDebt: 0, count: 0 },
-      Low: { totalDebt: 0, count: 0 },
+    if (!prioritySummaryData) {
+      return {
+        Critical: { totalDebt: 0, count: 0 },
+        High: { totalDebt: 0, count: 0 },
+        Medium: { totalDebt: 0, count: 0 },
+        Low: { totalDebt: 0, count: 0 },
+      }
     }
 
-    filteredClients.forEach((client) => {
-      const priority = client.priority as keyof typeof stats
-      if (stats[priority]) {
-        stats[priority].totalDebt += client.debt
-        stats[priority].count += 1
-      }
-    })
-
-    return stats
-  }, [filteredClients])
+    return {
+      Critical: {
+        totalDebt: prioritySummaryData.critical.total_debt,
+        count: prioritySummaryData.critical.count,
+      },
+      High: {
+        totalDebt: prioritySummaryData.high.total_debt,
+        count: prioritySummaryData.high.count,
+      },
+      Medium: {
+        totalDebt: prioritySummaryData.medium.total_debt,
+        count: prioritySummaryData.medium.count,
+      },
+      Low: {
+        totalDebt: prioritySummaryData.low.total_debt,
+        count: prioritySummaryData.low.count,
+      },
+    }
+  }, [prioritySummaryData])
 
   // Calculate total pages from server-side count
   const totalPages = Math.ceil(totalCount / rowsPerPage)
