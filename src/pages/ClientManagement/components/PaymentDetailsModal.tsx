@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
@@ -49,13 +50,6 @@ export interface PaymentDetailsModalProps {
   }) => void
 }
 
-const formatCurrency = (amount: number) => {
-  return `₴ ${amount.toLocaleString('uk-UA', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
-}
-
 export function PaymentDetailsModal({
   open,
   onClose,
@@ -67,6 +61,15 @@ export function PaymentDetailsModal({
   onDownloadReceipt,
   onSaveEdit,
 }: PaymentDetailsModalProps) {
+  const { t, i18n } = useTranslation('common')
+
+  const formatCurrency = (amount: number) => {
+    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
+    return `₴ ${amount.toLocaleString(locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`
+  }
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const hasDebt = payment.newDebt > 0
 
@@ -172,7 +175,7 @@ export function PaymentDetailsModal({
               <Icons.MoneyReceive01 size={20} className="text-dark-500" strokeWidth={1.5} />
             </div>
           }
-          title={`Payment Details #${payment.paymentId}`}
+          title={t('pages.clients.modals.paymentDetails.title', { paymentId: payment.paymentId })}
           className="pb-6"
         />
         <ModalContent className="max-h-[calc(90vh-250px)]">
@@ -187,7 +190,7 @@ export function PaymentDetailsModal({
               }}
               className="h-12 flex-1 rounded-md"
             >
-              Cancel Payment
+              {t('pages.clients.modals.paymentDetails.cancelPayment')}
             </Button>
             <Button
               variant="primary"
@@ -195,7 +198,7 @@ export function PaymentDetailsModal({
               onClick={handleEditPayment}
               className="h-12 flex-1 rounded-md"
             >
-              Edit Payment
+              {t('pages.clients.modals.paymentDetails.editPayment')}
             </Button>
           </div>
 
@@ -203,7 +206,7 @@ export function PaymentDetailsModal({
           <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
             <div className="flex flex-col items-start gap-2 self-stretch">
               <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                Payment Information
+                {t('pages.clients.modals.paymentDetails.paymentInformation')}
               </span>
             </div>
             <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 px-6 py-5">
@@ -211,12 +214,13 @@ export function PaymentDetailsModal({
                 <div className="flex flex-1 flex-col items-start gap-2 p-0">
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                      Payment ID: <span className="font-medium">{payment.paymentId}</span>
+                      {t('pages.clients.modals.paymentDetails.paymentId')}{' '}
+                      <span className="font-medium">{payment.paymentId}</span>
                     </span>
                   </div>
                   <div className="flex items-center gap-2 self-stretch">
                     <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                      Status:
+                      {t('pages.clients.modals.paymentDetails.status')}
                     </span>
                     <div className="flex items-center gap-1">
                       <span
@@ -250,13 +254,16 @@ export function PaymentDetailsModal({
                               : 'text-error-500'
                         )}
                       >
-                        {payment.status}
+                        {t(
+                          `pages.clients.debtSummary.paymentStatus.${payment.status.toLowerCase()}`
+                        )}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                      Amount: <span className="font-medium">{formatCurrency(payment.amount)}</span>
+                      {t('pages.clients.modals.paymentDetails.amount')}{' '}
+                      <span className="font-medium">{formatCurrency(payment.amount)}</span>
                     </span>
                   </div>
                 </div>
@@ -266,17 +273,20 @@ export function PaymentDetailsModal({
                 <div className="flex flex-1 flex-col items-start gap-2 p-0">
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                      Payment Date: <span className="font-medium">{payment.paymentDate}</span>
+                      {t('pages.clients.modals.paymentDetails.paymentDate')}{' '}
+                      <span className="font-medium">{payment.paymentDate}</span>
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                      Payment Method: <span className="font-medium">{payment.method}</span>
+                      {t('pages.clients.modals.paymentDetails.paymentMethod')}{' '}
+                      <span className="font-medium">{payment.method}</span>
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                      Reference: <span className="font-medium">{payment.reference}</span>
+                      {t('pages.clients.modals.paymentDetails.reference')}{' '}
+                      <span className="font-medium">{payment.reference}</span>
                     </span>
                   </div>
                 </div>
@@ -288,7 +298,7 @@ export function PaymentDetailsModal({
           <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
             <div className="flex items-center justify-between self-stretch">
               <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                Client Information
+                {t('pages.clients.modals.paymentDetails.clientInformation')}
               </span>
               {onViewClientProfile && (
                 <LinkButton
@@ -296,7 +306,7 @@ export function PaymentDetailsModal({
                   rightIcon={<Icons.ArrowRight size={20} />}
                   onClick={onViewClientProfile}
                 >
-                  View Client Profile
+                  {t('pages.clients.modals.paymentDetails.viewClientProfile')}
                 </LinkButton>
               )}
             </div>
@@ -304,7 +314,7 @@ export function PaymentDetailsModal({
               <div className="flex flex-col items-start gap-1 self-stretch">
                 <div className="flex items-start gap-6 self-stretch">
                   <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    Client ID:
+                    {t('pages.clients.modals.paymentDetails.clientId')}
                   </span>
                   <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                     {payment.clientId}
@@ -312,7 +322,7 @@ export function PaymentDetailsModal({
                 </div>
                 <div className="flex items-start gap-6 self-stretch">
                   <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    Name:
+                    {t('pages.clients.modals.paymentDetails.name')}
                   </span>
                   <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                     {payment.clientName}
@@ -320,7 +330,7 @@ export function PaymentDetailsModal({
                 </div>
                 <div className="flex items-start gap-6 self-stretch">
                   <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    Phone:
+                    {t('pages.clients.modals.paymentDetails.phone')}
                   </span>
                   <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                     {payment.phone}
@@ -328,7 +338,7 @@ export function PaymentDetailsModal({
                 </div>
                 <div className="flex items-start gap-6 self-stretch">
                   <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    Project:
+                    {t('pages.clients.modals.paymentDetails.project')}
                   </span>
                   <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                     {payment.project}
@@ -341,12 +351,12 @@ export function PaymentDetailsModal({
           {/* Debt Impact Section */}
           <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
             <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              Debt Impact
+              {t('pages.clients.modals.paymentDetails.debtImpact')}
             </span>
             <div className="flex flex-col items-start justify-center gap-2 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
               <div className="flex items-start gap-5 self-stretch">
                 <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
-                  Current Total Debt:
+                  {t('pages.clients.modals.paymentDetails.currentTotalDebt')}
                 </span>
                 <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                   {formatCurrency(payment.currentDebt)}
@@ -355,7 +365,7 @@ export function PaymentDetailsModal({
               <div className="flex flex-col items-start gap-1 self-stretch">
                 <div className="flex items-center gap-5 self-stretch">
                   <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    Payment Amount:
+                    {t('pages.clients.modals.paymentDetails.paymentAmount')}
                   </span>
                   <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                     - {formatCurrency(payment.amount)}
@@ -366,7 +376,7 @@ export function PaymentDetailsModal({
 
                 <div className="flex items-center gap-5 self-stretch">
                   <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    Payment Amount:
+                    {t('pages.clients.modals.paymentDetails.paymentAmount')}
                   </span>
                   <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                     {formatCurrency(payment.newDebt)}
@@ -375,7 +385,7 @@ export function PaymentDetailsModal({
               </div>
               <div className="flex items-center gap-5 self-stretch">
                 <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
-                  Client Status:
+                  {t('pages.clients.modals.paymentDetails.clientStatus')}
                 </span>
                 <div className="flex flex-1 items-center gap-3">
                   <div className="flex items-center justify-center gap-1 rounded-full bg-white px-3 py-1">
@@ -398,11 +408,13 @@ export function PaymentDetailsModal({
                         hasDebt ? 'text-success-500' : 'text-error-500'
                       )}
                     >
-                      {hasDebt ? 'Active' : 'Paid'}
+                      {hasDebt
+                        ? t('pages.clients.statuses.active')
+                        : t('pages.clients.statuses.paid')}
                     </span>
                   </div>
                   <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    {hasDebt && 'still has debt'}
+                    {hasDebt && t('pages.clients.modals.paymentDetails.stillHasDebt')}
                   </span>
                 </div>
               </div>
@@ -412,19 +424,21 @@ export function PaymentDetailsModal({
           {/* Audit Trail Section */}
           <div className="flex flex-col items-start gap-2 self-stretch">
             <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              Audit Trail
+              {t('pages.clients.modals.paymentDetails.auditTrail')}
             </span>
             <div className="flex flex-col items-start justify-center gap-2 self-stretch rounded-xl border border-white bg-white/50 p-6">
               <div className="flex items-center gap-3 self-stretch">
                 <div className="flex flex-1 flex-col items-start gap-2 p-0">
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                      Created by: <span className="font-medium">{payment.createdBy}</span>
+                      {t('pages.clients.modals.paymentDetails.createdBy')}{' '}
+                      <span className="font-medium">{payment.createdBy}</span>
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                      Created at: <span className="font-medium">{payment.createdAt}</span>
+                      {t('pages.clients.modals.paymentDetails.createdAt')}{' '}
+                      <span className="font-medium">{payment.createdAt}</span>
                     </span>
                   </div>
                 </div>
@@ -433,12 +447,14 @@ export function PaymentDetailsModal({
                 <div className="flex flex-1 flex-col items-start gap-2 p-0">
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                      Verified by: <span className="font-medium">{payment.verifiedBy}</span>
+                      {t('pages.clients.modals.paymentDetails.verifiedBy')}{' '}
+                      <span className="font-medium">{payment.verifiedBy}</span>
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                      Verified at: <span className="font-medium">{payment.verifiedAt}</span>
+                      {t('pages.clients.modals.paymentDetails.verifiedAt')}{' '}
+                      <span className="font-medium">{payment.verifiedAt}</span>
                     </span>
                   </div>
                 </div>
@@ -455,7 +471,7 @@ export function PaymentDetailsModal({
               onClick={onPrintReceipt}
               className="h-12 flex-1 rounded-md"
             >
-              Print Receipt
+              {t('pages.clients.modals.paymentDetails.printReceipt')}
             </Button>
             <Button
               variant="white-secondary"
@@ -463,11 +479,11 @@ export function PaymentDetailsModal({
               onClick={handleDownloadReceipt}
               className="h-12 flex-1 rounded-md"
             >
-              Download Receipt PDF
+              {t('pages.clients.modals.paymentDetails.downloadReceiptPDF')}
             </Button>
           </div>
           <Button variant="cancel" onClick={onClose} className="flex h-12 self-stretch rounded-md">
-            Close
+            {t('pages.clients.modals.paymentDetails.close')}
           </Button>
         </ModalFooter>
       </Modal>

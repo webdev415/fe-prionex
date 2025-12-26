@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
@@ -53,18 +54,6 @@ export interface PaymentVerificationQueueModalProps {
   onRefresh?: () => void
 }
 
-const formatCurrency = (amount: number) => {
-  return `₴ ${amount.toLocaleString('uk-UA', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
-}
-
-const formatTimeAgo = (timeString: string) => {
-  // Simple implementation - in real app, use a library like date-fns
-  return timeString
-}
-
 export function PaymentVerificationQueueModal({
   open,
   onClose,
@@ -74,6 +63,20 @@ export function PaymentVerificationQueueModal({
   onReject,
   onRefresh,
 }: PaymentVerificationQueueModalProps) {
+  const { t, i18n } = useTranslation('common')
+
+  const formatCurrency = (amount: number) => {
+    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
+    return `₴ ${amount.toLocaleString(locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`
+  }
+
+  const formatTimeAgo = (timeString: string) => {
+    // Simple implementation - in real app, use a library like date-fns
+    return timeString
+  }
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [sortBy, setSortBy] = useState('Oldest First')
   const [filter, setFilter] = useState('All Projects')
@@ -108,66 +111,90 @@ export function PaymentVerificationQueueModal({
     }
   }
 
+  // Prevent closing parent modal when cancel modal is open
+  const handleParentClose = () => {
+    if (!isCancelModalOpen) {
+      onClose()
+    }
+  }
+
   return (
-    <Modal open={open} onClose={onClose} maxWidth="2xl">
+    <Modal open={open} onClose={handleParentClose} maxWidth="2xl">
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex items-center justify-center rounded-full p-2.5">
             <Icons.MoneyReceive01 size={20} className="text-dark-500" strokeWidth={1.5} />
           </div>
         }
-        title="Payment Verification Queue"
+        title={t('pages.clients.modals.paymentVerificationQueue.title')}
         className="pb-6"
       />
       <ModalContent className="max-h-[calc(90vh-200px)]">
         {/* Pending Verification Section */}
         <div className="mb-4 flex items-start justify-between self-stretch">
           <span className="text-dark-500 text-xl leading-[132%] font-light tracking-[-0.4px]">
-            Pending Verification <span className="text-gray-700">({pendingPayments.length})</span>
+            {t('pages.clients.modals.paymentVerificationQueue.pendingVerification')}{' '}
+            <span className="text-gray-700">({pendingPayments.length})</span>
           </span>
           <div className="flex items-center gap-3">
             <div className="flex h-6 items-center gap-3">
               <ToggleSwitch checked={autoRefresh} onChange={setAutoRefresh} />
-              <span className="text-secondary-800 text-sm">Auto-refresh</span>
+              <span className="text-secondary-800 text-sm">
+                {t('pages.clients.modals.paymentVerificationQueue.autoRefresh')}
+              </span>
             </div>
             <LinkButton
               variant="regular-secondary"
               leftIcon={<Icons.Reload className="!h-6 !w-6" strokeWidth={1.5} />}
               onClick={onRefresh}
             >
-              Refresh
+              {t('pages.clients.modals.paymentVerificationQueue.refresh')}
             </LinkButton>
           </div>
         </div>
         <div className="mb-4 flex items-start gap-4 self-stretch">
           <div className="flex h-[63px] flex-1 flex-col items-start justify-center gap-1">
             <span className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
-              Sort by:
+              {t('pages.clients.modals.paymentVerificationQueue.sortBy')}
             </span>
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="h-[45px] flex-1 rounded-md">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Oldest First">Oldest First</SelectItem>
-                <SelectItem value="Newest First">Newest First</SelectItem>
-                <SelectItem value="Amount (High to Low)">Amount (High to Low)</SelectItem>
-                <SelectItem value="Amount (Low to High)">Amount (Low to High)</SelectItem>
+                <SelectItem value="Oldest First">
+                  {t('pages.clients.modals.paymentVerificationQueue.oldestFirst')}
+                </SelectItem>
+                <SelectItem value="Newest First">
+                  {t('pages.clients.modals.paymentVerificationQueue.newestFirst')}
+                </SelectItem>
+                <SelectItem value="Amount (High to Low)">
+                  {t('pages.clients.modals.paymentVerificationQueue.amountHighToLow')}
+                </SelectItem>
+                <SelectItem value="Amount (Low to High)">
+                  {t('pages.clients.modals.paymentVerificationQueue.amountLowToHigh')}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="flex h-[63px] flex-1 flex-col items-start justify-center gap-1">
             <span className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
-              Filter:
+              {t('pages.clients.modals.paymentVerificationQueue.filter')}
             </span>
             <Select value={filter} onValueChange={setFilter}>
               <SelectTrigger className="h-[45px] flex-1 rounded-md">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="All Projects">All Projects</SelectItem>
-                <SelectItem value="PrivatBank Collection">PrivatBank Collection</SelectItem>
-                <SelectItem value="Other Project">Other Project</SelectItem>
+                <SelectItem value="All Projects">
+                  {t('pages.clients.modals.paymentVerificationQueue.allProjects')}
+                </SelectItem>
+                <SelectItem value="PrivatBank Collection">
+                  {t('pages.clients.modals.paymentVerificationQueue.privatBankCollection')}
+                </SelectItem>
+                <SelectItem value="Other Project">
+                  {t('pages.clients.modals.paymentVerificationQueue.otherProject')}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -182,10 +209,13 @@ export function PaymentVerificationQueueModal({
                 {/* Payment Header */}
                 <div className="flex items-start justify-between self-stretch">
                   <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                    Payment #{payment.paymentId}
+                    {t('pages.clients.modals.paymentVerificationQueue.payment', {
+                      paymentId: payment.paymentId,
+                    })}
                   </span>
                   <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    Submitted: {formatTimeAgo(payment.submittedAt)}
+                    {t('pages.clients.modals.paymentVerificationQueue.submitted')}{' '}
+                    {formatTimeAgo(payment.submittedAt)}
                   </span>
                 </div>
 
@@ -195,7 +225,7 @@ export function PaymentVerificationQueueModal({
                     <div className="flex flex-col items-start gap-2 self-stretch">
                       <div className="flex items-start gap-6 self-stretch">
                         <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                          Client:
+                          {t('pages.clients.modals.paymentVerificationQueue.client')}
                         </span>
                         <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           {payment.client}
@@ -203,7 +233,7 @@ export function PaymentVerificationQueueModal({
                       </div>
                       <div className="flex items-start gap-6 self-stretch">
                         <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                          Project:
+                          {t('pages.clients.modals.paymentVerificationQueue.project')}
                         </span>
                         <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           {payment.project}
@@ -211,7 +241,7 @@ export function PaymentVerificationQueueModal({
                       </div>
                       <div className="flex items-start gap-6 self-stretch">
                         <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                          Amount:
+                          {t('pages.clients.modals.paymentVerificationQueue.amount')}
                         </span>
                         <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           {formatCurrency(payment.amount)}
@@ -219,7 +249,7 @@ export function PaymentVerificationQueueModal({
                       </div>
                       <div className="flex items-start gap-6 self-stretch">
                         <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                          Method:
+                          {t('pages.clients.modals.paymentVerificationQueue.method')}
                         </span>
                         <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           {payment.method}
@@ -227,7 +257,7 @@ export function PaymentVerificationQueueModal({
                       </div>
                       <div className="flex items-start gap-6 self-stretch">
                         <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                          Date:
+                          {t('pages.clients.modals.paymentVerificationQueue.date')}
                         </span>
                         <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           {payment.date}
@@ -235,7 +265,7 @@ export function PaymentVerificationQueueModal({
                       </div>
                       <div className="flex items-start gap-6 self-stretch">
                         <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                          Reference:
+                          {t('pages.clients.modals.paymentVerificationQueue.reference')}
                         </span>
                         <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           {payment.reference}
@@ -243,7 +273,7 @@ export function PaymentVerificationQueueModal({
                       </div>
                       <div className="flex items-start gap-6 self-stretch">
                         <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                          Current Debt:
+                          {t('pages.clients.modals.paymentVerificationQueue.currentDebt')}
                         </span>
                         <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           {formatCurrency(payment.currentDebt)}
@@ -251,7 +281,7 @@ export function PaymentVerificationQueueModal({
                       </div>
                       <div className="flex items-start gap-6 self-stretch">
                         <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                          New Debt:
+                          {t('pages.clients.modals.paymentVerificationQueue.newDebt')}
                         </span>
                         <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           {formatCurrency(payment.newDebt)}
@@ -267,7 +297,7 @@ export function PaymentVerificationQueueModal({
                         onClick={() => handleRejectClick(payment)}
                         className="flex-1"
                       >
-                        Reject Payment
+                        {t('pages.clients.modals.paymentVerificationQueue.rejectPayment')}
                       </Button>
                       <Button
                         variant="primary"
@@ -275,7 +305,7 @@ export function PaymentVerificationQueueModal({
                         onClick={() => onVerify(payment.id)}
                         className="flex-1"
                       >
-                        Verify & Approve
+                        {t('pages.clients.modals.paymentVerificationQueue.verifyAndApprove')}
                       </Button>
                     </div>
                   </div>
@@ -286,7 +316,7 @@ export function PaymentVerificationQueueModal({
                     <div className="flex flex-col items-start gap-1 self-stretch">
                       <div className="flex items-start gap-6 self-stretch">
                         <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                          Client:
+                          {t('pages.clients.modals.paymentVerificationQueue.client')}
                         </span>
                         <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           {payment.client}
@@ -294,7 +324,7 @@ export function PaymentVerificationQueueModal({
                       </div>
                       <div className="flex items-start gap-6 self-stretch">
                         <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                          Amount:
+                          {t('pages.clients.modals.paymentVerificationQueue.amount')}
                         </span>
                         <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           {formatCurrency(payment.amount)}
@@ -302,7 +332,7 @@ export function PaymentVerificationQueueModal({
                       </div>
                       <div className="flex items-start gap-6 self-stretch">
                         <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                          Method:
+                          {t('pages.clients.modals.paymentVerificationQueue.method')}
                         </span>
                         <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                           {payment.method}
@@ -316,7 +346,7 @@ export function PaymentVerificationQueueModal({
                       onClick={() => toggleExpanded(payment.id)}
                       className="p-0"
                     >
-                      Expand Details
+                      {t('pages.clients.modals.paymentVerificationQueue.expandDetails')}
                     </LinkButton>
                   </div>
                 )}
@@ -329,7 +359,7 @@ export function PaymentVerificationQueueModal({
         {processedPayments.length > 0 && (
           <div className="flex flex-col items-start gap-2 self-stretch">
             <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              Recently Processed
+              {t('pages.clients.modals.paymentVerificationQueue.recentlyProcessed')}
             </span>
             <div className="flex flex-col items-start justify-center gap-0 self-stretch rounded-xl border border-white bg-white/50 p-3 px-6">
               {processedPayments.map((payment) => (
@@ -355,7 +385,9 @@ export function PaymentVerificationQueueModal({
                           payment.status === 'Verified' ? 'text-success-500' : 'text-error-500'
                         )}
                       >
-                        {payment.status}
+                        {payment.status === 'Verified'
+                          ? t('pages.clients.modals.paymentVerificationQueue.verified')
+                          : t('pages.clients.modals.paymentVerificationQueue.rejected')}
                       </span>
                     </div>
                     <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">

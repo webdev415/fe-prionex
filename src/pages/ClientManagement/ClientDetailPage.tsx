@@ -1317,7 +1317,7 @@ export function ClientDetailPage() {
             className="flex flex-row rounded-full text-sm font-medium"
             onClick={() => navigate(`/dashboard/${id}/debt-summary`)}
           >
-            Debt Summary
+            {t('pages.clients.debtSummary.title')}
           </Button>
           <Button
             size="md"
@@ -1520,7 +1520,7 @@ export function ClientDetailPage() {
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        TIN
+                        {t('pages.clients.detail.tin')}
                       </label>
                     </div>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
@@ -1530,7 +1530,7 @@ export function ClientDetailPage() {
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        Date of birth
+                        {t('pages.clients.detail.dateOfBirth')}
                       </label>
                       <Icons.Info size={14} className="text-gray-800" />
                     </div>
@@ -1541,7 +1541,7 @@ export function ClientDetailPage() {
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        Age
+                        {t('pages.clients.detail.age')}
                       </label>
                       <Icons.Info size={14} className="text-gray-800" />
                     </div>
@@ -1552,7 +1552,7 @@ export function ClientDetailPage() {
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        Passport
+                        {t('pages.clients.detail.passport')}
                       </label>
                       <Icons.Info size={14} className="text-gray-800" />
                     </div>
@@ -1562,7 +1562,7 @@ export function ClientDetailPage() {
                   </div>
                   <div className="flex items-center justify-between self-stretch p-0">
                     <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      Marital status
+                      {t('pages.clients.detail.maritalStatus')}
                     </label>
                     <div className="flex flex-1 items-center justify-end gap-2">
                       <p className="text-dark-500 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
@@ -1573,7 +1573,7 @@ export function ClientDetailPage() {
                   </div>
                   <div className="flex items-center self-stretch p-0">
                     <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      Number of family members
+                      {t('pages.clients.detail.numberOfFamilyMembers')}
                     </label>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {client.personalDetails.familyMembers}

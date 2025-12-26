@@ -25,13 +25,14 @@ export interface AddNoteModalProps {
   onSave: (data: { action: string; type: string; note: string }) => void
 }
 
-const ACTION_OPTIONS = [
-  'Incoming call',
-  'Outgoing call',
-  'Field visit',
-  'Outgoing call. In-depth processing of the contract by the operator',
-  'Outgoing call. Surface processing of the contract by the operator',
-]
+// Action options will be translated using translation keys
+const ACTION_OPTION_KEYS = [
+  'incomingCall',
+  'outgoingCall',
+  'fieldVisit',
+  'outgoingCallInDepth',
+  'outgoingCallSurface',
+] as const
 
 const MAX_NOTE_LENGTH = 2000
 
@@ -99,9 +100,9 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                   <SelectValue placeholder={t('pages.clients.modals.addNote.selectAction')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {ACTION_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
+                  {ACTION_OPTION_KEYS.map((key) => (
+                    <SelectItem key={key} value={key}>
+                      {t(`pages.clients.modals.addNote.actionOptions.${key}`)}
                     </SelectItem>
                   ))}
                 </SelectContent>

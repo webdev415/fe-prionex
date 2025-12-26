@@ -5,6 +5,7 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -30,13 +31,6 @@ export interface RecordPaymentModalProps {
   }) => void
 }
 
-const formatCurrency = (amount: number) => {
-  return `₴ ${amount.toLocaleString('uk-UA', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
-}
-
 export function RecordPaymentModal({
   open,
   onClose,
@@ -44,6 +38,15 @@ export function RecordPaymentModal({
   currentDebt,
   onSave,
 }: RecordPaymentModalProps) {
+  const { t, i18n } = useTranslation('common')
+
+  const formatCurrency = (amount: number) => {
+    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
+    return `₴ ${amount.toLocaleString(locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`
+  }
   const [paymentAmount, setPaymentAmount] = useState<string>('10000.00')
   const [paymentDate, setPaymentDate] = useState<Date | null>(new Date())
   const [paymentMethod, setPaymentMethod] = useState<'Bank Transfer' | 'Card Payment' | 'Other'>(
@@ -105,7 +108,7 @@ export function RecordPaymentModal({
             <Icons.MoneyReceive01 size={20} className="text-dark-500" strokeWidth={1.5} />
           </div>
         }
-        title="Record Payment"
+        title={t('pages.clients.modals.recordPayment.title')}
         className="pb-6"
       />
 
@@ -121,7 +124,8 @@ export function RecordPaymentModal({
             </span>
           </div>
           <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
-            Current Debt: <span className="font-medium">{formatCurrency(currentDebt)}</span>
+            {t('pages.clients.modals.recordPayment.currentDebt')}{' '}
+            <span className="font-medium">{formatCurrency(currentDebt)}</span>
           </span>
         </div>
 
@@ -130,14 +134,14 @@ export function RecordPaymentModal({
           {/* Left Column - Payment Information */}
           <div className="flex flex-1 flex-col items-start gap-2">
             <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              Payment Information
+              {t('pages.clients.modals.recordPayment.paymentInformation')}
             </span>
             <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 p-5">
               <div className="flex flex-col items-start gap-5 self-stretch">
                 {/* Payment Amount */}
                 <div className="flex flex-col items-start justify-end gap-2 self-stretch">
                   <Label required className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                    Payment Amount
+                    {t('pages.clients.modals.recordPayment.paymentAmount')}
                   </Label>
                   <Input
                     type="number"
@@ -150,19 +154,20 @@ export function RecordPaymentModal({
                   <div className="flex items-center gap-2 self-stretch">
                     <Icons.Money01 size={20} className="text-gray-700" />
                     <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                      (min: {formatCurrency(minAmount)}, max: {formatCurrency(maxAmount)})
+                      ({t('pages.clients.modals.recordPayment.min')} {formatCurrency(minAmount)},{' '}
+                      {t('pages.clients.modals.recordPayment.max')} {formatCurrency(maxAmount)})
                     </span>
                   </div>
                 </div>
                 {/* Payment Date */}
                 <div className="flex flex-col items-start gap-2 self-stretch">
                   <Label required className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                    Payment Date
+                    {t('pages.clients.modals.recordPayment.paymentDate')}
                   </Label>
                   <DateSelect
                     value={paymentDate}
                     onChange={({ value }) => setPaymentDate(value)}
-                    placeholder="Select date"
+                    placeholder={t('pages.clients.modals.recordPayment.selectDate')}
                     className="rounded-md"
                   />
                 </div>
@@ -170,7 +175,7 @@ export function RecordPaymentModal({
               {/* Payment Method */}
               <div className="flex flex-col items-start gap-2 self-stretch">
                 <Label className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                  Payment Method:
+                  {t('pages.clients.modals.recordPayment.paymentMethod')}
                 </Label>
                 <RadioGroup
                   value={paymentMethod}
@@ -185,7 +190,7 @@ export function RecordPaymentModal({
                       htmlFor="method-bank"
                       className="text-dark-500 cursor-pointer text-sm font-light"
                     >
-                      Bank Transfer
+                      {t('pages.clients.modals.recordPayment.bankTransfer')}
                     </Label>
                   </div>
                   <div className="flex items-center gap-2">
@@ -194,7 +199,7 @@ export function RecordPaymentModal({
                       htmlFor="method-card"
                       className="text-dark-500 cursor-pointer text-sm font-light"
                     >
-                      Card Payment
+                      {t('pages.clients.modals.recordPayment.cardPayment')}
                     </Label>
                   </div>
                   <div className="flex items-center gap-2">
@@ -203,7 +208,7 @@ export function RecordPaymentModal({
                       htmlFor="method-other"
                       className="text-dark-500 cursor-pointer text-sm font-light"
                     >
-                      Other
+                      {t('pages.clients.modals.recordPayment.other')}
                     </Label>
                   </div>
                 </RadioGroup>
@@ -214,14 +219,14 @@ export function RecordPaymentModal({
           {/* Right Column - Impact Preview */}
           <div className="flex flex-1 flex-col items-start gap-2 self-stretch">
             <h3 className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              Impact Preview
+              {t('pages.clients.modals.recordPayment.impactPreview')}
             </h3>
 
             <div className="flex flex-1 flex-col items-start gap-6 self-stretch rounded-xl border border-white/100 bg-white/50 p-6">
               <div className="flex flex-col items-start gap-4 self-stretch">
                 <div className="flex items-center gap-5 self-stretch">
                   <span className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    Current Total Debt:
+                    {t('pages.clients.modals.recordPayment.currentTotalDebt')}
                   </span>
                   <div className="flex flex-1 items-start justify-end gap-2.5">
                     <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
@@ -233,7 +238,7 @@ export function RecordPaymentModal({
                   <div className="flex flex-col items-start gap-1 self-stretch">
                     <div className="flex items-center gap-5 self-stretch">
                       <span className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                        Payment Amount:
+                        {t('pages.clients.modals.recordPayment.paymentAmountLabel')}
                       </span>
                       <div className="flex flex-1 items-center gap-2.5">
                         <span className="text-dark-500 flex-1 text-right text-sm leading-[150%] font-medium tracking-[-0.28px]">
@@ -245,7 +250,7 @@ export function RecordPaymentModal({
                   <div className="h-px w-full bg-gray-200" />
                   <div className="flex items-center gap-5 self-stretch">
                     <span className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                      Payment Amount:
+                      {t('pages.clients.modals.recordPayment.paymentAmountLabel')}
                     </span>
                     <div className="flex flex-1 items-center gap-2.5">
                       <span className="text-dark-500 flex-1 text-right text-sm leading-[150%] font-medium tracking-[-0.28px]">
@@ -258,7 +263,7 @@ export function RecordPaymentModal({
 
               <div className="flex flex-col items-start justify-center gap-3 self-stretch">
                 <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
-                  New Status:
+                  {t('pages.clients.modals.recordPayment.newStatus')}
                 </span>
                 <div className="flex items-center gap-3 self-stretch">
                   <div className="flex items-center gap-1 rounded-[16px] bg-white px-3 py-1">
@@ -282,12 +287,14 @@ export function RecordPaymentModal({
                           hasDebt ? 'text-success-500' : 'text-gray-500'
                         )}
                       >
-                        {hasDebt ? 'Active' : 'Paid'}
+                        {hasDebt
+                          ? t('pages.clients.statuses.active')
+                          : t('pages.clients.statuses.paid')}
                       </span>
                     </div>
                   </div>
                   <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    {hasDebt && 'still has debt'}
+                    {hasDebt && t('pages.clients.modals.recordPayment.stillHasDebt')}
                   </span>
                 </div>
               </div>
@@ -298,12 +305,12 @@ export function RecordPaymentModal({
           <div className="flex items-start gap-4 self-stretch">
             <div className="flex flex-1 flex-col items-start gap-2">
               <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                Verification
+                {t('pages.clients.modals.recordPayment.verification')}
               </span>
               <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white bg-white/50 p-[20px_24px]">
                 <div className="flex flex-col items-start gap-2 self-stretch">
                   <Label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
-                    Payment Status:
+                    {t('pages.clients.modals.recordPayment.paymentStatus')}
                   </Label>
                   <RadioGroup
                     value={paymentStatus}
@@ -318,7 +325,7 @@ export function RecordPaymentModal({
                         htmlFor="status-pending"
                         className="text-dark-500 cursor-pointer text-sm font-light"
                       >
-                        Pending Verification
+                        {t('pages.clients.modals.recordPayment.pendingVerification')}
                       </Label>
                     </div>
                     <div className="flex flex-1 flex-col items-start gap-2">
@@ -328,11 +335,11 @@ export function RecordPaymentModal({
                           htmlFor="status-verified"
                           className="text-dark-500 cursor-pointer text-sm font-light"
                         >
-                          Verified
+                          {t('pages.clients.modals.recordPayment.verified')}
                         </Label>
                       </div>
                       <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        Requires supervisor permission
+                        {t('pages.clients.modals.recordPayment.requiresSupervisorPermission')}
                       </span>
                     </div>
                   </RadioGroup>
@@ -350,7 +357,7 @@ export function RecordPaymentModal({
                       htmlFor="generate-receipt"
                       className="flex flex-1 cursor-pointer flex-col justify-center self-stretch text-sm font-light text-gray-950"
                     >
-                      Generate receipt automatically
+                      {t('pages.clients.modals.recordPayment.generateReceiptAutomatically')}
                     </Label>
                   </div>
                   <div className="flex items-center gap-1 self-stretch">
@@ -363,7 +370,7 @@ export function RecordPaymentModal({
                       htmlFor="update-balance"
                       className="flex flex-1 cursor-pointer flex-col justify-center self-stretch text-sm font-light text-gray-950"
                     >
-                      Update debt balance immediately
+                      {t('pages.clients.modals.recordPayment.updateDebtBalanceImmediately')}
                     </Label>
                   </div>
                 </div>
@@ -380,7 +387,7 @@ export function RecordPaymentModal({
             onClick={() => handleSave('Pending Verification')}
             className="flex-1"
           >
-            Save as Pending
+            {t('pages.clients.modals.recordPayment.saveAsPending')}
           </Button>
           <Button
             variant="primary"
@@ -388,12 +395,12 @@ export function RecordPaymentModal({
             onClick={() => handleSave('Verified')}
             className="flex-1"
           >
-            Save & Verify
+            {t('pages.clients.modals.recordPayment.saveAndVerify')}
           </Button>
         </div>
 
         <Button variant="cancel" onClick={handleClose} className="flex self-stretch">
-          Cancel
+          {t('pages.clients.modals.recordPayment.cancel')}
         </Button>
       </ModalFooter>
     </Modal>
