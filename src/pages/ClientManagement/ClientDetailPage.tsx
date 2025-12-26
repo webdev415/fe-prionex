@@ -18,6 +18,7 @@ import { CallLogCard } from './components/CallLogCard'
 import { cn } from '@/lib/utils'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { LinkButton } from '@/components/ui/LinkButton'
+import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
 
 // Helper function to create mock client detail
 const createMockClientDetail = (
@@ -926,14 +927,9 @@ export function ClientDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client.id])
 
-  // Show loading state
+  // Show loading skeleton
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 py-16">
-        <div className="border-primary-500 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
-        <p className="text-gray-600">Loading client details...</p>
-      </div>
-    )
+    return <ClientDetailPageSkeleton />
   }
 
   // Show error state
