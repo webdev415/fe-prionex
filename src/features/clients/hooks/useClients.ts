@@ -24,6 +24,7 @@ export const clientKeys = {
   detail: (id: number) => [...clientKeys.details(), id] as const,
   search: (params: SearchByTinParams) => [...clientKeys.all, 'search', params] as const,
   count: () => [...clientKeys.all, 'count'] as const,
+  prioritySummary: () => [...clientKeys.all, 'priority-summary'] as const,
 }
 
 /**
@@ -88,6 +89,7 @@ export function useCreateClient() {
       // Invalidate and refetch clients list
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
       queryClient.invalidateQueries({ queryKey: clientKeys.count() })
+      queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
       toast.success('Client created successfully')
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
@@ -110,6 +112,7 @@ export function useUpdateClient() {
       // Invalidate specific client and lists
       queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.id) })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
       toast.success('Client updated successfully')
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
@@ -131,6 +134,7 @@ export function useDeleteClient() {
       // Invalidate clients list and count
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
       queryClient.invalidateQueries({ queryKey: clientKeys.count() })
+      queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
       toast.success('Client deleted successfully')
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
@@ -156,11 +160,25 @@ export function useSetManualPriority() {
         queryKey: clientKeys.detail(variables.clientId),
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
       toast.success('Manual priority set successfully')
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       const message = error?.response?.data?.detail || 'Failed to set manual priority'
       toast.error(message)
     },
+  })
+}
+
+/**
+ * Get priority summary with counts and total debt breakdown
+ */
+export function usePrioritySummary() {
+  return useQuery({
+    queryKey: clientKeys.prioritySummary(),
+    queryFn: () => clientApi.getPrioritySummary(),
+    staleTime: 30000, // 30 seconds
+    refetchInterval: 60000, // Refetch every 60 seconds
+    enabled: true,
   })
 }

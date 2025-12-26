@@ -97,6 +97,25 @@ export async function getClientCount(): Promise<number> {
 }
 
 /**
+ * Priority summary response type
+ */
+export interface PrioritySummary {
+  critical: { count: number; total_debt: number }
+  high: { count: number; total_debt: number }
+  medium: { count: number; total_debt: number }
+  low: { count: number; total_debt: number }
+  total: { count: number; total_debt: number }
+}
+
+/**
+ * Get priority summary with counts and total debt for each priority level
+ */
+export async function getPrioritySummary(): Promise<PrioritySummary> {
+  const response = await api.get<PrioritySummary>(`${BASE_URL}/stats/priority-summary`)
+  return response.data
+}
+
+/**
  * Exported API object for easier importing
  * Consistent with other service APIs (usersApi, rolesApi, projectsApi, etc.)
  */
@@ -109,4 +128,5 @@ export const clientApi = {
   searchByTin,
   setManualPriority,
   getClientCount,
+  getPrioritySummary,
 }
