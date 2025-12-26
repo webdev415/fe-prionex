@@ -16,6 +16,7 @@ import { ViewSMSModal } from './components/ViewSMSModal'
 import { SendSMSModal } from './components/SendSMSModal'
 import { CallLogCard } from './components/CallLogCard'
 import { cn } from '@/lib/utils'
+import { useClient } from '@/features/clients/hooks/useClients'
 import { LinkButton } from '@/components/ui/LinkButton'
 
 // Helper function to create mock client detail
@@ -830,14 +831,57 @@ export function ClientDetailPage() {
   const navigate = useNavigate()
   const [activeLoanTab, setActiveLoanTab] = useState<'process' | 'closed' | 'rr'>('process')
   const [activeCommentTab, setActiveCommentTab] = useState<'comments' | 'primary'>('comments')
-  // TODO: Fetch client data based on id
-  const clientId = id ? Number(id) : 1
-  const client = useMemo(
-    () => mockClientsDetail.find((c) => c.id === clientId) || mockClientsDetail[0],
-    [clientId]
-  )
 
-  const [tags, setTags] = useState<string[]>(client.tags)
+  // Fetch client data from API
+  const clientId = id ? Number(id) : 0
+  const { data: apiClient, isLoading, isError, error } = useClient(clientId, !!clientId)
+
+  // Use mock data as fallback for missing fields until backend is fully integrated
+  const client = useMemo(() => {
+    if (!apiClient) return mockClientsDetail[0]
+
+    const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
+      .filter(Boolean)
+      .join(' ')
+
+    // Map API client to expected shape, using mock data for fields not yet in API
+    return {
+      ...mockClientsDetail[0], // Fallback for fields not yet in backend
+      id: apiClient.id,
+      fullName,
+      taxIdNumber: apiClient.tax_id,
+      phoneNumber: apiClient.phone_primary,
+      tags: [], // TODO: Add tags support in backend
+      score: apiClient.priority_score,
+      priority:
+        apiClient.manual_priority ||
+        (apiClient.priority_score >= 75
+          ? 'Critical'
+          : apiClient.priority_score >= 50
+            ? 'High'
+            : apiClient.priority_score >= 25
+              ? 'Medium'
+              : 'Low'),
+      phones: [
+        { number: apiClient.phone_primary, type: 'primary' as const },
+        ...(apiClient.phone_secondary
+          ? [{ number: apiClient.phone_secondary, type: 'secondary' as const }]
+          : []),
+      ],
+      personalDetails: {
+        ...mockClientsDetail[0].personalDetails,
+        tin: apiClient.tax_id,
+        dateOfBirth: apiClient.date_of_birth || mockClientsDetail[0].personalDetails.dateOfBirth,
+      },
+      addresses: {
+        ...mockClientsDetail[0].addresses,
+        registrationAddress:
+          apiClient.address || mockClientsDetail[0].addresses.registrationAddress,
+      },
+    }
+  }, [apiClient])
+
+  const [tags, setTags] = useState<string[]>(client?.tags || [])
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
   const [isCallRecordingModalOpen, setIsCallRecordingModalOpen] = useState(false)
@@ -881,6 +925,30 @@ export function ClientDetailPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client.id])
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-16">
+        <div className="border-primary-500 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
+        <p className="text-gray-600">Loading client details...</p>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-16">
+        <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
+        <p className="font-medium text-gray-900">Failed to load client</p>
+        <p className="text-sm text-gray-600">{error?.message || 'An error occurred'}</p>
+        <Button variant="outline" onClick={() => navigate('/dashboard/client')} className="mt-4">
+          Back to Clients
+        </Button>
+      </div>
+    )
+  }
 
   if (!client) {
     return (

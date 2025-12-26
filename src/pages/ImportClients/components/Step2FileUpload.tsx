@@ -48,6 +48,14 @@ export function Step2FileUpload({
   // Import mutations
   const uploadImportMutation = useUploadImport()
 
+  // Reset mutation state when import is no longer in progress (allows new imports)
+  useEffect(() => {
+    if (!isImportInProgress && uploadImportMutation.isError) {
+      // Reset mutation when import completes/fails to allow retry
+      uploadImportMutation.reset()
+    }
+  }, [isImportInProgress, uploadImportMutation])
+
   const isFileValid = (file: File): boolean => {
     return file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv')
   }
@@ -262,7 +270,7 @@ export function Step2FileUpload({
     // Template download functionality
     // This would typically fetch a template file from the backend
     // For now, we'll create a simple CSV template with required columns
-    const templateContent = 'name,phone,debt_amount\n'
+    const templateContent = 'first_name, last_name, phone, tin, debt_amount\n'
     const blob = new Blob([templateContent], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -805,7 +813,13 @@ export function Step2FileUpload({
 
         {/* Start Import Button - disabled when invalid file, invalid CSV structure, or no file */}
         <DoubleButton
-          icon={<Icons.ArrowRight02 size={24} />}
+          icon={
+            isStartingImport ? (
+              <Icons.Spinner className="border-secondary-800" />
+            ) : (
+              <Icons.ArrowRight02 size={24} />
+            )
+          }
           iconPosition="right"
           onClick={handleStartImport}
           disabled={

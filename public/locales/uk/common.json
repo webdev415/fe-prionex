@@ -377,6 +377,7 @@
       "started": "Почато",
       "status": "Статус",
       "complete": "завершено",
+      "queued": "В черзі",
       "viewDetails": "Перегляд деталей",
       "cancelImport": "Скасувати імпорт",
       "cancelling": "Скасування...",
@@ -400,9 +401,13 @@
         "placeholders": {
           "enterProjectName": "Введіть назву проєкту",
           "enterProjectCode": "Введіть код проєкту",
+          "selectProjectCode": "Виберіть код проєкту",
           "selectPurchaseDate": "Виберіть дату покупки",
-          "placeholderText": "Текст-заповнювач"
-        }
+          "placeholderText": "Текст-заповнювач",
+          "enterSellerCreditor": "Введіть назву продавця/кредитора",
+          "loadingProjects": "Завантаження проєктів..."
+        },
+        "noProjectsAvailable": "Немає доступних проєктів"
       },
       "step2": {
         "simple": {
@@ -411,15 +416,15 @@
           "invalidCsvStructure": "Невірна структура CSV",
           "invalidFileType": "Невірний тип файлу",
           "chooseCsvFile": "Виберіть CSV файл",
-          "missingRequiredColumns": "Відсутні обов'язкові стовпці:",
+          "missingRequiredColumns": "Відсутні обов'язкові стовпці",
           "onlyCsvSupported": "У цій версії підтримуються лише файли .csv.",
           "fileRequirements": "Вимоги до файлу:",
           "oneCsvOnly": "Лише один CSV,",
           "maxRows": "максимум 50,000 рядків",
-          "required": "Обов'язково:",
-          "requiredColumns": "name, phone, debt_amount",
-          "optional": "Необов'язково:",
-          "optionalColumns": "address, inn, contract...",
+          "required": "Обов'язково",
+          "requiredColumns": "фірст_наме, ласт_наме, телефон, олово, сума_боргу",
+          "optional": "Необов'язково",
+          "optionalColumns": "міддле_наме, емайл, овердуе(дні)...",
           "browseFile": "Вибрати файл",
           "downloadSampleTemplate": "Завантажити зразок шаблону CSV",
           "startImport": "Розпочати імпорт",
@@ -506,6 +511,7 @@
         "errorsTitle": "Помилки",
         "row": "Рядок",
         "error": "Помилка",
+        "suggestedFix": "Запропоноване виправлення",
         "noErrors": "Немає помилок",
         "importNotFound": "Імпорт не знайдено",
         "loadingDetails": "Завантаження деталей імпорту...",
@@ -588,7 +594,9 @@
         "days": "днів"
       },
       "statuses": {
+        "new": "Новий",
         "active": "Активний",
+        "closed": "Закритий",
         "inprogress": "В процесі",
         "paid": "Сплачено",
         "defaulted": "Прострочено",

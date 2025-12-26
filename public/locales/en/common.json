@@ -377,6 +377,7 @@
       "started": "Started",
       "status": "Status",
       "complete": "complete",
+      "queued": "Queued",
       "viewDetails": "View Details",
       "cancelImport": "Cancel Import",
       "cancelling": "Cancelling...",
@@ -400,9 +401,13 @@
         "placeholders": {
           "enterProjectName": "Enter Project Name",
           "enterProjectCode": "Enter Project Code",
+          "selectProjectCode": "Select Project Code",
           "selectPurchaseDate": "Select purchase date",
-          "placeholderText": "Placeholder text"
-        }
+          "placeholderText": "Placeholder text",
+          "enterSellerCreditor": "Enter Seller/Creditor Name",
+          "loadingProjects": "Loading projects..."
+        },
+        "noProjectsAvailable": "No projects available"
       },
       "step2": {
         "simple": {
@@ -411,15 +416,15 @@
           "invalidCsvStructure": "Invalid CSV structure",
           "invalidFileType": "Invalid file type",
           "chooseCsvFile": "Choose CSV File",
-          "missingRequiredColumns": "Missing required columns:",
+          "missingRequiredColumns": "Missing required columns",
           "onlyCsvSupported": "Only .csv files are supported in this version.",
           "fileRequirements": "File Requirements:",
           "oneCsvOnly": "One CSV only,",
           "maxRows": "max 50,000 rows",
-          "required": "Required:",
-          "requiredColumns": "name, phone, debt_amount",
-          "optional": "Optional:",
-          "optionalColumns": "address, inn, contract...",
+          "required": "Required",
+          "requiredColumns": "first_name, last_name, phone, tin, debt_amount",
+          "optional": "Optional",
+          "optionalColumns": "middle_name, email, overdue(days)...",
           "browseFile": "Browse File",
           "downloadSampleTemplate": "Download Sample CSV Template",
           "startImport": "Start Import",
@@ -506,6 +511,7 @@
         "errorsTitle": "Errors",
         "row": "Row",
         "error": "Error",
+        "suggestedFix": "Suggested fix",
         "noErrors": "No errors",
         "importNotFound": "Import not found",
         "loadingDetails": "Loading import details...",
@@ -588,7 +594,9 @@
         "days": "days"
       },
       "statuses": {
+        "new": "New",
         "active": "Active",
+        "closed": "Closed",
         "inprogress": "In Progress",
         "paid": "Paid",
         "defaulted": "Defaulted",

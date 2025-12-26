@@ -29,6 +29,7 @@ export interface ApiResponse<T> {
 export interface UserProject {
   id: string
   name: string
+  code?: string // Project code (available from /api/v1/users/me)
   roles: UserRole[]
 }
 

@@ -43,24 +43,43 @@ export function ImportClientsPage() {
   const activeJobId = currentJobId || latestInProgressJob?.id || null
 
   // Fetch detail of the active job for progress updates
-  const { data: jobDetail } = useImportJob(activeJobId, {
+  // Start polling immediately when jobId is set, poll every 2 seconds for better responsiveness
+  const { data: jobDetail, refetch: refetchJobDetail } = useImportJob(activeJobId, {
     enabled: !!activeJobId,
     refetchInterval: (query) => {
-      // Poll every 5 seconds if job is in progress
+      // Poll every 2 seconds if job is pending or in progress
       const data = query.state.data
-      return data?.status === 'in_progress' ? 5000 : false
+      const status = data?.status
+      // Poll for pending, in_progress, or if data hasn't loaded yet
+      if (!status || status === 'pending' || status === 'in_progress') {
+        return 2000 // 2 seconds for better UX
+      }
+      return false // Stop polling when completed/failed/cancelled
     },
   })
 
   // Track current job ID for progress banner
+  // Update currentJobId when jobDetail.id changes, but defer the update
+  // to avoid cascading renders (React lint rule)
+  const lastSyncedJobIdRef = useRef<number | string | null>(null)
   useEffect(() => {
-    if (jobDetail?.id && jobDetail.id !== currentJobId) {
-      // Use setTimeout to avoid synchronous setState in effect
-      setTimeout(() => {
+    if (jobDetail?.id && jobDetail.id !== lastSyncedJobIdRef.current) {
+      lastSyncedJobIdRef.current = jobDetail.id
+      // Use requestAnimationFrame to defer state update and avoid cascading renders
+      const frameId = requestAnimationFrame(() => {
         setCurrentJobId(jobDetail.id)
-      }, 0)
+      })
+      return () => cancelAnimationFrame(frameId)
     }
-  }, [jobDetail?.id, currentJobId])
+  }, [jobDetail?.id])
+
+  // Immediately refetch job detail when currentJobId is set (from upload response)
+  useEffect(() => {
+    if (currentJobId && activeJobId === currentJobId && !jobDetail) {
+      // Trigger immediate refetch when jobId is set from upload
+      refetchJobDetail()
+    }
+  }, [currentJobId, activeJobId, jobDetail, refetchJobDetail])
 
   // Show ImportHistoryModal when import job completes
   useEffect(() => {
@@ -91,6 +110,28 @@ export function ImportClientsPage() {
     }
   }, [jobDetail?.status, jobDetail?.id, currentJobId])
 
+  // Clear currentJobId when import completes/fails/cancels to allow new imports
+  useEffect(() => {
+    if (
+      jobDetail?.id &&
+      currentJobId === jobDetail.id &&
+      (jobDetail.status === 'completed' ||
+        jobDetail.status === 'failed' ||
+        jobDetail.status === 'cancelled')
+    ) {
+      // Import is done, clear currentJobId after a short delay to allow modal to show
+      // This allows new imports to start
+      const timeoutId = setTimeout(() => {
+        setCurrentJobId(null)
+        // Reset refs for next import
+        previousStatusRef.current = null
+        lastShownJobIdRef.current = null
+      }, 1000) // Small delay to ensure modal shows first
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [jobDetail?.status, jobDetail?.id, currentJobId])
+
   // Reset refs when currentJobId changes (new upload started)
   useEffect(() => {
     if (currentJobId) {
@@ -100,13 +141,17 @@ export function ImportClientsPage() {
   }, [currentJobId])
 
   // Determine if import is in progress
-  // Show progress bar if we have an active job ID and either:
-  // - Job detail shows status is 'in_progress', OR
-  // - Job detail hasn't loaded yet (but we have the ID from upload response)
-  const isImportInProgress = !!activeJobId && (jobDetail?.status === 'in_progress' || !jobDetail)
+  // Show progress bar immediately when we have a job ID (even if status is pending or not loaded yet)
+  // Keep showing until job is completed, failed, or cancelled
+  const isImportInProgress =
+    !!activeJobId &&
+    (!jobDetail || // Show if jobDetail hasn't loaded yet
+      (jobDetail.status !== 'completed' &&
+        jobDetail.status !== 'failed' &&
+        jobDetail.status !== 'cancelled'))
 
   // Import progress data from API
-  // If jobDetail is not loaded yet, use basic info from latestInProgressJob or currentJobId
+  // Show progress immediately when jobId is set, even before jobDetail loads
   const importProgress = jobDetail
     ? {
         fileName: jobDetail.file_name,
@@ -116,6 +161,7 @@ export function ImportClientsPage() {
         }),
         progressPercentage: jobDetail.progress_percentage || 0,
         jobId: jobDetail.id,
+        status: jobDetail.status,
       }
     : latestInProgressJob
       ? {
@@ -126,6 +172,7 @@ export function ImportClientsPage() {
           }),
           progressPercentage: 0, // Will update when jobDetail loads
           jobId: latestInProgressJob.id,
+          status: latestInProgressJob.status,
         }
       : currentJobId
         ? {
@@ -136,6 +183,7 @@ export function ImportClientsPage() {
             }),
             progressPercentage: 0,
             jobId: currentJobId,
+            status: 'pending' as const,
           }
         : null
 
@@ -376,9 +424,9 @@ export function ImportClientsPage() {
         </div>
       </div>
 
-      {/* Import Progress Banner */}
+      {/* Import Progress Banner - Absolutely Positioned */}
       {isImportInProgress && importProgress ? (
-        <div className="z-50 mx-50 my-10 flex items-center justify-between gap-4 rounded-[10px] border border-gray-200 bg-white px-6 py-4 shadow-[0_12px_16px_-4px_rgba(16,24,40,0.08),0_4px_6px_-2px_rgba(16,24,40,0.03)]">
+        <div className="fixed bottom-6 left-1/2 z-50 flex w-[calc(100%-3rem)] max-w-7xl -translate-x-1/2 transform items-center justify-between gap-4 rounded-[10px] border border-gray-200 bg-white px-6 py-4 shadow-[0_12px_16px_-4px_rgba(16,24,40,0.08),0_4px_6px_-2px_rgba(16,24,40,0.03)]">
           <div className="text-warning-500 flex items-center gap-2.5 py-1 pl-3">
             {/* Icon - document with refresh symbol */}
             <Icons.FileImport size={20} />
@@ -401,7 +449,9 @@ export function ImportClientsPage() {
           <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
             {t('pages.imports.status')}:{' '}
             <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              {importProgress.progressPercentage}% {t('pages.imports.complete')}
+              {importProgress.status === 'pending'
+                ? t('pages.imports.queued')
+                : `${importProgress.progressPercentage}% ${t('pages.imports.complete')}`}
             </span>
           </span>
           <Button
@@ -434,7 +484,23 @@ export function ImportClientsPage() {
       {/* Import History Modal */}
       <ImportHistoryModal
         open={showImportHistory}
-        onClose={() => setShowImportHistory(false)}
+        onClose={() => {
+          setShowImportHistory(false)
+          // Reset to Step 1 and clear form data when modal closes
+          setCurrentStep(1)
+          // Clear step 2 data to allow new file upload
+          setStep2Data({
+            csvFile: null,
+            invalidFile: null,
+            csvValidationError: null,
+          })
+          // Reset modal-related state when closing
+          // This ensures the modal can show again for subsequent imports
+          if (jobDetail?.status === 'completed' || jobDetail?.status === 'failed') {
+            // Only reset if import is complete, to allow showing modal again for new imports
+            lastShownJobIdRef.current = null
+          }
+        }}
         data={importHistoryData}
       />
     </div>

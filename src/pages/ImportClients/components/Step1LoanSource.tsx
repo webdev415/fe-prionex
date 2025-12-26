@@ -32,7 +32,12 @@ interface Step1LoanSourceProps {
 
 export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
   const { t } = useTranslation('common')
-  const { data: projectsData } = useProjects({ page: 1, page_size: 100 })
+  // Fetch user's accessible projects (filtered by permissions - admins see all, users see only assigned)
+  const { data: projectsData, isLoading: isLoadingProjects } = useProjects({
+    page: 1,
+    page_size: 100, // Get all accessible projects
+    status: 'active', // Only show active projects
+  })
   const projects = projectsData?.projects || []
 
   return (
@@ -48,36 +53,48 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
           <div className="flex items-end gap-4">
             {/* Seller / Creditor */}
             <div className="flex-1">
-              <Label htmlFor="seller-creditor" required className="mb-1.5 block">
-                {t('pages.imports.step1.sellerCreditor')}
-              </Label>
-              <Select
+              <Input
+                label={t('pages.imports.step1.sellerCreditor')}
+                placeholder={t('pages.imports.step1.placeholders.enterSellerCreditor')}
                 value={data.sellerCreditor}
-                onValueChange={(value) => onChange({ sellerCreditor: value })}
-              >
-                <SelectTrigger className="w-full" id="seller-creditor">
-                  <SelectValue
-                    placeholder={t('pages.imports.step1.placeholders.enterProjectName')}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={String(project.id)}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(e) => onChange({ sellerCreditor: e.target.value })}
+                required
+              />
             </div>
 
             {/* Project Code */}
             <div className="flex-1">
-              <Input
-                label={t('pages.imports.step1.projectCode')}
-                placeholder={t('pages.imports.step1.placeholders.enterProjectCode')}
+              <Label htmlFor="project-code" required className="mb-1.5 block">
+                {t('pages.imports.step1.projectCode')}
+              </Label>
+              <Select
                 value={data.projectCode}
-                onChange={(e) => onChange({ projectCode: e.target.value })}
-              />
+                onValueChange={(value) => onChange({ projectCode: value })}
+                disabled={isLoadingProjects}
+              >
+                <SelectTrigger className="w-full" id="project-code">
+                  <SelectValue
+                    placeholder={
+                      isLoadingProjects
+                        ? t('pages.imports.step1.placeholders.loadingProjects')
+                        : t('pages.imports.step1.placeholders.selectProjectCode')
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.length === 0 && !isLoadingProjects ? (
+                    <SelectItem value="" disabled>
+                      {t('pages.imports.step1.noProjectsAvailable')}
+                    </SelectItem>
+                  ) : (
+                    projects.map((project) => (
+                      <SelectItem key={project.id} value={project.code}>
+                        {project.code} - {project.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

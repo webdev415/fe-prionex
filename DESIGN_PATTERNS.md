@@ -972,6 +972,64 @@ import { Icons } from '@/lib/icons'
 <Icons.CloudDownload size={48} className="text-dark-500" strokeWidth={0.5} />
 ```
 
+### Loading Spinner
+
+The `Icons.Spinner` component provides a reusable loading spinner with consistent styling.
+
+**Import:**
+```tsx
+import { Icons } from '@/lib/icons'
+```
+
+**Usage:**
+```tsx
+// Basic usage (default size: h-8 w-8)
+<Icons.Spinner />
+
+// With custom size
+<Icons.Spinner className="h-4 w-4" />
+
+// In a loading screen
+<div className="bg-dark-500 flex min-h-screen items-center justify-center">
+  <div className="flex flex-col items-center gap-4">
+    <Icons.Spinner />
+    <p className="text-gray-400">Loading...</p>
+  </div>
+</div>
+
+// In a button or inline context
+<button disabled>
+  <Icons.Spinner className="h-4 w-4" />
+  Processing...
+</button>
+```
+
+**Default Styling:**
+- Size: `h-8 w-8` (32px × 32px)
+- Border: `border-4` with `border-primary-500` color
+- Animation: `animate-spin` (continuous rotation)
+- Shape: `rounded-full` (circle)
+- Transparent top border: `border-t-transparent` (creates the spinner effect)
+
+**Customization:**
+You can override the default size and border color by passing a `className` prop:
+```tsx
+// Custom size
+<Icons.Spinner className="h-6 w-6" />  // 24px × 24px
+<Icons.Spinner className="h-12 w-12" /> // 48px × 48px
+
+// Custom border color
+<Icons.Spinner className="border-success-500" />  // Green spinner
+<Icons.Spinner className="border-information-500" />  // Blue spinner
+<Icons.Spinner className="border-white" />  // White spinner (for dark backgrounds)
+
+// Custom size and color
+<Icons.Spinner className="h-6 w-6 border-success-500" />  // Small green spinner
+<Icons.Spinner className="h-12 w-12 border-white" />  // Large white spinner
+```
+
+**Note:** When customizing the border color, make sure to keep the `border-t-transparent` class (or add it if overriding) to maintain the spinner effect. The component includes `border-t-transparent` by default, but if you override with a full `border-*` class, you may need to add it back.
+
 ---
 
 ## Common Conversions

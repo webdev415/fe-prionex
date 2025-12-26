@@ -5,13 +5,16 @@
  * Shows import summary and error details.
  */
 
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
 import { SemiCircularProgress } from './components'
 import { useImportJob, useImportJobErrors, useExportImportErrors } from '@/features/imports'
+import { ImportDetailsPageSkeleton } from './components/ImportDetailsPageSkeleton'
 
 // Status Badge Component
 function ImportDetailStatusBadge({
@@ -73,6 +76,10 @@ export function ImportDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
+  // Pagination state for errors
+  const [errorPage, setErrorPage] = useState(1)
+  const [errorPageSize, setErrorPageSize] = useState(50)
+
   // Fetch import job detail from API
   const { data: jobDetail, isLoading: isLoadingJob } = useImportJob(id, {
     refetchInterval: (query) => {
@@ -82,10 +89,10 @@ export function ImportDetailsPage() {
     },
   })
 
-  // Fetch import errors
+  // Fetch import errors with pagination
   const { data: errorsData } = useImportJobErrors(id, {
-    page: 1,
-    page_size: 100, // Get first 100 errors
+    page: errorPage,
+    page_size: errorPageSize,
   })
 
   // Export errors mutation
@@ -124,6 +131,7 @@ export function ImportDetailsPage() {
           id: err.id,
           row: err.row,
           error: err.error,
+          suggested_fix: err.suggested_fix,
         })),
         progressPercentage: jobDetail.progress_percentage || 0,
         processingRow: jobDetail.processing_row || 0,
@@ -137,11 +145,7 @@ export function ImportDetailsPage() {
   }
 
   if (isLoadingJob) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-gray-600">{t('pages.imports.details.loadingDetails')}</p>
-      </div>
-    )
+    return <ImportDetailsPageSkeleton />
   }
 
   if (!importDetail || !jobDetail) {
@@ -159,7 +163,12 @@ export function ImportDetailsPage() {
     )
   }
 
-  const errorColumns: Column<{ id: number; row: number; error: string }>[] = [
+  const errorColumns: Column<{
+    id: number
+    row: number
+    error: string
+    suggested_fix?: string | null
+  }>[] = [
     {
       key: 'row',
       header: t('pages.imports.details.row'),
@@ -169,7 +178,16 @@ export function ImportDetailsPage() {
     {
       key: 'error',
       header: t('pages.imports.details.error'),
-      render: (item) => <span>{item.error}</span>,
+      render: (item) => (
+        <div className="flex flex-col gap-1">
+          <span>{item.error}</span>
+          {item.suggested_fix && (
+            <span className="text-xs text-gray-600 italic">
+              💡 {t('pages.imports.details.suggestedFix')}: {item.suggested_fix}
+            </span>
+          )}
+        </div>
+      ),
     },
   ]
 
@@ -342,20 +360,69 @@ export function ImportDetailsPage() {
               </div>
             </div>
           </div>
-        ) : (
-          importDetail.errorList.length > 0 && (
-            <div className="rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
-              <h2 className="text-dark-500 mb-6 text-xl font-light">
-                {t('pages.imports.details.errorsTitle')}
-              </h2>
+        ) : importDetail.status === 'completed_with_errors' && importDetail.errors > 0 ? (
+          // Show errors panel when completed with errors
+          <div className="rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
+            <h2 className="text-dark-500 mb-6 text-xl font-light">
+              {t('pages.imports.details.errorsTitle')} ({importDetail.errors.toLocaleString()})
+            </h2>
 
-              <DataTable
-                columns={errorColumns}
-                data={importDetail.errorList}
-                emptyMessage={t('pages.imports.details.noErrors')}
+            <DataTable
+              columns={errorColumns}
+              data={importDetail.errorList}
+              emptyMessage={t('pages.imports.details.noErrors')}
+            />
+
+            {/* Pagination Controls */}
+            {errorsData && errorsData.total > errorPageSize && (
+              <Pagination
+                currentPage={errorPage}
+                totalPages={Math.ceil(errorsData.total / errorPageSize)}
+                pageSize={errorPageSize}
+                onPageChange={setErrorPage}
+                onPageSizeChange={(newSize) => {
+                  setErrorPageSize(newSize)
+                  setErrorPage(1) // Reset to first page
+                }}
               />
+            )}
+          </div>
+        ) : importDetail.status === 'done' || importDetail.status === 'completed_with_errors' ? (
+          // Show progress bar at 100% for completed imports (without errors)
+          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
+            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+              {t('pages.imports.details.progress')}
+            </h2>
+
+            {/* Divider */}
+            <div className="h-px w-full bg-gray-200" />
+
+            <div className="flex flex-1 flex-col items-center justify-center gap-6 self-stretch">
+              <SemiCircularProgressBar percentage={100} />
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
+                  {t('pages.imports.details.totalRows')}{' '}
+                  <span className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                    {importDetail.totalRows.toLocaleString()}
+                  </span>
+                </span>
+              </div>
             </div>
-          )
+          </div>
+        ) : (
+          // Fallback: Show progress bar at 100%
+          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
+            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+              {t('pages.imports.details.progress')}
+            </h2>
+
+            {/* Divider */}
+            <div className="h-px w-full bg-gray-200" />
+
+            <div className="flex flex-1 flex-col items-center justify-center gap-6 self-stretch">
+              <SemiCircularProgressBar percentage={100} />
+            </div>
+          </div>
         )}
       </div>
     </div>

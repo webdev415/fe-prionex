@@ -181,6 +181,13 @@ export const Icons = {
   Error: (props: Omit<IconProps, 'icon'>) => <Icon icon={Delete01Icon} {...props} />,
   Warning: (props: Omit<IconProps, 'icon'>) => <Icon icon={Alert02Icon} {...props} />,
 
+  // Loading
+  Spinner: (props?: { className?: string }) => (
+    <div
+      className={`border-primary-500 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent ${props?.className || ''}`}
+    />
+  ),
+
   // Navigation arrows
   ArrowLeft: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowLeft01Icon} {...props} />,
   ArrowRight: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowRight01Icon} {...props} />,

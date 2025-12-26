@@ -377,6 +377,7 @@
       "started": "Начато",
       "status": "Статус",
       "complete": "завершено",
+      "queued": "В очереди",
       "viewDetails": "Просмотр деталей",
       "cancelImport": "Отменить импорт",
       "cancelling": "Отмена...",
@@ -400,9 +401,13 @@
         "placeholders": {
           "enterProjectName": "Введите название проекта",
           "enterProjectCode": "Введите код проекта",
+          "selectProjectCode": "Выберите код проекта",
           "selectPurchaseDate": "Выберите дату покупки",
-          "placeholderText": "Текст-заполнитель"
-        }
+          "placeholderText": "Текст-заполнитель",
+          "enterSellerCreditor": "Введите название продавца/кредитора",
+          "loadingProjects": "Загрузка проектов..."
+        },
+        "noProjectsAvailable": "Нет доступных проектов"
       },
       "step2": {
         "simple": {
@@ -411,15 +416,15 @@
           "invalidCsvStructure": "Неверная структура CSV",
           "invalidFileType": "Неверный тип файла",
           "chooseCsvFile": "Выберите CSV файл",
-          "missingRequiredColumns": "Отсутствуют обязательные столбцы:",
+          "missingRequiredColumns": "Отсутствуют обязательные столбцы",
           "onlyCsvSupported": "В этой версии поддерживаются только файлы .csv.",
           "fileRequirements": "Требования к файлу:",
           "oneCsvOnly": "Только один CSV,",
           "maxRows": "максимум 50,000 строк",
-          "required": "Обязательно:",
-          "requiredColumns": "name, phone, debt_amount",
-          "optional": "Необязательно:",
-          "optionalColumns": "address, inn, contract...",
+          "required": "Обязательно",
+          "requiredColumns": "фирст_наме, ласт_наме, телефон, тин, дебт_амоунт",
+          "optional": "Необязательно",
+          "optionalColumns": "миддле_наме, емайл, овердуе(дни)...",
           "browseFile": "Выбрать файл",
           "downloadSampleTemplate": "Скачать образец шаблона CSV",
           "startImport": "Начать импорт",
@@ -506,6 +511,7 @@
         "errorsTitle": "Ошибки",
         "row": "Строка",
         "error": "Ошибка",
+        "suggestedFix": "Предлагаемое исправление",
         "noErrors": "Нет ошибок",
         "importNotFound": "Импорт не найден",
         "loadingDetails": "Загрузка деталей импорта...",
@@ -588,7 +594,9 @@
         "days": "дней"
       },
       "statuses": {
+        "new": "Новый",
         "active": "Активный",
+        "closed": "Закрытый",
         "inprogress": "В процессе",
         "paid": "Оплачено",
         "defaulted": "Просрочено",

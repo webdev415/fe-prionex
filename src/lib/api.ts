@@ -63,11 +63,15 @@ api.interceptors.request.use(
         accessToken = currentToken
       }
       config.headers.Authorization = `Bearer ${currentToken}`
-      console.log('Request interceptor: Added Authorization header', {
-        url: config.url,
-        hasToken: !!currentToken,
-        tokenLength: currentToken.length,
-      })
+      if (import.meta.env.DEV) {
+        console.log('[API Request]', {
+          method: config.method?.toUpperCase(),
+          url: config.url,
+          baseURL: config.baseURL,
+          fullURL: `${config.baseURL}${config.url}`,
+          hasToken: !!currentToken,
+        })
+      }
     } else {
       console.warn('Request interceptor: No token available', { url: config.url })
     }
