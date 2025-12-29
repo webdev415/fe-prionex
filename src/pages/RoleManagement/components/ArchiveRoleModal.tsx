@@ -110,7 +110,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Delete size={20} color="#05040D" strokeWidth={2} />
+            <Icons.Delete size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
         title={
@@ -274,7 +274,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
             {hasUsers && !canArchive && (
               <Alert variant="error">
                 <div className="flex items-center gap-2">
-                  <Icons.Warning size={16} color="#EF4444" />
+                  <Icons.Warning size={16} className="text-error-500" />
                   <p className="text-error-500 text-sm">
                     {t('pages.roles.modals.archive.cannotArchiveUntilReassigned')}
                   </p>
@@ -299,12 +299,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
         )}
       </ModalContent>
       <ModalFooter>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onClose}
-          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
-        >
+        <Button type="button" variant="cancel" onClick={onClose}>
           {t('actions.cancel')}
         </Button>
         <Button

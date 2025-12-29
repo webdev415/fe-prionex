@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
 import { LogoutConfirmationModal } from '@/components/layout/LogoutConfirmationModal'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { Button } from '@/components/ui/Button'
 
 /**
  * Forbidden (403) page shown when user lacks permissions
@@ -48,7 +49,7 @@ export function ForbiddenPage() {
           <div className="h-[40px] w-full gap-1">
             <div className="text-dark-500 flex h-full w-full items-center gap-4 text-[30px] font-light">
               <div className="bg-error-500 flex h-12 w-12 items-center justify-center rounded-full">
-                <Icons.LockedIcon01 size={24} color="#FFFFFF" strokeWidth={2} />
+                <Icons.LockedIcon01 size={24} className="text-white" strokeWidth={2} />
               </div>
               <span className="text-dark-500 text-[30px] font-medium">Access Denied</span>
               <span className="font-light">(403)</span>
@@ -56,7 +57,7 @@ export function ForbiddenPage() {
           </div>
 
           <div className="flex h-[72px] w-full items-center justify-center gap-1 rounded-[8px] bg-white text-sm font-medium">
-            <Icons.Warning size={24} color="#EF4444" strokeWidth={2} />
+            <Icons.Warning size={24} className="text-error-500" strokeWidth={2} />
             <p className="text-error-500 text-sm font-medium">
               You do not have permission to view this page or perform this action.
             </p>
@@ -70,18 +71,22 @@ export function ForbiddenPage() {
 
           {isAuthenticated && (
             <div className="flex h-[45px] w-full items-center justify-between gap-8">
-              <button
+              <Button
+                variant="cancel"
+                size="xl"
                 onClick={handleLogoutClick}
-                className="h-[45px] w-[224px] rounded-lg bg-gray-500 px-6 py-3 text-sm font-medium text-white transition-colors hover:opacity-90"
+                className="h-[45px] w-[224px]"
               >
                 Logout
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
+                size="xl"
                 onClick={handleGoHome}
-                className="text-dark-500 bg-primary-300 h-[45px] w-[224px] rounded-lg px-6 py-3 text-sm font-medium transition-colors hover:opacity-90"
+                className="h-[45px] w-[224px]"
               >
                 Go to Home
-              </button>
+              </Button>
             </div>
           )}
         </div>

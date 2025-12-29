@@ -1,4 +1,4 @@
-import { type ReactNode, useState, useMemo, useCallback } from 'react'
+import { type ReactNode, useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
@@ -13,6 +13,8 @@ import { LanguageSwitcher } from './LanguageSwitcher'
 import { ProjectSelector } from './ProjectSelector'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
+import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
+import { useNavigate } from 'react-router-dom'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -35,10 +37,19 @@ interface ExtendedSidebarItem extends SidebarItem {
  */
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { t } = useTranslation('common')
+  const navigate = useNavigate()
   const { logout, isImpersonating, impersonatedUser, exitImpersonation } = useAuth()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isExitingImpersonation, setIsExitingImpersonation] = useState(false)
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchType, setSearchType] = useState('phone')
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
+  const searchContainerRef = useRef<HTMLDivElement>(null)
 
   // Automatically refresh permissions every 5 minutes
   usePermissionRefresh()
@@ -75,8 +86,134 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     }
   }
 
-  const handleSearch = (_query: string, _searchType: string) => {
-    // TODO: Implement search functionality
+  const handleSearch = useCallback(
+    async (query: string, type: string) => {
+      // Clear results immediately when query is empty
+      if (!query.trim()) {
+        setSearchQuery('')
+        setSearchResults([])
+        setIsSearching(false)
+        setSearchError(null)
+        return
+      }
+
+      // Only search if query or type actually changed
+      if (query === searchQuery && type === searchType && searchResults.length > 0) {
+        return
+      }
+
+      setSearchQuery(query)
+      setSearchType(type)
+
+      setIsSearching(true)
+      setSearchError(null)
+
+      try {
+        // TODO: Replace with actual API call
+        // const response = await searchApi.searchClients(query, type)
+        // setSearchResults(response.data)
+
+        // Search through mock clients data
+        await new Promise((resolve) => setTimeout(resolve, 300))
+
+        // Import mock clients dynamically to avoid circular dependency
+        const { mockClients } = await import('@/pages/ClientManagement/mockClients')
+
+        const queryLower = query.toLowerCase().trim()
+        const phoneRegex = /[\s\-()]/g
+        const queryNormalized = queryLower.replace(phoneRegex, '')
+
+        const results: SearchResult[] = mockClients
+          .filter((client) => {
+            switch (type) {
+              case 'phone': {
+                // Search by phone number (remove spaces and special chars for comparison)
+                const phoneNormalized = client.phoneNumber.replace(phoneRegex, '').toLowerCase()
+                return phoneNormalized.includes(queryNormalized)
+              }
+              case 'username':
+              case 'email': {
+                // For username/email, search in full name and tax ID (as we don't have email/username fields)
+                return (
+                  client.fullName.toLowerCase().includes(queryLower) ||
+                  client.taxIdNumber.toLowerCase().includes(queryLower)
+                )
+              }
+              default: {
+                // Search in all fields
+                return (
+                  client.fullName.toLowerCase().includes(queryLower) ||
+                  client.phoneNumber
+                    .replace(phoneRegex, '')
+                    .toLowerCase()
+                    .includes(queryNormalized) ||
+                  client.taxIdNumber.toLowerCase().includes(queryLower) ||
+                  client.creditor.toLowerCase().includes(queryLower) ||
+                  client.tags.some((tag: string) => tag.toLowerCase().includes(queryLower))
+                )
+              }
+            }
+          })
+          .slice(0, 10) // Limit to 10 results for dropdown
+          .map((client) => ({
+            id: client.id,
+            name: client.fullName,
+            debt: client.debt,
+            phone: client.phoneNumber,
+            priority: client.priority as 'Critical' | 'High' | 'Medium' | 'Low',
+            score: client.score,
+          }))
+
+        setSearchResults(results)
+      } catch {
+        setSearchError('Could not search clients. Please try again.')
+        setSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    },
+    [searchQuery, searchType, searchResults.length]
+  )
+
+  const handleSearchChange = useCallback(
+    (query: string, type: string) => {
+      handleSearch(query, type)
+    },
+    [handleSearch]
+  )
+
+  // Handle click outside to close search results
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
+        setSearchQuery('')
+        setSearchResults([])
+        setIsSearching(false)
+        setSearchError(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
+  const handleResultClick = (result: SearchResult) => {
+    // Navigate to client detail page or filter by this client
+    navigate(`/dashboard?id=${result.id}`)
+    setSearchQuery('')
+    setSearchResults([])
+  }
+
+  const handleViewAllResults = () => {
+    // Navigate to client management page with search query
+    navigate(`/dashboard?search=${encodeURIComponent(searchQuery)}&type=${searchType}`)
+    setSearchQuery('')
+    setSearchResults([])
   }
 
   // Search type options
@@ -96,26 +233,32 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       { path: '/dashboard', icon: 'home-04', label: t('navigation.dashboard') },
       { path: '/dashboard', icon: 'activity-01', label: t('navigation.activity'), disabled: true }, // Route doesn't exist
       {
-        path: '/dashboard/importclients',
+        path: '/dashboard/import',
         icon: 'file-import',
         label: t('navigation.importClients'),
         requiredPermission: PERMISSIONS.DATA.IMPORT_DATA,
       },
       {
         path: '/dashboard/projects',
-        icon: 'chart-ring',
+        icon: 'brochure',
         label: t('navigation.projects'),
         requiredPermission: PERMISSIONS.PROJECTS.MANAGE,
       },
       {
+        path: '/dashboard/reports',
+        icon: 'chart-ring',
+        label: t('navigation.reports'),
+        requiredPermission: PERMISSIONS.REPORTS.VIEW_ALL_REPORTS,
+      },
+      {
         path: '/dashboard/users',
-        icon: 'community',
+        icon: 'user-search-01',
         label: t('navigation.users'),
         requiredPermission: PERMISSIONS.USERS.VIEW,
       },
       {
         path: '/dashboard/roles',
-        icon: 'user-status',
+        icon: 'user-circle-02',
         label: t('navigation.roles'),
         requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
       },
@@ -125,6 +268,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         label: t('navigation.transactions'),
         disabled: true,
       }, // Route doesn't exist
+      {
+        path: '/dashboard/sms-templates',
+        icon: 'mail',
+        label: t('navigation.smsTemplates'),
+      },
     ]
 
     return allNavItems.filter((item) => {
@@ -176,13 +324,31 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="ml-16">
         {/* Fixed Header */}
         <header className="bg-light-50 fixed top-0 right-0 left-16 z-20 flex h-[60px] items-center justify-between border-l border-white/10 px-6 shadow-sm">
-          {/* Search Bar */}
-          <SearchBar
-            placeholder={t('search.placeholder')}
-            searchOptions={searchOptions}
-            defaultSearchType="phone"
-            onSearch={handleSearch}
-          />
+          {/* Search Bar with Results */}
+          <div className="relative" ref={searchContainerRef}>
+            <SearchBar
+              placeholder={t('search.placeholder')}
+              searchOptions={searchOptions}
+              defaultSearchType="phone"
+              onSearch={handleSearch}
+              onSearchChange={handleSearchChange}
+              isLoading={isSearching}
+            />
+            {(isSearching ||
+              searchResults.length > 0 ||
+              searchError ||
+              (searchQuery.trim() && !isSearching)) && (
+              <SearchResults
+                query={searchQuery}
+                searchType={searchType}
+                results={searchResults}
+                isLoading={isSearching}
+                error={searchError}
+                onViewAll={handleViewAllResults}
+                onResultClick={handleResultClick}
+              />
+            )}
+          </div>
 
           {/* Right side: Project Selector, Language Switcher and User Profile */}
           <div className="flex items-center gap-3">

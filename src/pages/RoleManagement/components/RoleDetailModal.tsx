@@ -33,7 +33,7 @@ export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps)
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.View size={20} color="#05040D" strokeWidth={2} />
+            <Icons.View size={20} className="text-white" strokeWidth={2} />
           </div>
         }
         title={t('pages.roles.modals.view.title')}
@@ -52,9 +52,9 @@ export function RoleDetailModal({ open, roleId, onClose }: RoleDetailModalProps)
       <ModalFooter>
         <Button
           type="button"
-          variant="secondary"
+          variant="cancel"
           onClick={onClose}
-          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
+          className="h-[45px] flex-1 text-sm"
         >
           {t('actions.close')}
         </Button>

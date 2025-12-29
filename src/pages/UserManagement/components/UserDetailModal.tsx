@@ -28,7 +28,7 @@ export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps)
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.View size={20} color="#05040D" strokeWidth={2} />
+            <Icons.View size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
         title={t('pages.users.modals.view.title')}
@@ -47,9 +47,9 @@ export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps)
       <ModalFooter>
         <Button
           type="button"
-          variant="secondary"
+          variant="cancel"
           onClick={onClose}
-          className="h-[45px] flex-1 rounded-lg border-none bg-gray-500 text-sm font-medium text-white"
+          className="h-[45px] flex-1 text-sm"
         >
           {t('actions.close')}
         </Button>

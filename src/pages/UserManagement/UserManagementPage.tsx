@@ -25,6 +25,8 @@ import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { ErrorState } from '@/components/ErrorState'
+import { LinkButton } from '@/components/ui/LinkButton'
+import { DoubleButton } from '@/components/ui/DoubleButton'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -171,36 +173,38 @@ export function UserManagementPage() {
       align: 'center',
       render: (user) => (
         <div className="flex items-center justify-center gap-4">
-          <button
+          <LinkButton
+            variant="regular-black"
+            size="xs"
             onClick={() => handleView(user)}
-            className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+            leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
           >
-            <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
             {t('pages.users.actions.view')}
-          </button>
-
+          </LinkButton>
           <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
-            <button
+            <LinkButton
+              variant="regular-black"
+              size="xs"
               onClick={() => handleEdit(user)}
-              className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+              leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
             >
-              <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
               {t('pages.users.actions.edit')}
-            </button>
+            </LinkButton>
           </PermissionGuard>
 
           <PermissionGuard permission={PERMISSIONS.USERS.IMPERSONATE}>
             {currentUser?.id !== String(user.id) && (
-              <button
+              <LinkButton
+                variant="regular-black"
+                size="xs"
                 onClick={() => handleImpersonate(user)}
                 disabled={authLoading || impersonatingUserId !== null}
-                className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+                leftIcon={<Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />}
               >
-                <Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />
                 {impersonatingUserId === user.id
                   ? t('pages.users.actions.impersonating')
                   : t('pages.users.actions.impersonate')}
-              </button>
+              </LinkButton>
             )}
           </PermissionGuard>
           <div className="flex items-center gap-2">
@@ -228,18 +232,14 @@ export function UserManagementPage() {
         </div>
 
         <PermissionGuard permission={PERMISSIONS.USERS.CREATE}>
-          <button
+          <DoubleButton
+            size="md"
+            icon={<Icons.Add size={20} strokeWidth={2} />}
+            iconPosition="left"
             onClick={() => setShowCreateModal(true)}
-            className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-            aria-label={t('pages.users.addNewUser')}
           >
-            <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-              <Icons.Add size={20} color={'#05040D'} strokeWidth={2} />
-            </div>
-            <span className="px-4 py-3 text-sm font-medium text-white">
-              {t('pages.users.addNewUser')}
-            </span>
-          </button>
+            {t('pages.users.addNewUser')}
+          </DoubleButton>
         </PermissionGuard>
       </div>
 

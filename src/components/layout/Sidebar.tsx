@@ -43,18 +43,20 @@ export interface SidebarProps {
  */
 const iconMap: Record<
   string,
-  (props: { size: number; color: string; strokeWidth: number }) => React.ReactElement
+  (props: { size: number; className: string; strokeWidth: number }) => React.ReactElement
 > = {
   'home-04': (props) => <Icons.Home04 {...props} />,
   'activity-01': (props) => <Icons.Activity01 {...props} />,
   'file-import': (props) => <Icons.FileImport {...props} />,
+  brochure: (props) => <Icons.Brochure {...props} />,
   'chart-ring': (props) => <Icons.ChartRing {...props} />,
   'analytics-01': (props) => <Icons.Analytics01 {...props} />,
-  community: (props) => <Icons.Community {...props} />,
-  'user-status': (props) => <Icons.UserStatus {...props} />,
+  'user-search-01': (props) => <Icons.UserSearch01 {...props} />,
+  'user-circle-02': (props) => <Icons.UserCircle02Icon {...props} />,
   'transaction-history': (props) => <Icons.TransactionHistory {...props} />,
   'setting-07': (props) => <Icons.Setting07 {...props} />,
   'logout-square-01': (props) => <Icons.LogoutSquare01 {...props} />,
+  mail: (props) => <Icons.Mail {...props} />,
 }
 
 /**
@@ -90,7 +92,7 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
               className="focus:ring-primary-500 mb-4 rounded-md p-1 transition-all duration-200 hover:scale-110 focus:ring-2 focus:ring-offset-2 focus:outline-none"
               aria-label="Menu"
             >
-              <Icons.Menu11 size={22} color="#374151" strokeWidth={1.5} />
+              <Icons.Menu11 size={22} className="text-gray-700" strokeWidth={1.5} />
             </button>
           </TooltipTrigger>
           <TooltipContent side="right">
@@ -120,7 +122,7 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
                   className="mx-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-md opacity-50"
                   aria-label={item.label}
                 >
-                  <IconComponent size={20} color="#9CA3AF" strokeWidth={1.5} />
+                  <IconComponent size={20} className="text-gray-400" strokeWidth={1.5} />
                 </div>
               )
             }
@@ -141,7 +143,7 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
                   >
                     <IconComponent
                       size={20}
-                      color={isActive ? '#BBFB5B' : '#7B7B7B'}
+                      className={isActive ? 'text-primary-300' : 'text-gray-700'}
                       strokeWidth={1.5}
                     />
                   </NavLink>
@@ -173,7 +175,7 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
                       className="focus:ring-primary-500 flex items-center justify-center rounded-md p-1 transition-all duration-200 hover:scale-110 focus:ring-2 focus:ring-offset-2 focus:outline-none"
                       aria-label={action.label}
                     >
-                      <ActionIcon size={20} color="#374151" strokeWidth={1.5} />
+                      <ActionIcon size={20} className="text-gray-700" strokeWidth={1.5} />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="right">

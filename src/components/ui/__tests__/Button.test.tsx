@@ -18,13 +18,13 @@ describe('Button', () => {
   it('renders with secondary variant', () => {
     render(<Button variant="secondary">Secondary</Button>)
     const button = screen.getByRole('button')
-    expect(button).toHaveClass('bg-gray-700')
+    expect(button).toHaveClass('bg-secondary-800')
   })
 
   it('renders with outline variant', () => {
     render(<Button variant="outline">Outline</Button>)
     const button = screen.getByRole('button')
-    expect(button).toHaveClass('border-primary-500')
+    expect(button).toHaveClass('border-gray-600')
   })
 
   it('renders with ghost variant', () => {
@@ -100,7 +100,7 @@ describe('Button', () => {
     const button = screen.getByRole('button')
     // Official: PRIMARY (Green #80D80A)
     expect(button).toHaveClass('bg-primary-300')
-    expect(button).toHaveClass('hover:bg-primary-400')
+    expect(button).toHaveClass('hover:bg-primary-500')
   })
 
   it('should NOT have inline style attribute (Tailwind classes only)', () => {

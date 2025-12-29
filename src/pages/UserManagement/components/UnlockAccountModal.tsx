@@ -133,19 +133,19 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
             </p>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Icons.ArrowRight size={14} color="#05040D" strokeWidth={1.5} />
+                <Icons.ArrowRight size={14} className="text-dark-500" strokeWidth={1.5} />
                 <span className="text-dark-500 text-base font-light">
                   {t('pages.users.modals.unlock.restoreAccess')}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Icons.ArrowRight size={14} color="#05040D" strokeWidth={1.5} />
+                <Icons.ArrowRight size={14} className="text-dark-500" strokeWidth={1.5} />
                 <span className="text-dark-500 text-base font-light">
                   {t('pages.users.modals.unlock.resetCounter')}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Icons.ArrowRight size={14} color="#05040D" strokeWidth={1.5} />
+                <Icons.ArrowRight size={14} className="text-dark-500" strokeWidth={1.5} />
                 <span className="text-dark-500 text-base font-light">
                   {t('pages.users.modals.unlock.recordAudit')}
                 </span>
@@ -165,10 +165,10 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
       <ModalFooter>
         <Button
           type="button"
-          variant="secondary"
+          variant="cancel"
           onClick={onClose}
           disabled={isPending}
-          className="h-[45px] flex-1 rounded-lg border-none bg-gray-500 text-sm font-medium text-white"
+          className="h-[45px] flex-1 text-sm"
         >
           {t('actions.cancel')}
         </Button>
@@ -176,7 +176,7 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
           type="button"
           onClick={handleUnlock}
           disabled={isPending}
-          className="text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-lg border-none text-sm font-medium"
+          className="h-[45px] flex-1 text-sm"
         >
           {isPending
             ? t('pages.users.modals.unlock.unlocking')

@@ -36,7 +36,7 @@ const SelectTrigger = React.forwardRef<
   >
     {children}
     <div className="opacity-50">
-      <Icons.ArrowDown size={16} color="currentColor" />
+      <Icons.ArrowDown size={16} className="text-current" />
     </div>
   </SelectPrimitive.Trigger>
 ))

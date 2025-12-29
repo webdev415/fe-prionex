@@ -65,7 +65,7 @@ export function LanguageSwitcher({ variant = 'auth' }: LanguageSwitcherProps) {
           >
             <span>{LANGUAGE_NAMES[lang]}</span>
             {currentLanguage === lang && (
-              <Icons.Checkmark size={16} color="#0369A1" strokeWidth={2} className="ml-auto" />
+              <Icons.Checkmark size={16} className="text-information-700 ml-auto" strokeWidth={2} />
             )}
           </DropdownMenuItem>
         ))}

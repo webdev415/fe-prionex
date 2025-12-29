@@ -1,8 +1,7 @@
-/* eslint-disable react-refresh/only-export-components */
 import { createBrowserRouter, Navigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import LoginPage from '@/pages/auth/LoginPage'
 import { UserManagementPage } from '@/pages/UserManagement'
+import { ImportClientsPage } from '@/pages/ImportClients/ImportClientsPage'
 import { ProjectManagementPage } from '@/pages/ProjectManagement/ProjectManagementPage'
 import { RoleManagementPage } from '@/pages/RoleManagement/RoleManagementPage'
 import { ForbiddenPage } from '@/pages/errors'
@@ -11,19 +10,17 @@ import { PermissionRoute } from './PermissionRoute'
 import { GuestRoute } from './GuestRoute'
 import { DashboardLayout } from '@/components/layout'
 import { PERMISSIONS } from '@/constants/permissions'
-
-function DashboardContent() {
-  const { t } = useTranslation('common')
-
-  return (
-    <div>
-      <h1 className="mb-4 text-2xl font-bold text-gray-900">{t('navigation.dashboard')}</h1>
-      <div className="rounded-lg bg-white p-6 shadow">
-        <p className="text-gray-600">{t('app.description')}</p>
-      </div>
-    </div>
-  )
-}
+import { ImportHistoryPage } from '@/pages/ImportClients/ImportHistoryPage'
+import { ImportDetailsPage } from '@/pages/ImportClients/ImportDetailsPage'
+import {
+  ClientManagementPage,
+  ClientDetailPage,
+  ActivityTimelinePage,
+  DebtSummaryPage,
+  PaymentHistoryPage,
+} from '@/pages/ClientManagement'
+import { SmsTemplatesPage } from '@/pages/SmsTemplates'
+import { ReportsDashboardPage } from '@/pages/ReportsDashboard'
 
 export const router = createBrowserRouter([
   {
@@ -47,7 +44,37 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <DashboardLayout>
-          <DashboardContent />
+          <ClientManagementPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/:id',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ClientDetailPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/:id/debt-summary',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <DebtSummaryPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/:id/activity',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ActivityTimelinePage />
         </DashboardLayout>
       </ProtectedRoute>
     ),
@@ -61,6 +88,36 @@ export const router = createBrowserRouter([
             <UserManagementPage />
           </DashboardLayout>
         </PermissionRoute>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/import',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ImportClientsPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/import/history/:id',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ImportDetailsPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/import/history',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ImportHistoryPage />
+        </DashboardLayout>
       </ProtectedRoute>
     ),
   },
@@ -85,6 +142,38 @@ export const router = createBrowserRouter([
             <RoleManagementPage />
           </DashboardLayout>
         </PermissionRoute>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/sms-templates',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <SmsTemplatesPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/reports',
+    element: (
+      <ProtectedRoute>
+        <PermissionRoute requiredPermission={PERMISSIONS.REPORTS.VIEW_ALL_REPORTS}>
+          <DashboardLayout>
+            <ReportsDashboardPage />
+          </DashboardLayout>
+        </PermissionRoute>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/:id/payment-history',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <PaymentHistoryPage />
+        </DashboardLayout>
       </ProtectedRoute>
     ),
   },

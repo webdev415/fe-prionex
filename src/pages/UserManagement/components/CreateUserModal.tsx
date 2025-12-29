@@ -36,7 +36,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Add size={20} color="#05040D" strokeWidth={2} />
+            <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
         title={t('pages.users.modals.create.title')}
@@ -52,9 +52,9 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
       <ModalFooter>
         <Button
           type="button"
-          variant="secondary"
+          variant="cancel"
           onClick={onClose}
-          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
+          className="h-[45px] flex-1 text-sm"
         >
           {t('actions.cancel')}
         </Button>
@@ -63,7 +63,7 @@ export function CreateUserModal({ open, onClose, onSuccess }: CreateUserModalPro
           form="create-user-form"
           variant="primary"
           disabled={isLoading}
-          className="text-dark-500 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
+          className="h-[45px] flex-1 text-sm"
         >
           {t('actions.create')}
         </Button>

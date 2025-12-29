@@ -84,7 +84,7 @@ export function ProjectSwitcher({ user, onSwitchProject, isLoading }: ProjectSwi
           </span>
         </SelectPrimitive.Value>
         <SelectPrimitive.Icon className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-          <Icons.ArrowDown size={20} color="#9CA3AF" strokeWidth={1.5} />
+          <Icons.ArrowDown size={20} className="text-gray-400" strokeWidth={1.5} />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
 
@@ -130,7 +130,7 @@ export function ProjectSwitcher({ user, onSwitchProject, isLoading }: ProjectSwi
                   </SelectPrimitive.ItemText>
                   {isCurrent && (
                     <SelectPrimitive.ItemIndicator className="absolute left-0 flex w-[25px] items-center justify-center">
-                      <Icons.Checkmark size={20} color="#0369A1" strokeWidth={2} />
+                      <Icons.Checkmark size={20} className="text-information-700" strokeWidth={2} />
                     </SelectPrimitive.ItemIndicator>
                   )}
                 </SelectPrimitive.Item>

@@ -1,0 +1,432 @@
+/**
+ * ImportDetailsPage Component
+ *
+ * Page for viewing detailed information about a specific import.
+ * Shows import summary and error details.
+ */
+
+import { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/Button'
+import { DataTable, type Column } from '@/components/ui/DataTable'
+import { Pagination } from '@/components/ui/Pagination'
+import { Icons } from '@/lib/icons'
+import { SemiCircularProgress } from './components'
+import { useImportJob, useImportJobErrors, useExportImportErrors } from '@/features/imports'
+import { ImportDetailsPageSkeleton } from './components/ImportDetailsPageSkeleton'
+
+// Status Badge Component
+function ImportDetailStatusBadge({
+  status,
+}: {
+  status: 'done' | 'failed' | 'completed_with_errors' | 'in_progress'
+}) {
+  const { t } = useTranslation('common')
+
+  if (status === 'done') {
+    return (
+      <span className="bg-secondary-800 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
+        <span className="h-2 w-2 rounded-full bg-white" />
+        {t('pages.imports.details.statuses.completed')}
+      </span>
+    )
+  }
+
+  if (status === 'completed_with_errors') {
+    return (
+      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-gray-600 px-3 text-xs font-medium text-white">
+        <Icons.Warning size={14} className="text-white" />
+        {t('pages.imports.details.statuses.completedWithErrors')}
+      </span>
+    )
+  }
+
+  if (status === 'in_progress') {
+    return (
+      <span className="bg-secondary-800 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
+        <span className="h-2 w-2 rounded-full bg-white" />
+        {t('pages.imports.details.statuses.inProgress')}
+      </span>
+    )
+  }
+
+  return (
+    <span className="bg-error-600 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
+      <span className="h-2 w-2 rounded-full bg-white" />
+      {t('pages.imports.details.statuses.failed')}
+    </span>
+  )
+}
+
+// Semi-circular Progress Bar Component
+function SemiCircularProgressBar({ percentage }: { percentage: number }) {
+  return (
+    <div className="relative flex flex-col items-center justify-center">
+      {/* Semi-circular progress bar */}
+      <div className="relative mb-4">
+        <SemiCircularProgress percentage={percentage} size={300} />
+      </div>
+    </div>
+  )
+}
+
+export function ImportDetailsPage() {
+  const { t } = useTranslation('common')
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+
+  // Pagination state for errors
+  const [errorPage, setErrorPage] = useState(1)
+  const [errorPageSize, setErrorPageSize] = useState(50)
+
+  // Fetch import job detail from API
+  const { data: jobDetail, isLoading: isLoadingJob } = useImportJob(id, {
+    refetchInterval: (query) => {
+      // Poll every 5 seconds if job is in progress
+      const data = query.state.data
+      return data?.status === 'in_progress' ? 5000 : false
+    },
+  })
+
+  // Fetch import errors with pagination
+  const { data: errorsData } = useImportJobErrors(id, {
+    page: errorPage,
+    page_size: errorPageSize,
+  })
+
+  // Export errors mutation
+  const exportErrorsMutation = useExportImportErrors()
+
+  // Convert API data to component format
+  const importDetail = jobDetail
+    ? {
+        id: jobDetail.id,
+        file: jobDetail.file_name,
+        uploadedBy: jobDetail.uploaded_by,
+        uploadedAt: new Date(jobDetail.uploaded_at).toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        status:
+          jobDetail.status === 'completed'
+            ? jobDetail.errors_count > 0
+              ? ('completed_with_errors' as
+                  | 'done'
+                  | 'failed'
+                  | 'completed_with_errors'
+                  | 'in_progress')
+              : ('done' as 'done' | 'failed' | 'completed_with_errors' | 'in_progress')
+            : jobDetail.status === 'failed'
+              ? ('failed' as 'done' | 'failed' | 'completed_with_errors' | 'in_progress')
+              : jobDetail.status === 'in_progress'
+                ? ('in_progress' as 'done' | 'failed' | 'completed_with_errors' | 'in_progress')
+                : ('done' as 'done' | 'failed' | 'completed_with_errors' | 'in_progress'),
+        totalRows: jobDetail.total_rows,
+        newClients: jobDetail.new_clients,
+        updatedClients: jobDetail.updated_clients,
+        errors: jobDetail.errors_count,
+        processingTime: jobDetail.processing_time,
+        errorList: (errorsData?.items || []).map((err) => ({
+          id: err.id,
+          row: err.row,
+          error: err.error,
+          suggested_fix: err.suggested_fix,
+        })),
+        progressPercentage: jobDetail.progress_percentage || 0,
+        processingRow: jobDetail.processing_row || 0,
+      }
+    : null
+
+  const handleDownloadErrors = () => {
+    if (id) {
+      exportErrorsMutation.mutate(id)
+    }
+  }
+
+  if (isLoadingJob) {
+    return <ImportDetailsPageSkeleton />
+  }
+
+  if (!importDetail || !jobDetail) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <p className="text-gray-600">{t('pages.imports.details.importNotFound')}</p>
+        <Button
+          variant="outline"
+          onClick={() => navigate('/dashboard/import/history')}
+          className="mt-4"
+        >
+          {t('pages.imports.details.backToHistory')}
+        </Button>
+      </div>
+    )
+  }
+
+  const errorColumns: Column<{
+    id: number
+    row: number
+    error: string
+    suggested_fix?: string | null
+  }>[] = [
+    {
+      key: 'row',
+      header: t('pages.imports.details.row'),
+      align: 'center',
+      render: (item) => <span>{item.row}</span>,
+    },
+    {
+      key: 'error',
+      header: t('pages.imports.details.error'),
+      render: (item) => (
+        <div className="flex flex-col gap-1">
+          <span>{item.error}</span>
+          {item.suggested_fix && (
+            <span className="text-xs text-gray-600 italic">
+              💡 {t('pages.imports.details.suggestedFix')}: {item.suggested_fix}
+            </span>
+          )}
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <div>
+      {/* Page Header */}
+      <div className="mb-8 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="white-secondary"
+            onClick={() => navigate('/dashboard/import/history')}
+            leftIcon={<Icons.ArrowLeft02 size={20} />}
+            className="flex h-12 flex-row items-center justify-center rounded-full text-sm leading-[150%] font-medium"
+          >
+            {t('pages.imports.details.backToHistory')}
+          </Button>
+          <h1 className="text-dark-500 text-2xl font-light">{t('pages.imports.details.title')}</h1>
+        </div>
+
+        <Button
+          variant="primary"
+          onClick={handleDownloadErrors}
+          disabled={exportErrorsMutation.isPending || importDetail.errors === 0}
+          leftIcon={<Icons.FileDownload size={20} className="text-dark-500" />}
+          className="h-12 rounded-full text-sm font-medium"
+        >
+          {exportErrorsMutation.isPending
+            ? t('pages.imports.details.exporting')
+            : t('pages.imports.details.downloadErrorCsv')}
+        </Button>
+      </div>
+
+      {/* Content Cards */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Last Import Summary Card */}
+        <div className="flex flex-1 flex-col gap-3 rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
+          <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+            {t('pages.imports.details.lastImportSummary')}
+          </h2>
+
+          {/* Divider */}
+          <div className="mb-4 h-px w-full bg-gray-200" />
+
+          <div className="flex flex-col items-start gap-3 self-stretch">
+            <div className="flex items-center gap-6 self-stretch">
+              <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+                {t('pages.imports.details.file')}{' '}
+              </span>
+              <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                {importDetail.file}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-6 self-stretch">
+              <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+                {t('pages.imports.details.uploadedBy')}{' '}
+              </span>
+              <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                {importDetail.uploadedBy} at {importDetail.uploadedAt}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-6 self-stretch">
+              <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+                {t('pages.imports.details.status')}{' '}
+              </span>
+              <div className="flex flex-1">
+                <ImportDetailStatusBadge status={importDetail.status} />
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="my-4 h-px w-full bg-gray-200" />
+
+          {/* Summary Statistics - Grid Layout */}
+          {importDetail.status !== 'failed' && (
+            <>
+              <div className="flex flex-col items-start gap-3 self-stretch">
+                <div className="flex items-center gap-6 self-stretch">
+                  <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+                    {t('pages.imports.details.totalRows')}
+                  </span>
+                  <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                    {importDetail.totalRows.toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-6 self-stretch">
+                  <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+                    {t('pages.imports.details.newClients')}
+                  </span>
+                  <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                    {importDetail.newClients.toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-6 self-stretch">
+                  <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+                    {t('pages.imports.details.updatedClients')}
+                  </span>
+                  <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                    {importDetail.updatedClients.toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-6 self-stretch">
+                  <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+                    {t('pages.imports.details.errors')}
+                  </span>
+                  <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                    {importDetail.errors}
+                  </span>
+                </div>
+              </div>
+
+              {/* Processing time - separate from grid */}
+              <div className="flex items-center gap-6 self-stretch">
+                <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+                  {t('pages.imports.details.processingTime')}
+                </span>
+                <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                  {importDetail.processingTime}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Errors Card or Progress Card */}
+        {importDetail.status === 'failed' ? (
+          <div className="flex min-h-[448px] flex-1 flex-col items-center gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
+            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+              {t('pages.imports.details.progress')}
+            </h2>
+
+            {/* Divider */}
+            <div className="h-px w-full bg-gray-200" />
+
+            <div className="flex flex-1 flex-col items-center justify-center gap-8 self-stretch">
+              <Icons.SettingsError02 size={48} className="text-error-500" strokeWidth={1} />
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-error-500 text-2xl leading-[150%] font-light tracking-[-0.28px]">
+                  {t('pages.imports.details.systemError')}
+                </span>
+                <span className="text-error-500 text-2xl leading-[150%] font-light tracking-[-0.28px]">
+                  {t('pages.imports.details.noRowsImported')}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : importDetail.status === 'in_progress' ? (
+          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
+            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+              {t('pages.imports.details.progress')}
+            </h2>
+
+            {/* Divider */}
+            <div className="h-px w-full bg-gray-200" />
+
+            <div className="flex flex-1 flex-col items-center justify-center gap-6 self-stretch">
+              <SemiCircularProgressBar percentage={importDetail.progressPercentage} />
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
+                  {t('pages.imports.details.processingRow')}{' '}
+                  <span className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                    {importDetail.processingRow}
+                  </span>
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : importDetail.status === 'completed_with_errors' && importDetail.errors > 0 ? (
+          // Show errors panel when completed with errors
+          <div className="rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
+            <h2 className="text-dark-500 mb-6 text-xl font-light">
+              {t('pages.imports.details.errorsTitle')} ({importDetail.errors.toLocaleString()})
+            </h2>
+
+            <DataTable
+              columns={errorColumns}
+              data={importDetail.errorList}
+              emptyMessage={t('pages.imports.details.noErrors')}
+            />
+
+            {/* Pagination Controls */}
+            {errorsData && errorsData.total > errorPageSize && (
+              <Pagination
+                currentPage={errorPage}
+                totalPages={Math.ceil(errorsData.total / errorPageSize)}
+                pageSize={errorPageSize}
+                onPageChange={setErrorPage}
+                onPageSizeChange={(newSize) => {
+                  setErrorPageSize(newSize)
+                  setErrorPage(1) // Reset to first page
+                }}
+              />
+            )}
+          </div>
+        ) : importDetail.status === 'done' || importDetail.status === 'completed_with_errors' ? (
+          // Show progress bar at 100% for completed imports (without errors)
+          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
+            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+              {t('pages.imports.details.progress')}
+            </h2>
+
+            {/* Divider */}
+            <div className="h-px w-full bg-gray-200" />
+
+            <div className="flex flex-1 flex-col items-center justify-center gap-6 self-stretch">
+              <SemiCircularProgressBar percentage={100} />
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
+                  {t('pages.imports.details.totalRows')}{' '}
+                  <span className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                    {importDetail.totalRows.toLocaleString()}
+                  </span>
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Fallback: Show progress bar at 100%
+          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
+            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+              {t('pages.imports.details.progress')}
+            </h2>
+
+            {/* Divider */}
+            <div className="h-px w-full bg-gray-200" />
+
+            <div className="flex flex-1 flex-col items-center justify-center gap-6 self-stretch">
+              <SemiCircularProgressBar percentage={100} />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default ImportDetailsPage

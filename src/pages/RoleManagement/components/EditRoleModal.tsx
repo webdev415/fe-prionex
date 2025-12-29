@@ -40,7 +40,7 @@ export function EditRoleModal({ open, roleId, onClose, onSuccess }: EditRoleModa
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.PencilEdit size={20} color="#05040D" strokeWidth={2} />
+            <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
         title={t('pages.roles.modals.edit.title')}
@@ -64,9 +64,9 @@ export function EditRoleModal({ open, roleId, onClose, onSuccess }: EditRoleModa
       <ModalFooter>
         <Button
           type="button"
-          variant="secondary"
+          variant="cancel"
           onClick={onClose}
-          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
+          className="h-[45px] flex-1 text-sm"
         >
           {t('actions.cancel')}
         </Button>
@@ -75,7 +75,7 @@ export function EditRoleModal({ open, roleId, onClose, onSuccess }: EditRoleModa
           form="edit-role-form"
           variant="primary"
           disabled={isLoading}
-          className="text-dark-500 bg-primary-300 h-[45px] flex-1 rounded-md border-none text-sm font-medium"
+          className="h-[45px] flex-1 text-sm"
         >
           {t('actions.save')}
         </Button>
