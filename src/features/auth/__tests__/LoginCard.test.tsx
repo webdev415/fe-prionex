@@ -15,7 +15,7 @@ describe('LoginCard', () => {
 
     expect(screen.getByRole('heading')).toBeInTheDocument()
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^password:/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
   })
 
@@ -35,7 +35,7 @@ describe('LoginCard', () => {
     render(<LoginCard onSubmit={mockOnSubmit} />)
 
     await user.type(screen.getByLabelText(/username/i), 'ab')
-    await user.type(screen.getByLabelText(/password/i), 'password123')
+    await user.type(screen.getByLabelText(/^password:/i), 'password123')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
     await waitFor(() => {
@@ -48,7 +48,7 @@ describe('LoginCard', () => {
     render(<LoginCard onSubmit={mockOnSubmit} />)
 
     await user.type(screen.getByLabelText(/username/i), 'testuser')
-    await user.type(screen.getByLabelText(/password/i), 'short')
+    await user.type(screen.getByLabelText(/^password:/i), 'short')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
     await waitFor(() => {
@@ -62,7 +62,7 @@ describe('LoginCard', () => {
     render(<LoginCard onSubmit={mockOnSubmit} />)
 
     await user.type(screen.getByLabelText(/username/i), 'testuser')
-    await user.type(screen.getByLabelText(/password/i), 'password123')
+    await user.type(screen.getByLabelText(/^password:/i), 'password123')
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
     await waitFor(() => {
@@ -83,7 +83,7 @@ describe('LoginCard', () => {
     render(<LoginCard onSubmit={mockOnSubmit} isLoading />)
 
     expect(screen.getByLabelText(/username/i)).toBeDisabled()
-    expect(screen.getByLabelText(/password/i)).toBeDisabled()
+    expect(screen.getByLabelText(/^password:/i)).toBeDisabled()
     expect(screen.getByRole('button', { name: /loading/i })).toBeDisabled()
   })
 })

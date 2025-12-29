@@ -4,7 +4,7 @@
  * Full page view for displaying all client activities with filters.
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
@@ -18,6 +18,7 @@ import { CallDialogModal, type CallType, type CallStatus } from './components/Ca
 import { mockClientsDetail } from './mockClientDetails'
 import { cn } from '@/lib/utils'
 import { DoubleButton } from '@/components/ui/DoubleButton'
+import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
 
 type CommunicationType = 'calls' | 'sms' | 'notes' | 'all'
 
@@ -35,6 +36,15 @@ export function ActivityTimelinePage() {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Simulate loading state
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [id])
 
   const formatCurrencyWithDecimals = (amount: number) => {
     return new Intl.NumberFormat('uk-UA', {
@@ -148,6 +158,11 @@ export function ActivityTimelinePage() {
       default:
         return 'bg-gray-500'
     }
+  }
+
+  // Show loading skeleton
+  if (isLoading) {
+    return <ActivityTimelinePageSkeleton />
   }
 
   return (

@@ -5,9 +5,15 @@
  * Uses mock data matching the Report Service API specification.
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, startTransition } from 'react'
 import { useTranslation } from 'react-i18next'
-import { KPICard, PeriodTabs, AgentPerformanceTable, PaymentsCollectedModal } from './components'
+import {
+  KPICard,
+  PeriodTabs,
+  AgentPerformanceTable,
+  PaymentsCollectedModal,
+  ReportsDashboardPageSkeleton,
+} from './components'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import {
@@ -24,6 +30,18 @@ export function ReportsDashboardPage() {
   const { t } = useTranslation('common')
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('today')
   const [showPaymentsModal, setShowPaymentsModal] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Simulate loading state
+  useEffect(() => {
+    startTransition(() => {
+      setIsLoading(true)
+    })
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [selectedPeriod])
 
   // Get mock dashboard data (matches API structure)
   const dashboardData = useMemo(() => getMockDashboard(selectedPeriod), [selectedPeriod])
@@ -60,6 +78,11 @@ export function ReportsDashboardPage() {
       payments: op.summary.payments_collected || 0,
     }))
   }, [operatorPerformanceData])
+
+  // Show loading skeleton
+  if (isLoading) {
+    return <ReportsDashboardPageSkeleton />
+  }
 
   return (
     <div className="flex flex-1 flex-col items-start gap-5 self-stretch">

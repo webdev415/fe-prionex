@@ -18,6 +18,7 @@ import {
   EditTemplateModal,
   ViewTemplateModal,
   DeleteTemplateModal,
+  SmsTemplatesPageSkeleton,
 } from './components'
 
 // Maximum length for message text excerpt in table
@@ -36,7 +37,16 @@ export function SmsTemplatesPage() {
   const [viewTemplateId, setViewTemplateId] = useState<number | null>(null)
   const [editTemplateId, setEditTemplateId] = useState<number | null>(null)
   const [deleteTemplateId, setDeleteTemplateId] = useState<number | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const prevSearchQueryRef = useRef(searchQuery)
+
+  // Simulate loading state on mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Reset to page 1 when search query changes
   useEffect(() => {
@@ -213,6 +223,11 @@ export function SmsTemplatesPage() {
       ),
     },
   ]
+
+  // Show loading skeleton
+  if (isLoading) {
+    return <SmsTemplatesPageSkeleton />
+  }
 
   return (
     <div className="flex w-full flex-col items-start gap-5 pt-1 pr-7 pb-6 pl-7">

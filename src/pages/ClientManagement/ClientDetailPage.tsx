@@ -18,6 +18,7 @@ import { CallLogCard } from './components/CallLogCard'
 import { cn } from '@/lib/utils'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { LinkButton } from '@/components/ui/LinkButton'
+import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
 
 // Helper function to create mock client detail
 const createMockClientDetail = (
@@ -926,14 +927,9 @@ export function ClientDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [client.id])
 
-  // Show loading state
+  // Show loading skeleton
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 py-16">
-        <div className="border-primary-500 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
-        <p className="text-gray-600">Loading client details...</p>
-      </div>
-    )
+    return <ClientDetailPageSkeleton />
   }
 
   // Show error state
@@ -1314,6 +1310,14 @@ export function ClientDetailPage() {
           <Button
             size="md"
             variant="transparent-black"
+            className="flex flex-row rounded-full text-sm font-medium"
+            onClick={() => navigate(`/dashboard/${id}/debt-summary`)}
+          >
+            {t('pages.clients.debtSummary.title')}
+          </Button>
+          <Button
+            size="md"
+            variant="transparent-black"
             leftIcon={<Icons.PencilEdit size={20} />}
             className="flex flex-row rounded-full text-sm font-medium"
             onClick={() => setIsNoteModalOpen(true)}
@@ -1512,7 +1516,7 @@ export function ClientDetailPage() {
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        TIN
+                        {t('pages.clients.detail.tin')}
                       </label>
                     </div>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
@@ -1522,7 +1526,7 @@ export function ClientDetailPage() {
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        Date of birth
+                        {t('pages.clients.detail.dateOfBirth')}
                       </label>
                       <Icons.Info size={14} className="text-gray-800" />
                     </div>
@@ -1533,7 +1537,7 @@ export function ClientDetailPage() {
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        Age
+                        {t('pages.clients.detail.age')}
                       </label>
                       <Icons.Info size={14} className="text-gray-800" />
                     </div>
@@ -1544,7 +1548,7 @@ export function ClientDetailPage() {
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        Passport
+                        {t('pages.clients.detail.passport')}
                       </label>
                       <Icons.Info size={14} className="text-gray-800" />
                     </div>
@@ -1554,7 +1558,7 @@ export function ClientDetailPage() {
                   </div>
                   <div className="flex items-center justify-between self-stretch p-0">
                     <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      Marital status
+                      {t('pages.clients.detail.maritalStatus')}
                     </label>
                     <div className="flex flex-1 items-center justify-end gap-2">
                       <p className="text-dark-500 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
@@ -1565,7 +1569,7 @@ export function ClientDetailPage() {
                   </div>
                   <div className="flex items-center self-stretch p-0">
                     <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      Number of family members
+                      {t('pages.clients.detail.numberOfFamilyMembers')}
                     </label>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {client.personalDetails.familyMembers}

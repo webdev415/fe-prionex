@@ -139,6 +139,19 @@ export function CallLogCard({
     }
   }
 
+  const getTranslatedCallType = (callType: string) => {
+    switch (callType) {
+      case 'Incoming':
+        return t('pages.clients.modals.callLogCard.callTypes.incoming')
+      case 'Outgoing':
+        return t('pages.clients.modals.callLogCard.callTypes.outgoing')
+      case 'Incoming Call':
+        return t('pages.clients.modals.callLogCard.callTypes.incomingCall')
+      default:
+        return callType
+    }
+  }
+
   return (
     <div
       className={cn(
@@ -168,7 +181,10 @@ export function CallLogCard({
                 onClick={() => {
                   if (type) {
                     setSelectedCallData?.({
-                      type: type === 'Incoming' ? 'Incoming Call' : type,
+                      type:
+                        type === 'Incoming'
+                          ? t('pages.clients.modals.callLogCard.callTypes.incomingCall')
+                          : getTranslatedCallType(type),
                       clientName: clientName || '',
                       date: date || '',
                       time: time || '',
@@ -181,7 +197,8 @@ export function CallLogCard({
                     setSelectedSMSData?.({
                       date: date || '',
                       time: time || '',
-                      template: template || 'Payment Reminder',
+                      template:
+                        template || t('pages.clients.modals.sendSMS.templates.paymentReminder'),
                       operator: operator || 'Svitlana',
                       status: status || '',
                       message: message || 'Dear Ivan, this is a reminder about your loan payment.',
@@ -277,7 +294,7 @@ export function CallLogCard({
                     {t('pages.clients.modals.callLogCard.type')}:
                   </div>
                   <div className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    {type}
+                    {type ? getTranslatedCallType(type) : type}
                   </div>
                 </div>
 
