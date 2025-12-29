@@ -20,6 +20,7 @@ import {
 } from './components/ImportHistoryFiltersBar'
 import { useImportJobs, useExportImportErrors } from '@/features/imports'
 import type { ImportJob, ImportJobsListParams } from '@/features/imports'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 
 // Types for import history data - map from API types
 export interface ImportHistoryItem {
@@ -78,7 +79,7 @@ export function ImportHistoryPage() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
   const [currentPage, setCurrentPage] = useState(1)
-  const rowsPerPage = 10 // Changed from useState to constant
+  const [rowsPerPage, setRowsPerPage] = useState(10) // Change from constant to state
   const [sortConfig, setSortConfig] = useState<SortConfig | undefined>(undefined)
   const [selectedJobId, setSelectedJobId] = useState<number | string | null>(null)
 
@@ -166,7 +167,12 @@ export function ImportHistoryPage() {
   }, [currentPage, rowsPerPage, filters])
 
   // Fetch import jobs from API
-  const { data: importJobsData, isLoading } = useImportJobs(apiParams)
+  const { data: importJobsData, isLoading, refetch } = useImportJobs(apiParams)
+
+  // Optional: Explicitly refetch when apiParams changes (though React Query should do this automatically)
+  useEffect(() => {
+    refetch()
+  }, [apiParams, refetch])
 
   // Convert API data to ImportHistoryItem format
   // Filter out any in_progress, pending, and cancelled jobs as a safety measure (should be handled by API, but filter client-side too)
@@ -291,6 +297,10 @@ export function ImportHistoryPage() {
     setCurrentPage(validPage)
   }
 
+  const handlePageSizeChange = (newPageSize: number) => {
+    setRowsPerPage(newPageSize)
+    setCurrentPage(1) // Reset to first page when page size changes
+  }
   // const handleViewDetails = () => {
   //   if (selectedJobId) {
   //     navigate(`/dashboard/import/history/${selectedJobId}`)
@@ -442,12 +452,8 @@ export function ImportHistoryPage() {
       {/* Data Table or Empty State */}
       <div className="min-h-[400px] rounded-xl bg-white/50 p-6 shadow-sm">
         {isLoading ? (
-          // Loading State - Show while fetching data
-          <div className="flex min-h-[448px] flex-col items-center justify-center gap-6 p-6">
-            <div className="text-dark-500 text-center text-base leading-[150%] font-light tracking-[-0.32px]">
-              {t('pages.imports.history.loading')}
-            </div>
-          </div>
+          // Loading State - Show skeleton table while fetching data
+          <TableSkeleton columns={5} rows={rowsPerPage} />
         ) : filteredAndSortedData.length === 0 && hasActiveFilters ? (
           // Empty State - No results for filters
           <div className="flex flex-col items-center justify-center py-16">
@@ -520,7 +526,7 @@ export function ImportHistoryPage() {
             totalPages={totalPages}
             onPageChange={handlePageChange}
             pageSize={rowsPerPage}
-            onPageSizeChange={() => {}} // TODO: Implement page size change
+            onPageSizeChange={handlePageSizeChange} // Implement page size change
           />
         </div>
       )}
