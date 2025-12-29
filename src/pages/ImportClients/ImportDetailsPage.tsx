@@ -20,7 +20,7 @@ import { ImportDetailsPageSkeleton } from './components/ImportDetailsPageSkeleto
 function ImportDetailStatusBadge({
   status,
 }: {
-  status: 'done' | 'failed' | 'completed_with_errors' | 'in_progress'
+  status: 'done' | 'failed' | 'completed_with_errors' | 'in_progress' | 'pending' | 'cancelled'
 }) {
   const { t } = useTranslation('common')
 
@@ -47,6 +47,24 @@ function ImportDetailStatusBadge({
       <span className="bg-secondary-800 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
         <span className="h-2 w-2 rounded-full bg-white" />
         {t('pages.imports.details.statuses.inProgress')}
+      </span>
+    )
+  }
+
+  if (status === 'pending') {
+    return (
+      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-yellow-500 px-3 text-xs font-medium text-white">
+        <span className="h-2 w-2 rounded-full bg-white" />
+        {t('pages.imports.details.statuses.pending')}
+      </span>
+    )
+  }
+
+  if (status === 'cancelled') {
+    return (
+      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-gray-500 px-3 text-xs font-medium text-white">
+        <span className="h-2 w-2 rounded-full bg-white" />
+        {t('pages.imports.details.statuses.cancelled')}
       </span>
     )
   }
@@ -115,13 +133,55 @@ export function ImportDetailsPage() {
                   | 'done'
                   | 'failed'
                   | 'completed_with_errors'
-                  | 'in_progress')
-              : ('done' as 'done' | 'failed' | 'completed_with_errors' | 'in_progress')
+                  | 'in_progress'
+                  | 'pending'
+                  | 'cancelled')
+              : ('done' as
+                  | 'done'
+                  | 'failed'
+                  | 'completed_with_errors'
+                  | 'in_progress'
+                  | 'pending'
+                  | 'cancelled')
             : jobDetail.status === 'failed'
-              ? ('failed' as 'done' | 'failed' | 'completed_with_errors' | 'in_progress')
+              ? ('failed' as
+                  | 'done'
+                  | 'failed'
+                  | 'completed_with_errors'
+                  | 'in_progress'
+                  | 'pending'
+                  | 'cancelled')
               : jobDetail.status === 'in_progress'
-                ? ('in_progress' as 'done' | 'failed' | 'completed_with_errors' | 'in_progress')
-                : ('done' as 'done' | 'failed' | 'completed_with_errors' | 'in_progress'),
+                ? ('in_progress' as
+                    | 'done'
+                    | 'failed'
+                    | 'completed_with_errors'
+                    | 'in_progress'
+                    | 'pending'
+                    | 'cancelled')
+                : jobDetail.status === 'pending'
+                  ? ('pending' as
+                      | 'done'
+                      | 'failed'
+                      | 'completed_with_errors'
+                      | 'in_progress'
+                      | 'pending'
+                      | 'cancelled')
+                  : jobDetail.status === 'cancelled'
+                    ? ('cancelled' as
+                        | 'done'
+                        | 'failed'
+                        | 'completed_with_errors'
+                        | 'in_progress'
+                        | 'pending'
+                        | 'cancelled')
+                    : ('done' as
+                        | 'done'
+                        | 'failed'
+                        | 'completed_with_errors'
+                        | 'in_progress'
+                        | 'pending'
+                        | 'cancelled'),
         totalRows: jobDetail.total_rows,
         newClients: jobDetail.new_clients,
         updatedClients: jobDetail.updated_clients,
@@ -133,7 +193,17 @@ export function ImportDetailsPage() {
           error: err.error,
           suggested_fix: err.suggested_fix,
         })),
-        progressPercentage: jobDetail.progress_percentage || 0,
+        // Calculate progress percentage: use provided value, or calculate for cancelled status
+        progressPercentage:
+          jobDetail.progress_percentage !== undefined
+            ? jobDetail.progress_percentage
+            : jobDetail.status === 'cancelled' && jobDetail.total_rows > 0
+              ? Math.round(
+                  ((jobDetail.new_clients + jobDetail.updated_clients + jobDetail.errors_count) /
+                    jobDetail.total_rows) *
+                    100
+                )
+              : 0,
         processingRow: jobDetail.processing_row || 0,
       }
     : null
@@ -335,6 +405,42 @@ export function ImportDetailsPage() {
                 </span>
                 <span className="text-error-500 text-2xl leading-[150%] font-light tracking-[-0.28px]">
                   {t('pages.imports.details.noRowsImported')}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : importDetail.status === 'pending' ? (
+          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
+            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+              {t('pages.imports.details.progress')}
+            </h2>
+
+            {/* Divider */}
+            <div className="h-px w-full bg-gray-200" />
+
+            <div className="flex flex-1 flex-col items-center justify-center gap-6 self-stretch">
+              <SemiCircularProgressBar percentage={0} />
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
+                  {t('pages.imports.details.statuses.pending')}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : importDetail.status === 'cancelled' ? (
+          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
+            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+              {t('pages.imports.details.progress')}
+            </h2>
+
+            {/* Divider */}
+            <div className="h-px w-full bg-gray-200" />
+
+            <div className="flex flex-1 flex-col items-center justify-center gap-6 self-stretch">
+              <SemiCircularProgressBar percentage={importDetail.progressPercentage} />
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
+                  {t('pages.imports.details.statuses.cancelled')}
                 </span>
               </div>
             </div>
