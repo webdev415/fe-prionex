@@ -301,7 +301,6 @@ export function ImportHistoryPage() {
     setRowsPerPage(newPageSize)
     setCurrentPage(1) // Reset to first page when page size changes
   }
-
   // const handleViewDetails = () => {
   //   if (selectedJobId) {
   //     navigate(`/dashboard/import/history/${selectedJobId}`)

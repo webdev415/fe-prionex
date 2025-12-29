@@ -7,8 +7,7 @@
 
 import { useState } from 'react'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
-import { Input } from '@/components/ui/Input'
-import { Label } from '@/components/ui/Label'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 
@@ -29,8 +28,6 @@ export function ChangePasswordModal({
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
-  const [showNewPassword, setShowNewPassword] = useState(false)
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
@@ -69,8 +66,6 @@ export function ChangePasswordModal({
     setNewPassword('')
     setConfirmPassword('')
     setErrors({})
-    setShowCurrentPassword(false)
-    setShowNewPassword(false)
     onClose()
   }
 
@@ -87,82 +82,37 @@ export function ChangePasswordModal({
       <ModalContent>
         <form id="change-password-form" onSubmit={handleSubmit} className="space-y-4">
           {/* Current Password */}
-          <div>
-            <Label htmlFor="currentPassword" required>
-              Current Password:
-            </Label>
-            <div className="relative mt-1">
-              <Input
-                id="currentPassword"
-                type={showCurrentPassword ? 'text' : 'password'}
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                variant={errors.currentPassword ? 'error' : 'default'}
-              />
-              <button
-                type="button"
-                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                className="absolute inset-y-0 right-0 flex items-center px-3"
-                aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
-              >
-                <Icons.Eye
-                  size={18}
-                  className={showCurrentPassword ? 'text-information-400' : 'text-gray-400'}
-                />
-              </button>
-            </div>
-            {errors.currentPassword && (
-              <p className="mt-1 text-sm text-red-500">{errors.currentPassword}</p>
-            )}
-          </div>
+          <PasswordInput
+            id="currentPassword"
+            label="Current Password:"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            variant={errors.currentPassword ? 'error' : 'default'}
+            error={errors.currentPassword}
+            required
+          />
 
           {/* New Password */}
-          <div>
-            <Label htmlFor="newPassword" required>
-              New Password:
-            </Label>
-            <div className="relative mt-1">
-              <Input
-                id="newPassword"
-                type={showNewPassword ? 'text' : 'password'}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                variant={errors.newPassword ? 'error' : 'default'}
-              />
-              <button
-                type="button"
-                onClick={() => setShowNewPassword(!showNewPassword)}
-                className="absolute inset-y-0 right-0 flex items-center px-3"
-                aria-label={showNewPassword ? 'Hide password' : 'Show password'}
-              >
-                <Icons.Eye
-                  size={18}
-                  className={showNewPassword ? 'text-information-400' : 'text-gray-400'}
-                />
-              </button>
-            </div>
-            {errors.newPassword && (
-              <p className="mt-1 text-sm text-red-500">{errors.newPassword}</p>
-            )}
-          </div>
+          <PasswordInput
+            id="newPassword"
+            label="New Password:"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            variant={errors.newPassword ? 'error' : 'default'}
+            error={errors.newPassword}
+            required
+          />
 
           {/* Confirm Password */}
-          <div>
-            <Label htmlFor="confirmPassword" required>
-              Confirm New Password:
-            </Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              variant={errors.confirmPassword ? 'error' : 'default'}
-              className="mt-1"
-            />
-            {errors.confirmPassword && (
-              <p className="mt-1 text-sm text-red-500">{errors.confirmPassword}</p>
-            )}
-          </div>
+          <PasswordInput
+            id="confirmPassword"
+            label="Confirm New Password:"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            variant={errors.confirmPassword ? 'error' : 'default'}
+            error={errors.confirmPassword}
+            required
+          />
         </form>
       </ModalContent>
       <ModalFooter>

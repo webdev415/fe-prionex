@@ -14,6 +14,7 @@ import { z } from 'zod'
 import { useCreateUser } from '../hooks/useCreateUser'
 import { useRoles } from '@/features/roles'
 import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Label } from '@/components/ui/Label'
 import { Alert } from '@/components/ui/Alert'
 import { Checkbox } from '@/components/ui/Checkbox'
@@ -233,45 +234,31 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="password" required>
-              {t('pages.users.forms.password')}
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder={t('pages.users.forms.placeholders.password')}
-              {...register('password')}
-              aria-invalid={!!errors.password}
-              variant={errors.password ? 'error' : 'default'}
-              className="mt-1"
-            />
-            {errors.password && (
-              <p className="mt-1 text-sm text-red-500">{errors.password.message}</p>
-            )}
-          </div>
+          <PasswordInput
+            id="password"
+            label={t('pages.users.forms.password')}
+            placeholder={t('pages.users.forms.placeholders.password')}
+            {...register('password')}
+            aria-invalid={!!errors.password}
+            variant={errors.password ? 'error' : 'default'}
+            error={errors.password?.message}
+            required
+          />
 
-          <div>
-            <Label htmlFor="confirmPassword" required>
-              {t('pages.users.forms.confirmPassword')}
-            </Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              placeholder={t('pages.users.forms.placeholders.confirmPassword')}
-              {...register('confirmPassword')}
-              aria-invalid={!!errors.confirmPassword}
-              variant={errors.confirmPassword ? 'error' : 'default'}
-              className="mt-1"
-            />
-            {errors.confirmPassword && (
-              <p className="mt-1 text-sm text-red-500">
-                {errors.confirmPassword.message === 'PASSWORDS_DONT_MATCH'
-                  ? t('pages.users.forms.errors.passwordsDontMatch')
-                  : errors.confirmPassword.message}
-              </p>
-            )}
-          </div>
+          <PasswordInput
+            id="confirmPassword"
+            label={t('pages.users.forms.confirmPassword')}
+            placeholder={t('pages.users.forms.placeholders.confirmPassword')}
+            {...register('confirmPassword')}
+            aria-invalid={!!errors.confirmPassword}
+            variant={errors.confirmPassword ? 'error' : 'default'}
+            error={
+              errors.confirmPassword?.message === 'PASSWORDS_DONT_MATCH'
+                ? t('pages.users.forms.errors.passwordsDontMatch')
+                : errors.confirmPassword?.message
+            }
+            required
+          />
         </div>
 
         <div className="flex items-center gap-2">

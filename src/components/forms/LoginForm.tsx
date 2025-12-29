@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
-import { Button, Input } from '@/components/ui'
+import { Button, Input, PasswordInput } from '@/components/ui'
 
 const loginSchema = z.object({
   username: z.string().min(1, 'validation.usernameRequired').min(3, 'validation.usernameMinLength'),
@@ -49,9 +49,9 @@ export function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps
         disabled={isLoading}
       />
 
-      <Input
+      <PasswordInput
         {...register('password')}
-        type="password"
+        id="password"
         inputSize="xl"
         label={t('login.password') + ':'}
         placeholder={t('login.passwordPlaceholder')}
