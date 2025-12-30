@@ -36,7 +36,7 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
   }
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <button className="bg-primary-300 flex h-10 w-[175px] items-center gap-2 rounded-md px-3 transition-all duration-200 hover:opacity-90">
           <Icons.User02 size={20} className="text-dark-500" strokeWidth={1.5} />

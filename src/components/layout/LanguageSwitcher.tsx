@@ -32,7 +32,7 @@ export function LanguageSwitcher({ variant = 'auth' }: LanguageSwitcherProps) {
   const isAuth = variant === 'auth'
 
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
