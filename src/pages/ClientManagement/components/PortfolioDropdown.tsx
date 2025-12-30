@@ -76,7 +76,7 @@ export function PortfolioDropdown({
   }
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
+    <DropdownMenu open={isOpen} onOpenChange={handleOpenChange} modal={false}>
       <DropdownMenuTrigger asChild className="outline-none">
         {trigger}
       </DropdownMenuTrigger>
