@@ -29,15 +29,16 @@ export function ImportClientsPage() {
   const previousStatusRef = useRef<string | null>(null)
   const lastShownJobIdRef = useRef<number | string | null>(null)
 
-  // Fetch latest in-progress import job (check both currentJobId and latest in-progress)
+  // Fetch latest pending or in-progress import job (check both currentJobId and latest pending/in-progress)
   const { data: importJobsData, refetch: refetchImportJobs } = useImportJobs({
     page: 1,
-    page_size: 1,
-    status: 'in_progress',
+    page_size: 10, // Get more jobs to filter client-side
   })
 
-  // Get the latest in-progress job
-  const latestInProgressJob = importJobsData?.items?.[0]
+  // Get the latest pending or in-progress job
+  const latestInProgressJob = importJobsData?.items?.find(
+    (job) => job.status === 'pending' || job.status === 'in_progress'
+  )
 
   // Use currentJobId if set, otherwise use latest in-progress job ID
   const activeJobId = currentJobId || latestInProgressJob?.id || null
