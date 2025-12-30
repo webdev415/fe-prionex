@@ -28,7 +28,7 @@ export interface ImportHistoryItem {
   dateTime: string
   fileName: string
   uploadedBy: string
-  status: 'done' | 'failed' | 'in_progress'
+  status: 'done' | 'failed' | 'in_progress' | 'pending' | 'cancelled'
   errors: number
 }
 
@@ -40,13 +40,28 @@ function mapImportJobToHistoryItem(job: ImportJob): ImportHistoryItem {
     dateTime: job.uploaded_at,
     fileName: job.file_name,
     uploadedBy: job.uploaded_by,
-    status: job.status === 'completed' ? 'done' : job.status === 'failed' ? 'failed' : 'done', // Default to 'done' for any other status
+    status:
+      job.status === 'completed'
+        ? 'done'
+        : job.status === 'failed'
+          ? 'failed'
+          : job.status === 'in_progress'
+            ? 'in_progress'
+            : job.status === 'pending'
+              ? 'pending'
+              : job.status === 'cancelled'
+                ? 'cancelled'
+                : 'done', // Default fallback
     errors: job.errors_count,
   }
 }
 
 // Status Badge Component for Import History
-function ImportStatusBadge({ status }: { status: 'done' | 'failed' | 'in_progress' }) {
+function ImportStatusBadge({
+  status,
+}: {
+  status: 'done' | 'failed' | 'in_progress' | 'pending' | 'cancelled'
+}) {
   const { t } = useTranslation('common')
 
   if (status === 'done') {
@@ -63,6 +78,24 @@ function ImportStatusBadge({ status }: { status: 'done' | 'failed' | 'in_progres
       <span className="bg-secondary-800 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
         <span className="h-2 w-2 rounded-full bg-white" />
         {t('pages.imports.history.statuses.inProgress')}
+      </span>
+    )
+  }
+
+  if (status === 'pending') {
+    return (
+      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-yellow-500 px-3 text-xs font-medium text-white">
+        <span className="h-2 w-2 rounded-full bg-white" />
+        {t('pages.imports.history.statuses.pending')}
+      </span>
+    )
+  }
+
+  if (status === 'cancelled') {
+    return (
+      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-gray-500 px-3 text-xs font-medium text-white">
+        <span className="h-2 w-2 rounded-full bg-white" />
+        {t('pages.imports.history.statuses.cancelled')}
       </span>
     )
   }
@@ -98,20 +131,22 @@ export function ImportHistoryPage() {
   const prevFiltersRef = useRef(filters)
 
   // Build API params from filters
-  // IMPORTANT: Always exclude 'in_progress', 'pending', and 'cancelled' jobs from Import History page
+  // IMPORTANT: Always exclude 'in_progress' and 'pending' jobs from Import History page
+  // Allow 'cancelled' jobs to be shown in history
   const apiParams = useMemo(() => {
     const params: ImportJobsListParams = {
       page: currentPage,
       page_size: rowsPerPage,
-      // Always exclude in_progress, pending, and cancelled jobs from history page
-      exclude_status: ['in_progress', 'pending', 'cancelled'],
+      // Always exclude in_progress and pending jobs from history page
+      // Allow cancelled jobs to be shown
+      exclude_status: ['in_progress', 'pending'],
     }
 
     if (filters.searchFilename) {
       params.search = filters.searchFilename
     }
 
-    // Only allow filtering by 'completed' or 'failed' status
+    // Only allow filtering by 'completed', 'failed', or 'cancelled' status
     // Don't allow filtering by 'in_progress' in history page
     if (filters.status && filters.status !== 'all' && filters.status !== 'in_progress') {
       // Map filter status to API status
@@ -119,6 +154,8 @@ export function ImportHistoryPage() {
         params.status = 'completed'
       } else if (filters.status === 'failed') {
         params.status = 'failed'
+      } else if (filters.status === 'cancelled') {
+        params.status = 'cancelled'
       }
     }
 
@@ -175,29 +212,29 @@ export function ImportHistoryPage() {
   }, [apiParams, refetch])
 
   // Convert API data to ImportHistoryItem format
-  // Filter out any in_progress, pending, and cancelled jobs as a safety measure (should be handled by API, but filter client-side too)
+  // Filter out any in_progress and pending jobs as a safety measure (should be handled by API, but filter client-side too)
+  // Allow cancelled jobs to be shown
   const importHistory = useMemo(() => {
     const jobs = (importJobsData?.items || []).filter(
-      (job) =>
-        job.status !== 'in_progress' && job.status !== 'pending' && job.status !== 'cancelled'
+      (job) => job.status !== 'in_progress' && job.status !== 'pending'
     )
     return jobs.map(mapImportJobToHistoryItem)
   }, [importJobsData])
 
   // Extract unique users from all import history (for filter dropdown)
   // Fetch all jobs without any filters to get all users who have import histories
-  // Exclude in_progress, pending, and cancelled jobs when fetching for user list
+  // Exclude in_progress and pending jobs when fetching for user list
+  // Allow cancelled jobs to be included
   const { data: allJobsData } = useImportJobs({
     page: 1,
     page_size: 1000,
-    exclude_status: ['in_progress', 'pending', 'cancelled'],
+    exclude_status: ['in_progress', 'pending'],
     // Don't send any other filters - we want ALL users' data
   })
 
   const availableUsers = useMemo(() => {
     const allJobs = (allJobsData?.items || []).filter(
-      (job) =>
-        job.status !== 'in_progress' && job.status !== 'pending' && job.status !== 'cancelled'
+      (job) => job.status !== 'in_progress' && job.status !== 'pending'
     )
     // Extract unique usernames and filter out null/undefined
     const users = new Set(

@@ -474,7 +474,9 @@
         "statuses": {
           "done": "Готово",
           "inProgress": "В процессе",
-          "failed": "Не удалось"
+          "failed": "Не удалось",
+          "pending": "Ожидание",
+          "cancelled": "Отменено"
         },
         "filters": {
           "searchFilename": "Поиск по имени файла",
@@ -519,7 +521,9 @@
           "completed": "Завершено",
           "completedWithErrors": "Завершено с ошибками",
           "inProgress": "В процессе",
-          "failed": "Не удалось"
+          "failed": "Не удалось",
+          "pending": "Ожидание",
+          "cancelled": "Отменено"
         }
       },
       "modal": {

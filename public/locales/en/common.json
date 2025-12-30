@@ -474,7 +474,9 @@
         "statuses": {
           "done": "Done",
           "inProgress": "In progress",
-          "failed": "Failed"
+          "failed": "Failed",
+          "pending": "Pending",
+          "cancelled": "Cancelled"
         },
         "filters": {
           "searchFilename": "Search filename",
@@ -519,7 +521,9 @@
           "completed": "Completed",
           "completedWithErrors": "Completed with errors",
           "inProgress": "In progress",
-          "failed": "Failed"
+          "failed": "Failed",
+          "pending": "Pending",
+          "cancelled": "Cancelled"
         }
       },
       "modal": {

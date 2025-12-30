@@ -175,6 +175,9 @@ export function ImportHistoryFiltersBar({
                 </SelectItem>
                 <SelectItem value="done">{t('pages.imports.history.statuses.done')}</SelectItem>
                 <SelectItem value="failed">{t('pages.imports.history.statuses.failed')}</SelectItem>
+                <SelectItem value="cancelled">
+                  {t('pages.imports.history.statuses.cancelled')}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
