@@ -79,7 +79,9 @@ export function PriorityBadge({ priority, className, variant = 'default' }: Prio
         {priority !== 'Low' && (
           <span className="flex items-center justify-center gap-0.5">{renderDots()}</span>
         )}
-        <span>{t(`pages.clients.priorities.${priority.toLowerCase()}`)}</span>
+        <span className="text-dark-500 leading-[200%] tracking-[-0.24px]">
+          {t(`pages.clients.priorities.${priority.toLowerCase()}`)}
+        </span>
       </span>
     )
   }
