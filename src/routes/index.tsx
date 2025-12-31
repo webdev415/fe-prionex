@@ -21,6 +21,7 @@ import {
 } from '@/pages/ClientManagement'
 import { SmsTemplatesPage } from '@/pages/SmsTemplates'
 import { ReportsDashboardPage } from '@/pages/ReportsDashboard'
+import { SellerManagementPage } from '@/pages/SellerManagement'
 
 export const router = createBrowserRouter([
   {
@@ -173,6 +174,16 @@ export const router = createBrowserRouter([
       <ProtectedRoute>
         <DashboardLayout>
           <PaymentHistoryPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/sellers',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <SellerManagementPage />
         </DashboardLayout>
       </ProtectedRoute>
     ),

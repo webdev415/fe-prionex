@@ -85,6 +85,7 @@ import {
   Briefcase08Icon,
   PieChart02Icon,
   UserMultiple02Icon,
+  UserMultipleIcon,
   Calendar03Icon,
   MoneyRemove01Icon,
   MoneyNotFound04Icon,
@@ -252,6 +253,7 @@ export const Icons = {
   Briefcase08: (props: Omit<IconProps, 'icon'>) => <Icon icon={Briefcase08Icon} {...props} />,
   PieChart02: (props: Omit<IconProps, 'icon'>) => <Icon icon={PieChart02Icon} {...props} />,
   UserMultiple02: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserMultiple02Icon} {...props} />,
+  UserMultiple: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserMultipleIcon} {...props} />,
   Calendar03: (props: Omit<IconProps, 'icon'>) => <Icon icon={Calendar03Icon} {...props} />,
   MoneyRemove01: (props: Omit<IconProps, 'icon'>) => <Icon icon={MoneyRemove01Icon} {...props} />,
   MoneyNotFound04: (props: Omit<IconProps, 'icon'>) => (
@@ -366,6 +368,7 @@ export {
   Briefcase08Icon,
   PieChart02Icon,
   UserMultiple02Icon,
+  UserMultipleIcon,
   Calendar03Icon,
   MoneyRemove01Icon,
   MoneyNotFound04Icon,
