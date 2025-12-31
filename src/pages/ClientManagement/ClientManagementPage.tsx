@@ -10,6 +10,7 @@ import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTab
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { PriorityCards } from './components/PriorityCards'
+import { PriorityBadge } from './components/PriorityBadge'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { ClientManagementPageSkeleton } from './components/ClientManagementPageSkeleton'
 import { Icons } from '@/lib/icons'
@@ -438,21 +439,7 @@ export function ClientManagementPage() {
       align: 'left',
       sortable: true,
       sortKey: 'priority',
-      render: (client) => {
-        const priorityColors = {
-          Critical: 'bg-error-500',
-          High: 'bg-warning-500',
-          Medium: 'bg-success-500',
-          Low: 'bg-gray-500',
-        }
-        return (
-          <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-white ${priorityColors[client.priority as keyof typeof priorityColors] || 'bg-gray-500'}`}
-          >
-            {t(`pages.clients.priorities.${client.priority.toLowerCase()}`)}
-          </span>
-        )
-      },
+      render: (client) => <PriorityBadge priority={client.priority} variant="compact" />,
     },
     {
       key: 'score',

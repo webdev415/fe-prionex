@@ -14,9 +14,9 @@ import { DateSelect } from '@/components/ui/DateSelect'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { Pagination } from '@/components/ui/Pagination'
 import { AddNoteModal } from '@/pages/ClientManagement/components/AddNoteModal'
+import { PriorityBadge } from './components/PriorityBadge'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { mockClientsDetail } from './mockClientDetails'
-import { cn } from '@/lib/utils'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
 
@@ -145,21 +145,6 @@ export function ActivityTimelinePage() {
 
   const hasFilters = communicationType !== 'all' || dateFrom || dateTo
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'Critical':
-        return 'bg-error-500'
-      case 'High':
-        return 'bg-warning-500'
-      case 'Medium':
-        return 'bg-success-500'
-      case 'Low':
-        return 'bg-gray-500'
-      default:
-        return 'bg-gray-500'
-    }
-  }
-
   // Show loading skeleton
   if (isLoading) {
     return <ActivityTimelinePageSkeleton />
@@ -182,14 +167,7 @@ export function ActivityTimelinePage() {
           <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0">
             {client.score} {t('pages.clients.activity.score')}
           </span>
-          <span
-            className={cn(
-              'flex h-[25px] items-center rounded-[16px] px-3 py-2 text-center text-xs leading-[140%] font-medium tracking-[-0.24px]',
-              getPriorityColor(client.priority)
-            )}
-          >
-            {t(`pages.clients.priorities.${client.priority.toLowerCase()}`)}
-          </span>
+          <PriorityBadge priority={client.priority} />
         </div>
         <div className="flex items-center gap-5">
           <Button

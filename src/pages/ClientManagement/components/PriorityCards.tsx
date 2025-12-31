@@ -5,6 +5,8 @@
  */
 
 import { useTranslation } from 'react-i18next'
+import { PriorityBadge } from './PriorityBadge'
+import type { Priority } from '../types'
 
 interface PriorityStats {
   Critical: { totalDebt: number; count: number }
@@ -37,31 +39,37 @@ export function PriorityCards({ priorityStats }: PriorityCardsProps) {
     return formatted
   }
 
-  const priorityCards = [
+  const priorityCards: Array<{
+    label: string
+    priority: Priority
+    totalDebt: number
+    clientCount: number
+    color: 'error' | 'warning' | 'success' | 'gray'
+  }> = [
     {
       label: t('pages.clients.priorityCards.criticalPriority'),
-      badge: t('pages.clients.priorities.critical'),
+      priority: 'Critical',
       totalDebt: priorityStats.Critical.totalDebt,
       clientCount: priorityStats.Critical.count,
       color: 'error' as const,
     },
     {
       label: t('pages.clients.priorityCards.highPriority'),
-      badge: t('pages.clients.priorities.high'),
+      priority: 'High',
       totalDebt: priorityStats.High.totalDebt,
       clientCount: priorityStats.High.count,
       color: 'warning' as const,
     },
     {
       label: t('pages.clients.priorityCards.mediumPriority'),
-      badge: t('pages.clients.priorities.medium'),
+      priority: 'Medium',
       totalDebt: priorityStats.Medium.totalDebt,
       clientCount: priorityStats.Medium.count,
       color: 'success' as const,
     },
     {
       label: t('pages.clients.priorityCards.lowPriority'),
-      badge: t('pages.clients.priorities.low'),
+      priority: 'Low',
       totalDebt: priorityStats.Low.totalDebt,
       clientCount: priorityStats.Low.count,
       color: 'gray' as const,
@@ -72,22 +80,18 @@ export function PriorityCards({ priorityStats }: PriorityCardsProps) {
     switch (color) {
       case 'error':
         return {
-          label: 'bg-error-500 text-white',
           card: 'border-error-500',
         }
       case 'warning':
         return {
-          label: 'bg-warning-500 text-white',
           card: 'border-warning-500',
         }
       case 'success':
         return {
-          label: 'bg-success-500 text-white',
           card: 'border-success-500',
         }
       case 'gray':
         return {
-          label: 'bg-gray-500 text-white',
           card: 'border-gray-500',
         }
     }
@@ -103,11 +107,7 @@ export function PriorityCards({ priorityStats }: PriorityCardsProps) {
             className={`flex flex-1 flex-col items-start gap-4 rounded-xl border border-white bg-white/50 p-6 ${colors.card}`}
           >
             <div className="flex items-start gap-3">
-              <span
-                className={`flex h-[25px] items-center rounded-[16px] px-3 py-2 text-center text-xs leading-[140%] font-medium tracking-[-0.24px] text-white ${colors.label}`}
-              >
-                {card.badge}
-              </span>
+              <PriorityBadge priority={card.priority} />
               <h3 className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
                 {card.label}
               </h3>

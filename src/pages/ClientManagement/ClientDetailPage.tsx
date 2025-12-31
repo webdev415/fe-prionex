@@ -10,6 +10,8 @@ import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { AddNoteModal } from './components/AddNoteModal'
+import { PriorityBadge } from './components/PriorityBadge'
+import type { Priority } from './types'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { CallRecordingModal } from './components/CallRecordingModal'
 import { ViewSMSModal } from './components/ViewSMSModal'
@@ -854,15 +856,14 @@ export function ClientDetailPage() {
       phoneNumber: apiClient.phone_primary,
       tags: [], // TODO: Add tags support in backend
       score: apiClient.priority_score,
-      priority:
-        apiClient.manual_priority ||
+      priority: (apiClient.manual_priority ||
         (apiClient.priority_score >= 75
           ? 'Critical'
           : apiClient.priority_score >= 50
             ? 'High'
             : apiClient.priority_score >= 25
               ? 'Medium'
-              : 'Low'),
+              : 'Low')) as Priority,
       phones: [
         { number: apiClient.phone_primary, type: 'primary' as const },
         ...(apiClient.phone_secondary
@@ -975,21 +976,6 @@ export function ClientDetailPage() {
     })
       .format(amount)
       .replace(/,/g, ' ')
-  }
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'Critical':
-        return 'bg-error-500'
-      case 'High':
-        return 'bg-warning-500'
-      case 'Medium':
-        return 'bg-success-500'
-      case 'Low':
-        return 'bg-gray-500'
-      default:
-        return 'bg-gray-500'
-    }
   }
 
   const handleRemoveTag = (tagToRemove: string) => {
@@ -1297,14 +1283,7 @@ export function ClientDetailPage() {
           <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0">
             {client.score} {t('pages.clients.activity.score')}
           </span>
-          <span
-            className={cn(
-              'flex h-[25px] items-center rounded-[16px] px-3 py-2 text-center text-xs leading-[140%] font-medium tracking-[-0.24px]',
-              getPriorityColor(client.priority)
-            )}
-          >
-            {t(`pages.clients.priorities.${client.priority.toLowerCase()}`)}
-          </span>
+          <PriorityBadge priority={client.priority} />
         </div>
         <div className="flex items-center gap-5">
           <Button

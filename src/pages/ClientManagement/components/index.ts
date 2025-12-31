@@ -1,4 +1,5 @@
 export { PriorityCards } from './PriorityCards'
+export { PriorityBadge } from './PriorityBadge'
 export { ClientFiltersBar } from './ClientFiltersBar'
 export { PortfolioDropdown } from './PortfolioDropdown'
 export { AddNoteModal } from './AddNoteModal'
