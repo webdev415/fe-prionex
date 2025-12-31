@@ -13,6 +13,7 @@
     "importClients": "Import Clients",
     "projects": "Projects",
     "users": "Users",
+    "sellers": "Sellers",
     "roles": "Roles",
     "smsTemplates": "SMS Templates",
     "transactions": "Transactions",
@@ -1236,6 +1237,137 @@
           "actionCannotBeUndone": "This action cannot be undone",
           "templateWillBePermanentlyRemoved": "The template will be permanently removed from the system.",
           "deleting": "Deleting..."
+        }
+      }
+    },
+    "sellers": {
+      "title": "Seller Management",
+      "addNewSeller": "New Seller",
+      "noSellersFound": "No sellers found",
+      "errorLoading": "Error loading sellers",
+      "search": "Search",
+      "searchPlaceholder": "Search by company name, tax ID, contact...",
+      "searchButton": "Search",
+      "sellers": "sellers",
+      "searchFilters": {
+        "status": "Status",
+        "client": "Client",
+        "period": "Period",
+        "allClients": "All Clients",
+        "statusOptions": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "all": "All"
+        },
+        "periodOptions": {
+          "any": "Any time",
+          "last30Days": "Last 30 days",
+          "last90Days": "Last 90 days",
+          "thisYear": "This year"
+        }
+      },
+      "tableHeaders": {
+        "companyName": "Company Name",
+        "website": "Company Website",
+        "email": "Company Email",
+        "taxId": "Tax ID",
+        "contact": "Contact",
+        "clients": "Clients",
+        "actions": "Actions"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "modals": {
+        "create": {
+          "title": "Create New Seller",
+          "companyInformation": "Company Information",
+          "contactPerson": "Contact Person",
+          "address": "Address",
+          "optional": "Optional",
+          "companyName": "Company Name *",
+          "taxId": "Tax ID / Business Registration Number",
+          "website": "Website",
+          "email": "Email",
+          "contactName": "Name",
+          "contactPhone": "Phone",
+          "streetAddress": "Street Address",
+          "city": "City",
+          "stateProvince": "State/Province",
+          "postalCode": "Postal Code",
+          "country": "Country",
+          "notes": "Notes",
+          "saveSeller": "Save Seller",
+          "saving": "Saving...",
+          "placeholders": {
+            "companyName": "Enter company name",
+            "taxId": "Enter tax ID or business registration number",
+            "website": "Enter website URL",
+            "email": "Enter email address",
+            "contactName": "Enter contact person name",
+            "contactPhone": "Enter phone number",
+            "streetAddress": "Enter street address",
+            "city": "Enter city",
+            "stateProvince": "Enter state or province",
+            "postalCode": "Enter postal code",
+            "country": "Select country...",
+            "notes": "Enter any additional notes"
+          },
+          "errors": {
+            "companyNameRequired": "Company name is required",
+            "invalidEmail": "Please enter a valid email address"
+          }
+        },
+        "edit": {
+          "title": "Edit Seller",
+          "companyInformation": "Company Information",
+          "contactPerson": "Contact Person",
+          "address": "Address",
+          "optional": "Optional",
+          "companyName": "Company Name *",
+          "taxId": "Tax ID / Business Registration Number",
+          "website": "Website",
+          "email": "Email",
+          "contactName": "Name",
+          "contactPhone": "Phone",
+          "streetAddress": "Street Address",
+          "city": "City",
+          "stateProvince": "State/Province",
+          "postalCode": "Postal Code",
+          "country": "Country",
+          "notes": "Notes",
+          "saveSeller": "Save Seller",
+          "saving": "Saving...",
+          "loadingSellerData": "Loading seller data...",
+          "sellerNotFound": "Seller not found",
+          "placeholders": {
+            "companyName": "Enter company name",
+            "taxId": "Enter tax ID or business registration number",
+            "website": "Enter website URL",
+            "email": "Enter email address",
+            "contactName": "Enter contact person name",
+            "contactPhone": "Enter phone number",
+            "streetAddress": "Enter street address",
+            "city": "Enter city",
+            "stateProvince": "Enter state or province",
+            "postalCode": "Enter postal code",
+            "country": "Select country...",
+            "notes": "Enter any additional notes"
+          },
+          "errors": {
+            "companyNameRequired": "Company name is required",
+            "invalidEmail": "Please enter a valid email address"
+          }
+        },
+        "delete": {
+          "title": "Delete Seller",
+          "confirmMessage": {
+            "question": "Are you sure you want to delete this seller?",
+            "warning": "This action cannot be undone."
+          },
+          "deleting": "Deleting...",
+          "deleteSeller": "Delete Seller"
         }
       }
     },

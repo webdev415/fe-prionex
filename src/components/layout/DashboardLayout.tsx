@@ -257,6 +257,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.USERS.VIEW,
       },
       {
+        path: '/dashboard/sellers',
+        icon: 'user-multiple',
+        label: t('navigation.sellers'),
+      },
+      {
         path: '/dashboard/roles',
         icon: 'user-circle-02',
         label: t('navigation.roles'),
