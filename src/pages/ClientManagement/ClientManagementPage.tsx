@@ -593,7 +593,7 @@ export function ClientManagementPage() {
     },
     {
       key: 'actions',
-      header: t('pages.clients.tableHeaders.actions', 'Actions'),
+      header: t('pages.clients.tableHeaders.actions'),
       align: 'center',
       render: (client) => {
         // Disable assign button when bulk actions are active (items are selected)
@@ -607,7 +607,7 @@ export function ClientManagementPage() {
             className="text-xs"
             disabled={isBulkActionActive}
           >
-            {t('pages.clients.assign', 'Assign')}
+            {t('pages.clients.assign')}
           </LinkButton>
         )
       },
@@ -624,8 +624,10 @@ export function ClientManagementPage() {
     return (
       <div className="flex w-full flex-col items-center justify-center gap-4 pt-20">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
-        <p className="font-medium text-gray-900">Failed to load clients</p>
-        <p className="text-sm text-gray-600">{error?.message || 'An error occurred'}</p>
+        <p className="font-medium text-gray-900">{t('pages.clients.errorLoading')}</p>
+        <p className="text-sm text-gray-600">
+          {error?.message || t('pages.clients.errorOccurred')}
+        </p>
       </div>
     )
   }
@@ -713,7 +715,7 @@ export function ClientManagementPage() {
               className="flex items-center gap-2"
             >
               <Icons.UserCheck01 size={16} strokeWidth={2} />
-              {t('pages.clients.bulkAssign', 'Bulk Assign')}
+              {t('pages.clients.bulkAssign')}
             </Button>
           }
         />

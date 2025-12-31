@@ -22,6 +22,7 @@
  */
 
 import { type ReactNode, useMemo, useRef, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { Checkbox } from './Checkbox'
 
@@ -91,6 +92,7 @@ export function DataTable<T extends { id: number | string }>({
   tableHeaderActions,
   tableHeaderTitle,
 }: DataTableProps<T>) {
+  const { t } = useTranslation('common')
   const handleSort = (column: Column<T>) => {
     if (!column.sortable || !onSort) return
 
@@ -204,7 +206,7 @@ export function DataTable<T extends { id: number | string }>({
 
     return (
       <span className="text-xs font-medium text-[#05040D]">
-        Selected {selectedCount} of {totalItems}
+        {t('common.selected', 'Selected')} {selectedCount} {t('common.of', 'of')} {totalItems}
       </span>
     )
   }

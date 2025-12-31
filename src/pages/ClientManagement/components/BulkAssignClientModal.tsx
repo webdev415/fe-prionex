@@ -160,14 +160,14 @@ export function BulkAssignClientModal({
             <Icons.UserCheck01 size={20} className="text-dark-500" strokeWidth={1.5} />
           </div>
         }
-        title={`Bulk Assign Clients (${selectedCount} selected)`}
+        title={t('pages.clients.modals.bulkAssignClient.title', { count: selectedCount })}
       />
       <ModalContent>
         <div className="flex flex-col gap-6">
           {/* Selected Clients Preview Section */}
           <div className="flex flex-col items-start gap-2 self-stretch">
             <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              Selected Clients Preview
+              {t('pages.clients.modals.bulkAssignClient.selectedClientsPreview')}
             </span>
             <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white/100 bg-white/50 p-[20px_24px]">
               {/* Preview list */}
@@ -188,7 +188,12 @@ export function BulkAssignClientModal({
                 ))}
                 {remainingCount > 0 && (
                   <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    ... and {remainingCount} more {remainingCount === 1 ? 'client' : 'clients'}
+                    {t('pages.clients.modals.bulkAssignClient.andMoreClients', {
+                      count: remainingCount,
+                      client: t(
+                        `pages.clients.modals.bulkAssignClient.${remainingCount === 1 ? 'client' : 'clients'}`
+                      ),
+                    })}
                   </span>
                 )}
               </div>
@@ -197,13 +202,14 @@ export function BulkAssignClientModal({
               <div className="flex items-center gap-5">
                 <div>
                   <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    Total Debt:{' '}
+                    {t('pages.clients.modals.bulkAssignClient.totalDebt')}{' '}
                     <span className="font-medium">{formatUAH(summary.totalDebt)} ₴</span>
                   </span>
                 </div>
                 <div>
                   <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    Avg Score: <span className="font-medium">{summary.avgScore}</span>
+                    {t('pages.clients.modals.bulkAssignClient.avgScore')}{' '}
+                    <span className="font-medium">{summary.avgScore}</span>
                   </span>
                 </div>
               </div>
@@ -213,7 +219,7 @@ export function BulkAssignClientModal({
           {/* Assignment Options Section */}
           <div className="flex flex-col items-start gap-2 self-stretch">
             <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              Assignment Options
+              {t('pages.clients.modals.bulkAssignClient.assignmentOptions')}
             </span>
             <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white/100 bg-white/50 p-[20px_24px]">
               <div className="flex items-start gap-4 self-stretch">
@@ -223,11 +229,13 @@ export function BulkAssignClientModal({
                     htmlFor="bulk-employee"
                     className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
                   >
-                    Assign Employee To All (Optional)
+                    {t('pages.clients.modals.bulkAssignClient.assignEmployeeToAll')}
                   </Label>
                   <Select value={employeeId} onValueChange={setEmployeeId}>
                     <SelectTrigger id="bulk-employee" className="h-[45px] flex-1 rounded-md">
-                      <SelectValue placeholder="Select employee..." />
+                      <SelectValue
+                        placeholder={t('pages.clients.modals.bulkAssignClient.selectEmployee')}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {mockEmployees.map((employee) => (
@@ -245,11 +253,13 @@ export function BulkAssignClientModal({
                     htmlFor="bulk-searcher"
                     className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
                   >
-                    Assign Searcher To All (Optional)
+                    {t('pages.clients.modals.bulkAssignClient.assignSearcherToAll')}
                   </Label>
                   <Select value={searcherId} onValueChange={setSearcherId}>
                     <SelectTrigger id="bulk-searcher" className="h-[45px] flex-1 rounded-md">
-                      <SelectValue placeholder="Select searcher..." />
+                      <SelectValue
+                        placeholder={t('pages.clients.modals.bulkAssignClient.selectSearcher')}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {mockSearchers.map((searcher) => (
@@ -265,7 +275,7 @@ export function BulkAssignClientModal({
                 {/* Distribution Method */}
                 <div className="flex flex-col items-start justify-center gap-1 self-stretch">
                   <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                    Distribution Method
+                    {t('pages.clients.modals.bulkAssignClient.distributionMethod')}
                   </Label>
                   <RadioGroup
                     value={distributionMethod}
@@ -280,7 +290,7 @@ export function BulkAssignClientModal({
                           htmlFor="distribute-assign-all"
                           className="text-dark-500 cursor-pointer text-xs font-light tracking-[-0.24px]"
                         >
-                          Assign all to selected users above
+                          {t('pages.clients.modals.bulkAssignClient.assignAllToSelected')}
                         </Label>
                       </div>
                       <div className="flex items-center gap-0.5">
@@ -289,7 +299,7 @@ export function BulkAssignClientModal({
                           htmlFor="distribute-evenly"
                           className="text-dark-500 cursor-not-allowed text-xs font-light tracking-[-0.24px] opacity-50"
                         >
-                          Distribute evenly among available users (future)
+                          {t('pages.clients.modals.bulkAssignClient.distributeEvenly')}
                         </Label>
                       </div>
                     </div>
@@ -302,18 +312,32 @@ export function BulkAssignClientModal({
                     htmlFor="bulk-reason"
                     className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
                   >
-                    Assignment Reason
+                    {t('pages.clients.modals.bulkAssignClient.assignmentReason')}
                   </Label>
                   <Select value={reason} onValueChange={setReason}>
                     <SelectTrigger id="bulk-reason" className="h-[45px] flex-1 rounded-md">
-                      <SelectValue placeholder="Select reason..." />
+                      <SelectValue
+                        placeholder={t('pages.clients.modals.bulkAssignClient.selectReason')}
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {assignmentReasons.map((assignmentReason) => (
-                        <SelectItem key={assignmentReason} value={assignmentReason}>
-                          {assignmentReason}
-                        </SelectItem>
-                      ))}
+                      {assignmentReasons.map((assignmentReason) => {
+                        const reasonKeyMap: Record<string, string> = {
+                          'New Client': 'newClient',
+                          'Workload Distribution': 'workloadDistribution',
+                          'Specialist Required': 'specialistRequired',
+                          Reassignment: 'reassignment',
+                          Other: 'other',
+                        }
+                        const reasonKey =
+                          reasonKeyMap[assignmentReason] || assignmentReason.toLowerCase()
+                        const translationKey = `pages.clients.modals.bulkAssignClient.reasons.${reasonKey}`
+                        return (
+                          <SelectItem key={assignmentReason} value={assignmentReason}>
+                            {t(translationKey, assignmentReason)}
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -325,13 +349,13 @@ export function BulkAssignClientModal({
                     htmlFor="bulk-notes"
                     className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
                   >
-                    Notes
+                    {t('pages.clients.modals.bulkAssignClient.notes')}
                   </Label>
                   <Textarea
                     id="bulk-notes"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Enter additional notes..."
+                    placeholder={t('pages.clients.modals.bulkAssignClient.enterAdditionalNotes')}
                     textareaSize="md"
                     className="text-dark-500 rounded-md text-xs leading-[140%] font-light tracking-[-0.24px]"
                   />
@@ -344,8 +368,12 @@ export function BulkAssignClientModal({
           <div className="bg-warning-50 flex w-full items-center gap-2 rounded-md p-3">
             <Icons.Warning size={20} className="text-warning-500 flex-shrink-0" strokeWidth={2} />
             <p className="text-warning-800 text-sm">
-              This will assign {selectedCount} {selectedCount === 1 ? 'client' : 'clients'}.
-              Assignment history will be logged for each client individually.
+              {t('pages.clients.modals.bulkAssignClient.warningMessage', {
+                count: selectedCount,
+                client: t(
+                  `pages.clients.modals.bulkAssignClient.${selectedCount === 1 ? 'client' : 'clients'}`
+                ),
+              })}
             </p>
           </div>
         </div>
@@ -366,7 +394,7 @@ export function BulkAssignClientModal({
           disabled={!canSubmit}
           className="h-[45px] flex-1 text-sm"
         >
-          {t('pages.clients.assignAllClients', 'Assign All Clients')}
+          {t('pages.clients.modals.bulkAssignClient.assignAllClients')}
         </Button>
       </ModalFooter>
     </Modal>

@@ -135,7 +135,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
             <Icons.Tick02 size={20} className="text-dark-500" strokeWidth={1.5} />
           </div>
         }
-        title={`Assign Client: ${fullName}`}
+        title={t('pages.clients.modals.assignClient.title', { fullName })}
       />
       <ModalContent>
         {isLoading ? (
@@ -200,13 +200,13 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
             {/* Client Information Section */}
             <div className="flex flex-col items-start gap-2 self-stretch">
               <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                Client Information
+                {t('pages.clients.modals.assignClient.clientInformation')}
               </span>
               <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white/100 bg-white/50 p-[20px_24px]">
                 <div className="flex flex-col items-start gap-2 self-stretch">
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                      Name
+                      {t('pages.clients.modals.assignClient.name')}
                     </span>
                     <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                       {fullName}
@@ -214,7 +214,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                      Email
+                      {t('pages.clients.modals.assignClient.email')}
                     </span>
                     <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                       {email}
@@ -222,7 +222,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                      Phone
+                      {t('pages.clients.modals.assignClient.phone')}
                     </span>
                     <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                       {phone}
@@ -230,7 +230,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                      Priority
+                      {t('pages.clients.modals.assignClient.priority')}
                     </span>
                     <div className="flex items-center gap-2">
                       <PriorityBadge
@@ -238,16 +238,20 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                         variant="compact"
                       />
                       <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                        Score: {score}
+                        {t('pages.clients.modals.assignClient.score')}: {score}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
-                      Total Debt
+                      {t('pages.clients.modals.assignClient.totalDebt')}
                     </span>
                     <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                      {formatUAH(totalDebt)} ₴ ({debtCount} {debtCount === 1 ? 'debt' : 'debts'})
+                      {formatUAH(totalDebt)} ₴ ({debtCount}{' '}
+                      {debtCount === 1
+                        ? t('pages.clients.modals.assignClient.debt')
+                        : t('pages.clients.modals.assignClient.debts')}
+                      )
                     </span>
                   </div>
                 </div>
@@ -257,7 +261,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
             {/* Assignment Details Section */}
             <div className="flex flex-col items-start gap-2 self-stretch">
               <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                Assignment Details
+                {t('pages.clients.modals.assignClient.assignmentDetails')}
               </span>
               <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white/100 bg-white/50 p-[20px_24px]">
                 <div className="flex items-start gap-4 self-stretch">
@@ -267,11 +271,13 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                       htmlFor="employee"
                       className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
                     >
-                      Employee (Optional)
+                      {t('pages.clients.modals.assignClient.employee')}
                     </Label>
                     <Select value={employeeId} onValueChange={setEmployeeId}>
                       <SelectTrigger id="employee" className="h-[45px] flex-1 rounded-md">
-                        <SelectValue placeholder="Select employee..." />
+                        <SelectValue
+                          placeholder={t('pages.clients.modals.assignClient.selectEmployee')}
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {mockEmployees.map((employee) => (
@@ -289,11 +295,13 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                       htmlFor="searcher"
                       className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
                     >
-                      Searcher (Optional)
+                      {t('pages.clients.modals.assignClient.searcher')}
                     </Label>
                     <Select value={searcherId} onValueChange={setSearcherId}>
                       <SelectTrigger id="searcher" className="h-[45px] flex-1 rounded-md">
-                        <SelectValue placeholder="Select searcher..." />
+                        <SelectValue
+                          placeholder={t('pages.clients.modals.assignClient.selectSearcher')}
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {mockSearchers.map((searcher) => (
@@ -309,21 +317,36 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                   {/* Assignment Reason */}
                   <div className="flex flex-1 flex-col items-start justify-center gap-1">
                     <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      Assignment Reason
+                      {t('pages.clients.modals.assignClient.assignmentReason')}
                     </Label>
                     <RadioGroup value={reason} onValueChange={setReason}>
                       <div className="flex flex-col gap-2">
-                        {assignmentReasons.map((assignmentReason) => (
-                          <div key={assignmentReason} className="flex items-center gap-2">
-                            <RadioItem value={assignmentReason} id={`reason-${assignmentReason}`} />
-                            <Label
-                              htmlFor={`reason-${assignmentReason}`}
-                              className="text-dark-500 text-xs font-light tracking-[-0.24px]"
-                            >
-                              {assignmentReason}
-                            </Label>
-                          </div>
-                        ))}
+                        {assignmentReasons.map((assignmentReason) => {
+                          const reasonKeyMap: Record<string, string> = {
+                            'New Client': 'newClient',
+                            'Workload Distribution': 'workloadDistribution',
+                            'Specialist Required': 'specialistRequired',
+                            Reassignment: 'reassignment',
+                            Other: 'other',
+                          }
+                          const reasonKey =
+                            reasonKeyMap[assignmentReason] || assignmentReason.toLowerCase()
+                          const translationKey = `pages.clients.modals.assignClient.reasons.${reasonKey}`
+                          return (
+                            <div key={assignmentReason} className="flex items-center gap-2">
+                              <RadioItem
+                                value={assignmentReason}
+                                id={`reason-${assignmentReason}`}
+                              />
+                              <Label
+                                htmlFor={`reason-${assignmentReason}`}
+                                className="text-dark-500 text-xs font-light tracking-[-0.24px]"
+                              >
+                                {t(translationKey, assignmentReason)}
+                              </Label>
+                            </div>
+                          )
+                        })}
                       </div>
                     </RadioGroup>
                   </div>
@@ -334,13 +357,13 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                       htmlFor="notes"
                       className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
                     >
-                      Notes (Optional)
+                      {t('pages.clients.modals.assignClient.notes')}
                     </Label>
                     <Textarea
                       id="notes"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Enter additional notes..."
+                      placeholder={t('pages.clients.modals.assignClient.enterAdditionalNotes')}
                       textareaSize="md"
                       className="text-dark-500 rounded-md text-xs leading-[140%] font-light tracking-[-0.24px]"
                     />
@@ -357,7 +380,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                     strokeWidth={2}
                   />
                   <p className="text-warning-800 text-sm">
-                    Note: At least one assignment (Employee or Searcher) must be selected.
+                    {t('pages.clients.modals.assignClient.warningMessage')}
                   </p>
                 </div>
               )}
@@ -381,7 +404,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
           disabled={!canSubmit}
           className="h-[45px] flex-1 text-sm"
         >
-          {t('pages.clients.assignClient', 'Assign Client')}
+          {t('pages.clients.modals.assignClient.assignClient')}
         </Button>
       </ModalFooter>
     </Modal>

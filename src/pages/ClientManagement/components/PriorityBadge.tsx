@@ -89,7 +89,7 @@ export function PriorityBadge({ priority, className, variant = 'default' }: Prio
   return (
     <span
       className={cn(
-        'flex h-[25px] w-[90px] items-center justify-center gap-1.5 rounded-[16px] border px-3 py-2 text-center text-xs font-medium tracking-[-0.24px]',
+        'flex h-[25px] min-w-[90px] items-center justify-center gap-1.5 rounded-[16px] border px-3 py-2 text-center text-xs font-medium tracking-[-0.24px]',
         config.bgColor,
         config.borderColor,
         className
