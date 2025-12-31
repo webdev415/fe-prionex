@@ -19,7 +19,7 @@ export interface ImportJob {
   status: ImportJobStatus
   errors_count: number
   import_type: ImportType
-  seller_creditor?: string
+  seller_creditor?: string // Seller code for display (from job metadata)
   project_code?: string
   purchase_date?: string
   comment?: string
@@ -38,7 +38,7 @@ export interface ImportJobDetail {
   errors_count: number
   processing_time: string // e.g., "7 min 42 s"
   import_type: ImportType
-  seller_creditor?: string
+  seller_creditor?: string // Seller code for display (from job metadata)
   project_code?: string
   purchase_date?: string
   comment?: string
@@ -80,7 +80,7 @@ export interface UploadImportRequest {
   file?: File // For simple CSV (required for simple import type)
   files?: File[] // For vendor dump (multiple CSVs)
   zip_file?: File // For vendor dump (ZIP with documents)
-  seller_creditor: string
+  seller_id: number
   project_code: string
   purchase_date: string
   comment?: string
