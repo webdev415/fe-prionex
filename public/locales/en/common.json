@@ -3,22 +3,23 @@
     "name": "CRM Prionex",
     "description": "Customer Relationship Management System"
   },
-  "navigation": {
-    "home": "Home",
-    "dashboard": "Dashboard",
-    "clients": "Clients",
-    "settings": "Settings",
-    "logout": "Logout",
-    "activity": "Activity",
-    "importClients": "Import Clients",
-    "projects": "Projects",
-    "users": "Users",
-    "sellers": "Sellers",
-    "roles": "Roles",
-    "smsTemplates": "SMS Templates",
-    "transactions": "Transactions",
-    "reports": "Reports"
-  },
+    "navigation": {
+      "home": "Home",
+      "dashboard": "Dashboard",
+      "clients": "Clients",
+      "settings": "Settings",
+      "logout": "Logout",
+      "activity": "Activity",
+      "importClients": "Import Clients",
+      "projects": "Projects",
+      "users": "Users",
+      "sellers": "Sellers",
+      "roles": "Roles",
+      "smsTemplates": "SMS Templates",
+      "transactions": "Transactions",
+      "reports": "Reports",
+      "scoringConfiguration": "Scoring Configuration"
+    },
   "search": {
     "placeholder": "Search",
     "phoneNumber": "Phone number",
@@ -1491,6 +1492,37 @@
         "topCollector": "Top Collector",
         "largestPmt": "Largest Pmt"
       }
+    },
+    "scoringConfiguration": {
+      "title": "Scoring Configuration - Project Alpha",
+      "scoreWeights": "Score Weights",
+      "debtAmountWeight": "Debt Amount Weight",
+      "daysOverdueWeight": "Days Overdue Weight",
+      "contactHistoryWeight": "Contact History Weight",
+      "totalMustEqual": "Total must equal 100%",
+      "current": "Current",
+      "previewChanges": "Preview Changes",
+      "priorityThresholds": "Priority Classification Thresholds",
+      "resetDefaults": "Reset Defaults",
+      "scoreGreaterThanOrEqual": "Score ≥",
+      "scoreLessThan": "Score <",
+      "points": "points",
+      "andLessThan": "and <",
+      "criticalDescription": "Clients with highest urgency (score 25-100)",
+      "highDescription": "Important clients requiring attention (score 18-24)",
+      "mediumDescription": "Standard follow-up required (score 10-17)",
+      "lowDescription": "Minimal urgency (score 0-9)",
+      "immediateEffect": "Changes will affect all clients in this project immediately",
+      "sellerOverrides": "Seller-Specific Overrides (Optional)",
+      "addSellerConfig": "+ Add Seller-Specific Configuration",
+      "sellerOverridesDescription": "Configure different thresholds for specific sellers",
+      "configurationPreview": "Configuration Preview",
+      "currentDistribution": "Current Distribution:",
+      "withNewThresholds": "With New Thresholds:",
+      "clients": "clients",
+      "lastUpdated": "Last Updated:",
+      "by": "by",
+      "saveConfiguration": "Save Configuration"
     }
   }
 }

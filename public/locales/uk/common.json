@@ -17,7 +17,8 @@
     "roles": "Ролі",
     "smsTemplates": "SMS Шаблони",
     "transactions": "Транзакції",
-    "reports": "Звіти"
+    "reports": "Звіти",
+    "scoringConfiguration": "Конфігурація оцінки"
   },
   "search": {
     "placeholder": "Пошук",
@@ -1491,6 +1492,37 @@
         "topCollector": "Найкращий збирач",
         "largestPmt": "Найбільший платіж"
       }
+    },
+    "scoringConfiguration": {
+      "title": "Конфігурація оцінки - Проєкт Alpha",
+      "scoreWeights": "Ваги оцінки",
+      "debtAmountWeight": "Вага суми боргу",
+      "daysOverdueWeight": "Вага днів прострочення",
+      "contactHistoryWeight": "Вага історії контактів",
+      "totalMustEqual": "Разом має дорівнювати 100%",
+      "current": "Поточне",
+      "previewChanges": "Попередній перегляд змін",
+      "priorityThresholds": "Пороги класифікації пріоритетів",
+      "resetDefaults": "Скинути за замовчуванням",
+      "scoreGreaterThanOrEqual": "Оцінка ≥",
+      "scoreLessThan": "Оцінка <",
+      "points": "балів",
+      "andLessThan": "і <",
+      "criticalDescription": "Клієнти з найвищою терміновістю (оцінка 25-100)",
+      "highDescription": "Важливі клієнти, що потребують уваги (оцінка 18-24)",
+      "mediumDescription": "Потрібне стандартне спостереження (оцінка 10-17)",
+      "lowDescription": "Мінімальна терміновість (оцінка 0-9)",
+      "immediateEffect": "Зміни вплинуть на всіх клієнтів у цьому проєкті негайно",
+      "sellerOverrides": "Перевизначення для продавців (необов'язково)",
+      "addSellerConfig": "+ Додати конфігурацію для продавця",
+      "sellerOverridesDescription": "Налаштування різних порогів для конкретних продавців",
+      "configurationPreview": "Попередній перегляд конфігурації",
+      "currentDistribution": "Поточне розподілення:",
+      "withNewThresholds": "З новими порогами:",
+      "clients": "клієнтів",
+      "lastUpdated": "Останнє оновлення:",
+      "by": "від",
+      "saveConfiguration": "Зберегти конфігурацію"
     }
   }
 }

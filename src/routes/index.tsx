@@ -22,6 +22,7 @@ import {
 import { SmsTemplatesPage } from '@/pages/SmsTemplates'
 import { ReportsDashboardPage } from '@/pages/ReportsDashboard'
 import { SellerManagementPage } from '@/pages/SellerManagement'
+import { ScoringConfigurationPage } from '@/pages/ScoringConfiguration'
 
 export const router = createBrowserRouter([
   {
@@ -184,6 +185,16 @@ export const router = createBrowserRouter([
       <ProtectedRoute>
         <DashboardLayout>
           <SellerManagementPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/scoring-configuration',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ScoringConfigurationPage />
         </DashboardLayout>
       </ProtectedRoute>
     ),

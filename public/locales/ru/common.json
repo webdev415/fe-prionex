@@ -17,7 +17,8 @@
     "roles": "Роли",
     "smsTemplates": "SMS Шаблоны",
     "transactions": "Транзакции",
-    "reports": "Отчеты"
+    "reports": "Отчеты",
+    "scoringConfiguration": "Конфигурация оценки"
   },
   "search": {
     "placeholder": "Поиск",
@@ -1491,6 +1492,37 @@
         "topCollector": "Лучший сборщик",
         "largestPmt": "Самый большой платеж"
       }
+    },
+    "scoringConfiguration": {
+      "title": "Конфигурация оценки - Проект Alpha",
+      "scoreWeights": "Веса оценки",
+      "debtAmountWeight": "Вес суммы долга",
+      "daysOverdueWeight": "Вес дней просрочки",
+      "contactHistoryWeight": "Вес истории контактов",
+      "totalMustEqual": "Итого должно равняться 100%",
+      "current": "Текущее",
+      "previewChanges": "Предпросмотр изменений",
+      "priorityThresholds": "Пороги классификации приоритетов",
+      "resetDefaults": "Сбросить по умолчанию",
+      "scoreGreaterThanOrEqual": "Оценка ≥",
+      "scoreLessThan": "Оценка <",
+      "points": "баллов",
+      "andLessThan": "и <",
+      "criticalDescription": "Клиенты с наивысшей срочностью (оценка 25-100)",
+      "highDescription": "Важные клиенты, требующие внимания (оценка 18-24)",
+      "mediumDescription": "Требуется стандартное наблюдение (оценка 10-17)",
+      "lowDescription": "Минимальная срочность (оценка 0-9)",
+      "immediateEffect": "Изменения повлияют на всех клиентов в этом проекте немедленно",
+      "sellerOverrides": "Переопределения для продавцов (необязательно)",
+      "addSellerConfig": "[+ Добавить конфигурацию для продавца]",
+      "sellerOverridesDescription": "Настройка различных порогов для конкретных продавцов",
+      "configurationPreview": "Предпросмотр конфигурации",
+      "currentDistribution": "Текущее распределение:",
+      "withNewThresholds": "С новыми порогами:",
+      "clients": "клиентов",
+      "lastUpdated": "Последнее обновление:",
+      "by": "от",
+      "saveConfiguration": "Сохранить конфигурацию"
     }
   }
 }

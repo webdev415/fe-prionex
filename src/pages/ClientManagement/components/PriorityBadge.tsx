@@ -70,7 +70,7 @@ export function PriorityBadge({ priority, className, variant = 'default' }: Prio
     return (
       <span
         className={cn(
-          'inline-flex h-[25px] w-[90px] items-center justify-center gap-1.5 rounded-[16px] border px-3 py-1 text-xs font-medium',
+          'inline-flex h-[25px] min-w-[90px] items-center justify-center gap-1.5 rounded-[16px] border px-3 py-1 text-xs font-medium',
           config.bgColor,
           config.borderColor,
           className
