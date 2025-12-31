@@ -1,5 +1,5 @@
 @import 'tailwindcss';
-@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700&display=swap');
 
 @theme {
   /* PRIMARY (Green #80D80A) - CTAs, links, focus states, interactive elements */
@@ -120,7 +120,7 @@
   --color-error-950: #450a0a;
 
   /* Font Family */
-  --font-family-sans: 'Lexend', sans-serif;
+  --font-family-sans: 'Noto Sans', sans-serif;
 
   /* Font Sizes - Display */
   --font-size-2xl-display: 72px;
@@ -166,7 +166,7 @@
 
 @layer base {
   :root {
-    font-family: 'Lexend', sans-serif;
+    font-family: 'Noto Sans', sans-serif;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;

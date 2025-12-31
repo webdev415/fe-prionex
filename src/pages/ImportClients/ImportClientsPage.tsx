@@ -435,21 +435,21 @@ export function ImportClientsPage() {
               {t('pages.imports.importInProgress')}
             </span>
           </div>
-          <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+          <span className="text-dark-500 font-sans text-sm leading-[150%] font-light tracking-[-0.28px]">
             {t('pages.imports.file')}:{' '}
-            <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <span className="text-dark-500 font-sans text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {importProgress.fileName}
             </span>
           </span>
-          <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+          <span className="text-dark-500 font-sans text-sm leading-[150%] font-light tracking-[-0.28px]">
             {t('pages.imports.started')}:{' '}
-            <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <span className="text-dark-500 font-sans text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {importProgress.startedAt}
             </span>
           </span>
-          <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+          <span className="text-dark-500 font-sans text-sm leading-[150%] font-light tracking-[-0.28px]">
             {t('pages.imports.status')}:{' '}
-            <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <span className="text-dark-500 font-sans text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {importProgress.status === 'pending'
                 ? t('pages.imports.queued')
                 : `${importProgress.progressPercentage}% ${t('pages.imports.complete')}`}
