@@ -2,7 +2,6 @@
  * EditSellerModal Component
  *
  * Modal for editing an existing seller.
- * Based on EditProjectModal pattern.
  */
 
 import { useState, useEffect } from 'react'
@@ -11,6 +10,7 @@ import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/M
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
+import { Label } from '@/components/ui/Label'
 import {
   Select,
   SelectContent,
@@ -19,22 +19,12 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
-
-interface Seller {
-  id: number
-  companyName: string
-  taxId: string
-  website?: string
-  email?: string
-  contactName: string
-  contactPhone?: string
-  streetAddress?: string
-  city?: string
-  stateProvince?: string
-  postalCode?: string
-  country?: string
-  notes?: string
-}
+import {
+  useUpdateSeller,
+  type Seller,
+  type UpdateSellerInput,
+  type SellerType,
+} from '@/features/sellers'
 
 interface EditSellerModalProps {
   open: boolean
@@ -44,43 +34,25 @@ interface EditSellerModalProps {
   onSuccess: () => void
 }
 
-// Common countries list - same as CreateSellerModal
-const COUNTRIES = [
-  'United States',
-  'United Kingdom',
-  'Canada',
-  'Australia',
-  'Germany',
-  'France',
-  'Italy',
-  'Spain',
-  'Netherlands',
-  'Belgium',
-  'Switzerland',
-  'Austria',
-  'Sweden',
-  'Norway',
-  'Denmark',
-  'Finland',
-  'Poland',
-  'Czech Republic',
-  'Ukraine',
-  'Russia',
-  'Other',
+// Seller type options
+const SELLER_TYPES: { value: SellerType; label: string }[] = [
+  { value: 'bank', label: 'Bank' },
+  { value: 'mfo', label: 'MFO (Microfinance Organization)' },
+  { value: 'collection_agency', label: 'Collection Agency' },
+  { value: 'retail', label: 'Retail' },
+  { value: 'telecom', label: 'Telecom' },
+  { value: 'utilities', label: 'Utilities' },
+  { value: 'other', label: 'Other' },
 ]
 
 interface SellerFormData {
-  companyName: string
-  taxId: string
-  website: string
-  email: string
-  contactName: string
-  contactPhone: string
-  streetAddress: string
-  city: string
-  stateProvince: string
-  postalCode: string
-  country: string
+  seller_name: string
+  seller_type: SellerType | ''
+  contact_person: string
+  contact_email: string
+  contact_phone: string
+  address: string
+  tax_id: string
   notes: string
 }
 
@@ -92,74 +64,53 @@ export function EditSellerModal({
   onSuccess,
 }: EditSellerModalProps) {
   const { t } = useTranslation('common')
+  const updateSellerMutation = useUpdateSeller()
+
   const [formData, setFormData] = useState<SellerFormData>({
-    companyName: '',
-    taxId: '',
-    website: '',
-    email: '',
-    contactName: '',
-    contactPhone: '',
-    streetAddress: '',
-    city: '',
-    stateProvince: '',
-    postalCode: '',
-    country: '',
+    seller_name: '',
+    seller_type: '',
+    contact_person: '',
+    contact_email: '',
+    contact_phone: '',
+    address: '',
+    tax_id: '',
     notes: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
 
-  // Load seller data when modal opens or seller changes
+  // Populate form when seller data loads
   useEffect(() => {
-    if (open && sellerId && seller) {
-      setIsLoading(true)
-      // In a real app, you would fetch seller data here
-      // For now, use the provided seller prop
-      setFormData({
-        companyName: seller.companyName || '',
-        taxId: seller.taxId || '',
-        website: seller.website || '',
-        email: seller.email || '',
-        contactName: seller.contactName || '',
-        contactPhone: seller.contactPhone || '',
-        streetAddress: seller.streetAddress || '',
-        city: seller.city || '',
-        stateProvince: seller.stateProvince || '',
-        postalCode: seller.postalCode || '',
-        country: seller.country || '',
-        notes: seller.notes || '',
-      })
-      setIsLoading(false)
-    } else if (open && !seller) {
-      // If seller is not provided, reset form
-      setFormData({
-        companyName: '',
-        taxId: '',
-        website: '',
-        email: '',
-        contactName: '',
-        contactPhone: '',
-        streetAddress: '',
-        city: '',
-        stateProvince: '',
-        postalCode: '',
-        country: '',
-        notes: '',
+    if (seller) {
+      // Defer setState to avoid cascading renders
+      queueMicrotask(() => {
+        setFormData({
+          seller_name: seller.seller_name || '',
+          seller_type: seller.seller_type || '',
+          contact_person: seller.contact_person || '',
+          contact_email: seller.contact_email || '',
+          contact_phone: seller.contact_phone || '',
+          address: seller.address || '',
+          tax_id: seller.tax_id || '',
+          notes: seller.notes || '',
+        })
       })
     }
-  }, [open, sellerId, seller])
+  }, [seller])
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.companyName || formData.companyName.trim().length === 0) {
-      newErrors.companyName = t('pages.sellers.modals.edit.errors.companyNameRequired')
+    if (!formData.seller_name || formData.seller_name.trim().length === 0) {
+      newErrors.seller_name = t('pages.sellers.modals.edit.errors.sellerNameRequired')
+    }
+
+    if (!formData.seller_type) {
+      newErrors.seller_type = t('pages.sellers.modals.edit.errors.sellerTypeRequired')
     }
 
     // Email validation if provided
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = t('pages.sellers.modals.edit.errors.invalidEmail')
+    if (formData.contact_email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contact_email)) {
+      newErrors.contact_email = t('pages.sellers.modals.edit.errors.invalidEmail')
     }
 
     setErrors(newErrors)
@@ -169,23 +120,30 @@ export function EditSellerModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!validateForm()) return
+    if (!sellerId || !validateForm()) return
 
-    setIsSubmitting(true)
     try {
-      // TODO: Replace with actual API call
-      // await updateSellerMutation.mutateAsync({ id: sellerId, ...formData })
-      console.log('Updating seller:', sellerId, formData)
+      // Build update data - only include fields that have values
+      const updateData: UpdateSellerInput = {}
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      if (formData.seller_name) updateData.seller_name = formData.seller_name
+      if (formData.seller_type) updateData.seller_type = formData.seller_type as SellerType
+
+      // Optional fields - include even if empty to allow clearing
+      updateData.contact_person = formData.contact_person || undefined
+      updateData.contact_email = formData.contact_email || undefined
+      updateData.contact_phone = formData.contact_phone || undefined
+      updateData.address = formData.address || undefined
+      updateData.tax_id = formData.tax_id || undefined
+      updateData.notes = formData.notes || undefined
+
+      await updateSellerMutation.mutateAsync({ id: sellerId, data: updateData })
 
       onSuccess()
       onClose()
+      setErrors({})
     } catch (error) {
       console.error('Failed to update seller:', error)
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -196,235 +154,166 @@ export function EditSellerModal({
     }
   }
 
-  if (!seller && sellerId) {
-    return (
-      <Modal open={open} onClose={onClose} maxWidth="2xl">
-        <ModalHeader
-          icon={
-            <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-              <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
-            </div>
-          }
-          title={t('pages.sellers.modals.edit.title')}
-        />
-        <ModalContent>
-          <div className="py-8 text-center text-gray-500">
-            {t('pages.sellers.modals.edit.sellerNotFound')}
-          </div>
-        </ModalContent>
-        <ModalFooter>
-          <Button
-            type="button"
-            variant="cancel"
-            onClick={onClose}
-            className="h-[45px] flex-1 text-sm"
-          >
-            {t('actions.close')}
-          </Button>
-        </ModalFooter>
-      </Modal>
-    )
-  }
-
   return (
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
           <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
+            <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.sellers.modals.edit.title')}
       />
       <ModalContent>
-        {isLoading ? (
-          <div className="py-8 text-center text-gray-500">
-            {t('pages.sellers.modals.edit.loadingSellerData')}
+        <form id="edit-seller-form" onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Information Section */}
+          <div className="space-y-4">
+            <h3 className="text-dark-500 text-base font-medium">
+              {t('pages.sellers.modals.edit.basicInformation')}
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-light text-gray-500">
+                  {t('pages.sellers.modals.edit.sellerCode')}
+                </Label>
+                <p className="text-dark-500 text-sm font-medium">{seller?.seller_code}</p>
+                <p className="text-xs text-gray-500">
+                  {t('pages.sellers.modals.edit.sellerCodeReadOnly')}
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                id="seller_name"
+                label={t('pages.sellers.modals.edit.sellerName')}
+                value={formData.seller_name}
+                onChange={(e) => handleChange('seller_name', e.target.value)}
+                placeholder={t('pages.sellers.modals.edit.placeholders.sellerName')}
+                disabled={updateSellerMutation.isPending}
+                variant={errors.seller_name ? 'error' : 'default'}
+                error={errors.seller_name}
+                required
+              />
+
+              <div className="space-y-2">
+                <Label htmlFor="seller_type" required>
+                  {t('pages.sellers.modals.edit.sellerType')}
+                </Label>
+                <Select
+                  value={formData.seller_type}
+                  onValueChange={(value) => handleChange('seller_type', value)}
+                  disabled={updateSellerMutation.isPending}
+                >
+                  <SelectTrigger id="seller_type">
+                    <SelectValue
+                      placeholder={t('pages.sellers.modals.edit.placeholders.sellerType')}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SELLER_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.seller_type && <p className="text-xs text-red-500">{errors.seller_type}</p>}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4">
+              <Input
+                id="tax_id"
+                label={t('pages.sellers.modals.edit.taxId')}
+                value={formData.tax_id}
+                onChange={(e) => handleChange('tax_id', e.target.value)}
+                placeholder={t('pages.sellers.modals.edit.placeholders.taxId')}
+                disabled={updateSellerMutation.isPending}
+              />
+            </div>
+            <div className="h-px w-full bg-gray-200" />
           </div>
-        ) : (
-          <form id="edit-seller-form" onSubmit={handleSubmit} className="space-y-6">
-            {/* Company Information Section */}
-            <div className="space-y-4">
-              <h3 className="text-dark-500 text-base font-medium">
-                {t('pages.sellers.modals.edit.companyInformation')}
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  id="companyName"
-                  label={t('pages.sellers.modals.edit.companyName')}
-                  value={formData.companyName}
-                  onChange={(e) => handleChange('companyName', e.target.value)}
-                  placeholder={t('pages.sellers.modals.edit.placeholders.companyName')}
-                  disabled={isSubmitting}
-                  variant={errors.companyName ? 'error' : 'default'}
-                  error={errors.companyName}
-                  required
-                />
 
-                <Input
-                  id="taxId"
-                  label={t('pages.sellers.modals.edit.taxId')}
-                  value={formData.taxId}
-                  onChange={(e) => handleChange('taxId', e.target.value)}
-                  placeholder={t('pages.sellers.modals.edit.placeholders.taxId')}
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  id="website"
-                  label={t('pages.sellers.modals.edit.website')}
-                  value={formData.website}
-                  onChange={(e) => handleChange('website', e.target.value)}
-                  placeholder={t('pages.sellers.modals.edit.placeholders.website')}
-                  disabled={isSubmitting}
-                />
+          {/* Contact Information Section */}
+          <div className="space-y-4">
+            <h3 className="text-dark-500 text-base font-medium">
+              {t('pages.sellers.modals.edit.contactInformation')}
+              <span className="text-sm font-normal text-gray-500">
+                {' '}
+                ({t('pages.sellers.modals.edit.optional')})
+              </span>
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                id="contact_person"
+                label={t('pages.sellers.modals.edit.contactPerson')}
+                value={formData.contact_person}
+                onChange={(e) => handleChange('contact_person', e.target.value)}
+                placeholder={t('pages.sellers.modals.edit.placeholders.contactPerson')}
+                disabled={updateSellerMutation.isPending}
+              />
 
-                <Input
-                  id="email"
-                  label={t('pages.sellers.modals.edit.email')}
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleChange('email', e.target.value)}
-                  placeholder={t('pages.sellers.modals.edit.placeholders.email')}
-                  disabled={isSubmitting}
-                  variant={errors.email ? 'error' : 'default'}
-                  error={errors.email}
-                />
-              </div>
-              <div className="h-px w-full bg-gray-200" />
+              <Input
+                id="contact_phone"
+                label={t('pages.sellers.modals.edit.contactPhone')}
+                value={formData.contact_phone}
+                onChange={(e) => handleChange('contact_phone', e.target.value)}
+                placeholder={t('pages.sellers.modals.edit.placeholders.contactPhone')}
+                disabled={updateSellerMutation.isPending}
+              />
             </div>
-
-            {/* Contact Person Section */}
-            <div className="space-y-4">
-              <h3 className="text-dark-500 text-base font-medium">
-                {t('pages.sellers.modals.edit.contactPerson')}
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  id="contactName"
-                  label={t('pages.sellers.modals.edit.contactName')}
-                  value={formData.contactName}
-                  onChange={(e) => handleChange('contactName', e.target.value)}
-                  placeholder={t('pages.sellers.modals.edit.placeholders.contactName')}
-                  disabled={isSubmitting}
-                />
-
-                <Input
-                  id="contactPhone"
-                  label={t('pages.sellers.modals.edit.contactPhone')}
-                  value={formData.contactPhone}
-                  onChange={(e) => handleChange('contactPhone', e.target.value)}
-                  placeholder={t('pages.sellers.modals.edit.placeholders.contactPhone')}
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="h-px w-full bg-gray-200" />
+            <div className="grid grid-cols-1 gap-4">
+              <Input
+                id="contact_email"
+                label={t('pages.sellers.modals.edit.contactEmail')}
+                type="email"
+                value={formData.contact_email}
+                onChange={(e) => handleChange('contact_email', e.target.value)}
+                placeholder={t('pages.sellers.modals.edit.placeholders.contactEmail')}
+                disabled={updateSellerMutation.isPending}
+                variant={errors.contact_email ? 'error' : 'default'}
+                error={errors.contact_email}
+              />
             </div>
+            <div className="grid grid-cols-1 gap-4">
+              <Input
+                id="address"
+                label={t('pages.sellers.modals.edit.address')}
+                value={formData.address}
+                onChange={(e) => handleChange('address', e.target.value)}
+                placeholder={t('pages.sellers.modals.edit.placeholders.address')}
+                disabled={updateSellerMutation.isPending}
+              />
+            </div>
+            <div className="h-px w-full bg-gray-200" />
+          </div>
 
-            {/* Address Section (Optional) */}
-            <div className="space-y-4">
-              <h3 className="text-dark-500 text-base font-medium">
-                {t('pages.sellers.modals.edit.address')}
+          {/* Notes Section (Optional) */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-dark-500 block text-sm font-light">
+                {t('pages.sellers.modals.edit.notes')}{' '}
                 <span className="text-sm font-normal text-gray-500">
-                  {' '}
                   ({t('pages.sellers.modals.edit.optional')})
                 </span>
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  id="streetAddress"
-                  label={t('pages.sellers.modals.edit.streetAddress')}
-                  value={formData.streetAddress}
-                  onChange={(e) => handleChange('streetAddress', e.target.value)}
-                  placeholder={t('pages.sellers.modals.edit.placeholders.streetAddress')}
-                  disabled={isSubmitting}
-                />
-
-                <Input
-                  id="city"
-                  label={t('pages.sellers.modals.edit.city')}
-                  value={formData.city}
-                  onChange={(e) => handleChange('city', e.target.value)}
-                  placeholder={t('pages.sellers.modals.edit.placeholders.city')}
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  id="stateProvince"
-                  label={t('pages.sellers.modals.edit.stateProvince')}
-                  value={formData.stateProvince}
-                  onChange={(e) => handleChange('stateProvince', e.target.value)}
-                  placeholder={t('pages.sellers.modals.edit.placeholders.stateProvince')}
-                  disabled={isSubmitting}
-                />
-
-                <Input
-                  id="postalCode"
-                  label={t('pages.sellers.modals.edit.postalCode')}
-                  value={formData.postalCode}
-                  onChange={(e) => handleChange('postalCode', e.target.value)}
-                  placeholder={t('pages.sellers.modals.edit.placeholders.postalCode')}
-                  disabled={isSubmitting}
-                />
-              </div>
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-2">
-                  <label className="text-dark-500 block text-sm font-light">
-                    {t('pages.sellers.modals.edit.country')}
-                  </label>
-                  <Select
-                    value={formData.country}
-                    onValueChange={(value) => handleChange('country', value)}
-                    disabled={isSubmitting}
-                  >
-                    <SelectTrigger>
-                      <SelectValue
-                        placeholder={t('pages.sellers.modals.edit.placeholders.country')}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {COUNTRIES.map((country) => (
-                        <SelectItem key={country} value={country}>
-                          {country}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="h-px w-full bg-gray-200" />
+              </label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => handleChange('notes', e.target.value)}
+                placeholder={t('pages.sellers.modals.edit.placeholders.notes')}
+                rows={4}
+                disabled={updateSellerMutation.isPending}
+              />
             </div>
-
-            {/* Notes Section (Optional) */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-dark-500 block text-sm font-light">
-                  {t('pages.sellers.modals.edit.notes')}{' '}
-                  <span className="text-sm font-normal text-gray-500">
-                    ({t('pages.sellers.modals.edit.optional')})
-                  </span>
-                </label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => handleChange('notes', e.target.value)}
-                  placeholder={t('pages.sellers.modals.edit.placeholders.notes')}
-                  rows={4}
-                  disabled={isSubmitting}
-                />
-              </div>
-            </div>
-          </form>
-        )}
+          </div>
+        </form>
       </ModalContent>
       <ModalFooter>
         <Button
           type="button"
           variant="cancel"
           onClick={onClose}
-          disabled={isSubmitting || isLoading}
+          disabled={updateSellerMutation.isPending}
           className="h-[45px] flex-1 text-sm"
         >
           {t('actions.cancel')}
@@ -433,12 +322,12 @@ export function EditSellerModal({
           type="submit"
           form="edit-seller-form"
           variant="primary"
-          disabled={isSubmitting || isLoading}
+          disabled={updateSellerMutation.isPending}
           className="h-[45px] flex-1 text-sm"
         >
-          {isSubmitting
+          {updateSellerMutation.isPending
             ? t('pages.sellers.modals.edit.saving')
-            : t('pages.sellers.modals.edit.saveSeller')}
+            : t('pages.sellers.modals.edit.saveChanges')}
         </Button>
       </ModalFooter>
     </Modal>

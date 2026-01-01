@@ -15,60 +15,9 @@ import { ErrorState } from '@/components/ErrorState'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { CreateSellerModal, EditSellerModal, DeleteSellerConfirmationModal } from './components'
+import { useSellers, useDeleteSeller, type Seller } from '@/features/sellers'
 
 const DEFAULT_PAGE_SIZE = 10
-
-// Mock seller data type - replace with actual API type later
-interface Seller {
-  id: number
-  companyName: string
-  website?: string
-  email?: string
-  taxId: string
-  contactName: string
-  contactPhone?: string
-  clientsCount: number
-  streetAddress?: string
-  city?: string
-  stateProvince?: string
-  postalCode?: string
-  country?: string
-  notes?: string
-}
-
-// Mock data - replace with actual API call later
-const mockSellers: Seller[] = [
-  {
-    id: 1,
-    companyName: 'ABC Bank Corp',
-    website: 'abc.bank.com',
-    email: 'active@abcbank.com',
-    taxId: '123456789',
-    contactName: 'John Manager',
-    contactPhone: '+1234567890',
-    clientsCount: 145,
-  },
-  {
-    id: 2,
-    companyName: 'XYZ Financial LLC',
-    website: 'xyz-financial.com',
-    email: 'info@xyz.com',
-    taxId: '987654321',
-    contactName: 'Jane Director',
-    contactPhone: '+0987654321',
-    clientsCount: 87,
-  },
-  {
-    id: 3,
-    companyName: 'Quick Loans Inc',
-    website: 'quickloans.net',
-    email: 'sales@ql.net',
-    taxId: '456789123',
-    contactName: 'Bob Sales',
-    contactPhone: '+5556667777',
-    clientsCount: 56,
-  },
-]
 
 export function SellerManagementPage() {
   const { t } = useTranslation('common')
@@ -78,27 +27,25 @@ export function SellerManagementPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editSellerId, setEditSellerId] = useState<number | null>(null)
   const [deletingSeller, setDeletingSeller] = useState<Seller | null>(null)
-  const [isLoading] = useState(false)
-  const [isError] = useState(false)
 
-  // Filter sellers based on search query
-  const filteredSellers = mockSellers.filter((seller) => {
-    if (!searchQuery.trim()) return true
-    const query = searchQuery.toLowerCase()
-    return (
-      seller.companyName.toLowerCase().includes(query) ||
-      seller.taxId.toLowerCase().includes(query) ||
-      seller.contactName.toLowerCase().includes(query) ||
-      seller.email?.toLowerCase().includes(query) ||
-      seller.website?.toLowerCase().includes(query)
-    )
+  // Fetch sellers from API
+  const {
+    data: sellersData,
+    isLoading,
+    isError,
+    refetch,
+  } = useSellers({
+    search: searchQuery,
+    skip: (currentPage - 1) * pageSize,
+    limit: pageSize,
   })
 
+  const deleteSellerMutation = useDeleteSeller()
+
   // Pagination
-  const totalSellers = filteredSellers.length
+  const sellers = sellersData?.sellers || []
+  const totalSellers = sellersData?.total || 0
   const totalPages = Math.ceil(totalSellers / pageSize)
-  const startIndex = (currentPage - 1) * pageSize
-  const paginatedSellers = filteredSellers.slice(startIndex, startIndex + pageSize)
 
   const handleSearch = useCallback(() => {
     setCurrentPage(1) // Reset to first page on search
@@ -116,15 +63,9 @@ export function SellerManagementPage() {
     if (!deletingSeller) return
 
     try {
-      // TODO: Replace with actual API call
-      // await deleteSellerMutation.mutateAsync({ id: deletingSeller.id })
-      console.log('Deleting seller:', deletingSeller.id)
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
+      await deleteSellerMutation.mutateAsync({ sellerId: deletingSeller.id })
       setDeletingSeller(null)
-      // TODO: Refresh seller list
+      refetch() // Refresh seller list
     } catch (error) {
       console.error('Failed to delete seller:', error)
     }
@@ -136,12 +77,12 @@ export function SellerManagementPage() {
 
   const handleCreateSuccess = () => {
     setShowCreateModal(false)
-    // TODO: Refresh seller list
+    refetch() // Refresh seller list
   }
 
   const handleEditSuccess = () => {
     setEditSellerId(null)
-    // TODO: Refresh seller list
+    refetch() // Refresh seller list
   }
 
   const handleCloseEdit = () => {
@@ -149,46 +90,56 @@ export function SellerManagementPage() {
   }
 
   // Get seller data for edit modal
-  const editSeller = editSellerId ? mockSellers.find((s) => s.id === editSellerId) : undefined
+  const editSeller = editSellerId ? sellers.find((s) => s.id === editSellerId) : undefined
 
   // Table columns definition
   const columns: Column<Seller>[] = [
     {
-      key: 'companyName',
-      header: t('pages.sellers.tableHeaders.companyName'),
-      render: (seller) => <span className="font-medium">{seller.companyName}</span>,
+      key: 'seller_code',
+      header: t('pages.sellers.tableHeaders.sellerCode'),
+      render: (seller) => <span className="font-medium">{seller.seller_code}</span>,
     },
     {
-      key: 'website',
-      header: t('pages.sellers.tableHeaders.website'),
-      render: (seller) => <span className="text-gray-700">{seller.website || '-'}</span>,
+      key: 'seller_name',
+      header: t('pages.sellers.tableHeaders.sellerName'),
+      render: (seller) => <span className="font-medium">{seller.seller_name}</span>,
     },
     {
-      key: 'email',
+      key: 'seller_type',
+      header: t('pages.sellers.tableHeaders.sellerType'),
+      render: (seller) => (
+        <span className="text-gray-700 capitalize">{seller.seller_type.replace('_', ' ')}</span>
+      ),
+    },
+    {
+      key: 'contact_email',
       header: t('pages.sellers.tableHeaders.email'),
-      render: (seller) => <span className="text-gray-700">{seller.email || '-'}</span>,
-    },
-    {
-      key: 'taxId',
-      header: t('pages.sellers.tableHeaders.taxId'),
-      render: (seller) => <span>{seller.taxId}</span>,
+      render: (seller) => <span className="text-gray-700">{seller.contact_email || '-'}</span>,
     },
     {
       key: 'contact',
       header: t('pages.sellers.tableHeaders.contact'),
       render: (seller) => (
         <div className="flex flex-col">
-          <span>{seller.contactName}</span>
-          {seller.contactPhone && (
-            <span className="text-xs text-gray-500">{seller.contactPhone}</span>
+          <span>{seller.contact_person || '-'}</span>
+          {seller.contact_phone && (
+            <span className="text-xs text-gray-500">{seller.contact_phone}</span>
           )}
         </div>
       ),
     },
     {
-      key: 'clients',
-      header: t('pages.sellers.tableHeaders.clients'),
-      render: (seller) => <span>{seller.clientsCount}</span>,
+      key: 'is_active',
+      header: t('pages.sellers.tableHeaders.status'),
+      render: (seller) => (
+        <span
+          className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+            seller.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+          }`}
+        >
+          {seller.is_active ? t('pages.sellers.status.active') : t('pages.sellers.status.inactive')}
+        </span>
+      ),
     },
     {
       key: 'actions',
@@ -297,7 +248,7 @@ export function SellerManagementPage() {
       {!isLoading && !isError && (
         <DataTable
           columns={columns}
-          data={paginatedSellers}
+          data={sellers}
           emptyMessage={t('pages.sellers.noSellersFound')}
         />
       )}
@@ -341,7 +292,7 @@ export function SellerManagementPage() {
           open={deletingSeller !== null}
           onConfirm={handleDeleteConfirm}
           onCancel={handleDeleteCancel}
-          isLoading={false} // TODO: Set to actual loading state when API is implemented
+          isLoading={deleteSellerMutation.isPending}
         />
       )}
     </div>

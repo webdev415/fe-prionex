@@ -235,7 +235,7 @@ export function ImportClientsPage() {
     : null
 
   const [step1Data, setStep1Data] = useState<Step1Data>({
-    sellerCreditor: '',
+    sellerId: '',
     projectCode: '',
     purchaseDate: new Date().toISOString().split('T')[0], // Today's date
     comment: '',
@@ -274,9 +274,7 @@ export function ImportClientsPage() {
 
   const isStep1Valid = () => {
     return (
-      step1Data.sellerCreditor !== '' &&
-      step1Data.projectCode !== '' &&
-      step1Data.purchaseDate !== ''
+      step1Data.sellerId !== '' && step1Data.projectCode !== '' && step1Data.purchaseDate !== ''
     )
   }
 
