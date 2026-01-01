@@ -17,7 +17,8 @@
     "roles": "Ролі",
     "smsTemplates": "SMS Шаблони",
     "transactions": "Транзакції",
-    "reports": "Звіти"
+    "reports": "Звіти",
+    "scoringConfiguration": "Конфігурація оцінки"
   },
   "search": {
     "placeholder": "Пошук",
@@ -53,7 +54,9 @@
     "ru": "Російська"
   },
   "common": {
-    "step": "Крок"
+    "step": "Крок",
+    "selected": "Вибрано",
+    "of": "з"
   },
   "logout": {
     "confirmTitle": "Підтвердити вихід",
@@ -558,6 +561,10 @@
       "filtersLabel": "Фільтри",
       "applied": "застосовано",
       "noClientsFound": "Клієнтів не знайдено",
+      "assign": "Призначити",
+      "bulkAssign": "Масове призначення",
+      "errorLoading": "Не вдалося завантажити клієнтів",
+      "errorOccurred": "Сталася помилка",
       "tableHeaders": {
         "fullName": "Повне ім'я",
         "taxIdNumber": "ІПН",
@@ -568,7 +575,8 @@
         "debt": "Борг",
         "amountOfDebt": "Сума боргу",
         "priority": "Пріоритет",
-        "score": "Оцінка"
+        "score": "Оцінка",
+        "actions": "Дії"
       },
       "priorities": {
         "critical": "Критичний",
@@ -726,6 +734,65 @@
           "type3": "Тип 3",
           "note": "Примітка",
           "typeYourNoteHere": "Введіть вашу примітку тут"
+        },
+        "assignClient": {
+          "title": "Призначити клієнта: {{fullName}}",
+          "clientInformation": "Інформація про клієнта",
+          "assignmentDetails": "Деталі призначення",
+          "name": "Ім'я",
+          "email": "Електронна пошта",
+          "phone": "Телефон",
+          "priority": "Пріоритет",
+          "score": "Оцінка",
+          "totalDebt": "Загальний борг",
+          "debt": "борг",
+          "debts": "боргів",
+          "employee": "Співробітник (необов'язково)",
+          "searcher": "Шукач (необов'язково)",
+          "assignmentReason": "Причина призначення",
+          "notes": "Примітки (необов'язково)",
+          "selectEmployee": "Виберіть співробітника...",
+          "selectSearcher": "Виберіть шукача...",
+          "enterAdditionalNotes": "Введіть додаткові примітки...",
+          "warningMessage": "Примітка: Має бути вибрано принаймні одне призначення (Співробітник або Шукач).",
+          "assignClient": "Призначити клієнта",
+          "reasons": {
+            "newClient": "Новий клієнт",
+            "workloadDistribution": "Розподіл навантаження",
+            "specialistRequired": "Потрібен спеціаліст",
+            "reassignment": "Перепризначення",
+            "other": "Інше"
+          }
+        },
+        "bulkAssignClient": {
+          "title": "Масове призначення клієнтів ({{count}} вибрано)",
+          "selectedClientsPreview": "Попередній перегляд вибраних клієнтів",
+          "assignmentOptions": "Параметри призначення",
+          "assignEmployeeToAll": "Призначити співробітника всім (необов'язково)",
+          "assignSearcherToAll": "Призначити шукача всім (необов'язково)",
+          "distributionMethod": "Метод розподілу",
+          "assignmentReason": "Причина призначення",
+          "notes": "Примітки",
+          "selectEmployee": "Виберіть співробітника...",
+          "selectSearcher": "Виберіть шукача...",
+          "selectReason": "Виберіть причину...",
+          "enterAdditionalNotes": "Введіть додаткові примітки...",
+          "assignAllToSelected": "Призначити всіх вибраним користувачам вище",
+          "distributeEvenly": "Розподілити рівномірно серед доступних користувачів (в майбутньому)",
+          "totalDebt": "Загальний борг:",
+          "avgScore": "Середня оцінка:",
+          "andMoreClients": "... і ще {{count}} {{client}}",
+          "client": "клієнт",
+          "clients": "клієнтів",
+          "warningMessage": "Це призначить {{count}} {{client}}. Історія призначень буде зареєстрована для кожного клієнта окремо.",
+          "assignAllClients": "Призначити всіх клієнтів",
+          "reasons": {
+            "newClient": "Новий клієнт",
+            "workloadDistribution": "Розподіл навантаження",
+            "specialistRequired": "Потрібен спеціаліст",
+            "reassignment": "Перепризначення",
+            "other": "Інше"
+          }
         },
         "callDialog": {
           "incomingCall": "Вхідний дзвінок",
@@ -1425,6 +1492,37 @@
         "topCollector": "Найкращий збирач",
         "largestPmt": "Найбільший платіж"
       }
+    },
+    "scoringConfiguration": {
+      "title": "Конфігурація оцінки - Проєкт Alpha",
+      "scoreWeights": "Ваги оцінки",
+      "debtAmountWeight": "Вага суми боргу",
+      "daysOverdueWeight": "Вага днів прострочення",
+      "contactHistoryWeight": "Вага історії контактів",
+      "totalMustEqual": "Разом має дорівнювати 100%",
+      "current": "Поточне",
+      "previewChanges": "Попередній перегляд змін",
+      "priorityThresholds": "Пороги класифікації пріоритетів",
+      "resetDefaults": "Скинути за замовчуванням",
+      "scoreGreaterThanOrEqual": "Оцінка ≥",
+      "scoreLessThan": "Оцінка <",
+      "points": "балів",
+      "andLessThan": "і <",
+      "criticalDescription": "Клієнти з найвищою терміновістю (оцінка 25-100)",
+      "highDescription": "Важливі клієнти, що потребують уваги (оцінка 18-24)",
+      "mediumDescription": "Потрібне стандартне спостереження (оцінка 10-17)",
+      "lowDescription": "Мінімальна терміновість (оцінка 0-9)",
+      "immediateEffect": "Зміни вплинуть на всіх клієнтів у цьому проєкті негайно",
+      "sellerOverrides": "Перевизначення для продавців (необов'язково)",
+      "addSellerConfig": "+ Додати конфігурацію для продавця",
+      "sellerOverridesDescription": "Налаштування різних порогів для конкретних продавців",
+      "configurationPreview": "Попередній перегляд конфігурації",
+      "currentDistribution": "Поточне розподілення:",
+      "withNewThresholds": "З новими порогами:",
+      "clients": "клієнтів",
+      "lastUpdated": "Останнє оновлення:",
+      "by": "від",
+      "saveConfiguration": "Зберегти конфігурацію"
     }
   }
 }

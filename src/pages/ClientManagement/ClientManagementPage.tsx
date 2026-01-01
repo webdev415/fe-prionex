@@ -9,8 +9,13 @@ import { useTranslation } from 'react-i18next'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { Button } from '@/components/ui/Button'
+import { LinkButton } from '@/components/ui/LinkButton'
 import { PriorityCards } from './components/PriorityCards'
+import { PriorityBadge } from './components/PriorityBadge'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
+import { AssignClientModal } from './components/AssignClientModal'
+import { BulkAssignClientModal } from './components/BulkAssignClientModal'
 import { ClientManagementPageSkeleton } from './components/ClientManagementPageSkeleton'
 import { Icons } from '@/lib/icons'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -101,6 +106,11 @@ export function ClientManagementPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [sortConfig, setSortConfig] = useState<SortConfig | undefined>()
   const [currentPage, setCurrentPage] = useState(1)
+  const [selectedClients, setSelectedClients] = useState<Set<number>>(new Set())
+  const [allClientsSelected, setAllClientsSelected] = useState(false)
+  const [excludedClients, setExcludedClients] = useState<Set<number>>(new Set()) // Track excluded items when all are selected
+  const [assignModalClientId, setAssignModalClientId] = useState<number | null>(null)
+  const [showBulkAssignModal, setShowBulkAssignModal] = useState(false)
   const prevSearchQueryRef = useRef(searchQuery)
   const prevFiltersRef = useRef(filters)
   const prevRowsPerPageRef = useRef(rowsPerPage)
@@ -180,6 +190,7 @@ export function ClientManagementPage() {
       prevSearchQueryRef.current = searchQuery
       startTransition(() => {
         setCurrentPage(1)
+        setSelectedClients(new Set()) // Clear selection when search changes
       })
     }
   }, [searchQuery])
@@ -198,6 +209,12 @@ export function ClientManagementPage() {
       prevSortConfigRef.current = sortConfig
       startTransition(() => {
         setCurrentPage(1)
+        // Only clear selection when filters change, not when rows per page or sort changes
+        if (filtersChanged) {
+          setSelectedClients(new Set())
+          setAllClientsSelected(false)
+          setExcludedClients(new Set())
+        }
       })
     }
   }, [debouncedFilters, rowsPerPage, sortConfig])
@@ -299,6 +316,133 @@ export function ClientManagementPage() {
 
   const handleSort = (key: string, order: 'asc' | 'desc') => {
     setSortConfig({ key, order })
+  }
+
+  // Bulk selection handlers
+  const handleBulkAssign = () => {
+    setShowBulkAssignModal(true)
+  }
+
+  const handleBulkAssignSubmit = (assignmentData: {
+    employeeId?: string
+    searcherId?: string
+    distributionMethod: 'assign-all' | 'distribute-evenly'
+    reason: string
+    notes?: string
+  }) => {
+    // TODO: Implement bulk assignment API call
+    console.log('Bulk assigning clients:', Array.from(selectedClients), assignmentData)
+    // Close modal after assignment
+    setShowBulkAssignModal(false)
+  }
+
+  // Get selected clients data for bulk assign modal
+  const selectedClientsData = useMemo(() => {
+    if (allClientsSelected) {
+      // If all clients are selected, use current page clients as preview
+      // The actual count will be totalCount - excludedClients.size
+      return filteredClients
+        .filter((client) => !excludedClients.has(client.id))
+        .map((client) => ({
+          id: client.id,
+          fullName: client.fullName,
+          priority: client.priority,
+          score: client.score,
+          debt: client.debt,
+        }))
+    }
+    return filteredClients
+      .filter((client) => selectedClients.has(client.id))
+      .map((client) => ({
+        id: client.id,
+        fullName: client.fullName,
+        priority: client.priority,
+        score: client.score,
+        debt: client.debt,
+      }))
+  }, [filteredClients, selectedClients, allClientsSelected, excludedClients])
+
+  // Calculate total selected count for bulk assign modal
+  const totalSelectedCount = useMemo(() => {
+    if (allClientsSelected) {
+      return totalCount - excludedClients.size
+    }
+    return selectedClients.size
+  }, [allClientsSelected, totalCount, excludedClients.size, selectedClients.size])
+
+  // Individual row assign handler
+  const handleAssign = (clientId: number) => {
+    setAssignModalClientId(clientId)
+  }
+
+  const handleAssignSubmit = (assignmentData: {
+    employeeId?: string
+    searcherId?: string
+    reason: string
+    notes?: string
+  }) => {
+    // TODO: Implement assignment API call
+    console.log('Assigning client:', assignModalClientId, assignmentData)
+    // Close modal after assignment
+    setAssignModalClientId(null)
+  }
+
+  const handleSelectionChange = (selectedItems: Set<number | string>) => {
+    const newSelection = new Set(Array.from(selectedItems).map(Number))
+
+    // If selection is completely empty, clear all selection state
+    if (newSelection.size === 0) {
+      setSelectedClients(new Set())
+      setAllClientsSelected(false)
+      setExcludedClients(new Set())
+      return
+    }
+
+    if (allClientsSelected) {
+      // When all items are selected, track which items are excluded (unchecked)
+      const currentPageIds = new Set(filteredClients.map((client) => client.id))
+      const uncheckedOnCurrentPage = filteredClients
+        .filter((client) => !newSelection.has(client.id))
+        .map((client) => client.id)
+
+      // Add unchecked items to excluded set
+      const newExcluded = new Set(excludedClients)
+      uncheckedOnCurrentPage.forEach((id) => newExcluded.add(id))
+
+      // Remove items that are checked again from excluded set
+      currentPageIds.forEach((id) => {
+        if (newSelection.has(id)) {
+          newExcluded.delete(id)
+        }
+      })
+
+      setExcludedClients(newExcluded)
+      setSelectedClients(newSelection)
+
+      // If all items are checked again (no exclusions), clear excluded set
+      if (newExcluded.size === 0) {
+        setExcludedClients(new Set())
+      }
+    } else {
+      // Normal selection mode
+      setSelectedClients(newSelection)
+      setExcludedClients(new Set())
+    }
+  }
+
+  const handleSelectAll = () => {
+    // Select all items across all pages
+    setAllClientsSelected(true)
+    setExcludedClients(new Set()) // Clear any exclusions
+    // Also select all items on the current page for visual feedback
+    const currentPageIds = new Set(filteredClients.map((client) => client.id))
+    setSelectedClients(currentPageIds)
+    // Note: We mark all as selected, so the count will show "Selected 14060 of 14060"
+  }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    // Don't clear selection when page changes - keep selections across pages
   }
 
   const handleClearAll = () => {
@@ -438,21 +582,7 @@ export function ClientManagementPage() {
       align: 'left',
       sortable: true,
       sortKey: 'priority',
-      render: (client) => {
-        const priorityColors = {
-          Critical: 'bg-error-500',
-          High: 'bg-warning-500',
-          Medium: 'bg-success-500',
-          Low: 'bg-gray-500',
-        }
-        return (
-          <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-white ${priorityColors[client.priority as keyof typeof priorityColors] || 'bg-gray-500'}`}
-          >
-            {t(`pages.clients.priorities.${client.priority.toLowerCase()}`)}
-          </span>
-        )
-      },
+      render: (client) => <PriorityBadge priority={client.priority} variant="compact" />,
     },
     {
       key: 'score',
@@ -460,6 +590,27 @@ export function ClientManagementPage() {
       align: 'right',
       sortable: true,
       sortKey: 'score',
+    },
+    {
+      key: 'actions',
+      header: t('pages.clients.tableHeaders.actions'),
+      align: 'center',
+      render: (client) => {
+        // Disable assign button when bulk actions are active (items are selected)
+        const isBulkActionActive = selectedClients.size > 0 || allClientsSelected
+        return (
+          <LinkButton
+            leftIcon={<Icons.Tick02 size={16} strokeWidth={2} />}
+            onClick={() => handleAssign(client.id)}
+            variant="regular-black"
+            size="xs"
+            className="text-xs"
+            disabled={isBulkActionActive}
+          >
+            {t('pages.clients.assign')}
+          </LinkButton>
+        )
+      },
     },
   ]
 
@@ -473,8 +624,10 @@ export function ClientManagementPage() {
     return (
       <div className="flex w-full flex-col items-center justify-center gap-4 pt-20">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
-        <p className="font-medium text-gray-900">Failed to load clients</p>
-        <p className="text-sm text-gray-600">{error?.message || 'An error occurred'}</p>
+        <p className="font-medium text-gray-900">{t('pages.clients.errorLoading')}</p>
+        <p className="text-sm text-gray-600">
+          {error?.message || t('pages.clients.errorOccurred')}
+        </p>
       </div>
     )
   }
@@ -536,7 +689,7 @@ export function ClientManagementPage() {
       {/* Data Table - Show skeleton when fetching */}
       {isFetching && !isLoading ? (
         <div className="flex flex-col items-start gap-8 self-stretch">
-          <TableSkeleton columns={columns.length} rows={rowsPerPage} className="w-full" />
+          <TableSkeleton columns={columns.length + 1} rows={rowsPerPage} className="w-full" />
         </div>
       ) : (
         <DataTable
@@ -545,7 +698,26 @@ export function ClientManagementPage() {
           sortConfig={sortConfig}
           onSort={handleSort}
           emptyMessage={t('pages.clients.noClientsFound')}
-          className="flex flex-col items-start gap-8 self-stretch"
+          className="flex flex-col items-start self-stretch"
+          enableBulkSelection
+          selectedItems={selectedClients}
+          onSelectionChange={handleSelectionChange}
+          totalCount={totalCount}
+          onSelectAll={handleSelectAll}
+          allItemsSelected={allClientsSelected}
+          excludedItemsCount={excludedClients.size}
+          excludedItems={excludedClients}
+          headerActions={
+            <Button
+              onClick={handleBulkAssign}
+              variant="primary"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Icons.UserCheck01 size={16} strokeWidth={2} />
+              {t('pages.clients.bulkAssign')}
+            </Button>
+          }
         />
       )}
 
@@ -557,11 +729,29 @@ export function ClientManagementPage() {
             totalPages={totalPages}
             pageSize={rowsPerPage}
             pageSizeOptions={[10, 20, 50, 100]}
-            onPageChange={setCurrentPage}
+            onPageChange={handlePageChange}
             onPageSizeChange={setRowsPerPage}
           />
         </div>
       )}
+
+      {/* Assign Client Modal */}
+      <AssignClientModal
+        open={assignModalClientId !== null}
+        clientId={assignModalClientId}
+        onClose={() => setAssignModalClientId(null)}
+        onAssign={handleAssignSubmit}
+      />
+
+      {/* Bulk Assign Client Modal */}
+      <BulkAssignClientModal
+        open={showBulkAssignModal}
+        selectedClientIds={selectedClients}
+        selectedClients={selectedClientsData}
+        totalSelectedCount={totalSelectedCount}
+        onClose={() => setShowBulkAssignModal(false)}
+        onAssign={handleBulkAssignSubmit}
+      />
     </div>
   )
 }

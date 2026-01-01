@@ -278,6 +278,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         icon: 'mail',
         label: t('navigation.smsTemplates'),
       },
+      {
+        path: '/dashboard/scoring-configuration',
+        icon: 'checkmark-badge-02',
+        label: t('navigation.scoringConfiguration'),
+      },
     ]
 
     return allNavItems.filter((item) => {

@@ -122,6 +122,7 @@ import {
   Invoice01Icon,
   Tick02Icon,
   PrinterIcon,
+  CheckmarkBadge02Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -294,6 +295,9 @@ export const Icons = {
   Invoice01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Invoice01Icon} {...props} />,
   Tick02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Tick02Icon} {...props} />,
   Printer: (props: Omit<IconProps, 'icon'>) => <Icon icon={PrinterIcon} {...props} />,
+  CheckmarkBadge02: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={CheckmarkBadge02Icon} {...props} />
+  ),
 }
 
 /**
@@ -407,6 +411,7 @@ export {
   Invoice01Icon,
   Tick02Icon,
   PrinterIcon,
+  CheckmarkBadge02Icon,
 }
 
 /**

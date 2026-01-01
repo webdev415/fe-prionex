@@ -3,22 +3,23 @@
     "name": "CRM Prionex",
     "description": "Customer Relationship Management System"
   },
-  "navigation": {
-    "home": "Home",
-    "dashboard": "Dashboard",
-    "clients": "Clients",
-    "settings": "Settings",
-    "logout": "Logout",
-    "activity": "Activity",
-    "importClients": "Import Clients",
-    "projects": "Projects",
-    "users": "Users",
-    "sellers": "Sellers",
-    "roles": "Roles",
-    "smsTemplates": "SMS Templates",
-    "transactions": "Transactions",
-    "reports": "Reports"
-  },
+    "navigation": {
+      "home": "Home",
+      "dashboard": "Dashboard",
+      "clients": "Clients",
+      "settings": "Settings",
+      "logout": "Logout",
+      "activity": "Activity",
+      "importClients": "Import Clients",
+      "projects": "Projects",
+      "users": "Users",
+      "sellers": "Sellers",
+      "roles": "Roles",
+      "smsTemplates": "SMS Templates",
+      "transactions": "Transactions",
+      "reports": "Reports",
+      "scoringConfiguration": "Scoring Configuration"
+    },
   "search": {
     "placeholder": "Search",
     "phoneNumber": "Phone number",
@@ -53,7 +54,9 @@
     "ru": "Russian"
   },
   "common": {
-    "step": "Step"
+    "step": "Step",
+    "selected": "Selected",
+    "of": "of"
   },
   "logout": {
     "confirmTitle": "Confirm Logout",
@@ -558,6 +561,10 @@
       "filtersLabel": "Filters",
       "applied": "applied",
       "noClientsFound": "No clients found",
+      "assign": "Assign",
+      "bulkAssign": "Bulk Assign",
+      "errorLoading": "Failed to load clients",
+      "errorOccurred": "An error occurred",
       "tableHeaders": {
         "fullName": "Full name",
         "taxIdNumber": "Tax id number",
@@ -568,7 +575,8 @@
         "debt": "Debt",
         "amountOfDebt": "Amount of debt",
         "priority": "Priority",
-        "score": "Score"
+        "score": "Score",
+        "actions": "Actions"
       },
       "priorities": {
         "critical": "Critical",
@@ -726,6 +734,65 @@
           "type3": "Type 3",
           "note": "Note",
           "typeYourNoteHere": "Type your note here"
+        },
+        "assignClient": {
+          "title": "Assign Client: {{fullName}}",
+          "clientInformation": "Client Information",
+          "assignmentDetails": "Assignment Details",
+          "name": "Name",
+          "email": "Email",
+          "phone": "Phone",
+          "priority": "Priority",
+          "score": "Score",
+          "totalDebt": "Total Debt",
+          "debt": "debt",
+          "debts": "debts",
+          "employee": "Employee (Optional)",
+          "searcher": "Searcher (Optional)",
+          "assignmentReason": "Assignment Reason",
+          "notes": "Notes (Optional)",
+          "selectEmployee": "Select employee...",
+          "selectSearcher": "Select searcher...",
+          "enterAdditionalNotes": "Enter additional notes...",
+          "warningMessage": "Note: At least one assignment (Employee or Searcher) must be selected.",
+          "assignClient": "Assign Client",
+          "reasons": {
+            "newClient": "New Client",
+            "workloadDistribution": "Workload Distribution",
+            "specialistRequired": "Specialist Required",
+            "reassignment": "Reassignment",
+            "other": "Other"
+          }
+        },
+        "bulkAssignClient": {
+          "title": "Bulk Assign Clients ({{count}} selected)",
+          "selectedClientsPreview": "Selected Clients Preview",
+          "assignmentOptions": "Assignment Options",
+          "assignEmployeeToAll": "Assign Employee To All (Optional)",
+          "assignSearcherToAll": "Assign Searcher To All (Optional)",
+          "distributionMethod": "Distribution Method",
+          "assignmentReason": "Assignment Reason",
+          "notes": "Notes",
+          "selectEmployee": "Select employee...",
+          "selectSearcher": "Select searcher...",
+          "selectReason": "Select reason...",
+          "enterAdditionalNotes": "Enter additional notes...",
+          "assignAllToSelected": "Assign all to selected users above",
+          "distributeEvenly": "Distribute evenly among available users (future)",
+          "totalDebt": "Total Debt:",
+          "avgScore": "Avg Score:",
+          "andMoreClients": "... and {{count}} more {{client}}",
+          "client": "client",
+          "clients": "clients",
+          "warningMessage": "This will assign {{count}} {{client}}. Assignment history will be logged for each client individually.",
+          "assignAllClients": "Assign All Clients",
+          "reasons": {
+            "newClient": "New Client",
+            "workloadDistribution": "Workload Distribution",
+            "specialistRequired": "Specialist Required",
+            "reassignment": "Reassignment",
+            "other": "Other"
+          }
         },
         "callDialog": {
           "incomingCall": "Incoming Call",
@@ -1425,6 +1492,37 @@
         "topCollector": "Top Collector",
         "largestPmt": "Largest Pmt"
       }
+    },
+    "scoringConfiguration": {
+      "title": "Scoring Configuration - Project Alpha",
+      "scoreWeights": "Score Weights",
+      "debtAmountWeight": "Debt Amount Weight",
+      "daysOverdueWeight": "Days Overdue Weight",
+      "contactHistoryWeight": "Contact History Weight",
+      "totalMustEqual": "Total must equal 100%",
+      "current": "Current",
+      "previewChanges": "Preview Changes",
+      "priorityThresholds": "Priority Classification Thresholds",
+      "resetDefaults": "Reset Defaults",
+      "scoreGreaterThanOrEqual": "Score ≥",
+      "scoreLessThan": "Score <",
+      "points": "points",
+      "andLessThan": "and <",
+      "criticalDescription": "Clients with highest urgency (score 25-100)",
+      "highDescription": "Important clients requiring attention (score 18-24)",
+      "mediumDescription": "Standard follow-up required (score 10-17)",
+      "lowDescription": "Minimal urgency (score 0-9)",
+      "immediateEffect": "Changes will affect all clients in this project immediately",
+      "sellerOverrides": "Seller-Specific Overrides (Optional)",
+      "addSellerConfig": "+ Add Seller-Specific Configuration",
+      "sellerOverridesDescription": "Configure different thresholds for specific sellers",
+      "configurationPreview": "Configuration Preview",
+      "currentDistribution": "Current Distribution:",
+      "withNewThresholds": "With New Thresholds:",
+      "clients": "clients",
+      "lastUpdated": "Last Updated:",
+      "by": "by",
+      "saveConfiguration": "Save Configuration"
     }
   }
 }

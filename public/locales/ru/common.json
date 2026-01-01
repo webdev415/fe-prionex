@@ -17,7 +17,8 @@
     "roles": "Роли",
     "smsTemplates": "SMS Шаблоны",
     "transactions": "Транзакции",
-    "reports": "Отчеты"
+    "reports": "Отчеты",
+    "scoringConfiguration": "Конфигурация оценки"
   },
   "search": {
     "placeholder": "Поиск",
@@ -53,7 +54,9 @@
     "ru": "Русский"
   },
   "common": {
-    "step": "Шаг"
+    "step": "Шаг",
+    "selected": "Выбрано",
+    "of": "из"
   },
   "logout": {
     "confirmTitle": "Подтвердить выход",
@@ -558,6 +561,10 @@
       "filtersLabel": "Фильтры",
       "applied": "применено",
       "noClientsFound": "Клиенты не найдены",
+      "assign": "Назначить",
+      "bulkAssign": "Массовое назначение",
+      "errorLoading": "Не удалось загрузить клиентов",
+      "errorOccurred": "Произошла ошибка",
       "tableHeaders": {
         "fullName": "Полное имя",
         "taxIdNumber": "ИНН",
@@ -568,7 +575,8 @@
         "debt": "Долг",
         "amountOfDebt": "Сумма долга",
         "priority": "Приоритет",
-        "score": "Оценка"
+        "score": "Оценка",
+        "actions": "Действия"
       },
       "priorities": {
         "critical": "Критический",
@@ -726,6 +734,65 @@
           "type3": "Тип 3",
           "note": "Заметка",
           "typeYourNoteHere": "Введите вашу заметку здесь"
+        },
+        "assignClient": {
+          "title": "Назначить клиента: {{fullName}}",
+          "clientInformation": "Информация о клиенте",
+          "assignmentDetails": "Детали назначения",
+          "name": "Имя",
+          "email": "Электронная почта",
+          "phone": "Телефон",
+          "priority": "Приоритет",
+          "score": "Оценка",
+          "totalDebt": "Общий долг",
+          "debt": "долг",
+          "debts": "долгов",
+          "employee": "Сотрудник (необязательно)",
+          "searcher": "Поисковик (необязательно)",
+          "assignmentReason": "Причина назначения",
+          "notes": "Примечания (необязательно)",
+          "selectEmployee": "Выберите сотрудника...",
+          "selectSearcher": "Выберите поисковика...",
+          "enterAdditionalNotes": "Введите дополнительные примечания...",
+          "warningMessage": "Примечание: Должно быть выбрано хотя бы одно назначение (Сотрудник или Поисковик).",
+          "assignClient": "Назначить клиента",
+          "reasons": {
+            "newClient": "Новый клиент",
+            "workloadDistribution": "Распределение нагрузки",
+            "specialistRequired": "Требуется специалист",
+            "reassignment": "Переназначение",
+            "other": "Другое"
+          }
+        },
+        "bulkAssignClient": {
+          "title": "Массовое назначение клиентов ({{count}} выбрано)",
+          "selectedClientsPreview": "Предпросмотр выбранных клиентов",
+          "assignmentOptions": "Параметры назначения",
+          "assignEmployeeToAll": "Назначить сотрудника всем (необязательно)",
+          "assignSearcherToAll": "Назначить поисковика всем (необязательно)",
+          "distributionMethod": "Метод распределения",
+          "assignmentReason": "Причина назначения",
+          "notes": "Примечания",
+          "selectEmployee": "Выберите сотрудника...",
+          "selectSearcher": "Выберите поисковика...",
+          "selectReason": "Выберите причину...",
+          "enterAdditionalNotes": "Введите дополнительные примечания...",
+          "assignAllToSelected": "Назначить всех выбранным пользователям выше",
+          "distributeEvenly": "Распределить равномерно среди доступных пользователей (в будущем)",
+          "totalDebt": "Общий долг:",
+          "avgScore": "Средняя оценка:",
+          "andMoreClients": "... и еще {{count}} {{client}}",
+          "client": "клиент",
+          "clients": "клиентов",
+          "warningMessage": "Это назначит {{count}} {{client}}. История назначений будет зарегистрирована для каждого клиента отдельно.",
+          "assignAllClients": "Назначить всех клиентов",
+          "reasons": {
+            "newClient": "Новый клиент",
+            "workloadDistribution": "Распределение нагрузки",
+            "specialistRequired": "Требуется специалист",
+            "reassignment": "Переназначение",
+            "other": "Другое"
+          }
         },
         "callDialog": {
           "incomingCall": "Входящий звонок",
@@ -1425,6 +1492,37 @@
         "topCollector": "Лучший сборщик",
         "largestPmt": "Самый большой платеж"
       }
+    },
+    "scoringConfiguration": {
+      "title": "Конфигурация оценки - Проект Alpha",
+      "scoreWeights": "Веса оценки",
+      "debtAmountWeight": "Вес суммы долга",
+      "daysOverdueWeight": "Вес дней просрочки",
+      "contactHistoryWeight": "Вес истории контактов",
+      "totalMustEqual": "Итого должно равняться 100%",
+      "current": "Текущее",
+      "previewChanges": "Предпросмотр изменений",
+      "priorityThresholds": "Пороги классификации приоритетов",
+      "resetDefaults": "Сбросить по умолчанию",
+      "scoreGreaterThanOrEqual": "Оценка ≥",
+      "scoreLessThan": "Оценка <",
+      "points": "баллов",
+      "andLessThan": "и <",
+      "criticalDescription": "Клиенты с наивысшей срочностью (оценка 25-100)",
+      "highDescription": "Важные клиенты, требующие внимания (оценка 18-24)",
+      "mediumDescription": "Требуется стандартное наблюдение (оценка 10-17)",
+      "lowDescription": "Минимальная срочность (оценка 0-9)",
+      "immediateEffect": "Изменения повлияют на всех клиентов в этом проекте немедленно",
+      "sellerOverrides": "Переопределения для продавцов (необязательно)",
+      "addSellerConfig": "[+ Добавить конфигурацию для продавца]",
+      "sellerOverridesDescription": "Настройка различных порогов для конкретных продавцов",
+      "configurationPreview": "Предпросмотр конфигурации",
+      "currentDistribution": "Текущее распределение:",
+      "withNewThresholds": "С новыми порогами:",
+      "clients": "клиентов",
+      "lastUpdated": "Последнее обновление:",
+      "by": "от",
+      "saveConfiguration": "Сохранить конфигурацию"
     }
   }
 }
