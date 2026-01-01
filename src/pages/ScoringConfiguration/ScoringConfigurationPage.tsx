@@ -4,14 +4,20 @@
  * Page for configuring client scoring weights and priority classification thresholds.
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Slider } from '@/components/ui/Slider'
 import { PriorityBadge } from '@/pages/ClientManagement/components/PriorityBadge'
 import { Icons } from '@/lib/icons'
+import {
+  configApi,
+  type ScoringConfigResponse,
+  type PreviewResponse,
+} from '@/features/clients/api/configApi'
 
 interface ScoreWeights {
   debtAmount: number
@@ -36,6 +42,13 @@ interface Distribution {
 export function ScoringConfigurationPage() {
   const { t } = useTranslation('common')
 
+  // Loading and error states
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isPreviewing, setIsPreviewing] = useState(false)
+  const [originalConfig, setOriginalConfig] = useState<ScoringConfigResponse | null>(null)
+  const [previewData, setPreviewData] = useState<PreviewResponse | null>(null)
+
   // Score weights state
   const [scoreWeights, setScoreWeights] = useState<ScoreWeights>({
     debtAmount: 40,
@@ -54,28 +67,83 @@ export function ScoringConfigurationPage() {
   // Immediate effect checkbox
   const [immediateEffect, setImmediateEffect] = useState(true)
 
-  // Current distribution (mock data)
-  const currentDistribution: Distribution = useMemo(
-    () => ({
+  // Load configuration on mount
+  useEffect(() => {
+    loadConfiguration()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const loadConfiguration = async () => {
+    try {
+      setIsLoading(true)
+      const config = await configApi.getScoringConfig()
+
+      // Convert API response to component state
+      setScoreWeights({
+        debtAmount: config.weights.debt_amount * 100,
+        daysOverdue: config.weights.days_overdue * 100,
+        contactHistory: config.weights.contact_history * 100,
+      })
+
+      setPriorityThresholds(config.priority_thresholds)
+      setOriginalConfig(config)
+
+      // Show fallback warning if applicable
+      if (config.source === 'fallback') {
+        toast.warning(
+          t(
+            'pages.scoringConfiguration.fallbackWarning',
+            'Using fallback configuration. Database connection unavailable.'
+          )
+        )
+      }
+    } catch (error) {
+      console.error('Failed to load configuration:', error)
+      toast.error(
+        t('pages.scoringConfiguration.loadError', 'Failed to load configuration. Using defaults.')
+      )
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Current distribution from preview or original config
+  const currentDistribution: Distribution = useMemo(() => {
+    if (previewData) {
+      return {
+        critical: previewData.current_distribution.critical.count,
+        high: previewData.current_distribution.high.count,
+        medium: previewData.current_distribution.medium.count,
+        low: previewData.current_distribution.low.count,
+      }
+    }
+    // Default mock data
+    return {
       critical: 45,
       high: 87,
       medium: 156,
       low: 85,
-    }),
-    []
-  )
+    }
+  }, [previewData])
 
-  // Calculate new distribution (mock calculation)
+  // New distribution from preview
   const newDistribution: Distribution = useMemo(() => {
-    // This would be calculated based on actual client data
-    // For now, using mock calculations
+    if (previewData) {
+      return {
+        critical: previewData.new_distribution.critical.count,
+        high: previewData.new_distribution.high.count,
+        medium: previewData.new_distribution.medium.count,
+        low: previewData.new_distribution.low.count,
+      }
+    }
+    // Default mock data
     return {
       critical: 52,
       high: 93,
       medium: 148,
       low: 80,
     }
-  }, [])
+  }, [previewData])
 
   const totalClients = useMemo(() => {
     return (
@@ -111,20 +179,104 @@ export function ScoringConfigurationPage() {
       medium: 10,
       low: 0,
     })
+    setPreviewData(null) // Clear preview data
   }
 
-  const handleSave = () => {
-    // TODO: Implement save functionality
-    console.log('Saving configuration', { scoreWeights, priorityThresholds, immediateEffect })
+  const handlePreview = async () => {
+    try {
+      setIsPreviewing(true)
+      const preview = await configApi.previewScoringConfig({
+        project_id: originalConfig?.project_id,
+        seller_id: originalConfig?.seller_id,
+        new_priority_thresholds: priorityThresholds,
+      })
+      setPreviewData(preview)
+      toast.success(t('pages.scoringConfiguration.previewSuccess', 'Preview updated'))
+    } catch (error) {
+      console.error('Failed to preview configuration:', error)
+      toast.error(t('pages.scoringConfiguration.previewError', 'Failed to preview changes'))
+    } finally {
+      setIsPreviewing(false)
+    }
+  }
+
+  const handleSave = async () => {
+    // Validate total weight
+    if (totalWeight !== 100) {
+      toast.error(t('pages.scoringConfiguration.weightError', 'Total weights must equal 100%'))
+      return
+    }
+
+    try {
+      setIsSaving(true)
+
+      // Convert percentages to decimals for API
+      const result = await configApi.updateScoringConfig({
+        project_id: originalConfig?.project_id,
+        seller_id: originalConfig?.seller_id,
+        weights: {
+          debt_amount: scoreWeights.debtAmount / 100,
+          days_overdue: scoreWeights.daysOverdue / 100,
+          contact_history: scoreWeights.contactHistory / 100,
+        },
+        priority_thresholds: priorityThresholds,
+        immediate_effect: immediateEffect,
+        change_reason: 'Configuration updated via web interface',
+      })
+
+      toast.success(t('pages.scoringConfiguration.saveSuccess', 'Configuration saved successfully'))
+
+      if (result.recalculation_triggered) {
+        toast.info(
+          t(
+            'pages.scoringConfiguration.recalculationTriggered',
+            `Recalculating scores for ${result.affected_clients} clients...`
+          )
+        )
+      }
+
+      // Reload configuration to get updated data
+      await loadConfiguration()
+      setPreviewData(null) // Clear preview
+    } catch (error) {
+      console.error('Failed to save configuration:', error)
+      const errorMessage =
+        (error as { response?: { data?: { detail?: string } } }).response?.data?.detail ||
+        t('pages.scoringConfiguration.saveError', 'Failed to save configuration')
+      toast.error(errorMessage)
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleCancel = () => {
-    // TODO: Implement cancel/reset functionality
-    console.log('Canceling changes')
+    if (originalConfig) {
+      // Reset to original values
+      setScoreWeights({
+        debtAmount: originalConfig.weights.debt_amount * 100,
+        daysOverdue: originalConfig.weights.days_overdue * 100,
+        contactHistory: originalConfig.weights.contact_history * 100,
+      })
+      setPriorityThresholds(originalConfig.priority_thresholds)
+      setPreviewData(null)
+      toast.info(t('pages.scoringConfiguration.changesCanceled', 'Changes canceled'))
+    }
   }
 
   const formatPercentage = (count: number, total: number) => {
     return Math.round((count / total) * 100)
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="flex w-full flex-col items-center justify-center gap-4 py-16">
+        <Icons.Spinner />
+        <p className="text-dark-500 text-sm">
+          {t('pages.scoringConfiguration.loading', 'Loading configuration...')}
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -142,8 +294,16 @@ export function ScoringConfigurationPage() {
           <h2 className="text-dark-500 text-lg font-semibold">
             {t('pages.scoringConfiguration.scoreWeights', 'Score Weights')}
           </h2>
-          <Button variant="secondary" size="sm" onClick={() => {}} className="rounded-md">
-            {t('pages.scoringConfiguration.previewChanges', 'Preview Changes')}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handlePreview}
+            disabled={isPreviewing}
+            className="rounded-md"
+          >
+            {isPreviewing
+              ? t('pages.scoringConfiguration.previewing', 'Previewing...')
+              : t('pages.scoringConfiguration.previewChanges', 'Preview Changes')}
           </Button>
         </div>
 
@@ -458,19 +618,28 @@ export function ScoringConfigurationPage() {
       {/* Footer */}
       <div className="flex w-full items-center justify-between">
         <span className="text-dark-500 text-sm">
-          {t('pages.scoringConfiguration.lastUpdated', 'Last Updated:')} 2024-01-15 14:30{' '}
-          {t('pages.scoringConfiguration.by', 'by')} Admin User
+          {originalConfig?.updated_at
+            ? `${t('pages.scoringConfiguration.lastUpdated', 'Last Updated:')} ${new Date(originalConfig.updated_at).toLocaleString()}`
+            : t('pages.scoringConfiguration.noUpdateInfo', 'No update information available')}
         </span>
         <div className="flex w-[30%] items-center gap-3">
           <Button
             variant="cancel"
             onClick={handleCancel}
+            disabled={isSaving}
             className="flex-1 self-stretch rounded-md"
           >
             {t('actions.cancel', 'Cancel')}
           </Button>
-          <Button variant="primary" onClick={handleSave} className="flex-1 self-stretch rounded-md">
-            {t('pages.scoringConfiguration.saveConfiguration', 'Save Configuration')}
+          <Button
+            variant="primary"
+            onClick={handleSave}
+            disabled={isSaving || totalWeight !== 100}
+            className="flex-1 self-stretch rounded-md"
+          >
+            {isSaving
+              ? t('pages.scoringConfiguration.saving', 'Saving...')
+              : t('pages.scoringConfiguration.saveConfiguration', 'Save Configuration')}
           </Button>
         </div>
       </div>
