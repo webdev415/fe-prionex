@@ -2,8 +2,10 @@ import { create } from 'zustand'
 
 interface SidebarState {
   isOpenSideBar: boolean
+  isHoverOpen: boolean
   toggleSidebar: () => void
   setSidebarOpen: (isOpen: boolean) => void
+  setHoverOpen: (isOpen: boolean) => void
 }
 
 // Helper functions for localStorage
@@ -30,14 +32,24 @@ const setStoredSidebarState = (isOpen: boolean): void => {
 
 export const useSidebarStore = create<SidebarState>((set) => ({
   isOpenSideBar: getStoredSidebarState(),
+  isHoverOpen: false,
   toggleSidebar: () =>
     set((state) => {
       const newState = !state.isOpenSideBar
       setStoredSidebarState(newState)
-      return { isOpenSideBar: newState }
+      return { isOpenSideBar: newState, isHoverOpen: false }
     }),
   setSidebarOpen: (isOpen: boolean) => {
     setStoredSidebarState(isOpen)
-    set({ isOpenSideBar: isOpen })
+    set({ isOpenSideBar: isOpen, isHoverOpen: false })
+  },
+  setHoverOpen: (isOpen: boolean) => {
+    set((state) => {
+      // Only allow hover open if sidebar is not already clicked open
+      if (!state.isOpenSideBar) {
+        return { isHoverOpen: isOpen }
+      }
+      return state
+    })
   },
 }))

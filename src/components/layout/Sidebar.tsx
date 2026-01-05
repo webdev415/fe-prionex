@@ -65,7 +65,10 @@ const iconMap: Record<
  */
 export function Sidebar({ items, actions = [], className }: SidebarProps) {
   const location = useLocation()
-  const { isOpenSideBar, toggleSidebar } = useSidebarStore()
+  const { isOpenSideBar, isHoverOpen, toggleSidebar, setHoverOpen } = useSidebarStore()
+
+  // Determine if sidebar should be visible (either opened or hover-opened)
+  const isSidebarVisible = isOpenSideBar || isHoverOpen
 
   /**
    * Check if a path is active
@@ -83,9 +86,21 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
         className={cn(
           'fixed top-0 left-0 z-30 flex h-screen flex-col overflow-hidden py-6 transition-all duration-300',
           'shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_21px_2px_0px_rgba(0,0,0,0.06)]',
-          isOpenSideBar ? 'w-64 items-start bg-white px-4' : 'w-16 items-center bg-white',
+          isSidebarVisible ? 'w-64 items-start bg-white px-4' : 'w-16 items-center bg-white',
           className
         )}
+        onMouseEnter={() => {
+          // If hovering over sidebar and it was opened by hover, keep it open
+          if (isHoverOpen) {
+            setHoverOpen(true)
+          }
+        }}
+        onMouseLeave={() => {
+          // Close sidebar if it was only opened by hover
+          if (isHoverOpen && !isOpenSideBar) {
+            setHoverOpen(false)
+          }
+        }}
       >
         {/* Menu/Close icon at top */}
         {isOpenSideBar ? (
@@ -117,7 +132,7 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
         <nav
           className={cn(
             'flex w-full flex-1 flex-col gap-6 overflow-x-hidden overflow-y-auto py-4',
-            isOpenSideBar ? 'items-stretch px-0' : 'items-center px-0'
+            isSidebarVisible ? 'items-stretch px-0' : 'items-center px-0'
           )}
         >
           {items.map((item, index) => {
@@ -139,12 +154,18 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
                   key={uniqueKey}
                   className={cn(
                     'flex shrink-0 items-center rounded-md opacity-50',
-                    isOpenSideBar ? 'mx-1 h-10 w-[95%] px-3' : 'mx-auto h-10 w-10 justify-center'
+                    isSidebarVisible ? 'mx-1 h-10 w-[95%] px-3' : 'mx-auto h-10 w-10 justify-center'
                   )}
                   aria-label={item.label}
+                  onMouseEnter={() => {
+                    // Open sidebar on hover if it's closed
+                    if (!isOpenSideBar) {
+                      setHoverOpen(true)
+                    }
+                  }}
                 >
                   <IconComponent size={20} className="text-gray-400" strokeWidth={1.5} />
-                  {isOpenSideBar && (
+                  {isSidebarVisible && (
                     <span className="ml-3 text-sm text-gray-400">{item.label}</span>
                   )}
                 </div>
@@ -157,7 +178,7 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
                 end={item.path === '/dashboard'}
                 className={cn(
                   'focus:ring-primary-500 flex shrink-0 items-center transition-all duration-200 focus:ring-2 focus:ring-offset-2 focus:outline-none',
-                  isOpenSideBar
+                  isSidebarVisible
                     ? cn(
                         'mx-1 h-10 w-[95%] rounded-lg px-3',
                         isActive ? 'bg-secondary-800' : 'hover:bg-gray-50'
@@ -168,17 +189,23 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
                       )
                 )}
                 aria-label={item.label}
+                onMouseEnter={() => {
+                  // Open sidebar on hover if it's closed
+                  if (!isOpenSideBar) {
+                    setHoverOpen(true)
+                  }
+                }}
               >
                 <IconComponent
                   size={20}
                   className={cn(isActive ? 'text-primary-300' : 'text-gray-700')}
                   strokeWidth={1.5}
                 />
-                {isOpenSideBar && (
+                {isSidebarVisible && (
                   <span
                     className={cn(
                       'ml-3 text-sm font-medium',
-                      isActive ? 'text-white' : 'text-dark-500'
+                      isActive ? 'text-primary-300' : 'text-gray-700'
                     )}
                   >
                     {item.label}
@@ -187,7 +214,7 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
               </NavLink>
             )
 
-            if (isOpenSideBar) {
+            if (isSidebarVisible) {
               return (
                 <div key={uniqueKey} className="w-full">
                   {navLinkContent}
@@ -227,20 +254,26 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
                   onClick={action.onClick}
                   className={cn(
                     'focus:ring-primary-500 flex items-center rounded-md transition-all duration-200 focus:ring-2 focus:ring-offset-2 focus:outline-none',
-                    isOpenSideBar
+                    isSidebarVisible
                       ? 'mx-1 h-10 w-[95%] px-3 hover:bg-gray-50'
                       : 'justify-center p-1 hover:scale-110'
                   )}
                   aria-label={action.label}
+                  onMouseEnter={() => {
+                    // Open sidebar on hover if it's closed
+                    if (!isOpenSideBar) {
+                      setHoverOpen(true)
+                    }
+                  }}
                 >
                   <ActionIcon size={20} className="text-gray-700" strokeWidth={1.5} />
-                  {isOpenSideBar && (
-                    <span className="text-dark-500 ml-3 text-sm font-medium">{action.label}</span>
+                  {isSidebarVisible && (
+                    <span className="ml-3 text-sm font-medium text-gray-700">{action.label}</span>
                   )}
                 </button>
               )
 
-              if (isOpenSideBar) {
+              if (isSidebarVisible) {
                 return <div key={index}>{buttonContent}</div>
               }
 
