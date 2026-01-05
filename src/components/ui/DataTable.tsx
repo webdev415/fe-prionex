@@ -243,147 +243,149 @@ export function DataTable<T extends { id: number | string }>({
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-[#EBECE8] bg-[#EBECE8] shadow-sm ${className || ''}`}
+      className={`data-table-scroll overflow-x-auto rounded-xl border border-[#EBECE8] bg-[#EBECE8] shadow-sm ${className || ''}`}
     >
-      {/* Header Row - shown when bulk selection is enabled OR when tableHeaderActions/tableHeaderTitle is provided */}
-      {showHeaderRow && (
-        <div
-          ref={headerRowRef}
-          className="flex min-h-[49px] w-full items-center justify-between border-b border-[#EBECE8] bg-white px-6"
-        >
-          <div className="flex w-full items-center gap-3">
-            {/* Show selection info when bulk selection is enabled */}
-            {enableBulkSelection && renderBulkHeaderSelectionInfo()}
-            {/* Custom bulk header title */}
-            {enableBulkSelection && renderBulkHeaderTitle()}
-            {/* Table header title (when not using bulk selection) */}
-            {!enableBulkSelection &&
-              tableHeaderTitle &&
-              (typeof tableHeaderTitle === 'string' ? (
-                <span className="text-xs font-medium text-[#05040D]">{tableHeaderTitle}</span>
-              ) : (
-                tableHeaderTitle
-              ))}
+      <div className="min-w-full">
+        {/* Header Row - shown when bulk selection is enabled OR when tableHeaderActions/tableHeaderTitle is provided */}
+        {showHeaderRow && (
+          <div
+            ref={headerRowRef}
+            className="sticky top-0 z-20 flex min-h-[49px] w-full items-center justify-between border-b border-[#EBECE8] bg-white px-4 shadow-sm"
+          >
+            <div className="flex w-full items-center gap-3">
+              {/* Show selection info when bulk selection is enabled */}
+              {enableBulkSelection && renderBulkHeaderSelectionInfo()}
+              {/* Custom bulk header title */}
+              {enableBulkSelection && renderBulkHeaderTitle()}
+              {/* Table header title (when not using bulk selection) */}
+              {!enableBulkSelection &&
+                tableHeaderTitle &&
+                (typeof tableHeaderTitle === 'string' ? (
+                  <span className="text-xs font-medium text-[#05040D]">{tableHeaderTitle}</span>
+                ) : (
+                  tableHeaderTitle
+                ))}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {/* Bulk header actions (when bulk selection is enabled) */}
+              {enableBulkSelection && bulkHeaderActions}
+              {/* Actions shown only when items are selected (for backward compatibility) */}
+              {enableBulkSelection && hasSelectedItems && headerActions}
+              {/* Table header actions (works independently of bulk selection) */}
+              {tableHeaderActions}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {/* Bulk header actions (when bulk selection is enabled) */}
-            {enableBulkSelection && bulkHeaderActions}
-            {/* Actions shown only when items are selected (for backward compatibility) */}
-            {enableBulkSelection && hasSelectedItems && headerActions}
-            {/* Table header actions (works independently of bulk selection) */}
-            {tableHeaderActions}
-          </div>
-        </div>
-      )}
+        )}
 
-      <table className="min-w-full border-collapse">
-        <thead>
-          <tr className="bg-white">
-            {/* Checkbox column for bulk selection */}
-            {enableBulkSelection && (
-              <th
-                scope="col"
-                style={{ height: `${headerHeight}px` }}
-                className="w-[60px] border-r border-[#EBECE8] px-6 text-left"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={handleSelectAll}
-                  className={someSelected ? 'opacity-50' : ''}
-                  aria-label="Select all"
-                />
-              </th>
-            )}
-            {columns.map((column, index) => (
-              <th
-                key={column.key}
-                scope="col"
-                style={{ height: `${headerHeight}px` }}
-                className={`px-6 text-xs font-medium text-[#05040D] ${
-                  column.align === 'center'
-                    ? 'text-center'
-                    : column.align === 'right'
-                      ? 'text-right'
-                      : 'text-left'
-                } ${column.sortable ? 'cursor-pointer select-none hover:bg-gray-50' : ''} ${
-                  index < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''
-                }`}
-                onClick={() => handleSort(column)}
-              >
-                <span className="inline-flex items-center">
-                  {column.header}
-                  {getSortIcon(column)}
-                </span>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {data.length === 0 ? (
-            <tr>
-              <td
-                colSpan={enableBulkSelection ? columns.length + 1 : columns.length}
-                className="h-[49px] px-6 text-center text-xs font-medium text-[#05040D]"
-              >
-                {emptyMessage}
-              </td>
-            </tr>
-          ) : (
-            data.map((item, rowIndex) => {
-              // If allItemsSelected is true, treat all rows as selected EXCEPT excluded items
-              const isExcluded = allItemsSelected && excludedItems.has(item.id)
-              const isSelected =
-                (allItemsSelected && !isExcluded) ||
-                (!allItemsSelected && selectedItems.has(item.id))
-              // Determine background color: selected rows get distinct color, others alternate
-              const getRowBackground = () => {
-                if (isSelected) {
-                  return 'bg-information-50' // Light blue background for selected rows
-                }
-                return rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
-              }
-              return (
-                <tr
-                  key={item.id}
-                  className={`transition-colors ${getRowBackground()} ${onRowClick ? 'cursor-pointer' : ''}`}
-                  onClick={() => onRowClick?.(item)}
+        <table className="min-w-full border-collapse whitespace-nowrap">
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-white">
+              {/* Checkbox column for bulk selection */}
+              {enableBulkSelection && (
+                <th
+                  scope="col"
+                  style={{ height: `${headerHeight}px` }}
+                  className="w-[60px] border-r border-b border-[#EBECE8] bg-white px-4 text-left"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Checkbox column for bulk selection */}
-                  {enableBulkSelection && (
-                    <td
-                      className="h-[49px] border-r border-[#EBECE8] px-6"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={(checked) => handleSelectItem(item.id, checked === true)}
-                        aria-label={`Select item ${item.id}`}
-                      />
-                    </td>
-                  )}
-                  {columns.map((column, colIndex) => (
-                    <td
-                      key={column.key}
-                      className={`text-dark-500 h-[49px] px-6 text-xs font-medium ${
-                        column.align === 'center'
-                          ? 'text-center'
-                          : column.align === 'right'
-                            ? 'text-right'
-                            : 'text-left'
-                      } ${colIndex < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''} ${column.className || ''}`}
-                    >
-                      {column.render
-                        ? column.render(item)
-                        : String((item as Record<string, unknown>)[column.key] ?? '')}
-                    </td>
-                  ))}
-                </tr>
-              )
-            })
-          )}
-        </tbody>
-      </table>
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={handleSelectAll}
+                    className={someSelected ? 'opacity-50' : ''}
+                    aria-label="Select all"
+                  />
+                </th>
+              )}
+              {columns.map((column, index) => (
+                <th
+                  key={column.key}
+                  scope="col"
+                  style={{ height: `${headerHeight}px` }}
+                  className={`border-b border-[#EBECE8] bg-white px-4 text-xs font-semibold whitespace-nowrap text-[#05040D] ${
+                    column.align === 'center'
+                      ? 'text-center'
+                      : column.align === 'right'
+                        ? 'text-right'
+                        : 'text-left'
+                  } ${column.sortable ? 'cursor-pointer transition-colors select-none hover:bg-gray-50' : ''} ${
+                    index < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''
+                  }`}
+                  onClick={() => handleSort(column)}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    {column.header}
+                    {getSortIcon(column)}
+                  </span>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={enableBulkSelection ? columns.length + 1 : columns.length}
+                  className="h-[49px] px-4 text-center text-xs font-medium text-[#05040D]"
+                >
+                  {emptyMessage}
+                </td>
+              </tr>
+            ) : (
+              data.map((item, rowIndex) => {
+                // If allItemsSelected is true, treat all rows as selected EXCEPT excluded items
+                const isExcluded = allItemsSelected && excludedItems.has(item.id)
+                const isSelected =
+                  (allItemsSelected && !isExcluded) ||
+                  (!allItemsSelected && selectedItems.has(item.id))
+                // Determine background color: selected rows get distinct color, others alternate
+                const getRowBackground = () => {
+                  if (isSelected) {
+                    return 'bg-information-50' // Light blue background for selected rows
+                  }
+                  return rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
+                }
+                return (
+                  <tr
+                    key={item.id}
+                    className={`transition-colors ${getRowBackground()} ${onRowClick ? 'cursor-pointer' : ''}`}
+                    onClick={() => onRowClick?.(item)}
+                  >
+                    {/* Checkbox column for bulk selection */}
+                    {enableBulkSelection && (
+                      <td
+                        className="h-[49px] border-r border-[#EBECE8] px-4"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => handleSelectItem(item.id, checked === true)}
+                          aria-label={`Select item ${item.id}`}
+                        />
+                      </td>
+                    )}
+                    {columns.map((column, colIndex) => (
+                      <td
+                        key={column.key}
+                        className={`text-dark-500 h-[49px] px-4 text-xs font-medium whitespace-nowrap ${
+                          column.align === 'center'
+                            ? 'text-center'
+                            : column.align === 'right'
+                              ? 'text-right'
+                              : 'text-left'
+                        } ${colIndex < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''} ${column.className || ''}`}
+                      >
+                        {column.render
+                          ? column.render(item)
+                          : String((item as Record<string, unknown>)[column.key] ?? '')}
+                      </td>
+                    ))}
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
