@@ -600,7 +600,7 @@ export function ClientManagementPage() {
         const isBulkActionActive = selectedClients.size > 0 || allClientsSelected
         return (
           <LinkButton
-            leftIcon={<Icons.Tick02 size={16} strokeWidth={2} />}
+            leftIcon={<Icons.PencilEdit size={16} strokeWidth={2} />}
             onClick={() => handleAssign(client.id)}
             variant="regular-black"
             size="xs"
