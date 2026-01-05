@@ -18,6 +18,7 @@ import {
   type ScoringConfigResponse,
   type PreviewResponse,
 } from '@/features/clients/api/configApi'
+import { ScoringConfigurationPageSkeleton } from './ScoringConfigurationPageSkeleton'
 
 interface ScoreWeights {
   debtAmount: number
@@ -269,14 +270,7 @@ export function ScoringConfigurationPage() {
 
   // Show loading state
   if (isLoading) {
-    return (
-      <div className="flex w-full flex-col items-center justify-center gap-4 py-16">
-        <Icons.Spinner />
-        <p className="text-dark-500 text-sm">
-          {t('pages.scoringConfiguration.loading', 'Loading configuration...')}
-        </p>
-      </div>
-    )
+    return <ScoringConfigurationPageSkeleton />
   }
 
   return (
