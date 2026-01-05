@@ -141,15 +141,18 @@ export function DataTable<T extends { id: number | string }>({
   }
 
   // Check if all items are selected
+  // Only return true when allItemsSelected is true (user clicked "Select All")
+  // Don't auto-check when user manually selects all items on current page
   const allSelected = useMemo(() => {
     if (allItemsSelected) {
       // If all items are selected, check if any items on current page are excluded
       if (data.length === 0) return false
       return data.every((item) => !excludedItems.has(item.id))
     }
-    if (data.length === 0) return false
-    return data.every((item) => selectedItems.has(item.id))
-  }, [data, selectedItems, allItemsSelected, excludedItems])
+    // When allItemsSelected is false, don't check the header checkbox
+    // even if all items on current page are manually selected
+    return false
+  }, [data, allItemsSelected, excludedItems])
 
   // Check if some items are selected
   const someSelected = useMemo(() => {
