@@ -112,20 +112,13 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
             <Icons.Close size={22} className="text-secondary-800" strokeWidth={1.5} />
           </button>
         ) : (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={toggleSidebar}
-                className="focus:ring-primary-500 mb-4 cursor-pointer rounded-md p-1 transition-all duration-200 hover:scale-110 focus:ring-2 focus:ring-offset-2 focus:outline-none"
-                aria-label="Menu"
-              >
-                <Icons.Menu11 size={22} className="text-gray-700" strokeWidth={1.5} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>Menu</p>
-            </TooltipContent>
-          </Tooltip>
+          <button
+            onClick={toggleSidebar}
+            className="focus:ring-primary-500 mb-4 cursor-pointer rounded-md p-1 transition-all duration-200 hover:scale-110 focus:ring-2 focus:ring-offset-2 focus:outline-none"
+            aria-label="Menu"
+          >
+            <Icons.Menu11 size={22} className="text-gray-700" strokeWidth={1.5} />
+          </button>
         )}
 
         {/* Navigation Icons */}
