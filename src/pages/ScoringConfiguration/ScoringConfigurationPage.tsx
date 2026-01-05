@@ -352,7 +352,7 @@ export function ScoringConfigurationPage() {
       </div>
       <div className="flex flex-row gap-4 self-stretch">
         {/* Priority Classification Thresholds Section */}
-        <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
+        <div className="flex w-[50%] flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
           <div className="flex items-center justify-between">
             <h2 className="text-dark-500 text-lg font-semibold">
               {t(
@@ -370,65 +370,68 @@ export function ScoringConfigurationPage() {
             </Button>
           </div>
 
-          <div className="flex flex-row gap-4">
-            {/* Critical Priority */}
-            <div className="flex items-center gap-4">
-              <PriorityBadge priority="Critical" variant="compact" />
-              <div className="flex flex-1 items-center gap-2">
-                <span className="text-dark-500 w-[100px] text-sm">
-                  {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
-                </span>
-                <Input
-                  type="number"
-                  value={priorityThresholds.critical}
-                  onChange={(e) => handleThresholdChange('critical', Number(e.target.value) || 0)}
-                  className="w-16 rounded-md"
-                  inputSize="sm"
-                />
+          <div className="flex gap-4">
+            <div className="flex w-[50%] flex-col gap-4">
+              {/* Critical Priority */}
+              <div className="flex items-center gap-4">
+                <PriorityBadge priority="Critical" variant="compact" />
+                <div className="flex flex-1 items-center gap-2">
+                  <span className="text-dark-500 w-[100px] text-sm">
+                    {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
+                  </span>
+                  <Input
+                    type="number"
+                    value={priorityThresholds.critical}
+                    onChange={(e) => handleThresholdChange('critical', Number(e.target.value) || 0)}
+                    className="w-16 rounded-md"
+                    inputSize="sm"
+                  />
+                </div>
+              </div>
+
+              {/* High Priority */}
+              <div className="flex items-center gap-4">
+                <PriorityBadge priority="High" variant="compact" />
+                <div className="flex flex-1 items-center gap-2">
+                  <span className="text-dark-500 w-[100px] text-sm">
+                    {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
+                  </span>
+                  <Input
+                    type="number"
+                    value={priorityThresholds.high}
+                    onChange={(e) => handleThresholdChange('high', Number(e.target.value) || 0)}
+                    className="w-16 rounded-md"
+                    inputSize="sm"
+                  />
+                </div>
               </div>
             </div>
-
-            {/* High Priority */}
-            <div className="flex items-center gap-4">
-              <PriorityBadge priority="High" variant="compact" />
-              <div className="flex flex-1 items-center gap-2">
-                <span className="text-dark-500 w-[100px] text-sm">
-                  {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
-                </span>
-                <Input
-                  type="number"
-                  value={priorityThresholds.high}
-                  onChange={(e) => handleThresholdChange('high', Number(e.target.value) || 0)}
-                  className="w-16 rounded-md"
-                  inputSize="sm"
-                />
+            <div className="flex w-[50%] flex-col gap-4">
+              {/* Medium Priority */}
+              <div className="flex items-center gap-4">
+                <PriorityBadge priority="Medium" variant="compact" />
+                <div className="flex flex-1 items-center gap-2">
+                  <span className="text-dark-500 w-[100px] text-sm">
+                    {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
+                  </span>
+                  <Input
+                    type="number"
+                    value={priorityThresholds.medium}
+                    onChange={(e) => handleThresholdChange('medium', Number(e.target.value) || 0)}
+                    className="w-16 rounded-md"
+                    inputSize="sm"
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Medium Priority */}
-            <div className="flex items-center gap-4">
-              <PriorityBadge priority="Medium" variant="compact" />
-              <div className="flex flex-1 items-center gap-2">
+              {/* Low Priority */}
+              <div className="flex items-center gap-4">
+                <PriorityBadge priority="Low" variant="compact" />
                 <span className="text-dark-500 w-[100px] text-sm">
-                  {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
+                  {t('pages.scoringConfiguration.scoreLessThan', 'Score <')}{' '}
+                  {priorityThresholds.medium}
                 </span>
-                <Input
-                  type="number"
-                  value={priorityThresholds.medium}
-                  onChange={(e) => handleThresholdChange('medium', Number(e.target.value) || 0)}
-                  className="w-16 rounded-md"
-                  inputSize="sm"
-                />
               </div>
-            </div>
-
-            {/* Low Priority */}
-            <div className="flex items-center gap-4">
-              <PriorityBadge priority="Low" variant="compact" />
-              <span className="text-dark-500 w-[100px] text-sm">
-                {t('pages.scoringConfiguration.scoreLessThan', 'Score <')}{' '}
-                {priorityThresholds.medium}
-              </span>
             </div>
           </div>
 
@@ -448,7 +451,7 @@ export function ScoringConfigurationPage() {
         </div>
 
         {/* Seller-Specific Overrides Section */}
-        <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
+        <div className="flex w-[50%] flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
           <h2 className="text-dark-500 text-lg font-semibold">
             {t(
               'pages.scoringConfiguration.sellerOverrides',
