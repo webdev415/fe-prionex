@@ -46,8 +46,8 @@ const DAILY_SMS_LIMIT = 3
 let dailySMSCount = 1 // Mock: start with 1 sent today
 
 const calculateSMSParts = (message: string): number => {
-  const hasCyrillic = /[А-Яа-яЁё]/.test(message)
-  const maxLength = hasCyrillic ? 70 : 160
+  const hasCyrillic = /[\u0400-\u04FF]/.test(message)
+  const maxLength = hasCyrillic ? 70 : 120
   return Math.ceil(message.length / maxLength)
 }
 
@@ -87,8 +87,8 @@ export function SendSMSModal({
 
   // Calculate message metrics
   const messageMetrics = useMemo(() => {
-    const hasCyrillic = /[А-Яа-яЁё]/.test(message)
-    const maxChars = hasCyrillic ? 70 : 160
+    const hasCyrillic = /[\u0400-\u04FF]/.test(message)
+    const maxChars = hasCyrillic ? 70 : 120
     const charCount = message.length
     const smsParts = calculateSMSParts(message)
     const cost = calculateCost(smsParts)
