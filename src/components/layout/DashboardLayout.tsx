@@ -45,8 +45,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isExitingImpersonation, setIsExitingImpersonation] = useState(false)
   const isOpenSideBar = useSidebarStore((state) => state.isOpenSideBar)
-  const isHoverOpen = useSidebarStore((state) => state.isHoverOpen)
-  const isSidebarVisible = isOpenSideBar || isHoverOpen
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('')
@@ -330,12 +328,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       <Sidebar items={navItems} />
 
       {/* Main Content Area with left margin for sidebar */}
-      <div className={cn('transition-all duration-300', isSidebarVisible ? 'ml-64' : 'ml-16')}>
+      <div className={cn('transition-all duration-300', isOpenSideBar ? 'ml-64' : 'ml-16')}>
         {/* Fixed Header */}
         <header
           className={cn(
             'bg-light-50 fixed top-0 right-0 z-20 flex h-[60px] items-center justify-between border-l border-white/10 px-6 shadow-sm transition-all duration-300',
-            isSidebarVisible ? 'left-64' : 'left-16'
+            isOpenSideBar ? 'left-64' : 'left-16'
           )}
         >
           {/* Search Bar with Results */}
