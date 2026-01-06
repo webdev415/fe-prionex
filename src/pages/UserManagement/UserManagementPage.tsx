@@ -225,7 +225,7 @@ export function UserManagementPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-dark-500 text-2xl font-light">{t('pages.users.title')}</h1>
           <span className="text-base font-light text-gray-500">{totalUsers}</span>

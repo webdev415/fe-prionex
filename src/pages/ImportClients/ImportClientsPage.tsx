@@ -339,7 +339,7 @@ export function ImportClientsPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-6">
           {currentStep > 1 && (
             <Button
