@@ -46,12 +46,19 @@ const calculateCost = (smsParts: number, baseCost: number): number => {
 // Render template message by replacing variables with actual values
 const renderTemplateMessage = (
   templateText: string,
-  variables: { client_name?: string; debt_amount?: string; operator_name?: string; [key: string]: string | undefined }
+  variables: {
+    client_name?: string
+    debt_amount?: string
+    operator_name?: string
+    [key: string]: string | undefined
+  }
 ): string => {
   let rendered = templateText
   // Replace all variables in format {variable_name}
   rendered = rendered.replace(/\{(\w+)\}/g, (match, varName) => {
-    return variables[varName] !== undefined && variables[varName] !== '' ? variables[varName]! : match
+    return variables[varName] !== undefined && variables[varName] !== ''
+      ? variables[varName]!
+      : match
   })
   return rendered
 }
@@ -67,7 +74,7 @@ export function SendSMSModal({
 }: SendSMSModalProps) {
   const { t } = useTranslation('common')
   const { user } = useAuthStore()
-  
+
   // API hooks
   const { data: templatesData, isLoading: isLoadingTemplates } = useSMSTemplates(
     user?.active_project_id ? { project_id: parseInt(user.active_project_id) } : undefined
@@ -76,7 +83,7 @@ export function SendSMSModal({
     user?.active_project_id ? parseInt(user.active_project_id) : undefined
   )
   const sendSMSMutation = useSendSMS()
-  
+
   // Get SMS history for today's count
   const today = new Date().toISOString().split('T')[0]
   const { data: historyData } = useSMSHistory(clientId, {
@@ -84,7 +91,8 @@ export function SendSMSModal({
     to_date: today,
   })
 
-  const templates = templatesData?.templates || []
+  // Memoize templates to avoid recreating array on every render
+  const templates = useMemo(() => templatesData?.templates || [], [templatesData?.templates])
   const baseCost = configData?.base_cost_uah || 0.5
   const dailyLimit = configData?.max_sms_per_recipient_per_day || 3
   const smsSentToday = historyData?.total || 0
@@ -99,18 +107,21 @@ export function SendSMSModal({
   )
 
   // Reset form when modal opens/closes
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (open) {
+      // Reset form state when modal opens - this is intentional behavior
       setSelectedTemplateId(null)
       setMessage('')
       setCustomMessage('')
       setMessageEdited(false)
       setClientNameField(clientName)
       setDebtAmountField(debtAmount > 0 ? debtAmount.toFixed(2) : '')
-      
+
       // Set default template if available
       if (templates.length > 0) {
-        const defaultTemplate = templates.find(tpl => tpl.name === 'Payment Reminder') || templates[0]
+        const defaultTemplate =
+          templates.find((tpl) => tpl.name === 'Payment Reminder') || templates[0]
         setSelectedTemplateId(defaultTemplate.id)
         setMessage(defaultTemplate.message_text)
         setMessageEdited(false)
@@ -121,17 +132,21 @@ export function SendSMSModal({
       setMessageEdited(false)
     }
   }, [open, clientName, debtAmount, templates])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Update message when template changes
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (selectedTemplateId && templates.length > 0) {
       const template = templates.find((t) => t.id === selectedTemplateId)
       if (template) {
+        // Update message when template selection changes - this is intentional behavior
         setMessage(template.message_text)
         setMessageEdited(false)
       }
     }
   }, [selectedTemplateId, templates])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Render template message with variables replaced, or use custom message
   // If message was manually edited, use it as-is (don't re-render)
@@ -149,7 +164,15 @@ export function SendSMSModal({
       })
     }
     return customMessage
-  }, [selectedTemplateId, message, messageEdited, customMessage, clientNameField, debtAmountField, user?.username])
+  }, [
+    selectedTemplateId,
+    message,
+    messageEdited,
+    customMessage,
+    clientNameField,
+    debtAmountField,
+    user?.username,
+  ])
 
   // Calculate message metrics
   const messageMetrics = useMemo(() => {
@@ -172,7 +195,8 @@ export function SendSMSModal({
   }, [displayMessage, baseCost])
 
   const isDailyLimitReached = smsSentToday >= dailyLimit
-  const canSend = !isDailyLimitReached && displayMessage.trim().length > 0 && !sendSMSMutation.isPending
+  const canSend =
+    !isDailyLimitReached && displayMessage.trim().length > 0 && !sendSMSMutation.isPending
 
   const handleSend = async () => {
     if (!canSend) return
@@ -201,7 +225,9 @@ export function SendSMSModal({
               }
 
       await sendSMSMutation.mutateAsync(request)
-      toast.success(t('pages.clients.modals.sendSMS.smsSentSuccessfully') || 'SMS sent successfully')
+      toast.success(
+        t('pages.clients.modals.sendSMS.smsSentSuccessfully') || 'SMS sent successfully'
+      )
       onSent?.()
       onClose()
     } catch (error) {
@@ -265,8 +291,8 @@ export function SendSMSModal({
               <div className="flex flex-col items-center gap-5 self-stretch rounded-xl border border-white bg-white/50 px-6 py-5">
                 <Icons.MailBlock02 size={48} className="text-error-500" strokeWidth={0.5} />
                 <p className="text-error-500 self-stretch text-center text-xl leading-[132%] font-light tracking-[-0.4px]">
-                  {t('pages.clients.modals.sendSMS.dailyLimitReached')}: {smsSentToday}/
-                  {dailyLimit} {t('pages.clients.modals.sendSMS.smsSentToThisNumber')}
+                  {t('pages.clients.modals.sendSMS.dailyLimitReached')}: {smsSentToday}/{dailyLimit}{' '}
+                  {t('pages.clients.modals.sendSMS.smsSentToThisNumber')}
                 </p>
                 <p className="text-dark-500 self-stretch text-center text-[18px] leading-[150%] font-light tracking-[-0.36px]">
                   {t('pages.clients.modals.sendSMS.nextSMSAvailableTomorrow')}{' '}
@@ -330,7 +356,7 @@ export function SendSMSModal({
                     }}
                     disabled={!!selectedTemplateId && isLoadingTemplates}
                     placeholder={t('pages.clients.modals.sendSMS.typeYourMessageHere')}
-                    className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[120px] resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[120px] resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100"
                   />
                 </div>
 

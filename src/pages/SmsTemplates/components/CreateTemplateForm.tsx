@@ -125,7 +125,9 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
         category: data.category,
         project_id: user?.active_project_id ? parseInt(user.active_project_id) : undefined,
       })
-      toast.success(t('pages.smsTemplates.messages.templateCreated') || 'Template created successfully')
+      toast.success(
+        t('pages.smsTemplates.messages.templateCreated') || 'Template created successfully'
+      )
       onSuccess()
     } catch (error) {
       toast.error(getErrorMessage(error))

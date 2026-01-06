@@ -48,4 +48,3 @@ export function useSMSConfig(projectId?: number) {
     queryFn: () => getSMSConfig(projectId),
   })
 }
-

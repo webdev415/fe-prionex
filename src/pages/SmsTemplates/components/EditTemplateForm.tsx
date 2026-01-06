@@ -70,7 +70,9 @@ export function EditTemplateForm({ template, onSuccess }: EditTemplateFormProps)
           category: data.category,
         },
       })
-      toast.success(t('pages.smsTemplates.messages.templateUpdated') || 'Template updated successfully')
+      toast.success(
+        t('pages.smsTemplates.messages.templateUpdated') || 'Template updated successfully'
+      )
       onSuccess()
     } catch (error) {
       toast.error(getErrorMessage(error))

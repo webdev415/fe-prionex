@@ -38,4 +38,3 @@ export function mapTemplateResponseToSmsTemplate(apiTemplate: TemplateResponse):
 export function mapTemplateResponseArray(apiTemplates: TemplateResponse[]): SmsTemplate[] {
   return apiTemplates.map(mapTemplateResponseToSmsTemplate)
 }
-

@@ -183,4 +183,3 @@ export interface SMSConfigUpdate {
   allow_supervisor_override?: boolean
   base_cost_uah?: number
 }
-

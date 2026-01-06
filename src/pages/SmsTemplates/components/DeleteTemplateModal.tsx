@@ -37,7 +37,9 @@ export function DeleteTemplateModal({
 
     try {
       await deleteTemplateMutation.mutateAsync(template.id)
-      toast.success(t('pages.smsTemplates.messages.templateDeleted') || 'Template deleted successfully')
+      toast.success(
+        t('pages.smsTemplates.messages.templateDeleted') || 'Template deleted successfully'
+      )
       onSuccess()
     } catch (error) {
       toast.error(getErrorMessage(error))

@@ -839,7 +839,7 @@ export function ClientDetailPage() {
   // Fetch client data from API
   const clientId = id ? Number(id) : 0
   const { data: apiClient, isLoading, isError, error } = useClient(clientId, !!clientId)
-  
+
   // Fetch SMS history from API
   const { data: smsHistoryData } = useSMSHistory(clientId, undefined)
 
@@ -856,11 +856,13 @@ export function ClientDetailPage() {
     const mappedSmsHistory = apiSmsHistory.map((sms, index) => {
       const sentAt = sms.sent_at ? new Date(sms.sent_at) : new Date()
       // Map backend status to frontend status: 'sent' and 'delivered' -> 'Delivered', 'failed' -> 'Failed', otherwise -> 'Pending'
-      const statusStr = 
-        sms.status === 'delivered' || sms.status === 'sent' ? 'Delivered' 
-        : sms.status === 'failed' ? 'Failed' 
-        : 'Pending'
-      
+      const statusStr =
+        sms.status === 'delivered' || sms.status === 'sent'
+          ? 'Delivered'
+          : sms.status === 'failed'
+            ? 'Failed'
+            : 'Pending'
+
       return {
         id: index + 1,
         date: sentAt.toISOString().split('T')[0],
@@ -903,8 +905,7 @@ export function ClientDetailPage() {
       },
       addresses: {
         ...mockClient.addresses,
-        registrationAddress:
-          apiClient.address || mockClient.addresses.registrationAddress,
+        registrationAddress: apiClient.address || mockClient.addresses.registrationAddress,
       },
       callSmsHistory: {
         ...mockClient.callSmsHistory,

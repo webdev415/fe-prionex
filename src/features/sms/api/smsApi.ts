@@ -109,4 +109,3 @@ export async function updateSMSConfig(config: SMSConfigUpdate): Promise<SMSConfi
   const response = await api.put<SMSConfigResponse>(`${BASE_URL}/config`, config)
   return response.data
 }
-

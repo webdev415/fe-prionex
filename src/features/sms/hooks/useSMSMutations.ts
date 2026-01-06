@@ -6,7 +6,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
-import { sendSMS, sendBulkSMS, createTemplate, updateTemplate, deleteTemplate, updateSMSConfig } from '../api/smsApi'
+import {
+  sendSMS,
+  sendBulkSMS,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
+  updateSMSConfig,
+} from '../api/smsApi'
 import type {
   SendSMSRequest,
   BulkSendSMSRequest,
@@ -27,12 +34,14 @@ export function useSendSMS() {
       // Invalidate SMS history for the client to refresh the list
       // Use predicate to match all queries for this client_id regardless of params
       if (variables.client_id) {
-        queryClient.invalidateQueries({ 
+        queryClient.invalidateQueries({
           predicate: (query) => {
-            return query.queryKey[0] === 'sms' && 
-                   query.queryKey[1] === 'history' && 
-                   query.queryKey[2] === variables.client_id
-          }
+            return (
+              query.queryKey[0] === 'sms' &&
+              query.queryKey[1] === 'history' &&
+              query.queryKey[2] === variables.client_id
+            )
+          },
         })
       }
       // Invalidate templates to update usage stats
