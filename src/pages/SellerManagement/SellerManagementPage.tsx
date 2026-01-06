@@ -199,13 +199,12 @@ export function SellerManagementPage() {
                 placeholder={t('pages.sellers.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                disabled={isLoading}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     handleSearch()
                   }
                 }}
-                className="text-dark-500 h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500 disabled:opacity-60"
+                className="text-dark-500 h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500"
               />
               {searchQuery && (
                 <button

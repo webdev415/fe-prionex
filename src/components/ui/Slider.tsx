@@ -68,7 +68,9 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(
             />
           </div>
           {showValue && (
-            <span className="text-dark-500 w-12 text-right text-sm font-medium">{value}%</span>
+            <span className="text-dark-500 w-12 text-right text-sm font-medium">
+              {Math.round(value)}%
+            </span>
           )}
         </div>
       </div>

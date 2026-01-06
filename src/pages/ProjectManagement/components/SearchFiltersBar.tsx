@@ -136,8 +136,7 @@ export function SearchFiltersBar({
               placeholder={t('pages.projects.searchFilters.placeholder')}
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
-              disabled={isLoading}
-              className="text-dark-500 h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500 disabled:opacity-60"
+              className="text-dark-500 h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500"
             />
             {searchValue && (
               <button

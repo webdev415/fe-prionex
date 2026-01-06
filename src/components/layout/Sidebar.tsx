@@ -86,7 +86,7 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
         'shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_21px_2px_0px_rgba(0,0,0,0.06)]',
         isSidebarVisible ? 'w-60' : 'w-18',
         'items-start px-4 pl-3',
-        isHoverOpen && !isOpenSideBar ? 'bg-white/10 backdrop-blur-sm' : 'bg-white',
+        isHoverOpen && !isOpenSideBar ? 'bg-white' : 'bg-white',
         className
       )}
       onMouseEnter={() => {
@@ -105,7 +105,7 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
       {/* Navigation Icons */}
       <nav
         className={cn(
-          'flex w-full flex-1 flex-col gap-6 overflow-x-hidden overflow-y-auto',
+          'flex w-full flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto',
           'items-stretch px-0'
         )}
       >

@@ -6,6 +6,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -17,7 +18,11 @@ import {
   configApi,
   type ScoringConfigResponse,
   type PreviewResponse,
+  type SellerConfig,
 } from '@/features/clients/api/configApi'
+import { sellersApi } from '@/features/sellers/api/sellersApi'
+import { SellerConfigModal } from './components/SellerConfigModal'
+import { SellerConfigTable } from './components/SellerConfigTable'
 import { ScoringConfigurationPageSkeleton } from './ScoringConfigurationPageSkeleton'
 
 interface ScoreWeights {
@@ -42,6 +47,7 @@ interface Distribution {
 
 export function ScoringConfigurationPage() {
   const { t } = useTranslation('common')
+  const navigate = useNavigate()
 
   // Loading and error states
   const [isLoading, setIsLoading] = useState(true)
@@ -68,9 +74,17 @@ export function ScoringConfigurationPage() {
   // Immediate effect checkbox
   const [immediateEffect, setImmediateEffect] = useState(true)
 
+  // Seller-specific configurations state
+  const [sellerConfigs, setSellerConfigs] = useState<SellerConfig[]>([])
+  const [sellers, setSellers] = useState<Array<{ id: number; name: string }>>([])
+  const [isSellerModalOpen, setIsSellerModalOpen] = useState(false)
+  const [editingSellerConfig, setEditingSellerConfig] = useState<SellerConfig | null>(null)
+
   // Load configuration on mount
   useEffect(() => {
     loadConfiguration()
+    loadSellerConfigs()
+    loadSellers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -106,6 +120,50 @@ export function ScoringConfigurationPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const loadSellerConfigs = async () => {
+    try {
+      const response = await configApi.getSellerConfigs()
+      setSellerConfigs(response.seller_configs)
+    } catch (error) {
+      console.error('Failed to load seller configs:', error)
+      // Silent fail - not critical for page load
+    }
+  }
+
+  const loadSellers = async () => {
+    try {
+      const response = await sellersApi.getSellers({
+        is_active: true,
+        limit: 1000, // Get all active sellers
+      })
+
+      // Map API response to component format
+      const mappedSellers = response.sellers.map((seller) => ({
+        id: seller.id,
+        name: seller.seller_name,
+      }))
+
+      setSellers(mappedSellers)
+    } catch (error) {
+      console.error('Failed to load sellers:', error)
+      toast.error(t('pages.scoringConfiguration.sellersLoadFailed', 'Failed to load sellers list'))
+    }
+  }
+
+  const handleOpenSellerModal = (config?: SellerConfig) => {
+    setEditingSellerConfig(config || null)
+    setIsSellerModalOpen(true)
+  }
+
+  const handleCloseSellerModal = () => {
+    setIsSellerModalOpen(false)
+    setEditingSellerConfig(null)
+  }
+
+  const handleSellerConfigSuccess = () => {
+    loadSellerConfigs()
   }
 
   // Current distribution from preview or original config
@@ -264,6 +322,10 @@ export function ScoringConfigurationPage() {
     }
   }
 
+  const handleViewHistory = () => {
+    navigate('/dashboard/scoring-configuration/history')
+  }
+
   const formatPercentage = (count: number, total: number) => {
     return Math.round((count / total) * 100)
   }
@@ -280,6 +342,14 @@ export function ScoringConfigurationPage() {
         <h1 className="text-dark-500 text-2xl font-semibold">
           {t('pages.scoringConfiguration.title', 'Scoring Configuration - Project Alpha')}
         </h1>
+        <Button
+          variant="primary"
+          onClick={handleViewHistory}
+          leftIcon={<Icons.TransactionHistory size={20} className="text-dark-500" />}
+          className="flex h-12 flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium"
+        >
+          {t('pages.scoringConfiguration.viewHistory', 'View History')}
+        </Button>
       </div>
 
       {/* Score Weights Section */}
@@ -452,7 +522,12 @@ export function ScoringConfigurationPage() {
               'Seller-Specific Overrides (Optional)'
             )}
           </h2>
-          <Button variant="secondary" size="sm" onClick={() => {}} className="rounded-md">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => handleOpenSellerModal()}
+            className="rounded-md"
+          >
             {t('pages.scoringConfiguration.addSellerConfig', '+ Add Seller-Specific Configuration')}
           </Button>
           <span className="text-dark-500 text-sm font-light">
@@ -461,7 +536,23 @@ export function ScoringConfigurationPage() {
               'Configure different thresholds for specific sellers'
             )}
           </span>
+
+          {/* Seller Configurations Table */}
+          <SellerConfigTable
+            configs={sellerConfigs}
+            onEdit={handleOpenSellerModal}
+            onDelete={handleSellerConfigSuccess}
+          />
         </div>
+
+        {/* Seller Config Modal */}
+        <SellerConfigModal
+          open={isSellerModalOpen}
+          onClose={handleCloseSellerModal}
+          onSuccess={handleSellerConfigSuccess}
+          editConfig={editingSellerConfig}
+          sellers={sellers}
+        />
       </div>
 
       {/* Configuration Preview Section */}
