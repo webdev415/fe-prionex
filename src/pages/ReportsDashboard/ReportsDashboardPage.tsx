@@ -85,7 +85,7 @@ export function ReportsDashboardPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-start gap-5 self-stretch">
+    <div className="flex flex-1 flex-col items-start gap-4 self-stretch">
       {/* Page Header */}
       <div className="flex h-12 items-center justify-between gap-5 self-stretch">
         <div className="flex flex-1 items-center gap-4 self-stretch">

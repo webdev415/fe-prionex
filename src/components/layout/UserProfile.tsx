@@ -38,12 +38,12 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <button className="bg-primary-300 flex h-10 w-[175px] items-center gap-2 rounded-md px-3 transition-all duration-200 hover:opacity-90">
-          <Icons.User02 size={20} className="text-dark-500" strokeWidth={1.5} />
-          <span className="text-dark-500 flex-1 truncate text-left text-xs font-medium">
+        <button className="bg-secondary-800 flex h-10 w-[175px] cursor-pointer items-center gap-2 rounded-md px-3 transition-all duration-200 hover:opacity-90">
+          <Icons.User02 size={20} className="text-primary-500" strokeWidth={1.5} />
+          <span className="flex-1 truncate text-left text-xs font-medium text-white">
             {displayName}
           </span>
-          <Icons.ArrowDown size={16} className="text-dark-500" strokeWidth={1.5} />
+          <Icons.ArrowDown size={16} className="text-white" strokeWidth={1.5} />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[175px] bg-white">
