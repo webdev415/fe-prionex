@@ -1267,7 +1267,7 @@ export function ClientDetailPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* Client Header */}
       <div className="flex items-center justify-between self-stretch">
         <div className="flex items-center gap-2">
@@ -1277,7 +1277,7 @@ export function ClientDetailPage() {
           >
             <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
           </button>
-          <h1 className="text-dark-500 text-center text-2xl leading-[150%] font-medium">
+          <h1 className="text-dark-500 text-center text-2xl leading-[150%] font-light">
             {client.fullName}
           </h1>
           <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0">
