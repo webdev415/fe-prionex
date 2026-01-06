@@ -615,6 +615,7 @@
         "defaulted": "Просрочено",
         "answered": "Отвечен",
         "noAnswer": "Нет ответа",
+        "sent": "Отправлено",
         "delivered": "Доставлено",
         "failed": "Не удалось",
         "pending": "Ожидается"
@@ -871,11 +872,14 @@
           "title": "Отправить SMS",
           "smsSentToday": "SMS отправлено сегодня",
           "sendSMSTo": "Отправить SMS",
+          "dailyLimit": "Дневной лимит",
           "dailyLimitReached": "Дневной лимит достигнут",
           "smsSentToThisNumber": "SMS отправлено на этот номер",
           "nextSMSAvailableTomorrow": "Следующий SMS доступен завтра в",
           "template": "Шаблон",
           "selectTemplate": "Выберите шаблон",
+          "customMessage": "Пользовательское сообщение",
+          "loadingTemplates": "Загрузка шаблонов...",
           "message": "Сообщение",
           "typeYourMessageHere": "Введите ваше сообщение здесь...",
           "characters": "символов",
@@ -888,6 +892,9 @@
           "messageWillBeSplit": "Сообщение будет разделено на",
           "clientName": "Имя клиента",
           "debtAmount": "Сумма долга",
+          "templateVariables": "Переменные шаблона",
+          "sending": "Отправка...",
+          "smsSentSuccessfully": "SMS успешно отправлено",
           "sendSMS": "Отправить SMS"
         },
         "viewSMS": {
@@ -1284,6 +1291,11 @@
           "templateNameRequired": "Название шаблона обязательно",
           "messageTextRequired": "Текст сообщения обязателен"
         }
+      },
+      "messages": {
+        "templateDeleted": "Шаблон успешно удален",
+        "templateCreated": "Шаблон успешно создан",
+        "templateUpdated": "Шаблон успешно обновлен"
       },
       "modals": {
         "templateNotFound": "Шаблон не найден",

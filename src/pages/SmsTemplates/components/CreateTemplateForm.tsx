@@ -9,6 +9,7 @@ import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
@@ -21,6 +22,9 @@ import {
 } from '@/components/ui/Select'
 import { Alert } from '@/components/ui/Alert'
 import { Icons } from '@/lib/icons'
+import { useCreateTemplate } from '@/features/sms'
+import { useAuthStore } from '@/stores/authStore'
+import { getErrorMessage } from '@/lib/errors'
 
 type CreateTemplateFormData = {
   name: string
@@ -48,6 +52,8 @@ const CYRILLIC_SMS_LIMIT = 70
 
 export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
   const { t } = useTranslation('common')
+  const { user } = useAuthStore()
+  const createTemplateMutation = useCreateTemplate()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const createTemplateSchema = z.object({
@@ -112,11 +118,18 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
   }
 
   const onSubmit = async (data: CreateTemplateFormData) => {
-    // TODO: Replace with actual API call
-    console.log('Creating template:', data)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    onSuccess()
+    try {
+      await createTemplateMutation.mutateAsync({
+        name: data.name,
+        message_text: data.messageText,
+        category: data.category,
+        project_id: user?.active_project_id ? parseInt(user.active_project_id) : undefined,
+      })
+      toast.success(t('pages.smsTemplates.messages.templateCreated') || 'Template created successfully')
+      onSuccess()
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+    }
   }
 
   return (

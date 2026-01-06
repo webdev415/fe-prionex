@@ -618,6 +618,7 @@
         "defaulted": "Defaulted",
         "answered": "Answered",
         "noAnswer": "No Answer",
+        "sent": "Sent",
         "delivered": "Delivered",
         "failed": "Failed",
         "pending": "Pending"
@@ -874,11 +875,14 @@
           "title": "Send SMS",
           "smsSentToday": "SMS sent today",
           "sendSMSTo": "Send SMS to",
+          "dailyLimit": "Daily limit",
           "dailyLimitReached": "Daily limit reached",
           "smsSentToThisNumber": "SMS sent to this number",
           "nextSMSAvailableTomorrow": "Next SMS available tomorrow at",
           "template": "Template",
           "selectTemplate": "Select template",
+          "customMessage": "Custom Message",
+          "loadingTemplates": "Loading templates...",
           "message": "Message",
           "typeYourMessageHere": "Type your message here...",
           "characters": "characters",
@@ -891,6 +895,9 @@
           "messageWillBeSplit": "Message will be split into",
           "clientName": "Client name",
           "debtAmount": "Debt amount",
+          "templateVariables": "Template Variables",
+          "sending": "Sending...",
+          "smsSentSuccessfully": "SMS sent successfully",
           "sendSMS": "Send SMS"
         },
         "viewSMS": {
@@ -1287,6 +1294,11 @@
           "templateNameRequired": "Template name is required",
           "messageTextRequired": "Message text is required"
         }
+      },
+      "messages": {
+        "templateCreated": "Template created successfully",
+        "templateUpdated": "Template updated successfully",
+        "templateDeleted": "Template deleted successfully"
       },
       "modals": {
         "templateNotFound": "Template not found",

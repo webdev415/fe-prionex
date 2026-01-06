@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
+import { useSMSHistory } from '@/features/sms'
 
 // Helper function to create mock client detail
 const createMockClientDetail = (
@@ -838,6 +839,9 @@ export function ClientDetailPage() {
   // Fetch client data from API
   const clientId = id ? Number(id) : 0
   const { data: apiClient, isLoading, isError, error } = useClient(clientId, !!clientId)
+  
+  // Fetch SMS history from API
+  const { data: smsHistoryData } = useSMSHistory(clientId, undefined)
 
   // Use mock data as fallback for missing fields until backend is fully integrated
   const client = useMemo(() => {
@@ -847,9 +851,31 @@ export function ClientDetailPage() {
       .filter(Boolean)
       .join(' ')
 
+    // Map API SMS history to expected format - use real data from API
+    const apiSmsHistory = smsHistoryData?.items || []
+    const mappedSmsHistory = apiSmsHistory.map((sms, index) => {
+      const sentAt = sms.sent_at ? new Date(sms.sent_at) : new Date()
+      // Map backend status to frontend status: 'sent' and 'delivered' -> 'Delivered', 'failed' -> 'Failed', otherwise -> 'Pending'
+      const statusStr = 
+        sms.status === 'delivered' || sms.status === 'sent' ? 'Delivered' 
+        : sms.status === 'failed' ? 'Failed' 
+        : 'Pending'
+      
+      return {
+        id: index + 1,
+        date: sentAt.toISOString().split('T')[0],
+        time: sentAt.toTimeString().slice(0, 5), // HH:MM format
+        message: sms.message_text || '',
+        template: sms.template_name || '',
+        operator: sms.operator_name || '',
+        status: statusStr as 'Delivered' | 'Pending' | 'Failed',
+      }
+    })
+
     // Map API client to expected shape, using mock data for fields not yet in API
+    const mockClient = mockClientsDetail[0]
     return {
-      ...mockClientsDetail[0], // Fallback for fields not yet in backend
+      ...mockClient, // Fallback for fields not yet in backend
       id: apiClient.id,
       fullName,
       taxIdNumber: apiClient.tax_id,
@@ -871,17 +897,21 @@ export function ClientDetailPage() {
           : []),
       ],
       personalDetails: {
-        ...mockClientsDetail[0].personalDetails,
+        ...mockClient.personalDetails,
         tin: apiClient.tax_id,
-        dateOfBirth: apiClient.date_of_birth || mockClientsDetail[0].personalDetails.dateOfBirth,
+        dateOfBirth: apiClient.date_of_birth || mockClient.personalDetails.dateOfBirth,
       },
       addresses: {
-        ...mockClientsDetail[0].addresses,
+        ...mockClient.addresses,
         registrationAddress:
-          apiClient.address || mockClientsDetail[0].addresses.registrationAddress,
+          apiClient.address || mockClient.addresses.registrationAddress,
+      },
+      callSmsHistory: {
+        ...mockClient.callSmsHistory,
+        sms: mappedSmsHistory as typeof mockClient.callSmsHistory.sms, // Use real API data instead of mock
       },
     }
-  }, [apiClient])
+  }, [apiClient, smsHistoryData])
 
   const [tags, setTags] = useState<string[]>(client?.tags || [])
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
@@ -2562,12 +2592,12 @@ export function ClientDetailPage() {
           setIsSendSMSModalOpen(false)
           setSelectedPhoneForSMS('')
         }}
+        clientId={clientId}
         clientName={client.fullName}
         phoneNumber={selectedPhoneForSMS || client.phones?.[0]?.number || ''}
         debtAmount={client.loans?.reduce((sum, loan) => sum + (loan.totalToRepay || 0), 0) || 0}
-        onSend={(data) => {
-          // TODO: Send SMS to API
-          console.log('SMS sent:', data)
+        onSent={() => {
+          // SMS sent successfully - history will refresh automatically via query invalidation
         }}
       />
     </div>

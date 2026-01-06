@@ -615,6 +615,7 @@
         "defaulted": "Прострочено",
         "answered": "Відповів",
         "noAnswer": "Не відповів",
+        "sent": "Відправлено",
         "delivered": "Доставлено",
         "failed": "Не вдалося",
         "pending": "Очікується"
@@ -871,11 +872,14 @@
           "title": "Відправити SMS",
           "smsSentToday": "SMS відправлено сьогодні",
           "sendSMSTo": "Відправити SMS",
+          "dailyLimit": "Денний ліміт",
           "dailyLimitReached": "Денний ліміт досягнуто",
           "smsSentToThisNumber": "SMS відправлено на цей номер",
           "nextSMSAvailableTomorrow": "Наступний SMS доступний завтра о",
           "template": "Шаблон",
           "selectTemplate": "Виберіть шаблон",
+          "customMessage": "Власне повідомлення",
+          "loadingTemplates": "Завантаження шаблонів...",
           "message": "Повідомлення",
           "typeYourMessageHere": "Введіть ваше повідомлення тут...",
           "characters": "символів",
@@ -888,6 +892,9 @@
           "messageWillBeSplit": "Повідомлення буде розділено на",
           "clientName": "Ім'я клієнта",
           "debtAmount": "Сума боргу",
+          "templateVariables": "Змінні шаблону",
+          "sending": "Відправка...",
+          "smsSentSuccessfully": "SMS успішно відправлено",
           "sendSMS": "Відправити SMS"
         },
         "viewSMS": {
@@ -1284,6 +1291,11 @@
           "templateNameRequired": "Назва шаблону обов'язкова",
           "messageTextRequired": "Текст повідомлення обов'язковий"
         }
+      },
+      "messages": {
+        "templateDeleted": "Шаблон успішно видалено",
+        "templateCreated": "Шаблон успішно створено",
+        "templateUpdated": "Шаблон успішно оновлено"
       },
       "modals": {
         "templateNotFound": "Шаблон не знайдено",
