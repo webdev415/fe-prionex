@@ -600,7 +600,7 @@ export function ClientManagementPage() {
         const isBulkActionActive = selectedClients.size > 0 || allClientsSelected
         return (
           <LinkButton
-            leftIcon={<Icons.Tick02 size={16} strokeWidth={2} />}
+            leftIcon={<Icons.PencilEdit size={16} strokeWidth={2} />}
             onClick={() => handleAssign(client.id)}
             variant="regular-black"
             size="xs"
@@ -633,7 +633,7 @@ export function ClientManagementPage() {
   }
 
   return (
-    <div className="flex w-full flex-col items-start gap-5 pt-1 pr-7 pb-6 pl-7">
+    <div className="flex w-full flex-col items-start gap-4">
       {/* Priority Overview Cards */}
       <PriorityCards priorityStats={priorityStats} />
 

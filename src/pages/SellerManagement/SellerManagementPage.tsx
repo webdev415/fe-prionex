@@ -171,7 +171,7 @@ export function SellerManagementPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-dark-500 text-2xl font-light">{t('pages.sellers.title')}</h1>
           <span className="text-base font-light text-gray-500">{totalSellers}</span>
@@ -199,13 +199,12 @@ export function SellerManagementPage() {
                 placeholder={t('pages.sellers.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                disabled={isLoading}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     handleSearch()
                   }
                 }}
-                className="text-dark-500 h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500 disabled:opacity-60"
+                className="text-dark-500 h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500"
               />
               {searchQuery && (
                 <button

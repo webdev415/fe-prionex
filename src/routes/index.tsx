@@ -23,6 +23,7 @@ import { SmsTemplatesPage } from '@/pages/SmsTemplates'
 import { ReportsDashboardPage } from '@/pages/ReportsDashboard'
 import { SellerManagementPage } from '@/pages/SellerManagement'
 import { ScoringConfigurationPage } from '@/pages/ScoringConfiguration'
+import { ConfigurationHistoryPage } from '@/pages/ScoringConfiguration/ConfigurationHistoryPage'
 
 export const router = createBrowserRouter([
   {
@@ -195,6 +196,16 @@ export const router = createBrowserRouter([
       <ProtectedRoute>
         <DashboardLayout>
           <ScoringConfigurationPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/scoring-configuration/history',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ConfigurationHistoryPage />
         </DashboardLayout>
       </ProtectedRoute>
     ),

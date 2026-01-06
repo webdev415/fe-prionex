@@ -251,6 +251,64 @@
     scrollbar-width: thin;
     scrollbar-color: #c8c8c8 transparent;
   }
+
+  /* Data Table Scrollbar */
+  .data-table-scroll::-webkit-scrollbar {
+    height: 8px;
+  }
+  .data-table-scroll::-webkit-scrollbar-track {
+    background: #ebece8;
+    border-radius: 0 0 12px 12px;
+  }
+  .data-table-scroll::-webkit-scrollbar-thumb {
+    background: #90947b;
+    border-radius: 4px;
+    border: 1px solid #ebece8;
+  }
+  .data-table-scroll::-webkit-scrollbar-thumb:hover {
+    background: #6f715d;
+  }
+  /* Firefox */
+  .data-table-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #90947b #ebece8;
+  }
+  .sidebar-scrollbar {
+    scrollbar-gutter: stable;
+  }
+  /* Sidebar Scrollbar - Modern and elegant */
+  .sidebar-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-button {
+    display: none;
+    height: 0;
+    width: 0;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-button:start:decrement,
+  .sidebar-scrollbar::-webkit-scrollbar-button:end:increment {
+    display: none;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 0;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-thumb:active {
+    background: #4b5563;
+  }
+  /* Firefox */
+  .sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #9ca3af transparent;
+  }
 }
 
 @layer components {

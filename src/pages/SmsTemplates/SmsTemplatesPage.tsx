@@ -235,7 +235,7 @@ export function SmsTemplatesPage() {
   }
 
   return (
-    <div className="flex w-full flex-col items-start gap-5 pt-1 pr-7 pb-6 pl-7">
+    <div className="flex w-full flex-col items-start gap-4">
       {/* Page Header */}
       <div className="flex items-center justify-between self-stretch">
         <div className="flex items-center gap-3">

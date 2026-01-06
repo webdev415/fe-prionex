@@ -87,6 +87,48 @@ export interface PreviewResponse {
   >
 }
 
+export interface SellerConfig {
+  config_id: number
+  seller_id: number
+  seller_name: string
+  weights: ScoringWeights
+  priority_thresholds: PriorityThresholds
+  enabled: boolean
+  updated_at: string
+  clients_affected: number
+}
+
+export interface SellerConfigListResponse {
+  total_count: number
+  seller_configs: SellerConfig[]
+}
+
+export interface DeleteResponse {
+  message: string
+  deleted_config_id: number
+}
+
+export interface ConfigHistoryEntry {
+  history_id: number
+  config_id: number
+  project_id: number | null
+  seller_id: number | null
+  changed_by_user_id: number
+  changed_by_username: string
+  change_type: 'create' | 'update' | 'delete'
+  changed_at: string
+  change_reason: string | null
+  old_values: Record<string, unknown> | null
+  new_values: Record<string, unknown> | null
+}
+
+export interface ConfigHistoryListResponse {
+  total_count: number
+  page: number
+  page_size: number
+  history: ConfigHistoryEntry[]
+}
+
 const CONFIG_BASE_URL = '/api/v1/config'
 
 /**
@@ -166,6 +208,120 @@ export async function previewScoringConfig(preview: PreviewRequest): Promise<Pre
 }
 
 /**
+ * Get list of seller-specific configurations
+ * Admin only - shows all seller overrides for current project
+ */
+export async function getSellerConfigs(): Promise<SellerConfigListResponse> {
+  const response = await api.get<SellerConfigListResponse>(`${CONFIG_BASE_URL}/scoring/sellers`)
+  return response.data
+}
+
+/**
+ * Create seller-specific configuration
+ * Admin only - creates threshold override for specific seller
+ */
+export async function createSellerConfig(
+  sellerId: number,
+  config: ScoringConfigUpdateRequest
+): Promise<ScoringConfigResponse> {
+  const response = await api.post<ScoringConfigResponse>(
+    `${CONFIG_BASE_URL}/scoring/sellers/${sellerId}`,
+    config
+  )
+  return response.data
+}
+
+/**
+ * Update seller-specific configuration
+ * Admin only - updates existing seller threshold override
+ */
+export async function updateSellerConfig(
+  sellerId: number,
+  config: ScoringConfigUpdateRequest
+): Promise<ScoringConfigResponse> {
+  const response = await api.put<ScoringConfigResponse>(
+    `${CONFIG_BASE_URL}/scoring/sellers/${sellerId}`,
+    config
+  )
+  return response.data
+}
+
+/**
+ * Delete seller-specific configuration
+ * Admin only - removes seller override, falls back to project-level config
+ */
+export async function deleteSellerConfig(sellerId: number): Promise<DeleteResponse> {
+  const response = await api.delete<DeleteResponse>(
+    `${CONFIG_BASE_URL}/scoring/sellers/${sellerId}`
+  )
+  return response.data
+}
+
+/**
+ * Preview impact of seller-specific threshold changes
+ * Shows how many clients for this seller would move between priority levels
+ * Admin only
+ */
+export async function previewSellerConfig(
+  sellerId: number,
+  preview: PreviewRequest
+): Promise<PreviewResponse> {
+  const response = await api.post<PreviewResponse>(
+    `${CONFIG_BASE_URL}/scoring/sellers/${sellerId}/preview`,
+    preview
+  )
+  return response.data
+}
+
+/**
+ * Get configuration change history
+ * Admin only - shows audit trail of config changes with filters
+ */
+export async function getConfigHistory(params?: {
+  page?: number
+  page_size?: number
+  seller_id?: number
+  changed_by?: number
+  start_date?: string
+  end_date?: string
+}): Promise<ConfigHistoryListResponse> {
+  const queryParams = new URLSearchParams()
+  if (params?.page) queryParams.append('page', params.page.toString())
+  if (params?.page_size) queryParams.append('page_size', params.page_size.toString())
+  if (params?.seller_id) queryParams.append('seller_id', params.seller_id.toString())
+  if (params?.changed_by) queryParams.append('changed_by', params.changed_by.toString())
+  if (params?.start_date) queryParams.append('start_date', params.start_date)
+  if (params?.end_date) queryParams.append('end_date', params.end_date)
+
+  const url = `${CONFIG_BASE_URL}/scoring/history${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+  const response = await api.get<ConfigHistoryListResponse>(url)
+  return response.data
+}
+
+/**
+ * Export configuration history to CSV
+ * Admin only - downloads audit trail as CSV file
+ */
+export async function exportConfigHistory(params?: {
+  seller_id?: number
+  changed_by?: number
+  start_date?: string
+  end_date?: string
+}): Promise<Blob> {
+  const queryParams = new URLSearchParams()
+  if (params?.seller_id) queryParams.append('seller_id', params.seller_id.toString())
+  if (params?.changed_by) queryParams.append('changed_by', params.changed_by.toString())
+  if (params?.start_date) queryParams.append('start_date', params.start_date)
+  if (params?.end_date) queryParams.append('end_date', params.end_date)
+
+  const url = `${CONFIG_BASE_URL}/scoring/history/export${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+  const response = await api.get(url, {
+    responseType: 'blob',
+  })
+  return response.data
+}
+
+/**
  * Exported API object for easier importing
  * Consistent with other service APIs (usersApi, rolesApi, projectsApi, etc.)
  */
@@ -176,4 +332,11 @@ export const configApi = {
   getScoringConfig,
   updateScoringConfig,
   previewScoringConfig,
+  getSellerConfigs,
+  createSellerConfig,
+  updateSellerConfig,
+  deleteSellerConfig,
+  previewSellerConfig,
+  getConfigHistory,
+  exportConfigHistory,
 }

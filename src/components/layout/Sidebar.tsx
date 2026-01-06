@@ -11,8 +11,8 @@
 
 import { NavLink, useLocation } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
+import { useSidebarStore } from '@/stores/sidebarStore'
 
 export interface SidebarItem {
   path: string
@@ -32,8 +32,6 @@ export interface SidebarProps {
   items: SidebarItem[]
   /** Action buttons at the bottom */
   actions?: SidebarAction[]
-  /** Menu button click handler */
-  onMenuClick?: () => void
   /** Custom className for the sidebar */
   className?: string
 }
@@ -64,8 +62,12 @@ const iconMap: Record<
 /**
  * Sidebar Component
  */
-export function Sidebar({ items, actions = [], onMenuClick, className }: SidebarProps) {
+export function Sidebar({ items, actions = [], className }: SidebarProps) {
   const location = useLocation()
+  const { isOpenSideBar, isHoverOpen, toggleSidebar, setHoverOpen } = useSidebarStore()
+
+  // Determine if sidebar should be visible (either opened or hover-opened)
+  const isSidebarVisible = isOpenSideBar || isHoverOpen
 
   /**
    * Check if a path is active
@@ -78,118 +80,167 @@ export function Sidebar({ items, actions = [], onMenuClick, className }: Sidebar
   }
 
   return (
-    <TooltipProvider delayDuration={300}>
-      <aside
+    <aside
+      className={cn(
+        'fixed top-0 left-0 z-30 flex h-screen flex-col overflow-hidden py-6 transition-all duration-300',
+        'shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_21px_2px_0px_rgba(0,0,0,0.06)]',
+        isSidebarVisible ? 'w-60' : 'w-18',
+        'items-start px-4 pr-2 pl-3',
+        isHoverOpen && !isOpenSideBar ? 'bg-white' : 'bg-white',
+        className
+      )}
+      onMouseEnter={() => {
+        // If hovering over sidebar and it was opened by hover, keep it open
+        if (isHoverOpen) {
+          setHoverOpen(true)
+        }
+      }}
+      onMouseLeave={() => {
+        // Close sidebar if it was only opened by hover
+        if (isHoverOpen && !isOpenSideBar) {
+          setHoverOpen(false)
+        }
+      }}
+    >
+      {/* Navigation Icons */}
+      <nav
         className={cn(
-          'fixed top-0 left-0 z-30 flex h-screen w-16 flex-col items-center overflow-hidden bg-white py-6',
-          'shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_21px_2px_0px_rgba(0,0,0,0.06)]',
-          className
+          'sidebar-scrollbar flex w-full flex-1 flex-col gap-4 overflow-x-hidden overflow-y-scroll [scrollbar-gutter:stable]',
+          'items-stretch px-0'
         )}
       >
-        {/* Menu icon at top - 22px, color gray-700 */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={onMenuClick}
-              className="focus:ring-primary-500 mb-4 rounded-md p-1 transition-all duration-200 hover:scale-110 focus:ring-2 focus:ring-offset-2 focus:outline-none"
-              aria-label="Menu"
+        {/* Menu button */}
+        <button
+          onClick={toggleSidebar}
+          className={cn(
+            'flex h-10 shrink-0 cursor-pointer items-center rounded-lg transition-all duration-200 focus:outline-none',
+            isSidebarVisible ? 'px-3' : 'justify-start px-3',
+            'hover:bg-gray-50'
+          )}
+          aria-label="Menu"
+        >
+          <Icons.Menu11 size={20} className="shrink-0 text-gray-700" strokeWidth={1.5} />
+          {isSidebarVisible && (
+            <img
+              src="/logo.svg"
+              alt="Prionex"
+              className="ml-3 h-7 w-auto transition-all duration-300"
+            />
+          )}
+        </button>
+        <div className="mx-2 h-px bg-gray-200" />
+        {items.map((item, index) => {
+          const IconComponent = iconMap[item.icon]
+
+          if (!IconComponent) {
+            console.warn(`Icon "${item.icon}" not found in iconMap`)
+            return null
+          }
+
+          const isActive = !item.disabled && isActivePath(item.path)
+          const isDisabled = item.disabled
+          // Use unique key combining path and label to avoid duplicates
+          const uniqueKey = `${item.path}-${item.label}-${index}`
+
+          if (isDisabled) {
+            return (
+              <div
+                key={uniqueKey}
+                className={cn(
+                  'flex h-10 shrink-0 items-center rounded-md opacity-50',
+                  isSidebarVisible ? 'px-3' : 'justify-start px-3'
+                )}
+                aria-label={item.label}
+                onMouseEnter={() => {
+                  // Open sidebar on hover if it's closed
+                  if (!isOpenSideBar) {
+                    setHoverOpen(true)
+                  }
+                }}
+              >
+                <IconComponent size={20} className="shrink-0 text-gray-400" strokeWidth={1.5} />
+                <span className="ml-3 text-sm text-gray-400">{item.label}</span>
+              </div>
+            )
+          }
+
+          const navLinkContent = (
+            <NavLink
+              to={item.path}
+              end={item.path === '/dashboard'}
+              className={cn(
+                'flex h-10 shrink-0 items-center rounded-lg transition-all duration-200 focus:outline-none',
+                isSidebarVisible ? 'px-3' : 'justify-start px-3',
+                isActive ? 'bg-secondary-800' : 'hover:bg-gray-50'
+              )}
+              aria-label={item.label}
+              onMouseEnter={() => {
+                // Open sidebar on hover if it's closed
+                if (!isOpenSideBar) {
+                  setHoverOpen(true)
+                }
+              }}
             >
-              <Icons.Menu11 size={22} className="text-gray-700" strokeWidth={1.5} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            <p>Menu</p>
-          </TooltipContent>
-        </Tooltip>
+              <IconComponent
+                size={20}
+                className={cn('shrink-0', isActive ? 'text-primary-300' : 'text-gray-700')}
+                strokeWidth={1.5}
+              />
+              <span
+                className={cn(
+                  'ml-3 text-sm font-medium text-nowrap',
+                  isActive ? 'text-white' : 'text-dark-500'
+                )}
+              >
+                {item.label}
+              </span>
+            </NavLink>
+          )
 
-        {/* Navigation Icons */}
-        <nav className="flex w-full flex-1 flex-col items-center gap-6 overflow-x-hidden overflow-y-auto px-0 py-4">
-          {items.map((item, index) => {
-            const IconComponent = iconMap[item.icon]
+          return (
+            <div key={uniqueKey} className="w-full">
+              {navLinkContent}
+            </div>
+          )
+        })}
+      </nav>
 
-            if (!IconComponent) {
-              console.warn(`Icon "${item.icon}" not found in iconMap`)
+      {/* Bottom action buttons */}
+      {actions.length > 0 && (
+        <div className="flex w-full flex-col items-stretch gap-6 pt-6">
+          {actions.map((action, index) => {
+            const ActionIcon = iconMap[action.icon]
+
+            if (!ActionIcon) {
+              console.warn(`Icon "${action.icon}" not found in iconMap`)
               return null
             }
 
-            const isActive = !item.disabled && isActivePath(item.path)
-            const isDisabled = item.disabled
-            // Use unique key combining path and label to avoid duplicates
-            const uniqueKey = `${item.path}-${item.label}-${index}`
-
-            if (isDisabled) {
-              return (
-                <div
-                  key={uniqueKey}
-                  className="mx-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-md opacity-50"
-                  aria-label={item.label}
-                >
-                  <IconComponent size={20} className="text-gray-400" strokeWidth={1.5} />
-                </div>
-              )
-            }
-
             return (
-              <Tooltip key={uniqueKey}>
-                <TooltipTrigger asChild>
-                  <NavLink
-                    to={item.path}
-                    end={item.path === '/dashboard'}
-                    className={cn(
-                      'focus:ring-primary-500 mx-auto flex shrink-0 items-center justify-center transition-all duration-200 focus:ring-2 focus:ring-offset-2 focus:outline-none',
-                      isActive
-                        ? 'bg-secondary-800 h-10 w-11 rounded-lg'
-                        : 'h-10 w-10 rounded-md hover:bg-gray-50'
-                    )}
-                    aria-label={item.label}
-                  >
-                    <IconComponent
-                      size={20}
-                      className={isActive ? 'text-primary-300' : 'text-gray-700'}
-                      strokeWidth={1.5}
-                    />
-                  </NavLink>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>{item.label}</p>
-                </TooltipContent>
-              </Tooltip>
+              <button
+                key={index}
+                onClick={action.onClick}
+                className={cn(
+                  'flex h-10 items-center rounded-md transition-all duration-200 focus:outline-none',
+                  isSidebarVisible ? 'px-3' : 'justify-start px-3',
+                  isHoverOpen && !isOpenSideBar ? 'hover:bg-white/80' : 'hover:bg-gray-50'
+                )}
+                aria-label={action.label}
+                onMouseEnter={() => {
+                  // Open sidebar on hover if it's closed
+                  if (!isOpenSideBar) {
+                    setHoverOpen(true)
+                  }
+                }}
+              >
+                <ActionIcon size={20} className="shrink-0 text-gray-700" strokeWidth={1.5} />
+                <span className="text-dark-500 ml-3 text-sm font-medium">{action.label}</span>
+              </button>
             )
           })}
-        </nav>
-
-        {/* Bottom action buttons */}
-        {actions.length > 0 && (
-          <div className="flex flex-col items-center gap-6 pt-6">
-            {actions.map((action, index) => {
-              const ActionIcon = iconMap[action.icon]
-
-              if (!ActionIcon) {
-                console.warn(`Icon "${action.icon}" not found in iconMap`)
-                return null
-              }
-
-              return (
-                <Tooltip key={index}>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={action.onClick}
-                      className="focus:ring-primary-500 flex items-center justify-center rounded-md p-1 transition-all duration-200 hover:scale-110 focus:ring-2 focus:ring-offset-2 focus:outline-none"
-                      aria-label={action.label}
-                    >
-                      <ActionIcon size={20} className="text-gray-700" strokeWidth={1.5} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>{action.label}</p>
-                  </TooltipContent>
-                </Tooltip>
-              )
-            })}
-          </div>
-        )}
-      </aside>
-    </TooltipProvider>
+        </div>
+      )}
+    </aside>
   )
 }
 

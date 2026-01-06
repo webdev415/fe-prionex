@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
 import { useAuthStore } from '@/stores/authStore'
+import { useSidebarStore } from '@/stores/sidebarStore'
 import { usePermissionRefresh } from '@/hooks'
 import { ImpersonationBanner } from '@/features/auth/components/ImpersonationBanner'
 import { LogoutConfirmationModal } from './LogoutConfirmationModal'
@@ -15,6 +16,7 @@ import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate } from 'react-router-dom'
+import { cn } from '@/lib/utils'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -42,6 +44,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isExitingImpersonation, setIsExitingImpersonation] = useState(false)
+  const isOpenSideBar = useSidebarStore((state) => state.isOpenSideBar)
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('')
@@ -322,18 +325,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center bg-no-repeat">
       {/* Sidebar */}
-      <Sidebar
-        items={navItems}
-        onMenuClick={() => {
-          // Handle menu click (e.g., toggle sidebar, open menu, etc.)
-          console.log('Menu clicked')
-        }}
-      />
+      <Sidebar items={navItems} />
 
       {/* Main Content Area with left margin for sidebar */}
-      <div className="ml-16">
+      <div className={cn('transition-all duration-300', isOpenSideBar ? 'ml-64' : 'ml-16')}>
         {/* Fixed Header */}
-        <header className="bg-light-50 fixed top-0 right-0 left-16 z-20 flex h-[60px] items-center justify-between border-l border-white/10 px-6 shadow-sm">
+        <header
+          className={cn(
+            'bg-light-50 fixed top-0 right-0 z-20 flex h-[60px] items-center justify-between border-l border-white/10 px-6 shadow-sm transition-all duration-300',
+            isOpenSideBar ? 'left-64' : 'left-16'
+          )}
+        >
           {/* Search Bar with Results */}
           <div className="relative" ref={searchContainerRef}>
             <SearchBar

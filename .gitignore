@@ -48,3 +48,4 @@ memory-bank/
 .cursorrules
 
 .env
+packages-lock.json

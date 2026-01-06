@@ -136,7 +136,7 @@ export function RoleManagementPage() {
     <div>
       {/* Page Header */}
       {!isLoading && (
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <h1 className="text-dark-500 text-2xl font-light">{t('pages.roles.title')}</h1>
           </div>
