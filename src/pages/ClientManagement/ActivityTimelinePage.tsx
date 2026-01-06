@@ -7,6 +7,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -19,6 +20,7 @@ import { CallDialogModal, type CallType, type CallStatus } from './components/Ca
 import { mockClientsDetail } from './mockClientDetails'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
+import { useCallStore } from '@/stores/callStore'
 
 type CommunicationType = 'calls' | 'sms' | 'notes' | 'all'
 
@@ -26,6 +28,7 @@ export function ActivityTimelinePage() {
   const { t } = useTranslation('common')
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { isCallActive, setOpenCallModal } = useCallStore()
   const clientId = id ? Number(id) : 1
   const client = mockClientsDetail.find((c) => c.id === clientId) || mockClientsDetail[0]
 
@@ -183,7 +186,17 @@ export function ActivityTimelinePage() {
             size="md"
             leftIcon={<Icons.Headset size={20} />}
             className="rounded-full"
-            onClick={() => setIsCallModalOpen(true)}
+            onClick={() => {
+              if (isCallActive()) {
+                toast.warning(
+                  t('pages.clients.modals.callDialog.callInProgress') ||
+                    'Another call or recording is already in progress. Please finish or close it first.'
+                )
+                return
+              }
+              setOpenCallModal('call-dialog')
+              setIsCallModalOpen(true)
+            }}
           >
             {t('pages.clients.activity.call')}
           </Button>
@@ -323,7 +336,10 @@ export function ActivityTimelinePage() {
       {/* Call Dialog Modal */}
       <CallDialogModal
         open={isCallModalOpen}
-        onClose={() => setIsCallModalOpen(false)}
+        onClose={() => {
+          setOpenCallModal(null)
+          setIsCallModalOpen(false)
+        }}
         clientName={client.fullName}
         phoneNumber={client.phones?.[0]?.number || ''}
         initialState="initial"
@@ -332,6 +348,7 @@ export function ActivityTimelinePage() {
         }}
         onCallEnd={(duration: number, status: CallStatus) => {
           console.log('Call ended:', { duration, status })
+          setOpenCallModal(null)
         }}
       />
     </div>
