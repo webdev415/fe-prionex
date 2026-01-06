@@ -1401,7 +1401,17 @@ export function ClientDetailPage() {
                       {phone.number}
                     </span>
                     <button
-                      onClick={() => setIsCallModalOpen(true)}
+                      onClick={() => {
+                        if (isCallActive()) {
+                          toast.warning(
+                            t('pages.clients.modals.callDialog.callInProgress') ||
+                              'Another call or recording is already in progress. Please finish or close it first.'
+                          )
+                          return
+                        }
+                        setOpenCallModal('call-dialog')
+                        setIsCallModalOpen(true)
+                      }}
                       className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
                     >
                       <Icons.Headset size={16} className="flex-shrink-0" />
