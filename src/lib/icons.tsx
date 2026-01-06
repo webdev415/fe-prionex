@@ -77,6 +77,7 @@ import {
   FilterVerticalIcon,
   HeadsetIcon,
   RemoveMaleIcon,
+  Remove02Icon,
   ChatFeedback01Icon,
   UserAccountIcon,
   Briefcase01Icon,
@@ -123,6 +124,7 @@ import {
   Tick02Icon,
   PrinterIcon,
   CheckmarkBadge02Icon,
+  HeadsetConnectedIcon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -246,6 +248,7 @@ export const Icons = {
   FilterVertical: (props: Omit<IconProps, 'icon'>) => <Icon icon={FilterVerticalIcon} {...props} />,
   Headset: (props: Omit<IconProps, 'icon'>) => <Icon icon={HeadsetIcon} {...props} />,
   RemoveMale: (props: Omit<IconProps, 'icon'>) => <Icon icon={RemoveMaleIcon} {...props} />,
+  Remove02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Remove02Icon} {...props} />,
   ChatFeedback01: (props: Omit<IconProps, 'icon'>) => <Icon icon={ChatFeedback01Icon} {...props} />,
   UserAccount: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserAccountIcon} {...props} />,
   Briefcase01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Briefcase01Icon} {...props} />,
@@ -297,6 +300,9 @@ export const Icons = {
   Printer: (props: Omit<IconProps, 'icon'>) => <Icon icon={PrinterIcon} {...props} />,
   CheckmarkBadge02: (props: Omit<IconProps, 'icon'>) => (
     <Icon icon={CheckmarkBadge02Icon} {...props} />
+  ),
+  HeadsetConnected: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={HeadsetConnectedIcon} {...props} />
   ),
 }
 
@@ -364,6 +370,7 @@ export {
   FilterVerticalIcon,
   HeadsetIcon,
   RemoveMaleIcon,
+  Remove02Icon,
   ChatFeedback01Icon,
   UserAccountIcon,
   Briefcase01Icon,
@@ -412,6 +419,7 @@ export {
   Tick02Icon,
   PrinterIcon,
   CheckmarkBadge02Icon,
+  HeadsetConnectedIcon,
 }
 
 /**

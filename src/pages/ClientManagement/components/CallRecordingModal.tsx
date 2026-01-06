@@ -10,6 +10,7 @@ import { Modal, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { useCallStore } from '@/stores/callStore'
 
 export interface CallRecordingModalProps {
   open: boolean
@@ -23,6 +24,7 @@ export interface CallRecordingModalProps {
     duration: string
     phone: string
   }
+  onMinimize?: () => void
 }
 
 const formatTime = (seconds: number): string => {
@@ -31,8 +33,23 @@ const formatTime = (seconds: number): string => {
   return `${mins}:${String(secs).padStart(2, '0')}`
 }
 
-export function CallRecordingModal({ open, onClose, callData }: CallRecordingModalProps) {
+export function CallRecordingModal({
+  open,
+  onClose,
+  callData,
+  onMinimize,
+}: CallRecordingModalProps) {
   const { t } = useTranslation('common')
+  const { setMinimizedCall, setOpenCallModal } = useCallStore()
+
+  // Track modal open state
+  useEffect(() => {
+    if (open) {
+      setOpenCallModal('call-recording')
+    } else {
+      setOpenCallModal(null)
+    }
+  }, [open, setOpenCallModal])
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0)
@@ -131,10 +148,36 @@ export function CallRecordingModal({ open, onClose, callData }: CallRecordingMod
     setCurrentTime(Math.max(0, Math.min(recordingDuration, newTime)))
   }
 
+  const handleMinimize = () => {
+    setMinimizedCall({
+      id: `call-recording-${Date.now()}`,
+      type: 'call-recording',
+      clientName: callData.clientName,
+      phoneNumber: callData.phone,
+      callData,
+      timestamp: Date.now(),
+    })
+    // If onMinimize is provided, use it instead of onClose
+    // This prevents clearing the minimized state when restoring and re-minimizing
+    if (onMinimize) {
+      onMinimize()
+    } else {
+      onClose()
+    }
+  }
+
   const progressPercentage = (currentTime / recordingDuration) * 100
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="xl" className="p-6">
+      {/* Minimize Button */}
+      <button
+        onClick={handleMinimize}
+        className="absolute top-4 right-12 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+        aria-label="Minimize modal"
+      >
+        <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
+      </button>
       <div className="flex flex-col gap-6">
         {/* Audio Waveform Icon */}
         <div className="flex justify-center">
