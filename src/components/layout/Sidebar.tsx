@@ -85,7 +85,7 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
         'fixed top-0 left-0 z-30 flex h-screen flex-col overflow-hidden py-6 transition-all duration-300',
         'shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_21px_2px_0px_rgba(0,0,0,0.06)]',
         isSidebarVisible ? 'w-60' : 'w-18',
-        'items-start px-4 pl-3',
+        'items-start px-4 pr-2 pl-3',
         isHoverOpen && !isOpenSideBar ? 'bg-white' : 'bg-white',
         className
       )}
@@ -105,7 +105,7 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
       {/* Navigation Icons */}
       <nav
         className={cn(
-          'flex w-full flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto',
+          'sidebar-scrollbar flex w-full flex-1 flex-col gap-4 overflow-x-hidden overflow-y-scroll [scrollbar-gutter:stable]',
           'items-stretch px-0'
         )}
       >
@@ -115,7 +115,7 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
           className={cn(
             'flex h-10 shrink-0 cursor-pointer items-center rounded-lg transition-all duration-200 focus:outline-none',
             isSidebarVisible ? 'px-3' : 'justify-start px-3',
-            isHoverOpen && !isOpenSideBar ? 'hover:bg-white/80' : 'hover:bg-gray-50'
+            'hover:bg-gray-50'
           )}
           aria-label="Menu"
         >
@@ -171,11 +171,7 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
               className={cn(
                 'flex h-10 shrink-0 items-center rounded-lg transition-all duration-200 focus:outline-none',
                 isSidebarVisible ? 'px-3' : 'justify-start px-3',
-                isActive
-                  ? 'bg-secondary-800'
-                  : isHoverOpen && !isOpenSideBar
-                    ? 'hover:bg-white/80'
-                    : 'hover:bg-gray-50'
+                isActive ? 'bg-secondary-800' : 'hover:bg-gray-50'
               )}
               aria-label={item.label}
               onMouseEnter={() => {

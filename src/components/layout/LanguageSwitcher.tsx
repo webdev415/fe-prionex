@@ -37,10 +37,10 @@ export function LanguageSwitcher({ variant = 'auth' }: LanguageSwitcherProps) {
         <button
           type="button"
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors',
+            'inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg rounded-md px-2.5 py-1.5 text-sm transition-colors',
             isAuth
               ? 'bg-white/10 text-white backdrop-blur-sm hover:bg-white/20'
-              : 'bg-primary-300 text-dark-500 hover:opacity-90'
+              : 'bg-secondary-800 text-white hover:opacity-90'
           )}
         >
           <span className="font-medium">{LANGUAGE_NAMES[currentLanguage]}</span>
@@ -48,7 +48,7 @@ export function LanguageSwitcher({ variant = 'auth' }: LanguageSwitcherProps) {
             size={14}
             color={isAuth ? 'currentColor' : '#05040D'}
             strokeWidth={1.5}
-            className="opacity-70"
+            className="text-white opacity-70"
           />
         </button>
       </DropdownMenuTrigger>
