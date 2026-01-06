@@ -94,19 +94,9 @@ export const useCallStore = create<CallStore>((set, get) => ({
   },
   isCallActive: () => {
     const state = get()
-    // Check if there's a minimized call that's active (dialing or connected)
+    // Check if there's a minimized call - any minimized call is considered active
     if (state.minimizedCall) {
-      if (
-        state.minimizedCall.type === 'call-dialog' &&
-        (state.minimizedCall.callState === 'dialing' ||
-          state.minimizedCall.callState === 'connected')
-      ) {
-        return true
-      }
-      // For call recordings, if it's minimized, consider it active
-      if (state.minimizedCall.type === 'call-recording') {
-        return true
-      }
+      return true
     }
     // Check if there's an open modal
     if (state.openCallModal) {

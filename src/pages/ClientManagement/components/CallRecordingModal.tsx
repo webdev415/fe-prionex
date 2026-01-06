@@ -40,16 +40,20 @@ export function CallRecordingModal({
   onMinimize,
 }: CallRecordingModalProps) {
   const { t } = useTranslation('common')
-  const { setMinimizedCall, setOpenCallModal } = useCallStore()
+  const { setMinimizedCall, setOpenCallModal, minimizedCall } = useCallStore()
 
   // Track modal open state
   useEffect(() => {
     if (open) {
       setOpenCallModal('call-recording')
     } else {
-      setOpenCallModal(null)
+      // Only clear openCallModal if there's no minimized call
+      // This prevents clearing the state when minimizing
+      if (!minimizedCall || minimizedCall.type !== 'call-recording') {
+        setOpenCallModal(null)
+      }
     }
-  }, [open, setOpenCallModal])
+  }, [open, setOpenCallModal, minimizedCall])
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0)

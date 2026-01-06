@@ -69,16 +69,20 @@ export function CallDialogModal({
   loans = [],
 }: CallDialogModalProps) {
   const { t } = useTranslation('common')
-  const { setMinimizedCall, setOpenCallModal } = useCallStore()
+  const { setMinimizedCall, setOpenCallModal, minimizedCall } = useCallStore()
 
   // Track modal open state
   useEffect(() => {
     if (open) {
       setOpenCallModal('call-dialog')
     } else {
-      setOpenCallModal(null)
+      // Only clear openCallModal if there's no minimized call
+      // This prevents clearing the state when minimizing
+      if (!minimizedCall || minimizedCall.type !== 'call-dialog') {
+        setOpenCallModal(null)
+      }
     }
-  }, [open, setOpenCallModal])
+  }, [open, setOpenCallModal, minimizedCall])
   const [callState, setCallState] = useState<CallState>(initialState)
   const [callType, setCallType] = useState<CallType>('white-line')
   const [elapsedTime, setElapsedTime] = useState(0)
