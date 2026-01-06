@@ -85,7 +85,7 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
         'fixed top-0 left-0 z-30 flex h-screen flex-col overflow-hidden py-6 transition-all duration-300',
         'shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_21px_2px_0px_rgba(0,0,0,0.06)]',
         isSidebarVisible ? 'w-60' : 'w-18',
-        'items-start px-4 pr-2 pl-3',
+        'items-start px-4 pl-3',
         isHoverOpen && !isOpenSideBar ? 'bg-white' : 'bg-white',
         className
       )}
@@ -105,7 +105,7 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
       {/* Navigation Icons */}
       <nav
         className={cn(
-          'sidebar-scrollbar flex w-full flex-1 flex-col gap-4 overflow-x-hidden overflow-y-scroll [scrollbar-gutter:stable]',
+          'flex w-full flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
           'items-stretch px-0'
         )}
       >
