@@ -5,17 +5,19 @@
  * Uses reusable components following the same pattern as ImportHistoryPage.
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
+import { LinkButton } from '@/components/ui/LinkButton'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { configApi, type ConfigHistoryEntry } from '@/features/clients/api/configApi'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { sellersApi } from '@/features/sellers/api/sellersApi'
 
 // Status Badge Component for Configuration Changes
 function ChangeTypeBadge({ changeType }: { changeType: string }) {
@@ -23,7 +25,7 @@ function ChangeTypeBadge({ changeType }: { changeType: string }) {
 
   if (changeType === 'create') {
     return (
-      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-green-600 px-3 text-xs font-medium text-white">
+      <span className="bg-success-500 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
         <span className="h-2 w-2 rounded-full bg-white" />
         {t('pages.scoringConfiguration.history.changeTypes.created', 'Created')}
       </span>
@@ -32,7 +34,7 @@ function ChangeTypeBadge({ changeType }: { changeType: string }) {
 
   if (changeType === 'update') {
     return (
-      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-blue-600 px-3 text-xs font-medium text-white">
+      <span className="bg-information-500 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
         <span className="h-2 w-2 rounded-full bg-white" />
         {t('pages.scoringConfiguration.history.changeTypes.updated', 'Updated')}
       </span>
@@ -41,7 +43,7 @@ function ChangeTypeBadge({ changeType }: { changeType: string }) {
 
   if (changeType === 'delete') {
     return (
-      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-red-600 px-3 text-xs font-medium text-white">
+      <span className="bg-error-500 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
         <span className="h-2 w-2 rounded-full bg-white" />
         {t('pages.scoringConfiguration.history.changeTypes.deleted', 'Deleted')}
       </span>
@@ -49,7 +51,7 @@ function ChangeTypeBadge({ changeType }: { changeType: string }) {
   }
 
   return (
-    <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-gray-600 px-3 text-xs font-medium text-white">
+    <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-gray-500 px-3 text-xs font-medium text-white">
       <span className="h-2 w-2 rounded-full bg-white" />
       {changeType}
     </span>
@@ -59,6 +61,7 @@ function ChangeTypeBadge({ changeType }: { changeType: string }) {
 export function ConfigurationHistoryPage() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [sortConfig, setSortConfig] = useState<SortConfig | undefined>(undefined)
@@ -68,6 +71,52 @@ export function ConfigurationHistoryPage() {
     queryKey: ['configHistory', { page: currentPage, page_size: rowsPerPage }],
     queryFn: () => configApi.getConfigHistory({ page: currentPage, page_size: rowsPerPage }),
   })
+
+  // Invalidate history query when page mounts (handles navigation from save)
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['configHistory'] })
+  }, [queryClient])
+
+  // Fetch sellers to map IDs to names
+  const { data: sellersData } = useQuery({
+    queryKey: ['sellers', { is_active: true }],
+    queryFn: () => sellersApi.getSellers({ is_active: true, limit: 1000 }),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+
+  // Create seller ID to name map
+  const sellerNameMap = useMemo(() => {
+    const map = new Map<number, string>()
+    if (sellersData?.sellers) {
+      sellersData.sellers.forEach((seller) => {
+        map.set(seller.id, seller.seller_name)
+      })
+    }
+    return map
+  }, [sellersData])
+
+  // Helper function to replace seller IDs with names in reason text
+  const formatReason = (reason: string | null, sellerId: number | null) => {
+    if (!reason) return '-'
+
+    // Handle "Seller configuration deleted" - replace with seller name if available
+    if (reason === 'Seller configuration deleted' && sellerId && sellerNameMap.has(sellerId)) {
+      const sellerName = sellerNameMap.get(sellerId)!
+      return `Seller configuration deleted for ${sellerName}`
+    }
+
+    if (!sellerId || !sellerNameMap.has(sellerId)) return reason
+
+    const sellerName = sellerNameMap.get(sellerId)!
+    // Replace patterns like "seller 1", "seller1", "seller ID 1", "for seller 1" with actual name
+    return reason.replace(
+      new RegExp(`(?:for\\s+)?seller\\s*(?:id\\s*)?${sellerId}\\b`, 'gi'),
+      (match) => {
+        // Preserve "for " prefix if it exists
+        return match.toLowerCase().startsWith('for') ? `for ${sellerName}` : sellerName
+      }
+    )
+  }
 
   const historyItems = (data?.history || []).map((item) => ({
     ...item,
@@ -156,37 +205,50 @@ export function ConfigurationHistoryPage() {
       header: t('pages.scoringConfiguration.history.tableHeaders.changedBy', 'Changed By'),
       sortable: true,
       render: (item) => (
-        <span>{item.changed_by_username || `User #${item.changed_by_user_id}`}</span>
+        <span className="text-dark-500 text-sm">
+          {item.changed_by_username || `User #${item.changed_by_user_id}`}
+        </span>
       ),
     },
     {
       key: 'change_reason',
       header: t('pages.scoringConfiguration.history.tableHeaders.reason', 'Reason'),
       sortable: false,
-      render: (item) => <span className="text-sm text-gray-600">{item.change_reason || '-'}</span>,
+      render: (item) => (
+        <span className="text-dark-600 text-sm font-medium">
+          {formatReason(item.change_reason, item.seller_id)}
+        </span>
+      ),
     },
     {
       key: 'changes_summary',
       header: t('pages.scoringConfiguration.history.tableHeaders.changes', 'Changes'),
       sortable: false,
       render: (item) => {
-        const changedFields: string[] = []
-        if (item.old_values && item.new_values) {
-          const allKeys = new Set([
-            ...Object.keys(item.old_values),
-            ...Object.keys(item.new_values),
-          ])
-          allKeys.forEach((key) => {
-            if (JSON.stringify(item.old_values?.[key]) !== JSON.stringify(item.new_values?.[key])) {
-              changedFields.push(key)
-            }
-          })
+        if (!item.changes_summary || Object.keys(item.changes_summary).length === 0) {
+          return <span className="text-sm text-gray-500">-</span>
         }
-        return (
-          <div className="text-xs text-gray-600">
-            {changedFields.length > 0 ? changedFields.join(', ') : '-'}
-          </div>
-        )
+
+        // Display detailed JSON for changes
+        try {
+          const formattedJson = JSON.stringify(item.changes_summary, null, 2)
+          return (
+            <div className="text-dark-700 my-2 max-h-48 max-w-xl overflow-auto rounded-md border border-slate-200 bg-slate-50 p-4 font-mono text-xs shadow-sm">
+              <pre className="m-0 leading-relaxed break-words whitespace-pre-wrap">
+                {formattedJson}
+              </pre>
+            </div>
+          )
+        } catch {
+          // Fallback to string representation if JSON.stringify fails
+          return (
+            <div className="text-dark-700 my-2 max-h-48 max-w-xl overflow-auto rounded-md border border-slate-200 bg-slate-50 p-4 font-mono text-xs shadow-sm">
+              <pre className="m-0 leading-relaxed break-words whitespace-pre-wrap">
+                {String(item.changes_summary)}
+              </pre>
+            </div>
+          )
+        }
       },
     },
   ]
@@ -194,20 +256,18 @@ export function ConfigurationHistoryPage() {
   const hasNoData = !isLoading && totalItems === 0
 
   return (
-    <div className="flex w-full flex-col items-start gap-6">
+    <div className="flex w-full flex-col items-start gap-4">
       {/* Header */}
-      <div className="flex w-full items-center justify-between">
+      <div className="mb-4 flex w-full items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
+          <LinkButton
+            variant="regular-black"
             onClick={handleGoBack}
-            leftIcon={<Icons.ArrowLeft size={20} />}
-            className="rounded-full"
+            leftIcon={<Icons.ArrowLeft size={16} className="text-dark-500" />}
           >
             {t('common.back', 'Back')}
-          </Button>
-          <h1 className="text-dark-500 text-2xl font-semibold">
+          </LinkButton>
+          <h1 className="text-dark-500 text-2xl font-light">
             {t('pages.scoringConfiguration.history.title', 'Configuration History')}
           </h1>
         </div>
@@ -223,10 +283,12 @@ export function ConfigurationHistoryPage() {
       </div>
 
       {/* Data Table or Empty State */}
-      <div className="min-h-[400px] w-full rounded-xl bg-white/50 p-6 shadow-sm">
+      <div className="min-h-[400px] w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
         {isLoading ? (
           // Loading State - Show skeleton table while fetching data
-          <TableSkeleton columns={5} rows={rowsPerPage} />
+          <div className="p-6">
+            <TableSkeleton columns={5} rows={rowsPerPage} />
+          </div>
         ) : hasNoData ? (
           // Empty State - No configuration history at all
           <div className="flex min-h-[448px] flex-col items-center justify-center gap-6 p-6">
@@ -260,16 +322,18 @@ export function ConfigurationHistoryPage() {
           </div>
         ) : (
           // Data Table
-          <DataTable
-            columns={columns}
-            data={sortedData}
-            sortConfig={sortConfig}
-            onSort={handleSort}
-            emptyMessage={t(
-              'pages.scoringConfiguration.history.noHistoryFound',
-              'No history found'
-            )}
-          />
+          <div className="overflow-x-auto">
+            <DataTable
+              columns={columns}
+              data={sortedData}
+              sortConfig={sortConfig}
+              onSort={handleSort}
+              emptyMessage={t(
+                'pages.scoringConfiguration.history.noHistoryFound',
+                'No history found'
+              )}
+            />
+          </div>
         )}
       </div>
 

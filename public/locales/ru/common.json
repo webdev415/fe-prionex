@@ -1494,7 +1494,7 @@
       }
     },
     "scoringConfiguration": {
-      "title": "Конфигурация оценки - Проект Alpha",
+      "title": "Конфигурация оценки",
       "scoreWeights": "Веса оценки",
       "debtAmountWeight": "Вес суммы долга",
       "daysOverdueWeight": "Вес дней просрочки",
@@ -1514,7 +1514,7 @@
       "lowDescription": "Минимальная срочность (оценка 0-9)",
       "immediateEffect": "Изменения повлияют на всех клиентов в этом проекте немедленно",
       "sellerOverrides": "Переопределения для продавцов (необязательно)",
-      "addSellerConfig": "+ Добавить конфигурацию для продавца",
+      "addSellerConfig": "Добавить конфигурацию для продавца",
       "sellerOverridesDescription": "Настройка различных порогов для конкретных продавцов",
       "configurationPreview": "Предпросмотр конфигурации",
       "currentDistribution": "Текущее распределение:",

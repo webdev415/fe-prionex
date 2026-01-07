@@ -8,12 +8,15 @@ import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/features/auth'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Slider } from '@/components/ui/Slider'
 import { PriorityBadge } from '@/pages/ClientManagement/components/PriorityBadge'
 import { Icons } from '@/lib/icons'
+import { cn } from '@/lib/utils'
 import {
   configApi,
   type ScoringConfigResponse,
@@ -48,10 +51,25 @@ interface Distribution {
 export function ScoringConfigurationPage() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  // Get active project name
+  const activeProject = useMemo(() => {
+    if (!user?.projects || !user?.active_project_id) return null
+    return user.projects.find((p) => p.id === user.active_project_id)
+  }, [user])
+
+  const projectName =
+    activeProject?.name || t('pages.scoringConfiguration.defaultProject', 'Project')
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<'weights' | 'thresholds'>('weights')
 
   // Loading and error states
   const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
+  const [isSavingWeights, setIsSavingWeights] = useState(false)
+  const [isSavingThresholds, setIsSavingThresholds] = useState(false)
   const [isPreviewing, setIsPreviewing] = useState(false)
   const [originalConfig, setOriginalConfig] = useState<ScoringConfigResponse | null>(null)
   const [previewData, setPreviewData] = useState<PreviewResponse | null>(null)
@@ -74,11 +92,28 @@ export function ScoringConfigurationPage() {
   // Immediate effect checkbox
   const [immediateEffect, setImmediateEffect] = useState(true)
 
+  // Change reason state
+  const [weightChangeReason, setWeightChangeReason] = useState('')
+  const [thresholdChangeReason, setThresholdChangeReason] = useState('')
+
   // Seller-specific configurations state
   const [sellerConfigs, setSellerConfigs] = useState<SellerConfig[]>([])
   const [sellers, setSellers] = useState<Array<{ id: number; name: string }>>([])
   const [isSellerModalOpen, setIsSellerModalOpen] = useState(false)
   const [editingSellerConfig, setEditingSellerConfig] = useState<SellerConfig | null>(null)
+
+  // Normalize seller configs for display (backend may not return seller_name/clients_affected yet)
+  const displaySellerConfigs = useMemo(() => {
+    const sellerNameById = new Map<number, string>(sellers.map((s) => [s.id, s.name]))
+    return sellerConfigs.map((cfg) => ({
+      ...cfg,
+      seller_name:
+        (cfg as unknown as { seller_name?: string }).seller_name?.trim() ||
+        sellerNameById.get(cfg.seller_id) ||
+        `Seller #${cfg.seller_id}`,
+      clients_affected: (cfg as unknown as { clients_affected?: number }).clients_affected ?? 0,
+    }))
+  }, [sellerConfigs, sellers])
 
   // Load configuration on mount
   useEffect(() => {
@@ -91,7 +126,8 @@ export function ScoringConfigurationPage() {
   const loadConfiguration = async () => {
     try {
       setIsLoading(true)
-      const config = await configApi.getScoringConfig()
+      const projectId = user?.active_project_id ? Number(user.active_project_id) : null
+      const config = await configApi.getScoringConfig(projectId, null)
 
       // Convert API response to component state
       setScoreWeights({
@@ -166,8 +202,8 @@ export function ScoringConfigurationPage() {
     loadSellerConfigs()
   }
 
-  // Current distribution from preview or original config
-  const currentDistribution: Distribution = useMemo(() => {
+  // Current distribution from preview
+  const currentDistribution: Distribution | null = useMemo(() => {
     if (previewData) {
       return {
         critical: previewData.current_distribution.critical.count,
@@ -176,17 +212,11 @@ export function ScoringConfigurationPage() {
         low: previewData.current_distribution.low.count,
       }
     }
-    // Default mock data
-    return {
-      critical: 45,
-      high: 87,
-      medium: 156,
-      low: 85,
-    }
+    return null
   }, [previewData])
 
   // New distribution from preview
-  const newDistribution: Distribution = useMemo(() => {
+  const newDistribution: Distribution | null = useMemo(() => {
     if (previewData) {
       return {
         critical: previewData.new_distribution.critical.count,
@@ -195,16 +225,11 @@ export function ScoringConfigurationPage() {
         low: previewData.new_distribution.low.count,
       }
     }
-    // Default mock data
-    return {
-      critical: 52,
-      high: 93,
-      medium: 148,
-      low: 80,
-    }
+    return null
   }, [previewData])
 
   const totalClients = useMemo(() => {
+    if (!currentDistribution) return 0
     return (
       currentDistribution.critical +
       currentDistribution.high +
@@ -232,21 +257,28 @@ export function ScoringConfigurationPage() {
   }
 
   const handleResetDefaults = () => {
-    setPriorityThresholds({
-      critical: 25,
-      high: 18,
-      medium: 10,
-      low: 0,
-    })
+    // Reset to original config values from API, not hardcoded defaults
+    if (originalConfig) {
+      setPriorityThresholds(originalConfig.priority_thresholds)
+    } else {
+      // Fallback to defaults only if original config not loaded yet
+      setPriorityThresholds({
+        critical: 25,
+        high: 18,
+        medium: 10,
+        low: 0,
+      })
+    }
     setPreviewData(null) // Clear preview data
   }
 
   const handlePreview = async () => {
     try {
       setIsPreviewing(true)
+      const projectId = user?.active_project_id ? Number(user.active_project_id) : null
       const preview = await configApi.previewScoringConfig({
-        project_id: originalConfig?.project_id,
-        seller_id: originalConfig?.seller_id,
+        project_id: projectId,
+        seller_id: null,
         new_priority_thresholds: priorityThresholds,
       })
       setPreviewData(preview)
@@ -259,7 +291,7 @@ export function ScoringConfigurationPage() {
     }
   }
 
-  const handleSave = async () => {
+  const handleSaveWeights = async () => {
     // Validate total weight
     if (totalWeight !== 100) {
       toast.error(t('pages.scoringConfiguration.weightError', 'Total weights must equal 100%'))
@@ -267,58 +299,83 @@ export function ScoringConfigurationPage() {
     }
 
     try {
-      setIsSaving(true)
+      setIsSavingWeights(true)
 
       // Convert percentages to decimals for API
-      const result = await configApi.updateScoringConfig({
-        project_id: originalConfig?.project_id,
-        seller_id: originalConfig?.seller_id,
+      const projectId = user?.active_project_id ? Number(user.active_project_id) : null
+      await configApi.updateScoringConfig({
+        project_id: projectId,
+        seller_id: null,
         weights: {
           debt_amount: scoreWeights.debtAmount / 100,
           days_overdue: scoreWeights.daysOverdue / 100,
           contact_history: scoreWeights.contactHistory / 100,
         },
-        priority_thresholds: priorityThresholds,
         immediate_effect: immediateEffect,
-        change_reason: 'Configuration updated via web interface',
+        change_reason: weightChangeReason.trim() || 'Score weights updated via web interface',
       })
 
-      toast.success(t('pages.scoringConfiguration.saveSuccess', 'Configuration saved successfully'))
+      // Clear reason after successful save
+      setWeightChangeReason('')
 
-      if (result.recalculation_triggered) {
-        toast.info(
-          t(
-            'pages.scoringConfiguration.recalculationTriggered',
-            `Recalculating scores for ${result.affected_clients} clients...`
-          )
+      toast.success(
+        t('pages.scoringConfiguration.weightsSaveSuccess', 'Score weights saved successfully')
+      )
+
+      // Invalidate history query so it refreshes when navigating to history page
+      queryClient.invalidateQueries({ queryKey: ['configHistory'] })
+
+      // Reload configuration to get updated data
+      await loadConfiguration()
+    } catch (error) {
+      console.error('Failed to save weights:', error)
+      const errorMessage =
+        (error as { response?: { data?: { detail?: string } } }).response?.data?.detail ||
+        t('pages.scoringConfiguration.weightsSaveError', 'Failed to save score weights')
+      toast.error(errorMessage)
+    } finally {
+      setIsSavingWeights(false)
+    }
+  }
+
+  const handleSaveThresholds = async () => {
+    try {
+      setIsSavingThresholds(true)
+
+      const projectId = user?.active_project_id ? Number(user.active_project_id) : null
+      await configApi.updateScoringConfig({
+        project_id: projectId,
+        seller_id: null,
+        priority_thresholds: priorityThresholds,
+        immediate_effect: immediateEffect,
+        change_reason:
+          thresholdChangeReason.trim() || 'Priority thresholds updated via web interface',
+      })
+
+      // Clear reason after successful save
+      setThresholdChangeReason('')
+
+      toast.success(
+        t(
+          'pages.scoringConfiguration.thresholdsSaveSuccess',
+          'Priority thresholds saved successfully'
         )
-      }
+      )
+
+      // Invalidate history query so it refreshes when navigating to history page
+      queryClient.invalidateQueries({ queryKey: ['configHistory'] })
 
       // Reload configuration to get updated data
       await loadConfiguration()
       setPreviewData(null) // Clear preview
     } catch (error) {
-      console.error('Failed to save configuration:', error)
+      console.error('Failed to save thresholds:', error)
       const errorMessage =
         (error as { response?: { data?: { detail?: string } } }).response?.data?.detail ||
-        t('pages.scoringConfiguration.saveError', 'Failed to save configuration')
+        t('pages.scoringConfiguration.thresholdsSaveError', 'Failed to save priority thresholds')
       toast.error(errorMessage)
     } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleCancel = () => {
-    if (originalConfig) {
-      // Reset to original values
-      setScoreWeights({
-        debtAmount: originalConfig.weights.debt_amount * 100,
-        daysOverdue: originalConfig.weights.days_overdue * 100,
-        contactHistory: originalConfig.weights.contact_history * 100,
-      })
-      setPriorityThresholds(originalConfig.priority_thresholds)
-      setPreviewData(null)
-      toast.info(t('pages.scoringConfiguration.changesCanceled', 'Changes canceled'))
+      setIsSavingThresholds(false)
     }
   }
 
@@ -327,6 +384,8 @@ export function ScoringConfigurationPage() {
   }
 
   const formatPercentage = (count: number, total: number) => {
+    if (!Number.isFinite(total) || total <= 0) return 0
+    if (!Number.isFinite(count) || count <= 0) return 0
     return Math.round((count / total) * 100)
   }
 
@@ -336,11 +395,12 @@ export function ScoringConfigurationPage() {
   }
 
   return (
-    <div className="flex w-full flex-col items-start gap-6">
+    <div className="flex w-full flex-col items-start gap-4">
       {/* Header */}
-      <div className="flex w-full items-center justify-between">
-        <h1 className="text-dark-500 text-2xl font-semibold">
-          {t('pages.scoringConfiguration.title', 'Scoring Configuration - Project Alpha')}
+      <div className="mb-4 flex w-full items-center justify-between">
+        <h1 className="text-dark-500 text-2xl font-light">
+          {t('pages.scoringConfiguration.title', 'Scoring Configuration')} -{' '}
+          <span className="font-semibold">{projectName}</span>
         </h1>
         <Button
           variant="primary"
@@ -352,383 +412,603 @@ export function ScoringConfigurationPage() {
         </Button>
       </div>
 
-      {/* Score Weights Section */}
-      <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-dark-500 text-lg font-semibold">
+      {/* Side Tabs Layout */}
+      <div className="flex w-full gap-6">
+        {/* Side Tabs */}
+        <div className="flex w-[200px] flex-shrink-0 flex-col gap-1">
+          <button
+            onClick={() => setActiveTab('weights')}
+            className={cn(
+              'flex w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-4 py-3 text-left text-sm font-semibold transition-colors duration-200',
+              activeTab === 'weights'
+                ? 'bg-secondary-800 text-white shadow-sm'
+                : 'text-dark-500 bg-white hover:bg-gray-50'
+            )}
+          >
             {t('pages.scoringConfiguration.scoreWeights', 'Score Weights')}
-          </h2>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handlePreview}
-            disabled={isPreviewing}
-            className="rounded-md"
+          </button>
+          <button
+            onClick={() => setActiveTab('thresholds')}
+            className={cn(
+              'flex w-full cursor-pointer items-center justify-start gap-2 rounded-lg px-4 py-3 text-left text-sm font-semibold transition-colors duration-200',
+              activeTab === 'thresholds'
+                ? 'bg-secondary-800 text-white shadow-sm'
+                : 'text-dark-500 bg-white hover:bg-gray-50'
+            )}
           >
-            {isPreviewing
-              ? t('pages.scoringConfiguration.previewing', 'Previewing...')
-              : t('pages.scoringConfiguration.previewChanges', 'Preview Changes')}
-          </Button>
+            {t('pages.scoringConfiguration.priorityThresholds', 'Priority Thresholds')}
+          </button>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <Slider
-            label={t('pages.scoringConfiguration.debtAmountWeight', 'Debt Amount Weight')}
-            value={scoreWeights.debtAmount}
-            onValueChange={(value) => handleWeightChange('debtAmount', value)}
-            min={0}
-            max={100}
-            step={1}
-          />
-
-          <Slider
-            label={t('pages.scoringConfiguration.daysOverdueWeight', 'Days Overdue Weight')}
-            value={scoreWeights.daysOverdue}
-            onValueChange={(value) => handleWeightChange('daysOverdue', value)}
-            min={0}
-            max={100}
-            step={1}
-          />
-
-          <Slider
-            label={t('pages.scoringConfiguration.contactHistoryWeight', 'Contact History Weight')}
-            value={scoreWeights.contactHistory}
-            onValueChange={(value) => handleWeightChange('contactHistory', value)}
-            min={0}
-            max={100}
-            step={1}
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-dark-500 text-sm">
-            {t('pages.scoringConfiguration.totalMustEqual', 'Total must equal 100%')}
-          </span>
-          <span
-            className={`text-sm font-medium ${
-              totalWeight === 100 ? 'text-success-500' : 'text-error-500'
-            }`}
-          >
-            {t('pages.scoringConfiguration.current', 'Current')}: {totalWeight}%
-            {totalWeight === 100 && ' ✓'}
-          </span>
-        </div>
-      </div>
-      <div className="flex flex-row gap-4 self-stretch">
-        {/* Priority Classification Thresholds Section */}
-        <div className="flex w-[50%] flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-dark-500 text-lg font-semibold">
-              {t(
-                'pages.scoringConfiguration.priorityThresholds',
-                'Priority Classification Thresholds'
-              )}
-            </h2>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleResetDefaults}
-              className="rounded-md"
-            >
-              {t('pages.scoringConfiguration.resetDefaults', 'Reset Defaults')}
-            </Button>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="flex w-[50%] flex-col gap-4">
-              {/* Critical Priority */}
-              <div className="flex items-center gap-4">
-                <PriorityBadge priority="Critical" variant="compact" />
-                <div className="flex flex-1 items-center gap-2">
-                  <span className="text-dark-500 w-[100px] text-sm">
-                    {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
-                  </span>
-                  <Input
-                    type="number"
-                    value={priorityThresholds.critical}
-                    onChange={(e) => handleThresholdChange('critical', Number(e.target.value) || 0)}
-                    className="w-16 rounded-md"
-                    inputSize="sm"
-                  />
+        {/* Tab Content */}
+        <div className="flex flex-1 flex-col gap-4">
+          {/* Score Weights Tab */}
+          {activeTab === 'weights' && (
+            <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
+              <div className="mb-2 flex items-center justify-between">
+                <div>
+                  <h2 className="text-dark-500 mb-1 text-lg font-semibold">
+                    {t('pages.scoringConfiguration.scoreWeights', 'Score Weights')}
+                  </h2>
+                  <p className="text-dark-400 text-sm font-light">
+                    {t(
+                      'pages.scoringConfiguration.scoreWeightsDescription',
+                      'Configure the relative importance of each factor in calculating client scores. Total must equal 100%.'
+                    )}
+                  </p>
                 </div>
               </div>
 
-              {/* High Priority */}
-              <div className="flex items-center gap-4">
-                <PriorityBadge priority="High" variant="compact" />
-                <div className="flex flex-1 items-center gap-2">
-                  <span className="text-dark-500 w-[100px] text-sm">
-                    {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
-                  </span>
-                  <Input
-                    type="number"
-                    value={priorityThresholds.high}
-                    onChange={(e) => handleThresholdChange('high', Number(e.target.value) || 0)}
-                    className="w-16 rounded-md"
-                    inputSize="sm"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex w-[50%] flex-col gap-4">
-              {/* Medium Priority */}
-              <div className="flex items-center gap-4">
-                <PriorityBadge priority="Medium" variant="compact" />
-                <div className="flex flex-1 items-center gap-2">
-                  <span className="text-dark-500 w-[100px] text-sm">
-                    {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
-                  </span>
-                  <Input
-                    type="number"
-                    value={priorityThresholds.medium}
-                    onChange={(e) => handleThresholdChange('medium', Number(e.target.value) || 0)}
-                    className="w-16 rounded-md"
-                    inputSize="sm"
-                  />
+              <div className="grid grid-cols-1 gap-4">
+                <div className="flex flex-col gap-4">
+                  {/* Debt Amount Weight */}
+                  <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
+                    <div className="flex flex-1 items-center gap-3">
+                      <span className="text-dark-500 text-sm font-medium">
+                        {t('pages.scoringConfiguration.debtAmountWeight', 'Debt Amount Weight')}
+                      </span>
+                    </div>
+                    <div className="flex w-full items-center gap-3 sm:w-auto sm:min-w-[300px] md:min-w-[400px] lg:min-w-[500px]">
+                      <Slider
+                        value={scoreWeights.debtAmount}
+                        onValueChange={(value) => handleWeightChange('debtAmount', value)}
+                        min={0}
+                        max={100}
+                        step={1}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Days Overdue Weight */}
+                  <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
+                    <div className="flex flex-1 items-center gap-3">
+                      <span className="text-dark-500 text-sm font-medium">
+                        {t('pages.scoringConfiguration.daysOverdueWeight', 'Days Overdue Weight')}
+                      </span>
+                    </div>
+                    <div className="flex w-full items-center gap-3 sm:w-auto sm:min-w-[300px] md:min-w-[400px] lg:min-w-[500px]">
+                      <Slider
+                        value={scoreWeights.daysOverdue}
+                        onValueChange={(value) => handleWeightChange('daysOverdue', value)}
+                        min={0}
+                        max={100}
+                        step={1}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Contact History Weight */}
+                  <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
+                    <div className="flex flex-1 items-center gap-3">
+                      <span className="text-dark-500 text-sm font-medium">
+                        {t(
+                          'pages.scoringConfiguration.contactHistoryWeight',
+                          'Contact History Weight'
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex w-full items-center gap-3 sm:w-auto sm:min-w-[300px] md:min-w-[400px] lg:min-w-[500px]">
+                      <Slider
+                        value={scoreWeights.contactHistory}
+                        onValueChange={(value) => handleWeightChange('contactHistory', value)}
+                        min={0}
+                        max={100}
+                        step={1}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Low Priority */}
-              <div className="flex items-center gap-4">
-                <PriorityBadge priority="Low" variant="compact" />
-                <span className="text-dark-500 w-[100px] text-sm">
-                  {t('pages.scoringConfiguration.scoreLessThan', 'Score <')}{' '}
-                  {priorityThresholds.medium}
+              <div className="mt-4 flex items-center justify-end">
+                <span
+                  className={`inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium ${
+                    totalWeight === 100 ? 'bg-success-500 text-white' : 'bg-error-500 text-white'
+                  }`}
+                >
+                  {totalWeight === 100 && <span className="h-2 w-2 rounded-full bg-white" />}
+                  {t('pages.scoringConfiguration.current', 'Current')}: {totalWeight}%
                 </span>
               </div>
-            </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="immediate-effect"
-              checked={immediateEffect}
-              onCheckedChange={(checked) => setImmediateEffect(checked === true ? true : false)}
-            />
-            <span className="text-dark-500 text-sm font-light">
-              {t(
-                'pages.scoringConfiguration.immediateEffect',
-                'Changes will affect all clients in this project immediately'
-              )}
-            </span>
-          </div>
-        </div>
-
-        {/* Seller-Specific Overrides Section */}
-        <div className="flex w-[50%] flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
-          <h2 className="text-dark-500 text-lg font-semibold">
-            {t(
-              'pages.scoringConfiguration.sellerOverrides',
-              'Seller-Specific Overrides (Optional)'
-            )}
-          </h2>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => handleOpenSellerModal()}
-            className="rounded-md"
-          >
-            {t('pages.scoringConfiguration.addSellerConfig', '+ Add Seller-Specific Configuration')}
-          </Button>
-          <span className="text-dark-500 text-sm font-light">
-            {t(
-              'pages.scoringConfiguration.sellerOverridesDescription',
-              'Configure different thresholds for specific sellers'
-            )}
-          </span>
-
-          {/* Seller Configurations Table */}
-          <SellerConfigTable
-            configs={sellerConfigs}
-            onEdit={handleOpenSellerModal}
-            onDelete={handleSellerConfigSuccess}
-          />
-        </div>
-
-        {/* Seller Config Modal */}
-        <SellerConfigModal
-          open={isSellerModalOpen}
-          onClose={handleCloseSellerModal}
-          onSuccess={handleSellerConfigSuccess}
-          editConfig={editingSellerConfig}
-          sellers={sellers}
-        />
-      </div>
-
-      {/* Configuration Preview Section */}
-      <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
-        <h2 className="text-dark-500 text-lg font-semibold">
-          {t('pages.scoringConfiguration.configurationPreview', 'Configuration Preview')}
-        </h2>
-
-        <div className="grid grid-cols-2 gap-6">
-          {/* Current Distribution */}
-          <div className="flex flex-col gap-3">
-            <h3 className="text-dark-500 text-sm font-semibold">
-              {t('pages.scoringConfiguration.currentDistribution', 'Current Distribution:')}
-            </h3>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <div className="flex w-full items-center gap-2">
-                  <div className="w-[16%]">
-                    <PriorityBadge priority="Critical" variant="compact" />
-                  </div>
-                  <span className="text-dark-500 text-sm">
-                    {t('pages.clients.priorities.critical', 'Critical')}:{' '}
-                    {currentDistribution.critical}{' '}
-                    {t('pages.scoringConfiguration.clients', 'clients')} (
-                    {formatPercentage(currentDistribution.critical, totalClients)}%)
+              {/* Change Reason Input */}
+              <div className="flex flex-col gap-2">
+                <label className="text-dark-500 text-sm font-medium">
+                  {t('pages.scoringConfiguration.changeReason', 'Change Reason')}
+                  <span className="text-xs font-normal text-gray-500">
+                    {' '}
+                    ({t('pages.scoringConfiguration.optional', 'Optional')})
                   </span>
-                </div>
+                </label>
+                <Input
+                  type="text"
+                  value={weightChangeReason}
+                  onChange={(e) => setWeightChangeReason(e.target.value)}
+                  placeholder={t(
+                    'pages.scoringConfiguration.changeReasonPlaceholder',
+                    'Enter reason for this change (optional)'
+                  )}
+                  className="w-full"
+                />
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex w-full items-center gap-2">
-                  <div className="w-[16%]">
-                    <PriorityBadge priority="High" variant="compact" />
-                  </div>
-                  <span className="text-dark-500 text-sm">
-                    {t('pages.clients.priorities.high', 'High')}: {currentDistribution.high}{' '}
-                    {t('pages.scoringConfiguration.clients', 'clients')} (
-                    {formatPercentage(currentDistribution.high, totalClients)}%)
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex w-full items-center gap-2">
-                  <div className="w-[16%]">
-                    <PriorityBadge priority="Medium" variant="compact" />
-                  </div>
-                  <span className="text-dark-500 text-sm">
-                    {t('pages.clients.priorities.medium', 'Medium')}: {currentDistribution.medium}{' '}
-                    {t('pages.scoringConfiguration.clients', 'clients')} (
-                    {formatPercentage(currentDistribution.medium, totalClients)}%)
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex w-full items-center gap-2">
-                  <div className="w-[16%]">
-                    <PriorityBadge priority="Low" variant="compact" />
-                  </div>
-                  <span className="text-dark-500 text-sm">
-                    {t('pages.clients.priorities.low', 'Low')}: {currentDistribution.low}{' '}
-                    {t('pages.scoringConfiguration.clients', 'clients')} (
-                    {formatPercentage(currentDistribution.low, totalClients)}%)
-                  </span>
-                </div>
+
+              {/* Save Button for Weights */}
+              <div className="flex items-center justify-end">
+                <Button
+                  variant="primary"
+                  onClick={handleSaveWeights}
+                  disabled={isSavingWeights || totalWeight !== 100}
+                  className="rounded-md"
+                >
+                  {isSavingWeights
+                    ? t('pages.scoringConfiguration.saving', 'Saving...')
+                    : t('pages.scoringConfiguration.saveWeights', 'Save Weights')}
+                </Button>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* New Distribution */}
-          <div className="flex flex-col gap-3">
-            <h3 className="text-dark-500 text-sm font-semibold">
-              {t('pages.scoringConfiguration.withNewThresholds', 'With New Thresholds:')}
-            </h3>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <div className="flex w-full items-center gap-2">
-                  <div className="w-[16%]">
-                    <PriorityBadge priority="Critical" variant="compact" />
+          {/* Priority Thresholds Tab */}
+          {activeTab === 'thresholds' && (
+            <div className="flex w-full flex-col gap-4">
+              <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
+                <div className="mb-2 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-dark-500 mb-1 text-lg font-semibold">
+                      {t(
+                        'pages.scoringConfiguration.priorityThresholds',
+                        'Priority Classification Thresholds'
+                      )}
+                    </h2>
+                    <p className="text-dark-400 text-sm font-light">
+                      {t(
+                        'pages.scoringConfiguration.thresholdsDescription',
+                        'Set the minimum score values for each priority level. Clients are classified based on their calculated scores.'
+                      )}
+                    </p>
                   </div>
-                  <span className="text-dark-500 w-[25%] text-sm">
-                    {t('pages.clients.priorities.critical', 'Critical')}: {newDistribution.critical}{' '}
-                    {t('pages.scoringConfiguration.clients', 'clients')} (
-                    {formatPercentage(newDistribution.critical, totalClients)}%)
-                  </span>
-                  {newDistribution.critical > currentDistribution.critical && (
-                    <Icons.ArrowUp02 size={16} className="text-success-500" />
-                  )}
-                  {newDistribution.critical < currentDistribution.critical && (
-                    <Icons.ArrowDown02 size={16} className="text-error-500" />
-                  )}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleResetDefaults}
+                    className="rounded-md"
+                  >
+                    {t('pages.scoringConfiguration.resetDefaults', 'Reset Defaults')}
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-4">
+                    {/* Critical Priority */}
+                    <div className="flex items-center gap-4 rounded-lg border border-gray-200 bg-white p-4">
+                      <PriorityBadge priority="Critical" variant="compact" />
+                      <div className="flex flex-1 items-center gap-3">
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
+                        </span>
+                        <div>
+                          <Input
+                            type="number"
+                            value={priorityThresholds.critical}
+                            onChange={(e) =>
+                              handleThresholdChange('critical', Number(e.target.value) || 0)
+                            }
+                            className="w-20 rounded-md"
+                            inputSize="sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* High Priority */}
+                    <div className="flex items-center gap-4 rounded-lg border border-gray-200 bg-white p-4">
+                      <PriorityBadge priority="High" variant="compact" />
+                      <div className="flex flex-1 items-center gap-3">
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
+                        </span>
+                        <div>
+                          <Input
+                            type="number"
+                            value={priorityThresholds.high}
+                            onChange={(e) =>
+                              handleThresholdChange('high', Number(e.target.value) || 0)
+                            }
+                            className="w-20 rounded-md"
+                            inputSize="sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-4">
+                    {/* Medium Priority */}
+                    <div className="flex items-center gap-4 rounded-lg border border-gray-200 bg-white p-4">
+                      <PriorityBadge priority="Medium" variant="compact" />
+                      <div className="flex flex-1 items-center gap-3">
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.scoringConfiguration.scoreGreaterThanOrEqual', 'Score ≥')}
+                        </span>
+                        <div>
+                          <Input
+                            type="number"
+                            value={priorityThresholds.medium}
+                            onChange={(e) =>
+                              handleThresholdChange('medium', Number(e.target.value) || 0)
+                            }
+                            className="w-20 rounded-md"
+                            inputSize="sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Low Priority */}
+                    <div className="flex items-center gap-4 rounded-lg border border-gray-200 bg-white p-4">
+                      <PriorityBadge priority="Low" variant="compact" />
+                      <div className="flex flex-1 items-center gap-3">
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.scoringConfiguration.scoreLessThan', 'Score <')}{' '}
+                          {priorityThresholds.medium}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <Checkbox
+                    id="immediate-effect"
+                    checked={immediateEffect}
+                    onCheckedChange={(checked) =>
+                      setImmediateEffect(checked === true ? true : false)
+                    }
+                  />
+                  <label
+                    htmlFor="immediate-effect"
+                    className="text-dark-500 cursor-pointer text-sm font-light"
+                  >
+                    {t(
+                      'pages.scoringConfiguration.immediateEffect',
+                      'Changes will affect all clients in this project immediately'
+                    )}
+                  </label>
+                </div>
+
+                {/* Change Reason Input */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-dark-500 text-sm font-medium">
+                    {t('pages.scoringConfiguration.changeReason', 'Change Reason')}
+                    <span className="text-xs font-normal text-gray-500">
+                      {' '}
+                      ({t('pages.scoringConfiguration.optional', 'Optional')})
+                    </span>
+                  </label>
+                  <Input
+                    type="text"
+                    value={thresholdChangeReason}
+                    onChange={(e) => setThresholdChangeReason(e.target.value)}
+                    placeholder={t(
+                      'pages.scoringConfiguration.changeReasonPlaceholder',
+                      'Enter reason for this change (optional)'
+                    )}
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Save Button for Thresholds */}
+                <div className="flex items-center justify-end">
+                  <Button
+                    variant="primary"
+                    onClick={handleSaveThresholds}
+                    disabled={isSavingThresholds}
+                    className="rounded-md"
+                  >
+                    {isSavingThresholds
+                      ? t('pages.scoringConfiguration.saving', 'Saving...')
+                      : t('pages.scoringConfiguration.saveThresholds', 'Save Thresholds')}
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex w-full items-center gap-2">
-                  <div className="w-[16%]">
-                    <PriorityBadge priority="High" variant="compact" />
+
+              {/* Seller-Specific Overrides Section */}
+              <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
+                <div className="mb-2 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-dark-500 mb-1 text-lg font-semibold">
+                      {t(
+                        'pages.scoringConfiguration.sellerOverrides',
+                        'Seller-Specific Overrides (Optional)'
+                      )}
+                    </h2>
+                    <p className="text-dark-400 text-sm font-light">
+                      {t(
+                        'pages.scoringConfiguration.sellerOverridesDescription',
+                        'Configure different thresholds for specific sellers. These override the default thresholds above.'
+                      )}
+                    </p>
                   </div>
-                  <span className="text-dark-500 w-[25%] text-sm">
-                    {t('pages.clients.priorities.high', 'High')}: {newDistribution.high}{' '}
-                    {t('pages.scoringConfiguration.clients', 'clients')} (
-                    {formatPercentage(newDistribution.high, totalClients)}%)
-                  </span>
-                  {newDistribution.high > currentDistribution.high && (
-                    <Icons.ArrowUp02 size={16} className="text-success-500" />
-                  )}
-                  {newDistribution.high < currentDistribution.high && (
-                    <Icons.ArrowDown02 size={16} className="text-error-500" />
-                  )}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleOpenSellerModal()}
+                    className="rounded-md"
+                  >
+                    {t('pages.scoringConfiguration.addSellerConfig', 'Add Seller Configuration')}
+                  </Button>
                 </div>
+
+                {/* Seller Configurations Table */}
+                <SellerConfigTable
+                  configs={displaySellerConfigs}
+                  onEdit={handleOpenSellerModal}
+                  onDelete={handleSellerConfigSuccess}
+                />
               </div>
-              <div className="flex items-center justify-between">
-                <div className="flex w-full items-center gap-2">
-                  <div className="w-[16%]">
-                    <PriorityBadge priority="Medium" variant="compact" />
+
+              {/* Seller Config Modal */}
+              <SellerConfigModal
+                open={isSellerModalOpen}
+                onClose={handleCloseSellerModal}
+                onSuccess={handleSellerConfigSuccess}
+                editConfig={editingSellerConfig}
+                sellers={sellers}
+                defaultThresholds={originalConfig?.priority_thresholds}
+              />
+
+              {/* Configuration Preview Section - Only for Priority Thresholds */}
+              <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-dark-500 mb-1 text-lg font-semibold">
+                      {t(
+                        'pages.scoringConfiguration.configurationPreview',
+                        'Configuration Preview'
+                      )}
+                    </h2>
+                    <p className="text-dark-400 text-sm font-light">
+                      {t(
+                        'pages.scoringConfiguration.previewDescription',
+                        'See how threshold changes will affect client priority distribution'
+                      )}
+                    </p>
                   </div>
-                  <span className="text-dark-500 w-[25%] text-sm">
-                    {t('pages.clients.priorities.medium', 'Medium')}: {newDistribution.medium}{' '}
-                    {t('pages.scoringConfiguration.clients', 'clients')} (
-                    {formatPercentage(newDistribution.medium, totalClients)}%)
-                  </span>
-                  {newDistribution.medium > currentDistribution.medium && (
-                    <Icons.ArrowUp02 size={16} className="text-success-500" />
-                  )}
-                  {newDistribution.medium < currentDistribution.medium && (
-                    <Icons.ArrowDown02 size={16} className="text-error-500" />
-                  )}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handlePreview}
+                    disabled={isPreviewing}
+                    className="rounded-md"
+                  >
+                    {isPreviewing
+                      ? t('pages.scoringConfiguration.previewing', 'Previewing...')
+                      : t('pages.scoringConfiguration.previewChanges', 'Preview Changes')}
+                  </Button>
                 </div>
-              </div>
-              <div className="flex items-center">
-                <div className="flex w-full items-center gap-2">
-                  <div className="w-[16%]">
-                    <PriorityBadge priority="Low" variant="compact" />
+
+                {/* Preview Content */}
+                {!previewData ? (
+                  <div className="flex min-h-[200px] flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-8">
+                    <Icons.Info size={48} className="text-gray-400" strokeWidth={1.5} />
+                    <p className="text-dark-400 text-center text-sm font-light">
+                      {t(
+                        'pages.scoringConfiguration.previewEmpty',
+                        'Click "Preview Changes" to see how threshold changes will affect client priority distribution'
+                      )}
+                    </p>
                   </div>
-                  <span className="text-dark-500 w-[25%] text-sm">
-                    {t('pages.clients.priorities.low', 'Low')}: {newDistribution.low}{' '}
-                    {t('pages.scoringConfiguration.clients', 'clients')} (
-                    {formatPercentage(newDistribution.low, totalClients)}%)
-                  </span>
-                  {newDistribution.low > currentDistribution.low && (
-                    <Icons.ArrowUp02 size={16} className="text-success-500" />
-                  )}
-                  {newDistribution.low < currentDistribution.low && (
-                    <Icons.ArrowDown02 size={16} className="text-error-500" />
-                  )}
-                </div>
+                ) : (
+                  <div className="flex flex-col gap-6">
+                    {/* Threshold Details */}
+                    <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                      <h3 className="text-dark-500 text-sm font-semibold">
+                        {t('pages.scoringConfiguration.thresholdDetails', 'Threshold Details:')}
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-dark-400 font-medium">
+                            {t('pages.scoringConfiguration.current', 'Current')}:
+                          </span>
+                          <span className="text-dark-600 ml-2">
+                            Critical ≥ {originalConfig?.priority_thresholds.critical || 0}, High ≥{' '}
+                            {originalConfig?.priority_thresholds.high || 0}, Medium ≥{' '}
+                            {originalConfig?.priority_thresholds.medium || 0}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-dark-400 font-medium">
+                            {t('pages.scoringConfiguration.new', 'New')}:
+                          </span>
+                          <span className="text-dark-600 ml-2">
+                            Critical ≥ {priorityThresholds.critical}, High ≥{' '}
+                            {priorityThresholds.high}, Medium ≥ {priorityThresholds.medium}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Distribution Comparison */}
+                    <div className="grid grid-cols-2 gap-6">
+                      {/* Current Distribution */}
+                      <div className="flex flex-col gap-3">
+                        <h3 className="text-dark-500 text-sm font-semibold">
+                          {t(
+                            'pages.scoringConfiguration.currentDistribution',
+                            'Current Distribution:'
+                          )}
+                        </h3>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-3">
+                            <PriorityBadge priority="Critical" variant="compact" />
+                            <span className="text-dark-500 text-sm">
+                              {currentDistribution?.critical || 0}{' '}
+                              {t('pages.scoringConfiguration.clients', 'clients')} (
+                              {currentDistribution
+                                ? formatPercentage(currentDistribution.critical, totalClients)
+                                : 0}
+                              %)
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <PriorityBadge priority="High" variant="compact" />
+                            <span className="text-dark-500 text-sm">
+                              {currentDistribution?.high || 0}{' '}
+                              {t('pages.scoringConfiguration.clients', 'clients')} (
+                              {currentDistribution
+                                ? formatPercentage(currentDistribution.high, totalClients)
+                                : 0}
+                              %)
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <PriorityBadge priority="Medium" variant="compact" />
+                            <span className="text-dark-500 text-sm">
+                              {currentDistribution?.medium || 0}{' '}
+                              {t('pages.scoringConfiguration.clients', 'clients')} (
+                              {currentDistribution
+                                ? formatPercentage(currentDistribution.medium, totalClients)
+                                : 0}
+                              %)
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <PriorityBadge priority="Low" variant="compact" />
+                            <span className="text-dark-500 text-sm">
+                              {currentDistribution?.low || 0}{' '}
+                              {t('pages.scoringConfiguration.clients', 'clients')} (
+                              {currentDistribution
+                                ? formatPercentage(currentDistribution.low, totalClients)
+                                : 0}
+                              %)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* New Distribution */}
+                      <div className="flex flex-col gap-3">
+                        <h3 className="text-dark-500 text-sm font-semibold">
+                          {t(
+                            'pages.scoringConfiguration.withNewThresholds',
+                            'With New Thresholds:'
+                          )}
+                        </h3>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-3">
+                            <PriorityBadge priority="Critical" variant="compact" />
+                            <span className="text-dark-500 text-sm">
+                              {newDistribution?.critical || 0}{' '}
+                              {t('pages.scoringConfiguration.clients', 'clients')} (
+                              {newDistribution
+                                ? formatPercentage(newDistribution.critical, totalClients)
+                                : 0}
+                              %)
+                            </span>
+                            {newDistribution &&
+                              currentDistribution &&
+                              newDistribution.critical > currentDistribution.critical && (
+                                <Icons.ArrowUp02 size={16} className="text-success-500" />
+                              )}
+                            {newDistribution &&
+                              currentDistribution &&
+                              newDistribution.critical < currentDistribution.critical && (
+                                <Icons.ArrowDown02 size={16} className="text-error-500" />
+                              )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <PriorityBadge priority="High" variant="compact" />
+                            <span className="text-dark-500 text-sm">
+                              {newDistribution?.high || 0}{' '}
+                              {t('pages.scoringConfiguration.clients', 'clients')} (
+                              {newDistribution
+                                ? formatPercentage(newDistribution.high, totalClients)
+                                : 0}
+                              %)
+                            </span>
+                            {newDistribution &&
+                              currentDistribution &&
+                              newDistribution.high > currentDistribution.high && (
+                                <Icons.ArrowUp02 size={16} className="text-success-500" />
+                              )}
+                            {newDistribution &&
+                              currentDistribution &&
+                              newDistribution.high < currentDistribution.high && (
+                                <Icons.ArrowDown02 size={16} className="text-error-500" />
+                              )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <PriorityBadge priority="Medium" variant="compact" />
+                            <span className="text-dark-500 text-sm">
+                              {newDistribution?.medium || 0}{' '}
+                              {t('pages.scoringConfiguration.clients', 'clients')} (
+                              {newDistribution
+                                ? formatPercentage(newDistribution.medium, totalClients)
+                                : 0}
+                              %)
+                            </span>
+                            {newDistribution &&
+                              currentDistribution &&
+                              newDistribution.medium > currentDistribution.medium && (
+                                <Icons.ArrowUp02 size={16} className="text-success-500" />
+                              )}
+                            {newDistribution &&
+                              currentDistribution &&
+                              newDistribution.medium < currentDistribution.medium && (
+                                <Icons.ArrowDown02 size={16} className="text-error-500" />
+                              )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <PriorityBadge priority="Low" variant="compact" />
+                            <span className="text-dark-500 text-sm">
+                              {newDistribution?.low || 0}{' '}
+                              {t('pages.scoringConfiguration.clients', 'clients')} (
+                              {newDistribution
+                                ? formatPercentage(newDistribution.low, totalClients)
+                                : 0}
+                              %)
+                            </span>
+                            {newDistribution &&
+                              currentDistribution &&
+                              newDistribution.low > currentDistribution.low && (
+                                <Icons.ArrowUp02 size={16} className="text-success-500" />
+                              )}
+                            {newDistribution &&
+                              currentDistribution &&
+                              newDistribution.low < currentDistribution.low && (
+                                <Icons.ArrowDown02 size={16} className="text-error-500" />
+                              )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="flex w-full items-center justify-between">
-        <span className="text-dark-500 text-sm">
-          {originalConfig?.updated_at
-            ? `${t('pages.scoringConfiguration.lastUpdated', 'Last Updated:')} ${new Date(originalConfig.updated_at).toLocaleString()}`
-            : t('pages.scoringConfiguration.noUpdateInfo', 'No update information available')}
-        </span>
-        <div className="flex w-[30%] items-center gap-3">
-          <Button
-            variant="cancel"
-            onClick={handleCancel}
-            disabled={isSaving}
-            className="flex-1 self-stretch rounded-md"
-          >
-            {t('actions.cancel', 'Cancel')}
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleSave}
-            disabled={isSaving || totalWeight !== 100}
-            className="flex-1 self-stretch rounded-md"
-          >
-            {isSaving
-              ? t('pages.scoringConfiguration.saving', 'Saving...')
-              : t('pages.scoringConfiguration.saveConfiguration', 'Save Configuration')}
-          </Button>
+          )}
         </div>
       </div>
     </div>

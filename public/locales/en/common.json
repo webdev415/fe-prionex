@@ -1495,7 +1495,7 @@
       }
     },
     "scoringConfiguration": {
-      "title": "Scoring Configuration - Project Alpha",
+      "title": "Scoring Configuration",
       "scoreWeights": "Score Weights",
       "debtAmountWeight": "Debt Amount Weight",
       "daysOverdueWeight": "Days Overdue Weight",
@@ -1515,7 +1515,7 @@
       "lowDescription": "Minimal urgency (score 0-9)",
       "immediateEffect": "Changes will affect all clients in this project immediately",
       "sellerOverrides": "Seller-Specific Overrides (Optional)",
-      "addSellerConfig": "+ Add Seller-Specific Configuration",
+      "addSellerConfig": "Add Seller-Specific Configuration",
       "sellerOverridesDescription": "Configure different thresholds for specific sellers",
       "configurationPreview": "Configuration Preview",
       "currentDistribution": "Current Distribution:",
