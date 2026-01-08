@@ -4,7 +4,7 @@
  * Collapsible filter bar with multiple filter options for client management.
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
 import { PortfolioDropdown } from './PortfolioDropdown'
+import { useSellers } from '@/features/sellers/hooks/useSellers'
 import type { ClientFilters } from '../ClientManagementPage'
 
 interface ClientFiltersBarProps {
@@ -25,16 +26,6 @@ interface ClientFiltersBarProps {
   onFilterChange: (filters: ClientFilters) => void
 }
 
-const portfolioOptions = [
-  'Portfolio A',
-  'Portfolio B',
-  'Portfolio C',
-  'Portfolio D',
-  'Portfolio E',
-  'Portfolio F',
-  'Portfolio G',
-  'Portfolio H',
-]
 // Status options matching backend Client.status field (services/client/app/routers/clients.py:440)
 // Valid statuses: new, active, closed
 const statusOptions = ['new', 'active', 'closed']
@@ -42,6 +33,20 @@ const statusOptions = ['new', 'active', 'closed']
 export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarProps) {
   const { t } = useTranslation('common')
   const [portfolioDropdownOpen, setPortfolioDropdownOpen] = useState(false)
+
+  // Fetch sellers from API (replaces mock portfolio data)
+  const { data: sellersResponse } = useSellers({
+    is_active: true,
+    limit: 1000,
+  })
+
+  // Map sellers to portfolio options
+  // For now, using "Seller Name (ID)" format for clarity
+  // The portfolio filter stores these values, which are parsed to extract IDs for the API
+  const portfolioOptions = useMemo(() => {
+    if (!sellersResponse?.sellers) return []
+    return sellersResponse.sellers.map((seller) => `${seller.seller_name} (${seller.id})`)
+  }, [sellersResponse])
 
   const handleDebtRangeChange = (field: 'debtRangeFrom' | 'debtRangeTo', value: string) => {
     onFilterChange({
@@ -355,6 +360,26 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 </Select>
               </div>
             </div>
+          </div>
+          <div className="flex items-start gap-10 self-stretch">
+            {/* Unassigned only checkbox */}
+            <div className="flex min-w-[220px] flex-1 items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-2">
+                <Checkbox
+                  checked={filters.unassignedOnly || false}
+                  onCheckedChange={(checked) =>
+                    onFilterChange({
+                      ...filters,
+                      unassignedOnly: checked as boolean,
+                    })
+                  }
+                />
+                <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                  {t('pages.clients.filters.unassignedOnly')}
+                </span>
+              </label>
+            </div>
+            <div className="flex min-w-[220px] flex-1" />
           </div>
         </div>
       </div>
