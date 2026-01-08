@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
-import { Button } from '@/components/ui/Button'
+// import { Button } from '@/components/ui/Button' // Commented out: not used after export feature removal
 import { LinkButton } from '@/components/ui/LinkButton'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { configApi, type ConfigHistoryEntry } from '@/features/clients/api/configApi'
@@ -159,21 +159,22 @@ export function ConfigurationHistoryPage() {
     navigate('/dashboard/scoring-configuration')
   }
 
-  const handleExportHistory = async () => {
-    try {
-      const blob = await configApi.exportConfigHistory()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `config-history-${new Date().toISOString().split('T')[0]}.csv`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-    } catch (error) {
-      console.error('Export failed:', error)
-    }
-  }
+  // Commented out: CSV export feature
+  // const handleExportHistory = async () => {
+  //   try {
+  //     const blob = await configApi.exportConfigHistory()
+  //     const url = window.URL.createObjectURL(blob)
+  //     const a = document.createElement('a')
+  //     a.href = url
+  //     a.download = `config-history-${new Date().toISOString().split('T')[0]}.csv`
+  //     document.body.appendChild(a)
+  //     a.click()
+  //     window.URL.revokeObjectURL(url)
+  //     document.body.removeChild(a)
+  //   } catch (error) {
+  //     console.error('Export failed:', error)
+  //   }
+  // }
 
   // Format timestamp
   const formatTimestamp = (timestamp: string) => {
@@ -271,7 +272,8 @@ export function ConfigurationHistoryPage() {
             {t('pages.scoringConfiguration.history.title', 'Configuration History')}
           </h1>
         </div>
-        <Button
+        {/* Commented out: CSV export button */}
+        {/* <Button
           variant="secondary"
           onClick={handleExportHistory}
           leftIcon={<Icons.Download size={20} />}
@@ -279,7 +281,7 @@ export function ConfigurationHistoryPage() {
           disabled={hasNoData}
         >
           {t('pages.scoringConfiguration.history.export', 'Export CSV')}
-        </Button>
+        </Button> */}
       </div>
 
       {/* Data Table or Empty State */}
