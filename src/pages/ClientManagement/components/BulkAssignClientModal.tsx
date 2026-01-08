@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Label } from '@/components/ui/Label'
 import { Icons } from '@/lib/icons'
 import { PriorityBadge } from './PriorityBadge'
+import { useUsers } from '@/features/users/hooks/useUsers'
 
 // Format currency for Ukrainian Hryvnia
 const formatUAH = (amount: number) => {
@@ -53,19 +54,6 @@ interface BulkAssignClientModalProps {
   }) => void
 }
 
-// Mock employees and searchers - replace with actual API call
-const mockEmployees = [
-  { id: '1', name: 'John Smith' },
-  { id: '2', name: 'Jane Doe' },
-  { id: '3', name: 'Mike Johnson' },
-]
-
-const mockSearchers = [
-  { id: '1', name: 'Sarah Williams' },
-  { id: '2', name: 'Tom Brown' },
-  { id: '3', name: 'Emily Davis' },
-]
-
 const assignmentReasons = [
   'New Client',
   'Workload Distribution',
@@ -83,6 +71,21 @@ export function BulkAssignClientModal({
   onAssign,
 }: BulkAssignClientModalProps) {
   const { t } = useTranslation('common')
+
+  // Fetch active users for employee and searcher dropdowns
+  const { data: usersResponse } = useUsers({
+    status: 'active',
+    page_size: 1000,
+  })
+
+  // Map users to dropdown options (full name format)
+  const userOptions = useMemo(() => {
+    if (!usersResponse?.users) return []
+    return usersResponse.users.map((user) => ({
+      id: user.id.toString(),
+      name: [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' '),
+    }))
+  }, [usersResponse])
 
   const [employeeId, setEmployeeId] = useState<string>('')
   const [searcherId, setSearcherId] = useState<string>('')
@@ -238,9 +241,9 @@ export function BulkAssignClientModal({
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockEmployees.map((employee) => (
-                        <SelectItem key={employee.id} value={employee.id}>
-                          {employee.name}
+                      {userOptions.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -262,9 +265,9 @@ export function BulkAssignClientModal({
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockSearchers.map((searcher) => (
-                        <SelectItem key={searcher.id} value={searcher.id}>
-                          {searcher.name}
+                      {userOptions.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

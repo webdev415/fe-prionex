@@ -4,7 +4,7 @@
  * Modal for assigning a single client to an employee or searcher.
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -23,6 +23,7 @@ import { useClient } from '@/features/clients/hooks/useClients'
 import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import { PriorityBadge } from './PriorityBadge'
+import { useUsers } from '@/features/users/hooks/useUsers'
 
 // Format currency for Ukrainian Hryvnia
 const formatUAH = (amount: number) => {
@@ -47,19 +48,6 @@ interface AssignClientModalProps {
   }) => void
 }
 
-// Mock employees and searchers - replace with actual API call
-const mockEmployees = [
-  { id: '1', name: 'John Smith' },
-  { id: '2', name: 'Jane Doe' },
-  { id: '3', name: 'Mike Johnson' },
-]
-
-const mockSearchers = [
-  { id: '1', name: 'Sarah Williams' },
-  { id: '2', name: 'Tom Brown' },
-  { id: '3', name: 'Emily Davis' },
-]
-
 const assignmentReasons = [
   'New Client',
   'Workload Distribution',
@@ -72,6 +60,21 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
   const { t } = useTranslation('common')
   const { data: client, isLoading } = useClient(clientId || 0, open && !!clientId)
   const { data: thresholds } = usePriorityThresholds()
+
+  // Fetch active users for employee and searcher dropdowns
+  const { data: usersResponse } = useUsers({
+    status: 'active',
+    page_size: 1000,
+  })
+
+  // Map users to dropdown options (full name format)
+  const userOptions = useMemo(() => {
+    if (!usersResponse?.users) return []
+    return usersResponse.users.map((user) => ({
+      id: user.id.toString(),
+      name: [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' '),
+    }))
+  }, [usersResponse])
 
   const [employeeId, setEmployeeId] = useState<string>('')
   const [searcherId, setSearcherId] = useState<string>('')
@@ -280,9 +283,9 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockEmployees.map((employee) => (
-                          <SelectItem key={employee.id} value={employee.id}>
-                            {employee.name}
+                        {userOptions.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -304,9 +307,9 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockSearchers.map((searcher) => (
-                          <SelectItem key={searcher.id} value={searcher.id}>
-                            {searcher.name}
+                        {userOptions.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
