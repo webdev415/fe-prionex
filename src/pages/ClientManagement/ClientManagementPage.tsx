@@ -76,18 +76,38 @@ const mapAPIClientToDisplay = (
 }
 
 export interface ClientFilters {
-  debtRangeFrom?: number
-  debtRangeTo?: number
-  amountOfDebtRangeFrom?: number
-  amountOfDebtRangeTo?: number
+  // Debt Range Filters
+  debtRangeFrom?: number // Legacy remaining debt min
+  debtRangeTo?: number // Legacy remaining debt max
+  amountOfDebtRangeFrom?: number // Total debt min (UI label)
+  amountOfDebtRangeTo?: number // Total debt max (UI label)
+
+  // Principal Amount Filter (NEW - maps to principal_min/max)
+  principalRangeFrom?: number
+  principalRangeTo?: number
+
+  // Total Debt Filter (NEW - maps to total_debt_min/max)
+  totalDebtRangeFrom?: number
+  totalDebtRangeTo?: number
+
+  // Days Past Due Filter
   dpdRangeFrom?: number
   dpdRangeTo?: number
+
+  // Date Range Filter
   dateOfSaleFrom?: string
   dateOfSaleTo?: string
+
+  // Portfolio/Sellers Filter
   portfolio?: string[]
+
+  // Status Filter
   status?: string[]
+
+  // Assignment Filters
   responsibleEmployee?: string
   responsibleSearcher?: string
+  unassignedOnly?: boolean
 }
 
 export function ClientManagementPage() {
@@ -147,7 +167,71 @@ export function ClientManagementPage() {
       params.sort_order = 'desc'
     }
 
-    // Debt range filtering - use debtRangeFrom/To for filtering
+    // FILTER 1: Portfolio/Sellers
+    // Extract seller IDs from "Seller Name (ID)" format
+    if (debouncedFilters.portfolio && debouncedFilters.portfolio.length > 0) {
+      const sellerIds = debouncedFilters.portfolio
+        .map((portfolio) => {
+          // Extract ID from "Seller Name (ID)" format
+          const match = portfolio.match(/\((\d+)\)$/)
+          return match ? match[1] : null
+        })
+        .filter((id): id is string => id !== null)
+        .join(',')
+
+      if (sellerIds) {
+        params.seller_ids = sellerIds
+      }
+    }
+
+    // FILTER 2: Sale Date Range (FIXED - correct parameter names)
+    if (debouncedFilters.dateOfSaleFrom) {
+      params.sale_date_from = debouncedFilters.dateOfSaleFrom
+    }
+    if (debouncedFilters.dateOfSaleTo) {
+      params.sale_date_to = debouncedFilters.dateOfSaleTo
+    }
+
+    // FILTER 3: Assignment - Employee
+    if (debouncedFilters.responsibleEmployee) {
+      params.responsible_employee_id = parseInt(debouncedFilters.responsibleEmployee)
+    }
+
+    // FILTER 4: Assignment - Searcher
+    if (debouncedFilters.responsibleSearcher) {
+      params.responsible_searcher_id = parseInt(debouncedFilters.responsibleSearcher)
+    }
+
+    // FILTER 5: Assignment - Unassigned Only
+    if (debouncedFilters.unassignedOnly) {
+      params.unassigned_only = true
+    }
+
+    // FILTER 6: Principal Amount
+    if (debouncedFilters.principalRangeFrom !== undefined) {
+      params.principal_min = debouncedFilters.principalRangeFrom
+    }
+    if (debouncedFilters.principalRangeTo !== undefined) {
+      params.principal_max = debouncedFilters.principalRangeTo
+    }
+
+    // FILTER 7: Total Debt Amount
+    if (debouncedFilters.totalDebtRangeFrom !== undefined) {
+      params.total_debt_min = debouncedFilters.totalDebtRangeFrom
+    }
+    if (debouncedFilters.totalDebtRangeTo !== undefined) {
+      params.total_debt_max = debouncedFilters.totalDebtRangeTo
+    }
+
+    // FILTER 8: Days Past Due
+    if (debouncedFilters.dpdRangeFrom !== undefined) {
+      params.dpd_min = debouncedFilters.dpdRangeFrom
+    }
+    if (debouncedFilters.dpdRangeTo !== undefined) {
+      params.dpd_max = debouncedFilters.dpdRangeTo
+    }
+
+    // Existing filters (already working)
     if (debouncedFilters.debtRangeFrom !== undefined) {
       params.debt_min = debouncedFilters.debtRangeFrom
     }
@@ -155,17 +239,8 @@ export function ClientManagementPage() {
       params.debt_max = debouncedFilters.debtRangeTo
     }
 
-    // Status filtering - join array into comma-separated string
     if (debouncedFilters.status && debouncedFilters.status.length > 0) {
       params.status = debouncedFilters.status.join(',')
-    }
-
-    // Date range filtering
-    if (debouncedFilters.dateOfSaleFrom) {
-      params.date_from = debouncedFilters.dateOfSaleFrom
-    }
-    if (debouncedFilters.dateOfSaleTo) {
-      params.date_to = debouncedFilters.dateOfSaleTo
     }
 
     return params
