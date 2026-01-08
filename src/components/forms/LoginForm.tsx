@@ -37,7 +37,7 @@ export function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps
   }
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4" noValidate>
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-3 sm:space-y-4" noValidate>
       <Input
         {...register('username')}
         type="text"
@@ -47,6 +47,7 @@ export function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps
         error={errors.username ? t(errors.username.message as string) : undefined}
         autoComplete="username"
         disabled={isLoading}
+        className="text-sm sm:text-base"
       />
 
       <PasswordInput
@@ -58,10 +59,11 @@ export function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps
         error={errors.password ? t(errors.password.message as string) : undefined}
         autoComplete="current-password"
         disabled={isLoading}
+        className="text-sm sm:text-base"
       />
 
       {error && (
-        <div className="bg-error-50 border-error-500 text-body-sm text-error-600 rounded-lg border p-3">
+        <div className="bg-error-50 border-error-500 text-body-xs sm:text-body-sm text-error-600 rounded-md border p-2.5 sm:rounded-lg sm:p-3">
           {error}
         </div>
       )}
@@ -69,7 +71,7 @@ export function LoginForm({ onSubmit, isLoading = false, error }: LoginFormProps
       <Button
         type="submit"
         size="xl"
-        className="mt-6 w-full sm:mt-8"
+        className="mt-4 w-full text-sm sm:mt-6 sm:text-base md:mt-8"
         isLoading={isLoading}
         disabled={isLoading}
       >
