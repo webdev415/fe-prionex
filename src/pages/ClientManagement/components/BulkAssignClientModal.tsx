@@ -75,7 +75,7 @@ export function BulkAssignClientModal({
   // Fetch active users for employee and searcher dropdowns
   const { data: usersResponse } = useUsers({
     status: 'active',
-    page_size: 1000,
+    page_size: 100,
   })
 
   // Map users to dropdown options (full name format)
@@ -241,11 +241,17 @@ export function BulkAssignClientModal({
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      {userOptions.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name}
-                        </SelectItem>
-                      ))}
+                      {userOptions.length === 0 ? (
+                        <div className="px-2 py-6 text-center text-sm text-gray-500">
+                          {t('pages.clients.modals.assignClient.noUsersAvailable')}
+                        </div>
+                      ) : (
+                        userOptions.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -265,11 +271,17 @@ export function BulkAssignClientModal({
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      {userOptions.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name}
-                        </SelectItem>
-                      ))}
+                      {userOptions.length === 0 ? (
+                        <div className="px-2 py-6 text-center text-sm text-gray-500">
+                          {t('pages.clients.modals.assignClient.noUsersAvailable')}
+                        </div>
+                      ) : (
+                        userOptions.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

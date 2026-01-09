@@ -19,7 +19,7 @@ import { BulkAssignClientModal } from './components/BulkAssignClientModal'
 import { ClientManagementPageSkeleton } from './components/ClientManagementPageSkeleton'
 import { Icons } from '@/lib/icons'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useClients, useClientCount, usePrioritySummary } from '@/features/clients/hooks/useClients'
+import { useClients, usePrioritySummary } from '@/features/clients/hooks/useClients'
 import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import type { Client as APIClient } from '@/features/clients/api/types'
@@ -247,9 +247,13 @@ export function ClientManagementPage() {
   }, [debouncedFilters, currentPage, rowsPerPage, sortConfig])
 
   // Fetch clients from API
-  const { data: apiClients = [], isLoading, isFetching, isError, error } = useClients(apiParams)
-  const { data: totalCount = 0 } = useClientCount()
+  const { data: clientsResponse, isLoading, isFetching, isError, error } = useClients(apiParams)
   const { data: prioritySummaryData } = usePrioritySummary()
+
+  // Extract paginated data from response
+  const apiClients = useMemo(() => clientsResponse?.items || [], [clientsResponse?.items])
+  const totalCount = clientsResponse?.total || 0
+  const totalPages = clientsResponse?.total_pages || 1
 
   // Fetch priority thresholds configuration
   const { data: thresholds = DEFAULT_THRESHOLDS } = usePriorityThresholds()
@@ -385,9 +389,6 @@ export function ClientManagementPage() {
       },
     }
   }, [prioritySummaryData])
-
-  // Calculate total pages from server-side count
-  const totalPages = Math.ceil(totalCount / rowsPerPage)
 
   const handleSort = (key: string, order: 'asc' | 'desc') => {
     setSortConfig({ key, order })

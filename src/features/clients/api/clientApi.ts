@@ -12,6 +12,7 @@ import type {
   CreateClientRequest,
   GetClientsParams,
   ManualPriorityRequest,
+  PaginatedClientResponse,
   SearchByTinParams,
   UpdateClientRequest,
 } from './types'
@@ -21,9 +22,9 @@ const BASE_URL = '/api/v1/clients'
 /**
  * Get list of clients for user's active project
  */
-export async function getClients(params: GetClientsParams = {}): Promise<Client[]> {
+export async function getClients(params: GetClientsParams = {}): Promise<PaginatedClientResponse> {
   // Add trailing slash to match FastAPI route definition @router.get("/")
-  const response = await api.get<Client[]>(`${BASE_URL}/`, { params })
+  const response = await api.get<PaginatedClientResponse>(`${BASE_URL}/`, { params })
   return response.data
 }
 
