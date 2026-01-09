@@ -21,11 +21,7 @@ import {
   configApi,
   type ScoringConfigResponse,
   type PreviewResponse,
-  type SellerConfig,
 } from '@/features/clients/api/configApi'
-import { sellersApi } from '@/features/sellers/api/sellersApi'
-import { SellerConfigModal } from './components/SellerConfigModal'
-import { SellerConfigTable } from './components/SellerConfigTable'
 import { ScoringConfigurationPageSkeleton } from './ScoringConfigurationPageSkeleton'
 
 interface ScoreWeights {
@@ -96,30 +92,9 @@ export function ScoringConfigurationPage() {
   const [weightChangeReason, setWeightChangeReason] = useState('')
   const [thresholdChangeReason, setThresholdChangeReason] = useState('')
 
-  // Seller-specific configurations state
-  const [sellerConfigs, setSellerConfigs] = useState<SellerConfig[]>([])
-  const [sellers, setSellers] = useState<Array<{ id: number; name: string }>>([])
-  const [isSellerModalOpen, setIsSellerModalOpen] = useState(false)
-  const [editingSellerConfig, setEditingSellerConfig] = useState<SellerConfig | null>(null)
-
-  // Normalize seller configs for display (backend may not return seller_name/clients_affected yet)
-  const displaySellerConfigs = useMemo(() => {
-    const sellerNameById = new Map<number, string>(sellers.map((s) => [s.id, s.name]))
-    return sellerConfigs.map((cfg) => ({
-      ...cfg,
-      seller_name:
-        (cfg as unknown as { seller_name?: string }).seller_name?.trim() ||
-        sellerNameById.get(cfg.seller_id) ||
-        `Seller #${cfg.seller_id}`,
-      clients_affected: (cfg as unknown as { clients_affected?: number }).clients_affected ?? 0,
-    }))
-  }, [sellerConfigs, sellers])
-
   // Load configuration on mount
   useEffect(() => {
     loadConfiguration()
-    loadSellerConfigs()
-    loadSellers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -156,50 +131,6 @@ export function ScoringConfigurationPage() {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const loadSellerConfigs = async () => {
-    try {
-      const response = await configApi.getSellerConfigs()
-      setSellerConfigs(response.seller_configs)
-    } catch (error) {
-      console.error('Failed to load seller configs:', error)
-      // Silent fail - not critical for page load
-    }
-  }
-
-  const loadSellers = async () => {
-    try {
-      const response = await sellersApi.getSellers({
-        is_active: true,
-        limit: 1000, // Get all active sellers
-      })
-
-      // Map API response to component format
-      const mappedSellers = response.sellers.map((seller) => ({
-        id: seller.id,
-        name: seller.seller_name,
-      }))
-
-      setSellers(mappedSellers)
-    } catch (error) {
-      console.error('Failed to load sellers:', error)
-      toast.error(t('pages.scoringConfiguration.sellersLoadFailed', 'Failed to load sellers list'))
-    }
-  }
-
-  const handleOpenSellerModal = (config?: SellerConfig) => {
-    setEditingSellerConfig(config || null)
-    setIsSellerModalOpen(true)
-  }
-
-  const handleCloseSellerModal = () => {
-    setIsSellerModalOpen(false)
-    setEditingSellerConfig(null)
-  }
-
-  const handleSellerConfigSuccess = () => {
-    loadSellerConfigs()
   }
 
   // Current distribution from preview
@@ -325,6 +256,12 @@ export function ScoringConfigurationPage() {
       // Invalidate history query so it refreshes when navigating to history page
       queryClient.invalidateQueries({ queryKey: ['configHistory'] })
 
+      // Invalidate client queries to refresh priorities and priority summary
+      queryClient.invalidateQueries({ queryKey: ['clients'] })
+
+      // Invalidate config queries to refresh thresholds used in priority mapping
+      queryClient.invalidateQueries({ queryKey: ['config'] })
+
       // Reload configuration to get updated data
       await loadConfiguration()
     } catch (error) {
@@ -364,6 +301,12 @@ export function ScoringConfigurationPage() {
 
       // Invalidate history query so it refreshes when navigating to history page
       queryClient.invalidateQueries({ queryKey: ['configHistory'] })
+
+      // Invalidate client queries to refresh priorities and priority summary
+      queryClient.invalidateQueries({ queryKey: ['clients'] })
+
+      // Invalidate config queries to refresh thresholds used in priority mapping
+      queryClient.invalidateQueries({ queryKey: ['config'] })
 
       // Reload configuration to get updated data
       await loadConfiguration()
@@ -734,52 +677,7 @@ export function ScoringConfigurationPage() {
                 </div>
               </div>
 
-              {/* Seller-Specific Overrides Section */}
-              <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
-                <div className="mb-2 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-dark-500 mb-1 text-lg font-semibold">
-                      {t(
-                        'pages.scoringConfiguration.sellerOverrides',
-                        'Seller-Specific Overrides (Optional)'
-                      )}
-                    </h2>
-                    <p className="text-dark-400 text-sm font-light">
-                      {t(
-                        'pages.scoringConfiguration.sellerOverridesDescription',
-                        'Configure different thresholds for specific sellers. These override the default thresholds above.'
-                      )}
-                    </p>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleOpenSellerModal()}
-                    className="rounded-md"
-                  >
-                    {t('pages.scoringConfiguration.addSellerConfig', 'Add Seller Configuration')}
-                  </Button>
-                </div>
-
-                {/* Seller Configurations Table */}
-                <SellerConfigTable
-                  configs={displaySellerConfigs}
-                  onEdit={handleOpenSellerModal}
-                  onDelete={handleSellerConfigSuccess}
-                />
-              </div>
-
-              {/* Seller Config Modal */}
-              <SellerConfigModal
-                open={isSellerModalOpen}
-                onClose={handleCloseSellerModal}
-                onSuccess={handleSellerConfigSuccess}
-                editConfig={editingSellerConfig}
-                sellers={sellers}
-                defaultThresholds={originalConfig?.priority_thresholds}
-              />
-
-              {/* Configuration Preview Section - Only for Priority Thresholds */}
+              {/* Configuration Preview Section */}
               <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
                 <div className="flex items-center justify-between">
                   <div>

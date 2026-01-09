@@ -157,3 +157,11 @@ export interface SearchByTinParams {
   tin: string
   project_id?: number
 }
+
+export interface PaginatedClientResponse {
+  items: Client[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
+}
