@@ -832,7 +832,8 @@
           "hangUp": "Hang Up",
           "viewClient": "View Client",
           "loanPrincipal": "Loan principal",
-          "lastContact": "Last contact"
+          "lastContact": "Last contact",
+          "callInProgress": "Another call or recording is already in progress. Please finish or close it first."
         },
         "callLogCard": {
           "message": "Message",

@@ -1,5 +1,7 @@
 import React, { useId } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
+import { useCallStore } from '@/stores/callStore'
 
 function cn(...parts: Array<string | undefined | false>) {
   return parts.filter(Boolean).join(' ')
@@ -121,6 +123,7 @@ export function CallLogCard({
   setIsViewSMSModalOpen,
 }: CallLogCardProps) {
   const { t } = useTranslation('common')
+  const { isCallActive, setOpenCallModal } = useCallStore()
 
   const getTranslatedStatus = (status: string) => {
     switch (status) {
@@ -180,6 +183,14 @@ export function CallLogCard({
                 className="flex cursor-pointer items-start gap-2"
                 onClick={() => {
                   if (type) {
+                    // Check if there's an active call/recording
+                    if (isCallActive()) {
+                      toast.warning(
+                        t('pages.clients.modals.callDialog.callInProgress') ||
+                          'Another call or recording is already in progress. Please finish or close it first.'
+                      )
+                      return
+                    }
                     setSelectedCallData?.({
                       type:
                         type === 'Incoming'
@@ -192,6 +203,7 @@ export function CallLogCard({
                       duration: duration || '',
                       phone: phone || '',
                     })
+                    setOpenCallModal('call-recording')
                     setIsCallRecordingModalOpen?.(true)
                   } else {
                     setSelectedSMSData?.({
