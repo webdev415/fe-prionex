@@ -119,7 +119,7 @@ export function ProjectSelector() {
         <button
           type="button"
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors',
+            'inline-flex h-10 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors',
             'bg-secondary-800 text-white hover:opacity-90',
             isSwitchingProject && 'cursor-not-allowed opacity-50'
           )}
