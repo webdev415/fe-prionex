@@ -12,6 +12,7 @@ import { SearchBar } from './SearchBar'
 import { UserProfile } from './UserProfile'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { ProjectSelector } from './ProjectSelector'
+import { MinimizedCallBubble } from './MinimizedCallBubble'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
@@ -337,7 +338,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           )}
         >
           {/* Search Bar with Results */}
-          <div className="relative" ref={searchContainerRef}>
+          <div className="relative flex items-center gap-2" ref={searchContainerRef}>
             <SearchBar
               placeholder={t('search.placeholder')}
               searchOptions={searchOptions}
@@ -364,6 +365,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Right side: Project Selector, Language Switcher and User Profile */}
           <div className="flex items-center gap-3">
+            <MinimizedCallBubble />
             <ProjectSelector />
             <LanguageSwitcher variant="dashboard" />
             <UserProfile onLogoutClick={handleLogoutClick} />
