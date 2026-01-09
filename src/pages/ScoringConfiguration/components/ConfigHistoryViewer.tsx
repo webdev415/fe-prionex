@@ -254,14 +254,14 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
                     )}
 
                     {/* Before/After Comparison */}
-                    {entry.old_values && entry.new_values && (
+                    {entry.before_config && entry.after_config && (
                       <div className="mt-3 grid grid-cols-2 gap-4">
                         <div className="bg-light-100 rounded p-3">
                           <div className="text-dark-300 mb-2 text-xs font-semibold uppercase">
                             {t('pages.scoringConfiguration.before', 'Before')}
                           </div>
                           <pre className="text-dark-500 text-xs whitespace-pre-wrap">
-                            {JSON.stringify(entry.old_values, null, 2)}
+                            {JSON.stringify(entry.before_config, null, 2)}
                           </pre>
                         </div>
                         <div className="bg-light-100 rounded p-3">
@@ -269,7 +269,7 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
                             {t('pages.scoringConfiguration.after', 'After')}
                           </div>
                           <pre className="text-dark-500 text-xs whitespace-pre-wrap">
-                            {JSON.stringify(entry.new_values, null, 2)}
+                            {JSON.stringify(entry.after_config, null, 2)}
                           </pre>
                         </div>
                       </div>

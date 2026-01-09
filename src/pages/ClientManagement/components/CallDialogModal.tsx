@@ -16,6 +16,7 @@ import { Button } from '../../../components/ui/Button'
 import { RadioGroup, RadioItem } from '../../../components/ui/Radio'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { useCallStore } from '@/stores/callStore'
 
 export type CallState = 'initial' | 'dialing' | 'connected' | 'ended' | 'incoming'
 export type CallType = 'white-line' | 'gray-line' | 'spam-calls'
@@ -31,6 +32,7 @@ export interface CallDialogModalProps {
   onCallEnd?: (duration: number, status: CallStatus) => void
   onAnswer?: () => void
   onReject?: () => void
+  onMinimize?: () => void
   // For incoming call
   loans?: Array<{
     id: string
@@ -63,9 +65,24 @@ export function CallDialogModal({
   onCallEnd,
   onAnswer,
   onReject,
+  onMinimize,
   loans = [],
 }: CallDialogModalProps) {
   const { t } = useTranslation('common')
+  const { setMinimizedCall, setOpenCallModal, minimizedCall } = useCallStore()
+
+  // Track modal open state
+  useEffect(() => {
+    if (open) {
+      setOpenCallModal('call-dialog')
+    } else {
+      // Only clear openCallModal if there's no minimized call
+      // This prevents clearing the state when minimizing
+      if (!minimizedCall || minimizedCall.type !== 'call-dialog') {
+        setOpenCallModal(null)
+      }
+    }
+  }, [open, setOpenCallModal, minimizedCall])
   const [callState, setCallState] = useState<CallState>(initialState)
   const [callType, setCallType] = useState<CallType>('white-line')
   const [elapsedTime, setElapsedTime] = useState(0)
@@ -218,6 +235,26 @@ export function CallDialogModal({
     setCallState('ended')
   }
 
+  const handleMinimize = () => {
+    setMinimizedCall({
+      id: `call-dialog-${Date.now()}`,
+      type: 'call-dialog',
+      clientName,
+      phoneNumber,
+      callState,
+      callType,
+      elapsedTime,
+      timestamp: Date.now(),
+    })
+    // If onMinimize is provided, use it instead of onClose
+    // This prevents clearing the minimized state when restoring and re-minimizing
+    if (onMinimize) {
+      onMinimize()
+    } else {
+      onClose()
+    }
+  }
+
   const handleClose = () => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
@@ -243,6 +280,14 @@ export function CallDialogModal({
   if (callState === 'incoming') {
     return (
       <Modal open={open} onClose={handleClose} maxWidth="xl" className="p-6">
+        {/* Minimize Button */}
+        <button
+          onClick={handleMinimize}
+          className="absolute top-4 right-12 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+          aria-label="Minimize modal"
+        >
+          <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
+        </button>
         <div className="flex flex-col gap-6">
           {/* Call Info */}
           <div className="flex flex-col items-center gap-3">
@@ -342,6 +387,14 @@ export function CallDialogModal({
   // Regular call dialog states
   return (
     <Modal open={open} onClose={handleClose} maxWidth="xl" className="p-10">
+      {/* Minimize Button */}
+      <button
+        onClick={handleMinimize}
+        className="absolute top-4 right-12 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+        aria-label="Minimize modal"
+      >
+        <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
+      </button>
       <div className="flex flex-col gap-6">
         {/* Content based on state */}
         {callState === 'initial' && (

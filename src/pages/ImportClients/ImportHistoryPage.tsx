@@ -449,10 +449,19 @@ export function ImportHistoryPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-dark-500 mb-6 text-2xl font-light">
-          {t('pages.imports.history.title')}
-        </h1>
+      <div className="mb-4 flex w-full items-center justify-between">
+        <div className="flex items-center gap-4">
+          <LinkButton
+            variant="regular-black"
+            onClick={handleGoToImportClients}
+            leftIcon={<Icons.ArrowLeft size={16} className="text-dark-500" />}
+          >
+            {t('common.back', 'Back')}
+          </LinkButton>
+          <h1 className="text-dark-500 text-2xl font-light">{t('pages.imports.history.title')}</h1>
+        </div>
+      </div>
+      <div className="mb-6">
         <div className="mb-6 flex w-full items-center justify-between gap-3">
           {/* Filters Section - using the reusable component */}
           <ImportHistoryFiltersBar
