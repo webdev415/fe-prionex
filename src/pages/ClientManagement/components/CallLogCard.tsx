@@ -1,5 +1,7 @@
 import React, { useId } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
+import { useCallStore } from '@/stores/callStore'
 
 function cn(...parts: Array<string | undefined | false>) {
   return parts.filter(Boolean).join(' ')
@@ -121,6 +123,7 @@ export function CallLogCard({
   setIsViewSMSModalOpen,
 }: CallLogCardProps) {
   const { t } = useTranslation('common')
+  const { isCallActive, setOpenCallModal } = useCallStore()
 
   const getTranslatedStatus = (status: string) => {
     switch (status) {
@@ -180,6 +183,14 @@ export function CallLogCard({
                 className="flex cursor-pointer items-start gap-2"
                 onClick={() => {
                   if (type) {
+                    // Check if there's an active call/recording
+                    if (isCallActive()) {
+                      toast.warning(
+                        t('pages.clients.modals.callDialog.callInProgress') ||
+                          'Another call or recording is already in progress. Please finish or close it first.'
+                      )
+                      return
+                    }
                     setSelectedCallData?.({
                       type:
                         type === 'Incoming'
@@ -192,13 +203,16 @@ export function CallLogCard({
                       duration: duration || '',
                       phone: phone || '',
                     })
+                    setOpenCallModal('call-recording')
                     setIsCallRecordingModalOpen?.(true)
                   } else {
                     setSelectedSMSData?.({
                       date: date || '',
                       time: time || '',
                       template:
-                        template || t('pages.clients.modals.sendSMS.templates.paymentReminder'),
+                        template ||
+                        t('pages.clients.modals.sendSMS.customMessage') ||
+                        'Custom Message', // Show "Custom Message" if no template
                       operator: operator || 'Svitlana',
                       status: status || '',
                       message: message || 'Dear Ivan, this is a reminder about your loan payment.',
@@ -271,7 +285,9 @@ export function CallLogCard({
                     {t('pages.clients.modals.callLogCard.template')}:
                   </div>
                   <div className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    {template}
+                    {template ||
+                      t('pages.clients.modals.sendSMS.customMessage') ||
+                      'Custom Message'}
                   </div>
                 </div>
 

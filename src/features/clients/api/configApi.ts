@@ -114,12 +114,13 @@ export interface ConfigHistoryEntry {
   project_id: number | null
   seller_id: number | null
   changed_by_user_id: number
-  changed_by_username: string
+  changed_by_username: string | null
   change_type: 'create' | 'update' | 'delete'
   changed_at: string
   change_reason: string | null
-  old_values: Record<string, unknown> | null
-  new_values: Record<string, unknown> | null
+  before_config: Record<string, unknown> | null
+  after_config: Record<string, unknown> | null
+  changes_summary: Record<string, unknown>
 }
 
 export interface ConfigHistoryListResponse {

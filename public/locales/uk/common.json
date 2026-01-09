@@ -603,6 +603,7 @@
         "responsibleSearcher": "Відповідальний пошуковик",
         "selectEmployee": "Виберіть співробітника",
         "selectSearcher": "Виберіть пошуковика",
+        "unassignedOnly": "Тільки непризначені",
         "more": "більше",
         "days": "днів"
       },
@@ -615,6 +616,7 @@
         "defaulted": "Прострочено",
         "answered": "Відповів",
         "noAnswer": "Не відповів",
+        "sent": "Відправлено",
         "delivered": "Доставлено",
         "failed": "Не вдалося",
         "pending": "Очікується"
@@ -753,6 +755,7 @@
           "notes": "Примітки (необов'язково)",
           "selectEmployee": "Виберіть співробітника...",
           "selectSearcher": "Виберіть шукача...",
+          "noUsersAvailable": "Користувачі відсутні",
           "enterAdditionalNotes": "Введіть додаткові примітки...",
           "warningMessage": "Примітка: Має бути вибрано принаймні одне призначення (Співробітник або Шукач).",
           "assignClient": "Призначити клієнта",
@@ -827,7 +830,8 @@
           "hangUp": "Завершити дзвінок",
           "viewClient": "Переглянути клієнта",
           "loanPrincipal": "Основна сума позики",
-          "lastContact": "Останній контакт"
+          "lastContact": "Останній контакт",
+          "callInProgress": "Інший дзвінок або запис вже триває. Будь ласка, завершіть або закрийте його спочатку."
         },
         "callLogCard": {
           "message": "Повідомлення",
@@ -871,11 +875,14 @@
           "title": "Відправити SMS",
           "smsSentToday": "SMS відправлено сьогодні",
           "sendSMSTo": "Відправити SMS",
+          "dailyLimit": "Денний ліміт",
           "dailyLimitReached": "Денний ліміт досягнуто",
           "smsSentToThisNumber": "SMS відправлено на цей номер",
           "nextSMSAvailableTomorrow": "Наступний SMS доступний завтра о",
           "template": "Шаблон",
           "selectTemplate": "Виберіть шаблон",
+          "customMessage": "Власне повідомлення",
+          "loadingTemplates": "Завантаження шаблонів...",
           "message": "Повідомлення",
           "typeYourMessageHere": "Введіть ваше повідомлення тут...",
           "characters": "символів",
@@ -888,6 +895,9 @@
           "messageWillBeSplit": "Повідомлення буде розділено на",
           "clientName": "Ім'я клієнта",
           "debtAmount": "Сума боргу",
+          "templateVariables": "Змінні шаблону",
+          "sending": "Відправка...",
+          "smsSentSuccessfully": "SMS успішно відправлено",
           "sendSMS": "Відправити SMS"
         },
         "viewSMS": {
@@ -1285,6 +1295,11 @@
           "messageTextRequired": "Текст повідомлення обов'язковий"
         }
       },
+      "messages": {
+        "templateDeleted": "Шаблон успішно видалено",
+        "templateCreated": "Шаблон успішно створено",
+        "templateUpdated": "Шаблон успішно оновлено"
+      },
       "modals": {
         "templateNotFound": "Шаблон не знайдено",
         "create": {
@@ -1494,7 +1509,7 @@
       }
     },
     "scoringConfiguration": {
-      "title": "Конфігурація оцінки - Проєкт Alpha",
+      "title": "Конфігурація оцінки",
       "scoreWeights": "Ваги оцінки",
       "debtAmountWeight": "Вага суми боргу",
       "daysOverdueWeight": "Вага днів прострочення",
@@ -1514,7 +1529,7 @@
       "lowDescription": "Мінімальна терміновість (оцінка 0-9)",
       "immediateEffect": "Зміни вплинуть на всіх клієнтів у цьому проєкті негайно",
       "sellerOverrides": "Перевизначення для продавців (необов'язково)",
-      "addSellerConfig": "+ Додати конфігурацію для продавця",
+      "addSellerConfig": "Додати конфігурацію для продавця",
       "sellerOverridesDescription": "Налаштування різних порогів для конкретних продавців",
       "configurationPreview": "Попередній перегляд конфігурації",
       "currentDistribution": "Поточне розподілення:",

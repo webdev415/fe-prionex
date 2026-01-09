@@ -10,7 +10,8 @@ import { ModalSkeleton } from '@/components/ui/ModalSkeleton'
 import { ViewTemplateForm } from './ViewTemplateForm'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
-import { mockSmsTemplates } from '../mockSmsTemplates'
+import { useSMSTemplate } from '@/features/sms'
+import { mapTemplateResponseToSmsTemplate } from '../utils'
 
 interface ViewTemplateModalProps {
   open: boolean
@@ -21,9 +22,8 @@ interface ViewTemplateModalProps {
 export function ViewTemplateModal({ open, templateId, onClose }: ViewTemplateModalProps) {
   const { t } = useTranslation('common')
 
-  // TODO: Replace with actual API hook
-  const template = mockSmsTemplates.find((t) => t.id === templateId)
-  const isLoading = false // TODO: Replace with actual loading state
+  const { data: apiTemplate, isLoading } = useSMSTemplate(templateId)
+  const template = apiTemplate ? mapTemplateResponseToSmsTemplate(apiTemplate) : null
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="2xl">

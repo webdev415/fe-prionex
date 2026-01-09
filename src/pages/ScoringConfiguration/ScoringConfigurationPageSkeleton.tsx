@@ -2,133 +2,73 @@
  * ScoringConfigurationPageSkeleton Component
  *
  * Full page skeleton for the scoring configuration page.
- * Includes header, score weights section, priority thresholds, and preview sections.
+ * Matches the side-tab layout with Score Weights and Priority Thresholds tabs.
  */
 
 export function ScoringConfigurationPageSkeleton() {
   return (
-    <div className="flex w-full flex-col items-start gap-6">
+    <div className="flex w-full flex-col items-start gap-4">
       {/* Header Skeleton */}
-      <div className="flex w-full items-center justify-between">
+      <div className="mb-4 flex w-full items-center justify-between">
         <div className="h-8 w-80 animate-pulse rounded bg-gray-200" />
+        <div className="h-12 w-32 animate-pulse rounded-full bg-gray-200" />
       </div>
 
-      {/* Score Weights Section Skeleton */}
-      <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
-        <div className="flex items-center justify-between">
-          <div className="h-6 w-32 animate-pulse rounded bg-gray-200" />
-          <div className="h-9 w-32 animate-pulse rounded-md bg-gray-200" />
+      {/* Side Tabs Layout */}
+      <div className="flex w-full gap-6">
+        {/* Side Tabs Skeleton */}
+        <div className="flex w-[200px] flex-shrink-0 flex-col gap-1">
+          <div className="h-12 w-full animate-pulse rounded-lg bg-gray-200" />
+          <div className="h-12 w-full animate-pulse rounded-lg bg-gray-200" />
         </div>
 
-        {/* Sliders Skeleton */}
-        <div className="flex flex-col gap-4">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div key={index} className="flex flex-col gap-2">
-              <div className="h-5 w-40 animate-pulse rounded bg-gray-200" />
-              <div className="h-2 w-full animate-pulse rounded-full bg-gray-200" />
+        {/* Tab Content Skeleton */}
+        <div className="flex flex-1 flex-col gap-4">
+          {/* Score Weights Tab Content Skeleton */}
+          <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
+            {/* Header */}
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex flex-col gap-2">
+                <div className="h-6 w-40 animate-pulse rounded bg-gray-200" />
+                <div className="h-4 w-96 animate-pulse rounded bg-gray-200" />
+              </div>
             </div>
-          ))}
-        </div>
 
-        {/* Total Weight Skeleton */}
-        <div className="flex items-center gap-2">
-          <div className="h-5 w-32 animate-pulse rounded bg-gray-200" />
-          <div className="h-5 w-24 animate-pulse rounded bg-gray-200" />
-        </div>
-      </div>
-
-      {/* Two Column Section Skeleton */}
-      <div className="flex flex-row gap-4 self-stretch">
-        {/* Priority Classification Thresholds Section Skeleton */}
-        <div className="flex w-[50%] flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
-          <div className="flex items-center justify-between">
-            <div className="h-6 w-48 animate-pulse rounded bg-gray-200" />
-            <div className="h-9 w-28 animate-pulse rounded-md bg-gray-200" />
-          </div>
-
-          <div className="flex gap-4">
-            <div className="flex w-[50%] flex-col gap-4">
-              {Array.from({ length: 2 }).map((_, index) => (
-                <div key={index} className="flex items-center gap-4">
-                  <div className="h-6 w-16 animate-pulse rounded-full bg-gray-200" />
-                  <div className="flex flex-1 items-center gap-2">
-                    <div className="h-5 w-20 animate-pulse rounded bg-gray-200" />
-                    <div className="h-9 w-16 animate-pulse rounded-md bg-gray-200" />
+            {/* Slider Cards Skeleton */}
+            <div className="grid grid-cols-1 gap-4">
+              <div className="flex flex-col gap-4">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center"
+                  >
+                    <div className="flex flex-1 items-center gap-3">
+                      <div className="h-5 w-40 animate-pulse rounded bg-gray-200" />
+                    </div>
+                    <div className="flex w-full items-center gap-3 sm:w-auto sm:min-w-[300px]">
+                      <div className="h-1 w-full animate-pulse rounded-full bg-gray-200" />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-            <div className="flex w-[50%] flex-col gap-4">
-              {Array.from({ length: 2 }).map((_, index) => (
-                <div key={index} className="flex items-center gap-4">
-                  <div className="h-6 w-16 animate-pulse rounded-full bg-gray-200" />
-                  <div className="flex flex-1 items-center gap-2">
-                    <div className="h-5 w-20 animate-pulse rounded bg-gray-200" />
-                    <div className="h-9 w-16 animate-pulse rounded-md bg-gray-200" />
-                  </div>
-                </div>
-              ))}
+
+            {/* Total Weight Badge Skeleton */}
+            <div className="mt-4 flex items-center justify-end">
+              <div className="h-8 w-32 animate-pulse rounded-full bg-gray-200" />
             </div>
-          </div>
 
-          {/* Checkbox Skeleton */}
-          <div className="flex items-center gap-2">
-            <div className="h-5 w-5 animate-pulse rounded bg-gray-200" />
-            <div className="h-5 w-64 animate-pulse rounded bg-gray-200" />
-          </div>
-        </div>
-
-        {/* Seller-Specific Overrides Section Skeleton */}
-        <div className="flex w-[50%] flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
-          <div className="h-6 w-56 animate-pulse rounded bg-gray-200" />
-          <div className="h-9 w-64 animate-pulse rounded-md bg-gray-200" />
-          <div className="h-5 w-full animate-pulse rounded bg-gray-200" />
-        </div>
-      </div>
-
-      {/* Configuration Preview Section Skeleton */}
-      <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
-        <div className="h-6 w-48 animate-pulse rounded bg-gray-200" />
-
-        <div className="grid grid-cols-2 gap-6">
-          {/* Current Distribution Skeleton */}
-          <div className="flex flex-col gap-3">
-            <div className="h-5 w-40 animate-pulse rounded bg-gray-200" />
+            {/* Change Reason Input Skeleton */}
             <div className="flex flex-col gap-2">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex w-full items-center gap-2">
-                    <div className="h-6 w-16 animate-pulse rounded-full bg-gray-200" />
-                    <div className="h-5 w-32 animate-pulse rounded bg-gray-200" />
-                  </div>
-                </div>
-              ))}
+              <div className="h-5 w-32 animate-pulse rounded bg-gray-200" />
+              <div className="h-10 w-full animate-pulse rounded-md bg-gray-200" />
+            </div>
+
+            {/* Save Button Skeleton */}
+            <div className="flex items-center justify-end">
+              <div className="h-10 w-32 animate-pulse rounded-md bg-gray-200" />
             </div>
           </div>
-
-          {/* New Distribution Skeleton */}
-          <div className="flex flex-col gap-3">
-            <div className="h-5 w-40 animate-pulse rounded bg-gray-200" />
-            <div className="flex flex-col gap-2">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex w-full items-center gap-2">
-                    <div className="h-6 w-16 animate-pulse rounded-full bg-gray-200" />
-                    <div className="h-5 w-32 animate-pulse rounded bg-gray-200" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer Skeleton */}
-      <div className="flex w-full items-center justify-between">
-        <div className="h-5 w-64 animate-pulse rounded bg-gray-200" />
-        <div className="flex w-[30%] items-center gap-3">
-          <div className="h-10 flex-1 animate-pulse rounded-md bg-gray-200" />
-          <div className="h-10 flex-1 animate-pulse rounded-md bg-gray-200" />
         </div>
       </div>
     </div>

@@ -31,6 +31,7 @@ interface SellerConfigModalProps {
   onSuccess: () => void
   editConfig?: SellerConfig | null
   sellers: Array<{ id: number; name: string }>
+  defaultThresholds?: PriorityThresholds // Current project thresholds to use as defaults
 }
 
 export function SellerConfigModal({
@@ -39,6 +40,7 @@ export function SellerConfigModal({
   onSuccess,
   editConfig,
   sellers,
+  defaultThresholds,
 }: SellerConfigModalProps) {
   const { t } = useTranslation('common')
   const isEditMode = !!editConfig
@@ -55,22 +57,24 @@ export function SellerConfigModal({
   // UI state
   const [isSaving, setIsSaving] = useState(false)
 
-  // Initialize form with editConfig data
+  // Initialize form with editConfig data or default thresholds
   useEffect(() => {
     if (editConfig) {
       setSellerId(editConfig.seller_id)
       setThresholds(editConfig.priority_thresholds)
     } else {
-      // Reset form for create mode
+      // Reset form for create mode - use current project thresholds as defaults
       setSellerId(null)
-      setThresholds({
-        critical: 25,
-        high: 18,
-        medium: 10,
-        low: 0,
-      })
+      setThresholds(
+        defaultThresholds || {
+          critical: 25,
+          high: 18,
+          medium: 10,
+          low: 0,
+        }
+      )
     }
-  }, [editConfig, open])
+  }, [editConfig, open, defaultThresholds])
 
   const handleSave = async () => {
     if (!sellerId) {
@@ -152,7 +156,11 @@ export function SellerConfigModal({
   return (
     <Modal open={open} onClose={onClose} maxWidth="lg">
       <ModalHeader
-        icon={<Icons.Settings size={24} />}
+        icon={
+          <div className="bg-primary-300 flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+          </div>
+        }
         title={
           isEditMode
             ? t('pages.scoringConfiguration.editSellerConfig', 'Edit Seller Configuration')
