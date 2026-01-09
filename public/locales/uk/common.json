@@ -603,6 +603,7 @@
         "responsibleSearcher": "Відповідальний пошуковик",
         "selectEmployee": "Виберіть співробітника",
         "selectSearcher": "Виберіть пошуковика",
+        "unassignedOnly": "Тільки непризначені",
         "more": "більше",
         "days": "днів"
       },
@@ -754,6 +755,7 @@
           "notes": "Примітки (необов'язково)",
           "selectEmployee": "Виберіть співробітника...",
           "selectSearcher": "Виберіть шукача...",
+          "noUsersAvailable": "Користувачі відсутні",
           "enterAdditionalNotes": "Введіть додаткові примітки...",
           "warningMessage": "Примітка: Має бути вибрано принаймні одне призначення (Співробітник або Шукач).",
           "assignClient": "Призначити клієнта",
@@ -1506,7 +1508,7 @@
       }
     },
     "scoringConfiguration": {
-      "title": "Конфігурація оцінки - Проєкт Alpha",
+      "title": "Конфігурація оцінки",
       "scoreWeights": "Ваги оцінки",
       "debtAmountWeight": "Вага суми боргу",
       "daysOverdueWeight": "Вага днів прострочення",
@@ -1526,7 +1528,7 @@
       "lowDescription": "Мінімальна терміновість (оцінка 0-9)",
       "immediateEffect": "Зміни вплинуть на всіх клієнтів у цьому проєкті негайно",
       "sellerOverrides": "Перевизначення для продавців (необов'язково)",
-      "addSellerConfig": "+ Додати конфігурацію для продавця",
+      "addSellerConfig": "Додати конфігурацію для продавця",
       "sellerOverridesDescription": "Налаштування різних порогів для конкретних продавців",
       "configurationPreview": "Попередній перегляд конфігурації",
       "currentDistribution": "Поточне розподілення:",
