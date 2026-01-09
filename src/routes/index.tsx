@@ -24,6 +24,7 @@ import { ReportsDashboardPage } from '@/pages/ReportsDashboard'
 import { SellerManagementPage } from '@/pages/SellerManagement'
 import { ScoringConfigurationPage } from '@/pages/ScoringConfiguration'
 import { ConfigurationHistoryPage } from '@/pages/ScoringConfiguration/ConfigurationHistoryPage'
+import { TagsPage } from '@/pages/Tags/TagsPage'
 
 export const router = createBrowserRouter([
   {
@@ -149,16 +150,6 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: '/dashboard/sms-templates',
-    element: (
-      <ProtectedRoute>
-        <DashboardLayout>
-          <SmsTemplatesPage />
-        </DashboardLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
     path: '/dashboard/reports',
     element: (
       <ProtectedRoute>
@@ -190,8 +181,19 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
+  // System Settings routes
   {
-    path: '/dashboard/scoring-configuration',
+    path: '/dashboard/system-settings/tags',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <TagsPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/system-settings/scoring-configuration',
     element: (
       <ProtectedRoute>
         <DashboardLayout>
@@ -201,7 +203,7 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: '/dashboard/scoring-configuration/history',
+    path: '/dashboard/system-settings/scoring-configuration/history',
     element: (
       <ProtectedRoute>
         <DashboardLayout>
@@ -209,6 +211,29 @@ export const router = createBrowserRouter([
         </DashboardLayout>
       </ProtectedRoute>
     ),
+  },
+  {
+    path: '/dashboard/system-settings/sms-templates',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <SmsTemplatesPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  // Legacy routes - redirect to new paths
+  {
+    path: '/dashboard/scoring-configuration',
+    element: <Navigate to="/dashboard/system-settings/scoring-configuration" replace />,
+  },
+  {
+    path: '/dashboard/scoring-configuration/history',
+    element: <Navigate to="/dashboard/system-settings/scoring-configuration/history" replace />,
+  },
+  {
+    path: '/dashboard/sms-templates',
+    element: <Navigate to="/dashboard/system-settings/sms-templates" replace />,
   },
   {
     path: '/',
