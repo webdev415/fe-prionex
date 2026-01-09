@@ -7,7 +7,7 @@ import { useSidebarStore } from '@/stores/sidebarStore'
 import { usePermissionRefresh } from '@/hooks'
 import { ImpersonationBanner } from '@/features/auth/components/ImpersonationBanner'
 import { LogoutConfirmationModal } from './LogoutConfirmationModal'
-import { Sidebar, type SidebarItem } from './Sidebar'
+import { Sidebar, type SidebarItem, type SidebarSubItem } from './Sidebar'
 import { SearchBar } from './SearchBar'
 import { UserProfile } from './UserProfile'
 import { LanguageSwitcher } from './LanguageSwitcher'
@@ -28,6 +28,11 @@ interface ExtendedSidebarItem extends SidebarItem {
   requiredPermission?: Permission
   requiredPermissions?: Permission[]
   mode?: 'any' | 'all'
+  subItems?: (SidebarSubItem & {
+    requiredPermission?: Permission
+    requiredPermissions?: Permission[]
+    mode?: 'any' | 'all'
+  })[]
 }
 
 /**
@@ -278,49 +283,95 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         disabled: true,
       }, // Route doesn't exist
       {
-        path: '/dashboard/sms-templates',
-        icon: 'mail',
-        label: t('navigation.smsTemplates'),
-      },
-      {
-        path: '/dashboard/scoring-configuration',
-        icon: 'checkmark-badge-02',
-        label: t('navigation.scoringConfiguration'),
+        path: '/dashboard/system-settings',
+        icon: 'setting-07',
+        label: t('navigation.systemSettings', 'System Settings'),
+        subItems: [
+          {
+            path: '/dashboard/system-settings/tags',
+            label: t('navigation.tags', 'Tags'),
+          },
+          {
+            path: '/dashboard/system-settings/scoring-configuration',
+            label: t('navigation.scoringConfiguration'),
+          },
+          {
+            path: '/dashboard/system-settings/sms-templates',
+            label: t('navigation.smsTemplates'),
+          },
+        ],
       },
     ]
 
-    return allNavItems.filter((item) => {
-      // Always show disabled items (for visual consistency)
-      if (item.disabled) return true
+    return allNavItems
+      .filter((item) => {
+        // Always show disabled items (for visual consistency)
+        if (item.disabled) return true
 
-      // No permission required - show to all users
-      if (!item.requiredPermission && !item.requiredPermissions) return true
+        // No permission required - show to all users
+        if (!item.requiredPermission && !item.requiredPermissions) return true
 
-      // Check single permission
-      if (item.requiredPermission) {
-        return user?.permissions?.includes(item.requiredPermission) ?? false
-      }
-
-      // Check multiple permissions
-      if (item.requiredPermissions && item.requiredPermissions.length > 0) {
-        if (item.mode === 'any') {
-          // User needs at least one of the permissions
-          return (
-            item.requiredPermissions.some((p: Permission) => user?.permissions?.includes(p)) ??
-            false
-          )
-        } else {
-          // User needs all of the permissions (default)
-          return (
-            item.requiredPermissions.every((p: Permission) => user?.permissions?.includes(p)) ??
-            false
-          )
+        // Check single permission
+        if (item.requiredPermission) {
+          return user?.permissions?.includes(item.requiredPermission) ?? false
         }
-      }
 
-      // Default: show the item
-      return true
-    })
+        // Check multiple permissions
+        if (item.requiredPermissions && item.requiredPermissions.length > 0) {
+          if (item.mode === 'any') {
+            // User needs at least one of the permissions
+            return (
+              item.requiredPermissions.some((p: Permission) => user?.permissions?.includes(p)) ??
+              false
+            )
+          } else {
+            // User needs all of the permissions (default)
+            return (
+              item.requiredPermissions.every((p: Permission) => user?.permissions?.includes(p)) ??
+              false
+            )
+          }
+        }
+
+        // Default: show the item
+        return true
+      })
+      .map((item) => {
+        // Filter sub-items based on permissions
+        if (item.subItems) {
+          const filteredSubItems = item.subItems.filter((subItem) => {
+            // No permission required - show to all users
+            if (!subItem.requiredPermission && !subItem.requiredPermissions) return true
+
+            // Check single permission
+            if (subItem.requiredPermission) {
+              return user?.permissions?.includes(subItem.requiredPermission) ?? false
+            }
+
+            // Check multiple permissions
+            if (subItem.requiredPermissions && subItem.requiredPermissions.length > 0) {
+              if (subItem.mode === 'any') {
+                return (
+                  subItem.requiredPermissions.some((p: Permission) =>
+                    user?.permissions?.includes(p)
+                  ) ?? false
+                )
+              } else {
+                return (
+                  subItem.requiredPermissions.every((p: Permission) =>
+                    user?.permissions?.includes(p)
+                  ) ?? false
+                )
+              }
+            }
+
+            return true
+          })
+
+          return { ...item, subItems: filteredSubItems }
+        }
+        return item
+      })
   }, [user?.permissions, t])
 
   return (

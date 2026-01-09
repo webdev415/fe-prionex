@@ -18,7 +18,9 @@
       "smsTemplates": "SMS Templates",
       "transactions": "Transactions",
       "reports": "Reports",
-      "scoringConfiguration": "Scoring Configuration"
+      "scoringConfiguration": "Scoring Configuration",
+      "systemSettings": "System Settings",
+      "tags": "Tags"
     },
   "search": {
     "placeholder": "Search",
@@ -1324,6 +1326,10 @@
           "deleting": "Deleting..."
         }
       }
+    },
+    "tags": {
+      "title": "Tags",
+      "comingSoon": "Tags management coming soon..."
     },
     "sellers": {
       "title": "Seller Management",
