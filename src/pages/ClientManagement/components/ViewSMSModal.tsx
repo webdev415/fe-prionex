@@ -60,8 +60,8 @@ const formatDateTime = (dateStr: string, timeStr: string, t: (key: string) => st
 const calculateSMSParts = (message: string): number => {
   // Standard SMS: 160 characters for single-byte, 70 for multi-byte (Cyrillic)
   // For simplicity, assume Cyrillic if message contains Cyrillic characters
-  const hasCyrillic = /[А-Яа-яЁё]/.test(message)
-  const maxLength = hasCyrillic ? 70 : 160
+  const hasCyrillic = /[\u0400-\u04FF]/.test(message)
+  const maxLength = hasCyrillic ? 70 : 120
   return Math.ceil(message.length / maxLength)
 }
 
@@ -82,8 +82,8 @@ export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
   const { t } = useTranslation('common')
   const dateTime = formatDateTime(smsData.date, smsData.time, t)
   const smsParts = calculateSMSParts(smsData.message)
-  const hasCyrillic = /[А-Яа-яЁё]/.test(smsData.message)
-  const maxChars = hasCyrillic ? 70 : 160
+  const hasCyrillic = /[\u0400-\u04FF]/.test(smsData.message)
+  const maxChars = hasCyrillic ? 70 : 120
   const charCount = smsData.message.length
   const cost = smsParts * 1.0 // Assuming 1.00 per SMS part
 
