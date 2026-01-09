@@ -6,6 +6,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -21,6 +22,7 @@ import { cn } from '@/lib/utils'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
+import { useCallStore } from '@/stores/callStore'
 
 // Helper function to create mock client detail
 const createMockClientDetail = (
@@ -830,6 +832,7 @@ const mockClientsDetail = [
 
 export function ClientDetailPage() {
   const { t } = useTranslation('common')
+  const { isCallActive, setOpenCallModal } = useCallStore()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [activeLoanTab, setActiveLoanTab] = useState<'process' | 'closed' | 'rr'>('process')
@@ -1267,7 +1270,7 @@ export function ClientDetailPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* Client Header */}
       <div className="flex items-center justify-between self-stretch">
         <div className="flex items-center gap-2">
@@ -1277,7 +1280,7 @@ export function ClientDetailPage() {
           >
             <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
           </button>
-          <h1 className="text-dark-500 text-center text-2xl leading-[150%] font-medium">
+          <h1 className="text-dark-500 text-center text-2xl leading-[150%] font-light">
             {client.fullName}
           </h1>
           <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0">
@@ -1307,7 +1310,17 @@ export function ClientDetailPage() {
             size="md"
             leftIcon={<Icons.Headset size={20} />}
             className="rounded-full"
-            onClick={() => setIsCallModalOpen(true)}
+            onClick={() => {
+              if (isCallActive()) {
+                toast.warning(
+                  t('pages.clients.modals.callDialog.callInProgress') ||
+                    'Another call or recording is already in progress. Please finish or close it first.'
+                )
+                return
+              }
+              setOpenCallModal('call-dialog')
+              setIsCallModalOpen(true)
+            }}
           >
             {t('pages.clients.activity.call')}
           </Button>
@@ -1388,7 +1401,17 @@ export function ClientDetailPage() {
                       {phone.number}
                     </span>
                     <button
-                      onClick={() => setIsCallModalOpen(true)}
+                      onClick={() => {
+                        if (isCallActive()) {
+                          toast.warning(
+                            t('pages.clients.modals.callDialog.callInProgress') ||
+                              'Another call or recording is already in progress. Please finish or close it first.'
+                          )
+                          return
+                        }
+                        setOpenCallModal('call-dialog')
+                        setIsCallModalOpen(true)
+                      }}
                       className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
                     >
                       <Icons.Headset size={16} className="flex-shrink-0" />
@@ -2519,7 +2542,10 @@ export function ClientDetailPage() {
       {/* Call Dialog Modal */}
       <CallDialogModal
         open={isCallModalOpen}
-        onClose={() => setIsCallModalOpen(false)}
+        onClose={() => {
+          setOpenCallModal(null)
+          setIsCallModalOpen(false)
+        }}
         clientName={client.fullName}
         phoneNumber={client.phones?.[0]?.number || ''}
         initialState="initial"
@@ -2528,6 +2554,7 @@ export function ClientDetailPage() {
         }}
         onCallEnd={(duration: number, status: CallStatus) => {
           console.log('Call ended:', { duration, status })
+          setOpenCallModal(null)
         }}
       />
 
@@ -2536,6 +2563,7 @@ export function ClientDetailPage() {
         <CallRecordingModal
           open={isCallRecordingModalOpen}
           onClose={() => {
+            setOpenCallModal(null)
             setIsCallRecordingModalOpen(false)
             setSelectedCallData(null)
           }}
