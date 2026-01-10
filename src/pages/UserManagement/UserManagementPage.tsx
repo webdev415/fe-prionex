@@ -5,7 +5,7 @@
  * Integrated with real API using React Query.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -47,6 +47,26 @@ export function UserManagementPage() {
   const [editUserId, setEditUserId] = useState<number | null>(null)
   const [unlockUser, setUnlockUser] = useState<ApiUser | null>(null)
   const [impersonatingUserId, setImpersonatingUserId] = useState<number | null>(null)
+  const [openDropdownUserId, setOpenDropdownUserId] = useState<number | null>(null)
+
+  // Close dropdown when screen size crosses breakpoint (in either direction)
+  useEffect(() => {
+    let wasMobile = window.innerWidth < 1024 // lg breakpoint
+
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 1024
+
+      // Close dropdown if transitioning across breakpoint (mobile <-> desktop)
+      if (wasMobile !== isMobile && openDropdownUserId !== null) {
+        setOpenDropdownUserId(null)
+      }
+
+      wasMobile = isMobile
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [openDropdownUserId])
 
   // Fetch users with pagination
   const { data, isLoading, isError, error } = useUsers({
@@ -221,7 +241,11 @@ export function UserManagementPage() {
 
           {/* Mobile/Tablet: Dropdown button group */}
           <div className="lg:hidden">
-            <DropdownMenu modal={false}>
+            <DropdownMenu
+              modal={false}
+              open={openDropdownUserId === user.id}
+              onOpenChange={(open) => setOpenDropdownUserId(open ? user.id : null)}
+            >
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
@@ -231,7 +255,7 @@ export function UserManagementPage() {
                   <Icons.FilterVertical size={16} strokeWidth={1.5} />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-white">
+              <DropdownMenuContent align="end" className="bg-white">
                 <DropdownMenuItem
                   onClick={() => handleView(user)}
                   className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"

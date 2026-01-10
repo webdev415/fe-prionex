@@ -49,6 +49,8 @@ export function SearchBar({
 }: SearchBarProps) {
   const [searchQuery, setSearchQuery] = useState(value || '')
   const [searchType, setSearchType] = useState(searchTypeValue || defaultSearchType)
+  const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false)
+  const [isDesktopDropdownOpen, setIsDesktopDropdownOpen] = useState(false)
 
   // Sync with controlled value prop
   useEffect(() => {
@@ -57,6 +59,37 @@ export function SearchBar({
       setSearchQuery(value)
     }
   }, [value])
+
+  // Close mobile dropdown when screen size crosses breakpoint (in either direction)
+  useEffect(() => {
+    let wasMobile = window.innerWidth < 1024 // lg breakpoint
+
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 1024
+
+      // Close mobile dropdown if transitioning across breakpoint (mobile <-> desktop)
+      if (wasMobile !== isMobile && isMobileDropdownOpen) {
+        setIsMobileDropdownOpen(false)
+      }
+
+      wasMobile = isMobile
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isMobileDropdownOpen])
+
+  // Close desktop dropdown on window resize to prevent positioning issues
+  useEffect(() => {
+    const handleResize = () => {
+      if (isDesktopDropdownOpen) {
+        setIsDesktopDropdownOpen(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isDesktopDropdownOpen])
 
   useEffect(() => {
     if (searchTypeValue !== undefined) {
@@ -156,7 +189,11 @@ export function SearchBar({
         <div className="flex shrink-0 items-center">
           {/* Mobile: Icon-only selector - styled as a rounded-full button with primary background */}
           <div className="lg:hidden">
-            <DropdownMenu modal={false}>
+            <DropdownMenu
+              modal={false}
+              open={isMobileDropdownOpen}
+              onOpenChange={setIsMobileDropdownOpen}
+            >
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
@@ -197,7 +234,11 @@ export function SearchBar({
           {/* Desktop: Full selector with divider */}
           <div className="hidden items-center lg:flex">
             <div className="mx-2 h-5 w-px bg-gray-300" />
-            <DropdownMenu modal={false}>
+            <DropdownMenu
+              modal={false}
+              open={isDesktopDropdownOpen}
+              onOpenChange={setIsDesktopDropdownOpen}
+            >
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"

@@ -5,6 +5,7 @@
  * Built with Radix UI DropdownMenu for consistency.
  */
 
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
@@ -22,6 +23,7 @@ interface LanguageSwitcherProps {
 
 export function LanguageSwitcher({ variant = 'auth' }: LanguageSwitcherProps) {
   const { i18n } = useTranslation('common')
+  const [isOpen, setIsOpen] = useState(false)
 
   const currentLanguage = i18n.language as SupportedLanguage
 
@@ -29,10 +31,22 @@ export function LanguageSwitcher({ variant = 'auth' }: LanguageSwitcherProps) {
     i18n.changeLanguage(lang)
   }
 
+  // Close dropdown on window resize to prevent positioning issues
+  useEffect(() => {
+    const handleResize = () => {
+      if (isOpen) {
+        setIsOpen(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isOpen])
+
   const isAuth = variant === 'auth'
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu modal={false} open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
