@@ -80,167 +80,194 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
   }
 
   return (
-    <aside
-      className={cn(
-        'fixed top-0 left-0 z-30 flex h-screen flex-col overflow-hidden py-6 transition-all duration-300',
-        'shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_21px_2px_0px_rgba(0,0,0,0.06)]',
-        isSidebarVisible ? 'w-60' : 'w-18',
-        'items-start px-4 pl-3',
-        isHoverOpen && !isOpenSideBar ? 'bg-white' : 'bg-white',
-        className
+    <>
+      {/* Mobile overlay */}
+      {isOpenSideBar && (
+        <div
+          className="fixed inset-0 z-21 bg-black/50 lg:hidden"
+          onClick={() => toggleSidebar()}
+          aria-hidden="true"
+        />
       )}
-      onMouseEnter={() => {
-        // If hovering over sidebar and it was opened by hover, keep it open
-        if (isHoverOpen) {
-          setHoverOpen(true)
-        }
-      }}
-      onMouseLeave={() => {
-        // Close sidebar if it was only opened by hover
-        if (isHoverOpen && !isOpenSideBar) {
-          setHoverOpen(false)
-        }
-      }}
-    >
-      {/* Navigation Icons */}
-      <nav
+      <aside
         className={cn(
-          'flex w-full flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-          'items-stretch px-0'
+          'fixed top-0 left-0 z-30 flex h-screen flex-col overflow-hidden py-6 transition-all duration-300',
+          'shadow-[0px_1px_3px_0px_rgba(0,0,0,0.1),0px_21px_2px_0px_rgba(0,0,0,0.06)]',
+          isSidebarVisible ? 'w-60' : 'w-18',
+          'items-start px-4 pl-3',
+          isHoverOpen && !isOpenSideBar ? 'bg-white' : 'bg-white',
+          // Hide on mobile by default, show when opened. On desktop (lg+), always visible
+          isOpenSideBar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+          className
         )}
+        onMouseEnter={() => {
+          // Only enable hover on desktop (lg and above) - check via media query
+          if (window.matchMedia('(min-width: 1024px)').matches) {
+            // If hovering over sidebar and it was opened by hover, keep it open
+            if (isHoverOpen) {
+              setHoverOpen(true)
+            }
+          }
+        }}
+        onMouseLeave={() => {
+          // Only enable hover on desktop (lg and above) - check via media query
+          if (window.matchMedia('(min-width: 1024px)').matches) {
+            // Close sidebar if it was only opened by hover
+            if (isHoverOpen && !isOpenSideBar) {
+              setHoverOpen(false)
+            }
+          }
+        }}
       >
-        {/* Menu button */}
-        <button
-          onClick={toggleSidebar}
+        {/* Navigation Icons */}
+        <nav
           className={cn(
-            'flex h-10 shrink-0 cursor-pointer items-center rounded-lg transition-all duration-200 focus:outline-none',
-            isSidebarVisible ? 'px-3' : 'justify-start px-3',
-            'hover:bg-gray-50'
+            'flex w-full flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            'items-stretch px-0'
           )}
-          aria-label="Menu"
         >
-          <Icons.Menu11 size={20} className="shrink-0 text-gray-700" strokeWidth={1.5} />
-          {isSidebarVisible && (
-            <img
-              src="/logo.svg"
-              alt="Prionex"
-              className="ml-3 h-7 w-auto transition-all duration-300"
-            />
-          )}
-        </button>
-        <div className="mx-2 h-px bg-gray-200" />
-        {items.map((item, index) => {
-          const IconComponent = iconMap[item.icon]
-
-          if (!IconComponent) {
-            console.warn(`Icon "${item.icon}" not found in iconMap`)
-            return null
-          }
-
-          const isActive = !item.disabled && isActivePath(item.path)
-          const isDisabled = item.disabled
-          // Use unique key combining path and label to avoid duplicates
-          const uniqueKey = `${item.path}-${item.label}-${index}`
-
-          if (isDisabled) {
-            return (
-              <div
-                key={uniqueKey}
-                className={cn(
-                  'flex h-10 shrink-0 items-center rounded-md opacity-50',
-                  isSidebarVisible ? 'px-3' : 'justify-start px-3'
-                )}
-                aria-label={item.label}
-                onMouseEnter={() => {
-                  // Open sidebar on hover if it's closed
-                  if (!isOpenSideBar) {
-                    setHoverOpen(true)
-                  }
-                }}
-              >
-                <IconComponent size={20} className="shrink-0 text-gray-400" strokeWidth={1.5} />
-                <span className="ml-3 text-sm text-gray-400">{item.label}</span>
-              </div>
-            )
-          }
-
-          const navLinkContent = (
-            <NavLink
-              to={item.path}
-              end={item.path === '/dashboard'}
-              className={cn(
-                'flex h-10 shrink-0 items-center rounded-lg transition-all duration-200 focus:outline-none',
-                isSidebarVisible ? 'px-3' : 'justify-start px-3',
-                isActive ? 'bg-secondary-800' : 'hover:bg-gray-50'
-              )}
-              aria-label={item.label}
-              onMouseEnter={() => {
-                // Open sidebar on hover if it's closed
-                if (!isOpenSideBar) {
-                  setHoverOpen(true)
-                }
-              }}
-            >
-              <IconComponent
-                size={20}
-                className={cn('shrink-0', isActive ? 'text-primary-300' : 'text-gray-700')}
-                strokeWidth={1.5}
+          {/* Menu button */}
+          <button
+            onClick={toggleSidebar}
+            className={cn(
+              'flex h-10 shrink-0 cursor-pointer items-center rounded-lg transition-all duration-200 focus:outline-none',
+              isSidebarVisible ? 'px-3' : 'justify-start px-3',
+              'hover:bg-gray-50'
+            )}
+            aria-label="Menu"
+          >
+            <Icons.Menu11 size={20} className="shrink-0 text-gray-700" strokeWidth={1.5} />
+            {isSidebarVisible && (
+              <img
+                src="/logo.svg"
+                alt="Prionex"
+                className="ml-3 h-7 w-auto transition-all duration-300"
               />
-              <span
-                className={cn(
-                  'ml-3 text-sm font-medium text-nowrap',
-                  isActive ? 'text-white' : 'text-dark-500'
-                )}
-              >
-                {item.label}
-              </span>
-            </NavLink>
-          )
+            )}
+          </button>
+          <div className="mx-2 h-px bg-gray-200" />
+          {items.map((item, index) => {
+            const IconComponent = iconMap[item.icon]
 
-          return (
-            <div key={uniqueKey} className="w-full">
-              {navLinkContent}
-            </div>
-          )
-        })}
-      </nav>
-
-      {/* Bottom action buttons */}
-      {actions.length > 0 && (
-        <div className="flex w-full flex-col items-stretch gap-6 pt-6">
-          {actions.map((action, index) => {
-            const ActionIcon = iconMap[action.icon]
-
-            if (!ActionIcon) {
-              console.warn(`Icon "${action.icon}" not found in iconMap`)
+            if (!IconComponent) {
+              console.warn(`Icon "${item.icon}" not found in iconMap`)
               return null
             }
 
-            return (
-              <button
-                key={index}
-                onClick={action.onClick}
+            const isActive = !item.disabled && isActivePath(item.path)
+            const isDisabled = item.disabled
+            // Use unique key combining path and label to avoid duplicates
+            const uniqueKey = `${item.path}-${item.label}-${index}`
+
+            if (isDisabled) {
+              return (
+                <div
+                  key={uniqueKey}
+                  className={cn(
+                    'flex h-10 shrink-0 items-center rounded-md opacity-50',
+                    isSidebarVisible ? 'px-3' : 'justify-start px-3'
+                  )}
+                  aria-label={item.label}
+                  onMouseEnter={() => {
+                    // Only enable hover on desktop (lg and above)
+                    if (window.matchMedia('(min-width: 1024px)').matches) {
+                      // Open sidebar on hover if it's closed
+                      if (!isOpenSideBar) {
+                        setHoverOpen(true)
+                      }
+                    }
+                  }}
+                >
+                  <IconComponent size={20} className="shrink-0 text-gray-400" strokeWidth={1.5} />
+                  <span className="ml-3 text-sm text-gray-400">{item.label}</span>
+                </div>
+              )
+            }
+
+            const navLinkContent = (
+              <NavLink
+                to={item.path}
+                end={item.path === '/dashboard'}
                 className={cn(
-                  'flex h-10 items-center rounded-md transition-all duration-200 focus:outline-none',
+                  'flex h-10 shrink-0 items-center rounded-lg transition-all duration-200 focus:outline-none',
                   isSidebarVisible ? 'px-3' : 'justify-start px-3',
-                  isHoverOpen && !isOpenSideBar ? 'hover:bg-white/80' : 'hover:bg-gray-50'
+                  isActive ? 'bg-secondary-800' : 'hover:bg-gray-50'
                 )}
-                aria-label={action.label}
+                aria-label={item.label}
                 onMouseEnter={() => {
-                  // Open sidebar on hover if it's closed
-                  if (!isOpenSideBar) {
-                    setHoverOpen(true)
+                  // Only enable hover on desktop (lg and above)
+                  if (window.matchMedia('(min-width: 1024px)').matches) {
+                    // Open sidebar on hover if it's closed
+                    if (!isOpenSideBar) {
+                      setHoverOpen(true)
+                    }
                   }
                 }}
               >
-                <ActionIcon size={20} className="shrink-0 text-gray-700" strokeWidth={1.5} />
-                <span className="text-dark-500 ml-3 text-sm font-medium">{action.label}</span>
-              </button>
+                <IconComponent
+                  size={20}
+                  className={cn('shrink-0', isActive ? 'text-primary-300' : 'text-gray-700')}
+                  strokeWidth={1.5}
+                />
+                <span
+                  className={cn(
+                    'ml-3 text-sm font-medium text-nowrap',
+                    isActive ? 'text-white' : 'text-dark-500'
+                  )}
+                >
+                  {item.label}
+                </span>
+              </NavLink>
+            )
+
+            return (
+              <div key={uniqueKey} className="w-full">
+                {navLinkContent}
+              </div>
             )
           })}
-        </div>
-      )}
-    </aside>
+        </nav>
+
+        {/* Bottom action buttons */}
+        {actions.length > 0 && (
+          <div className="flex w-full flex-col items-stretch gap-6 pt-6">
+            {actions.map((action, index) => {
+              const ActionIcon = iconMap[action.icon]
+
+              if (!ActionIcon) {
+                console.warn(`Icon "${action.icon}" not found in iconMap`)
+                return null
+              }
+
+              return (
+                <button
+                  key={index}
+                  onClick={action.onClick}
+                  className={cn(
+                    'flex h-10 items-center rounded-md transition-all duration-200 focus:outline-none',
+                    isSidebarVisible ? 'px-3' : 'justify-start px-3',
+                    isHoverOpen && !isOpenSideBar ? 'hover:bg-white/80' : 'hover:bg-gray-50'
+                  )}
+                  aria-label={action.label}
+                  onMouseEnter={() => {
+                    // Only enable hover on desktop (lg and above)
+                    if (window.matchMedia('(min-width: 1024px)').matches) {
+                      // Open sidebar on hover if it's closed
+                      if (!isOpenSideBar) {
+                        setHoverOpen(true)
+                      }
+                    }
+                  }}
+                >
+                  <ActionIcon size={20} className="shrink-0 text-gray-700" strokeWidth={1.5} />
+                  <span className="text-dark-500 ml-3 text-sm font-medium">{action.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </aside>
+    </>
   )
 }
 
