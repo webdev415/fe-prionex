@@ -5,7 +5,7 @@
  * Based on User Management page structure.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -14,6 +14,12 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { ErrorState } from '@/components/ErrorState'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { DoubleButton } from '@/components/ui/DoubleButton'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
 import { CreateSellerModal, EditSellerModal, DeleteSellerConfirmationModal } from './components'
 import { useSellers, useDeleteSeller, type Seller } from '@/features/sellers'
 
@@ -27,6 +33,7 @@ export function SellerManagementPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editSellerId, setEditSellerId] = useState<number | null>(null)
   const [deletingSeller, setDeletingSeller] = useState<Seller | null>(null)
+  const [openDropdownSellerId, setOpenDropdownSellerId] = useState<number | null>(null)
 
   // Fetch sellers from API
   const {
@@ -41,6 +48,25 @@ export function SellerManagementPage() {
   })
 
   const deleteSellerMutation = useDeleteSeller()
+
+  // Close dropdown when screen size crosses breakpoint (in either direction)
+  useEffect(() => {
+    let wasMobile = window.innerWidth < 1024 // lg breakpoint
+
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 1024
+
+      // Close dropdown if transitioning across breakpoint (mobile <-> desktop)
+      if (wasMobile !== isMobile && openDropdownSellerId !== null) {
+        setOpenDropdownSellerId(null)
+      }
+
+      wasMobile = isMobile
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [openDropdownSellerId])
 
   // Pagination
   const sellers = sellersData?.sellers || []
@@ -146,23 +172,61 @@ export function SellerManagementPage() {
       header: t('pages.sellers.tableHeaders.actions'),
       align: 'center',
       render: (seller) => (
-        <div className="flex items-center justify-center gap-4">
-          <LinkButton
-            variant="regular-black"
-            size="xs"
-            onClick={() => handleEdit(seller)}
-            leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
-          >
-            {t('pages.sellers.actions.edit')}
-          </LinkButton>
-          <LinkButton
-            variant="regular-black"
-            size="xs"
-            onClick={() => handleDelete(seller)}
-            leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
-          >
-            {t('pages.sellers.actions.delete')}
-          </LinkButton>
+        <div className="flex items-center justify-center gap-2 sm:gap-4">
+          {/* Desktop: Individual buttons */}
+          <div className="hidden items-center gap-4 lg:flex">
+            <LinkButton
+              variant="regular-black"
+              size="xs"
+              onClick={() => handleEdit(seller)}
+              leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+            >
+              {t('pages.sellers.actions.edit')}
+            </LinkButton>
+            <LinkButton
+              variant="regular-black"
+              size="xs"
+              onClick={() => handleDelete(seller)}
+              leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
+            >
+              {t('pages.sellers.actions.delete')}
+            </LinkButton>
+          </div>
+
+          {/* Mobile/Tablet: Dropdown button group */}
+          <div className="lg:hidden">
+            <DropdownMenu
+              modal={false}
+              open={openDropdownSellerId === seller.id}
+              onOpenChange={(open) => setOpenDropdownSellerId(open ? seller.id : null)}
+            >
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
+                  aria-label={t('pages.sellers.tableHeaders.actions')}
+                >
+                  <Icons.FilterVertical size={16} strokeWidth={1.5} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white">
+                <DropdownMenuItem
+                  onClick={() => handleEdit(seller)}
+                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                >
+                  <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                  <span>{t('pages.sellers.actions.edit')}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleDelete(seller)}
+                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                >
+                  <Icons.Delete size={16} strokeWidth={1.5} />
+                  <span>{t('pages.sellers.actions.delete')}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       ),
     },
@@ -171,27 +235,40 @@ export function SellerManagementPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-dark-500 text-2xl font-light">{t('pages.sellers.title')}</h1>
-          <span className="text-base font-light text-gray-500">{totalSellers}</span>
+      <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+            {t('pages.sellers.title')}
+          </h1>
+          <span className="text-sm font-light text-gray-500 sm:text-base">{totalSellers}</span>
         </div>
 
-        <DoubleButton
-          size="md"
-          icon={<Icons.Add size={20} strokeWidth={2} />}
-          iconPosition="left"
+        {/* Desktop: Full button with text, Mobile: Icon-only button */}
+        <div className="hidden sm:block">
+          <DoubleButton
+            size="md"
+            icon={<Icons.Add size={20} strokeWidth={2} />}
+            iconPosition="left"
+            onClick={() => setShowCreateModal(true)}
+          >
+            {t('pages.sellers.addNewSeller')}
+          </DoubleButton>
+        </div>
+        {/* Mobile: Icon-only button */}
+        <button
           onClick={() => setShowCreateModal(true)}
+          className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+          aria-label={t('pages.sellers.addNewSeller')}
         >
-          {t('pages.sellers.addNewSeller')}
-        </DoubleButton>
+          <Icons.Add size={20} strokeWidth={2} />
+        </button>
       </div>
 
       {/* Search Bar */}
       <div className="mb-6 flex w-full items-center gap-4">
-        {/* Search pill - styled to match screenshot */}
+        {/* Search pill - responsive width only */}
         <div className="flex items-center gap-3">
-          <div className="flex w-[600px] items-center gap-3 rounded-full border border-gray-200 bg-white pr-2 pl-4 shadow-sm">
+          <div className="flex w-[280px] items-center gap-3 rounded-full border border-gray-200 bg-white pr-2 pl-4 shadow-sm sm:w-[400px] md:w-[500px] lg:w-[600px]">
             {/* Search Input */}
             <div className="flex flex-1 items-center gap-2 py-1">
               <input
@@ -209,8 +286,9 @@ export function SellerManagementPage() {
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="flex h-6 w-6 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
                   type="button"
+                  aria-label="Clear search"
                 >
                   <Icons.Close size={14} className="text-gray-500" />
                 </button>

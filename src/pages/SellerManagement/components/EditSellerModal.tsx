@@ -158,8 +158,8 @@ export function EditSellerModal({
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={1.5} />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.PencilEdit size={18} className="text-dark-500" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.sellers.modals.edit.title')}
@@ -182,7 +182,7 @@ export function EditSellerModal({
                 </p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
                 id="seller_name"
                 label={t('pages.sellers.modals.edit.sellerName')}
@@ -242,7 +242,7 @@ export function EditSellerModal({
                 ({t('pages.sellers.modals.edit.optional')})
               </span>
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
                 id="contact_person"
                 label={t('pages.sellers.modals.edit.contactPerson')}
