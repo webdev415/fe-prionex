@@ -173,8 +173,8 @@ export function SearchBar({
           className
         )}
       >
-        {/* Search icon - shown before placeholder */}
-        <Icons.Search size={18} className="shrink-0 text-gray-400" strokeWidth={1.5} />
+        {/* Search icon - shown on mobile when search button is hidden, hidden on desktop when search button is visible */}
+        <Icons.Search size={18} className="shrink-0 text-gray-400 lg:hidden" strokeWidth={1.5} />
 
         <input
           type="text"
