@@ -19,7 +19,12 @@ import { BulkAssignClientModal } from './components/BulkAssignClientModal'
 import { ClientManagementPageSkeleton } from './components/ClientManagementPageSkeleton'
 import { Icons } from '@/lib/icons'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useClients, usePrioritySummary } from '@/features/clients/hooks/useClients'
+import {
+  useAssignClient,
+  useBulkAssignClients,
+  useClients,
+  usePrioritySummary,
+} from '@/features/clients/hooks/useClients'
 import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import type { Client as APIClient } from '@/features/clients/api/types'
@@ -258,6 +263,10 @@ export function ClientManagementPage() {
   // Fetch priority thresholds configuration
   const { data: thresholds = DEFAULT_THRESHOLDS } = usePriorityThresholds()
 
+  // Assignment mutations
+  const assignClientMutation = useAssignClient()
+  const bulkAssignClientsMutation = useBulkAssignClients()
+
   // Map API clients to display format
   const displayClients = useMemo(() => {
     return apiClients.map((client) => mapAPIClientToDisplay(client, thresholds))
@@ -406,10 +415,42 @@ export function ClientManagementPage() {
     reason: string
     notes?: string
   }) => {
-    // TODO: Implement bulk assignment API call
-    console.log('Bulk assigning clients:', Array.from(selectedClients), assignmentData)
-    // Close modal after assignment
-    setShowBulkAssignModal(false)
+    // Collect client IDs to assign
+    let clientIds: number[]
+
+    if (allClientsSelected) {
+      // All selected minus excluded - get from current page data
+      clientIds = apiClients
+        .filter((client) => !excludedClients.has(client.id))
+        .map((client) => client.id)
+    } else {
+      // Just the explicitly selected clients
+      clientIds = Array.from(selectedClients).map(Number)
+    }
+
+    if (clientIds.length === 0) return
+
+    bulkAssignClientsMutation.mutate(
+      {
+        client_ids: clientIds,
+        responsible_employee_id: assignmentData.employeeId
+          ? parseInt(assignmentData.employeeId)
+          : undefined,
+        responsible_searcher_id: assignmentData.searcherId
+          ? parseInt(assignmentData.searcherId)
+          : undefined,
+        assignment_reason: assignmentData.reason,
+      },
+      {
+        onSuccess: () => {
+          // Close modal and clear selection after successful assignment
+          setShowBulkAssignModal(false)
+          setSelectedClients(new Set())
+          setAllClientsSelected(false)
+          setExcludedClients(new Set())
+        },
+      }
+    )
   }
 
   // Get selected clients data for bulk assign modal
@@ -457,10 +498,28 @@ export function ClientManagementPage() {
     reason: string
     notes?: string
   }) => {
-    // TODO: Implement assignment API call
-    console.log('Assigning client:', assignModalClientId, assignmentData)
-    // Close modal after assignment
-    setAssignModalClientId(null)
+    if (!assignModalClientId) return
+
+    assignClientMutation.mutate(
+      {
+        clientId: assignModalClientId,
+        data: {
+          responsible_employee_id: assignmentData.employeeId
+            ? parseInt(assignmentData.employeeId)
+            : undefined,
+          responsible_searcher_id: assignmentData.searcherId
+            ? parseInt(assignmentData.searcherId)
+            : undefined,
+          assignment_reason: assignmentData.reason,
+        },
+      },
+      {
+        onSuccess: () => {
+          // Close modal after successful assignment
+          setAssignModalClientId(null)
+        },
+      }
+    )
   }
 
   const handleSelectionChange = (selectedItems: Set<number | string>) => {
