@@ -46,6 +46,7 @@ interface ExtendedSidebarItem extends SidebarItem {
 function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
   const { t, i18n } = useTranslation('common')
   const { user } = useAuth()
+  const [isOpen, setIsOpen] = useState(false)
 
   const userProjects = user?.projects || []
   const hasMultipleProjects = userProjects.length > 1
@@ -57,6 +58,25 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
     user?.firstName && user?.lastName
       ? `${user.firstName} ${user.lastName}`
       : user?.username || 'User'
+
+  // Close dropdown when screen size crosses breakpoint (in either direction)
+  useEffect(() => {
+    let wasMobile = window.innerWidth < 1024 // lg breakpoint
+
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 1024
+
+      // Close dropdown if transitioning across breakpoint (mobile <-> desktop)
+      if (wasMobile !== isMobile && isOpen) {
+        setIsOpen(false)
+      }
+
+      wasMobile = isMobile
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isOpen])
 
   const handleProjectSwitch = async (projectId: string) => {
     if (projectId === user?.active_project_id) return
@@ -81,7 +101,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
   }
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu modal={false} open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"

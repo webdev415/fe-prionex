@@ -113,7 +113,7 @@ export function ModalFooter({ children, className }: ModalFooterProps) {
   return (
     <div
       className={cn(
-        'border-light-200 flex flex-row-reverse items-stretch justify-end gap-2 border-t sm:flex-row sm:items-center sm:gap-3',
+        'border-light-200 flex flex-row items-stretch justify-end gap-2 border-t sm:flex-row sm:items-center sm:gap-3',
         'pt-3 sm:pt-4', // Responsive padding
         className
       )}
