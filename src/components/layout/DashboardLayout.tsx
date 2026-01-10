@@ -18,6 +18,18 @@ import type { Permission } from '@/constants/permissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { Icons } from '@/lib/icons'
+import { SUPPORTED_LANGUAGES, LANGUAGE_NAMES } from '@/lib/i18n'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+} from '@/components/ui/DropdownMenu'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -28,6 +40,155 @@ interface ExtendedSidebarItem extends SidebarItem {
   requiredPermission?: Permission
   requiredPermissions?: Permission[]
   mode?: 'any' | 'all'
+}
+
+// Mobile Header Menu Component - groups header actions into dropdown on mobile
+function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
+  const { t, i18n } = useTranslation('common')
+  const { user } = useAuth()
+
+  const userProjects = user?.projects || []
+  const hasMultipleProjects = userProjects.length > 1
+  const currentProject = userProjects.find((p) => p.id === user?.active_project_id)
+  const currentLanguage = i18n.language as 'en' | 'uk' | 'ru'
+
+  // Display name
+  const displayName =
+    user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user?.username || 'User'
+
+  const handleProjectSwitch = async (projectId: string) => {
+    if (projectId === user?.active_project_id) return
+    try {
+      const { authApi } = await import('@/features/auth/api/authApi')
+      const projectIdNum = parseInt(projectId, 10)
+      if (isNaN(projectIdNum)) {
+        throw new Error('Invalid project ID')
+      }
+      const response = await authApi.switchProject(projectIdNum)
+      const projectName =
+        response.data.active_project?.project_name ||
+        userProjects.find((p) => p.id === projectId)?.name ||
+        'Project'
+      toast.success(t('pages.users.messages.projectSwitched', { projectName }))
+      // Reload page to refresh user data
+      window.location.reload()
+    } catch (error) {
+      console.error('Failed to switch project:', error)
+      toast.error(t('pages.users.messages.failedToSwitchProject'))
+    }
+  }
+
+  return (
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="bg-secondary-800 flex h-10 w-10 cursor-pointer items-center justify-center rounded-md text-white transition-colors hover:opacity-90 focus:outline-none lg:hidden"
+          aria-label="Menu"
+        >
+          <Icons.User02 size={20} strokeWidth={1.5} className="text-primary-500" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56 bg-white">
+        {/* User Profile */}
+        <DropdownMenuItem disabled className="text-dark-500 text-sm">
+          <Icons.User02 size={16} className="mr-2" />
+          <span className="truncate">{displayName}</span>
+        </DropdownMenuItem>
+
+        {/* Project Selector (if multiple projects) */}
+        {hasMultipleProjects && currentProject && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="text-dark-500 text-sm">
+                <Icons.Brochure size={16} className="mr-2" />
+                <span>{currentProject.name}</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="bg-white">
+                {userProjects.map((project) => {
+                  const isActive = project.id === user?.active_project_id
+                  const projectRole = project.roles?.[0]
+
+                  return (
+                    <DropdownMenuItem
+                      key={project.id}
+                      onClick={() => void handleProjectSwitch(project.id)}
+                      disabled={isActive}
+                      className={cn(
+                        'flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors',
+                        isActive ? 'text-primary-600 font-medium' : 'text-gray-700'
+                      )}
+                    >
+                      <span className="flex-1 truncate">{project.name}</span>
+                      {projectRole && (
+                        <span className="text-xs text-gray-500">({projectRole.name})</span>
+                      )}
+                      {isActive && (
+                        <Icons.Checkmark
+                          size={16}
+                          className="text-dark-500 ml-auto"
+                          strokeWidth={2}
+                        />
+                      )}
+                    </DropdownMenuItem>
+                  )
+                })}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </>
+        )}
+
+        {/* Language Switcher */}
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger className="text-dark-500 text-sm">
+            <Icons.LanguageSquare size={16} className="mr-2" />
+            <span>{LANGUAGE_NAMES[currentLanguage] || currentLanguage}</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="bg-white">
+            {SUPPORTED_LANGUAGES.map((lang) => {
+              const isActive = i18n.language === lang
+
+              return (
+                <DropdownMenuItem
+                  key={lang}
+                  onClick={() => i18n.changeLanguage(lang)}
+                  className={cn(
+                    'flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors',
+                    isActive ? 'text-primary-600 font-medium' : 'text-gray-700'
+                  )}
+                >
+                  <span>{LANGUAGE_NAMES[lang]}</span>
+                  {isActive && (
+                    <Icons.Checkmark size={16} className="text-dark-500 ml-auto" strokeWidth={2} />
+                  )}
+                </DropdownMenuItem>
+              )
+            })}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+
+        {/* Settings */}
+        <DropdownMenuItem
+          onClick={() => {
+            toast.info(t('navigation.settings'))
+          }}
+          className="text-dark-500 text-sm"
+        >
+          <Icons.Setting07 size={16} className="mr-2" />
+          <span>{t('navigation.settings')}</span>
+        </DropdownMenuItem>
+
+        {/* Logout */}
+        <DropdownMenuItem onClick={onLogoutClick} className="text-dark-500 text-sm">
+          <Icons.Logout size={16} className="mr-2" />
+          <span>{t('actions.logout')}</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 }
 
 /**
@@ -323,57 +484,86 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     })
   }, [user?.permissions, t])
 
+  const { toggleSidebar } = useSidebarStore()
+
   return (
     <div className="bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center bg-no-repeat">
       {/* Sidebar */}
       <Sidebar items={navItems} />
 
-      {/* Main Content Area with left margin for sidebar */}
-      <div className={cn('transition-all duration-300', isOpenSideBar ? 'ml-60' : 'ml-18')}>
+      {/* Main Content Area with left margin for sidebar - no margin on mobile */}
+      <div
+        className={cn(
+          'transition-all duration-300',
+          'lg:ml-18', // Desktop: always has margin for collapsed sidebar
+          isOpenSideBar && 'lg:ml-60' // Desktop: expanded sidebar
+        )}
+      >
         {/* Fixed Header */}
         <header
           className={cn(
-            'bg-light-50 fixed top-0 right-0 z-20 flex h-[60px] items-center justify-between border-l border-white/10 px-6 shadow-sm transition-all duration-300',
-            isOpenSideBar ? 'left-60' : 'left-18'
+            'bg-light-50 fixed top-0 right-0 z-20 flex h-[60px] items-center justify-between border-l border-white/10 px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
+            'left-0 lg:left-18', // Mobile: full width, Desktop: margin for collapsed sidebar
+            isOpenSideBar && 'lg:left-60' // Desktop: expanded sidebar
           )}
         >
-          {/* Search Bar with Results */}
-          <div className="relative flex items-center gap-2" ref={searchContainerRef}>
-            <SearchBar
-              placeholder={t('search.placeholder')}
-              searchOptions={searchOptions}
-              defaultSearchType="phone"
-              onSearch={handleSearch}
-              onSearchChange={handleSearchChange}
-              isLoading={isSearching}
-            />
-            {(isSearching ||
-              searchResults.length > 0 ||
-              searchError ||
-              (searchQuery.trim() && !isSearching)) && (
-              <SearchResults
-                query={searchQuery}
-                searchType={searchType}
-                results={searchResults}
-                isLoading={isSearching}
-                error={searchError}
-                onViewAll={handleViewAllResults}
-                onResultClick={handleResultClick}
+          {/* Left side: Menu button (mobile) + Search Bar */}
+          <div className="relative flex items-center gap-2 lg:gap-3">
+            {/* Mobile menu button */}
+            <button
+              onClick={toggleSidebar}
+              className="focus:ring-primary-500 group flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:bg-gray-100 active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 lg:hidden"
+              aria-label="Toggle menu"
+            >
+              <Icons.Menu11
+                size={20}
+                className="text-gray-700 transition-transform duration-200 group-hover:scale-110"
+                strokeWidth={1.5}
               />
-            )}
+            </button>
+
+            {/* Search Bar with Results */}
+            <div className="relative flex items-center gap-2" ref={searchContainerRef}>
+              <SearchBar
+                placeholder={t('search.placeholder')}
+                searchOptions={searchOptions}
+                defaultSearchType="phone"
+                onSearch={handleSearch}
+                onSearchChange={handleSearchChange}
+                isLoading={isSearching}
+              />
+              {(isSearching ||
+                searchResults.length > 0 ||
+                searchError ||
+                (searchQuery.trim() && !isSearching)) && (
+                <SearchResults
+                  query={searchQuery}
+                  searchType={searchType}
+                  results={searchResults}
+                  isLoading={isSearching}
+                  error={searchError}
+                  onViewAll={handleViewAllResults}
+                  onResultClick={handleResultClick}
+                />
+              )}
+            </div>
           </div>
 
-          {/* Right side: Project Selector, Language Switcher and User Profile */}
-          <div className="flex items-center gap-3">
+          {/* Right side: Desktop - individual buttons, Mobile - grouped dropdown */}
+          {/* Desktop: Project Selector, Language Switcher and User Profile */}
+          <div className="hidden items-center gap-3 lg:flex">
             <MinimizedCallBubble />
             <ProjectSelector />
             <LanguageSwitcher variant="dashboard" />
             <UserProfile onLogoutClick={handleLogoutClick} />
           </div>
+
+          {/* Mobile: Tree dropdown with all actions */}
+          <MobileHeaderMenu onLogoutClick={handleLogoutClick} />
         </header>
 
         {/* Scrollable Page Content with top padding for fixed header */}
-        <main className="min-h-screen overflow-y-auto px-[28px] pt-[80px] pb-[20px]">
+        <main className="min-h-screen overflow-y-auto px-4 pt-[80px] pb-4 sm:px-6 sm:pb-6 lg:px-[28px] lg:pb-[20px]">
           {children}
         </main>
       </div>

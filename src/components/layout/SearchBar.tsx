@@ -7,13 +7,13 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Icons } from '@/lib/icons'
+import { cn } from '@/lib/utils'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/Select'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
 
 interface SearchOption {
   value: string
@@ -123,34 +123,123 @@ export function SearchBar({
     }
   }
 
+  // Get current search type label
+  const currentSearchTypeLabel = searchOptions.find((opt) => opt.value === searchType)?.label || ''
+
   return (
     <div className="relative">
       <div
-        className={`border-light-100 flex h-11 w-[448px] items-center gap-3 rounded-full border bg-white pr-2 pl-4 ${className || ''}`}
+        className={cn(
+          'border-light-100 flex h-11 items-center gap-2 rounded-full border bg-white sm:gap-3',
+          // Responsive padding: less on mobile, more on desktop
+          'pl-3 sm:pl-4',
+          // Responsive width: smaller on mobile, full width on larger screens
+          'w-[200px] sm:w-[280px] md:w-[360px] lg:w-[448px]',
+          // Responsive right padding: adjust for mobile (with filter button) and desktop (with search button)
+          'pr-2 lg:pr-2',
+          className
+        )}
       >
+        {/* Search icon - shown before placeholder */}
+        <Icons.Search size={18} className="shrink-0 text-gray-400" strokeWidth={1.5} />
+
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder={placeholder}
-          className="text-dark-500 flex-1 bg-transparent text-sm outline-none placeholder:font-light placeholder:text-gray-400"
+          className="text-dark-500 min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:font-light placeholder:text-gray-400 sm:text-sm"
         />
-        <div className="h-5 w-px bg-gray-300" />
-        <Select value={searchType} onValueChange={handleSearchTypeChange}>
-          <SelectTrigger className="text-dark-500 h-auto w-auto min-w-[120px] border-0 bg-transparent p-0 text-xs shadow-none focus:ring-0">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-white">
-            {searchOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value} className="text-dark-500 text-xs">
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+        {/* Search type selector - icon-only on mobile, full on desktop */}
+        <div className="flex shrink-0 items-center">
+          {/* Mobile: Icon-only selector - styled as a rounded-full button with primary background */}
+          <div className="lg:hidden">
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="text-dark-500 bg-primary-300 hover:bg-primary-500 active:bg-primary-600 group flex h-9 w-9 min-w-0 cursor-pointer items-center justify-center rounded-full border-0 p-0 shadow-none transition-all duration-200 hover:shadow-md focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
+                  aria-label="Search type"
+                >
+                  <Icons.Filter
+                    size={18}
+                    className="text-dark-500 shrink-0 transition-transform duration-200 group-hover:scale-110"
+                    strokeWidth={1.5}
+                  />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40 bg-white">
+                {searchOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => handleSearchTypeChange(option.value)}
+                    className={cn(
+                      'text-dark-500 flex cursor-pointer items-center gap-2 text-xs',
+                      searchType === option.value && 'bg-gray-100 font-medium'
+                    )}
+                  >
+                    {option.label}
+                    {searchType === option.value && (
+                      <Icons.Checkmark
+                        size={16}
+                        className="text-dark-500 ml-auto"
+                        strokeWidth={2}
+                      />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Desktop: Full selector with divider */}
+          <div className="hidden items-center lg:flex">
+            <div className="mx-2 h-5 w-px bg-gray-300" />
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="text-dark-500 group flex h-auto w-auto min-w-[120px] cursor-pointer items-center justify-between gap-2 rounded-md border-0 bg-transparent px-2 py-1 text-xs shadow-none transition-all duration-200 hover:bg-gray-100 focus:outline-none active:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
+                  aria-label="Search type"
+                >
+                  <span className="transition-colors duration-200">{currentSearchTypeLabel}</span>
+                  <Icons.ArrowDown
+                    size={14}
+                    className="text-gray-500 opacity-50 transition-all duration-200 group-hover:translate-y-0.5 group-hover:opacity-100"
+                    strokeWidth={1.5}
+                  />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40 bg-white">
+                {searchOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => handleSearchTypeChange(option.value)}
+                    className={cn(
+                      'text-dark-500 flex cursor-pointer items-center gap-2 text-xs',
+                      searchType === option.value && 'bg-gray-100 font-medium'
+                    )}
+                  >
+                    {option.label}
+                    {searchType === option.value && (
+                      <Icons.Checkmark
+                        size={16}
+                        className="text-dark-500 ml-auto"
+                        strokeWidth={2}
+                      />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Search button - hidden on mobile, visible on desktop */}
         <button
-          className="bg-primary-300 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-50"
+          className="bg-primary-300 hidden h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-50 lg:flex"
           aria-label="Search"
           onClick={handleSearch}
           disabled={isLoading}

@@ -125,6 +125,8 @@ import {
   PrinterIcon,
   CheckmarkBadge02Icon,
   HeadsetConnectedIcon,
+  LanguageSquareIcon,
+  Settings05Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -304,6 +306,8 @@ export const Icons = {
   HeadsetConnected: (props: Omit<IconProps, 'icon'>) => (
     <Icon icon={HeadsetConnectedIcon} {...props} />
   ),
+  LanguageSquare: (props: Omit<IconProps, 'icon'>) => <Icon icon={LanguageSquareIcon} {...props} />,
+  Settings05: (props: Omit<IconProps, 'icon'>) => <Icon icon={Settings05Icon} {...props} />,
 }
 
 /**
@@ -420,6 +424,8 @@ export {
   PrinterIcon,
   CheckmarkBadge02Icon,
   HeadsetConnectedIcon,
+  LanguageSquareIcon,
+  Settings05Icon,
 }
 
 /**
