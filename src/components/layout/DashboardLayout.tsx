@@ -20,6 +20,9 @@ import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 import { SUPPORTED_LANGUAGES, LANGUAGE_NAMES } from '@/lib/i18n'
+import { useCallStore } from '@/stores/callStore'
+import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
+import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +33,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from '@/components/ui/DropdownMenu'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -47,6 +51,8 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
   const { t, i18n } = useTranslation('common')
   const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
+  const { minimizedCall, clearMinimizedCall, setOpenCallModal } = useCallStore()
+  const [isRestored, setIsRestored] = useState(false)
 
   const userProjects = user?.projects || []
   const hasMultipleProjects = userProjects.length > 1
@@ -100,6 +106,172 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
     }
   }
 
+  const handleRestoreCall = () => {
+    setIsRestored(true)
+    setIsOpen(false) // Close dropdown when restoring call
+  }
+
+  const handleCloseCall = () => {
+    setIsRestored(false)
+    setOpenCallModal(null)
+    clearMinimizedCall()
+  }
+
+  const handleMinimizeCall = () => {
+    setIsRestored(false)
+  }
+
+  // Determine if call is active (dialing or connected) for styling
+  const isActiveCall =
+    minimizedCall?.type === 'call-dialog' &&
+    (minimizedCall.callState === 'dialing' || minimizedCall.callState === 'connected')
+
+  // Format time helper
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+  }
+
+  // Get status color for call dialog
+  const getStatusColor = () => {
+    if (minimizedCall?.type === 'call-dialog') {
+      if (minimizedCall.callState === 'connected') return 'bg-success-500'
+      if (minimizedCall.callState === 'dialing') return 'bg-primary-500'
+      if (minimizedCall.callState === 'ended') return 'bg-gray-500'
+    }
+    return 'bg-primary-500'
+  }
+
+  // Get status text
+  const getStatusText = () => {
+    if (minimizedCall?.type === 'call-dialog') {
+      if (minimizedCall.callState === 'dialing') return t('pages.clients.modals.callDialog.calling')
+      if (minimizedCall.callState === 'connected')
+        return t('pages.clients.modals.callDialog.connected')
+      if (minimizedCall.callState === 'ended') return t('pages.clients.modals.callDialog.callEnded')
+      return t('pages.clients.modals.callDialog.callClient')
+    }
+    return t('pages.clients.modals.callRecording.title')
+  }
+
+  // Get tooltip content (same as original bubble button)
+  const getTooltipContent = () => {
+    if (!minimizedCall) return null
+
+    if (minimizedCall.type === 'call-dialog') {
+      return (
+        <div className="flex min-w-[280px] flex-col gap-3">
+          {/* Header with icon and title */}
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${getStatusColor()}`}
+            >
+              <Icons.Headset size={20} className="text-white" strokeWidth={1.5} />
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <div className="truncate text-sm font-semibold text-white">
+                {minimizedCall.clientName}
+              </div>
+              <div className="text-xs text-gray-300">{minimizedCall.phoneNumber}</div>
+            </div>
+          </div>
+
+          {/* Status badge */}
+          <div className="flex items-center gap-2">
+            <div className={`h-2 w-2 rounded-full ${getStatusColor()}`} />
+            <span className="text-xs font-medium text-white">{getStatusText()}</span>
+          </div>
+
+          {/* Call details */}
+          <div className="flex flex-col gap-2 border-t border-gray-700 pt-2">
+            {minimizedCall.callType && (
+              <div className="flex items-center gap-2">
+                <Icons.Phone size={14} className="text-gray-400" strokeWidth={1.5} />
+                <span className="text-xs text-gray-300 capitalize">
+                  {minimizedCall.callType.replace('-', ' ')}
+                </span>
+              </div>
+            )}
+            {minimizedCall.elapsedTime !== undefined && minimizedCall.elapsedTime > 0 && (
+              <div className="flex items-center gap-2">
+                <Icons.StopWatch size={14} className="text-gray-400" strokeWidth={1.5} />
+                <span className="text-xs text-gray-300">
+                  {t('pages.clients.modals.callDialog.talkTime')}:{' '}
+                  {formatTime(minimizedCall.elapsedTime)}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    } else {
+      // call-recording
+      return (
+        <div className="flex min-w-[280px] flex-col gap-3">
+          {/* Header with icon and title */}
+          <div className="flex items-center gap-3">
+            <div className="bg-primary-500 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+              <Icons.Voice size={20} className="text-white" strokeWidth={1.5} />
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <div className="truncate text-sm font-semibold text-white">
+                {minimizedCall.callData?.clientName || minimizedCall.clientName}
+              </div>
+              <div className="text-xs text-gray-300">
+                {minimizedCall.callData?.phone || minimizedCall.phoneNumber}
+              </div>
+            </div>
+          </div>
+
+          {/* Status badge */}
+          <div className="flex items-center gap-2">
+            <div className="bg-primary-500 h-2 w-2 rounded-full" />
+            <span className="text-xs font-medium text-white">
+              {t('pages.clients.modals.callRecording.title')}
+            </span>
+          </div>
+
+          {/* Call details */}
+          <div className="flex flex-col gap-2 border-t border-gray-700 pt-2">
+            {minimizedCall.callData?.type && (
+              <div className="flex items-center gap-2">
+                <Icons.Info size={14} className="text-gray-400" strokeWidth={1.5} />
+                <span className="text-xs text-gray-300">{minimizedCall.callData.type}</span>
+              </div>
+            )}
+            {minimizedCall.callData?.operator && (
+              <div className="flex items-center gap-2">
+                <Icons.User size={14} className="text-gray-400" strokeWidth={1.5} />
+                <span className="text-xs text-gray-300">
+                  {t('pages.clients.modals.callRecording.operator')}:{' '}
+                  {minimizedCall.callData.operator}
+                </span>
+              </div>
+            )}
+            {minimizedCall.callData?.duration && (
+              <div className="flex items-center gap-2">
+                <Icons.StopWatch size={14} className="text-gray-400" strokeWidth={1.5} />
+                <span className="text-xs text-gray-300">
+                  {t('pages.clients.modals.callRecording.duration')}:{' '}
+                  {minimizedCall.callData.duration}
+                </span>
+              </div>
+            )}
+            {minimizedCall.callData?.date && minimizedCall.callData?.time && (
+              <div className="flex items-center gap-2">
+                <Icons.Calendar size={14} className="text-gray-400" strokeWidth={1.5} />
+                <span className="text-xs text-gray-300">
+                  {minimizedCall.callData.date} {minimizedCall.callData.time}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    }
+  }
+
   return (
     <DropdownMenu modal={false} open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
@@ -117,6 +289,57 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           <Icons.User02 size={16} className="mr-2" />
           <span className="truncate">{displayName}</span>
         </DropdownMenuItem>
+
+        {/* Minimized Call Bubble (if call is minimized) */}
+        {minimizedCall && (
+          <>
+            <DropdownMenuSeparator />
+            <TooltipProvider>
+              <Tooltip delayDuration={200}>
+                <TooltipTrigger asChild>
+                  <DropdownMenuItem
+                    onClick={handleRestoreCall}
+                    className={cn(
+                      'bg-secondary-800 relative flex cursor-pointer items-center rounded-md px-3 py-2 text-sm transition-all duration-200',
+                      'hover:bg-secondary-800 hover:scale-101 hover:opacity-90',
+                      'focus:bg-secondary-800 focus:text-white',
+                      'data-[highlighted]:bg-secondary-800 data-[highlighted]:text-white',
+                      isActiveCall ? 'animate-pulse' : 'animate-[pulse_3s_ease-in-out_infinite]'
+                    )}
+                  >
+                    <Icons.HeadsetConnected
+                      size={16}
+                      className={cn(
+                        'mr-2 text-white transition-transform duration-300',
+                        isActiveCall ? 'animate-pulse' : ''
+                      )}
+                      strokeWidth={1.5}
+                    />
+                    <span className="flex-1 truncate text-white">
+                      {minimizedCall.type === 'call-dialog'
+                        ? t('pages.clients.modals.callDialog.callClient')
+                        : t('pages.clients.modals.callRecording.title')}
+                    </span>
+                    {/* Active call indicator dot */}
+                    {isActiveCall && (
+                      <>
+                        <span className="bg-success-500 border-secondary-800 absolute -top-0.5 -right-0.5 h-2.5 w-2.5 animate-ping rounded-full border-2" />
+                        <span className="bg-success-500 border-secondary-800 absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2" />
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="right"
+                  sideOffset={8}
+                  className="max-w-sm border border-gray-700 bg-gray-900 p-4 shadow-xl"
+                >
+                  {getTooltipContent()}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </>
+        )}
 
         {/* Project Selector (if multiple projects) */}
         {hasMultipleProjects && currentProject && (
@@ -207,6 +430,27 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           <span>{t('actions.logout')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
+
+      {/* Restore call modals */}
+      {isRestored && minimizedCall?.type === 'call-dialog' && (
+        <CallDialogModal
+          open={isRestored}
+          onClose={handleCloseCall}
+          onMinimize={handleMinimizeCall}
+          clientName={minimizedCall.clientName}
+          phoneNumber={minimizedCall.phoneNumber}
+          initialState={minimizedCall.callState || 'initial'}
+        />
+      )}
+
+      {isRestored && minimizedCall?.type === 'call-recording' && minimizedCall.callData && (
+        <CallRecordingModal
+          open={isRestored}
+          onClose={handleCloseCall}
+          onMinimize={handleMinimizeCall}
+          callData={minimizedCall.callData}
+        />
+      )}
     </DropdownMenu>
   )
 }
