@@ -7,6 +7,9 @@
 
 import api from '@/lib/api'
 import type {
+  AssignClientRequest,
+  BulkAssignClientRequest,
+  BulkAssignmentResponse,
   Client,
   ClientDetail,
   CreateClientRequest,
@@ -117,6 +120,29 @@ export async function getPrioritySummary(): Promise<PrioritySummary> {
 }
 
 /**
+ * Assign a client to an employee and/or searcher
+ * Requires Admin or Supervisor role
+ */
+export async function assignClient(
+  clientId: number,
+  assignmentData: AssignClientRequest
+): Promise<Client> {
+  const response = await api.post<Client>(`${BASE_URL}/${clientId}/assign`, assignmentData)
+  return response.data
+}
+
+/**
+ * Bulk assign multiple clients to an employee and/or searcher
+ * Requires Admin or Supervisor role
+ */
+export async function bulkAssignClients(
+  bulkData: BulkAssignClientRequest
+): Promise<BulkAssignmentResponse> {
+  const response = await api.post<BulkAssignmentResponse>(`${BASE_URL}/bulk/assign`, bulkData)
+  return response.data
+}
+
+/**
  * Exported API object for easier importing
  * Consistent with other service APIs (usersApi, rolesApi, projectsApi, etc.)
  */
@@ -130,4 +156,6 @@ export const clientApi = {
   setManualPriority,
   getClientCount,
   getPrioritySummary,
+  assignClient,
+  bulkAssignClients,
 }

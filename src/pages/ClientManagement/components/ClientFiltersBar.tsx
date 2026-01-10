@@ -19,6 +19,7 @@ import {
 import { Icons } from '@/lib/icons'
 import { PortfolioDropdown } from './PortfolioDropdown'
 import { useSellers } from '@/features/sellers/hooks/useSellers'
+import { useUsers } from '@/features/users/hooks/useUsers'
 import type { ClientFilters } from '../ClientManagementPage'
 
 // Debounced number input component to avoid re-rendering on every keystroke
@@ -105,6 +106,21 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     if (!sellersResponse?.sellers) return []
     return sellersResponse.sellers.map((seller) => `${seller.seller_name} (${seller.id})`)
   }, [sellersResponse])
+
+  // Fetch active users for employee and searcher dropdowns
+  const { data: usersResponse } = useUsers({
+    status: 'active',
+    page_size: 100,
+  })
+
+  // Map users to dropdown options (full name format)
+  const userOptions = useMemo(() => {
+    if (!usersResponse?.users) return []
+    return usersResponse.users.map((user) => ({
+      id: user.id.toString(),
+      name: [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' '),
+    }))
+  }, [usersResponse])
 
   const handleDateChange = (field: 'dateOfSaleFrom' | 'dateOfSaleTo', date: Date | null) => {
     onFilterChange({
@@ -380,7 +396,17 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     <SelectItem value="none">
                       {t('pages.clients.filters.selectEmployee')}
                     </SelectItem>
-                    {/* TODO: Add actual employee list */}
+                    {userOptions.length === 0 ? (
+                      <div className="px-2 py-6 text-center text-sm text-gray-500">
+                        {t('pages.clients.filters.noUsersAvailable')}
+                      </div>
+                    ) : (
+                      userOptions.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -408,7 +434,17 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     <SelectItem value="none">
                       {t('pages.clients.filters.selectSearcher')}
                     </SelectItem>
-                    {/* TODO: Add actual searcher list */}
+                    {userOptions.length === 0 ? (
+                      <div className="px-2 py-6 text-center text-sm text-gray-500">
+                        {t('pages.clients.filters.noUsersAvailable')}
+                      </div>
+                    ) : (
+                      userOptions.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>

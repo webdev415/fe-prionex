@@ -8,6 +8,8 @@ import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
 import { clientApi } from '../api/clientApi'
 import type {
+  AssignClientRequest,
+  BulkAssignClientRequest,
   CreateClientRequest,
   GetClientsParams,
   ManualPriorityRequest,
@@ -180,5 +182,57 @@ export function usePrioritySummary() {
     staleTime: 30000, // 30 seconds
     refetchInterval: 60000, // Refetch every 60 seconds
     enabled: true,
+  })
+}
+
+/**
+ * Assign a client to an employee and/or searcher
+ * Requires Admin or Supervisor role
+ */
+export function useAssignClient() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, data }: { clientId: number; data: AssignClientRequest }) =>
+      clientApi.assignClient(clientId, data),
+    onSuccess: (_, variables) => {
+      // Invalidate specific client and lists to show updated assignments
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      toast.success('Client assigned successfully')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to assign client'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Bulk assign multiple clients to an employee and/or searcher
+ * Requires Admin or Supervisor role
+ */
+export function useBulkAssignClients() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: BulkAssignClientRequest) => clientApi.bulkAssignClients(data),
+    onSuccess: (result) => {
+      // Invalidate clients list to show updated assignments
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+
+      // Show appropriate success message
+      if (result.failed_count === 0) {
+        toast.success(`Successfully assigned ${result.assigned_count} clients`)
+      } else {
+        toast.warning(
+          `Assigned ${result.assigned_count} clients, ${result.failed_count} failed. Check details.`
+        )
+      }
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to bulk assign clients'
+      toast.error(message)
+    },
   })
 }
