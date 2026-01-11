@@ -82,6 +82,7 @@ export function TagFormModal({
   })
 
   // Watch color value for preview
+  // eslint-disable-next-line react-hooks/incompatible-library
   const selectedColor = watch('color')
 
   // Reset form when modal opens/closes or tag changes

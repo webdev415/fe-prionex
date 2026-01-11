@@ -13,7 +13,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useSidebarStore } from '@/stores/sidebarStore'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 export interface SidebarSubItem {
@@ -109,63 +109,66 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
 
   // Derive effective submenu index - close when sidebar is not visible
   const effectiveSubmenuIndex = isSidebarVisible ? openSubmenuIndex : null
-  const allItems = [...items, ...bottomItems]
   const visibleSubmenuItem = useMemo(() => {
     if (effectiveSubmenuIndex == null) return null
+    const allItems = [...items, ...bottomItems]
     return allItems[effectiveSubmenuIndex] ?? null
-  }, [allItems, effectiveSubmenuIndex])
+  }, [items, bottomItems, effectiveSubmenuIndex])
 
   const shouldShowSubmenu =
     isSidebarVisible &&
     effectiveSubmenuIndex != null &&
     (visibleSubmenuItem?.subItems?.length ?? 0) > 0
 
-  const updateSubmenuPosition = (index: number | null) => {
-    if (index == null) {
-      setSubmenuPosition(null)
-      return
-    }
-    const el = anchorRefs.current[index]
-    if (!el) {
-      setSubmenuPosition(null)
-      return
-    }
-    const rect = el.getBoundingClientRect()
-    const menuWidth = 220
-    const gutter = 8
-
-    // Calculate submenu height estimate (approximate based on number of items)
-    const allItems = [...items, ...bottomItems]
-    const item = allItems[index]
-    const submenuItemCount = item?.subItems?.length || 0
-    const submenuHeight = Math.min(submenuItemCount * 40 + 16, 400) // ~40px per item + padding, max 400px
-
-    // Horizontal positioning
-    let left = rect.right + gutter
-    if (left + menuWidth + gutter > window.innerWidth) {
-      left = Math.max(gutter, rect.left - menuWidth - gutter)
-    }
-
-    // Vertical positioning - check if submenu would overflow bottom
-    let top = rect.top
-    const spaceBelow = window.innerHeight - rect.top
-    const spaceAbove = rect.bottom
-
-    // If not enough space below and more space above, align to bottom
-    if (spaceBelow < submenuHeight && spaceAbove > spaceBelow) {
-      // Bottom align - submenu grows upward from the bottom of the nav item
-      top = Math.max(gutter, rect.bottom - submenuHeight)
-    } else {
-      // Top align (default) - submenu grows downward from the top of the nav item
-      top = Math.max(gutter, rect.top)
-      // Ensure it doesn't overflow the bottom
-      if (top + submenuHeight > window.innerHeight - gutter) {
-        top = Math.max(gutter, window.innerHeight - submenuHeight - gutter)
+  const updateSubmenuPosition = useCallback(
+    (index: number | null) => {
+      if (index == null) {
+        setSubmenuPosition(null)
+        return
       }
-    }
+      const el = anchorRefs.current[index]
+      if (!el) {
+        setSubmenuPosition(null)
+        return
+      }
+      const rect = el.getBoundingClientRect()
+      const menuWidth = 220
+      const gutter = 8
 
-    setSubmenuPosition({ top, left })
-  }
+      // Calculate submenu height estimate (approximate based on number of items)
+      const allItems = [...items, ...bottomItems]
+      const item = allItems[index]
+      const submenuItemCount = item?.subItems?.length || 0
+      const submenuHeight = Math.min(submenuItemCount * 40 + 16, 400) // ~40px per item + padding, max 400px
+
+      // Horizontal positioning
+      let left = rect.right + gutter
+      if (left + menuWidth + gutter > window.innerWidth) {
+        left = Math.max(gutter, rect.left - menuWidth - gutter)
+      }
+
+      // Vertical positioning - check if submenu would overflow bottom
+      let top = rect.top
+      const spaceBelow = window.innerHeight - rect.top
+      const spaceAbove = rect.bottom
+
+      // If not enough space below and more space above, align to bottom
+      if (spaceBelow < submenuHeight && spaceAbove > spaceBelow) {
+        // Bottom align - submenu grows upward from the bottom of the nav item
+        top = Math.max(gutter, rect.bottom - submenuHeight)
+      } else {
+        // Top align (default) - submenu grows downward from the top of the nav item
+        top = Math.max(gutter, rect.top)
+        // Ensure it doesn't overflow the bottom
+        if (top + submenuHeight > window.innerHeight - gutter) {
+          top = Math.max(gutter, window.innerHeight - submenuHeight - gutter)
+        }
+      }
+
+      setSubmenuPosition({ top, left })
+    },
+    [items, bottomItems]
+  )
 
   useEffect(() => {
     // Update position when sidebar is visible and submenu is open
@@ -187,13 +190,13 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
         })
       }
     }
-  }, [isSidebarVisible, effectiveSubmenuIndex, openSubmenuIndex])
+  }, [isSidebarVisible, effectiveSubmenuIndex, openSubmenuIndex, updateSubmenuPosition])
 
   useEffect(() => {
     const handleResize = () => updateSubmenuPosition(effectiveSubmenuIndex)
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
-  }, [effectiveSubmenuIndex])
+  }, [effectiveSubmenuIndex, updateSubmenuPosition])
 
   useEffect(() => {
     // Close submenu when clicking outside (works for both pinned-open and hover-open sidebar)

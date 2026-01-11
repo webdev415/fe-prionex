@@ -68,6 +68,9 @@ export interface Client {
   responsible_searcher_id?: number | null
   assigned_at?: string | null
   assigned_by?: number | null
+
+  // Tags (Sprint 2.5 - Phase 2.3)
+  tags?: Array<{ id: number; name: string; color: string; description?: string | null }>
 }
 
 export interface ClientDetail extends Client {
