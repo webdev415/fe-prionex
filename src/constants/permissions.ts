@@ -80,6 +80,18 @@ export const PERMISSIONS = {
   PROJECTS: {
     MANAGE: 'manage_projects',
   },
+
+  /**
+   * Tags Category (4 permissions)
+   * Controls access to tag management
+   * Note: Tags are admin-only
+   */
+  TAGS: {
+    VIEW: 'view_tags',
+    CREATE: 'create_tags',
+    EDIT: 'edit_tags',
+    DELETE: 'delete_tags',
+  },
 } as const
 
 /**
@@ -125,6 +137,7 @@ export const PERMISSION_CATEGORIES = {
   USERS: 'Users',
   SYSTEM: 'System',
   PROJECTS: 'Projects',
+  TAGS: 'Tags',
 } as const
 
 /**
@@ -166,4 +179,10 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
 
   // Projects
   manage_projects: 'Create, update, archive and restore projects',
+
+  // Tags
+  view_tags: 'View tags',
+  create_tags: 'Create new tags',
+  edit_tags: 'Edit existing tags',
+  delete_tags: 'Delete tags',
 }

@@ -16,8 +16,16 @@ import { PriorityBadge } from './components/PriorityBadge'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
+import { TagSelectorModal } from './components/TagSelectorModal'
+import { BulkTagModal } from './components/BulkTagModal'
 import { ClientManagementPageSkeleton } from './components/ClientManagementPageSkeleton'
 import { Icons } from '@/lib/icons'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   useAssignClient,
@@ -113,6 +121,9 @@ export interface ClientFilters {
   responsibleEmployee?: string
   responsibleSearcher?: string
   unassignedOnly?: boolean
+
+  // Tags Filter
+  tagIds?: number[]
 }
 
 export function ClientManagementPage() {
@@ -136,6 +147,13 @@ export function ClientManagementPage() {
   const [excludedClients, setExcludedClients] = useState<Set<number>>(new Set()) // Track excluded items when all are selected
   const [assignModalClientId, setAssignModalClientId] = useState<number | null>(null)
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false)
+  const [showBulkTagModal, setShowBulkTagModal] = useState(false)
+  const [bulkTagAction, setBulkTagAction] = useState<'add' | 'remove'>('add')
+  const [tagModalOpen, setTagModalOpen] = useState(false)
+  const [selectedClientForTags, setSelectedClientForTags] = useState<{
+    id: number
+    name: string
+  } | null>(null)
   const prevSearchQueryRef = useRef(searchQuery)
   const prevFiltersRef = useRef(filters)
   const prevRowsPerPageRef = useRef(rowsPerPage)
@@ -246,6 +264,11 @@ export function ClientManagementPage() {
 
     if (debouncedFilters.status && debouncedFilters.status.length > 0) {
       params.status = debouncedFilters.status.join(',')
+    }
+
+    // FILTER 9: Tags
+    if (debouncedFilters.tagIds && debouncedFilters.tagIds.length > 0) {
+      params.tag_ids = debouncedFilters.tagIds.join(',')
     }
 
     return params
@@ -408,6 +431,16 @@ export function ClientManagementPage() {
     setShowBulkAssignModal(true)
   }
 
+  const handleBulkAddTags = () => {
+    setBulkTagAction('add')
+    setShowBulkTagModal(true)
+  }
+
+  const handleBulkRemoveTags = () => {
+    setBulkTagAction('remove')
+    setShowBulkTagModal(true)
+  }
+
   const handleBulkAssignSubmit = (assignmentData: {
     employeeId?: string
     searcherId?: string
@@ -490,6 +523,12 @@ export function ClientManagementPage() {
   // Individual row assign handler
   const handleAssign = (clientId: number) => {
     setAssignModalClientId(clientId)
+  }
+
+  // Tag management handler
+  const handleManageTags = (clientId: number, clientName: string) => {
+    setSelectedClientForTags({ id: clientId, name: clientName })
+    setTagModalOpen(true)
   }
 
   const handleAssignSubmit = (assignmentData: {
@@ -734,16 +773,31 @@ export function ClientManagementPage() {
         // Disable assign button when bulk actions are active (items are selected)
         const isBulkActionActive = selectedClients.size > 0 || allClientsSelected
         return (
-          <LinkButton
-            leftIcon={<Icons.PencilEdit size={16} strokeWidth={2} />}
-            onClick={() => handleAssign(client.id)}
-            variant="regular-black"
-            size="xs"
-            className="text-xs"
-            disabled={isBulkActionActive}
+          <div
+            className="flex items-center justify-center gap-2"
+            data-testid={`client-actions-${client.id}`}
           >
-            {t('pages.clients.assign')}
-          </LinkButton>
+            <LinkButton
+              leftIcon={<Icons.PencilEdit size={16} strokeWidth={2} />}
+              onClick={() => handleAssign(client.id)}
+              variant="regular-black"
+              size="xs"
+              className="text-xs"
+              disabled={isBulkActionActive}
+            >
+              {t('pages.clients.assign')}
+            </LinkButton>
+            <Button
+              leftIcon={<Icons.Contact size={16} />}
+              onClick={() => handleManageTags(client.id, client.fullName)}
+              variant="ghost"
+              size="icon-xs"
+              disabled={isBulkActionActive}
+              title={t('pages.clients.manageTags')}
+              data-testid={`tag-button-${client.id}`}
+              iconOnly
+            />
+          </div>
         )
       },
     },
@@ -843,15 +897,32 @@ export function ClientManagementPage() {
           excludedItemsCount={excludedClients.size}
           excludedItems={excludedClients}
           headerActions={
-            <Button
-              onClick={handleBulkAssign}
-              variant="primary"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Icons.UserCheck01 size={16} strokeWidth={2} />
-              {t('pages.clients.bulkAssign')}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="primary" size="sm" className="flex items-center gap-2">
+                  <Icons.Settings size={16} strokeWidth={2} />
+                  {t('pages.clients.bulkActions')}
+                  <Icons.ArrowDown size={16} strokeWidth={2} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleBulkAssign} className="flex items-center gap-2">
+                  <Icons.UserCheck01 size={16} strokeWidth={2} />
+                  {t('pages.clients.bulkActions.assignEmployee')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleBulkAddTags} className="flex items-center gap-2">
+                  <Icons.PlusSignCircle size={16} strokeWidth={2} />
+                  {t('pages.clients.bulkActions.addTags')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleBulkRemoveTags}
+                  className="flex items-center gap-2"
+                >
+                  <Icons.Remove02 size={16} strokeWidth={2} />
+                  {t('pages.clients.bulkActions.removeTags')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           }
         />
       )}
@@ -886,6 +957,35 @@ export function ClientManagementPage() {
         totalSelectedCount={totalSelectedCount}
         onClose={() => setShowBulkAssignModal(false)}
         onAssign={handleBulkAssignSubmit}
+      />
+
+      {/* Tag Selector Modal */}
+      {selectedClientForTags && (
+        <TagSelectorModal
+          open={tagModalOpen}
+          clientId={selectedClientForTags.id}
+          clientName={selectedClientForTags.name}
+          projectId={1}
+          onClose={() => {
+            setTagModalOpen(false)
+            setSelectedClientForTags(null)
+          }}
+        />
+      )}
+
+      {/* Bulk Tag Modal */}
+      <BulkTagModal
+        open={showBulkTagModal}
+        clientIds={
+          allClientsSelected
+            ? apiClients
+                .filter((client) => !excludedClients.has(client.id))
+                .map((client) => client.id)
+            : Array.from(selectedClients).map(Number)
+        }
+        clientCount={totalSelectedCount}
+        action={bulkTagAction}
+        onClose={() => setShowBulkTagModal(false)}
       />
     </div>
   )

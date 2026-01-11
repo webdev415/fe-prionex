@@ -3,7 +3,7 @@
  *
  * Full page view for displaying detailed client information.
  */
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { AddNoteModal } from './components/AddNoteModal'
 import { PriorityBadge } from './components/PriorityBadge'
+import { TagBadge } from '@/components/ui/TagBadge'
 import type { Priority } from './types'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { CallRecordingModal } from './components/CallRecordingModal'
@@ -24,6 +25,7 @@ import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
 import { useSMSHistory } from '@/features/sms'
 import { useCallStore } from '@/stores/callStore'
+import { useClientTags } from '@/features/tags/hooks/useTags'
 
 // Helper function to create mock client detail
 const createMockClientDetail = (
@@ -846,6 +848,9 @@ export function ClientDetailPage() {
   // Fetch SMS history from API
   const { data: smsHistoryData } = useSMSHistory(clientId, undefined)
 
+  // Fetch client tags from API
+  const { data: clientTags } = useClientTags(clientId)
+
   // Use mock data as fallback for missing fields until backend is fully integrated
   const client = useMemo(() => {
     if (!apiClient) return mockClientsDetail[0]
@@ -917,7 +922,7 @@ export function ClientDetailPage() {
     }
   }, [apiClient, smsHistoryData])
 
-  const [tags, setTags] = useState<string[]>(client?.tags || [])
+  // Tags are now fetched from useClientTags hook instead of local state
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
   const [isCallRecordingModalOpen, setIsCallRecordingModalOpen] = useState(false)
@@ -953,14 +958,6 @@ export function ClientDetailPage() {
   >('payments')
   const [activeOperatorTab, setActiveOperatorTab] = useState<'operators' | 'searchers'>('operators')
   const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms'>('all')
-
-  // Update tags when client changes
-  useEffect(() => {
-    if (client) {
-      setTags(client.tags)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client.id])
 
   // Show loading skeleton
   if (isLoading) {
@@ -1010,10 +1007,6 @@ export function ClientDetailPage() {
     })
       .format(amount)
       .replace(/,/g, ' ')
-  }
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove))
   }
 
   const loanColumns: Column<(typeof client.loans)[0]>[] = [
@@ -1370,28 +1363,17 @@ export function ClientDetailPage() {
         <div className="flex min-h-[44px] w-[428px] flex-col items-start justify-center gap-0 rounded-lg bg-white/50 p-0">
           {/* Credit Details (top part of card) */}
           <div className="flex flex-col items-start gap-3 self-stretch px-6 py-5">
-            <div className="flex items-center gap-2 self-stretch">
-              {tags.map((tag) => {
-                return (
-                  <span
-                    key={tag}
-                    className="flex items-center gap-2 rounded-[16px] bg-white px-3 py-2"
-                  >
-                    <span className="text-dark-500 text-center font-sans text-sm leading-[142.857%] font-medium tracking-[0.14px]">
-                      {tag}
-                    </span>
-                    <button
-                      onClick={() => handleRemoveTag(tag)}
-                      className="text-secondary-800 bg-white"
-                    >
-                      <Icons.Close size={14} />
-                    </button>
-                  </span>
-                )
-              })}
-              <button className="bg-primary-300 flex flex-col items-start gap-2.5 rounded-full p-1.5">
-                <Icons.Add size={16} className="text-dark-500 m-[2.667px]" />
-              </button>
+            <div className="flex flex-col gap-2 self-stretch">
+              <div className="flex flex-wrap items-center gap-2 self-stretch">
+                {clientTags && clientTags.length > 0 ? (
+                  clientTags.map((tag) => (
+                    <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
+                  ))
+                ) : (
+                  <span className="text-sm text-gray-500">No tags assigned</span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">Tags can be managed from the client list page</p>
             </div>
             <div className="flex flex-col gap-1 self-stretch">
               <div className="flex min-h-8 items-center self-stretch p-0">

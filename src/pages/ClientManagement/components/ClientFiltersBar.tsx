@@ -18,8 +18,10 @@ import {
 } from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
 import { PortfolioDropdown } from './PortfolioDropdown'
+import { TagsDropdown } from './TagsDropdown'
 import { useSellers } from '@/features/sellers/hooks/useSellers'
 import { useUsers } from '@/features/users/hooks/useUsers'
+import { useTags } from '@/features/tags/hooks/useTags'
 import type { ClientFilters } from '../ClientManagementPage'
 
 // Debounced number input component to avoid re-rendering on every keystroke
@@ -92,12 +94,17 @@ const statusOptions = ['new', 'active', 'closed']
 export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarProps) {
   const { t } = useTranslation('common')
   const [portfolioDropdownOpen, setPortfolioDropdownOpen] = useState(false)
+  const [tagsDropdownOpen, setTagsDropdownOpen] = useState(false)
 
   // Fetch sellers from API (replaces mock portfolio data)
   const { data: sellersResponse } = useSellers({
     is_active: true,
     limit: 1000,
   })
+
+  // Fetch tags from API
+  const projectId = 1 // TODO: Get from auth context
+  const { data: tagsData } = useTags(projectId)
 
   // Map sellers to portfolio options
   // For now, using "Seller Name (ID)" format for clarity
@@ -136,6 +143,13 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     })
   }
 
+  const handleTagsChange = (tagIds: number[]) => {
+    onFilterChange({
+      ...filters,
+      tagIds: tagIds,
+    })
+  }
+
   const handleStatusChange = (status: string, checked: boolean) => {
     const currentStatuses = filters.status || []
     onFilterChange({
@@ -147,6 +161,12 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   const displayedPortfolios = portfolioOptions.slice(0, 3)
   const hiddenPortfoliosCount = portfolioOptions.length - 3
   const selectedPortfolios = filters.portfolio || []
+
+  // Tag display logic (similar to portfolio)
+  const tags = tagsData || []
+  const displayedTags = tags.slice(0, 3)
+  const hiddenTagsCount = tags.length - 3
+  const selectedTagIds = filters.tagIds || []
 
   return (
     <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-6">
@@ -467,6 +487,69 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   {t('pages.clients.filters.unassignedOnly')}
                 </span>
               </label>
+            </div>
+            <div className="flex min-w-[220px] flex-1" />
+          </div>
+          <div className="flex items-center gap-10 self-stretch">
+            {/* Tags Filter */}
+            <div className="flex min-w-[220px] flex-1 items-center gap-3">
+              <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                {t('pages.clients.filters.tags')}
+              </label>
+              <div className="flex flex-1 flex-wrap items-start gap-3">
+                {displayedTags.map((tag) => (
+                  <label key={tag.id} className="flex cursor-pointer items-center gap-2">
+                    <Checkbox
+                      checked={selectedTagIds.includes(tag.id)}
+                      onCheckedChange={(checked) => {
+                        const current = filters.tagIds || []
+                        onFilterChange({
+                          ...filters,
+                          tagIds: checked
+                            ? [...current, tag.id]
+                            : current.filter((id) => id !== tag.id),
+                        })
+                      }}
+                    />
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: tag.color }}
+                      />
+                      <span className="text-dark-500 text-sm">{tag.name}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-secondary-800 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                  + {hiddenTagsCount} {t('pages.clients.filters.more')}
+                </span>
+                {hiddenTagsCount > 0 && (
+                  <TagsDropdown
+                    tags={tags}
+                    selectedTagIds={selectedTagIds}
+                    onSelectionChange={handleTagsChange}
+                    onOpenChange={setTagsDropdownOpen}
+                    trigger={
+                      <button
+                        type="button"
+                        className="bg-primary-300 flex items-center gap-2 rounded p-1"
+                      >
+                        {tagsDropdownOpen ? (
+                          <Icons.ArrowUp size={16} className="text-secondary-800" strokeWidth={2} />
+                        ) : (
+                          <Icons.ArrowDown
+                            size={16}
+                            className="text-secondary-800"
+                            strokeWidth={2}
+                          />
+                        )}
+                      </button>
+                    }
+                  />
+                )}
+              </div>
             </div>
             <div className="flex min-w-[220px] flex-1" />
           </div>

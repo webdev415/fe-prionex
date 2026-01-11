@@ -19,6 +19,7 @@ import { createPortal } from 'react-dom'
 export interface SidebarSubItem {
   path: string
   label: string
+  icon?: string
   disabled?: boolean
 }
 
@@ -39,6 +40,8 @@ export interface SidebarAction {
 export interface SidebarProps {
   /** Navigation items to display */
   items: SidebarItem[]
+  /** Navigation items to display at the bottom (before actions) */
+  bottomItems?: SidebarItem[]
   /** Action buttons at the bottom */
   actions?: SidebarAction[]
   /** Custom className for the sidebar */
@@ -66,12 +69,15 @@ const iconMap: Record<
   'logout-square-01': (props) => <Icons.LogoutSquare01 {...props} />,
   'checkmark-badge-02': (props) => <Icons.CheckmarkBadge02 {...props} />,
   mail: (props) => <Icons.Mail {...props} />,
+  'file-01': (props) => <Icons.File {...props} />,
+  'chart-01': (props) => <Icons.Chart01 {...props} />,
+  'mail-send-01': (props) => <Icons.MailSend01 {...props} />,
 }
 
 /**
  * Sidebar Component
  */
-export function Sidebar({ items, actions = [], className }: SidebarProps) {
+export function Sidebar({ items = [], bottomItems = [], actions = [], className }: SidebarProps) {
   const location = useLocation()
   const { isOpenSideBar, isHoverOpen, toggleSidebar, setHoverOpen } = useSidebarStore()
   const [openSubmenuIndex, setOpenSubmenuIndex] = useState<number | null>(null)
@@ -103,10 +109,11 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
 
   // Derive effective submenu index - close when sidebar is not visible
   const effectiveSubmenuIndex = isSidebarVisible ? openSubmenuIndex : null
+  const allItems = [...items, ...bottomItems]
   const visibleSubmenuItem = useMemo(() => {
     if (effectiveSubmenuIndex == null) return null
-    return items[effectiveSubmenuIndex] ?? null
-  }, [items, effectiveSubmenuIndex])
+    return allItems[effectiveSubmenuIndex] ?? null
+  }, [allItems, effectiveSubmenuIndex])
 
   const shouldShowSubmenu =
     isSidebarVisible &&
@@ -124,15 +131,39 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
       return
     }
     const rect = el.getBoundingClientRect()
-    const menuWidth = 200
-    // Small visual gap between anchor and submenu (click-only, so no hover flicker concerns)
+    const menuWidth = 220
     const gutter = 8
 
+    // Calculate submenu height estimate (approximate based on number of items)
+    const allItems = [...items, ...bottomItems]
+    const item = allItems[index]
+    const submenuItemCount = item?.subItems?.length || 0
+    const submenuHeight = Math.min(submenuItemCount * 40 + 16, 400) // ~40px per item + padding, max 400px
+
+    // Horizontal positioning
     let left = rect.right + gutter
     if (left + menuWidth + gutter > window.innerWidth) {
       left = Math.max(gutter, rect.left - menuWidth - gutter)
     }
-    const top = Math.max(gutter, rect.top)
+
+    // Vertical positioning - check if submenu would overflow bottom
+    let top = rect.top
+    const spaceBelow = window.innerHeight - rect.top
+    const spaceAbove = rect.bottom
+
+    // If not enough space below and more space above, align to bottom
+    if (spaceBelow < submenuHeight && spaceAbove > spaceBelow) {
+      // Bottom align - submenu grows upward from the bottom of the nav item
+      top = Math.max(gutter, rect.bottom - submenuHeight)
+    } else {
+      // Top align (default) - submenu grows downward from the top of the nav item
+      top = Math.max(gutter, rect.top)
+      // Ensure it doesn't overflow the bottom
+      if (top + submenuHeight > window.innerHeight - gutter) {
+        top = Math.max(gutter, window.innerHeight - submenuHeight - gutter)
+      }
+    }
+
     setSubmenuPosition({ top, left })
   }
 
@@ -409,6 +440,173 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
               </div>
             )
           })}
+
+          {/* Bottom navigation items (e.g., System Settings) */}
+          {bottomItems.length > 0 && (
+            <>
+              <div className="mx-2 mt-auto h-px bg-gray-200" />
+              {bottomItems.map((item, index) => {
+                const IconComponent = iconMap[item.icon]
+
+                if (!IconComponent) {
+                  console.warn(`Icon "${item.icon}" not found in iconMap`)
+                  return null
+                }
+
+                const hasSubItems = item.subItems && item.subItems.length > 0
+                const isActive =
+                  !item.disabled && (isActivePath(item.path) || hasActiveSubItem(item.subItems))
+                const isDisabled = item.disabled
+                const uniqueKey = `${item.path}-${item.label}-bottom-${index}`
+
+                if (isDisabled) {
+                  return (
+                    <div
+                      key={uniqueKey}
+                      className={cn(
+                        'flex h-10 shrink-0 items-center rounded-md opacity-50',
+                        isSidebarVisible ? 'px-3' : 'justify-start px-3'
+                      )}
+                      aria-label={item.label}
+                      onMouseEnter={() => {
+                        if (!isOpenSideBar) {
+                          setHoverOpen(true)
+                        }
+                      }}
+                    >
+                      <IconComponent
+                        size={20}
+                        className="shrink-0 text-gray-400"
+                        strokeWidth={1.5}
+                      />
+                      <span className="ml-3 text-sm text-gray-400">{item.label}</span>
+                    </div>
+                  )
+                }
+
+                if (hasSubItems) {
+                  return (
+                    <div
+                      key={uniqueKey}
+                      className="relative w-full"
+                      data-nav-item={`bottom-${index}`}
+                    >
+                      <div
+                        ref={(el) => {
+                          const bottomIndex = items.length + index
+                          anchorRefs.current[bottomIndex] = el
+                        }}
+                        className={cn(
+                          'flex h-10 shrink-0 cursor-pointer items-center rounded-lg transition-all duration-200 select-none',
+                          isSidebarVisible ? 'px-3' : 'justify-start px-3',
+                          isActive ? 'bg-secondary-800' : 'hover:bg-gray-50'
+                        )}
+                        onClick={() => {
+                          if (!isSidebarVisible && !isOpenSideBar) {
+                            setHoverOpen(true)
+                          }
+                          const bottomIndex = items.length + index
+                          setOpenSubmenuIndex((prev) => (prev === bottomIndex ? null : bottomIndex))
+                          updateSubmenuPosition(bottomIndex)
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            if (!isSidebarVisible && !isOpenSideBar) {
+                              setHoverOpen(true)
+                            }
+                            const bottomIndex = items.length + index
+                            setOpenSubmenuIndex((prev) =>
+                              prev === bottomIndex ? null : bottomIndex
+                            )
+                            updateSubmenuPosition(bottomIndex)
+                          }
+                        }}
+                      >
+                        <div
+                          className="flex items-center"
+                          onMouseEnter={() => {
+                            if (!isOpenSideBar) {
+                              setHoverOpen(true)
+                            }
+                          }}
+                        >
+                          <IconComponent
+                            size={20}
+                            className={cn(
+                              'shrink-0',
+                              isActive ? 'text-primary-300' : 'text-gray-700'
+                            )}
+                            strokeWidth={1.5}
+                          />
+                        </div>
+                        {isSidebarVisible && (
+                          <div
+                            className={cn(
+                              'ml-3 flex-1 text-sm font-medium text-nowrap',
+                              isActive ? 'text-white' : 'text-dark-500'
+                            )}
+                          >
+                            {item.label}
+                          </div>
+                        )}
+                        {isSidebarVisible && (
+                          <Icons.ArrowRight
+                            size={16}
+                            className={cn(
+                              'ml-auto shrink-0 transition-colors',
+                              isActive ? 'text-white' : 'text-gray-400'
+                            )}
+                            strokeWidth={1.5}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )
+                }
+
+                const navLinkContent = (
+                  <NavLink
+                    to={item.path}
+                    end={item.path === '/dashboard'}
+                    className={cn(
+                      'flex h-10 shrink-0 items-center rounded-lg transition-all duration-200 focus:outline-none',
+                      isSidebarVisible ? 'px-3' : 'justify-start px-3',
+                      isActive ? 'bg-secondary-800' : 'hover:bg-gray-50'
+                    )}
+                    aria-label={item.label}
+                    onMouseEnter={() => {
+                      if (!isOpenSideBar) {
+                        setHoverOpen(true)
+                      }
+                    }}
+                  >
+                    <IconComponent
+                      size={20}
+                      className={cn('shrink-0', isActive ? 'text-primary-300' : 'text-gray-700')}
+                      strokeWidth={1.5}
+                    />
+                    <span
+                      className={cn(
+                        'ml-3 text-sm font-medium text-nowrap',
+                        isActive ? 'text-white' : 'text-dark-500'
+                      )}
+                    >
+                      {item.label}
+                    </span>
+                  </NavLink>
+                )
+
+                return (
+                  <div key={uniqueKey} className="w-full">
+                    {navLinkContent}
+                  </div>
+                )
+              })}
+            </>
+          )}
         </nav>
 
         {/* Bottom action buttons */}
@@ -475,6 +673,7 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
             {visibleSubmenuItem.subItems.map((subItem, subIndex) => {
               const isSubActive = !subItem.disabled && isActivePath(subItem.path)
               const subUniqueKey = `${subItem.path}-${subItem.label}-${subIndex}`
+              const SubIconComponent = subItem.icon ? iconMap[subItem.icon] : null
 
               if (subItem.disabled) {
                 return (
@@ -482,6 +681,13 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
                     key={subUniqueKey}
                     className="flex h-10 cursor-not-allowed items-center px-4 opacity-50"
                   >
+                    {SubIconComponent && (
+                      <SubIconComponent
+                        size={18}
+                        className="mr-3 shrink-0 text-gray-400"
+                        strokeWidth={1.5}
+                      />
+                    )}
                     <span className="text-sm text-gray-400">{subItem.label}</span>
                   </div>
                 )
@@ -501,6 +707,16 @@ export function Sidebar({ items, actions = [], className }: SidebarProps) {
                     isSubActive ? 'bg-secondary-800 text-white' : 'text-dark-500 hover:bg-gray-50'
                   )}
                 >
+                  {SubIconComponent && (
+                    <SubIconComponent
+                      size={18}
+                      className={cn(
+                        'mr-3 shrink-0',
+                        isSubActive ? 'text-primary-300' : 'text-gray-600'
+                      )}
+                      strokeWidth={1.5}
+                    />
+                  )}
                   <span className="text-sm font-medium">{subItem.label}</span>
                 </NavLink>
               )
