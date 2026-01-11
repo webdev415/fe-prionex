@@ -5,7 +5,7 @@
  * These permissions control access to features, routes, and UI elements.
  *
  * Backend Source: /home/pst/dev/prionex/api-prionex/services/auth/alembic/versions/20251122_0002_002_seed_initial_data.py
- * Total Permissions: 22 (21 initial + 1 manage_projects)
+ * Total Permissions: 34 (26 pre-existing + 8 seller/scoring config permissions)
  */
 
 export const PERMISSIONS = {
@@ -92,6 +92,30 @@ export const PERMISSIONS = {
     EDIT: 'edit_tags',
     DELETE: 'delete_tags',
   },
+
+  /**
+   * Sellers Category (4 permissions)
+   * Controls access to seller/creditor management
+   * Note: View permissions restricted to Admin and Supervisor
+   */
+  SELLERS: {
+    VIEW: 'view_sellers',
+    CREATE: 'create_sellers',
+    EDIT: 'edit_sellers',
+    DELETE: 'delete_sellers',
+  },
+
+  /**
+   * Scoring Configuration Category (4 permissions)
+   * Controls access to scoring algorithm configuration
+   * Note: View permissions restricted to Admin and Supervisor
+   */
+  SCORING_CONFIG: {
+    VIEW: 'view_scoring_config',
+    EDIT: 'edit_scoring_config',
+    MANAGE_SELLER_CONFIG: 'manage_seller_config',
+    VIEW_HISTORY: 'view_config_history',
+  },
 } as const
 
 /**
@@ -138,6 +162,8 @@ export const PERMISSION_CATEGORIES = {
   SYSTEM: 'System',
   PROJECTS: 'Projects',
   TAGS: 'Tags',
+  SELLERS: 'Sellers',
+  SCORING_CONFIG: 'Scoring Configuration',
 } as const
 
 /**
@@ -185,4 +211,16 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   create_tags: 'Create new tags',
   edit_tags: 'Edit existing tags',
   delete_tags: 'Delete tags',
+
+  // Sellers
+  view_sellers: 'View seller/creditor list and details',
+  create_sellers: 'Create new sellers/creditors',
+  edit_sellers: 'Edit seller/creditor information',
+  delete_sellers: 'Deactivate sellers/creditors',
+
+  // Scoring Configuration
+  view_scoring_config: 'View scoring configuration and thresholds',
+  edit_scoring_config: 'Update scoring weights and priority thresholds',
+  manage_seller_config: 'Manage seller-specific scoring configurations',
+  view_config_history: 'View scoring configuration change history',
 }

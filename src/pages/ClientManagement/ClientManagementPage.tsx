@@ -44,7 +44,7 @@ interface DisplayClient {
   id: number
   fullName: string
   taxIdNumber: string
-  tags: string[]
+  tags: Array<{ id: number; name: string; color: string }>
   phoneNumber: string
   dateOfSale: string
   creditor: string
@@ -75,7 +75,7 @@ const mapAPIClientToDisplay = (
     id: client.id,
     fullName,
     taxIdNumber: client.tax_id,
-    tags: [], // TODO: Add tags from backend when available
+    tags: client.tags || [], // Tags from API
     phoneNumber: client.phone_primary,
     dateOfSale: client.created_at ? new Date(client.created_at).toLocaleDateString('uk-UA') : '-',
     creditor: client.primary_creditor || '-',
@@ -380,7 +380,7 @@ export function ClientManagementPage() {
               client.phoneNumber.replace(phoneRegex, '').toLowerCase().includes(queryNormalized) ||
               client.taxIdNumber.toLowerCase().includes(query) ||
               client.creditor.toLowerCase().includes(query) ||
-              client.tags.some((tag) => tag.toLowerCase().includes(query))
+              client.tags.some((tag) => tag.name.toLowerCase().includes(query))
             )
           }
         }
@@ -658,16 +658,6 @@ export function ClientManagementPage() {
   }
 
   // Get tag icon based on tag name
-  const getTagIcon = (tag: string) => {
-    const lowerTag = tag.toLowerCase()
-    if (lowerTag.includes('employee')) {
-      return <span className="bg-success-500 h-2 w-2 rounded-full" />
-    }
-    if (lowerTag.includes('creditor') || lowerTag.includes('insolvent')) {
-      return <Icons.Warning size={12} className="text-warning-500" strokeWidth={2} />
-    }
-    return null
-  }
 
   const columns: Column<DisplayClient>[] = [
     {
@@ -706,18 +696,24 @@ export function ClientManagementPage() {
       align: 'left',
       render: (client) => (
         <div className="flex flex-wrap gap-1">
-          {client.tags.map((tag, index) => {
-            const icon = getTagIcon(tag)
-            return (
+          {client.tags && client.tags.length > 0 ? (
+            client.tags.map((tag) => (
               <span
-                key={index}
-                className="text-dark-500 inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs"
+                key={tag.id}
+                className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
+                style={{
+                  backgroundColor: tag.color + '20',
+                  borderColor: tag.color,
+                  color: tag.color,
+                }}
               >
-                {icon}
-                {tag}
+                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: tag.color }} />
+                {tag.name}
               </span>
-            )
-          })}
+            ))
+          ) : (
+            <span className="text-xs text-gray-400">-</span>
+          )}
         </div>
       ),
     },
@@ -778,25 +774,24 @@ export function ClientManagementPage() {
             data-testid={`client-actions-${client.id}`}
           >
             <LinkButton
-              leftIcon={<Icons.PencilEdit size={16} strokeWidth={2} />}
+              leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
               onClick={() => handleAssign(client.id)}
               variant="regular-black"
               size="xs"
-              className="text-xs"
               disabled={isBulkActionActive}
             >
               {t('pages.clients.assign')}
             </LinkButton>
-            <Button
-              leftIcon={<Icons.Contact size={16} />}
+            <LinkButton
+              leftIcon={<Icons.File size={16} color="#05040D" strokeWidth={1.5} />}
               onClick={() => handleManageTags(client.id, client.fullName)}
-              variant="ghost"
-              size="icon-xs"
+              variant="regular-black"
+              size="xs"
               disabled={isBulkActionActive}
-              title={t('pages.clients.manageTags')}
               data-testid={`tag-button-${client.id}`}
-              iconOnly
-            />
+            >
+              {t('pages.clients.manageTags')}
+            </LinkButton>
           </div>
         )
       },
@@ -899,27 +894,42 @@ export function ClientManagementPage() {
           headerActions={
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="primary" size="sm" className="flex items-center gap-2">
-                  <Icons.Settings size={16} strokeWidth={2} />
-                  {t('pages.clients.bulkActions')}
-                  <Icons.ArrowDown size={16} strokeWidth={2} />
+                <Button variant="primary" size="sm" className="h-10 gap-2 rounded-lg px-4">
+                  <Icons.Settings size={18} className="text-dark-500" strokeWidth={1.5} />
+                  <span className="text-sm font-medium">Bulk Actions</span>
+                  <Icons.ArrowDown size={16} className="text-dark-500" strokeWidth={1.5} />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={handleBulkAssign} className="flex items-center gap-2">
-                  <Icons.UserCheck01 size={16} strokeWidth={2} />
-                  {t('pages.clients.bulkActions.assignEmployee')}
+              <DropdownMenuContent
+                align="end"
+                className="w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+              >
+                <DropdownMenuItem
+                  onClick={handleBulkAssign}
+                  className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                >
+                  <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                  <span className="text-dark-500 text-sm font-medium">
+                    {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
+                  </span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleBulkAddTags} className="flex items-center gap-2">
-                  <Icons.PlusSignCircle size={16} strokeWidth={2} />
-                  {t('pages.clients.bulkActions.addTags')}
+                <DropdownMenuItem
+                  onClick={handleBulkAddTags}
+                  className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                >
+                  <Icons.PlusSignCircle size={18} className="text-dark-500" strokeWidth={1.5} />
+                  <span className="text-dark-500 text-sm font-medium">
+                    {t('pages.clients.bulkActions.addTags', 'Add Tags')}
+                  </span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleBulkRemoveTags}
-                  className="flex items-center gap-2"
+                  className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
                 >
-                  <Icons.Remove02 size={16} strokeWidth={2} />
-                  {t('pages.clients.bulkActions.removeTags')}
+                  <Icons.Remove02 size={18} className="text-dark-500" strokeWidth={1.5} />
+                  <span className="text-dark-500 text-sm font-medium">
+                    {t('pages.clients.bulkActions.removeTags', 'Remove Tags')}
+                  </span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

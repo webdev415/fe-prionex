@@ -33,12 +33,16 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
   const { data: tags, isLoading } = useTags(projectId)
   const bulkTagMutation = useBulkTagClients()
 
-  // Reset state when modal opens
+  // Reset state when modal closes
   useEffect(() => {
     if (!open) {
       // Reset on close to prepare for next open
-      setSelectedTagIds([])
-      setSearchQuery('')
+      // Use setTimeout to avoid calling setState synchronously in effect
+      const timeoutId = setTimeout(() => {
+        setSelectedTagIds([])
+        setSearchQuery('')
+      }, 0)
+      return () => clearTimeout(timeoutId)
     }
   }, [open])
 
@@ -54,7 +58,9 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
 
   const handleSave = async () => {
     if (selectedTagIds.length === 0) {
-      toast.error(t('pages.clients.modals.bulkTag.selectAtLeastOneTag'))
+      toast.error(
+        t('pages.clients.modals.bulkTag.selectAtLeastOneTag', 'Please select at least one tag')
+      )
       return
     }
 
@@ -73,20 +79,20 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
 
   const actionText =
     action === 'add'
-      ? t('pages.clients.modals.bulkTag.addTags')
-      : t('pages.clients.modals.bulkTag.removeTags')
+      ? t('pages.clients.modals.bulkTag.addTags', 'Add Tags')
+      : t('pages.clients.modals.bulkTag.removeTags', 'Remove Tags')
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="md">
       <ModalHeader
-        title={`${actionText} - ${clientCount} ${t('pages.clients.modals.bulkTag.clients')}`}
+        title={`${actionText} - ${clientCount} ${t('pages.clients.modals.bulkTag.clients', 'client(s)')}`}
       />
 
       <ModalContent>
         <div className="space-y-4">
           {/* Search Input */}
           <Input
-            placeholder={t('pages.clients.modals.bulkTag.searchTags')}
+            placeholder={t('pages.clients.modals.bulkTag.searchTags', 'Search tags...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -95,11 +101,11 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
           <div className="max-h-96 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-4">
             {isLoading ? (
               <div className="py-4 text-center text-sm text-gray-500">
-                {t('pages.clients.modals.bulkTag.loadingTags')}
+                {t('pages.clients.modals.bulkTag.loadingTags', 'Loading tags...')}
               </div>
             ) : filteredTags?.length === 0 ? (
               <div className="py-4 text-center text-sm text-gray-500">
-                {t('pages.clients.modals.bulkTag.noTagsFound')}
+                {t('pages.clients.modals.bulkTag.noTagsFound', 'No tags found')}
               </div>
             ) : (
               filteredTags?.map((tag) => (
@@ -123,22 +129,33 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
           {/* Selected count */}
           {selectedTagIds.length > 0 && (
             <div className="text-sm text-gray-600">
-              {selectedTagIds.length} {t('pages.clients.modals.bulkTag.tagsSelected')}
+              {selectedTagIds.length}{' '}
+              {t('pages.clients.modals.bulkTag.tagsSelected', 'tag(s) selected')}
             </div>
           )}
         </div>
       </ModalContent>
 
       <ModalFooter>
-        <Button variant="outline" onClick={onClose} disabled={bulkTagMutation.isPending}>
-          {t('pages.clients.modals.bulkTag.cancel')}
+        <Button
+          type="button"
+          variant="cancel"
+          onClick={onClose}
+          disabled={bulkTagMutation.isPending}
+          className="h-[45px] flex-1 text-sm"
+        >
+          {t('actions.cancel', 'Cancel')}
         </Button>
         <Button
+          type="button"
           variant="primary"
           onClick={handleSave}
           disabled={selectedTagIds.length === 0 || bulkTagMutation.isPending}
+          className="h-[45px] flex-1 text-sm"
         >
-          {bulkTagMutation.isPending ? t('pages.clients.modals.bulkTag.processing') : actionText}
+          {bulkTagMutation.isPending
+            ? t('pages.clients.modals.bulkTag.processing', 'Processing...')
+            : actionText}
         </Button>
       </ModalFooter>
     </Modal>
