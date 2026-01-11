@@ -568,6 +568,8 @@
       "noClientsFound": "No clients found",
       "assign": "Assign",
       "bulkAssign": "Bulk Assign",
+      "bulkActions": "Bulk Actions",
+      "manageTags": "Manage Tags",
       "errorLoading": "Failed to load clients",
       "errorOccurred": "An error occurred",
       "tableHeaders": {
@@ -604,13 +606,15 @@
         "dateOfSale": "Date of sale",
         "portfolio": "Portfolio",
         "status": "Status",
+        "tags": "Tags",
         "responsibleEmployee": "Responsible employee",
         "responsibleSearcher": "Responsible searcher",
         "selectEmployee": "Select employee",
         "selectSearcher": "Select searcher",
         "unassignedOnly": "Unassigned only",
         "more": "more",
-        "days": "days"
+        "days": "days",
+        "noUsersAvailable": "No users available"
       },
       "statuses": {
         "new": "New",
@@ -625,6 +629,37 @@
         "delivered": "Delivered",
         "failed": "Failed",
         "pending": "Pending"
+      },
+      "bulkActions": {
+        "assignEmployee": "Assign Employee",
+        "addTags": "Add Tags",
+        "removeTags": "Remove Tags"
+      },
+      "modals": {
+        "portfolioDropdown": {
+          "searchPortfolios": "Search portfolios...",
+          "noPortfoliosFound": "No portfolios found",
+          "clear": "Clear",
+          "apply": "Apply"
+        },
+        "tagsDropdown": {
+          "searchTags": "Search tags...",
+          "noTagsFound": "No tags found",
+          "clear": "Clear",
+          "apply": "Apply"
+        },
+        "bulkTag": {
+          "addTags": "Add Tags",
+          "removeTags": "Remove Tags",
+          "clients": "client(s)",
+          "searchTags": "Search tags...",
+          "loadingTags": "Loading tags...",
+          "noTagsFound": "No tags found",
+          "tagsSelected": "tag(s) selected",
+          "selectAtLeastOneTag": "Please select at least one tag",
+          "cancel": "Cancel",
+          "processing": "Processing..."
+        }
       },
       "activity": {
         "score": "Score",
@@ -1329,7 +1364,33 @@
     },
     "tags": {
       "title": "Tags",
-      "comingSoon": "Tags management coming soon..."
+      "createTag": "Create Tag",
+      "editTag": "Edit Tag",
+      "newTag": "New Tag",
+      "noTagsFound": "No tags found",
+      "errorLoading": "Failed to load tags",
+      "tableHeaders": {
+        "name": "Tag Name",
+        "project": "Project",
+        "description": "Description",
+        "clients": "Clients",
+        "actions": "Actions"
+      },
+      "fields": {
+        "name": "Name",
+        "namePlaceholder": "Enter tag name",
+        "color": "Color",
+        "description": "Description",
+        "descriptionPlaceholder": "Enter tag description",
+        "optional": "Optional",
+        "project": "Project",
+        "projectNote": "Tags are automatically assigned to your active project",
+        "tagName": "Tag Name"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete"
+      }
     },
     "sellers": {
       "title": "Seller Management",

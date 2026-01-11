@@ -236,7 +236,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // useMemo prevents unnecessary re-filtering on every render
   // Only recalculates when user permissions change
-  const navItems: SidebarItem[] = useMemo(() => {
+  const navItemsResult = useMemo(() => {
     // All navigation items with required permissions
     const allNavItems: ExtendedSidebarItem[] = [
       { path: '/dashboard', icon: 'home-04', label: t('navigation.dashboard') },
@@ -290,20 +290,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {
             path: '/dashboard/system-settings/tags',
             label: t('navigation.tags', 'Tags'),
+            icon: 'file-01',
           },
           {
             path: '/dashboard/system-settings/scoring-configuration',
             label: t('navigation.scoringConfiguration'),
+            icon: 'chart-01',
           },
           {
             path: '/dashboard/system-settings/sms-templates',
             label: t('navigation.smsTemplates'),
+            icon: 'mail-send-01',
           },
         ],
       },
     ]
 
-    return allNavItems
+    const filteredItems = allNavItems
       .filter((item) => {
         // Always show disabled items (for visual consistency)
         if (item.disabled) return true
@@ -372,12 +375,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         }
         return item
       })
+
+    // Separate System Settings to render at bottom
+    const systemSettingsItem = filteredItems.find(
+      (item) => item.path === '/dashboard/system-settings'
+    )
+    const regularItems = filteredItems.filter((item) => item.path !== '/dashboard/system-settings')
+    const bottomItems = systemSettingsItem ? [systemSettingsItem] : []
+
+    return { navItems: regularItems, bottomNavItems: bottomItems }
   }, [user?.permissions, t])
+
+  const { navItems, bottomNavItems } = navItemsResult
 
   return (
     <div className="bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center bg-no-repeat">
       {/* Sidebar */}
-      <Sidebar items={navItems} />
+      <Sidebar items={navItems} bottomItems={bottomNavItems} />
 
       {/* Main Content Area with left margin for sidebar */}
       <div className={cn('transition-all duration-300', isOpenSideBar ? 'ml-64' : 'ml-16')}>
