@@ -39,6 +39,7 @@ export {
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './Tooltip'
 export { DataTable, type Column, type DataTableProps } from './DataTable'
 export { StatusBadge, type StatusType } from './StatusBadge'
+export { TagBadge } from './TagBadge'
 export { ToggleSwitch } from './ToggleSwitch'
 export { Pagination, type PaginationProps } from './Pagination'
 export { TableSkeleton, type TableSkeletonProps } from './TableSkeleton'

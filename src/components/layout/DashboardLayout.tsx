@@ -7,7 +7,7 @@ import { useSidebarStore } from '@/stores/sidebarStore'
 import { usePermissionRefresh } from '@/hooks'
 import { ImpersonationBanner } from '@/features/auth/components/ImpersonationBanner'
 import { LogoutConfirmationModal } from './LogoutConfirmationModal'
-import { Sidebar, type SidebarItem } from './Sidebar'
+import { Sidebar, type SidebarItem, type SidebarSubItem } from './Sidebar'
 import { SearchBar } from './SearchBar'
 import { UserProfile } from './UserProfile'
 import { LanguageSwitcher } from './LanguageSwitcher'
@@ -44,6 +44,11 @@ interface ExtendedSidebarItem extends SidebarItem {
   requiredPermission?: Permission
   requiredPermissions?: Permission[]
   mode?: 'any' | 'all'
+  subItems?: (SidebarSubItem & {
+    requiredPermission?: Permission
+    requiredPermissions?: Permission[]
+    mode?: 'any' | 'all'
+  })[]
 }
 
 // Mobile Header Menu Component - groups header actions into dropdown on mobile
@@ -656,7 +661,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // useMemo prevents unnecessary re-filtering on every render
   // Only recalculates when user permissions change
-  const navItems: SidebarItem[] = useMemo(() => {
+  const navItemsResult = useMemo(() => {
     // All navigation items with required permissions
     const allNavItems: ExtendedSidebarItem[] = [
       { path: '/dashboard', icon: 'home-04', label: t('navigation.dashboard') },
@@ -702,57 +707,116 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         label: t('navigation.auditLogs'),
       },
       {
-        path: '/dashboard/sms-templates',
-        icon: 'mail',
-        label: t('navigation.smsTemplates'),
-      },
-      {
-        path: '/dashboard/scoring-configuration',
-        icon: 'checkmark-badge-02',
-        label: t('navigation.scoringConfiguration'),
+        path: '/dashboard/system-settings',
+        icon: 'setting-07',
+        label: t('navigation.systemSettings', 'System Settings'),
+        subItems: [
+          {
+            path: '/dashboard/system-settings/tags',
+            label: t('navigation.tags', 'Tags'),
+            icon: 'file-01',
+          },
+          {
+            path: '/dashboard/system-settings/scoring-configuration',
+            label: t('navigation.scoringConfiguration'),
+            icon: 'chart-01',
+          },
+          {
+            path: '/dashboard/system-settings/sms-templates',
+            label: t('navigation.smsTemplates'),
+            icon: 'mail-send-01',
+          },
+        ],
       },
     ]
 
-    return allNavItems.filter((item) => {
-      // Always show disabled items (for visual consistency)
-      if (item.disabled) return true
+    const filteredItems = allNavItems
+      .filter((item) => {
+        // Always show disabled items (for visual consistency)
+        if (item.disabled) return true
 
-      // No permission required - show to all users
-      if (!item.requiredPermission && !item.requiredPermissions) return true
+        // No permission required - show to all users
+        if (!item.requiredPermission && !item.requiredPermissions) return true
 
-      // Check single permission
-      if (item.requiredPermission) {
-        return user?.permissions?.includes(item.requiredPermission) ?? false
-      }
-
-      // Check multiple permissions
-      if (item.requiredPermissions && item.requiredPermissions.length > 0) {
-        if (item.mode === 'any') {
-          // User needs at least one of the permissions
-          return (
-            item.requiredPermissions.some((p: Permission) => user?.permissions?.includes(p)) ??
-            false
-          )
-        } else {
-          // User needs all of the permissions (default)
-          return (
-            item.requiredPermissions.every((p: Permission) => user?.permissions?.includes(p)) ??
-            false
-          )
+        // Check single permission
+        if (item.requiredPermission) {
+          return user?.permissions?.includes(item.requiredPermission) ?? false
         }
-      }
 
-      // Default: show the item
-      return true
-    })
+        // Check multiple permissions
+        if (item.requiredPermissions && item.requiredPermissions.length > 0) {
+          if (item.mode === 'any') {
+            // User needs at least one of the permissions
+            return (
+              item.requiredPermissions.some((p: Permission) => user?.permissions?.includes(p)) ??
+              false
+            )
+          } else {
+            // User needs all of the permissions (default)
+            return (
+              item.requiredPermissions.every((p: Permission) => user?.permissions?.includes(p)) ??
+              false
+            )
+          }
+        }
+
+        // Default: show the item
+        return true
+      })
+      .map((item) => {
+        // Filter sub-items based on permissions
+        if (item.subItems) {
+          const filteredSubItems = item.subItems.filter((subItem) => {
+            // No permission required - show to all users
+            if (!subItem.requiredPermission && !subItem.requiredPermissions) return true
+
+            // Check single permission
+            if (subItem.requiredPermission) {
+              return user?.permissions?.includes(subItem.requiredPermission) ?? false
+            }
+
+            // Check multiple permissions
+            if (subItem.requiredPermissions && subItem.requiredPermissions.length > 0) {
+              if (subItem.mode === 'any') {
+                return (
+                  subItem.requiredPermissions.some((p: Permission) =>
+                    user?.permissions?.includes(p)
+                  ) ?? false
+                )
+              } else {
+                return (
+                  subItem.requiredPermissions.every((p: Permission) =>
+                    user?.permissions?.includes(p)
+                  ) ?? false
+                )
+              }
+            }
+
+            return true
+          })
+
+          return { ...item, subItems: filteredSubItems }
+        }
+        return item
+      })
+
+    // Separate System Settings to render at bottom
+    const systemSettingsItem = filteredItems.find(
+      (item) => item.path === '/dashboard/system-settings'
+    )
+    const regularItems = filteredItems.filter((item) => item.path !== '/dashboard/system-settings')
+    const bottomItems = systemSettingsItem ? [systemSettingsItem] : []
+
+    return { navItems: regularItems, bottomNavItems: bottomItems }
   }, [user?.permissions, t])
 
+  const { navItems, bottomNavItems } = navItemsResult
   const { toggleSidebar } = useSidebarStore()
 
   return (
     <div className="bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center bg-no-repeat">
       {/* Sidebar */}
-      <Sidebar items={navItems} />
+      <Sidebar items={navItems} bottomItems={bottomNavItems} />
 
       {/* Main Content Area with left margin for sidebar - no margin on mobile */}
       <div
