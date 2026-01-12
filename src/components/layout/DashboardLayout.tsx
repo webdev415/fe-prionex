@@ -697,11 +697,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
       },
       {
-        path: '/dashboard',
+        path: '/dashboard/audit-logs',
         icon: 'transaction-history',
-        label: t('navigation.transactions'),
-        disabled: true,
-      }, // Route doesn't exist
+        label: t('navigation.auditLogs'),
+      },
       {
         path: '/dashboard/sms-templates',
         icon: 'mail',
