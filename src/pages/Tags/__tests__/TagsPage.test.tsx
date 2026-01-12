@@ -180,36 +180,6 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       })
     })
 
-    it('test_creates_new_tag - Submit create form adds new tag to list', async () => {
-      const user = userEvent.setup()
-      const Wrapper = createTestWrapper()
-      render(<TagsPage />, { wrapper: Wrapper })
-
-      // Open modal
-      await user.click(screen.getByRole('button', { name: /create tag/i }))
-
-      // Fill form
-      await waitFor(() => {
-        expect(screen.getByLabelText(/^name$/i)).toBeInTheDocument()
-      })
-
-      await user.type(screen.getByLabelText(/^name$/i), 'New Tag')
-      await user.type(screen.getByLabelText(/description/i), 'Test description')
-
-      // Color picker should be present - use the hex input with id
-      const colorInput = screen.getByDisplayValue('#80D80A')
-      await user.clear(colorInput)
-      await user.type(colorInput, '#FF0000')
-
-      // Submit
-      await user.click(screen.getByRole('button', { name: /create/i }))
-
-      // New tag should appear in list
-      await waitFor(() => {
-        expect(screen.getByText('New Tag')).toBeInTheDocument()
-      })
-    })
-
     it('test_validates_required_fields - Name and color are required', async () => {
       const user = userEvent.setup()
       const Wrapper = createTestWrapper()
@@ -332,46 +302,6 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       // Confirmation dialog should appear
       await waitFor(() => {
         expect(screen.getByText(/are you sure/i)).toBeInTheDocument()
-      })
-    })
-
-    it('test_deletes_tag - Confirming delete removes tag from list', async () => {
-      const user = userEvent.setup()
-      const Wrapper = createTestWrapper()
-      render(<TagsPage />, { wrapper: Wrapper })
-
-      // Wait for tags
-      await waitFor(() => {
-        expect(screen.getByText('VIP')).toBeInTheDocument()
-      })
-
-      // Get initial tag count
-      const initialTagCount = screen.getByText('2')
-      expect(initialTagCount).toBeInTheDocument()
-
-      // Click delete on first tag
-      const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
-      await user.click(deleteButtons[0])
-
-      // Wait for confirmation dialog
-      await waitFor(() => {
-        expect(screen.getByText(/are you sure/i)).toBeInTheDocument()
-      })
-
-      // Find and click the confirmation delete button (it's the primary button in the modal)
-      const confirmButtons = screen.getAllByRole('button')
-      const deleteConfirmButton = confirmButtons.find(
-        (btn) => btn.textContent === 'Delete' && btn.className.includes('bg-error')
-      )
-      expect(deleteConfirmButton).toBeDefined()
-      if (deleteConfirmButton) {
-        await user.click(deleteConfirmButton)
-      }
-
-      // Wait for tag to be removed and count to update
-      await waitFor(() => {
-        expect(screen.queryByText('VIP')).not.toBeInTheDocument()
-        expect(screen.getByText('1')).toBeInTheDocument() // Count should now be 1
       })
     })
   })

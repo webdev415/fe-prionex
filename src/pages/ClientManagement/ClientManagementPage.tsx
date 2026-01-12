@@ -339,12 +339,12 @@ export function ClientManagementPage() {
     // DPD Range not yet implemented (days past due not calculated)
     // if (filters.dpdRangeFrom || filters.dpdRangeTo) count++
     if (filters.dateOfSaleFrom || filters.dateOfSaleTo) count++
-    // Portfolio not yet implemented in schema
-    // if (filters.portfolio && filters.portfolio.length > 0) count++
+    if (filters.portfolio && filters.portfolio.length > 0) count++
+    if (filters.tagIds && filters.tagIds.length > 0) count++
     if (filters.status && filters.status.length > 0) count++
-    // Responsible employee/searcher not yet assigned to clients
-    // if (filters.responsibleEmployee) count++
-    // if (filters.responsibleSearcher) count++
+    if (filters.responsibleEmployee) count++
+    if (filters.responsibleSearcher) count++
+    if (filters.unassignedOnly) count++
     return count
   }, [filters])
 
@@ -834,19 +834,21 @@ export function ClientManagementPage() {
           </div>
         </div>
         <div className="flex items-center justify-end gap-5">
-          <button
-            onClick={handleClearAll}
-            className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2.5 transition-colors hover:bg-white/10"
-          >
-            <Icons.Cancel01
-              size={20}
-              className="stroke-secondary-800 text-secondary-800"
-              strokeWidth={1.5}
-            />
-            <span className="text-center text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
-              {t('pages.clients.clearAll')}
-            </span>
-          </button>
+          {appliedFiltersCount > 0 && (
+            <button
+              onClick={handleClearAll}
+              className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2.5 transition-colors hover:bg-white/10"
+            >
+              <Icons.Cancel01
+                size={20}
+                className="stroke-secondary-800 text-secondary-800"
+                strokeWidth={1.5}
+              />
+              <span className="text-center text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
+                {t('pages.clients.clearAll')}
+              </span>
+            </button>
+          )}
           <button
             onClick={() => setIsFiltersOpen(!isFiltersOpen)}
             className="flex flex-col items-start gap-2.5 rounded-lg bg-white px-5 py-3 shadow-sm"

@@ -159,13 +159,13 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   }
 
   const displayedPortfolios = portfolioOptions.slice(0, 3)
-  const hiddenPortfoliosCount = portfolioOptions.length - 3
+  const hiddenPortfoliosCount = Math.max(0, portfolioOptions.length - 3)
   const selectedPortfolios = filters.portfolio || []
 
   // Tag display logic (similar to portfolio)
   const tags = tagsData || []
   const displayedTags = tags.slice(0, 3)
-  const hiddenTagsCount = tags.length - 3
+  const hiddenTagsCount = Math.max(0, tags.length - 3)
   const selectedTagIds = filters.tagIds || []
 
   return (
@@ -337,11 +337,11 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   </label>
                 ))}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-secondary-800 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                  + {hiddenPortfoliosCount} {t('pages.clients.filters.more')}
-                </span>
-                {hiddenPortfoliosCount > 0 && (
+              {hiddenPortfoliosCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-secondary-800 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    + {hiddenPortfoliosCount} {t('pages.clients.filters.more')}
+                  </span>
                   <PortfolioDropdown
                     portfolios={portfolioOptions}
                     selectedPortfolios={selectedPortfolios}
@@ -364,8 +364,8 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       </button>
                     }
                   />
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Status */}
@@ -392,6 +392,69 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 })}
               </div>
             </div>
+          </div>
+          <div className="flex items-center gap-10 self-stretch">
+            {/* Tags Filter - on next line after portfolio */}
+            <div className="flex min-w-[220px] flex-1 items-center gap-3">
+              <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                {t('pages.clients.filters.tags')}
+              </label>
+              <div className="flex flex-1 flex-wrap items-start gap-3">
+                {displayedTags.map((tag) => (
+                  <label key={tag.id} className="flex cursor-pointer items-center gap-2">
+                    <Checkbox
+                      checked={selectedTagIds.includes(tag.id)}
+                      onCheckedChange={(checked) => {
+                        const current = filters.tagIds || []
+                        onFilterChange({
+                          ...filters,
+                          tagIds: checked
+                            ? [...current, tag.id]
+                            : current.filter((id) => id !== tag.id),
+                        })
+                      }}
+                    />
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: tag.color }}
+                      />
+                      <span className="text-dark-500 text-sm">{tag.name}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              {hiddenTagsCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-secondary-800 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    + {hiddenTagsCount} {t('pages.clients.filters.more')}
+                  </span>
+                  <TagsDropdown
+                    tags={tags}
+                    selectedTagIds={selectedTagIds}
+                    onSelectionChange={handleTagsChange}
+                    onOpenChange={setTagsDropdownOpen}
+                    trigger={
+                      <button
+                        type="button"
+                        className="bg-primary-300 flex items-center gap-2 rounded p-1"
+                      >
+                        {tagsDropdownOpen ? (
+                          <Icons.ArrowUp size={16} className="text-secondary-800" strokeWidth={2} />
+                        ) : (
+                          <Icons.ArrowDown
+                            size={16}
+                            className="text-secondary-800"
+                            strokeWidth={2}
+                          />
+                        )}
+                      </button>
+                    }
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex min-w-[220px] flex-1" />
           </div>
           <div className="flex items-start gap-10 self-stretch">
             {/* Responsible employee */}
@@ -487,69 +550,6 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   {t('pages.clients.filters.unassignedOnly')}
                 </span>
               </label>
-            </div>
-            <div className="flex min-w-[220px] flex-1" />
-          </div>
-          <div className="flex items-center gap-10 self-stretch">
-            {/* Tags Filter */}
-            <div className="flex min-w-[220px] flex-1 items-center gap-3">
-              <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                {t('pages.clients.filters.tags')}
-              </label>
-              <div className="flex flex-1 flex-wrap items-start gap-3">
-                {displayedTags.map((tag) => (
-                  <label key={tag.id} className="flex cursor-pointer items-center gap-2">
-                    <Checkbox
-                      checked={selectedTagIds.includes(tag.id)}
-                      onCheckedChange={(checked) => {
-                        const current = filters.tagIds || []
-                        onFilterChange({
-                          ...filters,
-                          tagIds: checked
-                            ? [...current, tag.id]
-                            : current.filter((id) => id !== tag.id),
-                        })
-                      }}
-                    />
-                    <div className="flex items-center gap-1.5">
-                      <div
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: tag.color }}
-                      />
-                      <span className="text-dark-500 text-sm">{tag.name}</span>
-                    </div>
-                  </label>
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-secondary-800 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                  + {hiddenTagsCount} {t('pages.clients.filters.more')}
-                </span>
-                {hiddenTagsCount > 0 && (
-                  <TagsDropdown
-                    tags={tags}
-                    selectedTagIds={selectedTagIds}
-                    onSelectionChange={handleTagsChange}
-                    onOpenChange={setTagsDropdownOpen}
-                    trigger={
-                      <button
-                        type="button"
-                        className="bg-primary-300 flex items-center gap-2 rounded p-1"
-                      >
-                        {tagsDropdownOpen ? (
-                          <Icons.ArrowUp size={16} className="text-secondary-800" strokeWidth={2} />
-                        ) : (
-                          <Icons.ArrowDown
-                            size={16}
-                            className="text-secondary-800"
-                            strokeWidth={2}
-                          />
-                        )}
-                      </button>
-                    }
-                  />
-                )}
-              </div>
             </div>
             <div className="flex min-w-[220px] flex-1" />
           </div>
