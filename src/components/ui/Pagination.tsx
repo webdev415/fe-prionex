@@ -7,6 +7,7 @@
  */
 
 import { Icons } from '@/lib/icons'
+import { cn } from '@/lib/utils'
 import {
   Select,
   SelectTrigger,
@@ -91,10 +92,16 @@ export function Pagination({
     visiblePages[visiblePages.length - 2] < totalPages - 1
 
   return (
-    <div className={`flex w-full items-center justify-between gap-4 py-4 ${className || ''}`}>
-      {/* Rows per page selector (Left) */}
+    <div
+      className={cn(
+        'flex w-full flex-wrap items-center justify-between gap-2 py-4 sm:gap-4',
+        className
+      )}
+    >
+      {/* Rows per page selector (Left) - minimized on mobile */}
       <div className="flex items-center gap-2">
-        <span className="text-dark-500 text-sm font-light">Rows per page:</span>
+        {/* Hidden on mobile, shown on desktop */}
+        <span className="text-dark-500 hidden text-sm font-light md:inline">Rows per page:</span>
         <Select
           value={pageSize.toString()}
           onValueChange={(value) => {
@@ -103,8 +110,8 @@ export function Pagination({
             onPageChange(1)
           }}
         >
-          <SelectTrigger className="h-auto w-auto min-w-[60px] border-0 bg-transparent p-0 shadow-none focus:ring-0">
-            <SelectValue className="text-dark-500 text-sm font-medium" />
+          <SelectTrigger className="h-auto w-auto min-w-[50px] border-0 bg-transparent p-0 shadow-none focus:ring-0 md:min-w-[60px]">
+            <SelectValue className="text-dark-500 text-xs font-medium md:text-sm" />
           </SelectTrigger>
           <SelectContent>
             {pageSizeOptions.map((size) => (
@@ -116,27 +123,28 @@ export function Pagination({
         </Select>
       </div>
 
-      {/* Pagination controls (Center) */}
-      <div className="flex items-center gap-2">
-        {/* Previous Arrow */}
+      {/* Pagination controls (Center) - responsive spacing */}
+      <div className="flex items-center gap-1 sm:gap-2">
+        {/* Previous Arrow - smaller on mobile */}
         <button
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white sm:h-10 sm:w-10"
           aria-label="Previous page"
         >
-          <Icons.ArrowLeft size={16} className="text-dark-500" strokeWidth={1.5} />
+          <Icons.ArrowLeft size={14} className="text-dark-500 sm:h-4 sm:w-4" strokeWidth={1.5} />
         </button>
 
-        {/* First page */}
+        {/* First page - smaller on mobile */}
         {visiblePages[0] === 1 && (
           <button
             onClick={() => onPageChange(1)}
-            className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+            className={cn(
+              'flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors sm:h-10 sm:w-10 sm:text-sm',
               currentPage === 1
                 ? 'bg-secondary-800 text-white'
                 : 'text-dark-500 border border-gray-300 bg-white hover:bg-gray-100'
-            }`}
+            )}
             aria-label="Go to page 1"
             aria-current={currentPage === 1 ? 'page' : undefined}
           >
@@ -144,10 +152,10 @@ export function Pagination({
           </button>
         )}
 
-        {/* Ellipsis before */}
+        {/* Ellipsis before - smaller on mobile */}
         {showEllipsisBefore && (
           <button
-            className="text-dark-500 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-medium"
+            className="text-dark-500 flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-xs font-medium sm:h-10 sm:w-10 sm:text-sm"
             disabled
             aria-label="More pages"
           >
@@ -155,18 +163,19 @@ export function Pagination({
           </button>
         )}
 
-        {/* Middle pages (excluding first and last if they're already shown) */}
+        {/* Middle pages (excluding first and last if they're already shown) - smaller on mobile */}
         {visiblePages
           .filter((page) => page !== 1 && page !== totalPages)
           .map((page) => (
             <button
               key={page}
               onClick={() => onPageChange(page)}
-              className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+              className={cn(
+                'flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors sm:h-10 sm:w-10 sm:text-sm',
                 currentPage === page
                   ? 'bg-secondary-800 text-white'
                   : 'text-dark-500 border border-gray-300 bg-white hover:bg-gray-100'
-              }`}
+              )}
               aria-label={`Go to page ${page}`}
               aria-current={currentPage === page ? 'page' : undefined}
             >
@@ -174,10 +183,10 @@ export function Pagination({
             </button>
           ))}
 
-        {/* Ellipsis after */}
+        {/* Ellipsis after - smaller on mobile */}
         {showEllipsisAfter && (
           <button
-            className="text-dark-500 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white text-sm font-medium"
+            className="text-dark-500 flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white text-xs font-medium sm:h-10 sm:w-10 sm:text-sm"
             disabled
             aria-label="More pages"
           >
@@ -185,15 +194,16 @@ export function Pagination({
           </button>
         )}
 
-        {/* Last page */}
+        {/* Last page - smaller on mobile */}
         {visiblePages[visiblePages.length - 1] === totalPages && totalPages !== 1 && (
           <button
             onClick={() => onPageChange(totalPages)}
-            className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+            className={cn(
+              'flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors sm:h-10 sm:w-10 sm:text-sm',
               currentPage === totalPages
                 ? 'bg-secondary-800 text-white'
                 : 'text-dark-500 border border-gray-300 bg-white hover:bg-gray-100'
-            }`}
+            )}
             aria-label={`Go to page ${totalPages}`}
             aria-current={currentPage === totalPages ? 'page' : undefined}
           >
@@ -201,23 +211,24 @@ export function Pagination({
           </button>
         )}
 
-        {/* Next Arrow */}
+        {/* Next Arrow - smaller on mobile */}
         <button
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white sm:h-10 sm:w-10"
           aria-label="Next page"
         >
-          <Icons.ArrowRight size={16} className="text-dark-500" strokeWidth={1.5} />
+          <Icons.ArrowRight size={14} className="text-dark-500 sm:h-4 sm:w-4" strokeWidth={1.5} />
         </button>
       </div>
 
-      {/* Page indicator (Right) */}
+      {/* Page indicator (Right) - minimized on mobile */}
       <div className="flex items-center gap-1">
-        <span className="text-sm font-light text-gray-700">Page</span>
-        <span className="text-dark-500 text-sm font-medium">{currentPage}</span>
-        <span className="text-sm font-light text-gray-500">of</span>
-        <span className="text-dark-500 text-sm font-medium">{totalPages}</span>
+        {/* Hidden on mobile, shown on desktop */}
+        <span className="hidden text-sm font-light text-gray-700 md:inline">Page</span>
+        <span className="text-dark-500 text-xs font-medium md:text-sm">{currentPage}</span>
+        <span className="text-xs font-light text-gray-500 md:text-sm">of</span>
+        <span className="text-dark-500 text-xs font-medium md:text-sm">{totalPages}</span>
       </div>
     </div>
   )

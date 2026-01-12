@@ -5,7 +5,7 @@
  * Integrated with real API using React Query.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -27,6 +27,12 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { ErrorState } from '@/components/ErrorState'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { DoubleButton } from '@/components/ui/DoubleButton'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -41,6 +47,26 @@ export function UserManagementPage() {
   const [editUserId, setEditUserId] = useState<number | null>(null)
   const [unlockUser, setUnlockUser] = useState<ApiUser | null>(null)
   const [impersonatingUserId, setImpersonatingUserId] = useState<number | null>(null)
+  const [openDropdownUserId, setOpenDropdownUserId] = useState<number | null>(null)
+
+  // Close dropdown when screen size crosses breakpoint (in either direction)
+  useEffect(() => {
+    let wasMobile = window.innerWidth < 1024 // lg breakpoint
+
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 1024
+
+      // Close dropdown if transitioning across breakpoint (mobile <-> desktop)
+      if (wasMobile !== isMobile && openDropdownUserId !== null) {
+        setOpenDropdownUserId(null)
+      }
+
+      wasMobile = isMobile
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [openDropdownUserId])
 
   // Fetch users with pagination
   const { data, isLoading, isError, error } = useUsers({
@@ -172,43 +198,103 @@ export function UserManagementPage() {
       header: t('pages.users.tableHeaders.actions'),
       align: 'center',
       render: (user) => (
-        <div className="flex items-center justify-center gap-4">
-          <LinkButton
-            variant="regular-black"
-            size="xs"
-            onClick={() => handleView(user)}
-            leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
-          >
-            {t('pages.users.actions.view')}
-          </LinkButton>
-          <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+        <div className="flex items-center justify-center gap-2 sm:gap-4">
+          {/* Desktop: Individual link buttons */}
+          <div className="hidden items-center gap-4 lg:flex">
             <LinkButton
               variant="regular-black"
               size="xs"
-              onClick={() => handleEdit(user)}
-              leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+              onClick={() => handleView(user)}
+              leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
             >
-              {t('pages.users.actions.edit')}
+              {t('pages.users.actions.view')}
             </LinkButton>
-          </PermissionGuard>
-
-          <PermissionGuard permission={PERMISSIONS.USERS.IMPERSONATE}>
-            {currentUser?.id !== String(user.id) && (
+            <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
               <LinkButton
                 variant="regular-black"
                 size="xs"
-                onClick={() => handleImpersonate(user)}
-                disabled={authLoading || impersonatingUserId !== null}
-                leftIcon={<Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />}
+                onClick={() => handleEdit(user)}
+                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
               >
-                {impersonatingUserId === user.id
-                  ? t('pages.users.actions.impersonating')
-                  : t('pages.users.actions.impersonate')}
+                {t('pages.users.actions.edit')}
               </LinkButton>
-            )}
-          </PermissionGuard>
-          <div className="flex items-center gap-2">
-            <label className="text-dark-500 text-xs font-medium">
+            </PermissionGuard>
+
+            <PermissionGuard permission={PERMISSIONS.USERS.IMPERSONATE}>
+              {currentUser?.id !== String(user.id) && (
+                <LinkButton
+                  variant="regular-black"
+                  size="xs"
+                  onClick={() => handleImpersonate(user)}
+                  disabled={authLoading || impersonatingUserId !== null}
+                  leftIcon={
+                    <Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />
+                  }
+                >
+                  {impersonatingUserId === user.id
+                    ? t('pages.users.actions.impersonating')
+                    : t('pages.users.actions.impersonate')}
+                </LinkButton>
+              )}
+            </PermissionGuard>
+          </div>
+
+          {/* Mobile/Tablet: Dropdown button group */}
+          <div className="lg:hidden">
+            <DropdownMenu
+              modal={false}
+              open={openDropdownUserId === user.id}
+              onOpenChange={(open) => setOpenDropdownUserId(open ? user.id : null)}
+            >
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
+                  aria-label={t('pages.users.tableHeaders.actions')}
+                >
+                  <Icons.FilterVertical size={16} strokeWidth={1.5} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white">
+                <DropdownMenuItem
+                  onClick={() => handleView(user)}
+                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                >
+                  <Icons.View size={16} strokeWidth={1.5} />
+                  <span>{t('pages.users.actions.view')}</span>
+                </DropdownMenuItem>
+                <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+                  <DropdownMenuItem
+                    onClick={() => handleEdit(user)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                  >
+                    <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                    <span>{t('pages.users.actions.edit')}</span>
+                  </DropdownMenuItem>
+                </PermissionGuard>
+                <PermissionGuard permission={PERMISSIONS.USERS.IMPERSONATE}>
+                  {currentUser?.id !== String(user.id) && (
+                    <DropdownMenuItem
+                      onClick={() => handleImpersonate(user)}
+                      disabled={authLoading || impersonatingUserId !== null}
+                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Icons.SecurityValidation size={16} strokeWidth={1.5} />
+                      <span>
+                        {impersonatingUserId === user.id
+                          ? t('pages.users.actions.impersonating')
+                          : t('pages.users.actions.impersonate')}
+                      </span>
+                    </DropdownMenuItem>
+                  )}
+                </PermissionGuard>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Unlock toggle - always visible, responsive */}
+          <div className="flex items-center gap-1 sm:gap-2">
+            <label className="text-dark-500 hidden text-xs font-medium sm:inline">
               {t('pages.users.actions.unlock')}
             </label>
             <ToggleSwitch
@@ -225,21 +311,32 @@ export function UserManagementPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-dark-500 text-2xl font-light">{t('pages.users.title')}</h1>
-          <span className="text-base font-light text-gray-500">{totalUsers}</span>
+      <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">{t('pages.users.title')}</h1>
+          <span className="text-sm font-light text-gray-500 sm:text-base">{totalUsers}</span>
         </div>
 
         <PermissionGuard permission={PERMISSIONS.USERS.CREATE}>
-          <DoubleButton
-            size="md"
-            icon={<Icons.Add size={20} strokeWidth={2} />}
-            iconPosition="left"
+          {/* Desktop: Full button with text, Mobile: Icon-only button */}
+          <div className="hidden sm:block">
+            <DoubleButton
+              size="md"
+              icon={<Icons.Add size={20} strokeWidth={2} />}
+              iconPosition="left"
+              onClick={() => setShowCreateModal(true)}
+            >
+              {t('pages.users.addNewUser')}
+            </DoubleButton>
+          </div>
+          {/* Mobile: Icon-only button */}
+          <button
             onClick={() => setShowCreateModal(true)}
+            className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+            aria-label={t('pages.users.addNewUser')}
           >
-            {t('pages.users.addNewUser')}
-          </DoubleButton>
+            <Icons.Add size={20} strokeWidth={2} />
+          </button>
         </PermissionGuard>
       </div>
 

@@ -218,6 +218,14 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
 
   return (
     <>
+      {/* Mobile overlay */}
+      {isOpenSideBar && (
+        <div
+          className="fixed inset-0 z-21 bg-black/50 lg:hidden"
+          onClick={() => toggleSidebar()}
+          aria-hidden="true"
+        />
+      )}
       <aside
         ref={(el) => {
           asideRef.current = el
@@ -229,15 +237,24 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
           isSidebarVisible ? 'w-60' : 'w-18',
           'items-start px-4 pl-3',
           isHoverOpen && !isOpenSideBar ? 'bg-white' : 'bg-white',
+          // Hide on mobile by default, show when opened. On desktop (lg+), always visible
+          isOpenSideBar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           className
         )}
         onMouseEnter={() => {
-          // If hovering over sidebar and it was opened by hover, keep it open
-          if (isHoverOpen) {
-            setHoverOpen(true)
+          // Only enable hover on desktop (lg and above) - check via media query
+          if (window.matchMedia('(min-width: 1024px)').matches) {
+            // If hovering over sidebar and it was opened by hover, keep it open
+            if (isHoverOpen) {
+              setHoverOpen(true)
+            }
           }
         }}
         onMouseLeave={(e) => {
+          // Only enable hover on desktop (lg and above) - check via media query
+          if (!window.matchMedia('(min-width: 1024px)').matches) {
+            return
+          }
           // If we're moving into the submenu (rendered via portal), don't collapse hover sidebar
           const relatedTarget = (e.relatedTarget as HTMLElement | null) ?? null
           if (relatedTarget?.closest?.('.submenu-container')) {
@@ -310,9 +327,12 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                   )}
                   aria-label={item.label}
                   onMouseEnter={() => {
-                    // Open sidebar on hover if it's closed
-                    if (!isOpenSideBar) {
-                      setHoverOpen(true)
+                    // Only enable hover on desktop (lg and above)
+                    if (window.matchMedia('(min-width: 1024px)').matches) {
+                      // Open sidebar on hover if it's closed
+                      if (!isOpenSideBar) {
+                        setHoverOpen(true)
+                      }
                     }
                   }}
                 >
@@ -363,9 +383,12 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                     <div
                       className="flex items-center"
                       onMouseEnter={() => {
-                        // When hovering icon, expand sidebar
-                        if (!isOpenSideBar) {
-                          setHoverOpen(true)
+                        // Only enable hover on desktop (lg and above)
+                        if (window.matchMedia('(min-width: 1024px)').matches) {
+                          // When hovering icon, expand sidebar
+                          if (!isOpenSideBar) {
+                            setHoverOpen(true)
+                          }
                         }
                       }}
                     >
@@ -415,9 +438,12 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                 )}
                 aria-label={item.label}
                 onMouseEnter={() => {
-                  // Open sidebar on hover if it's closed
-                  if (!isOpenSideBar) {
-                    setHoverOpen(true)
+                  // Only enable hover on desktop (lg and above)
+                  if (window.matchMedia('(min-width: 1024px)').matches) {
+                    // Open sidebar on hover if it's closed
+                    if (!isOpenSideBar) {
+                      setHoverOpen(true)
+                    }
                   }
                 }}
               >
@@ -634,9 +660,12 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                   )}
                   aria-label={action.label}
                   onMouseEnter={() => {
-                    // Open sidebar on hover if it's closed
-                    if (!isOpenSideBar) {
-                      setHoverOpen(true)
+                    // Only enable hover on desktop (lg and above)
+                    if (window.matchMedia('(min-width: 1024px)').matches) {
+                      // Open sidebar on hover if it's closed
+                      if (!isOpenSideBar) {
+                        setHoverOpen(true)
+                      }
                     }
                   }}
                 >

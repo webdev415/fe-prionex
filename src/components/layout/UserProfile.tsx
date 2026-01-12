@@ -4,6 +4,7 @@
  * User profile dropdown with user info, settings, and logout option.
  */
 
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
@@ -22,12 +23,25 @@ interface UserProfileProps {
 export function UserProfile({ onLogoutClick }: UserProfileProps) {
   const { t } = useTranslation('common')
   const { user } = useAuth()
+  const [isOpen, setIsOpen] = useState(false)
 
   // Get display name: prefer firstName + lastName, fallback to username
   const displayName =
     user?.firstName && user?.lastName
       ? `${user.firstName} ${user.lastName}`
       : user?.username || 'User'
+
+  // Close dropdown on window resize to prevent positioning issues
+  useEffect(() => {
+    const handleResize = () => {
+      if (isOpen) {
+        setIsOpen(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isOpen])
 
   const handleSettingsClick = () => {
     // TODO: Navigate to settings page or open settings modal
@@ -36,7 +50,7 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
   }
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu modal={false} open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <button className="bg-secondary-800 flex h-10 w-[175px] cursor-pointer items-center gap-2 rounded-md px-3 transition-all duration-200 hover:opacity-90">
           <Icons.User02 size={20} className="text-primary-500" strokeWidth={1.5} />

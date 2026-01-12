@@ -3,11 +3,12 @@ import { vi } from 'vitest'
 
 // Mock ResizeObserver
 if (typeof globalThis.ResizeObserver === 'undefined') {
-  globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn(),
-  })) as unknown as typeof ResizeObserver
+  class ResizeObserverMock {
+    observe = vi.fn()
+    unobserve = vi.fn()
+    disconnect = vi.fn()
+  }
+  globalThis.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver
 }
 
 // Mock i18next
@@ -36,6 +37,18 @@ vi.mock('react-i18next', () => ({
         'alreadyLoggedIn.message': 'You are already logged in on another device.',
         'alreadyLoggedIn.forceLogout': 'Force Logout Other Session',
         'alreadyLoggedIn.cancel': 'Back to Login',
+        'pages.clients.listOfClients': 'List of Clients',
+        'pages.clients.clearAll': 'Clear All',
+        'pages.clients.filtersLabel': 'Filters',
+        'pages.clients.applied': 'applied',
+        'pages.clients.filters.tags': 'Tags',
+        'pages.clients.filters.more': 'more',
+        'pages.clients.priorities.critical': 'Critical',
+        'pages.clients.priorities.high': 'High',
+        'pages.clients.priorities.medium': 'Medium',
+        'pages.clients.priorities.low': 'Low',
+        'pages.clients.priorityCards.criticalPriority': 'Critical Priority',
+        'pages.clients.priorityCards.totalDebt': 'Total Debt',
       }
       return translations[key] || key
     },
