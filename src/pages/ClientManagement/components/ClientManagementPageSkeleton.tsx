@@ -8,7 +8,7 @@
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 
 const ITEMS_PER_PAGE = 10
-const TABLE_COLUMNS = 11
+const TABLE_COLUMNS = 12 // id, fullName, taxIdNumber, tags, phoneNumber, dateOfSale, creditor, debt, amountOfDebt, priority, score, actions
 
 export function ClientManagementPageSkeleton() {
   return (
@@ -53,9 +53,15 @@ export function ClientManagementPageSkeleton() {
         </div>
       </div>
 
-      {/* Table Skeleton */}
+      {/* Table Skeleton with Bulk Selection */}
       <div className="flex flex-col items-start gap-8 self-stretch">
-        <TableSkeleton columns={TABLE_COLUMNS} rows={ITEMS_PER_PAGE} className="w-full" />
+        <TableSkeleton
+          columns={TABLE_COLUMNS}
+          rows={ITEMS_PER_PAGE}
+          className="w-full"
+          enableBulkSelection
+          showBulkHeader
+        />
       </div>
 
       {/* Pagination Skeleton */}

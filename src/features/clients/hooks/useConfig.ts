@@ -24,8 +24,8 @@ export function useSystemConfig() {
   return useQuery({
     queryKey: configKeys.system(),
     queryFn: configApi.getSystemConfig,
-    staleTime: 60 * 60 * 1000, // 1 hour (config changes infrequently)
-    gcTime: 24 * 60 * 60 * 1000, // 24 hours
+    staleTime: 5 * 60 * 1000, // 5 minutes (reduced for faster config updates)
+    gcTime: 60 * 60 * 1000, // 1 hour
   })
 }
 
@@ -39,7 +39,7 @@ export function usePriorityThresholds() {
   return useQuery({
     queryKey: configKeys.priorityThresholds(),
     queryFn: configApi.getPriorityThresholds,
-    staleTime: 60 * 60 * 1000, // 1 hour
-    gcTime: 24 * 60 * 60 * 1000, // 24 hours
+    staleTime: 5 * 60 * 1000, // 5 minutes (reduced from 1 hour for faster config updates)
+    gcTime: 60 * 60 * 1000, // 1 hour
   })
 }

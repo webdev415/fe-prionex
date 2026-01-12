@@ -3,21 +3,26 @@
     "name": "CRM Prionex",
     "description": "Customer Relationship Management System"
   },
-  "navigation": {
-    "home": "Home",
-    "dashboard": "Dashboard",
-    "clients": "Clients",
-    "settings": "Settings",
-    "logout": "Logout",
-    "activity": "Activity",
-    "importClients": "Import Clients",
-    "projects": "Projects",
-    "users": "Users",
-    "roles": "Roles",
-    "smsTemplates": "SMS Templates",
-    "transactions": "Transactions",
-    "reports": "Reports"
-  },
+    "navigation": {
+      "home": "Home",
+      "dashboard": "Dashboard",
+      "clients": "Clients",
+      "settings": "Settings",
+      "logout": "Logout",
+      "activity": "Activity",
+      "importClients": "Import Clients",
+      "projects": "Projects",
+      "users": "Users",
+      "sellers": "Sellers",
+      "roles": "Roles",
+      "smsTemplates": "SMS Templates",
+      "transactions": "Transactions",
+      "auditLogs": "Audit Logs",
+      "reports": "Reports",
+      "scoringConfiguration": "Scoring Configuration",
+      "systemSettings": "System Settings",
+      "tags": "Tags"
+    },
   "search": {
     "placeholder": "Search",
     "phoneNumber": "Phone number",
@@ -52,7 +57,9 @@
     "ru": "Russian"
   },
   "common": {
-    "step": "Step"
+    "step": "Step",
+    "selected": "Selected",
+    "of": "of"
   },
   "logout": {
     "confirmTitle": "Confirm Logout",
@@ -405,9 +412,12 @@
           "selectPurchaseDate": "Select purchase date",
           "placeholderText": "Placeholder text",
           "enterSellerCreditor": "Enter Seller/Creditor Name",
-          "loadingProjects": "Loading projects..."
+          "selectSellerCreditor": "Select Seller/Creditor",
+          "loadingProjects": "Loading projects...",
+          "loadingSellers": "Loading sellers..."
         },
-        "noProjectsAvailable": "No projects available"
+        "noProjectsAvailable": "No projects available",
+        "noSellersAvailable": "No sellers available"
       },
       "step2": {
         "simple": {
@@ -557,6 +567,12 @@
       "filtersLabel": "Filters",
       "applied": "applied",
       "noClientsFound": "No clients found",
+      "assign": "Assign",
+      "bulkAssign": "Bulk Assign",
+      "bulkActions": "Bulk Actions",
+      "manageTags": "Manage Tags",
+      "errorLoading": "Failed to load clients",
+      "errorOccurred": "An error occurred",
       "tableHeaders": {
         "fullName": "Full name",
         "taxIdNumber": "Tax id number",
@@ -567,7 +583,8 @@
         "debt": "Debt",
         "amountOfDebt": "Amount of debt",
         "priority": "Priority",
-        "score": "Score"
+        "score": "Score",
+        "actions": "Actions"
       },
       "priorities": {
         "critical": "Critical",
@@ -590,12 +607,15 @@
         "dateOfSale": "Date of sale",
         "portfolio": "Portfolio",
         "status": "Status",
+        "tags": "Tags",
         "responsibleEmployee": "Responsible employee",
         "responsibleSearcher": "Responsible searcher",
         "selectEmployee": "Select employee",
         "selectSearcher": "Select searcher",
+        "unassignedOnly": "Unassigned only",
         "more": "more",
-        "days": "days"
+        "days": "days",
+        "noUsersAvailable": "No users available"
       },
       "statuses": {
         "new": "New",
@@ -606,9 +626,41 @@
         "defaulted": "Defaulted",
         "answered": "Answered",
         "noAnswer": "No Answer",
+        "sent": "Sent",
         "delivered": "Delivered",
         "failed": "Failed",
         "pending": "Pending"
+      },
+      "bulkActions": {
+        "assignEmployee": "Assign Employee",
+        "addTags": "Add Tags",
+        "removeTags": "Remove Tags"
+      },
+      "modals": {
+        "portfolioDropdown": {
+          "searchPortfolios": "Search portfolios...",
+          "noPortfoliosFound": "No portfolios found",
+          "clear": "Clear",
+          "apply": "Apply"
+        },
+        "tagsDropdown": {
+          "searchTags": "Search tags...",
+          "noTagsFound": "No tags found",
+          "clear": "Clear",
+          "apply": "Apply"
+        },
+        "bulkTag": {
+          "addTags": "Add Tags",
+          "removeTags": "Remove Tags",
+          "clients": "client(s)",
+          "searchTags": "Search tags...",
+          "loadingTags": "Loading tags...",
+          "noTagsFound": "No tags found",
+          "tagsSelected": "tag(s) selected",
+          "selectAtLeastOneTag": "Please select at least one tag",
+          "cancel": "Cancel",
+          "processing": "Processing..."
+        }
       },
       "activity": {
         "score": "Score",
@@ -726,6 +778,66 @@
           "note": "Note",
           "typeYourNoteHere": "Type your note here"
         },
+        "assignClient": {
+          "title": "Assign Client: {{fullName}}",
+          "clientInformation": "Client Information",
+          "assignmentDetails": "Assignment Details",
+          "name": "Name",
+          "email": "Email",
+          "phone": "Phone",
+          "priority": "Priority",
+          "score": "Score",
+          "totalDebt": "Total Debt",
+          "debt": "debt",
+          "debts": "debts",
+          "employee": "Employee (Optional)",
+          "searcher": "Searcher (Optional)",
+          "assignmentReason": "Assignment Reason",
+          "notes": "Notes (Optional)",
+          "selectEmployee": "Select employee...",
+          "selectSearcher": "Select searcher...",
+          "noUsersAvailable": "No users available",
+          "enterAdditionalNotes": "Enter additional notes...",
+          "warningMessage": "Note: At least one assignment (Employee or Searcher) must be selected.",
+          "assignClient": "Assign Client",
+          "reasons": {
+            "newClient": "New Client",
+            "workloadDistribution": "Workload Distribution",
+            "specialistRequired": "Specialist Required",
+            "reassignment": "Reassignment",
+            "other": "Other"
+          }
+        },
+        "bulkAssignClient": {
+          "title": "Bulk Assign Clients ({{count}} selected)",
+          "selectedClientsPreview": "Selected Clients Preview",
+          "assignmentOptions": "Assignment Options",
+          "assignEmployeeToAll": "Assign Employee To All (Optional)",
+          "assignSearcherToAll": "Assign Searcher To All (Optional)",
+          "distributionMethod": "Distribution Method",
+          "assignmentReason": "Assignment Reason",
+          "notes": "Notes",
+          "selectEmployee": "Select employee...",
+          "selectSearcher": "Select searcher...",
+          "selectReason": "Select reason...",
+          "enterAdditionalNotes": "Enter additional notes...",
+          "assignAllToSelected": "Assign all to selected users above",
+          "distributeEvenly": "Distribute evenly among available users (future)",
+          "totalDebt": "Total Debt:",
+          "avgScore": "Avg Score:",
+          "andMoreClients": "... and {{count}} more {{client}}",
+          "client": "client",
+          "clients": "clients",
+          "warningMessage": "This will assign {{count}} {{client}}. Assignment history will be logged for each client individually.",
+          "assignAllClients": "Assign All Clients",
+          "reasons": {
+            "newClient": "New Client",
+            "workloadDistribution": "Workload Distribution",
+            "specialistRequired": "Specialist Required",
+            "reassignment": "Reassignment",
+            "other": "Other"
+          }
+        },
         "callDialog": {
           "incomingCall": "Incoming Call",
           "primary": "Primary",
@@ -759,7 +871,8 @@
           "hangUp": "Hang Up",
           "viewClient": "View Client",
           "loanPrincipal": "Loan principal",
-          "lastContact": "Last contact"
+          "lastContact": "Last contact",
+          "callInProgress": "Another call or recording is already in progress. Please finish or close it first."
         },
         "callLogCard": {
           "message": "Message",
@@ -803,11 +916,14 @@
           "title": "Send SMS",
           "smsSentToday": "SMS sent today",
           "sendSMSTo": "Send SMS to",
+          "dailyLimit": "Daily limit",
           "dailyLimitReached": "Daily limit reached",
           "smsSentToThisNumber": "SMS sent to this number",
           "nextSMSAvailableTomorrow": "Next SMS available tomorrow at",
           "template": "Template",
           "selectTemplate": "Select template",
+          "customMessage": "Custom Message",
+          "loadingTemplates": "Loading templates...",
           "message": "Message",
           "typeYourMessageHere": "Type your message here...",
           "characters": "characters",
@@ -820,6 +936,9 @@
           "messageWillBeSplit": "Message will be split into",
           "clientName": "Client name",
           "debtAmount": "Debt amount",
+          "templateVariables": "Template Variables",
+          "sending": "Sending...",
+          "smsSentSuccessfully": "SMS sent successfully",
           "sendSMS": "Send SMS"
         },
         "viewSMS": {
@@ -1217,6 +1336,11 @@
           "messageTextRequired": "Message text is required"
         }
       },
+      "messages": {
+        "templateCreated": "Template created successfully",
+        "templateUpdated": "Template updated successfully",
+        "templateDeleted": "Template deleted successfully"
+      },
       "modals": {
         "templateNotFound": "Template not found",
         "create": {
@@ -1236,6 +1360,165 @@
           "actionCannotBeUndone": "This action cannot be undone",
           "templateWillBePermanentlyRemoved": "The template will be permanently removed from the system.",
           "deleting": "Deleting..."
+        }
+      }
+    },
+    "tags": {
+      "title": "Tags",
+      "createTag": "Create Tag",
+      "editTag": "Edit Tag",
+      "newTag": "New Tag",
+      "noTagsFound": "No tags found",
+      "errorLoading": "Failed to load tags",
+      "tableHeaders": {
+        "name": "Tag Name",
+        "project": "Project",
+        "description": "Description",
+        "clients": "Clients",
+        "actions": "Actions"
+      },
+      "fields": {
+        "name": "Name",
+        "namePlaceholder": "Enter tag name",
+        "color": "Color",
+        "description": "Description",
+        "descriptionPlaceholder": "Enter tag description",
+        "optional": "Optional",
+        "project": "Project",
+        "projectNote": "Tags are automatically assigned to your active project",
+        "tagName": "Tag Name"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete"
+      }
+    },
+    "sellers": {
+      "title": "Seller Management",
+      "addNewSeller": "New Seller",
+      "noSellersFound": "No sellers found",
+      "errorLoading": "Error loading sellers",
+      "search": "Search",
+      "searchPlaceholder": "Search by company name, tax ID, contact...",
+      "searchButton": "Search",
+      "sellers": "sellers",
+      "searchFilters": {
+        "status": "Status",
+        "client": "Client",
+        "period": "Period",
+        "allClients": "All Clients",
+        "statusOptions": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "all": "All"
+        },
+        "periodOptions": {
+          "any": "Any time",
+          "last30Days": "Last 30 days",
+          "last90Days": "Last 90 days",
+          "thisYear": "This year"
+        }
+      },
+      "tableHeaders": {
+        "sellerCode": "Seller Code",
+        "sellerName": "Seller Name",
+        "sellerType": "Seller Type",
+        "status": "Status",
+        "companyEmail": "Company Email",
+        "contact": "Contact",
+        "actions": "Actions",
+        "companyName": "Company Name",
+        "website": "Company Website",
+        "email": "Company Email",
+        "taxId": "Tax ID",
+        "clients": "Clients"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "modals": {
+        "create": {
+          "title": "Create New Seller",
+          "basicInformation": "Basic Information",
+          "contactInformation": "Contact Information",
+          "optional": "Optional",
+          "sellerCode": "Seller Code",
+          "sellerName": "Seller Name",
+          "sellerType": "Seller Type",
+          "taxId": "Tax ID",
+          "contactPerson": "Contact Person",
+          "contactEmail": "Contact Email",
+          "contactPhone": "Contact Phone",
+          "address": "Address",
+          "notes": "Notes",
+          "saveSeller": "Save Seller",
+          "saving": "Saving...",
+          "placeholders": {
+            "sellerCode": "e.g., BANK_ABC_2024",
+            "sellerName": "Enter seller company name",
+            "sellerType": "Select seller type",
+            "taxId": "Enter tax ID",
+            "contactPerson": "Enter contact person name",
+            "contactEmail": "Enter contact email",
+            "contactPhone": "Enter contact phone",
+            "address": "Enter business address",
+            "notes": "Enter any additional notes"
+          },
+          "errors": {
+            "sellerCodeRequired": "Seller code is required",
+            "sellerNameRequired": "Seller name is required",
+            "sellerTypeRequired": "Seller type is required",
+            "invalidEmail": "Please enter a valid email address"
+          }
+        },
+        "edit": {
+          "title": "Edit Seller",
+          "basicInformation": "Basic Information",
+          "contactInformation": "Contact Information",
+          "optional": "Optional",
+          "sellerCode": "Seller Code",
+          "sellerCodeReadOnly": "Seller code cannot be changed after creation",
+          "sellerName": "Seller Name",
+          "sellerType": "Seller Type",
+          "taxId": "Tax ID",
+          "contactPerson": "Contact Person",
+          "contactEmail": "Contact Email",
+          "contactPhone": "Contact Phone",
+          "address": "Address",
+          "notes": "Notes",
+          "saveChanges": "Save Changes",
+          "saving": "Saving...",
+          "loadingSellerData": "Loading seller data...",
+          "sellerNotFound": "Seller not found",
+          "placeholders": {
+            "sellerName": "Enter seller company name",
+            "sellerType": "Select seller type",
+            "taxId": "Enter tax ID",
+            "contactPerson": "Enter contact person name",
+            "contactEmail": "Enter contact email",
+            "contactPhone": "Enter contact phone",
+            "address": "Enter business address",
+            "notes": "Enter any additional notes"
+          },
+          "errors": {
+            "sellerNameRequired": "Seller name is required",
+            "sellerTypeRequired": "Seller type is required",
+            "invalidEmail": "Please enter a valid email address"
+          }
+        },
+        "delete": {
+          "title": "Delete Seller",
+          "confirmMessage": {
+            "question": "Are you sure you want to delete this seller?",
+            "warning": "This action cannot be undone."
+          },
+          "deleting": "Deleting...",
+          "deleteSeller": "Delete Seller"
         }
       }
     },
@@ -1292,6 +1575,135 @@
         "averagePayment": "Average Payment",
         "topCollector": "Top Collector",
         "largestPmt": "Largest Pmt"
+      }
+    },
+    "scoringConfiguration": {
+      "title": "Scoring Configuration",
+      "scoreWeights": "Score Weights",
+      "debtAmountWeight": "Debt Amount Weight",
+      "daysOverdueWeight": "Days Overdue Weight",
+      "contactHistoryWeight": "Contact History Weight",
+      "totalMustEqual": "Total must equal 100%",
+      "current": "Current",
+      "previewChanges": "Preview Changes",
+      "priorityThresholds": "Priority Classification Thresholds",
+      "resetDefaults": "Reset Defaults",
+      "scoreGreaterThanOrEqual": "Score ≥",
+      "scoreLessThan": "Score <",
+      "points": "points",
+      "andLessThan": "and <",
+      "criticalDescription": "Clients with highest urgency (score 25-100)",
+      "highDescription": "Important clients requiring attention (score 18-24)",
+      "mediumDescription": "Standard follow-up required (score 10-17)",
+      "lowDescription": "Minimal urgency (score 0-9)",
+      "immediateEffect": "Changes will affect all clients in this project immediately",
+      "sellerOverrides": "Seller-Specific Overrides (Optional)",
+      "addSellerConfig": "Add Seller-Specific Configuration",
+      "sellerOverridesDescription": "Configure different thresholds for specific sellers",
+      "configurationPreview": "Configuration Preview",
+      "currentDistribution": "Current Distribution:",
+      "withNewThresholds": "With New Thresholds:",
+      "clients": "clients",
+      "lastUpdated": "Last Updated:",
+      "by": "by",
+      "saveConfiguration": "Save Configuration"
+    },
+    "auditLogs": {
+      "title": "Audit Logs",
+      "exportCsv": "Export CSV",
+      "noLogsFound": "No audit logs found",
+      "searchFilters": {
+        "placeholder": "Search by client ID, entity ID, or keyword",
+        "status": "Status",
+        "client": "Client",
+        "period": "Period",
+        "search": "Search",
+        "dateRange": "Date Range",
+        "user": "User",
+        "entity": "Entity",
+        "action": "Action",
+        "role": "Role",
+        "quickRanges": "Quick ranges",
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "last7": "Last 7",
+        "last30": "Last 30 days",
+        "selectEmployee": "Select employee",
+        "allTypes": "All Types",
+        "selectSearcher": "Select searcher",
+        "selectRole": "Select role",
+        "selectStartDate": "Select start date",
+        "selectEndDate": "Select end date",
+        "allActions": "All Actions",
+        "allUsers": "All Users",
+        "applyFilters": "Apply Filters",
+        "clearAll": "Clear All",
+        "search": "Search"
+      },
+      "tableHeaders": {
+        "status": "Status",
+        "timestamp": "TIMESTAMP",
+        "user": "USER",
+        "actions": "Actions",
+        "entity": "Entity",
+        "details": "Details"
+      },
+      "status": {
+        "success": "Success",
+        "failed": "Failed"
+      },
+      "viewDetails": "View Details",
+      "detailModal": {
+        "title": "Audit Log Details",
+        "eventInformation": "Event Information",
+        "changes": "Changes",
+        "requestInformation": "Request Information",
+        "timestamp": "Timestamp",
+        "user": "User",
+        "role": "Role",
+        "action": "Action",
+        "result": "Result",
+        "ipAddress": "IP Address",
+        "sessionId": "Session ID",
+        "status": "Status",
+        "yes": "Yes",
+        "no": "No",
+        "field": "Field",
+        "oldValue": "Old Value",
+        "newValue": "New Value",
+        "change": "Change",
+        "httpMethod": "HTTP Method",
+        "apiPath": "API Path",
+        "responseStatus": "Response Status",
+        "responseTime": "Response Time",
+        "userAgent": "User Agent",
+        "added": "Added",
+        "modified": "Modified",
+        "removed": "Removed"
+      },
+      "csvExport": {
+        "title": "Export audit logs to CSV",
+        "exportScope": "Export {{count}} audit log entries matching current filters.",
+        "csvOptions": "CSV options",
+        "columnsToInclude": "Columns to Include",
+        "selectAll": "Select All",
+        "formatSettings": "Format Settings",
+        "dateFormat": "Date Format",
+        "fieldDelimiter": "Field Delimiter",
+        "encoding": "Encoding",
+        "includeHeaders": "Include column headers",
+        "exportDownload": "Export & Download",
+        "columns": {
+          "timestamp": "Timestamp",
+          "user": "User",
+          "action": "Action",
+          "entityType": "Entity Type",
+          "entityId": "Entity ID",
+          "oldValue": "Old Value",
+          "newValue": "New Value",
+          "ipAddress": "IP Address",
+          "successStatus": "Success Status"
+        }
       }
     }
   }

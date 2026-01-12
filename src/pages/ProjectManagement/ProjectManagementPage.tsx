@@ -5,12 +5,13 @@
  * Updated: 2025-12-08 - Added search/filters, new columns, side panel
  */
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useProjects, useProjectDetail } from '@/features/projects/hooks/useProjects'
 import { useProjectExport, useDeleteProject } from '@/features/projects/hooks/useProjectMutations'
 import { EditProjectModal } from './components/EditProjectModal'
 import { ProjectDetailPanel } from './components/ProjectDetailPanel'
+import { ProjectDetailModal } from './components/ProjectDetailModal'
 import { DeleteProjectConfirmationModal } from './components/DeleteProjectConfirmationModal'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import type { ApiProject, ApiProjectDetail, ProjectFilters } from '@/features/projects/types'
@@ -37,6 +38,23 @@ export function ProjectManagementPage() {
     key: 'created_at',
     order: 'desc',
   })
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024) // lg breakpoint
+  const [showDetailModal, setShowDetailModal] = useState(false)
+
+  // Track screen size to determine if we're on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024
+      setIsMobile(mobile)
+      // Close modal when transitioning from mobile to desktop
+      if (!mobile && showDetailModal) {
+        setShowDetailModal(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [showDetailModal])
 
   // Fetch projects with pagination, filters, and sorting
   const { data, isLoading, isError, error, refetch } = useProjects({
@@ -99,9 +117,16 @@ export function ProjectManagementPage() {
     })
   }, [exportMutation, filters])
 
-  const handleRowClick = useCallback((project: ApiProject) => {
-    setSelectedProjectId(project.id)
-  }, [])
+  const handleRowClick = useCallback(
+    (project: ApiProject) => {
+      setSelectedProjectId(project.id)
+      // Show modal on mobile, panel is automatically shown on desktop
+      if (isMobile) {
+        setShowDetailModal(true)
+      }
+    },
+    [isMobile]
+  )
 
   const handleEditFromPanel = useCallback(() => {
     if (projectDetail) {
@@ -226,7 +251,9 @@ export function ProjectManagementPage() {
     <div className="flex h-full flex-col">
       {/* Page Header */}
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-dark-500 text-2xl font-light">{t('pages.projects.title')}</h1>
+        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+          {t('pages.projects.title')}
+        </h1>
       </div>
 
       {/* Search & Filters */}
@@ -239,7 +266,7 @@ export function ProjectManagementPage() {
       />
 
       {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
         {/* Loading State */}
         {isLoading && <ProjectManagementPageSkeleton />}
 
@@ -256,34 +283,39 @@ export function ProjectManagementPage() {
 
         {/* Projects Table */}
         {!isLoading && !isError && (
-          <div className="flex flex-1 flex-col">
-            <div className="flex w-full flex-1 items-start justify-between overflow-y-auto">
-              <div className="w-[70%]">
-                <div className="rounded-xl bg-white/50 p-6">
-                  <DataTable
-                    columns={columns}
-                    data={projects}
-                    emptyMessage={t('pages.projects.noProjectsFound')}
-                    onRowClick={handleRowClick}
-                    sortConfig={sortConfig}
-                    onSort={handleSort}
-                  />
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="flex flex-1 gap-4 overflow-hidden">
+              {/* Table Container */}
+              <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex h-full flex-col overflow-hidden rounded-xl bg-white/50">
+                  <div className="flex-1 overflow-auto lg:p-6">
+                    <DataTable
+                      columns={columns}
+                      data={projects}
+                      emptyMessage={t('pages.projects.noProjectsFound')}
+                      onRowClick={handleRowClick}
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="w-[30%] pl-4">
-                {/* Side Panel */}
-                <ProjectDetailPanel
-                  project={projectDetail as ApiProjectDetail | null}
-                  hasProjects={projects.length > 0}
-                  onEdit={handleEditFromPanel}
-                  onDelete={handleDeleteFromPanel}
-                  isLoading={effectiveSelectedProjectId !== null && isDetailLoading}
-                />
+              {/* Side Panel - hidden on mobile, visible on desktop */}
+              <div className="hidden min-w-0 flex-col lg:flex lg:w-[30%] lg:self-stretch">
+                <div className="flex h-full overflow-hidden">
+                  <ProjectDetailPanel
+                    project={projectDetail as ApiProjectDetail | null}
+                    hasProjects={projects.length > 0}
+                    onEdit={handleEditFromPanel}
+                    onDelete={handleDeleteFromPanel}
+                    isLoading={effectiveSelectedProjectId !== null && isDetailLoading}
+                  />
+                </div>
               </div>
             </div>
 
             {/* Pagination */}
-            <div className="mt-4">
+            <div className="mt-4 shrink-0">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -317,6 +349,19 @@ export function ProjectManagementPage() {
           onConfirm={handleDeleteConfirm}
           onCancel={handleDeleteCancel}
           isLoading={deleteMutation.isPending}
+        />
+      )}
+
+      {/* Project Detail Modal - shown on mobile when project is clicked */}
+      {showDetailModal && (
+        <ProjectDetailModal
+          open={showDetailModal}
+          onClose={() => setShowDetailModal(false)}
+          project={projectDetail as ApiProjectDetail | null}
+          hasProjects={projects.length > 0}
+          onEdit={handleEditFromPanel}
+          onDelete={handleDeleteFromPanel}
+          isLoading={effectiveSelectedProjectId !== null && isDetailLoading}
         />
       )}
     </div>

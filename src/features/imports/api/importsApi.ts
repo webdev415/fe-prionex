@@ -65,8 +65,8 @@ export async function uploadImport(request: UploadImportRequest): Promise<Upload
   }
 
   // Add metadata to form data for backend
-  if (request.seller_creditor) {
-    formData.append('seller_creditor', request.seller_creditor)
+  if (request.seller_id) {
+    formData.append('seller_id', request.seller_id.toString())
   }
   if (request.project_code) {
     formData.append('project_code', request.project_code)

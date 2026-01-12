@@ -57,38 +57,40 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
     <Modal open={open} onClose={onClose} maxWidth="lg">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <HugeiconsIcon icon={LockedIcon} size={20} color="#05040D" />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <HugeiconsIcon icon={LockedIcon} size={18} color="#05040D" />
           </div>
         }
         title={
-          <span className="flex items-baseline gap-2">
+          <span className="flex flex-wrap items-baseline gap-1 break-words sm:gap-2">
             <span>{t('pages.users.modals.unlock.title')}</span>
             <span className="text-error-500">{t('pages.users.modals.unlock.locked')}</span>
           </span>
         }
       />
-      <ModalContent className="space-y-6">
+      <ModalContent className="space-y-4 sm:space-y-6">
         {/* Account summary */}
-        <div className="space-y-1 text-sm">
-          <p>
-            <span className="text-dark-500 text-base font-medium">
+        <div className="space-y-1 text-sm sm:space-y-2">
+          <p className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+            <span className="text-dark-500 text-sm font-medium sm:text-base">
               {t('pages.users.modals.unlock.unlockAccount')}
-            </span>{' '}
-            <span className="text-dark-500 text-base font-light">{user.username}</span>
+            </span>
+            <span className="text-dark-500 text-sm font-light break-words sm:text-base">
+              {user.username}
+            </span>
           </p>
-          <p>
-            <span className="text-dark-500 text-base font-light">
+          <p className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+            <span className="text-dark-500 text-sm font-light sm:text-base">
               {t('pages.users.modals.unlock.failedAttempts')}
-            </span>{' '}
-            <span className="text-dark-500 text-base font-medium">{failedAttempts}</span>
+            </span>
+            <span className="text-dark-500 text-sm font-medium sm:text-base">{failedAttempts}</span>
           </p>
           {lockedAt && (
-            <p>
-              <span className="text-dark-500 text-base font-light">
+            <p className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+              <span className="text-dark-500 text-sm font-light sm:text-base">
                 {t('pages.users.modals.unlock.lockedAt')}
-              </span>{' '}
-              <span className="text-dark-500 text-base font-medium">
+              </span>
+              <span className="text-dark-500 text-sm font-medium break-words sm:text-base">
                 {lockedAt.toLocaleString(undefined, {
                   year: 'numeric',
                   month: 'short',
@@ -100,11 +102,11 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
             </p>
           )}
           {autoUnlockAt && (
-            <p>
-              <span className="text-dark-500 text-base font-light">
+            <p className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+              <span className="text-dark-500 text-sm font-light sm:text-base">
                 {t('pages.users.modals.unlock.autoUnlockAt')}
-              </span>{' '}
-              <span className="text-dark-500 text-base font-medium">
+              </span>
+              <span className="text-dark-500 text-sm font-medium break-words sm:text-base">
                 {autoUnlockAt.toLocaleString(undefined, {
                   year: 'numeric',
                   month: 'short',
@@ -114,7 +116,7 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
                 })}
               </span>
               {remainingMinutes !== null && remainingMinutes > 0 && (
-                <span className="text-dark-500 ml-1 text-sm font-light">{`(${remainingMinutes} ${t('pages.users.modals.unlock.minRemaining')})`}</span>
+                <span className="text-dark-500 text-xs font-light sm:text-sm">{`(${remainingMinutes} ${t('pages.users.modals.unlock.minRemaining')})`}</span>
               )}
             </p>
           )}
@@ -123,30 +125,42 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
         <hr className="border-light-50 border-t" />
 
         {/* Confirmation copy */}
-        <div className="space-y-3 text-sm">
-          <p className="text-dark-500 text-lg font-medium">
+        <div className="space-y-2 text-sm sm:space-y-3">
+          <p className="text-dark-500 text-base font-medium sm:text-lg">
             {t('pages.users.modals.unlock.confirmTitle')}
           </p>
           <div className="space-y-2">
-            <p className="text-dark-500 text-base font-light">
+            <p className="text-dark-500 text-sm font-light sm:text-base">
               {t('pages.users.modals.unlock.thisWill')}
             </p>
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Icons.ArrowRight size={14} className="text-dark-500" strokeWidth={1.5} />
-                <span className="text-dark-500 text-base font-light">
+              <div className="flex items-start gap-2 sm:items-center">
+                <Icons.ArrowRight
+                  size={14}
+                  className="text-dark-500 mt-0.5 shrink-0 sm:mt-0"
+                  strokeWidth={1.5}
+                />
+                <span className="text-dark-500 text-sm font-light break-words sm:text-base">
                   {t('pages.users.modals.unlock.restoreAccess')}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <Icons.ArrowRight size={14} className="text-dark-500" strokeWidth={1.5} />
-                <span className="text-dark-500 text-base font-light">
+              <div className="flex items-start gap-2 sm:items-center">
+                <Icons.ArrowRight
+                  size={14}
+                  className="text-dark-500 mt-0.5 shrink-0 sm:mt-0"
+                  strokeWidth={1.5}
+                />
+                <span className="text-dark-500 text-sm font-light break-words sm:text-base">
                   {t('pages.users.modals.unlock.resetCounter')}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <Icons.ArrowRight size={14} className="text-dark-500" strokeWidth={1.5} />
-                <span className="text-dark-500 text-base font-light">
+              <div className="flex items-start gap-2 sm:items-center">
+                <Icons.ArrowRight
+                  size={14}
+                  className="text-dark-500 mt-0.5 shrink-0 sm:mt-0"
+                  strokeWidth={1.5}
+                />
+                <span className="text-dark-500 text-sm font-light break-words sm:text-base">
                   {t('pages.users.modals.unlock.recordAudit')}
                 </span>
               </div>
@@ -155,7 +169,7 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
 
           {isError && (
             <Alert variant="error">
-              <p className="text-sm">
+              <p className="text-sm break-words">
                 {error?.message || t('pages.users.modals.unlock.failedToUnlock')}
               </p>
             </Alert>

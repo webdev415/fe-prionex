@@ -7,11 +7,15 @@
 
 import api from '@/lib/api'
 import type {
+  AssignClientRequest,
+  BulkAssignClientRequest,
+  BulkAssignmentResponse,
   Client,
   ClientDetail,
   CreateClientRequest,
   GetClientsParams,
   ManualPriorityRequest,
+  PaginatedClientResponse,
   SearchByTinParams,
   UpdateClientRequest,
 } from './types'
@@ -21,9 +25,9 @@ const BASE_URL = '/api/v1/clients'
 /**
  * Get list of clients for user's active project
  */
-export async function getClients(params: GetClientsParams = {}): Promise<Client[]> {
+export async function getClients(params: GetClientsParams = {}): Promise<PaginatedClientResponse> {
   // Add trailing slash to match FastAPI route definition @router.get("/")
-  const response = await api.get<Client[]>(`${BASE_URL}/`, { params })
+  const response = await api.get<PaginatedClientResponse>(`${BASE_URL}/`, { params })
   return response.data
 }
 
@@ -116,6 +120,29 @@ export async function getPrioritySummary(): Promise<PrioritySummary> {
 }
 
 /**
+ * Assign a client to an employee and/or searcher
+ * Requires Admin or Supervisor role
+ */
+export async function assignClient(
+  clientId: number,
+  assignmentData: AssignClientRequest
+): Promise<Client> {
+  const response = await api.post<Client>(`${BASE_URL}/${clientId}/assign`, assignmentData)
+  return response.data
+}
+
+/**
+ * Bulk assign multiple clients to an employee and/or searcher
+ * Requires Admin or Supervisor role
+ */
+export async function bulkAssignClients(
+  bulkData: BulkAssignClientRequest
+): Promise<BulkAssignmentResponse> {
+  const response = await api.post<BulkAssignmentResponse>(`${BASE_URL}/bulk/assign`, bulkData)
+  return response.data
+}
+
+/**
  * Exported API object for easier importing
  * Consistent with other service APIs (usersApi, rolesApi, projectsApi, etc.)
  */
@@ -129,4 +156,6 @@ export const clientApi = {
   setManualPriority,
   getClientCount,
   getPrioritySummary,
+  assignClient,
+  bulkAssignClients,
 }

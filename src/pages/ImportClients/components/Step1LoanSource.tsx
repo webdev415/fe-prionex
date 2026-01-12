@@ -3,7 +3,6 @@
  */
 
 import { useTranslation } from 'react-i18next'
-import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import {
   Select,
@@ -16,9 +15,10 @@ import { Label } from '@/components/ui/Label'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { RadioCard } from './RadioCard'
 import { useProjects } from '@/features/projects'
+import { useSellers } from '@/features/sellers'
 
 export interface Step1Data {
-  sellerCreditor: string
+  sellerId: string // Seller ID as string (for Select component compatibility)
   projectCode: string
   purchaseDate: string
   comment: string
@@ -40,6 +40,13 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
   })
   const projects = projectsData?.projects || []
 
+  // Fetch active sellers for dropdown
+  const { data: sellersData, isLoading: isLoadingSellers } = useSellers({
+    is_active: true,
+    limit: 100,
+  })
+  const sellers = sellersData?.sellers || []
+
   return (
     <div className="space-y-6">
       {/* Loan Source / Metadata Section */}
@@ -53,13 +60,37 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
           <div className="flex items-end gap-4">
             {/* Seller / Creditor */}
             <div className="flex-1">
-              <Input
-                label={t('pages.imports.step1.sellerCreditor')}
-                placeholder={t('pages.imports.step1.placeholders.enterSellerCreditor')}
-                value={data.sellerCreditor}
-                onChange={(e) => onChange({ sellerCreditor: e.target.value })}
-                required
-              />
+              <Label htmlFor="seller-creditor" required className="mb-1.5 block">
+                {t('pages.imports.step1.sellerCreditor')}
+              </Label>
+              <Select
+                value={data.sellerId}
+                onValueChange={(value) => onChange({ sellerId: value })}
+                disabled={isLoadingSellers}
+              >
+                <SelectTrigger className="w-full" id="seller-creditor">
+                  <SelectValue
+                    placeholder={
+                      isLoadingSellers
+                        ? t('pages.imports.step1.placeholders.loadingSellers')
+                        : t('pages.imports.step1.placeholders.selectSellerCreditor')
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {sellers.length === 0 && !isLoadingSellers ? (
+                    <SelectItem value="" disabled>
+                      {t('pages.imports.step1.noSellersAvailable')}
+                    </SelectItem>
+                  ) : (
+                    sellers.map((seller) => (
+                      <SelectItem key={seller.id} value={seller.id.toString()}>
+                        {seller.seller_code} - {seller.seller_name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Project Code */}

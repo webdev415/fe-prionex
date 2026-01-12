@@ -8,6 +8,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
@@ -20,6 +21,8 @@ import {
 } from '@/components/ui/Select'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/Alert'
 import type { SmsTemplate } from '../types'
+import { useUpdateTemplate } from '@/features/sms'
+import { getErrorMessage } from '@/lib/errors'
 
 type EditTemplateFormData = {
   name: string
@@ -35,6 +38,7 @@ interface EditTemplateFormProps {
 
 export function EditTemplateForm({ template, onSuccess }: EditTemplateFormProps) {
   const { t } = useTranslation('common')
+  const updateTemplateMutation = useUpdateTemplate()
 
   const editTemplateSchema = z.object({
     name: z.string().min(1, t('pages.smsTemplates.forms.validation.templateNameRequired')),
@@ -57,11 +61,22 @@ export function EditTemplateForm({ template, onSuccess }: EditTemplateFormProps)
   })
 
   const onSubmit = async (data: EditTemplateFormData) => {
-    // TODO: Replace with actual API call
-    console.log('Updating template:', template.id, data)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    onSuccess()
+    try {
+      await updateTemplateMutation.mutateAsync({
+        templateId: template.id,
+        template: {
+          name: data.name,
+          message_text: data.messageText,
+          category: data.category,
+        },
+      })
+      toast.success(
+        t('pages.smsTemplates.messages.templateUpdated') || 'Template updated successfully'
+      )
+      onSuccess()
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+    }
   }
 
   return (

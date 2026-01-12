@@ -3,13 +3,17 @@
  *
  * Full page view for displaying detailed client information.
  */
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { AddNoteModal } from './components/AddNoteModal'
+import { PriorityBadge } from './components/PriorityBadge'
+import { TagBadge } from '@/components/ui/TagBadge'
+import type { Priority } from './types'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { CallRecordingModal } from './components/CallRecordingModal'
 import { ViewSMSModal } from './components/ViewSMSModal'
@@ -19,6 +23,9 @@ import { cn } from '@/lib/utils'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
+import { useSMSHistory } from '@/features/sms'
+import { useCallStore } from '@/stores/callStore'
+import { useClientTags } from '@/features/tags/hooks/useTags'
 
 // Helper function to create mock client detail
 const createMockClientDetail = (
@@ -828,6 +835,7 @@ const mockClientsDetail = [
 
 export function ClientDetailPage() {
   const { t } = useTranslation('common')
+  const { isCallActive, setOpenCallModal } = useCallStore()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [activeLoanTab, setActiveLoanTab] = useState<'process' | 'closed' | 'rr'>('process')
@@ -837,6 +845,12 @@ export function ClientDetailPage() {
   const clientId = id ? Number(id) : 0
   const { data: apiClient, isLoading, isError, error } = useClient(clientId, !!clientId)
 
+  // Fetch SMS history from API
+  const { data: smsHistoryData } = useSMSHistory(clientId, undefined)
+
+  // Fetch client tags from API
+  const { data: clientTags } = useClientTags(clientId)
+
   // Use mock data as fallback for missing fields until backend is fully integrated
   const client = useMemo(() => {
     if (!apiClient) return mockClientsDetail[0]
@@ -845,24 +859,47 @@ export function ClientDetailPage() {
       .filter(Boolean)
       .join(' ')
 
+    // Map API SMS history to expected format - use real data from API
+    const apiSmsHistory = smsHistoryData?.items || []
+    const mappedSmsHistory = apiSmsHistory.map((sms, index) => {
+      const sentAt = sms.sent_at ? new Date(sms.sent_at) : new Date()
+      // Map backend status to frontend status: 'sent' and 'delivered' -> 'Delivered', 'failed' -> 'Failed', otherwise -> 'Pending'
+      const statusStr =
+        sms.status === 'delivered' || sms.status === 'sent'
+          ? 'Delivered'
+          : sms.status === 'failed'
+            ? 'Failed'
+            : 'Pending'
+
+      return {
+        id: index + 1,
+        date: sentAt.toISOString().split('T')[0],
+        time: sentAt.toTimeString().slice(0, 5), // HH:MM format
+        message: sms.message_text || '',
+        template: sms.template_name || '',
+        operator: sms.operator_name || '',
+        status: statusStr as 'Delivered' | 'Pending' | 'Failed',
+      }
+    })
+
     // Map API client to expected shape, using mock data for fields not yet in API
+    const mockClient = mockClientsDetail[0]
     return {
-      ...mockClientsDetail[0], // Fallback for fields not yet in backend
+      ...mockClient, // Fallback for fields not yet in backend
       id: apiClient.id,
       fullName,
       taxIdNumber: apiClient.tax_id,
       phoneNumber: apiClient.phone_primary,
       tags: [], // TODO: Add tags support in backend
       score: apiClient.priority_score,
-      priority:
-        apiClient.manual_priority ||
+      priority: (apiClient.manual_priority ||
         (apiClient.priority_score >= 75
           ? 'Critical'
           : apiClient.priority_score >= 50
             ? 'High'
             : apiClient.priority_score >= 25
               ? 'Medium'
-              : 'Low'),
+              : 'Low')) as Priority,
       phones: [
         { number: apiClient.phone_primary, type: 'primary' as const },
         ...(apiClient.phone_secondary
@@ -870,19 +907,22 @@ export function ClientDetailPage() {
           : []),
       ],
       personalDetails: {
-        ...mockClientsDetail[0].personalDetails,
+        ...mockClient.personalDetails,
         tin: apiClient.tax_id,
-        dateOfBirth: apiClient.date_of_birth || mockClientsDetail[0].personalDetails.dateOfBirth,
+        dateOfBirth: apiClient.date_of_birth || mockClient.personalDetails.dateOfBirth,
       },
       addresses: {
-        ...mockClientsDetail[0].addresses,
-        registrationAddress:
-          apiClient.address || mockClientsDetail[0].addresses.registrationAddress,
+        ...mockClient.addresses,
+        registrationAddress: apiClient.address || mockClient.addresses.registrationAddress,
+      },
+      callSmsHistory: {
+        ...mockClient.callSmsHistory,
+        sms: mappedSmsHistory as typeof mockClient.callSmsHistory.sms, // Use real API data instead of mock
       },
     }
-  }, [apiClient])
+  }, [apiClient, smsHistoryData])
 
-  const [tags, setTags] = useState<string[]>(client?.tags || [])
+  // Tags are now fetched from useClientTags hook instead of local state
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
   const [isCallRecordingModalOpen, setIsCallRecordingModalOpen] = useState(false)
@@ -918,14 +958,6 @@ export function ClientDetailPage() {
   >('payments')
   const [activeOperatorTab, setActiveOperatorTab] = useState<'operators' | 'searchers'>('operators')
   const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms'>('all')
-
-  // Update tags when client changes
-  useEffect(() => {
-    if (client) {
-      setTags(client.tags)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client.id])
 
   // Show loading skeleton
   if (isLoading) {
@@ -975,25 +1007,6 @@ export function ClientDetailPage() {
     })
       .format(amount)
       .replace(/,/g, ' ')
-  }
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'Critical':
-        return 'bg-error-500'
-      case 'High':
-        return 'bg-warning-500'
-      case 'Medium':
-        return 'bg-success-500'
-      case 'Low':
-        return 'bg-gray-500'
-      default:
-        return 'bg-gray-500'
-    }
-  }
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove))
   }
 
   const loanColumns: Column<(typeof client.loans)[0]>[] = [
@@ -1281,7 +1294,7 @@ export function ClientDetailPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* Client Header */}
       <div className="flex items-center justify-between self-stretch">
         <div className="flex items-center gap-2">
@@ -1291,20 +1304,13 @@ export function ClientDetailPage() {
           >
             <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
           </button>
-          <h1 className="text-dark-500 text-center text-2xl leading-[150%] font-medium">
+          <h1 className="text-dark-500 text-center text-2xl leading-[150%] font-light">
             {client.fullName}
           </h1>
           <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0">
             {client.score} {t('pages.clients.activity.score')}
           </span>
-          <span
-            className={cn(
-              'flex h-[25px] items-center rounded-[16px] px-3 py-2 text-center text-xs leading-[140%] font-medium tracking-[-0.24px]',
-              getPriorityColor(client.priority)
-            )}
-          >
-            {t(`pages.clients.priorities.${client.priority.toLowerCase()}`)}
-          </span>
+          <PriorityBadge priority={client.priority} />
         </div>
         <div className="flex items-center gap-5">
           <Button
@@ -1328,7 +1334,17 @@ export function ClientDetailPage() {
             size="md"
             leftIcon={<Icons.Headset size={20} />}
             className="rounded-full"
-            onClick={() => setIsCallModalOpen(true)}
+            onClick={() => {
+              if (isCallActive()) {
+                toast.warning(
+                  t('pages.clients.modals.callDialog.callInProgress') ||
+                    'Another call or recording is already in progress. Please finish or close it first.'
+                )
+                return
+              }
+              setOpenCallModal('call-dialog')
+              setIsCallModalOpen(true)
+            }}
           >
             {t('pages.clients.activity.call')}
           </Button>
@@ -1347,28 +1363,17 @@ export function ClientDetailPage() {
         <div className="flex min-h-[44px] w-[428px] flex-col items-start justify-center gap-0 rounded-lg bg-white/50 p-0">
           {/* Credit Details (top part of card) */}
           <div className="flex flex-col items-start gap-3 self-stretch px-6 py-5">
-            <div className="flex items-center gap-2 self-stretch">
-              {tags.map((tag) => {
-                return (
-                  <span
-                    key={tag}
-                    className="flex items-center gap-2 rounded-[16px] bg-white px-3 py-2"
-                  >
-                    <span className="text-dark-500 text-center font-sans text-sm leading-[142.857%] font-medium tracking-[0.14px]">
-                      {tag}
-                    </span>
-                    <button
-                      onClick={() => handleRemoveTag(tag)}
-                      className="text-secondary-800 bg-white"
-                    >
-                      <Icons.Close size={14} />
-                    </button>
-                  </span>
-                )
-              })}
-              <button className="bg-primary-300 flex flex-col items-start gap-2.5 rounded-full p-1.5">
-                <Icons.Add size={16} className="text-dark-500 m-[2.667px]" />
-              </button>
+            <div className="flex flex-col gap-2 self-stretch">
+              <div className="flex flex-wrap items-center gap-2 self-stretch">
+                {clientTags && clientTags.length > 0 ? (
+                  clientTags.map((tag) => (
+                    <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
+                  ))
+                ) : (
+                  <span className="text-sm text-gray-500">No tags assigned</span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">Tags can be managed from the client list page</p>
             </div>
             <div className="flex flex-col gap-1 self-stretch">
               <div className="flex min-h-8 items-center self-stretch p-0">
@@ -1409,7 +1414,17 @@ export function ClientDetailPage() {
                       {phone.number}
                     </span>
                     <button
-                      onClick={() => setIsCallModalOpen(true)}
+                      onClick={() => {
+                        if (isCallActive()) {
+                          toast.warning(
+                            t('pages.clients.modals.callDialog.callInProgress') ||
+                              'Another call or recording is already in progress. Please finish or close it first.'
+                          )
+                          return
+                        }
+                        setOpenCallModal('call-dialog')
+                        setIsCallModalOpen(true)
+                      }}
                       className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
                     >
                       <Icons.Headset size={16} className="flex-shrink-0" />
@@ -2540,7 +2555,10 @@ export function ClientDetailPage() {
       {/* Call Dialog Modal */}
       <CallDialogModal
         open={isCallModalOpen}
-        onClose={() => setIsCallModalOpen(false)}
+        onClose={() => {
+          setOpenCallModal(null)
+          setIsCallModalOpen(false)
+        }}
         clientName={client.fullName}
         phoneNumber={client.phones?.[0]?.number || ''}
         initialState="initial"
@@ -2549,6 +2567,7 @@ export function ClientDetailPage() {
         }}
         onCallEnd={(duration: number, status: CallStatus) => {
           console.log('Call ended:', { duration, status })
+          setOpenCallModal(null)
         }}
       />
 
@@ -2557,6 +2576,7 @@ export function ClientDetailPage() {
         <CallRecordingModal
           open={isCallRecordingModalOpen}
           onClose={() => {
+            setOpenCallModal(null)
             setIsCallRecordingModalOpen(false)
             setSelectedCallData(null)
           }}
@@ -2583,12 +2603,12 @@ export function ClientDetailPage() {
           setIsSendSMSModalOpen(false)
           setSelectedPhoneForSMS('')
         }}
+        clientId={clientId}
         clientName={client.fullName}
         phoneNumber={selectedPhoneForSMS || client.phones?.[0]?.number || ''}
         debtAmount={client.loans?.reduce((sum, loan) => sum + (loan.totalToRepay || 0), 0) || 0}
-        onSend={(data) => {
-          // TODO: Send SMS to API
-          console.log('SMS sent:', data)
+        onSent={() => {
+          // SMS sent successfully - history will refresh automatically via query invalidation
         }}
       />
     </div>

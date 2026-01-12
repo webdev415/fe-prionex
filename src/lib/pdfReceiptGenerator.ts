@@ -72,8 +72,8 @@
 //   try {
 //     // Try to use Lexend if available
 //     const fonts = doc.getFontList()
-//     if ('Lexend' in fonts) {
-//       doc.setFont('Lexend', style)
+//     if ('NotoSans' in fonts) {
+//       doc.setFont('NotoSans', style)
 //     } else {
 //       doc.setFont('helvetica', style)
 //     }
@@ -353,7 +353,7 @@
 // }
 
 import jsPDF from 'jspdf'
-import { loadLexendFont } from './loadLexendFont'
+import { loadNotoSansFont } from './loadNotoFont'
 
 export interface PaymentReceiptData {
   receiptNumber: string
@@ -484,26 +484,26 @@ const drawCheck = (doc: jsPDF, x: number, y: number, size = 3) => {
 export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
   const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
 
-  // Load Lexend font if available (critical for ₴ symbol support)
-  loadLexendFont(doc)
+  // Load Noto Sans font if available (critical for ₴ symbol support)
+  loadNotoSansFont(doc)
 
-  // IMPORTANT: Try to use Lexend font, but fall back gracefully if not available
+  // IMPORTANT: Try to use Noto Sans font, but fall back gracefully if not available
   // Default fonts (helvetica, times, courier) do NOT support ₴ Unicode character
-  // The symbol will only display if Lexend (or another Unicode font) is loaded
+  // The symbol will only display if Noto Sans (or another Unicode font) is loaded
   try {
     const fonts = doc.getFontList()
-    if ('Lexend' in fonts) {
-      doc.setFont('Lexend', 'normal')
+    if ('NotoSans' in fonts) {
+      doc.setFont('NotoSans', 'normal')
     } else {
       // Fallback to helvetica (₴ will not display, will use "UAH" fallback in renderCurrency)
       doc.setFont('helvetica', 'normal')
       console.warn(
-        'Lexend font not loaded. ₴ symbol will not display. Using helvetica fallback and "UAH" for currency.'
+        'Noto Sans font not loaded. ₴ symbol will not display. Using helvetica fallback and "UAH" for currency.'
       )
     }
   } catch {
     doc.setFont('helvetica', 'normal')
-    console.warn('Failed to set Lexend font. Using helvetica fallback and "UAH" for currency.')
+    console.warn('Failed to set Noto Sans font. Using helvetica fallback and "UAH" for currency.')
   }
 
   const pageW = doc.internal.pageSize.getWidth()
@@ -539,7 +539,7 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
 
   const section = (title: string, y: number) => {
     doc.setFontSize(fsSection)
-    doc.setFont('Lexend', 'bold')
+    doc.setFont('NotoSans', 'bold')
     setText(MUTED)
     doc.text(title, xLabel, y)
 
@@ -548,7 +548,7 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
     hr(xLabel + w + 6, y - 2.2, xRight)
 
     setText(TEXT)
-    doc.setFont('Lexend', 'normal')
+    doc.setFont('NotoSans', 'normal')
   }
 
   const kv = (
@@ -565,13 +565,13 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
     doc.setFontSize(fsBody)
 
     // label
-    doc.setFont('Lexend', 'normal')
+    doc.setFont('NotoSans', 'normal')
     setText(opts?.labelMuted === false ? TEXT : MUTED)
     doc.text(label, xLabel, y)
 
     // value
     setText(TEXT)
-    doc.setFont('Lexend', opts?.valueBold === false ? 'normal' : 'bold')
+    doc.setFont('NotoSans', opts?.valueBold === false ? 'normal' : 'bold')
 
     // If it's currency, use special rendering to ensure symbol displays
     if (opts?.isCurrency || value.includes('₴')) {
@@ -587,22 +587,22 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
         doc.text(value, xValue, y)
       }
     }
-    doc.setFont('Lexend', 'normal')
+    doc.setFont('NotoSans', 'normal')
   }
 
   let y = 18
 
   // ===== Header =====
   doc.setFontSize(fsTitle)
-  doc.setFont('Lexend', 'bold')
+  doc.setFont('NotoSans', 'bold')
   setText(TEXT)
   doc.text('Payment Receipt', xLabel, y)
 
   const companyName = data.companyName || 'PrivatBank Debt Collection'
   doc.setFontSize(fsBody + 1)
-  doc.setFont('Lexend', 'bold')
+  doc.setFont('NotoSans', 'bold')
   doc.text(companyName, xRight, y, { align: 'right' })
-  doc.setFont('Lexend', 'normal')
+  doc.setFont('NotoSans', 'normal')
 
   y += 16
 
@@ -673,7 +673,7 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
 
   if (String(data.status).toUpperCase() === 'ACTIVE') {
     doc.setFontSize(fsBody - 0.5)
-    doc.setFont('Lexend', 'normal')
+    doc.setFont('NotoSans', 'normal')
     setText(MUTED)
     // wrap inside the left column area (no overlap into box)
     doc.text('(Outstanding debt remains)', xValue, y, { maxWidth: leftMaxWidth })
@@ -696,11 +696,11 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
     doc.setFontSize(fsBody)
     setText(TEXT)
 
-    doc.setFont('Lexend', 'normal')
+    doc.setFont('NotoSans', 'normal')
     // keep label on left, avoid running under the right-aligned value
     doc.text(label, boxLabelX, yy, { maxWidth: boxW - boxPadX * 2 - 32 })
 
-    doc.setFont('Lexend', 'bold')
+    doc.setFont('NotoSans', 'bold')
     // Use special currency rendering for values with ₴ symbol
     if (value.includes('₴')) {
       // For right-aligned currency, we need to calculate position
@@ -739,16 +739,16 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
 
   // Status line (black, with drawn check)
   doc.setFontSize(fsBody)
-  doc.setFont('Lexend', 'normal')
+  doc.setFont('NotoSans', 'normal')
   setText(MUTED)
   doc.text('Status:', xLabel, y)
 
   setText(TEXT)
   drawCheck(doc, xValue, y, 3.2)
 
-  doc.setFont('Lexend', 'bold')
+  doc.setFont('NotoSans', 'bold')
   doc.text('VERIFIED AND APPLIED', xValue + 6, y)
-  doc.setFont('Lexend', 'normal')
+  doc.setFont('NotoSans', 'normal')
   y += 14
 
   // ===== Company Information =====
@@ -756,7 +756,7 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
   y += 8
 
   doc.setFontSize(fsBody)
-  doc.setFont('Lexend', 'normal')
+  doc.setFont('NotoSans', 'normal')
   setText(TEXT)
   doc.text(`${companyName} Department`, xLabel, y)
   y += 8
@@ -774,7 +774,7 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
 
   // ===== Footer =====
   doc.setFontSize(fsFooter)
-  doc.setFont('Lexend', 'normal')
+  doc.setFont('NotoSans', 'normal')
   setText(FOOTER)
   doc.text(`Generated: ${formatDateTime(new Date().toISOString())}`, xRight, pageH - marginX, {
     align: 'right',

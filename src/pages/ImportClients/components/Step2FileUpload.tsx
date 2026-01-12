@@ -288,12 +288,7 @@ export function Step2FileUpload({
   }
 
   const handleStartImport = async () => {
-    if (
-      !data.csvFile ||
-      !step1Data.sellerCreditor ||
-      !step1Data.projectCode ||
-      !step1Data.purchaseDate
-    ) {
+    if (!data.csvFile || !step1Data.sellerId || !step1Data.projectCode || !step1Data.purchaseDate) {
       setImportError(t('pages.imports.step2.simple.fillAllFields'))
       return
     }
@@ -308,7 +303,7 @@ export function Step2FileUpload({
     try {
       const result = await uploadImportMutation.mutateAsync({
         file: data.csvFile,
-        seller_creditor: step1Data.sellerCreditor,
+        seller_id: parseInt(step1Data.sellerId, 10),
         project_code: step1Data.projectCode,
         purchase_date: step1Data.purchaseDate,
         comment: step1Data.comment || undefined,

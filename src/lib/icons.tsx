@@ -77,6 +77,7 @@ import {
   FilterVerticalIcon,
   HeadsetIcon,
   RemoveMaleIcon,
+  Remove02Icon,
   ChatFeedback01Icon,
   UserAccountIcon,
   Briefcase01Icon,
@@ -85,6 +86,7 @@ import {
   Briefcase08Icon,
   PieChart02Icon,
   UserMultiple02Icon,
+  UserMultipleIcon,
   Calendar03Icon,
   MoneyRemove01Icon,
   MoneyNotFound04Icon,
@@ -121,6 +123,10 @@ import {
   Invoice01Icon,
   Tick02Icon,
   PrinterIcon,
+  CheckmarkBadge02Icon,
+  HeadsetConnectedIcon,
+  LanguageSquareIcon,
+  Settings05Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -244,6 +250,7 @@ export const Icons = {
   FilterVertical: (props: Omit<IconProps, 'icon'>) => <Icon icon={FilterVerticalIcon} {...props} />,
   Headset: (props: Omit<IconProps, 'icon'>) => <Icon icon={HeadsetIcon} {...props} />,
   RemoveMale: (props: Omit<IconProps, 'icon'>) => <Icon icon={RemoveMaleIcon} {...props} />,
+  Remove02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Remove02Icon} {...props} />,
   ChatFeedback01: (props: Omit<IconProps, 'icon'>) => <Icon icon={ChatFeedback01Icon} {...props} />,
   UserAccount: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserAccountIcon} {...props} />,
   Briefcase01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Briefcase01Icon} {...props} />,
@@ -252,6 +259,7 @@ export const Icons = {
   Briefcase08: (props: Omit<IconProps, 'icon'>) => <Icon icon={Briefcase08Icon} {...props} />,
   PieChart02: (props: Omit<IconProps, 'icon'>) => <Icon icon={PieChart02Icon} {...props} />,
   UserMultiple02: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserMultiple02Icon} {...props} />,
+  UserMultiple: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserMultipleIcon} {...props} />,
   Calendar03: (props: Omit<IconProps, 'icon'>) => <Icon icon={Calendar03Icon} {...props} />,
   MoneyRemove01: (props: Omit<IconProps, 'icon'>) => <Icon icon={MoneyRemove01Icon} {...props} />,
   MoneyNotFound04: (props: Omit<IconProps, 'icon'>) => (
@@ -292,6 +300,14 @@ export const Icons = {
   Invoice01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Invoice01Icon} {...props} />,
   Tick02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Tick02Icon} {...props} />,
   Printer: (props: Omit<IconProps, 'icon'>) => <Icon icon={PrinterIcon} {...props} />,
+  CheckmarkBadge02: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={CheckmarkBadge02Icon} {...props} />
+  ),
+  HeadsetConnected: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={HeadsetConnectedIcon} {...props} />
+  ),
+  LanguageSquare: (props: Omit<IconProps, 'icon'>) => <Icon icon={LanguageSquareIcon} {...props} />,
+  Settings05: (props: Omit<IconProps, 'icon'>) => <Icon icon={Settings05Icon} {...props} />,
 }
 
 /**
@@ -358,6 +374,7 @@ export {
   FilterVerticalIcon,
   HeadsetIcon,
   RemoveMaleIcon,
+  Remove02Icon,
   ChatFeedback01Icon,
   UserAccountIcon,
   Briefcase01Icon,
@@ -366,6 +383,7 @@ export {
   Briefcase08Icon,
   PieChart02Icon,
   UserMultiple02Icon,
+  UserMultipleIcon,
   Calendar03Icon,
   MoneyRemove01Icon,
   MoneyNotFound04Icon,
@@ -404,6 +422,10 @@ export {
   Invoice01Icon,
   Tick02Icon,
   PrinterIcon,
+  CheckmarkBadge02Icon,
+  HeadsetConnectedIcon,
+  LanguageSquareIcon,
+  Settings05Icon,
 }
 
 /**

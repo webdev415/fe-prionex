@@ -62,6 +62,15 @@ export interface Client {
   debt_count: number
   total_debt: number
   primary_creditor?: string | null
+
+  // Assignment (Sprint 2 - Phase A)
+  responsible_employee_id?: number | null
+  responsible_searcher_id?: number | null
+  assigned_at?: string | null
+  assigned_by?: number | null
+
+  // Tags (Sprint 2.5 - Phase 2.3)
+  tags?: Array<{ id: number; name: string; color: string; description?: string | null }>
 }
 
 export interface ClientDetail extends Client {
@@ -106,18 +115,46 @@ export interface UpdateClientRequest {
 }
 
 export interface GetClientsParams {
+  // Pagination
   project_id?: number
   skip?: number
   limit?: number
+
+  // Sorting
   sort_by_priority?: boolean // Legacy parameter
   sort_by?: 'priority_score' | 'created_at' | 'first_name' | 'last_name' | 'id'
   sort_order?: 'asc' | 'desc'
-  // Filtering parameters
+
+  // Filter: Portfolio/Sellers
+  seller_ids?: string // Comma-separated seller IDs (e.g., "1,5,12")
+
+  // Filter: Date Range
+  sale_date_from?: string // YYYY-MM-DD format
+  sale_date_to?: string // YYYY-MM-DD format
+
+  // Filter: Assignment
+  responsible_employee_id?: number
+  responsible_searcher_id?: number
+  unassigned_only?: boolean
+
+  // Filter: Debt Amounts (legacy - remaining debt)
   debt_min?: number
   debt_max?: number
-  status?: string // Comma-separated status values
-  date_from?: string // YYYY-MM-DD format
-  date_to?: string // YYYY-MM-DD format
+
+  // Filter: Principal Amount
+  principal_min?: number
+  principal_max?: number
+
+  // Filter: Total Debt Amount
+  total_debt_min?: number
+  total_debt_max?: number
+
+  // Filter: Days Past Due
+  dpd_min?: number
+  dpd_max?: number
+
+  // Filter: Status
+  status?: string // Comma-separated statuses (e.g., "active,new")
 }
 
 export interface ManualPriorityRequest {
@@ -128,4 +165,35 @@ export interface ManualPriorityRequest {
 export interface SearchByTinParams {
   tin: string
   project_id?: number
+}
+
+export interface PaginatedClientResponse {
+  items: Client[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
+}
+
+// Assignment request/response types
+export interface AssignClientRequest {
+  responsible_employee_id?: number
+  responsible_searcher_id?: number
+  assignment_reason?: string
+}
+
+export interface BulkAssignClientRequest {
+  client_ids: number[]
+  responsible_employee_id?: number
+  responsible_searcher_id?: number
+  assignment_reason?: string
+}
+
+export interface BulkAssignmentResponse {
+  assigned_count: number
+  failed_count: number
+  failures: Array<{
+    client_id: number
+    reason: string
+  }>
 }

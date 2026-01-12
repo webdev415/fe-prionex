@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
+import { LinkButton } from '@/components/ui/LinkButton'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
@@ -222,13 +223,14 @@ export function ImportDetailsPage() {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <p className="text-gray-600">{t('pages.imports.details.importNotFound')}</p>
-        <Button
-          variant="outline"
+        <LinkButton
+          variant="regular-black"
           onClick={() => navigate('/dashboard/import/history')}
+          leftIcon={<Icons.ArrowLeft size={16} className="text-dark-500" />}
           className="mt-4"
         >
-          {t('pages.imports.details.backToHistory')}
-        </Button>
+          {t('common.back', 'Back')}
+        </LinkButton>
       </div>
     )
   }
@@ -264,16 +266,15 @@ export function ImportDetailsPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-4 flex w-full items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button
-            variant="white-secondary"
+          <LinkButton
+            variant="regular-black"
             onClick={() => navigate('/dashboard/import/history')}
-            leftIcon={<Icons.ArrowLeft02 size={20} />}
-            className="flex h-12 flex-row items-center justify-center rounded-full text-sm leading-[150%] font-medium"
+            leftIcon={<Icons.ArrowLeft size={16} className="text-dark-500" />}
           >
-            {t('pages.imports.details.backToHistory')}
-          </Button>
+            {t('common.back', 'Back')}
+          </LinkButton>
           <h1 className="text-dark-500 text-2xl font-light">{t('pages.imports.details.title')}</h1>
         </div>
 

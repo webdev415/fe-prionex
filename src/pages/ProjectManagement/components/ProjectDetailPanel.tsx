@@ -64,7 +64,7 @@ export function ProjectDetailPanel({
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white/50 p-6">
+    <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white/50 p-6">
       {/* Header */}
       <div className="flex items-center border-none">
         <div className="flex items-center gap-2">
@@ -114,31 +114,32 @@ export function ProjectDetailPanel({
           </div>
         </div>
 
-        {/* Divider */}
-        <div className="my-1 h-px w-full bg-gray-200" />
-
         {/* Description */}
         {project.description && (
-          <div className="flex flex-col gap-2">
-            <h3 className="text-dark-500 text-sm font-light">
-              {t('pages.projects.detailPanel.description')}
-            </h3>
-            <p className="text-dark-500 text-sm leading-relaxed font-light">
-              {isExpanded ? project.description : truncateText(project.description, 120)}
-            </p>
-            {project.description.length > 120 && (
-              <div className="flex">
-                <button
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="text-secondary-800 text-xs font-medium"
-                >
-                  {isExpanded
-                    ? t('pages.projects.detailPanel.showLess')
-                    : t('pages.projects.detailPanel.readMore')}
-                </button>
-              </div>
-            )}
-          </div>
+          <>
+            {/* Divider */}
+            <div className="my-1 h-px w-full bg-gray-200" />
+            <div className="flex flex-col gap-2">
+              <h3 className="text-dark-500 text-sm font-light">
+                {t('pages.projects.detailPanel.description')}
+              </h3>
+              <p className="text-dark-500 text-sm leading-relaxed font-light">
+                {isExpanded ? project.description : truncateText(project.description, 120)}
+              </p>
+              {project.description.length > 120 && (
+                <div className="flex">
+                  <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="text-secondary-800 text-xs font-medium"
+                  >
+                    {isExpanded
+                      ? t('pages.projects.detailPanel.showLess')
+                      : t('pages.projects.detailPanel.readMore')}
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {/* Divider */}

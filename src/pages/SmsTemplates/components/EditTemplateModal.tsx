@@ -10,7 +10,8 @@ import { ModalSkeleton } from '@/components/ui/ModalSkeleton'
 import { EditTemplateForm } from './EditTemplateForm'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
-import { mockSmsTemplates } from '../mockSmsTemplates'
+import { useSMSTemplate } from '@/features/sms'
+import { mapTemplateResponseToSmsTemplate } from '../utils'
 
 interface EditTemplateModalProps {
   open: boolean
@@ -27,9 +28,8 @@ export function EditTemplateModal({
 }: EditTemplateModalProps) {
   const { t } = useTranslation('common')
 
-  // TODO: Replace with actual API hook
-  const template = mockSmsTemplates.find((t) => t.id === templateId)
-  const isLoading = false // TODO: Replace with actual loading state
+  const { data: apiTemplate, isLoading } = useSMSTemplate(templateId)
+  const template = apiTemplate ? mapTemplateResponseToSmsTemplate(apiTemplate) : null
 
   const handleSuccess = () => {
     onSuccess()

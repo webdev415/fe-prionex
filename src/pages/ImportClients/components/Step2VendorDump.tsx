@@ -170,7 +170,7 @@ export function Step2VendorDump({
   }
 
   const handleStartImport = async () => {
-    if (!step1Data.sellerCreditor || !step1Data.projectCode || !step1Data.purchaseDate) {
+    if (!step1Data.sellerId || !step1Data.projectCode || !step1Data.purchaseDate) {
       setImportError(t('pages.imports.step2.vendor.fillAllFields'))
       return
     }
@@ -198,7 +198,7 @@ export function Step2VendorDump({
       const result = await uploadImportMutation.mutateAsync({
         files: filesToUpload.length > 0 ? filesToUpload : undefined,
         zip_file: data.zipFile || undefined,
-        seller_creditor: step1Data.sellerCreditor,
+        seller_id: parseInt(step1Data.sellerId, 10),
         project_code: step1Data.projectCode,
         purchase_date: step1Data.purchaseDate,
         comment: step1Data.comment || undefined,

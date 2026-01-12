@@ -103,7 +103,11 @@ describe('Modal', () => {
     const content = document.querySelector('[class*="bg-light-50"]')
     // Should have Tailwind classes for background, padding, shadows
     expect(content).toHaveClass('bg-light-50')
-    expect(content).toHaveClass('p-10')
+    // Check for responsive padding classes (mobile-first approach)
+    expect(content).toHaveClass('p-4')
+    expect(content).toHaveClass('sm:p-6')
+    expect(content).toHaveClass('md:p-8')
+    expect(content).toHaveClass('lg:p-10')
   })
 })
 
@@ -156,7 +160,10 @@ describe('ModalHeader', () => {
       </Modal>
     )
     const title = screen.getByText('Title')
-    expect(title).toHaveClass('text-2xl')
+    // Check for responsive text size classes (mobile-first approach)
+    expect(title).toHaveClass('text-lg')
+    expect(title).toHaveClass('sm:text-xl')
+    expect(title).toHaveClass('md:text-2xl')
     expect(title).toHaveClass('text-dark-500')
   })
 })
@@ -198,9 +205,16 @@ describe('ModalContent', () => {
     )
     // Query from document since Modal is portaled
     const content = document.querySelector('.modal-content-scroll')
-    expect(content).toHaveClass('max-h-[calc(90vh-200px)]')
-    expect(content).toHaveClass('px-1')
-    expect(content).toHaveClass('py-6')
+    // Check for responsive max-height classes (mobile-first approach)
+    expect(content).toHaveClass('max-h-[calc(90vh-140px)]')
+    expect(content).toHaveClass('sm:max-h-[calc(90vh-180px)]')
+    expect(content).toHaveClass('md:max-h-[calc(90vh-200px)]')
+    // Check for responsive padding classes (mobile-first approach)
+    expect(content).toHaveClass('px-0')
+    expect(content).toHaveClass('py-4')
+    expect(content).toHaveClass('sm:px-1')
+    expect(content).toHaveClass('sm:py-5')
+    expect(content).toHaveClass('md:py-6')
   })
 })
 
@@ -244,6 +258,8 @@ describe('ModalFooter', () => {
     // Query from document since Modal is portaled
     const footer = document.querySelector('.border-t')
     expect(footer).toHaveClass('border-light-200')
+    // Check for responsive padding classes (mobile-first approach)
     expect(footer).toHaveClass('pt-3')
+    expect(footer).toHaveClass('sm:pt-4')
   })
 })

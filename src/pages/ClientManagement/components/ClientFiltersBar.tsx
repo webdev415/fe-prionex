@@ -4,7 +4,7 @@
  * Collapsible filter bar with multiple filter options for client management.
  */
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
@@ -18,23 +18,75 @@ import {
 } from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
 import { PortfolioDropdown } from './PortfolioDropdown'
+import { TagsDropdown } from './TagsDropdown'
+import { useSellers } from '@/features/sellers/hooks/useSellers'
+import { useUsers } from '@/features/users/hooks/useUsers'
+import { useTags } from '@/features/tags/hooks/useTags'
 import type { ClientFilters } from '../ClientManagementPage'
+
+// Debounced number input component to avoid re-rendering on every keystroke
+function DebouncedNumberInput({
+  value,
+  onChange,
+  placeholder,
+  className,
+  formatWithCommas = false,
+}: {
+  value: number | undefined
+  onChange: (value: number | undefined) => void
+  placeholder?: string
+  className?: string
+  formatWithCommas?: boolean
+}) {
+  const [localValue, setLocalValue] = useState(value?.toString() || '')
+  const [isFocused, setIsFocused] = useState(false)
+
+  // Update local value when prop changes (only when not focused)
+  // The isFocused guard prevents cascading renders - state only updates when input is blurred
+  useEffect(() => {
+    if (!isFocused) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLocalValue(value?.toString() || '')
+    }
+  }, [value, isFocused])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/,/g, '') // Remove commas
+    setLocalValue(rawValue)
+  }
+
+  const handleBlur = () => {
+    setIsFocused(false)
+    const numValue = localValue ? Number(localValue.replace(/,/g, '')) : undefined
+    if (numValue !== value) {
+      onChange(numValue)
+    }
+  }
+
+  const displayValue = isFocused
+    ? localValue
+    : localValue && formatWithCommas
+      ? new Intl.NumberFormat('uk-UA').format(Number(localValue.replace(/,/g, '')))
+      : localValue
+
+  return (
+    <Input
+      type="text"
+      value={displayValue}
+      onChange={handleChange}
+      onFocus={() => setIsFocused(true)}
+      onBlur={handleBlur}
+      placeholder={placeholder}
+      className={className}
+    />
+  )
+}
 
 interface ClientFiltersBarProps {
   filters: ClientFilters
   onFilterChange: (filters: ClientFilters) => void
 }
 
-const portfolioOptions = [
-  'Portfolio A',
-  'Portfolio B',
-  'Portfolio C',
-  'Portfolio D',
-  'Portfolio E',
-  'Portfolio F',
-  'Portfolio G',
-  'Portfolio H',
-]
 // Status options matching backend Client.status field (services/client/app/routers/clients.py:440)
 // Valid statuses: new, active, closed
 const statusOptions = ['new', 'active', 'closed']
@@ -42,30 +94,40 @@ const statusOptions = ['new', 'active', 'closed']
 export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarProps) {
   const { t } = useTranslation('common')
   const [portfolioDropdownOpen, setPortfolioDropdownOpen] = useState(false)
+  const [tagsDropdownOpen, setTagsDropdownOpen] = useState(false)
 
-  const handleDebtRangeChange = (field: 'debtRangeFrom' | 'debtRangeTo', value: string) => {
-    onFilterChange({
-      ...filters,
-      [field]: value ? Number(value.replace(/,/g, '')) : undefined,
-    })
-  }
+  // Fetch sellers from API (replaces mock portfolio data)
+  const { data: sellersResponse } = useSellers({
+    is_active: true,
+    limit: 1000,
+  })
 
-  const handleAmountOfDebtRangeChange = (
-    field: 'amountOfDebtRangeFrom' | 'amountOfDebtRangeTo',
-    value: string
-  ) => {
-    onFilterChange({
-      ...filters,
-      [field]: value ? Number(value.replace(/,/g, '')) : undefined,
-    })
-  }
+  // Fetch tags from API
+  const projectId = 1 // TODO: Get from auth context
+  const { data: tagsData } = useTags(projectId)
 
-  const handleDpdRangeChange = (field: 'dpdRangeFrom' | 'dpdRangeTo', value: string) => {
-    onFilterChange({
-      ...filters,
-      [field]: value ? Number(value) : undefined,
-    })
-  }
+  // Map sellers to portfolio options
+  // For now, using "Seller Name (ID)" format for clarity
+  // The portfolio filter stores these values, which are parsed to extract IDs for the API
+  const portfolioOptions = useMemo(() => {
+    if (!sellersResponse?.sellers) return []
+    return sellersResponse.sellers.map((seller) => `${seller.seller_name} (${seller.id})`)
+  }, [sellersResponse])
+
+  // Fetch active users for employee and searcher dropdowns
+  const { data: usersResponse } = useUsers({
+    status: 'active',
+    page_size: 100,
+  })
+
+  // Map users to dropdown options (full name format)
+  const userOptions = useMemo(() => {
+    if (!usersResponse?.users) return []
+    return usersResponse.users.map((user) => ({
+      id: user.id.toString(),
+      name: [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' '),
+    }))
+  }, [usersResponse])
 
   const handleDateChange = (field: 'dateOfSaleFrom' | 'dateOfSaleTo', date: Date | null) => {
     onFilterChange({
@@ -81,6 +143,13 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     })
   }
 
+  const handleTagsChange = (tagIds: number[]) => {
+    onFilterChange({
+      ...filters,
+      tagIds: tagIds,
+    })
+  }
+
   const handleStatusChange = (status: string, checked: boolean) => {
     const currentStatuses = filters.status || []
     onFilterChange({
@@ -89,14 +158,15 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     })
   }
 
-  const formatNumber = (value: number | undefined) => {
-    if (!value) return ''
-    return new Intl.NumberFormat('uk-UA').format(value)
-  }
-
   const displayedPortfolios = portfolioOptions.slice(0, 3)
   const hiddenPortfoliosCount = portfolioOptions.length - 3
   const selectedPortfolios = filters.portfolio || []
+
+  // Tag display logic (similar to portfolio)
+  const tags = tagsData || []
+  const displayedTags = tags.slice(0, 3)
+  const hiddenTagsCount = tags.length - 3
+  const selectedTagIds = filters.tagIds || []
 
   return (
     <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-6">
@@ -112,22 +182,32 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 ₴
               </span>
               <div className="flex flex-1 items-center gap-2">
-                <Input
-                  type="text"
-                  value={formatNumber(filters.debtRangeFrom)}
-                  onChange={(e) => handleDebtRangeChange('debtRangeFrom', e.target.value)}
+                <DebouncedNumberInput
+                  value={filters.debtRangeFrom}
+                  onChange={(value) =>
+                    onFilterChange({
+                      ...filters,
+                      debtRangeFrom: value,
+                    })
+                  }
                   placeholder="10,000"
                   className="flex flex-1 flex-col items-start gap-2"
+                  formatWithCommas={true}
                 />
                 <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
                   -
                 </span>
-                <Input
-                  type="text"
-                  value={formatNumber(filters.debtRangeTo)}
-                  onChange={(e) => handleDebtRangeChange('debtRangeTo', e.target.value)}
+                <DebouncedNumberInput
+                  value={filters.debtRangeTo}
+                  onChange={(value) =>
+                    onFilterChange({
+                      ...filters,
+                      debtRangeTo: value,
+                    })
+                  }
                   placeholder="50,000"
                   className="flex flex-1 flex-col items-start gap-2"
+                  formatWithCommas={true}
                 />
               </div>
             </div>
@@ -137,20 +217,28 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 {t('pages.clients.filters.dpdRange')}
               </label>
               <div className="flex flex-1 items-center gap-2">
-                <Input
-                  type="number"
-                  value={filters.dpdRangeFrom?.toString() || ''}
-                  onChange={(e) => handleDpdRangeChange('dpdRangeFrom', e.target.value)}
+                <DebouncedNumberInput
+                  value={filters.dpdRangeFrom}
+                  onChange={(value) =>
+                    onFilterChange({
+                      ...filters,
+                      dpdRangeFrom: value,
+                    })
+                  }
                   placeholder="10"
                   className="flex flex-1 flex-col items-start gap-2"
                 />
                 <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
                   -
                 </span>
-                <Input
-                  type="number"
-                  value={filters.dpdRangeTo?.toString() || ''}
-                  onChange={(e) => handleDpdRangeChange('dpdRangeTo', e.target.value)}
+                <DebouncedNumberInput
+                  value={filters.dpdRangeTo}
+                  onChange={(value) =>
+                    onFilterChange({
+                      ...filters,
+                      dpdRangeTo: value,
+                    })
+                  }
                   placeholder="60"
                   className="flex flex-1 flex-col items-start gap-2"
                 />
@@ -170,26 +258,32 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 ₴
               </span>
               <div className="flex flex-1 items-center gap-2">
-                <Input
-                  type="text"
-                  value={formatNumber(filters.amountOfDebtRangeFrom)}
-                  onChange={(e) =>
-                    handleAmountOfDebtRangeChange('amountOfDebtRangeFrom', e.target.value)
+                <DebouncedNumberInput
+                  value={filters.amountOfDebtRangeFrom}
+                  onChange={(value) =>
+                    onFilterChange({
+                      ...filters,
+                      amountOfDebtRangeFrom: value,
+                    })
                   }
                   placeholder="10,000"
                   className="flex flex-1 flex-col items-start gap-2"
+                  formatWithCommas={true}
                 />
                 <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
                   -
                 </span>
-                <Input
-                  type="text"
-                  value={formatNumber(filters.amountOfDebtRangeTo)}
-                  onChange={(e) =>
-                    handleAmountOfDebtRangeChange('amountOfDebtRangeTo', e.target.value)
+                <DebouncedNumberInput
+                  value={filters.amountOfDebtRangeTo}
+                  onChange={(value) =>
+                    onFilterChange({
+                      ...filters,
+                      amountOfDebtRangeTo: value,
+                    })
                   }
                   placeholder="50,000"
                   className="flex flex-1 flex-col items-start gap-2"
+                  formatWithCommas={true}
                 />
               </div>
             </div>
@@ -202,7 +296,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               <DateSelect
                 value={filters.dateOfSaleFrom || null}
                 onChange={({ value }) => handleDateChange('dateOfSaleFrom', value)}
-                placeholder="2024-11-20"
+                placeholder={`${new Date().getFullYear()}-01-01`}
                 format="yyyy-MM-dd"
                 className="flex flex-1 flex-col gap-2"
               />
@@ -212,7 +306,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               <DateSelect
                 value={filters.dateOfSaleTo || null}
                 onChange={({ value }) => handleDateChange('dateOfSaleTo', value)}
-                placeholder="2024-11-20"
+                placeholder={`${new Date().getFullYear()}-12-31`}
                 format="yyyy-MM-dd"
                 className="flex flex-1 flex-col gap-2"
               />
@@ -322,7 +416,17 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     <SelectItem value="none">
                       {t('pages.clients.filters.selectEmployee')}
                     </SelectItem>
-                    {/* TODO: Add actual employee list */}
+                    {userOptions.length === 0 ? (
+                      <div className="px-2 py-6 text-center text-sm text-gray-500">
+                        {t('pages.clients.filters.noUsersAvailable')}
+                      </div>
+                    ) : (
+                      userOptions.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -350,11 +454,105 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     <SelectItem value="none">
                       {t('pages.clients.filters.selectSearcher')}
                     </SelectItem>
-                    {/* TODO: Add actual searcher list */}
+                    {userOptions.length === 0 ? (
+                      <div className="px-2 py-6 text-center text-sm text-gray-500">
+                        {t('pages.clients.filters.noUsersAvailable')}
+                      </div>
+                    ) : (
+                      userOptions.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
             </div>
+          </div>
+          <div className="flex items-start gap-10 self-stretch">
+            {/* Unassigned only checkbox */}
+            <div className="flex min-w-[220px] flex-1 items-center gap-3">
+              <label className="flex cursor-pointer items-center gap-2">
+                <Checkbox
+                  checked={filters.unassignedOnly || false}
+                  onCheckedChange={(checked) =>
+                    onFilterChange({
+                      ...filters,
+                      unassignedOnly: checked as boolean,
+                    })
+                  }
+                />
+                <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                  {t('pages.clients.filters.unassignedOnly')}
+                </span>
+              </label>
+            </div>
+            <div className="flex min-w-[220px] flex-1" />
+          </div>
+          <div className="flex items-center gap-10 self-stretch">
+            {/* Tags Filter */}
+            <div className="flex min-w-[220px] flex-1 items-center gap-3">
+              <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                {t('pages.clients.filters.tags')}
+              </label>
+              <div className="flex flex-1 flex-wrap items-start gap-3">
+                {displayedTags.map((tag) => (
+                  <label key={tag.id} className="flex cursor-pointer items-center gap-2">
+                    <Checkbox
+                      checked={selectedTagIds.includes(tag.id)}
+                      onCheckedChange={(checked) => {
+                        const current = filters.tagIds || []
+                        onFilterChange({
+                          ...filters,
+                          tagIds: checked
+                            ? [...current, tag.id]
+                            : current.filter((id) => id !== tag.id),
+                        })
+                      }}
+                    />
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: tag.color }}
+                      />
+                      <span className="text-dark-500 text-sm">{tag.name}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-secondary-800 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                  + {hiddenTagsCount} {t('pages.clients.filters.more')}
+                </span>
+                {hiddenTagsCount > 0 && (
+                  <TagsDropdown
+                    tags={tags}
+                    selectedTagIds={selectedTagIds}
+                    onSelectionChange={handleTagsChange}
+                    onOpenChange={setTagsDropdownOpen}
+                    trigger={
+                      <button
+                        type="button"
+                        data-testid="tags-multiselect-trigger"
+                        className="bg-primary-300 flex items-center gap-2 rounded p-1"
+                      >
+                        {tagsDropdownOpen ? (
+                          <Icons.ArrowUp size={16} className="text-secondary-800" strokeWidth={2} />
+                        ) : (
+                          <Icons.ArrowDown
+                            size={16}
+                            className="text-secondary-800"
+                            strokeWidth={2}
+                          />
+                        )}
+                      </button>
+                    }
+                  />
+                )}
+              </div>
+            </div>
+            <div className="flex min-w-[220px] flex-1" />
           </div>
         </div>
       </div>

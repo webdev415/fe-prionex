@@ -9,12 +9,30 @@ import { useTranslation } from 'react-i18next'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { Button } from '@/components/ui/Button'
+import { LinkButton } from '@/components/ui/LinkButton'
 import { PriorityCards } from './components/PriorityCards'
+import { PriorityBadge } from './components/PriorityBadge'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
+import { AssignClientModal } from './components/AssignClientModal'
+import { BulkAssignClientModal } from './components/BulkAssignClientModal'
+import { TagSelectorModal } from './components/TagSelectorModal'
+import { BulkTagModal } from './components/BulkTagModal'
 import { ClientManagementPageSkeleton } from './components/ClientManagementPageSkeleton'
 import { Icons } from '@/lib/icons'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useClients, useClientCount, usePrioritySummary } from '@/features/clients/hooks/useClients'
+import {
+  useAssignClient,
+  useBulkAssignClients,
+  useClients,
+  usePrioritySummary,
+} from '@/features/clients/hooks/useClients'
 import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import type { Client as APIClient } from '@/features/clients/api/types'
@@ -26,7 +44,7 @@ interface DisplayClient {
   id: number
   fullName: string
   taxIdNumber: string
-  tags: string[]
+  tags: Array<{ id: number; name: string; color: string }>
   phoneNumber: string
   dateOfSale: string
   creditor: string
@@ -57,7 +75,7 @@ const mapAPIClientToDisplay = (
     id: client.id,
     fullName,
     taxIdNumber: client.tax_id,
-    tags: [], // TODO: Add tags from backend when available
+    tags: client.tags || [], // Tags from API
     phoneNumber: client.phone_primary,
     dateOfSale: client.created_at ? new Date(client.created_at).toLocaleDateString('uk-UA') : '-',
     creditor: client.primary_creditor || '-',
@@ -71,18 +89,41 @@ const mapAPIClientToDisplay = (
 }
 
 export interface ClientFilters {
-  debtRangeFrom?: number
-  debtRangeTo?: number
-  amountOfDebtRangeFrom?: number
-  amountOfDebtRangeTo?: number
+  // Debt Range Filters
+  debtRangeFrom?: number // Legacy remaining debt min
+  debtRangeTo?: number // Legacy remaining debt max
+  amountOfDebtRangeFrom?: number // Total debt min (UI label)
+  amountOfDebtRangeTo?: number // Total debt max (UI label)
+
+  // Principal Amount Filter (NEW - maps to principal_min/max)
+  principalRangeFrom?: number
+  principalRangeTo?: number
+
+  // Total Debt Filter (NEW - maps to total_debt_min/max)
+  totalDebtRangeFrom?: number
+  totalDebtRangeTo?: number
+
+  // Days Past Due Filter
   dpdRangeFrom?: number
   dpdRangeTo?: number
+
+  // Date Range Filter
   dateOfSaleFrom?: string
   dateOfSaleTo?: string
+
+  // Portfolio/Sellers Filter
   portfolio?: string[]
+
+  // Status Filter
   status?: string[]
+
+  // Assignment Filters
   responsibleEmployee?: string
   responsibleSearcher?: string
+  unassignedOnly?: boolean
+
+  // Tags Filter
+  tagIds?: number[]
 }
 
 export function ClientManagementPage() {
@@ -101,6 +142,18 @@ export function ClientManagementPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [sortConfig, setSortConfig] = useState<SortConfig | undefined>()
   const [currentPage, setCurrentPage] = useState(1)
+  const [selectedClients, setSelectedClients] = useState<Set<number>>(new Set())
+  const [allClientsSelected, setAllClientsSelected] = useState(false)
+  const [excludedClients, setExcludedClients] = useState<Set<number>>(new Set()) // Track excluded items when all are selected
+  const [assignModalClientId, setAssignModalClientId] = useState<number | null>(null)
+  const [showBulkAssignModal, setShowBulkAssignModal] = useState(false)
+  const [showBulkTagModal, setShowBulkTagModal] = useState(false)
+  const [bulkTagAction, setBulkTagAction] = useState<'add' | 'remove'>('add')
+  const [tagModalOpen, setTagModalOpen] = useState(false)
+  const [selectedClientForTags, setSelectedClientForTags] = useState<{
+    id: number
+    name: string
+  } | null>(null)
   const prevSearchQueryRef = useRef(searchQuery)
   const prevFiltersRef = useRef(filters)
   const prevRowsPerPageRef = useRef(rowsPerPage)
@@ -137,7 +190,71 @@ export function ClientManagementPage() {
       params.sort_order = 'desc'
     }
 
-    // Debt range filtering - use debtRangeFrom/To for filtering
+    // FILTER 1: Portfolio/Sellers
+    // Extract seller IDs from "Seller Name (ID)" format
+    if (debouncedFilters.portfolio && debouncedFilters.portfolio.length > 0) {
+      const sellerIds = debouncedFilters.portfolio
+        .map((portfolio) => {
+          // Extract ID from "Seller Name (ID)" format
+          const match = portfolio.match(/\((\d+)\)$/)
+          return match ? match[1] : null
+        })
+        .filter((id): id is string => id !== null)
+        .join(',')
+
+      if (sellerIds) {
+        params.seller_ids = sellerIds
+      }
+    }
+
+    // FILTER 2: Sale Date Range (FIXED - correct parameter names)
+    if (debouncedFilters.dateOfSaleFrom) {
+      params.sale_date_from = debouncedFilters.dateOfSaleFrom
+    }
+    if (debouncedFilters.dateOfSaleTo) {
+      params.sale_date_to = debouncedFilters.dateOfSaleTo
+    }
+
+    // FILTER 3: Assignment - Employee
+    if (debouncedFilters.responsibleEmployee) {
+      params.responsible_employee_id = parseInt(debouncedFilters.responsibleEmployee)
+    }
+
+    // FILTER 4: Assignment - Searcher
+    if (debouncedFilters.responsibleSearcher) {
+      params.responsible_searcher_id = parseInt(debouncedFilters.responsibleSearcher)
+    }
+
+    // FILTER 5: Assignment - Unassigned Only
+    if (debouncedFilters.unassignedOnly) {
+      params.unassigned_only = true
+    }
+
+    // FILTER 6: Principal Amount
+    if (debouncedFilters.principalRangeFrom !== undefined) {
+      params.principal_min = debouncedFilters.principalRangeFrom
+    }
+    if (debouncedFilters.principalRangeTo !== undefined) {
+      params.principal_max = debouncedFilters.principalRangeTo
+    }
+
+    // FILTER 7: Total Debt Amount
+    if (debouncedFilters.totalDebtRangeFrom !== undefined) {
+      params.total_debt_min = debouncedFilters.totalDebtRangeFrom
+    }
+    if (debouncedFilters.totalDebtRangeTo !== undefined) {
+      params.total_debt_max = debouncedFilters.totalDebtRangeTo
+    }
+
+    // FILTER 8: Days Past Due
+    if (debouncedFilters.dpdRangeFrom !== undefined) {
+      params.dpd_min = debouncedFilters.dpdRangeFrom
+    }
+    if (debouncedFilters.dpdRangeTo !== undefined) {
+      params.dpd_max = debouncedFilters.dpdRangeTo
+    }
+
+    // Existing filters (already working)
     if (debouncedFilters.debtRangeFrom !== undefined) {
       params.debt_min = debouncedFilters.debtRangeFrom
     }
@@ -145,29 +262,33 @@ export function ClientManagementPage() {
       params.debt_max = debouncedFilters.debtRangeTo
     }
 
-    // Status filtering - join array into comma-separated string
     if (debouncedFilters.status && debouncedFilters.status.length > 0) {
       params.status = debouncedFilters.status.join(',')
     }
 
-    // Date range filtering
-    if (debouncedFilters.dateOfSaleFrom) {
-      params.date_from = debouncedFilters.dateOfSaleFrom
-    }
-    if (debouncedFilters.dateOfSaleTo) {
-      params.date_to = debouncedFilters.dateOfSaleTo
+    // FILTER 9: Tags
+    if (debouncedFilters.tagIds && debouncedFilters.tagIds.length > 0) {
+      params.tag_ids = debouncedFilters.tagIds.join(',')
     }
 
     return params
   }, [debouncedFilters, currentPage, rowsPerPage, sortConfig])
 
   // Fetch clients from API
-  const { data: apiClients = [], isLoading, isFetching, isError, error } = useClients(apiParams)
-  const { data: totalCount = 0 } = useClientCount()
+  const { data: clientsResponse, isLoading, isFetching, isError, error } = useClients(apiParams)
   const { data: prioritySummaryData } = usePrioritySummary()
+
+  // Extract paginated data from response
+  const apiClients = useMemo(() => clientsResponse?.items || [], [clientsResponse?.items])
+  const totalCount = clientsResponse?.total || 0
+  const totalPages = clientsResponse?.total_pages || 1
 
   // Fetch priority thresholds configuration
   const { data: thresholds = DEFAULT_THRESHOLDS } = usePriorityThresholds()
+
+  // Assignment mutations
+  const assignClientMutation = useAssignClient()
+  const bulkAssignClientsMutation = useBulkAssignClients()
 
   // Map API clients to display format
   const displayClients = useMemo(() => {
@@ -180,6 +301,7 @@ export function ClientManagementPage() {
       prevSearchQueryRef.current = searchQuery
       startTransition(() => {
         setCurrentPage(1)
+        setSelectedClients(new Set()) // Clear selection when search changes
       })
     }
   }, [searchQuery])
@@ -198,6 +320,12 @@ export function ClientManagementPage() {
       prevSortConfigRef.current = sortConfig
       startTransition(() => {
         setCurrentPage(1)
+        // Only clear selection when filters change, not when rows per page or sort changes
+        if (filtersChanged) {
+          setSelectedClients(new Set())
+          setAllClientsSelected(false)
+          setExcludedClients(new Set())
+        }
       })
     }
   }, [debouncedFilters, rowsPerPage, sortConfig])
@@ -211,12 +339,12 @@ export function ClientManagementPage() {
     // DPD Range not yet implemented (days past due not calculated)
     // if (filters.dpdRangeFrom || filters.dpdRangeTo) count++
     if (filters.dateOfSaleFrom || filters.dateOfSaleTo) count++
-    // Portfolio not yet implemented in schema
-    // if (filters.portfolio && filters.portfolio.length > 0) count++
+    if (filters.portfolio && filters.portfolio.length > 0) count++
+    if (filters.tagIds && filters.tagIds.length > 0) count++
     if (filters.status && filters.status.length > 0) count++
-    // Responsible employee/searcher not yet assigned to clients
-    // if (filters.responsibleEmployee) count++
-    // if (filters.responsibleSearcher) count++
+    if (filters.responsibleEmployee) count++
+    if (filters.responsibleSearcher) count++
+    if (filters.unassignedOnly) count++
     return count
   }, [filters])
 
@@ -252,7 +380,7 @@ export function ClientManagementPage() {
               client.phoneNumber.replace(phoneRegex, '').toLowerCase().includes(queryNormalized) ||
               client.taxIdNumber.toLowerCase().includes(query) ||
               client.creditor.toLowerCase().includes(query) ||
-              client.tags.some((tag) => tag.toLowerCase().includes(query))
+              client.tags.some((tag) => tag.name.toLowerCase().includes(query))
             )
           }
         }
@@ -294,11 +422,201 @@ export function ClientManagementPage() {
     }
   }, [prioritySummaryData])
 
-  // Calculate total pages from server-side count
-  const totalPages = Math.ceil(totalCount / rowsPerPage)
-
   const handleSort = (key: string, order: 'asc' | 'desc') => {
     setSortConfig({ key, order })
+  }
+
+  // Bulk selection handlers
+  const handleBulkAssign = () => {
+    setShowBulkAssignModal(true)
+  }
+
+  const handleBulkAddTags = () => {
+    setBulkTagAction('add')
+    setShowBulkTagModal(true)
+  }
+
+  const handleBulkRemoveTags = () => {
+    setBulkTagAction('remove')
+    setShowBulkTagModal(true)
+  }
+
+  const handleBulkAssignSubmit = (assignmentData: {
+    employeeId?: string
+    searcherId?: string
+    distributionMethod: 'assign-all' | 'distribute-evenly'
+    reason: string
+    notes?: string
+  }) => {
+    // Collect client IDs to assign
+    let clientIds: number[]
+
+    if (allClientsSelected) {
+      // All selected minus excluded - get from current page data
+      clientIds = apiClients
+        .filter((client) => !excludedClients.has(client.id))
+        .map((client) => client.id)
+    } else {
+      // Just the explicitly selected clients
+      clientIds = Array.from(selectedClients).map(Number)
+    }
+
+    if (clientIds.length === 0) return
+
+    bulkAssignClientsMutation.mutate(
+      {
+        client_ids: clientIds,
+        responsible_employee_id: assignmentData.employeeId
+          ? parseInt(assignmentData.employeeId)
+          : undefined,
+        responsible_searcher_id: assignmentData.searcherId
+          ? parseInt(assignmentData.searcherId)
+          : undefined,
+        assignment_reason: assignmentData.reason,
+      },
+      {
+        onSuccess: () => {
+          // Close modal and clear selection after successful assignment
+          setShowBulkAssignModal(false)
+          setSelectedClients(new Set())
+          setAllClientsSelected(false)
+          setExcludedClients(new Set())
+        },
+      }
+    )
+  }
+
+  // Get selected clients data for bulk assign modal
+  const selectedClientsData = useMemo(() => {
+    if (allClientsSelected) {
+      // If all clients are selected, use current page clients as preview
+      // The actual count will be totalCount - excludedClients.size
+      return filteredClients
+        .filter((client) => !excludedClients.has(client.id))
+        .map((client) => ({
+          id: client.id,
+          fullName: client.fullName,
+          priority: client.priority,
+          score: client.score,
+          debt: client.debt,
+        }))
+    }
+    return filteredClients
+      .filter((client) => selectedClients.has(client.id))
+      .map((client) => ({
+        id: client.id,
+        fullName: client.fullName,
+        priority: client.priority,
+        score: client.score,
+        debt: client.debt,
+      }))
+  }, [filteredClients, selectedClients, allClientsSelected, excludedClients])
+
+  // Calculate total selected count for bulk assign modal
+  const totalSelectedCount = useMemo(() => {
+    if (allClientsSelected) {
+      return totalCount - excludedClients.size
+    }
+    return selectedClients.size
+  }, [allClientsSelected, totalCount, excludedClients.size, selectedClients.size])
+
+  // Individual row assign handler
+  const handleAssign = (clientId: number) => {
+    setAssignModalClientId(clientId)
+  }
+
+  // Tag management handler
+  const handleManageTags = (clientId: number, clientName: string) => {
+    setSelectedClientForTags({ id: clientId, name: clientName })
+    setTagModalOpen(true)
+  }
+
+  const handleAssignSubmit = (assignmentData: {
+    employeeId?: string
+    searcherId?: string
+    reason: string
+    notes?: string
+  }) => {
+    if (!assignModalClientId) return
+
+    assignClientMutation.mutate(
+      {
+        clientId: assignModalClientId,
+        data: {
+          responsible_employee_id: assignmentData.employeeId
+            ? parseInt(assignmentData.employeeId)
+            : undefined,
+          responsible_searcher_id: assignmentData.searcherId
+            ? parseInt(assignmentData.searcherId)
+            : undefined,
+          assignment_reason: assignmentData.reason,
+        },
+      },
+      {
+        onSuccess: () => {
+          // Close modal after successful assignment
+          setAssignModalClientId(null)
+        },
+      }
+    )
+  }
+
+  const handleSelectionChange = (selectedItems: Set<number | string>) => {
+    const newSelection = new Set(Array.from(selectedItems).map(Number))
+
+    // If selection is completely empty, clear all selection state
+    if (newSelection.size === 0) {
+      setSelectedClients(new Set())
+      setAllClientsSelected(false)
+      setExcludedClients(new Set())
+      return
+    }
+
+    if (allClientsSelected) {
+      // When all items are selected, track which items are excluded (unchecked)
+      const currentPageIds = new Set(filteredClients.map((client) => client.id))
+      const uncheckedOnCurrentPage = filteredClients
+        .filter((client) => !newSelection.has(client.id))
+        .map((client) => client.id)
+
+      // Add unchecked items to excluded set
+      const newExcluded = new Set(excludedClients)
+      uncheckedOnCurrentPage.forEach((id) => newExcluded.add(id))
+
+      // Remove items that are checked again from excluded set
+      currentPageIds.forEach((id) => {
+        if (newSelection.has(id)) {
+          newExcluded.delete(id)
+        }
+      })
+
+      setExcludedClients(newExcluded)
+      setSelectedClients(newSelection)
+
+      // If all items are checked again (no exclusions), clear excluded set
+      if (newExcluded.size === 0) {
+        setExcludedClients(new Set())
+      }
+    } else {
+      // Normal selection mode
+      setSelectedClients(newSelection)
+      setExcludedClients(new Set())
+    }
+  }
+
+  const handleSelectAll = () => {
+    // Select all items across all pages
+    setAllClientsSelected(true)
+    setExcludedClients(new Set()) // Clear any exclusions
+    // Also select all items on the current page for visual feedback
+    const currentPageIds = new Set(filteredClients.map((client) => client.id))
+    setSelectedClients(currentPageIds)
+    // Note: We mark all as selected, so the count will show "Selected 14060 of 14060"
+  }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    // Don't clear selection when page changes - keep selections across pages
   }
 
   const handleClearAll = () => {
@@ -340,16 +658,6 @@ export function ClientManagementPage() {
   }
 
   // Get tag icon based on tag name
-  const getTagIcon = (tag: string) => {
-    const lowerTag = tag.toLowerCase()
-    if (lowerTag.includes('employee')) {
-      return <span className="bg-success-500 h-2 w-2 rounded-full" />
-    }
-    if (lowerTag.includes('creditor') || lowerTag.includes('insolvent')) {
-      return <Icons.Warning size={12} className="text-warning-500" strokeWidth={2} />
-    }
-    return null
-  }
 
   const columns: Column<DisplayClient>[] = [
     {
@@ -388,18 +696,24 @@ export function ClientManagementPage() {
       align: 'left',
       render: (client) => (
         <div className="flex flex-wrap gap-1">
-          {client.tags.map((tag, index) => {
-            const icon = getTagIcon(tag)
-            return (
+          {client.tags && client.tags.length > 0 ? (
+            client.tags.map((tag) => (
               <span
-                key={index}
-                className="text-dark-500 inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs"
+                key={tag.id}
+                className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
+                style={{
+                  backgroundColor: tag.color + '20',
+                  borderColor: tag.color,
+                  color: tag.color,
+                }}
               >
-                {icon}
-                {tag}
+                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: tag.color }} />
+                {tag.name}
               </span>
-            )
-          })}
+            ))
+          ) : (
+            <span className="text-xs text-gray-400">-</span>
+          )}
         </div>
       ),
     },
@@ -438,21 +752,7 @@ export function ClientManagementPage() {
       align: 'left',
       sortable: true,
       sortKey: 'priority',
-      render: (client) => {
-        const priorityColors = {
-          Critical: 'bg-error-500',
-          High: 'bg-warning-500',
-          Medium: 'bg-success-500',
-          Low: 'bg-gray-500',
-        }
-        return (
-          <span
-            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-white ${priorityColors[client.priority as keyof typeof priorityColors] || 'bg-gray-500'}`}
-          >
-            {t(`pages.clients.priorities.${client.priority.toLowerCase()}`)}
-          </span>
-        )
-      },
+      render: (client) => <PriorityBadge priority={client.priority} variant="compact" />,
     },
     {
       key: 'score',
@@ -460,6 +760,41 @@ export function ClientManagementPage() {
       align: 'right',
       sortable: true,
       sortKey: 'score',
+    },
+    {
+      key: 'actions',
+      header: t('pages.clients.tableHeaders.actions'),
+      align: 'center',
+      render: (client) => {
+        // Disable assign button when bulk actions are active (items are selected)
+        const isBulkActionActive = selectedClients.size > 0 || allClientsSelected
+        return (
+          <div
+            className="flex items-center justify-center gap-2"
+            data-testid={`client-actions-${client.id}`}
+          >
+            <LinkButton
+              leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+              onClick={() => handleAssign(client.id)}
+              variant="regular-black"
+              size="xs"
+              disabled={isBulkActionActive}
+            >
+              {t('pages.clients.assign')}
+            </LinkButton>
+            <LinkButton
+              leftIcon={<Icons.File size={16} color="#05040D" strokeWidth={1.5} />}
+              onClick={() => handleManageTags(client.id, client.fullName)}
+              variant="regular-black"
+              size="xs"
+              disabled={isBulkActionActive}
+              data-testid={`tag-button-${client.id}`}
+            >
+              {t('pages.clients.manageTags')}
+            </LinkButton>
+          </div>
+        )
+      },
     },
   ]
 
@@ -473,14 +808,16 @@ export function ClientManagementPage() {
     return (
       <div className="flex w-full flex-col items-center justify-center gap-4 pt-20">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
-        <p className="font-medium text-gray-900">Failed to load clients</p>
-        <p className="text-sm text-gray-600">{error?.message || 'An error occurred'}</p>
+        <p className="font-medium text-gray-900">{t('pages.clients.errorLoading')}</p>
+        <p className="text-sm text-gray-600">
+          {error?.message || t('pages.clients.errorOccurred')}
+        </p>
       </div>
     )
   }
 
   return (
-    <div className="flex w-full flex-col items-start gap-5 pt-1 pr-7 pb-6 pl-7">
+    <div className="flex w-full flex-col items-start gap-4">
       {/* Priority Overview Cards */}
       <PriorityCards priorityStats={priorityStats} />
 
@@ -497,19 +834,21 @@ export function ClientManagementPage() {
           </div>
         </div>
         <div className="flex items-center justify-end gap-5">
-          <button
-            onClick={handleClearAll}
-            className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2.5 transition-colors hover:bg-white/10"
-          >
-            <Icons.Cancel01
-              size={20}
-              className="stroke-secondary-800 text-secondary-800"
-              strokeWidth={1.5}
-            />
-            <span className="text-center text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
-              {t('pages.clients.clearAll')}
-            </span>
-          </button>
+          {appliedFiltersCount > 0 && (
+            <button
+              onClick={handleClearAll}
+              className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2.5 transition-colors hover:bg-white/10"
+            >
+              <Icons.Cancel01
+                size={20}
+                className="stroke-secondary-800 text-secondary-800"
+                strokeWidth={1.5}
+              />
+              <span className="text-center text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
+                {t('pages.clients.clearAll')}
+              </span>
+            </button>
+          )}
           <button
             onClick={() => setIsFiltersOpen(!isFiltersOpen)}
             className="flex flex-col items-start gap-2.5 rounded-lg bg-white px-5 py-3 shadow-sm"
@@ -536,7 +875,7 @@ export function ClientManagementPage() {
       {/* Data Table - Show skeleton when fetching */}
       {isFetching && !isLoading ? (
         <div className="flex flex-col items-start gap-8 self-stretch">
-          <TableSkeleton columns={columns.length} rows={rowsPerPage} className="w-full" />
+          <TableSkeleton columns={columns.length + 1} rows={rowsPerPage} className="w-full" />
         </div>
       ) : (
         <DataTable
@@ -545,7 +884,58 @@ export function ClientManagementPage() {
           sortConfig={sortConfig}
           onSort={handleSort}
           emptyMessage={t('pages.clients.noClientsFound')}
-          className="flex flex-col items-start gap-8 self-stretch"
+          className="flex flex-col items-start self-stretch"
+          enableBulkSelection
+          selectedItems={selectedClients}
+          onSelectionChange={handleSelectionChange}
+          totalCount={totalCount}
+          onSelectAll={handleSelectAll}
+          allItemsSelected={allClientsSelected}
+          excludedItemsCount={excludedClients.size}
+          excludedItems={excludedClients}
+          headerActions={
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="primary" size="sm" className="h-10 gap-2 rounded-lg px-4">
+                  <Icons.Settings size={18} className="text-dark-500" strokeWidth={1.5} />
+                  <span className="text-sm font-medium">Bulk Actions</span>
+                  <Icons.ArrowDown size={16} className="text-dark-500" strokeWidth={1.5} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+              >
+                <DropdownMenuItem
+                  onClick={handleBulkAssign}
+                  className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                >
+                  <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                  <span className="text-dark-500 text-sm font-medium">
+                    {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleBulkAddTags}
+                  className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                >
+                  <Icons.PlusSignCircle size={18} className="text-dark-500" strokeWidth={1.5} />
+                  <span className="text-dark-500 text-sm font-medium">
+                    {t('pages.clients.bulkActions.addTags', 'Add Tags')}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleBulkRemoveTags}
+                  className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                >
+                  <Icons.Remove02 size={18} className="text-dark-500" strokeWidth={1.5} />
+                  <span className="text-dark-500 text-sm font-medium">
+                    {t('pages.clients.bulkActions.removeTags', 'Remove Tags')}
+                  </span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          }
         />
       )}
 
@@ -557,11 +947,58 @@ export function ClientManagementPage() {
             totalPages={totalPages}
             pageSize={rowsPerPage}
             pageSizeOptions={[10, 20, 50, 100]}
-            onPageChange={setCurrentPage}
+            onPageChange={handlePageChange}
             onPageSizeChange={setRowsPerPage}
           />
         </div>
       )}
+
+      {/* Assign Client Modal */}
+      <AssignClientModal
+        open={assignModalClientId !== null}
+        clientId={assignModalClientId}
+        onClose={() => setAssignModalClientId(null)}
+        onAssign={handleAssignSubmit}
+      />
+
+      {/* Bulk Assign Client Modal */}
+      <BulkAssignClientModal
+        open={showBulkAssignModal}
+        selectedClientIds={selectedClients}
+        selectedClients={selectedClientsData}
+        totalSelectedCount={totalSelectedCount}
+        onClose={() => setShowBulkAssignModal(false)}
+        onAssign={handleBulkAssignSubmit}
+      />
+
+      {/* Tag Selector Modal */}
+      {selectedClientForTags && (
+        <TagSelectorModal
+          open={tagModalOpen}
+          clientId={selectedClientForTags.id}
+          clientName={selectedClientForTags.name}
+          projectId={1}
+          onClose={() => {
+            setTagModalOpen(false)
+            setSelectedClientForTags(null)
+          }}
+        />
+      )}
+
+      {/* Bulk Tag Modal */}
+      <BulkTagModal
+        open={showBulkTagModal}
+        clientIds={
+          allClientsSelected
+            ? apiClients
+                .filter((client) => !excludedClients.has(client.id))
+                .map((client) => client.id)
+            : Array.from(selectedClients).map(Number)
+        }
+        clientCount={totalSelectedCount}
+        action={bulkTagAction}
+        onClose={() => setShowBulkTagModal(false)}
+      />
     </div>
   )
 }

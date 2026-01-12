@@ -19,6 +19,12 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
 import { ErrorState } from '@/components/ErrorState'
 import { Icons } from '@/lib/icons'
 import { CreateRoleModal } from './components/CreateRoleModal'
@@ -35,6 +41,7 @@ export function RoleManagementPage() {
   const [editRoleId, setEditRoleId] = useState<number | null>(null)
   const [archiveRoleId, setArchiveRoleId] = useState<number | null>(null)
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
+  const [openDropdownRoleId, setOpenDropdownRoleId] = useState<number | null>(null)
 
   // Fetch all projects for dropdown
   const { data: projectsData, isLoading: loadingProjects } = useProjects({
@@ -58,6 +65,25 @@ export function RoleManagementPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProjectId])
+
+  // Close dropdown when screen size crosses breakpoint (in either direction)
+  useEffect(() => {
+    let wasMobile = window.innerWidth < 1024 // lg breakpoint
+
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 1024
+
+      // Close dropdown if transitioning across breakpoint (mobile <-> desktop)
+      if (wasMobile !== isMobile && openDropdownRoleId !== null) {
+        setOpenDropdownRoleId(null)
+      }
+
+      wasMobile = isMobile
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [openDropdownRoleId])
 
   const {
     data,
@@ -98,33 +124,80 @@ export function RoleManagementPage() {
       header: t('pages.roles.tableHeaders.actions'),
       align: 'center',
       render: (role) => (
-        <div className="flex items-center justify-center gap-4">
-          <button
-            type="button"
-            onClick={() => setSelectedRoleId(role.id)}
-            className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
-          >
-            <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
-            {t('pages.roles.actions.view')}
-          </button>
-          <button
-            type="button"
-            className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
-            onClick={() => setEditRoleId(role.id)}
-          >
-            <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
-            {t('pages.roles.actions.edit')}
-          </button>
-          {!role.is_default && (
+        <div className="flex items-center justify-center gap-2 sm:gap-4">
+          {/* Desktop: Individual buttons */}
+          <div className="hidden items-center gap-4 lg:flex">
+            <button
+              type="button"
+              onClick={() => setSelectedRoleId(role.id)}
+              className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+            >
+              <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
+              {t('pages.roles.actions.view')}
+            </button>
             <button
               type="button"
               className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
-              onClick={() => setArchiveRoleId(role.id)}
+              onClick={() => setEditRoleId(role.id)}
             >
-              <Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />
-              {t('pages.roles.actions.delete')}
+              <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
+              {t('pages.roles.actions.edit')}
             </button>
-          )}
+            {!role.is_default && (
+              <button
+                type="button"
+                className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+                onClick={() => setArchiveRoleId(role.id)}
+              >
+                <Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />
+                {t('pages.roles.actions.delete')}
+              </button>
+            )}
+          </div>
+
+          {/* Mobile/Tablet: Dropdown button group */}
+          <div className="lg:hidden">
+            <DropdownMenu
+              modal={false}
+              open={openDropdownRoleId === role.id}
+              onOpenChange={(open) => setOpenDropdownRoleId(open ? role.id : null)}
+            >
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
+                  aria-label={t('pages.roles.tableHeaders.actions')}
+                >
+                  <Icons.FilterVertical size={16} strokeWidth={1.5} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white">
+                <DropdownMenuItem
+                  onClick={() => setSelectedRoleId(role.id)}
+                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                >
+                  <Icons.View size={16} strokeWidth={1.5} />
+                  <span>{t('pages.roles.actions.view')}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setEditRoleId(role.id)}
+                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                >
+                  <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                  <span>{t('pages.roles.actions.edit')}</span>
+                </DropdownMenuItem>
+                {!role.is_default && (
+                  <DropdownMenuItem
+                    onClick={() => setArchiveRoleId(role.id)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                  >
+                    <Icons.Delete size={16} strokeWidth={1.5} />
+                    <span>{t('pages.roles.actions.delete')}</span>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       ),
     },
@@ -136,34 +209,50 @@ export function RoleManagementPage() {
     <div>
       {/* Page Header */}
       {!isLoading && (
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-dark-500 text-2xl font-light">{t('pages.roles.title')}</h1>
+        <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+              {t('pages.roles.title')}
+            </h1>
           </div>
-          <DoubleButton
-            size="md"
-            icon={<Icons.Add size={20} strokeWidth={2} />}
-            iconPosition="left"
+          {/* Desktop: Full button with text, Mobile: Icon-only button */}
+          <div className="hidden sm:block">
+            <DoubleButton
+              size="md"
+              icon={<Icons.Add size={20} strokeWidth={2} />}
+              iconPosition="left"
+              onClick={() => setShowCreateModal(true)}
+              disabled={!selectedProjectId}
+            >
+              {t('pages.roles.newRole')}
+            </DoubleButton>
+          </div>
+          {/* Mobile: Icon-only button */}
+          <button
             onClick={() => setShowCreateModal(true)}
             disabled={!selectedProjectId}
+            className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:hidden"
+            aria-label={t('pages.roles.newRole')}
           >
-            {t('pages.roles.newRole')}
-          </DoubleButton>
+            <Icons.Add size={20} strokeWidth={2} />
+          </button>
         </div>
       )}
 
       {/* Project Selector */}
       {!isLoading && (
         <div className="mb-6 flex items-center gap-3">
-          <span className="text-xl font-light text-gray-500">{t('pages.roles.project')}</span>
+          <span className="text-base font-light text-gray-500 sm:text-xl">
+            {t('pages.roles.project')}
+          </span>
           <Select
             value={selectedProjectId ? String(selectedProjectId) : ''}
             onValueChange={(value) => setSelectedProjectId(Number(value))}
           >
-            <SelectTrigger className="text-dark-500 flex h-auto w-auto min-w-0 items-center gap-2 border-0 bg-transparent p-0 text-xl font-light shadow-none focus:ring-0 [&>div.opacity-50]:hidden">
+            <SelectTrigger className="text-dark-500 flex h-auto w-auto min-w-0 items-center gap-2 border-0 bg-transparent p-0 text-base font-light shadow-none focus:ring-0 sm:text-xl [&>div.opacity-50]:hidden">
               <SelectValue
                 placeholder={t('pages.roles.selectProject')}
-                className="text-dark-500 text-xl font-light"
+                className="text-dark-500 text-base font-light sm:text-xl"
               />
               <div className="bg-primary-300 flex h-6 w-6 items-center justify-center rounded-md">
                 <Icons.ArrowDown size={16} color="#05040D" strokeWidth={1.5} />
@@ -199,7 +288,9 @@ export function RoleManagementPage() {
         <div className="space-y-8">
           {/* Default Roles */}
           <section className="rounded-xl bg-white/50 p-6">
-            <h2 className="mb-3 text-xl font-light text-black">{t('pages.roles.defaultRoles')}</h2>
+            <h2 className="mb-3 text-base font-light text-black sm:text-xl">
+              {t('pages.roles.defaultRoles')}
+            </h2>
             <DataTable<ApiRole>
               columns={columns}
               data={defaultRoles}
@@ -209,7 +300,9 @@ export function RoleManagementPage() {
 
           {/* Custom Roles */}
           <section className="rounded-xl bg-white/50 p-6">
-            <h2 className="mb-3 text-xl font-light text-black">{t('pages.roles.customRoles')}</h2>
+            <h2 className="mb-3 text-base font-light text-black sm:text-xl">
+              {t('pages.roles.customRoles')}
+            </h2>
             <DataTable<ApiRole>
               columns={columns}
               data={customRoles}

@@ -13,10 +13,13 @@
     "importClients": "Импорт клиентов",
     "projects": "Проекты",
     "users": "Пользователи",
+    "sellers": "Продавцы",
     "roles": "Роли",
     "smsTemplates": "SMS Шаблоны",
-    "transactions": "Транзакции",
-    "reports": "Отчеты"
+      "transactions": "Транзакции",
+      "auditLogs": "Журнал аудита",
+      "reports": "Отчеты",
+    "scoringConfiguration": "Конфигурация оценки"
   },
   "search": {
     "placeholder": "Поиск",
@@ -52,7 +55,9 @@
     "ru": "Русский"
   },
   "common": {
-    "step": "Шаг"
+    "step": "Шаг",
+    "selected": "Выбрано",
+    "of": "из"
   },
   "logout": {
     "confirmTitle": "Подтвердить выход",
@@ -557,6 +562,10 @@
       "filtersLabel": "Фильтры",
       "applied": "применено",
       "noClientsFound": "Клиенты не найдены",
+      "assign": "Назначить",
+      "bulkAssign": "Массовое назначение",
+      "errorLoading": "Не удалось загрузить клиентов",
+      "errorOccurred": "Произошла ошибка",
       "tableHeaders": {
         "fullName": "Полное имя",
         "taxIdNumber": "ИНН",
@@ -567,7 +576,8 @@
         "debt": "Долг",
         "amountOfDebt": "Сумма долга",
         "priority": "Приоритет",
-        "score": "Оценка"
+        "score": "Оценка",
+        "actions": "Действия"
       },
       "priorities": {
         "critical": "Критический",
@@ -606,6 +616,7 @@
         "defaulted": "Просрочено",
         "answered": "Отвечен",
         "noAnswer": "Нет ответа",
+        "sent": "Отправлено",
         "delivered": "Доставлено",
         "failed": "Не удалось",
         "pending": "Ожидается"
@@ -726,6 +737,65 @@
           "note": "Заметка",
           "typeYourNoteHere": "Введите вашу заметку здесь"
         },
+        "assignClient": {
+          "title": "Назначить клиента: {{fullName}}",
+          "clientInformation": "Информация о клиенте",
+          "assignmentDetails": "Детали назначения",
+          "name": "Имя",
+          "email": "Электронная почта",
+          "phone": "Телефон",
+          "priority": "Приоритет",
+          "score": "Оценка",
+          "totalDebt": "Общий долг",
+          "debt": "долг",
+          "debts": "долгов",
+          "employee": "Сотрудник (необязательно)",
+          "searcher": "Поисковик (необязательно)",
+          "assignmentReason": "Причина назначения",
+          "notes": "Примечания (необязательно)",
+          "selectEmployee": "Выберите сотрудника...",
+          "selectSearcher": "Выберите поисковика...",
+          "enterAdditionalNotes": "Введите дополнительные примечания...",
+          "warningMessage": "Примечание: Должно быть выбрано хотя бы одно назначение (Сотрудник или Поисковик).",
+          "assignClient": "Назначить клиента",
+          "reasons": {
+            "newClient": "Новый клиент",
+            "workloadDistribution": "Распределение нагрузки",
+            "specialistRequired": "Требуется специалист",
+            "reassignment": "Переназначение",
+            "other": "Другое"
+          }
+        },
+        "bulkAssignClient": {
+          "title": "Массовое назначение клиентов ({{count}} выбрано)",
+          "selectedClientsPreview": "Предпросмотр выбранных клиентов",
+          "assignmentOptions": "Параметры назначения",
+          "assignEmployeeToAll": "Назначить сотрудника всем (необязательно)",
+          "assignSearcherToAll": "Назначить поисковика всем (необязательно)",
+          "distributionMethod": "Метод распределения",
+          "assignmentReason": "Причина назначения",
+          "notes": "Примечания",
+          "selectEmployee": "Выберите сотрудника...",
+          "selectSearcher": "Выберите поисковика...",
+          "selectReason": "Выберите причину...",
+          "enterAdditionalNotes": "Введите дополнительные примечания...",
+          "assignAllToSelected": "Назначить всех выбранным пользователям выше",
+          "distributeEvenly": "Распределить равномерно среди доступных пользователей (в будущем)",
+          "totalDebt": "Общий долг:",
+          "avgScore": "Средняя оценка:",
+          "andMoreClients": "... и еще {{count}} {{client}}",
+          "client": "клиент",
+          "clients": "клиентов",
+          "warningMessage": "Это назначит {{count}} {{client}}. История назначений будет зарегистрирована для каждого клиента отдельно.",
+          "assignAllClients": "Назначить всех клиентов",
+          "reasons": {
+            "newClient": "Новый клиент",
+            "workloadDistribution": "Распределение нагрузки",
+            "specialistRequired": "Требуется специалист",
+            "reassignment": "Переназначение",
+            "other": "Другое"
+          }
+        },
         "callDialog": {
           "incomingCall": "Входящий звонок",
           "primary": "Основной",
@@ -759,7 +829,8 @@
           "hangUp": "Завершить звонок",
           "viewClient": "Просмотреть клиента",
           "loanPrincipal": "Основная сумма займа",
-          "lastContact": "Последний контакт"
+          "lastContact": "Последний контакт",
+          "callInProgress": "Другой звонок или запись уже идет. Пожалуйста, сначала завершите или закройте его."
         },
         "callLogCard": {
           "message": "Сообщение",
@@ -803,11 +874,14 @@
           "title": "Отправить SMS",
           "smsSentToday": "SMS отправлено сегодня",
           "sendSMSTo": "Отправить SMS",
+          "dailyLimit": "Дневной лимит",
           "dailyLimitReached": "Дневной лимит достигнут",
           "smsSentToThisNumber": "SMS отправлено на этот номер",
           "nextSMSAvailableTomorrow": "Следующий SMS доступен завтра в",
           "template": "Шаблон",
           "selectTemplate": "Выберите шаблон",
+          "customMessage": "Пользовательское сообщение",
+          "loadingTemplates": "Загрузка шаблонов...",
           "message": "Сообщение",
           "typeYourMessageHere": "Введите ваше сообщение здесь...",
           "characters": "символов",
@@ -820,6 +894,9 @@
           "messageWillBeSplit": "Сообщение будет разделено на",
           "clientName": "Имя клиента",
           "debtAmount": "Сумма долга",
+          "templateVariables": "Переменные шаблона",
+          "sending": "Отправка...",
+          "smsSentSuccessfully": "SMS успешно отправлено",
           "sendSMS": "Отправить SMS"
         },
         "viewSMS": {
@@ -1217,6 +1294,11 @@
           "messageTextRequired": "Текст сообщения обязателен"
         }
       },
+      "messages": {
+        "templateDeleted": "Шаблон успешно удален",
+        "templateCreated": "Шаблон успешно создан",
+        "templateUpdated": "Шаблон успешно обновлен"
+      },
       "modals": {
         "templateNotFound": "Шаблон не найден",
         "create": {
@@ -1236,6 +1318,137 @@
           "actionCannotBeUndone": "Это действие нельзя отменить",
           "templateWillBePermanentlyRemoved": "Шаблон будет навсегда удален из системы.",
           "deleting": "Удаление..."
+        }
+      }
+    },
+    "sellers": {
+      "title": "Управление продавцами",
+      "addNewSeller": "Новый продавец",
+      "noSellersFound": "Продавцы не найдены",
+      "errorLoading": "Ошибка загрузки продавцов",
+      "search": "Поиск",
+      "searchPlaceholder": "Поиск по названию компании, налоговому номеру, контакту...",
+      "searchButton": "Поиск",
+      "sellers": "продавцов",
+      "searchFilters": {
+        "status": "Статус",
+        "client": "Клиент",
+        "period": "Период",
+        "allClients": "Все клиенты",
+        "statusOptions": {
+          "active": "Активный",
+          "inactive": "Неактивный",
+          "all": "Все"
+        },
+        "periodOptions": {
+          "any": "Любое время",
+          "last30Days": "Последние 30 дней",
+          "last90Days": "Последние 90 дней",
+          "thisYear": "В этом году"
+        }
+      },
+      "tableHeaders": {
+        "companyName": "Название компании",
+        "website": "Веб-сайт компании",
+        "email": "Электронная почта компании",
+        "taxId": "Налоговый номер",
+        "contact": "Контакт",
+        "clients": "Клиенты",
+        "actions": "Действия"
+      },
+      "actions": {
+        "edit": "Редактировать",
+        "delete": "Удалить"
+      },
+      "modals": {
+        "create": {
+          "title": "Создать нового продавца",
+          "companyInformation": "Информация о компании",
+          "contactPerson": "Контактное лицо",
+          "address": "Адрес",
+          "optional": "Необязательно",
+          "companyName": "Название компании *",
+          "taxId": "Налоговый номер / Регистрационный номер бизнеса",
+          "website": "Веб-сайт",
+          "email": "Электронная почта",
+          "contactName": "Имя",
+          "contactPhone": "Телефон",
+          "streetAddress": "Улица и номер дома",
+          "city": "Город",
+          "stateProvince": "Область/Провинция",
+          "postalCode": "Почтовый индекс",
+          "country": "Страна",
+          "notes": "Примечания",
+          "saveSeller": "Сохранить продавца",
+          "saving": "Сохранение...",
+          "placeholders": {
+            "companyName": "Введите название компании",
+            "taxId": "Введите налоговый номер или регистрационный номер бизнеса",
+            "website": "Введите URL веб-сайта",
+            "email": "Введите адрес электронной почты",
+            "contactName": "Введите имя контактного лица",
+            "contactPhone": "Введите номер телефона",
+            "streetAddress": "Введите адрес улицы",
+            "city": "Введите город",
+            "stateProvince": "Введите область или провинцию",
+            "postalCode": "Введите почтовый индекс",
+            "country": "Выберите страну...",
+            "notes": "Введите любые дополнительные примечания"
+          },
+          "errors": {
+            "companyNameRequired": "Название компании является обязательным",
+            "invalidEmail": "Пожалуйста, введите действительный адрес электронной почты"
+          }
+        },
+        "edit": {
+          "title": "Редактировать продавца",
+          "companyInformation": "Информация о компании",
+          "contactPerson": "Контактное лицо",
+          "address": "Адрес",
+          "optional": "Необязательно",
+          "companyName": "Название компании *",
+          "taxId": "Налоговый номер / Регистрационный номер бизнеса",
+          "website": "Веб-сайт",
+          "email": "Электронная почта",
+          "contactName": "Имя",
+          "contactPhone": "Телефон",
+          "streetAddress": "Улица и номер дома",
+          "city": "Город",
+          "stateProvince": "Область/Провинция",
+          "postalCode": "Почтовый индекс",
+          "country": "Страна",
+          "notes": "Примечания",
+          "saveSeller": "Сохранить продавца",
+          "saving": "Сохранение...",
+          "loadingSellerData": "Загрузка данных продавца...",
+          "sellerNotFound": "Продавец не найден",
+          "placeholders": {
+            "companyName": "Введите название компании",
+            "taxId": "Введите налоговый номер или регистрационный номер бизнеса",
+            "website": "Введите URL веб-сайта",
+            "email": "Введите адрес электронной почты",
+            "contactName": "Введите имя контактного лица",
+            "contactPhone": "Введите номер телефона",
+            "streetAddress": "Введите адрес улицы",
+            "city": "Введите город",
+            "stateProvince": "Введите область или провинцию",
+            "postalCode": "Введите почтовый индекс",
+            "country": "Выберите страну...",
+            "notes": "Введите любые дополнительные примечания"
+          },
+          "errors": {
+            "companyNameRequired": "Название компании является обязательным",
+            "invalidEmail": "Пожалуйста, введите действительный адрес электронной почты"
+          }
+        },
+        "delete": {
+          "title": "Удалить продавца",
+          "confirmMessage": {
+            "question": "Вы уверены, что хотите удалить этого продавца?",
+            "warning": "Это действие нельзя отменить."
+          },
+          "deleting": "Удаление...",
+          "deleteSeller": "Удалить продавца"
         }
       }
     },
@@ -1292,6 +1505,135 @@
         "averagePayment": "Средний платеж",
         "topCollector": "Лучший сборщик",
         "largestPmt": "Самый большой платеж"
+      }
+    },
+    "scoringConfiguration": {
+      "title": "Конфигурация оценки",
+      "scoreWeights": "Веса оценки",
+      "debtAmountWeight": "Вес суммы долга",
+      "daysOverdueWeight": "Вес дней просрочки",
+      "contactHistoryWeight": "Вес истории контактов",
+      "totalMustEqual": "Итого должно равняться 100%",
+      "current": "Текущее",
+      "previewChanges": "Предпросмотр изменений",
+      "priorityThresholds": "Пороги классификации приоритетов",
+      "resetDefaults": "Сбросить по умолчанию",
+      "scoreGreaterThanOrEqual": "Оценка ≥",
+      "scoreLessThan": "Оценка <",
+      "points": "баллов",
+      "andLessThan": "и <",
+      "criticalDescription": "Клиенты с наивысшей срочностью (оценка 25-100)",
+      "highDescription": "Важные клиенты, требующие внимания (оценка 18-24)",
+      "mediumDescription": "Требуется стандартное наблюдение (оценка 10-17)",
+      "lowDescription": "Минимальная срочность (оценка 0-9)",
+      "immediateEffect": "Изменения повлияют на всех клиентов в этом проекте немедленно",
+      "sellerOverrides": "Переопределения для продавцов (необязательно)",
+      "addSellerConfig": "Добавить конфигурацию для продавца",
+      "sellerOverridesDescription": "Настройка различных порогов для конкретных продавцов",
+      "configurationPreview": "Предпросмотр конфигурации",
+      "currentDistribution": "Текущее распределение:",
+      "withNewThresholds": "С новыми порогами:",
+      "clients": "клиентов",
+      "lastUpdated": "Последнее обновление:",
+      "by": "от",
+      "saveConfiguration": "Сохранить конфигурацию"
+    },
+    "auditLogs": {
+      "title": "Журнал аудита",
+      "exportCsv": "Экспорт CSV",
+      "noLogsFound": "Журналов аудита не найдено",
+      "searchFilters": {
+        "placeholder": "Поиск по ID клиента, ID сущности или ключевому слову",
+        "status": "Статус",
+        "client": "Клиент",
+        "period": "Период",
+        "search": "Поиск",
+        "dateRange": "Диапазон дат",
+        "user": "Пользователь",
+        "entity": "Сущность",
+        "action": "Действие",
+        "role": "Роль",
+        "quickRanges": "Быстрые диапазоны",
+        "today": "Сегодня",
+        "yesterday": "Вчера",
+        "last7": "Последние 7",
+        "last30": "Последние 30 дней",
+        "selectEmployee": "Выберите сотрудника",
+        "allTypes": "Все типы",
+        "selectSearcher": "Выберите поиск",
+        "selectRole": "Выберите роль",
+        "selectStartDate": "Выберите дату начала",
+        "selectEndDate": "Выберите дату окончания",
+        "allActions": "Все действия",
+        "allUsers": "Все пользователи",
+        "applyFilters": "Применить фильтры",
+        "clearAll": "Очистить все",
+        "search": "Поиск"
+      },
+      "tableHeaders": {
+        "status": "Статус",
+        "timestamp": "ВРЕМЕННАЯ МЕТКА",
+        "user": "ПОЛЬЗОВАТЕЛЬ",
+        "actions": "Действия",
+        "entity": "Энтити",
+        "details": "Детали"
+      },
+      "status": {
+        "success": "Успех",
+        "failed": "Ошибка"
+      },
+      "viewDetails": "Просмотреть детали",
+      "detailModal": {
+        "title": "Детали журнала аудита",
+        "eventInformation": "Информация о событии",
+        "changes": "Изменения",
+        "requestInformation": "Информация о запросе",
+        "timestamp": "Временная метка",
+        "user": "Пользователь",
+        "role": "Роль",
+        "action": "Действие",
+        "result": "Результат",
+        "ipAddress": "IP адрес",
+        "sessionId": "ID сессии",
+        "status": "Статус",
+        "yes": "Да",
+        "no": "Нет",
+        "field": "Поле",
+        "oldValue": "Старое значение",
+        "newValue": "Новое значение",
+        "change": "Изменение",
+        "httpMethod": "HTTP метод",
+        "apiPath": "API путь",
+        "responseStatus": "Статус ответа",
+        "responseTime": "Время ответа",
+        "userAgent": "User Agent",
+        "added": "Добавлено",
+        "modified": "Изменено",
+        "removed": "Удалено"
+      },
+      "csvExport": {
+        "title": "ЭКСПОРТ ЖУРНАЛА АУДИТА В CSV",
+        "exportScope": "Экспортировать {{count}} записей журнала аудита, соответствующих текущим фильтрам.",
+        "csvOptions": "ПАРАМЕТРЫ CSV",
+        "columnsToInclude": "Колонки для включения",
+        "selectAll": "Выбрать все",
+        "formatSettings": "Настройки формата",
+        "dateFormat": "Формат даты",
+        "fieldDelimiter": "Разделитель полей",
+        "encoding": "Кодировка",
+        "includeHeaders": "Включить заголовки колонок",
+        "exportDownload": "Экспортировать и загрузить",
+        "columns": {
+          "timestamp": "Временная метка",
+          "user": "Пользователь",
+          "action": "Действие",
+          "entityType": "Тип сущности",
+          "entityId": "ID сущности",
+          "oldValue": "Старое значение",
+          "newValue": "Новое значение",
+          "ipAddress": "IP адрес",
+          "successStatus": "Статус успеха"
+        }
       }
     }
   }

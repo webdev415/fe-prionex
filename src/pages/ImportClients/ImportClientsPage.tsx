@@ -235,7 +235,7 @@ export function ImportClientsPage() {
     : null
 
   const [step1Data, setStep1Data] = useState<Step1Data>({
-    sellerCreditor: '',
+    sellerId: '',
     projectCode: '',
     purchaseDate: new Date().toISOString().split('T')[0], // Today's date
     comment: '',
@@ -274,9 +274,7 @@ export function ImportClientsPage() {
 
   const isStep1Valid = () => {
     return (
-      step1Data.sellerCreditor !== '' &&
-      step1Data.projectCode !== '' &&
-      step1Data.purchaseDate !== ''
+      step1Data.sellerId !== '' && step1Data.projectCode !== '' && step1Data.purchaseDate !== ''
     )
   }
 
@@ -341,7 +339,7 @@ export function ImportClientsPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-6">
           {currentStep > 1 && (
             <Button
@@ -435,21 +433,21 @@ export function ImportClientsPage() {
               {t('pages.imports.importInProgress')}
             </span>
           </div>
-          <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+          <span className="text-dark-500 font-sans text-sm leading-[150%] font-light tracking-[-0.28px]">
             {t('pages.imports.file')}:{' '}
-            <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <span className="text-dark-500 font-sans text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {importProgress.fileName}
             </span>
           </span>
-          <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+          <span className="text-dark-500 font-sans text-sm leading-[150%] font-light tracking-[-0.28px]">
             {t('pages.imports.started')}:{' '}
-            <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <span className="text-dark-500 font-sans text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {importProgress.startedAt}
             </span>
           </span>
-          <span className="font-lexend text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+          <span className="text-dark-500 font-sans text-sm leading-[150%] font-light tracking-[-0.28px]">
             {t('pages.imports.status')}:{' '}
-            <span className="font-lexend text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <span className="text-dark-500 font-sans text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {importProgress.status === 'pending'
                 ? t('pages.imports.queued')
                 : `${importProgress.progressPercentage}% ${t('pages.imports.complete')}`}

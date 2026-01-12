@@ -7,6 +7,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -14,11 +15,12 @@ import { DateSelect } from '@/components/ui/DateSelect'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { Pagination } from '@/components/ui/Pagination'
 import { AddNoteModal } from '@/pages/ClientManagement/components/AddNoteModal'
+import { PriorityBadge } from './components/PriorityBadge'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { mockClientsDetail } from './mockClientDetails'
-import { cn } from '@/lib/utils'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
+import { useCallStore } from '@/stores/callStore'
 
 type CommunicationType = 'calls' | 'sms' | 'notes' | 'all'
 
@@ -26,6 +28,7 @@ export function ActivityTimelinePage() {
   const { t } = useTranslation('common')
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { isCallActive, setOpenCallModal } = useCallStore()
   const clientId = id ? Number(id) : 1
   const client = mockClientsDetail.find((c) => c.id === clientId) || mockClientsDetail[0]
 
@@ -145,28 +148,13 @@ export function ActivityTimelinePage() {
 
   const hasFilters = communicationType !== 'all' || dateFrom || dateTo
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'Critical':
-        return 'bg-error-500'
-      case 'High':
-        return 'bg-warning-500'
-      case 'Medium':
-        return 'bg-success-500'
-      case 'Low':
-        return 'bg-gray-500'
-      default:
-        return 'bg-gray-500'
-    }
-  }
-
   // Show loading skeleton
   if (isLoading) {
     return <ActivityTimelinePageSkeleton />
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* Client Header */}
       <div className="flex items-center justify-between self-stretch">
         <div className="flex items-center gap-2">
@@ -176,20 +164,13 @@ export function ActivityTimelinePage() {
           >
             <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
           </button>
-          <h1 className="text-dark-500 text-center text-2xl leading-[150%] font-medium">
+          <h1 className="text-dark-500 text-center text-2xl leading-[150%] font-light">
             {client.fullName}
           </h1>
           <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0">
             {client.score} {t('pages.clients.activity.score')}
           </span>
-          <span
-            className={cn(
-              'flex h-[25px] items-center rounded-[16px] px-3 py-2 text-center text-xs leading-[140%] font-medium tracking-[-0.24px]',
-              getPriorityColor(client.priority)
-            )}
-          >
-            {t(`pages.clients.priorities.${client.priority.toLowerCase()}`)}
-          </span>
+          <PriorityBadge priority={client.priority} />
         </div>
         <div className="flex items-center gap-5">
           <Button
@@ -205,7 +186,17 @@ export function ActivityTimelinePage() {
             size="md"
             leftIcon={<Icons.Headset size={20} />}
             className="rounded-full"
-            onClick={() => setIsCallModalOpen(true)}
+            onClick={() => {
+              if (isCallActive()) {
+                toast.warning(
+                  t('pages.clients.modals.callDialog.callInProgress') ||
+                    'Another call or recording is already in progress. Please finish or close it first.'
+                )
+                return
+              }
+              setOpenCallModal('call-dialog')
+              setIsCallModalOpen(true)
+            }}
           >
             {t('pages.clients.activity.call')}
           </Button>
@@ -345,7 +336,10 @@ export function ActivityTimelinePage() {
       {/* Call Dialog Modal */}
       <CallDialogModal
         open={isCallModalOpen}
-        onClose={() => setIsCallModalOpen(false)}
+        onClose={() => {
+          setOpenCallModal(null)
+          setIsCallModalOpen(false)
+        }}
         clientName={client.fullName}
         phoneNumber={client.phones?.[0]?.number || ''}
         initialState="initial"
@@ -354,6 +348,7 @@ export function ActivityTimelinePage() {
         }}
         onCallEnd={(duration: number, status: CallStatus) => {
           console.log('Call ended:', { duration, status })
+          setOpenCallModal(null)
         }}
       />
     </div>

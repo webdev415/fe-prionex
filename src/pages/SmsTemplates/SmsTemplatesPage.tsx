@@ -12,7 +12,9 @@ import { LinkButton } from '@/components/ui/LinkButton'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { Icons } from '@/lib/icons'
 import type { SmsTemplate } from './types'
-import { mockSmsTemplates } from './mockSmsTemplates'
+import { mapTemplateResponseArray } from './utils'
+import { useSMSTemplates } from '@/features/sms'
+import { useAuthStore } from '@/stores/authStore'
 import {
   CreateTemplateModal,
   EditTemplateModal,
@@ -29,6 +31,7 @@ export function SmsTemplatesPage() {
   const [searchParams] = useSearchParams()
   const searchQuery = searchParams.get('search') || ''
   const searchType = searchParams.get('type') || 'name'
+  const { user } = useAuthStore()
 
   const [currentPage, setCurrentPage] = useState(1)
   const rowsPerPage = 10
@@ -37,16 +40,18 @@ export function SmsTemplatesPage() {
   const [viewTemplateId, setViewTemplateId] = useState<number | null>(null)
   const [editTemplateId, setEditTemplateId] = useState<number | null>(null)
   const [deleteTemplateId, setDeleteTemplateId] = useState<number | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const prevSearchQueryRef = useRef(searchQuery)
 
-  // Simulate loading state on mount
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [])
+  // Fetch templates from API
+  const { data: templatesData, isLoading } = useSMSTemplates(
+    user?.active_project_id ? { project_id: parseInt(user.active_project_id) } : undefined
+  )
+
+  // Map API templates to frontend format
+  const apiTemplates = useMemo(() => {
+    if (!templatesData?.templates) return []
+    return mapTemplateResponseArray(templatesData.templates)
+  }, [templatesData])
 
   // Reset to page 1 when search query changes
   useEffect(() => {
@@ -60,7 +65,7 @@ export function SmsTemplatesPage() {
 
   // Filter and sort templates
   const filteredTemplates = useMemo(() => {
-    let result = [...mockSmsTemplates]
+    let result = [...apiTemplates]
 
     // Apply search filter
     if (searchQuery.trim()) {
@@ -95,7 +100,7 @@ export function SmsTemplatesPage() {
     }
 
     return result
-  }, [searchQuery, searchType, sortConfig])
+  }, [apiTemplates, searchQuery, searchType, sortConfig])
 
   // Helper function to truncate message text
   const truncateMessage = (text: string, maxLength: number) => {
@@ -130,17 +135,17 @@ export function SmsTemplatesPage() {
 
   const handleCreateSuccess = () => {
     setShowCreateModal(false)
-    // TODO: Refresh templates from API
+    // Templates will refresh automatically via query invalidation in mutation hook
   }
 
   const handleEditSuccess = () => {
     setEditTemplateId(null)
-    // TODO: Refresh templates from API
+    // Templates will refresh automatically via query invalidation in mutation hook
   }
 
   const handleDeleteSuccess = () => {
     setDeleteTemplateId(null)
-    // TODO: Refresh templates from API
+    // Templates will refresh automatically via query invalidation in mutation hook
   }
 
   const columns: Column<SmsTemplate>[] = [
@@ -230,7 +235,7 @@ export function SmsTemplatesPage() {
   }
 
   return (
-    <div className="flex w-full flex-col items-start gap-5 pt-1 pr-7 pb-6 pl-7">
+    <div className="flex w-full flex-col items-start gap-4">
       {/* Page Header */}
       <div className="flex items-center justify-between self-stretch">
         <div className="flex items-center gap-3">
