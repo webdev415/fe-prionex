@@ -198,7 +198,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
       {/* User Credentials Section */}
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="username" required>
               {t('pages.users.forms.username')}
@@ -233,7 +233,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <PasswordInput
             id="password"
             label={t('pages.users.forms.password')}
@@ -275,7 +275,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
       {/* Name Fields Section - Required by API */}
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="first_name" required>
               {t('pages.users.forms.firstName')}
@@ -311,7 +311,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="middle_name">{t('pages.users.forms.middleName')}</Label>
             <Input
@@ -345,7 +345,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
       {/* Preferences Section */}
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="language" required>
               {t('pages.users.forms.language')}
@@ -451,7 +451,10 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
               const selectedRoleId = projectRoles[projectId]
 
               return (
-                <div key={projectId} className="grid w-full grid-cols-2 items-center gap-4">
+                <div
+                  key={projectId}
+                  className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 sm:gap-4"
+                >
                   <span className="text-dark-500 text-sm font-light">{project?.name}:</span>
                   <Select
                     value={selectedRoleId?.toString() || ''}

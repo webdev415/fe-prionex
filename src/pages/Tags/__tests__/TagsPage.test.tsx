@@ -180,6 +180,37 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       })
     })
 
+    it('test_creates_new_tag - Submit create form adds new tag to list', async () => {
+      const user = userEvent.setup({ delay: null })
+      const Wrapper = createTestWrapper()
+      render(<TagsPage />, { wrapper: Wrapper })
+
+      // Open modal
+      await user.click(screen.getByRole('button', { name: /create tag/i }))
+
+      // Fill form
+      await waitFor(() => {
+        expect(screen.getByLabelText(/^name$/i)).toBeInTheDocument()
+      })
+
+      const nameInput = screen.getByLabelText(/^name$/i)
+      await user.type(nameInput, 'New Tag')
+      await user.type(screen.getByLabelText(/description/i), 'Test description')
+
+      // Submit form
+      const submitButton = screen.getByRole('button', { name: /create/i })
+      await user.click(submitButton)
+
+      // Wait for the new tag to appear in the table with longer timeout
+      await waitFor(
+        () => {
+          // The new tag should appear in the table after submit
+          expect(screen.getByText('New Tag')).toBeInTheDocument()
+        },
+        { timeout: 8000 }
+      )
+    }, 10000)
+
     it('test_validates_required_fields - Name and color are required', async () => {
       const user = userEvent.setup()
       const Wrapper = createTestWrapper()
@@ -302,6 +333,42 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       // Confirmation dialog should appear
       await waitFor(() => {
         expect(screen.getByText(/are you sure/i)).toBeInTheDocument()
+      })
+    })
+
+    it('test_deletes_tag - Confirming delete removes tag from list', async () => {
+      const user = userEvent.setup()
+      const Wrapper = createTestWrapper()
+      render(<TagsPage />, { wrapper: Wrapper })
+
+      // Wait for tags
+      await waitFor(() => {
+        expect(screen.getByText('VIP')).toBeInTheDocument()
+      })
+
+      // Get initial tag count
+      const initialTagCount = screen.getByText('2')
+      expect(initialTagCount).toBeInTheDocument()
+
+      // Click delete on first tag
+      const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
+      await user.click(deleteButtons[0])
+
+      // Wait for confirmation dialog
+      await waitFor(() => {
+        expect(screen.getByText(/are you sure/i)).toBeInTheDocument()
+      })
+
+      // Find and click the confirmation delete button
+      // The button name is "actions.delete" (translation key) in the mock
+      const deleteConfirmButton = screen.getByRole('button', { name: /actions\.delete|delete/i })
+      expect(deleteConfirmButton).toBeInTheDocument()
+      await user.click(deleteConfirmButton)
+
+      // Wait for tag to be removed and count to update
+      await waitFor(() => {
+        expect(screen.queryByText('VIP')).not.toBeInTheDocument()
+        expect(screen.getByText('1')).toBeInTheDocument() // Count should now be 1
       })
     })
   })

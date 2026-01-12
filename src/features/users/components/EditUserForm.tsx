@@ -145,7 +145,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
       {/* User Credentials Section */}
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="username">Username:</Label>
             <Input id="username" value={user.username} disabled className="mt-1 bg-gray-50" />
@@ -172,7 +172,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
       {/* Name Fields Section */}
       <div className="mt-4 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="first_name" required>
               First Name:
@@ -208,7 +208,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="middle_name">Middle Name:</Label>
             <Input
@@ -242,7 +242,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
       {/* Preferences Section */}
       <div className="mt-4 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="language" required>
               Language:
@@ -352,7 +352,10 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
               const selectedRoleId = projectRoles[projectId]
 
               return (
-                <div key={projectId} className="grid w-full grid-cols-2 items-center gap-4">
+                <div
+                  key={projectId}
+                  className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 sm:gap-4"
+                >
                   <span className="text-dark-500 text-sm font-light">{project?.name}:</span>
                   <Select
                     value={selectedRoleId?.toString() || ''}

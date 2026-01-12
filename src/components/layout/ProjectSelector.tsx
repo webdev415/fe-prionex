@@ -6,7 +6,7 @@
  * Uses the same style as LanguageSwitcher for consistency.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAuth } from '@/features/auth'
@@ -27,11 +27,24 @@ export function ProjectSelector() {
   const { t } = useTranslation('common')
   const { user } = useAuth()
   const [isSwitchingProject, setIsSwitchingProject] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
 
   // Get user's assigned projects
   const userProjects = user?.projects || []
   const hasMultipleProjects = userProjects.length > 1
   const currentProject = userProjects.find((p) => p.id === user?.active_project_id)
+
+  // Close dropdown on window resize to prevent positioning issues
+  useEffect(() => {
+    const handleResize = () => {
+      if (isOpen) {
+        setIsOpen(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isOpen])
 
   // Don't render if user has only one project or no projects
   if (!hasMultipleProjects || !currentProject) {
@@ -114,12 +127,12 @@ export function ProjectSelector() {
   }
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu modal={false} open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors',
+            'inline-flex h-10 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors',
             'bg-secondary-800 text-white hover:opacity-90',
             isSwitchingProject && 'cursor-not-allowed opacity-50'
           )}

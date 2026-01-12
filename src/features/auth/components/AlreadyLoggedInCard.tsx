@@ -16,21 +16,21 @@ export function AlreadyLoggedInCard({
 
   return (
     <div className="w-full">
-      <div className="mb-6 flex w-full flex-col items-center text-center sm:mb-8">
-        <h1 className="text-display-xs sm:text-display-sm text-dark-500 font-medium">
+      <div className="mb-4 flex w-full flex-col items-center text-center sm:mb-6 md:mb-8">
+        <h1 className="sm:text-display-xs md:text-display-sm text-dark-500 text-xl font-medium">
           {t('alreadyLoggedIn.title')}
         </h1>
       </div>
 
-      <div className="space-y-4">
-        <span className="text-body-sm flex w-full items-center justify-center gap-2 font-normal text-gray-700">
+      <div className="space-y-3 sm:space-y-4">
+        <span className="text-body-xs sm:text-body-sm flex w-full items-center justify-center gap-1.5 px-2 font-normal text-gray-700 sm:gap-2 sm:px-0">
           {t('alreadyLoggedIn.message')}
         </span>
 
         <Button
           variant="primary"
           size="xl"
-          className="mt-6 w-full sm:mt-8"
+          className="mt-4 w-full text-sm sm:mt-6 sm:text-base md:mt-8"
           onClick={onForceLogout}
           isLoading={isLoading}
         >
@@ -40,7 +40,7 @@ export function AlreadyLoggedInCard({
         <Button
           variant="light"
           size="xl"
-          className="w-full"
+          className="w-full text-sm sm:text-base"
           onClick={onCancel}
           disabled={isLoading}
         >

@@ -27,8 +27,8 @@ export function UserDetailModal({ open, userId, onClose }: UserDetailModalProps)
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.View size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.View size={18} className="text-dark-500" strokeWidth={2} />
           </div>
         }
         title={t('pages.users.modals.view.title')}

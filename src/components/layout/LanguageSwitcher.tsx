@@ -5,6 +5,7 @@
  * Built with Radix UI DropdownMenu for consistency.
  */
 
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
@@ -22,6 +23,7 @@ interface LanguageSwitcherProps {
 
 export function LanguageSwitcher({ variant = 'auth' }: LanguageSwitcherProps) {
   const { i18n } = useTranslation('common')
+  const [isOpen, setIsOpen] = useState(false)
 
   const currentLanguage = i18n.language as SupportedLanguage
 
@@ -29,15 +31,27 @@ export function LanguageSwitcher({ variant = 'auth' }: LanguageSwitcherProps) {
     i18n.changeLanguage(lang)
   }
 
+  // Close dropdown on window resize to prevent positioning issues
+  useEffect(() => {
+    const handleResize = () => {
+      if (isOpen) {
+        setIsOpen(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isOpen])
+
   const isAuth = variant === 'auth'
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu modal={false} open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           className={cn(
-            'inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg rounded-md px-2.5 py-1.5 text-sm transition-colors',
+            'inline-flex h-8 cursor-pointer items-center gap-1 rounded-lg rounded-md px-2 py-1 text-xs transition-colors sm:h-9 sm:gap-1.5 sm:px-2.5 sm:py-1.5 sm:text-sm md:h-10',
             isAuth
               ? 'bg-white/10 text-white backdrop-blur-sm hover:bg-white/20'
               : 'bg-secondary-800 text-white hover:opacity-90'
@@ -48,12 +62,12 @@ export function LanguageSwitcher({ variant = 'auth' }: LanguageSwitcherProps) {
             size={14}
             color={isAuth ? 'currentColor' : '#05040D'}
             strokeWidth={1.5}
-            className="text-white opacity-70"
+            className="h-3 w-3 text-white opacity-70 sm:h-3.5 sm:w-3.5"
           />
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-40">
+      <DropdownMenuContent align="end" className="w-36 sm:w-40">
         {SUPPORTED_LANGUAGES.map((lang) => (
           <DropdownMenuItem
             key={lang}

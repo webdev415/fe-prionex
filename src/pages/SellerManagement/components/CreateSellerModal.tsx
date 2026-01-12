@@ -139,8 +139,8 @@ export function CreateSellerModal({ open, onClose, onSuccess }: CreateSellerModa
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="bg-primary-400 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.Add size={18} className="text-dark-500" strokeWidth={2} />
           </div>
         }
         title={t('pages.sellers.modals.create.title')}
@@ -152,7 +152,7 @@ export function CreateSellerModal({ open, onClose, onSuccess }: CreateSellerModa
             <h3 className="text-dark-500 text-base font-medium">
               {t('pages.sellers.modals.create.basicInformation')}
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
                 id="seller_code"
                 label={t('pages.sellers.modals.create.sellerCode')}
@@ -177,7 +177,7 @@ export function CreateSellerModal({ open, onClose, onSuccess }: CreateSellerModa
                 required
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="seller_type" required>
                   {t('pages.sellers.modals.create.sellerType')}
@@ -224,7 +224,7 @@ export function CreateSellerModal({ open, onClose, onSuccess }: CreateSellerModa
                 ({t('pages.sellers.modals.create.optional')})
               </span>
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
                 id="contact_person"
                 label={t('pages.sellers.modals.create.contactPerson')}

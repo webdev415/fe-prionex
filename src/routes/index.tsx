@@ -24,6 +24,7 @@ import { ReportsDashboardPage } from '@/pages/ReportsDashboard'
 import { SellerManagementPage } from '@/pages/SellerManagement'
 import { ScoringConfigurationPage } from '@/pages/ScoringConfiguration'
 import { ConfigurationHistoryPage } from '@/pages/ScoringConfiguration/ConfigurationHistoryPage'
+import { AuditLogsPage } from '@/pages/AuditLogs'
 import { TagsPage } from '@/pages/Tags/TagsPage'
 
 export const router = createBrowserRouter([
@@ -218,6 +219,16 @@ export const router = createBrowserRouter([
       <ProtectedRoute>
         <DashboardLayout>
           <SmsTemplatesPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/audit-logs',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <AuditLogsPage />
         </DashboardLayout>
       </ProtectedRoute>
     ),
