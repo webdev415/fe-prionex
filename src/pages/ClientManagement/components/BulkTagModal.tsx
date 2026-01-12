@@ -83,7 +83,7 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
       : t('pages.clients.modals.bulkTag.removeTags', 'Remove Tags')
 
   return (
-    <Modal open={open} onClose={onClose} maxWidth="md">
+    <Modal open={open} onClose={onClose} maxWidth="md" data-testid="bulk-tag-modal">
       <ModalHeader
         title={`${actionText} - ${clientCount} ${t('pages.clients.modals.bulkTag.clients', 'client(s)')}`}
       />
