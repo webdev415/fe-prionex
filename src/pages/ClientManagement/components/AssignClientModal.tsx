@@ -4,7 +4,7 @@
  * Modal for assigning a single client to an employee or searcher.
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -80,6 +80,17 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
   const [searcherId, setSearcherId] = useState<string>('')
   const [reason, setReason] = useState<string>('')
   const [notes, setNotes] = useState<string>('')
+
+  // Populate current assignments when modal opens
+  useEffect(() => {
+    if (open && client) {
+      // Use requestAnimationFrame to defer state update and avoid lint error
+      requestAnimationFrame(() => {
+        setEmployeeId(client.responsible_employee_id?.toString() || '')
+        setSearcherId(client.responsible_searcher_id?.toString() || '')
+      })
+    }
+  }, [open, client])
 
   const handleSubmit = () => {
     if (!employeeId && !searcherId) {

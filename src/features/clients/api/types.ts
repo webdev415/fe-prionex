@@ -62,6 +62,15 @@ export interface Client {
   debt_count: number
   total_debt: number
   primary_creditor?: string | null
+
+  // Assignment (Sprint 2 - Phase A)
+  responsible_employee_id?: number | null
+  responsible_searcher_id?: number | null
+  assigned_at?: string | null
+  assigned_by?: number | null
+
+  // Tags (Sprint 2.5 - Phase 2.3)
+  tags?: Array<{ id: number; name: string; color: string; description?: string | null }>
 }
 
 export interface ClientDetail extends Client {
@@ -164,4 +173,27 @@ export interface PaginatedClientResponse {
   page: number
   page_size: number
   total_pages: number
+}
+
+// Assignment request/response types
+export interface AssignClientRequest {
+  responsible_employee_id?: number
+  responsible_searcher_id?: number
+  assignment_reason?: string
+}
+
+export interface BulkAssignClientRequest {
+  client_ids: number[]
+  responsible_employee_id?: number
+  responsible_searcher_id?: number
+  assignment_reason?: string
+}
+
+export interface BulkAssignmentResponse {
+  assigned_count: number
+  failed_count: number
+  failures: Array<{
+    client_id: number
+    reason: string
+  }>
 }
