@@ -17,26 +17,6 @@ interface TagBadgeProps {
   size?: 'sm' | 'md' | 'lg'
 }
 
-/**
- * Calculate contrast color for text readability
- * Returns white for dark colors, black for light colors
- */
-function getContrastColor(hexColor: string): string {
-  // Remove # if present
-  const hex = hexColor.replace('#', '')
-
-  // Convert to RGB
-  const r = parseInt(hex.substring(0, 2), 16)
-  const g = parseInt(hex.substring(2, 4), 16)
-  const b = parseInt(hex.substring(4, 6), 16)
-
-  // Calculate luminance
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-
-  // Return white for dark colors, dark for light colors
-  return luminance > 0.5 ? '#05040D' : '#FFFFFF'
-}
-
 export const TagBadge = memo(function TagBadge({
   name,
   color,
@@ -56,14 +36,22 @@ export const TagBadge = memo(function TagBadge({
     lg: 'h-2.5 w-2.5',
   }
 
-  const textColor = getContrastColor(color)
+  const gapSizes = {
+    sm: 'gap-1',
+    md: 'gap-2',
+    lg: 'gap-2',
+  }
+
+  // Use tag color directly for text (matching data table style)
+  const textColor = color
   const backgroundColor = color + '20' // 20% opacity
 
   return (
-    <div
+    <span
       className={cn(
-        'inline-flex items-center gap-2 rounded-full border font-medium',
+        'inline-flex items-center rounded-full border font-medium',
         sizeClasses[size],
+        gapSizes[size],
         className
       )}
       style={{
@@ -72,7 +60,7 @@ export const TagBadge = memo(function TagBadge({
         color: textColor,
       }}
     >
-      <div className={cn('rounded-full', dotSizes[size])} style={{ backgroundColor: color }} />
+      <span className={cn('rounded-full', dotSizes[size])} style={{ backgroundColor: color }} />
       <span>{name}</span>
       {onRemove && (
         <button
@@ -84,6 +72,6 @@ export const TagBadge = memo(function TagBadge({
           <Icons.Delete size={size === 'sm' ? 12 : size === 'md' ? 14 : 16} />
         </button>
       )}
-    </div>
+    </span>
   )
 })
