@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { PriorityCards } from './components/PriorityCards'
 import { PriorityBadge } from './components/PriorityBadge'
+import { TagBadge } from '@/components/ui/TagBadge'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
@@ -698,18 +699,7 @@ export function ClientManagementPage() {
         <div className="flex flex-wrap gap-1">
           {client.tags && client.tags.length > 0 ? (
             client.tags.map((tag) => (
-              <span
-                key={tag.id}
-                className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium"
-                style={{
-                  backgroundColor: tag.color + '20',
-                  borderColor: tag.color,
-                  color: tag.color,
-                }}
-              >
-                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: tag.color }} />
-                {tag.name}
-              </span>
+              <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
             ))
           ) : (
             <span className="text-xs text-gray-400">-</span>
