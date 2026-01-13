@@ -66,29 +66,25 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
               <Select
                 value={data.sellerId}
                 onValueChange={(value) => onChange({ sellerId: value })}
-                disabled={isLoadingSellers}
+                disabled={isLoadingSellers || sellers.length === 0}
               >
                 <SelectTrigger className="w-full" id="seller-creditor">
                   <SelectValue
                     placeholder={
                       isLoadingSellers
                         ? t('pages.imports.step1.placeholders.loadingSellers')
-                        : t('pages.imports.step1.placeholders.selectSellerCreditor')
+                        : sellers.length === 0
+                          ? t('pages.imports.step1.noSellersAvailable')
+                          : t('pages.imports.step1.placeholders.selectSellerCreditor')
                     }
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  {sellers.length === 0 && !isLoadingSellers ? (
-                    <SelectItem value="" disabled>
-                      {t('pages.imports.step1.noSellersAvailable')}
+                  {sellers.map((seller) => (
+                    <SelectItem key={seller.id} value={seller.id.toString()}>
+                      {seller.seller_code} - {seller.seller_name}
                     </SelectItem>
-                  ) : (
-                    sellers.map((seller) => (
-                      <SelectItem key={seller.id} value={seller.id.toString()}>
-                        {seller.seller_code} - {seller.seller_name}
-                      </SelectItem>
-                    ))
-                  )}
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -101,29 +97,25 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
               <Select
                 value={data.projectCode}
                 onValueChange={(value) => onChange({ projectCode: value })}
-                disabled={isLoadingProjects}
+                disabled={isLoadingProjects || projects.length === 0}
               >
                 <SelectTrigger className="w-full" id="project-code">
                   <SelectValue
                     placeholder={
                       isLoadingProjects
                         ? t('pages.imports.step1.placeholders.loadingProjects')
-                        : t('pages.imports.step1.placeholders.selectProjectCode')
+                        : projects.length === 0
+                          ? t('pages.imports.step1.noProjectsAvailable')
+                          : t('pages.imports.step1.placeholders.selectProjectCode')
                     }
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  {projects.length === 0 && !isLoadingProjects ? (
-                    <SelectItem value="" disabled>
-                      {t('pages.imports.step1.noProjectsAvailable')}
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.code}>
+                      {project.code} - {project.name}
                     </SelectItem>
-                  ) : (
-                    projects.map((project) => (
-                      <SelectItem key={project.id} value={project.code}>
-                        {project.code} - {project.name}
-                      </SelectItem>
-                    ))
-                  )}
+                  ))}
                 </SelectContent>
               </Select>
             </div>
