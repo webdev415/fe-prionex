@@ -118,8 +118,8 @@ export function TagFormModal({
   }, [reset, onClose])
 
   return (
-    <Modal open={open} onClose={handleClose} className="max-w-2xl">
-      <form onSubmit={handleSubmit(onSubmit)}>
+    <Modal open={open} onClose={handleClose} className="max-w-3xl">
+      <form onSubmit={handleSubmit(onSubmit)} className="min-w-0">
         <ModalHeader
           icon={
             <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
@@ -133,8 +133,8 @@ export function TagFormModal({
           title={isEdit ? t('pages.tags.editTag', 'Edit Tag') : t('pages.tags.newTag', 'New Tag')}
         />
 
-        <ModalContent>
-          <div className="space-y-6">
+        <ModalContent className="overflow-x-hidden">
+          <div className="min-w-0 space-y-6">
             {/* Project (Read-only) */}
             {(tag?.project_name || activeProjectName) && (
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">

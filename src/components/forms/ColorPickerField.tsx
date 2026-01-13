@@ -49,7 +49,7 @@ export const ColorPickerField = memo(function ColorPickerField({
       {label && <Label>{label}</Label>}
 
       {/* Preset Colors */}
-      <div className="grid grid-cols-12 gap-2">
+      <div className="grid min-w-0 grid-cols-12 gap-2">
         {presetColors.map((color) => (
           <button
             key={color}
@@ -67,8 +67,8 @@ export const ColorPickerField = memo(function ColorPickerField({
       </div>
 
       {/* Custom Color Picker */}
-      <div className="flex gap-4">
-        <div className="flex-1">
+      <div className="flex min-w-0 gap-4">
+        <div className="min-w-0 flex-1">
           <HexColorPicker
             color={value}
             onChange={(color) => onChange(color.toUpperCase())}
@@ -76,7 +76,7 @@ export const ColorPickerField = memo(function ColorPickerField({
           />
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-shrink-0 flex-col gap-4">
           {/* Hex Input */}
           <div className="flex flex-col gap-2">
             <Label htmlFor="hex-input" className="text-xs">
