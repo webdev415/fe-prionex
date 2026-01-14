@@ -7,7 +7,7 @@
     "home": "Головна",
     "dashboard": "Панель управління",
     "clients": "Клієнти",
-    "settings": "Налаштування",
+    "profile": "Профіль",
     "logout": "Вийти",
     "activity": "Активність",
     "importClients": "Імпорт клієнтів",
@@ -1454,6 +1454,23 @@
         }
       }
     },
+    "profile": {
+      "title": "Налаштування профілю",
+      "roleLabel": "Роль:",
+      "resetPassword": "Скинути пароль",
+      "passwordChanged": "Пароль змінено",
+      "passwordChangeFailed": "Не вдалося змінити пароль",
+      "profileUpdated": "Профіль оновлено",
+      "profileUpdateFailed": "Не вдалося оновити профіль",
+      "saveChanges": "Зберегти зміни",
+      "currentPassword": "Поточний пароль:",
+      "newPassword": "Новий пароль:",
+      "confirmNewPassword": "Підтвердіть новий пароль:",
+      "currentPasswordRequired": "Поточний пароль обов'язковий",
+      "newPasswordRequired": "Новий пароль обов'язковий",
+      "changePassword": "Змінити пароль",
+      "changing": "Зміна..."
+    },
     "reports": {
       "title": "Панель звітів",
       "periods": {
@@ -1569,8 +1586,7 @@
         "allActions": "Всі дії",
         "allUsers": "Всі користувачі",
         "applyFilters": "Застосувати фільтри",
-        "clearAll": "Очистити все",
-        "search": "Пошук"
+        "clearAll": "Очистити все"
       },
       "tableHeaders": {
         "status": "Статус",
