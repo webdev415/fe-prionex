@@ -248,7 +248,8 @@ export function ClientManagementPage() {
     name: string
   } | null>(null)
   const hasSetDefaultFilter = useRef(false)
-  const STORAGE_KEY = 'client-filters-state'
+  // User-specific storage key to prevent filter leakage between users
+  const STORAGE_KEY = user?.id ? `client-filters-state-${user.id}` : null
 
   // Save filters to localStorage whenever they change (for persistence when sidebar navigation clears URL)
   useEffect(() => {
@@ -299,7 +300,7 @@ export function ClientManagementPage() {
       dpdRangeFromFilter > 0 ||
       dpdRangeToFilter > 0
 
-    if (hasActiveFilters) {
+    if (hasActiveFilters && STORAGE_KEY) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(filterState))
       } catch (e) {
@@ -307,6 +308,7 @@ export function ClientManagementPage() {
       }
     }
   }, [
+    STORAGE_KEY,
     selectedPriorities,
     currentPage,
     rowsPerPage,
@@ -349,7 +351,7 @@ export function ClientManagementPage() {
       debtRangeFromFilter > 0 ||
       principalRangeFromFilter > 0
 
-    if (!hasURLFilters) {
+    if (!hasURLFilters && STORAGE_KEY) {
       // Try to restore from localStorage first
       try {
         const savedState = localStorage.getItem(STORAGE_KEY)
@@ -963,10 +965,12 @@ export function ClientManagementPage() {
     })
 
     // Clear localStorage saved state
-    try {
-      localStorage.removeItem(STORAGE_KEY)
-    } catch (e) {
-      console.error('Failed to clear localStorage:', e)
+    if (STORAGE_KEY) {
+      try {
+        localStorage.removeItem(STORAGE_KEY)
+      } catch (e) {
+        console.error('Failed to clear localStorage:', e)
+      }
     }
   }
 
