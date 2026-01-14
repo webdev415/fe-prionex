@@ -822,10 +822,13 @@ export function ClientManagementPage() {
     setSortOrder('desc')
 
     // Clear search query and type params (these don't use useURLState)
-    const newParams = new URLSearchParams()
-    // Preserve the URL params that useURLState is managing (will be cleared by setters above)
-    // Only remove search and type params that are managed separately
-    setSearchParams(newParams)
+    // Let useURLState hooks handle their own params - only clear search/type here
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev)
+      params.delete('search')
+      params.delete('type')
+      return params
+    })
   }
 
   const formatCurrency = (amount: number) => {
