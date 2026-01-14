@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { cn } from '@/lib/utils'
 
-export function ProjectSelector() {
+export function ProjectSelector({ variant = 'default' }: { variant?: 'default' | 'profile' }) {
   const { t } = useTranslation('common')
   const { user } = useAuth()
   const [isSwitchingProject, setIsSwitchingProject] = useState(false)
@@ -126,24 +126,44 @@ export function ProjectSelector() {
     }
   }
 
+  const isProfile = variant === 'profile'
+
   return (
     <DropdownMenu modal={false} open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           className={cn(
-            'inline-flex h-10 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm transition-colors',
-            'bg-secondary-800 text-white hover:opacity-90',
-            isSwitchingProject && 'cursor-not-allowed opacity-50'
+            // profile variant: larger text link without pill background
+            isProfile
+              ? 'text-secondary-800 inline-flex cursor-pointer items-center gap-1.5 rounded-md px-1 py-0 text-lg font-medium hover:opacity-90'
+              : 'bg-secondary-800 inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-white transition-colors hover:opacity-90',
+            isSwitchingProject &&
+              (isProfile ? 'cursor-not-allowed opacity-50' : 'cursor-not-allowed opacity-50')
           )}
           disabled={isSwitchingProject}
         >
-          <span className="max-w-[120px] truncate font-medium">{currentProject.name}</span>
-          <Icons.ArrowDown size={14} strokeWidth={1.5} className="text-white" />
+          <span
+            className={cn(
+              isProfile
+                ? 'max-w-[220px] truncate text-center'
+                : 'max-w-[120px] truncate font-medium'
+            )}
+          >
+            {currentProject.name}
+          </span>
+          <Icons.ArrowDown
+            size={isProfile ? 18 : 14}
+            strokeWidth={1.5}
+            className={isProfile ? 'text-secondary-800' : 'text-white'}
+          />
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent
+        align={isProfile ? 'center' : 'end'}
+        className={cn(isProfile ? 'w-56' : 'w-48')}
+      >
         {userProjects.map((project) => {
           const isActive = project.id === user?.active_project_id
           const projectRole = project.roles?.[0]

@@ -30,7 +30,7 @@ export interface InputProps
   extends
     Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>,
     VariantProps<typeof inputVariants> {
-  label?: string
+  label?: React.ReactNode
   error?: string
   helperText?: string
   leftIcon?: React.ReactNode
@@ -65,7 +65,19 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       <div className="w-full">
         {label && (
           <label htmlFor={inputId} className="text-dark-500 mb-1.5 block text-sm font-light">
-            {label}
+            {typeof label === 'string'
+              ? label.split(/(\*)/).map((token, i) =>
+                  token === '*' ? (
+                    <span key={i} className="text-error-500 font-light">
+                      *
+                    </span>
+                  ) : (
+                    <span key={i} className="font-light">
+                      {token}
+                    </span>
+                  )
+                )
+              : label}
           </label>
         )}
         <div className="relative">

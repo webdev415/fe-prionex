@@ -26,6 +26,7 @@ import { ScoringConfigurationPage } from '@/pages/ScoringConfiguration'
 import { ConfigurationHistoryPage } from '@/pages/ScoringConfiguration/ConfigurationHistoryPage'
 import { AuditLogsPage } from '@/pages/AuditLogs'
 import { TagsPage } from '@/pages/Tags/TagsPage'
+import { ProfileSettingsPage } from '@/pages/ProfileSettings/ProfileSettingsPage'
 
 export const router = createBrowserRouter([
   {
@@ -54,7 +55,16 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
-  // Specific routes must come before /dashboard/:id to avoid route conflicts
+  {
+    path: '/dashboard/profile',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ProfileSettingsPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
   {
     path: '/dashboard/users',
     element: (

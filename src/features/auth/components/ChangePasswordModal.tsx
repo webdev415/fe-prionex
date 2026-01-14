@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react'
-import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
+import { Modal, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -70,15 +70,25 @@ export function ChangePasswordModal({
   }
 
   return (
-    <Modal open={open} onClose={handleClose} maxWidth="md">
-      <ModalHeader
+    <Modal open={open} onClose={handleClose} maxWidth="xl">
+      {/* <ModalHeader
         icon={
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#A7E8BD]">
-            <Icons.Lock size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#A7E8BD]">
+            <Icons.Lock size={24} className="text-dark-500" strokeWidth={2} />
           </div>
         }
         title="Change Password"
-      />
+      /> */}
+      <div className="border-light-200 flex w-full items-center justify-center border-b p-0 pb-4 sm:pb-4">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="bg-primary-300 flex h-12 w-12 items-center justify-center rounded-full">
+            <Icons.LockSync01 size={24} className="text-dark-500" strokeWidth={2} />
+          </div>
+          <span className="text-dark-500 text-3xl leading-[129%] font-light tracking-[-0.6px]">
+            Reset User Password
+          </span>
+        </div>
+      </div>
       <ModalContent>
         <form id="change-password-form" onSubmit={handleSubmit} className="space-y-4">
           {/* Current Password */}
@@ -118,10 +128,10 @@ export function ChangePasswordModal({
       <ModalFooter>
         <Button
           type="button"
-          variant="outline"
+          variant="cancel"
           onClick={handleClose}
           disabled={isLoading}
-          className="h-[45px] flex-1 rounded-md border-none bg-gray-500 text-sm font-medium text-white"
+          className="h-[45px] flex-1 rounded-md"
         >
           Cancel
         </Button>
@@ -130,7 +140,7 @@ export function ChangePasswordModal({
           form="change-password-form"
           variant="primary"
           disabled={isLoading}
-          className="text-dark-500 h-[45px] flex-1 rounded-md border-none bg-[#A7E8BD] text-sm font-medium"
+          className="h-[45px] flex-1 rounded-md"
         >
           {isLoading ? 'Changing...' : 'Change Password'}
         </Button>
