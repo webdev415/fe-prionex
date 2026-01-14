@@ -7,7 +7,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useURLState } from '@/hooks/useURLState'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
@@ -47,6 +47,25 @@ export function ActivityTimelinePage() {
   const [communicationTypeUrl, setCommunicationTypeUrl] = useURLState<string>('type', 'calls')
   const [dateFromUrl, setDateFromUrl] = useURLState<string>('date_from', '2024-11-20')
   const [dateToUrl, setDateToUrl] = useURLState<string>('date_to', '2024-11-27')
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'activity-timeline-state',
+    {
+      currentPage,
+      rowsPerPage,
+      communicationTypeUrl,
+      dateFromUrl,
+      dateToUrl,
+    },
+    {
+      currentPage: setCurrentPage,
+      rowsPerPage: setRowsPerPage,
+      communicationTypeUrl: setCommunicationTypeUrl,
+      dateFromUrl: setDateFromUrl,
+      dateToUrl: setDateToUrl,
+    }
+  )
 
   // Convert URL state to component state
   const communicationType = communicationTypeUrl as CommunicationType

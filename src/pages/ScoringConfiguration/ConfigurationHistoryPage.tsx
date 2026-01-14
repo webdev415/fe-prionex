@@ -8,7 +8,7 @@
 import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { useURLState } from '@/hooks/useURLState'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
@@ -71,6 +71,23 @@ export function ConfigurationHistoryPage() {
   // URL state for sorting
   const [sortBy, setSortBy] = useURLState<string>('sort_by', '')
   const [sortOrder, setSortOrder] = useURLState<'asc' | 'desc'>('sort_order', 'asc')
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'config-history-state',
+    {
+      currentPage,
+      rowsPerPage,
+      sortBy,
+      sortOrder,
+    },
+    {
+      currentPage: setCurrentPage,
+      rowsPerPage: setRowsPerPage,
+      sortBy: setSortBy,
+      sortOrder: setSortOrder,
+    }
+  )
 
   // Reconstruct sortConfig from URL state
   const sortConfig = useMemo<SortConfig | undefined>(

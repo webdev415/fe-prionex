@@ -7,7 +7,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useURLState } from '@/hooks/useURLState'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
@@ -263,6 +263,27 @@ export function PaymentHistoryPage() {
   const [methodFilterUrl, setMethodFilterUrl] = useURLState<string>('method', 'All')
   const [startDateUrl, setStartDateUrl] = useURLState<string>('start_date', '')
   const [endDateUrl, setEndDateUrl] = useURLState<string>('end_date', '')
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'payment-history-state',
+    {
+      currentPage,
+      pageSize,
+      statusFilterUrl,
+      methodFilterUrl,
+      startDateUrl,
+      endDateUrl,
+    },
+    {
+      currentPage: setCurrentPage,
+      pageSize: setPageSize,
+      statusFilterUrl: setStatusFilterUrl,
+      methodFilterUrl: setMethodFilterUrl,
+      startDateUrl: setStartDateUrl,
+      endDateUrl: setEndDateUrl,
+    }
+  )
 
   // Convert URL state to component state
   const statusFilter = statusFilterUrl

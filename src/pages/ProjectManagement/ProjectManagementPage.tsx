@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useURLState } from '@/hooks/useURLState'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { useProjects, useProjectDetail } from '@/features/projects/hooks/useProjects'
 import { useProjectExport, useDeleteProject } from '@/features/projects/hooks/useProjectMutations'
 import { EditProjectModal } from './components/EditProjectModal'
@@ -42,6 +42,33 @@ export function ProjectManagementPage() {
   const [clientCompanyFilter, setClientCompanyFilter] = useURLState<string>('client_company', '')
   const [startDateFromFilter, setStartDateFromFilter] = useURLState<string>('start_date_from', '')
   const [startDateToFilter, setStartDateToFilter] = useURLState<string>('start_date_to', '')
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'project-management-state',
+    {
+      currentPage,
+      pageSize,
+      sortBy,
+      sortOrder,
+      searchFilter,
+      statusFilter,
+      clientCompanyFilter,
+      startDateFromFilter,
+      startDateToFilter,
+    },
+    {
+      currentPage: setCurrentPage,
+      pageSize: setPageSize,
+      sortBy: setSortBy,
+      sortOrder: setSortOrder,
+      searchFilter: setSearchFilter,
+      statusFilter: setStatusFilter,
+      clientCompanyFilter: setClientCompanyFilter,
+      startDateFromFilter: setStartDateFromFilter,
+      startDateToFilter: setStartDateToFilter,
+    }
+  )
 
   // Reconstruct filters object from URL state
   const filters = useMemo<ProjectFilters>(

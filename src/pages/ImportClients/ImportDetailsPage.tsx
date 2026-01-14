@@ -7,7 +7,7 @@
 
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useURLState } from '@/hooks/useURLState'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -98,6 +98,19 @@ export function ImportDetailsPage() {
   // URL state for pagination
   const [errorPage, setErrorPage] = useURLState<number>('page', 1)
   const [errorPageSize, setErrorPageSize] = useURLState<number>('pageSize', 50)
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'import-details-state',
+    {
+      errorPage,
+      errorPageSize,
+    },
+    {
+      errorPage: setErrorPage,
+      errorPageSize: setErrorPageSize,
+    }
+  )
 
   // Fetch import job detail from API
   const { data: jobDetail, isLoading: isLoadingJob } = useImportJob(id, {

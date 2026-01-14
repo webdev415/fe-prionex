@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { useURLState } from '@/hooks/useURLState'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
@@ -126,6 +126,31 @@ export function ImportHistoryPage() {
   const [dateRangeFilter, setDateRangeFilter] = useURLState<string>('date_range', '')
   const [statusFilter, setStatusFilter] = useURLState<string>('status', '')
   const [uploadedByFilter, setUploadedByFilter] = useURLState<string>('uploaded_by', '')
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'import-history-state',
+    {
+      currentPage,
+      rowsPerPage,
+      sortBy,
+      sortOrder,
+      searchFilenameFilter,
+      dateRangeFilter,
+      statusFilter,
+      uploadedByFilter,
+    },
+    {
+      currentPage: setCurrentPage,
+      rowsPerPage: setRowsPerPage,
+      sortBy: setSortBy,
+      sortOrder: setSortOrder,
+      searchFilenameFilter: setSearchFilenameFilter,
+      dateRangeFilter: setDateRangeFilter,
+      statusFilter: setStatusFilter,
+      uploadedByFilter: setUploadedByFilter,
+    }
+  )
 
   // Reconstruct filters object from URL state
   const filters = useMemo<ImportHistoryFilters>(

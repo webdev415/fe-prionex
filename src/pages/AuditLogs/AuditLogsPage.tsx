@@ -6,7 +6,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useURLState } from '@/hooks/useURLState'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import { AuditLogDetailModal } from './components/AuditLogDetailModal'
 import { CSVExportDialog, type CSVExportOptions } from './components/CSVExportDialog'
@@ -115,6 +115,45 @@ export function AuditLogsPage() {
   const [entityTypeFilter, setEntityTypeFilter] = useURLState<string>('entity_type', '')
   const [actionFilter, setActionFilter] = useURLState<string>('action', '')
   const [roleFilter, setRoleFilter] = useURLState<string>('role', '')
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'audit-logs-state',
+    {
+      currentPage,
+      pageSize,
+      sortBy,
+      sortOrder,
+      searchFilter,
+      statusFilter,
+      clientFilter,
+      periodFilter,
+      dateFromFilter,
+      dateToFilter,
+      userFilter,
+      usersFilter,
+      entityTypeFilter,
+      actionFilter,
+      roleFilter,
+    },
+    {
+      currentPage: setCurrentPage,
+      pageSize: setPageSize,
+      sortBy: setSortBy,
+      sortOrder: setSortOrder,
+      searchFilter: setSearchFilter,
+      statusFilter: setStatusFilter,
+      clientFilter: setClientFilter,
+      periodFilter: setPeriodFilter,
+      dateFromFilter: setDateFromFilter,
+      dateToFilter: setDateToFilter,
+      userFilter: setUserFilter,
+      usersFilter: setUsersFilter,
+      entityTypeFilter: setEntityTypeFilter,
+      actionFilter: setActionFilter,
+      roleFilter: setRoleFilter,
+    }
+  )
 
   // Reconstruct filters object from URL state
   const filters = useMemo<AuditLogFilters>(

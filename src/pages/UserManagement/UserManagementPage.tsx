@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAuth } from '@/features/auth'
 import { useUsers } from '@/features/users/hooks/useUsers'
-import { useURLState } from '@/hooks/useURLState'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { CreateUserModal } from './components/CreateUserModal'
@@ -45,6 +45,19 @@ export function UserManagementPage() {
   // URL state for pagination
   const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
   const [pageSize, setPageSize] = useURLState<number>('pageSize', DEFAULT_PAGE_SIZE)
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'user-management-state',
+    {
+      currentPage,
+      pageSize,
+    },
+    {
+      currentPage: setCurrentPage,
+      pageSize: setPageSize,
+    }
+  )
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [viewUserId, setViewUserId] = useState<number | null>(null)
