@@ -6,9 +6,10 @@ import { Icons } from '@/lib/icons'
 import { useAuth } from '@/features/auth'
 import { authApi } from '@/features/auth/api/authApi'
 import { useUpdateUser } from '@/features/users/hooks/useUpdateUser'
-import { languageOptions, timezoneOptions } from '@/features/users/schemas/userSchemas'
+import { timezoneOptions } from '@/features/users/schemas/userSchemas'
 import { Input } from '@/components/ui/Input'
 import { ProjectSelector } from '@/components/layout/ProjectSelector'
+import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import {
   Select,
   SelectTrigger,
@@ -121,7 +122,7 @@ export function ProfileSettingsPage() {
               {user?.username}
             </div>
             <div className="flex flex-col items-center gap-3 self-stretch">
-              <ProjectSelector variant="profile" />
+              <ProjectSelector />
               <span className="text-base leading-[155%] font-light tracking-[-0.32px] text-gray-700">
                 {t('pages.profile.roleLabel')}{' '}
                 <span className="text-dark-500 font-medium">{user?.active_role_name || ''}</span>
@@ -207,21 +208,12 @@ export function ProfileSettingsPage() {
               <div className="flex items-start gap-4 self-stretch">
                 <div className="flex w-full flex-col gap-2 self-stretch">
                   <Label htmlFor="language">{t('pages.users.forms.language')}</Label>
-                  <Select
+                  <LanguageSwitcher
+                    id="language"
+                    variant="dashboard"
                     value={form.language}
                     onValueChange={(v: string) => setForm({ ...form, language: v })}
-                  >
-                    <SelectTrigger id="language">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {languageOptions.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>
-                          {o.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
 
                 <div className="flex w-full flex-col gap-2 self-stretch">

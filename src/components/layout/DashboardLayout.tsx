@@ -10,8 +10,6 @@ import { LogoutConfirmationModal } from './LogoutConfirmationModal'
 import { Sidebar, type SidebarItem, type SidebarSubItem } from './Sidebar'
 import { SearchBar } from './SearchBar'
 import { UserProfile } from './UserProfile'
-import { LanguageSwitcher } from './LanguageSwitcher'
-import { ProjectSelector } from './ProjectSelector'
 import { MinimizedCallBubble } from './MinimizedCallBubble'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
@@ -19,7 +17,6 @@ import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
-import { SUPPORTED_LANGUAGES, LANGUAGE_NAMES } from '@/lib/i18n'
 import { useCallStore } from '@/stores/callStore'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
@@ -29,9 +26,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
 } from '@/components/ui/DropdownMenu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 
@@ -53,16 +47,11 @@ interface ExtendedSidebarItem extends SidebarItem {
 
 // Mobile Header Menu Component - groups header actions into dropdown on mobile
 function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
-  const { t, i18n } = useTranslation('common')
+  const { t } = useTranslation('common')
   const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const { minimizedCall, clearMinimizedCall, setOpenCallModal } = useCallStore()
   const [isRestored, setIsRestored] = useState(false)
-
-  const userProjects = user?.projects || []
-  const hasMultipleProjects = userProjects.length > 1
-  const currentProject = userProjects.find((p) => p.id === user?.active_project_id)
-  const currentLanguage = i18n.language as 'en' | 'uk' | 'ru'
 
   // Display name
   const displayName =
@@ -88,28 +77,6 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [isOpen])
-
-  const handleProjectSwitch = async (projectId: string) => {
-    if (projectId === user?.active_project_id) return
-    try {
-      const { authApi } = await import('@/features/auth/api/authApi')
-      const projectIdNum = parseInt(projectId, 10)
-      if (isNaN(projectIdNum)) {
-        throw new Error('Invalid project ID')
-      }
-      const response = await authApi.switchProject(projectIdNum)
-      const projectName =
-        response.data.active_project?.project_name ||
-        userProjects.find((p) => p.id === projectId)?.name ||
-        'Project'
-      toast.success(t('pages.users.messages.projectSwitched', { projectName }))
-      // Reload page to refresh user data
-      window.location.reload()
-    } catch (error) {
-      console.error('Failed to switch project:', error)
-      toast.error(t('pages.users.messages.failedToSwitchProject'))
-    }
-  }
 
   const handleRestoreCall = () => {
     setIsRestored(true)
@@ -346,87 +313,15 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           </>
         )}
 
-        {/* Project Selector (if multiple projects) */}
-        {hasMultipleProjects && currentProject && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="text-dark-500 text-sm">
-                <Icons.Brochure size={16} className="mr-2" />
-                <span>{currentProject.name}</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="bg-white">
-                {userProjects.map((project) => {
-                  const isActive = project.id === user?.active_project_id
-                  const projectRole = project.roles?.[0]
-
-                  return (
-                    <DropdownMenuItem
-                      key={project.id}
-                      onClick={() => void handleProjectSwitch(project.id)}
-                      disabled={isActive}
-                      className={cn(
-                        'flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors',
-                        isActive ? 'text-primary-600 font-medium' : 'text-gray-700'
-                      )}
-                    >
-                      <span className="flex-1 truncate">{project.name}</span>
-                      {projectRole && (
-                        <span className="text-xs text-gray-500">({projectRole.name})</span>
-                      )}
-                      {isActive && (
-                        <Icons.Checkmark
-                          size={16}
-                          className="text-dark-500 ml-auto"
-                          strokeWidth={2}
-                        />
-                      )}
-                    </DropdownMenuItem>
-                  )
-                })}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-          </>
-        )}
-
-        {/* Language Switcher */}
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger className="text-dark-500 text-sm">
-            <Icons.LanguageSquare size={16} className="mr-2" />
-            <span>{LANGUAGE_NAMES[currentLanguage] || currentLanguage}</span>
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="bg-white">
-            {SUPPORTED_LANGUAGES.map((lang) => {
-              const isActive = i18n.language === lang
-
-              return (
-                <DropdownMenuItem
-                  key={lang}
-                  onClick={() => i18n.changeLanguage(lang)}
-                  className={cn(
-                    'flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors',
-                    isActive ? 'text-primary-600 font-medium' : 'text-gray-700'
-                  )}
-                >
-                  <span>{LANGUAGE_NAMES[lang]}</span>
-                  {isActive && (
-                    <Icons.Checkmark size={16} className="text-dark-500 ml-auto" strokeWidth={2} />
-                  )}
-                </DropdownMenuItem>
-              )
-            })}
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-
         {/* Settings */}
         <DropdownMenuItem
           onClick={() => {
-            toast.info(t('navigation.settings'))
+            toast.info(t('navigation.profile'))
           }}
           className="text-dark-500 text-sm"
         >
-          <Icons.Setting07 size={16} className="mr-2" />
-          <span>{t('navigation.settings')}</span>
+          <Icons.User02 size={16} className="mr-2" />
+          <span>{t('navigation.profile')}</span>
         </DropdownMenuItem>
 
         {/* Logout */}
@@ -880,8 +775,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Desktop: Project Selector, Language Switcher and User Profile */}
           <div className="hidden items-center gap-3 lg:flex">
             <MinimizedCallBubble />
-            <ProjectSelector />
-            <LanguageSwitcher variant="dashboard" />
             <UserProfile onLogoutClick={handleLogoutClick} />
           </div>
 
