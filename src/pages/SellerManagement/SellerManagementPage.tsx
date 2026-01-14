@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useURLState } from '@/hooks/useURLState'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
@@ -33,6 +33,21 @@ export function SellerManagementPage() {
   const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
   const [pageSize, setPageSize] = useURLState<number>('pageSize', DEFAULT_PAGE_SIZE)
   const [searchQuery, setSearchQuery] = useURLState<string>('search', '')
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'seller-management-state',
+    {
+      currentPage,
+      pageSize,
+      searchQuery,
+    },
+    {
+      currentPage: setCurrentPage,
+      pageSize: setPageSize,
+      searchQuery: setSearchQuery,
+    }
+  )
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editSellerId, setEditSellerId] = useState<number | null>(null)
