@@ -248,21 +248,153 @@ export function ClientManagementPage() {
     name: string
   } | null>(null)
   const hasSetDefaultFilter = useRef(false)
+  const STORAGE_KEY = 'client-filters-state'
 
-  // Set default "assigned to me" filter on initial load
+  // Save filters to localStorage whenever they change (for persistence when sidebar navigation clears URL)
+  useEffect(() => {
+    const filterState = {
+      selectedPriorities,
+      currentPage,
+      rowsPerPage,
+      sortBy,
+      sortOrder,
+      portfolioFilter,
+      statusFilter,
+      tagIdsFilter,
+      responsibleEmployeeFilter,
+      responsibleSearcherFilter,
+      unassignedOnlyFilter,
+      dateOfSaleFromFilter,
+      dateOfSaleToFilter,
+      debtRangeFromFilter,
+      debtRangeToFilter,
+      principalRangeFromFilter,
+      principalRangeToFilter,
+      totalDebtRangeFromFilter,
+      totalDebtRangeToFilter,
+      dpdRangeFromFilter,
+      dpdRangeToFilter,
+      searchQuery,
+      searchType,
+    }
+
+    // Only save if there are active filters (don't save empty state)
+    const hasActiveFilters =
+      selectedPriorities.length > 0 ||
+      searchQuery !== '' ||
+      responsibleEmployeeFilter !== '' ||
+      responsibleSearcherFilter !== '' ||
+      portfolioFilter.length > 0 ||
+      statusFilter.length > 0 ||
+      tagIdsFilter.length > 0 ||
+      unassignedOnlyFilter ||
+      dateOfSaleFromFilter !== '' ||
+      dateOfSaleToFilter !== '' ||
+      debtRangeFromFilter > 0 ||
+      debtRangeToFilter > 0 ||
+      principalRangeFromFilter > 0 ||
+      principalRangeToFilter > 0 ||
+      totalDebtRangeFromFilter > 0 ||
+      totalDebtRangeToFilter > 0 ||
+      dpdRangeFromFilter > 0 ||
+      dpdRangeToFilter > 0
+
+    if (hasActiveFilters) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(filterState))
+      } catch (e) {
+        console.error('Failed to save filters to localStorage:', e)
+      }
+    }
+  }, [
+    selectedPriorities,
+    currentPage,
+    rowsPerPage,
+    sortBy,
+    sortOrder,
+    portfolioFilter,
+    statusFilter,
+    tagIdsFilter,
+    responsibleEmployeeFilter,
+    responsibleSearcherFilter,
+    unassignedOnlyFilter,
+    dateOfSaleFromFilter,
+    dateOfSaleToFilter,
+    debtRangeFromFilter,
+    debtRangeToFilter,
+    principalRangeFromFilter,
+    principalRangeToFilter,
+    totalDebtRangeFromFilter,
+    totalDebtRangeToFilter,
+    dpdRangeFromFilter,
+    dpdRangeToFilter,
+    searchQuery,
+    searchType,
+  ])
+
+  // Set default "assigned to me" filter on initial load OR restore from localStorage
   useEffect(() => {
     if (hasSetDefaultFilter.current || !user?.id) return
 
-    // Only apply default filter if no filters are already set (from URL or state)
-    const hasExistingFilters =
+    // Check if URL has any filters
+    const hasURLFilters =
       selectedPriorities.length > 0 ||
       searchQuery !== '' ||
       responsibleEmployeeFilter !== '' ||
       portfolioFilter.length > 0 ||
-      statusFilter.length > 0
+      statusFilter.length > 0 ||
+      tagIdsFilter.length > 0 ||
+      unassignedOnlyFilter ||
+      dateOfSaleFromFilter !== '' ||
+      debtRangeFromFilter > 0 ||
+      principalRangeFromFilter > 0
 
-    if (!hasExistingFilters) {
-      setResponsibleEmployeeFilter(user.id)
+    if (!hasURLFilters) {
+      // Try to restore from localStorage first
+      try {
+        const savedState = localStorage.getItem(STORAGE_KEY)
+        if (savedState) {
+          const parsed = JSON.parse(savedState)
+          // Restore filters (use setTimeout to avoid state updates during render)
+          setTimeout(() => {
+            if (parsed.selectedPriorities) setSelectedPriorities(parsed.selectedPriorities)
+            if (parsed.portfolioFilter) setPortfolioFilter(parsed.portfolioFilter)
+            if (parsed.statusFilter) setStatusFilter(parsed.statusFilter)
+            if (parsed.tagIdsFilter) setTagIdsFilter(parsed.tagIdsFilter)
+            if (parsed.responsibleEmployeeFilter)
+              setResponsibleEmployeeFilter(parsed.responsibleEmployeeFilter)
+            if (parsed.responsibleSearcherFilter)
+              setResponsibleSearcherFilter(parsed.responsibleSearcherFilter)
+            if (parsed.unassignedOnlyFilter) setUnassignedOnlyFilter(parsed.unassignedOnlyFilter)
+            if (parsed.dateOfSaleFromFilter) setDateOfSaleFromFilter(parsed.dateOfSaleFromFilter)
+            if (parsed.dateOfSaleToFilter) setDateOfSaleToFilter(parsed.dateOfSaleToFilter)
+            if (parsed.debtRangeFromFilter) setDebtRangeFromFilter(parsed.debtRangeFromFilter)
+            if (parsed.debtRangeToFilter) setDebtRangeToFilter(parsed.debtRangeToFilter)
+            if (parsed.principalRangeFromFilter)
+              setPrincipalRangeFromFilter(parsed.principalRangeFromFilter)
+            if (parsed.principalRangeToFilter)
+              setPrincipalRangeToFilter(parsed.principalRangeToFilter)
+            if (parsed.totalDebtRangeFromFilter)
+              setTotalDebtRangeFromFilter(parsed.totalDebtRangeFromFilter)
+            if (parsed.totalDebtRangeToFilter)
+              setTotalDebtRangeToFilter(parsed.totalDebtRangeToFilter)
+            if (parsed.dpdRangeFromFilter) setDpdRangeFromFilter(parsed.dpdRangeFromFilter)
+            if (parsed.dpdRangeToFilter) setDpdRangeToFilter(parsed.dpdRangeToFilter)
+            if (parsed.currentPage) setCurrentPage(parsed.currentPage)
+            if (parsed.rowsPerPage) setRowsPerPage(parsed.rowsPerPage)
+            if (parsed.sortBy) setSortBy(parsed.sortBy)
+            if (parsed.sortOrder) setSortOrder(parsed.sortOrder)
+            // Note: search query and type are managed separately via setSearchParams
+          }, 0)
+        } else {
+          // No saved state, apply default "assigned to me" filter
+          setResponsibleEmployeeFilter(user.id)
+        }
+      } catch (e) {
+        console.error('Failed to restore filters from localStorage:', e)
+        // Fallback to default filter
+        setResponsibleEmployeeFilter(user.id)
+      }
     }
 
     hasSetDefaultFilter.current = true
@@ -829,6 +961,13 @@ export function ClientManagementPage() {
       params.delete('type')
       return params
     })
+
+    // Clear localStorage saved state
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+    } catch (e) {
+      console.error('Failed to clear localStorage:', e)
+    }
   }
 
   const formatCurrency = (amount: number) => {
