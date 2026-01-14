@@ -26,6 +26,7 @@ import { ScoringConfigurationPage } from '@/pages/ScoringConfiguration'
 import { ConfigurationHistoryPage } from '@/pages/ScoringConfiguration/ConfigurationHistoryPage'
 import { AuditLogsPage } from '@/pages/AuditLogs'
 import { TagsPage } from '@/pages/Tags/TagsPage'
+import { ProfileSettingsPage } from '@/pages/ProfileSettings/ProfileSettingsPage'
 
 export const router = createBrowserRouter([
   {
@@ -50,6 +51,16 @@ export const router = createBrowserRouter([
       <ProtectedRoute>
         <DashboardLayout>
           <ClientManagementPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/profile',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ProfileSettingsPage />
         </DashboardLayout>
       </ProtectedRoute>
     ),
