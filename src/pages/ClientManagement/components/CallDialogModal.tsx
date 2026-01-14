@@ -17,6 +17,7 @@ import { RadioGroup, RadioItem } from '../../../components/ui/Radio'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useCallStore } from '@/stores/callStore'
+import { useCallDetails } from '@/features/calls/hooks/useCall'
 
 export type CallState = 'initial' | 'dialing' | 'connected' | 'ended' | 'incoming'
 export type CallType = 'white-line' | 'gray-line' | 'spam-calls'
@@ -27,6 +28,7 @@ export interface CallDialogModalProps {
   onClose: () => void
   clientName: string
   phoneNumber: string
+  callId?: string | null // Optional call ID for tracking real-time call state
   initialState?: CallState
   onCallStart?: (callType: CallType) => void
   onCallEnd?: (duration: number, status: CallStatus) => void
@@ -60,6 +62,7 @@ export function CallDialogModal({
   onClose,
   clientName,
   phoneNumber,
+  callId,
   initialState = 'initial',
   onCallStart,
   onCallEnd,
@@ -70,6 +73,9 @@ export function CallDialogModal({
 }: CallDialogModalProps) {
   const { t } = useTranslation('common')
   const { setMinimizedCall, setOpenCallModal, minimizedCall } = useCallStore()
+
+  // Fetch call details with polling if callId is provided
+  const { data: callDetails } = useCallDetails(callId || null)
 
   // Track modal open state
   useEffect(() => {
@@ -119,27 +125,36 @@ export function CallDialogModal({
     }
   }, [open, initialState])
 
-  // Auto-transition from dialing to connected (for testing/demo)
+  // Update UI based on real call state from backend
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
-    if (callState === 'dialing' && open) {
-      // Auto-connect after 3 seconds for demo purposes
-      dialingTimeoutRef.current = setTimeout(() => {
-        setCallState('connected')
-        setElapsedTime(0) // Reset timer when connected
-      }, 3000)
-    } else {
-      if (dialingTimeoutRef.current) {
-        clearTimeout(dialingTimeoutRef.current)
-        dialingTimeoutRef.current = null
-      }
-    }
+    if (!callDetails || !open) return
 
-    return () => {
-      if (dialingTimeoutRef.current) {
-        clearTimeout(dialingTimeoutRef.current)
-      }
+    // Map backend state to frontend state
+    switch (callDetails.state) {
+      case 'initiated':
+        setCallState('dialing')
+        setElapsedTime(callDetails.ring_duration || 0)
+        break
+      case 'ringing':
+        setCallState('dialing')
+        setElapsedTime(callDetails.ring_duration || 0)
+        break
+      case 'active':
+        setCallState('connected')
+        setElapsedTime(callDetails.talk_duration || 0)
+        break
+      case 'completed':
+        setCallState('ended')
+        setElapsedTime(callDetails.total_duration || 0)
+        // Auto-close countdown already handles this
+        break
+      case 'failed':
+        setCallState('ended')
+        setElapsedTime(0)
+        break
     }
-  }, [callState, open])
+  }, [callDetails, open])
 
   // Timer for dialing and connected states
   useEffect(() => {

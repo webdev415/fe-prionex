@@ -96,6 +96,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           permissions: backendUser.permissions || [],
           createdAt: backendUser.created_at,
           updatedAt: backendUser.created_at,
+          asterisk_extension: backendUser.asterisk_extension,
+          is_agent: backendUser.is_agent,
+          agent_status: backendUser.agent_status,
         }
 
         set({
@@ -262,6 +265,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           permissions: backendUser.permissions || [],
           createdAt: backendUser.created_at,
           updatedAt: backendUser.created_at,
+          asterisk_extension: backendUser.asterisk_extension,
+          is_agent: backendUser.is_agent,
+          agent_status: backendUser.agent_status,
         }
 
         set({
@@ -382,6 +388,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             permissions: backendUser.permissions || [],
             createdAt: backendUser.created_at,
             updatedAt: backendUser.created_at,
+            asterisk_extension: backendUser.asterisk_extension,
+            is_agent: backendUser.is_agent,
+            agent_status: backendUser.agent_status,
           }
 
           if (isImpersonating) {
@@ -676,6 +685,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         permissions: admin_user.permissions || [],
         createdAt: admin_user.created_at,
         updatedAt: admin_user.created_at,
+        asterisk_extension: admin_user.asterisk_extension,
+        is_agent: admin_user.is_agent,
+        agent_status: admin_user.agent_status,
       }
 
       // Clear stored admin from sessionStorage
