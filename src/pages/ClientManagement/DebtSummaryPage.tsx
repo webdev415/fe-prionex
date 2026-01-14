@@ -747,7 +747,11 @@ export function DebtSummaryPage() {
         <p className="text-sm text-gray-600">
           {clientError?.message || t('pages.clients.debtSummary.errorOccurred')}
         </p>
-        <Button variant="outline" onClick={() => navigate(`/dashboard/${id}`)} className="mt-4">
+        <Button
+          variant="outline"
+          onClick={() => navigate(`/dashboard/clients/${id}`)}
+          className="mt-4"
+        >
           {t('pages.clients.debtSummary.backToClient')}
         </Button>
       </div>
@@ -809,7 +813,10 @@ export function DebtSummaryPage() {
       {/* Header */}
       <div className="flex items-center justify-between self-stretch">
         <div className="flex items-center">
-          <LinkButton variant="regular-secondary" onClick={() => navigate(`/dashboard/${id}`)}>
+          <LinkButton
+            variant="regular-secondary"
+            onClick={() => navigate(`/dashboard/clients/${id}`)}
+          >
             <Icons.ArrowLeft02 size={24} />
           </LinkButton>
           <span className="text-dark-500 flex-1 text-2xl leading-tight font-light tracking-[-0.48px]">
@@ -925,7 +932,7 @@ export function DebtSummaryPage() {
               <LinkButton
                 variant="regular-secondary"
                 leftIcon={<Icons.MoneyReceive01 size={24} />}
-                onClick={() => navigate(`/dashboard/${id}/payment-history`)}
+                onClick={() => navigate(`/dashboard/clients/${id}/payment-history`)}
                 className="flex-1"
               >
                 {t('pages.clients.debtSummary.viewPaymentHistory')}
@@ -953,7 +960,7 @@ export function DebtSummaryPage() {
                 onClick={() => {
                   // Navigate to client detail page for calling functionality
                   if (id) {
-                    navigate(`/dashboard/${id}`)
+                    navigate(`/dashboard/clients/${id}`)
                   }
                 }}
               >
@@ -966,7 +973,7 @@ export function DebtSummaryPage() {
                 onClick={() => {
                   // Navigate to client detail page for editing
                   if (id) {
-                    navigate(`/dashboard/${id}`)
+                    navigate(`/dashboard/clients/${id}`)
                   }
                 }}
               >

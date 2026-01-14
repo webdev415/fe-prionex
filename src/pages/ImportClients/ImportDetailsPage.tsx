@@ -5,9 +5,9 @@
  * Shows import summary and error details.
  */
 
-import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useURLState } from '@/hooks/useURLState'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -95,9 +95,9 @@ export function ImportDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
-  // Pagination state for errors
-  const [errorPage, setErrorPage] = useState(1)
-  const [errorPageSize, setErrorPageSize] = useState(50)
+  // URL state for pagination
+  const [errorPage, setErrorPage] = useURLState<number>('page', 1)
+  const [errorPageSize, setErrorPageSize] = useURLState<number>('pageSize', 50)
 
   // Fetch import job detail from API
   const { data: jobDetail, isLoading: isLoadingJob } = useImportJob(id, {

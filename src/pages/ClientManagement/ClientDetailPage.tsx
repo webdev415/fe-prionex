@@ -844,7 +844,10 @@ export function ClientDetailPage() {
 
   // Fetch client data from API
   const clientId = id ? Number(id) : 0
-  const { data: apiClient, isLoading, isError, error } = useClient(clientId, !!clientId)
+
+  // Ensure clientId is valid before making API call
+  const isValidClientId = clientId > 0 && !isNaN(clientId)
+  const { data: apiClient, isLoading, isError, error } = useClient(clientId, isValidClientId)
 
   // Fetch SMS history from API
   const { data: smsHistoryData } = useSMSHistory(clientId, undefined)
@@ -1318,7 +1321,7 @@ export function ClientDetailPage() {
             size="md"
             variant="transparent-black"
             className="flex flex-row rounded-full text-sm font-medium"
-            onClick={() => navigate(`/dashboard/${id}/debt-summary`)}
+            onClick={() => navigate(`/dashboard/clients/${id}/debt-summary`)}
           >
             {t('pages.clients.debtSummary.title')}
           </Button>
@@ -2508,7 +2511,7 @@ export function ClientDetailPage() {
           <LinkButton
             variant="regular-secondary"
             size="xs"
-            onClick={() => navigate(`/dashboard/${client.id}/activity`)}
+            onClick={() => navigate(`/dashboard/clients/${client.id}/activity`)}
             rightIcon={<Icons.ArrowRight size={18} />}
           >
             {t('pages.clients.detail.viewAll')}

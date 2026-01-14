@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAuth } from '@/features/auth'
 import { useUsers } from '@/features/users/hooks/useUsers'
+import { useURLState } from '@/hooks/useURLState'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { CreateUserModal } from './components/CreateUserModal'
@@ -40,8 +41,11 @@ export function UserManagementPage() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
   const { startImpersonation, user: currentUser, isLoading: authLoading } = useAuth()
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+
+  // URL state for pagination
+  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
+  const [pageSize, setPageSize] = useURLState<number>('pageSize', DEFAULT_PAGE_SIZE)
+
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [viewUserId, setViewUserId] = useState<number | null>(null)
   const [editUserId, setEditUserId] = useState<number | null>(null)

@@ -4,9 +4,10 @@
  * Displays full payment history for a client with filtering and pagination.
  */
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useURLState } from '@/hooks/useURLState'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
@@ -252,13 +253,36 @@ export function PaymentHistoryPage() {
   const { t, i18n } = useTranslation('common')
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+
+  // URL state for pagination
+  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
+  const [pageSize, setPageSize] = useURLState<number>('pageSize', 10)
+
+  // URL state for filters
+  const [statusFilterUrl, setStatusFilterUrl] = useURLState<string>('status', 'All')
+  const [methodFilterUrl, setMethodFilterUrl] = useURLState<string>('method', 'All')
+  const [startDateUrl, setStartDateUrl] = useURLState<string>('start_date', '')
+  const [endDateUrl, setEndDateUrl] = useURLState<string>('end_date', '')
+
+  // Convert URL state to component state
+  const statusFilter = statusFilterUrl
+  const methodFilter = methodFilterUrl
+  const startDate = useMemo(() => (startDateUrl ? new Date(startDateUrl) : null), [startDateUrl])
+  const endDate = useMemo(() => (endDateUrl ? new Date(endDateUrl) : null), [endDateUrl])
+
+  // Create setters that update URL state
+  const setStatusFilter = (value: string) => setStatusFilterUrl(value)
+  const setMethodFilter = (value: string) => setMethodFilterUrl(value)
+  const setStartDate = useCallback(
+    (value: Date | null) => setStartDateUrl(value ? value.toISOString().split('T')[0] : ''),
+    [setStartDateUrl]
+  )
+  const setEndDate = useCallback(
+    (value: Date | null) => setEndDateUrl(value ? value.toISOString().split('T')[0] : ''),
+    [setEndDateUrl]
+  )
+
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryData | null>(null)
-  const [statusFilter, setStatusFilter] = useState<string>('All')
-  const [methodFilter, setMethodFilter] = useState<string>('All')
-  const [startDate, setStartDate] = useState<Date | null>(null)
-  const [endDate, setEndDate] = useState<Date | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false)
   // Note: selectedPaymentId is set but not currently read, reserved for future use
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -390,7 +414,7 @@ export function PaymentHistoryPage() {
   const handleViewClientProfile = () => {
     if (selectedPayment && id) {
       setIsPaymentDetailsModalOpen(false)
-      navigate(`/dashboard/${id}`)
+      navigate(`/dashboard/clients/${id}`)
     }
   }
 
@@ -426,7 +450,7 @@ export function PaymentHistoryPage() {
         }
       }, 500)
     }
-  }, [customerName])
+  }, [customerName, setStartDate, setEndDate])
 
   const formatCurrency = (amount: number) => {
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
@@ -697,7 +721,7 @@ export function PaymentHistoryPage() {
         </p>
         <Button
           variant="outline"
-          onClick={() => navigate(`/dashboard/${id}/debt-summary`)}
+          onClick={() => navigate(`/dashboard/clients/${id}/debt-summary`)}
           className="mt-4"
         >
           {t('pages.clients.debtSummary.backToClient')}
@@ -714,7 +738,7 @@ export function PaymentHistoryPage() {
           <Button
             variant="white-secondary"
             leftIcon={<Icons.ArrowLeft02 size={20} />}
-            onClick={() => navigate(`/dashboard/${id}/debt-summary`)}
+            onClick={() => navigate(`/dashboard/clients/${id}/debt-summary`)}
             className="h-12 rounded-full"
           >
             {t('pages.clients.paymentHistory.backToClient')}

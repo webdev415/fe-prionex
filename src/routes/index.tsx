@@ -66,36 +66,6 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: '/dashboard/:id',
-    element: (
-      <ProtectedRoute>
-        <DashboardLayout>
-          <ClientDetailPage />
-        </DashboardLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/:id/debt-summary',
-    element: (
-      <ProtectedRoute>
-        <DashboardLayout>
-          <DebtSummaryPage />
-        </DashboardLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/:id/activity',
-    element: (
-      <ProtectedRoute>
-        <DashboardLayout>
-          <ActivityTimelinePage />
-        </DashboardLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
     path: '/dashboard/users',
     element: (
       <ProtectedRoute>
@@ -174,16 +144,6 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: '/dashboard/:id/payment-history',
-    element: (
-      <ProtectedRoute>
-        <DashboardLayout>
-          <PaymentHistoryPage />
-        </DashboardLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
     path: '/dashboard/sellers',
     element: (
       <ProtectedRoute>
@@ -240,6 +200,47 @@ export const router = createBrowserRouter([
       <ProtectedRoute>
         <DashboardLayout>
           <AuditLogsPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  // Client detail routes - must come after all specific routes
+  {
+    path: '/dashboard/clients/:id',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ClientDetailPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/clients/:id/debt-summary',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <DebtSummaryPage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/clients/:id/activity',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <ActivityTimelinePage />
+        </DashboardLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/clients/:id/payment-history',
+    element: (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <PaymentHistoryPage />
         </DashboardLayout>
       </ProtectedRoute>
     ),

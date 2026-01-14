@@ -4,7 +4,7 @@
  * Main page for managing clients with priority overview, filters, and data table.
  */
 
-import { useState, useMemo, useEffect, useRef, startTransition } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
@@ -14,6 +14,7 @@ import { LinkButton } from '@/components/ui/LinkButton'
 import { PriorityCards } from './components/PriorityCards'
 import { PriorityBadge } from './components/PriorityBadge'
 import { TagBadge } from '@/components/ui/TagBadge'
+import { TooltipProvider } from '@/components/ui/Tooltip'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
@@ -27,7 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   useAssignClient,
   useBulkAssignClients,
@@ -38,7 +39,9 @@ import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import type { Client as APIClient } from '@/features/clients/api/types'
 import type { PriorityThresholds } from '@/features/clients/api/configApi'
-import { useDebounce } from '@/hooks/useDebounce'
+import { useURLState } from '@/hooks/useURLState'
+import type { Priority } from './types'
+import { useAuthStore } from '@/stores/authStore'
 
 // Display type matching page requirements
 interface DisplayClient {
@@ -125,27 +128,116 @@ export interface ClientFilters {
 
   // Tags Filter
   tagIds?: number[]
+
+  // Priority Filter
+  priorities?: Priority[]
 }
 
 export function ClientManagementPage() {
   const { t } = useTranslation('common')
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const searchQuery = searchParams.get('search') || ''
   const searchType = searchParams.get('type') || 'phone'
+  const user = useAuthStore((state) => state.user)
 
-  const [filters, setFilters] = useState<ClientFilters>({
-    // Start with no filters applied - user can select what they want
-    portfolio: [],
-    status: [],
-  })
+  // URL state for priority filtering
+  const [selectedPriorities, setSelectedPriorities] = useURLState<Priority[]>('priority', [])
+
+  // URL state for pagination
+  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
+  const [rowsPerPage, setRowsPerPage] = useURLState<number>('pageSize', 10)
+
+  // URL state for sorting (separate params for sort field and order)
+  const [sortBy, setSortBy] = useURLState<string>('sort_by', 'priority_score')
+  const [sortOrder, setSortOrder] = useURLState<'asc' | 'desc'>('sort_order', 'desc')
+
+  // URL state for filters
+  const [portfolioFilter, setPortfolioFilter] = useURLState<string[]>('portfolio', [])
+  const [statusFilter, setStatusFilter] = useURLState<string[]>('status', [])
+  const [tagIdsFilter, setTagIdsFilter] = useURLState<number[]>('tags', [])
+  const [responsibleEmployeeFilter, setResponsibleEmployeeFilter] = useURLState<string>(
+    'employee',
+    ''
+  )
+  const [responsibleSearcherFilter, setResponsibleSearcherFilter] = useURLState<string>(
+    'searcher',
+    ''
+  )
+  const [unassignedOnlyFilter, setUnassignedOnlyFilter] = useURLState<boolean>('unassigned', false)
+  const [dateOfSaleFromFilter, setDateOfSaleFromFilter] = useURLState<string>('dateFrom', '')
+  const [dateOfSaleToFilter, setDateOfSaleToFilter] = useURLState<string>('dateTo', '')
+  const [debtRangeFromFilter, setDebtRangeFromFilter] = useURLState<number>('debtMin', 0)
+  const [debtRangeToFilter, setDebtRangeToFilter] = useURLState<number>('debtMax', 0)
+  const [principalRangeFromFilter, setPrincipalRangeFromFilter] = useURLState<number>(
+    'principalMin',
+    0
+  )
+  const [principalRangeToFilter, setPrincipalRangeToFilter] = useURLState<number>('principalMax', 0)
+  const [totalDebtRangeFromFilter, setTotalDebtRangeFromFilter] = useURLState<number>(
+    'totalDebtMin',
+    0
+  )
+  const [totalDebtRangeToFilter, setTotalDebtRangeToFilter] = useURLState<number>('totalDebtMax', 0)
+  const [dpdRangeFromFilter, setDpdRangeFromFilter] = useURLState<number>('dpdMin', 0)
+  const [dpdRangeToFilter, setDpdRangeToFilter] = useURLState<number>('dpdMax', 0)
+
+  // Compute filters object from URL state
+  const filters: ClientFilters = useMemo(
+    () => ({
+      portfolio: portfolioFilter,
+      status: statusFilter,
+      tagIds: tagIdsFilter,
+      responsibleEmployee: responsibleEmployeeFilter || undefined,
+      responsibleSearcher: responsibleSearcherFilter || undefined,
+      unassignedOnly: unassignedOnlyFilter,
+      dateOfSaleFrom: dateOfSaleFromFilter || undefined,
+      dateOfSaleTo: dateOfSaleToFilter || undefined,
+      debtRangeFrom: debtRangeFromFilter || undefined,
+      debtRangeTo: debtRangeToFilter || undefined,
+      principalRangeFrom: principalRangeFromFilter || undefined,
+      principalRangeTo: principalRangeToFilter || undefined,
+      totalDebtRangeFrom: totalDebtRangeFromFilter || undefined,
+      totalDebtRangeTo: totalDebtRangeToFilter || undefined,
+      dpdRangeFrom: dpdRangeFromFilter || undefined,
+      dpdRangeTo: dpdRangeToFilter || undefined,
+    }),
+    [
+      portfolioFilter,
+      statusFilter,
+      tagIdsFilter,
+      responsibleEmployeeFilter,
+      responsibleSearcherFilter,
+      unassignedOnlyFilter,
+      dateOfSaleFromFilter,
+      dateOfSaleToFilter,
+      debtRangeFromFilter,
+      debtRangeToFilter,
+      principalRangeFromFilter,
+      principalRangeToFilter,
+      totalDebtRangeFromFilter,
+      totalDebtRangeToFilter,
+      dpdRangeFromFilter,
+      dpdRangeToFilter,
+    ]
+  )
+
+  // Compute sortConfig from URL state (map backend keys to frontend keys for DataTable)
+  const sortConfig: SortConfig | undefined = useMemo(() => {
+    if (!sortBy) return undefined
+    // Map backend sort fields to frontend keys
+    const backendToFrontendMap: Record<string, string> = {
+      priority_score: 'priority',
+      first_name: 'fullName',
+      id: 'id',
+    }
+    const frontendKey = backendToFrontendMap[sortBy] || sortBy
+    return { key: frontendKey, order: sortOrder }
+  }, [sortBy, sortOrder])
+
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
-  const [rowsPerPage, setRowsPerPage] = useState(10)
-  const [sortConfig, setSortConfig] = useState<SortConfig | undefined>()
-  const [currentPage, setCurrentPage] = useState(1)
   const [selectedClients, setSelectedClients] = useState<Set<number>>(new Set())
   const [allClientsSelected, setAllClientsSelected] = useState(false)
-  const [excludedClients, setExcludedClients] = useState<Set<number>>(new Set()) // Track excluded items when all are selected
+  const [excludedClients, setExcludedClients] = useState<Set<number>>(new Set())
   const [assignModalClientId, setAssignModalClientId] = useState<number | null>(null)
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false)
   const [showBulkTagModal, setShowBulkTagModal] = useState(false)
@@ -155,46 +247,57 @@ export function ClientManagementPage() {
     id: number
     name: string
   } | null>(null)
-  const prevSearchQueryRef = useRef(searchQuery)
-  const prevFiltersRef = useRef(filters)
-  const prevRowsPerPageRef = useRef(rowsPerPage)
-  const prevSortConfigRef = useRef(sortConfig)
+  const hasSetDefaultFilter = useRef(false)
 
-  // Debounce filters to avoid triggering API calls on every keystroke
-  const debouncedFilters = useDebounce(filters, 500)
+  // Set default "assigned to me" filter on initial load
+  useEffect(() => {
+    if (hasSetDefaultFilter.current || !user?.id) return
+
+    // Only apply default filter if no filters are already set (from URL or state)
+    const hasExistingFilters =
+      selectedPriorities.length > 0 ||
+      searchQuery !== '' ||
+      responsibleEmployeeFilter !== '' ||
+      portfolioFilter.length > 0 ||
+      statusFilter.length > 0
+
+    if (!hasExistingFilters) {
+      setResponsibleEmployeeFilter(user.id)
+    }
+
+    hasSetDefaultFilter.current = true
+    // Only run once when user is available
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id])
+
+  // NO need to debounce filters - useURLState already does this with 300ms debounce
+  // const filters = useDebounce(filters, 500)
+
+  // Toggle handler for priority card clicks
+  const handlePriorityToggle = (priority: Priority) => {
+    setSelectedPriorities((prev) => {
+      const newValue = prev.includes(priority)
+        ? prev.filter((p) => p !== priority)
+        : [...prev, priority]
+      return newValue
+    })
+  }
 
   // Convert frontend filters to API parameters
   const apiParams = useMemo(() => {
-    // Map frontend sort keys to backend sort fields
-    // Note: debt/amountOfDebt removed - total_debt is computed post-query and not sortable
-    const sortFieldMap: Record<string, string> = {
-      priority: 'priority_score',
-      score: 'priority_score',
-      fullName: 'first_name',
-      id: 'id',
-    }
-
     const params: Record<string, unknown> = {
       // Server-side pagination
       skip: (currentPage - 1) * rowsPerPage,
       limit: rowsPerPage,
-    }
-
-    // Add sorting parameters
-    if (sortConfig) {
-      const backendSortField = sortFieldMap[sortConfig.key] || 'priority_score'
-      params.sort_by = backendSortField
-      params.sort_order = sortConfig.order
-    } else {
-      // Default sort: priority_score DESC
-      params.sort_by = 'priority_score'
-      params.sort_order = 'desc'
+      // Sorting (always present with defaults)
+      sort_by: sortBy,
+      sort_order: sortOrder,
     }
 
     // FILTER 1: Portfolio/Sellers
     // Extract seller IDs from "Seller Name (ID)" format
-    if (debouncedFilters.portfolio && debouncedFilters.portfolio.length > 0) {
-      const sellerIds = debouncedFilters.portfolio
+    if (filters.portfolio && filters.portfolio.length > 0) {
+      const sellerIds = filters.portfolio
         .map((portfolio) => {
           // Extract ID from "Seller Name (ID)" format
           const match = portfolio.match(/\((\d+)\)$/)
@@ -209,71 +312,78 @@ export function ClientManagementPage() {
     }
 
     // FILTER 2: Sale Date Range (FIXED - correct parameter names)
-    if (debouncedFilters.dateOfSaleFrom) {
-      params.sale_date_from = debouncedFilters.dateOfSaleFrom
+    if (filters.dateOfSaleFrom) {
+      params.sale_date_from = filters.dateOfSaleFrom
     }
-    if (debouncedFilters.dateOfSaleTo) {
-      params.sale_date_to = debouncedFilters.dateOfSaleTo
+    if (filters.dateOfSaleTo) {
+      params.sale_date_to = filters.dateOfSaleTo
     }
 
     // FILTER 3: Assignment - Employee
-    if (debouncedFilters.responsibleEmployee) {
-      params.responsible_employee_id = parseInt(debouncedFilters.responsibleEmployee)
+    if (filters.responsibleEmployee) {
+      params.responsible_employee_id = parseInt(filters.responsibleEmployee)
     }
 
     // FILTER 4: Assignment - Searcher
-    if (debouncedFilters.responsibleSearcher) {
-      params.responsible_searcher_id = parseInt(debouncedFilters.responsibleSearcher)
+    if (filters.responsibleSearcher) {
+      params.responsible_searcher_id = parseInt(filters.responsibleSearcher)
     }
 
     // FILTER 5: Assignment - Unassigned Only
-    if (debouncedFilters.unassignedOnly) {
+    if (filters.unassignedOnly) {
       params.unassigned_only = true
     }
 
     // FILTER 6: Principal Amount
-    if (debouncedFilters.principalRangeFrom !== undefined) {
-      params.principal_min = debouncedFilters.principalRangeFrom
+    if (filters.principalRangeFrom !== undefined) {
+      params.principal_min = filters.principalRangeFrom
     }
-    if (debouncedFilters.principalRangeTo !== undefined) {
-      params.principal_max = debouncedFilters.principalRangeTo
+    if (filters.principalRangeTo !== undefined) {
+      params.principal_max = filters.principalRangeTo
     }
 
     // FILTER 7: Total Debt Amount
-    if (debouncedFilters.totalDebtRangeFrom !== undefined) {
-      params.total_debt_min = debouncedFilters.totalDebtRangeFrom
+    if (filters.totalDebtRangeFrom !== undefined) {
+      params.total_debt_min = filters.totalDebtRangeFrom
     }
-    if (debouncedFilters.totalDebtRangeTo !== undefined) {
-      params.total_debt_max = debouncedFilters.totalDebtRangeTo
+    if (filters.totalDebtRangeTo !== undefined) {
+      params.total_debt_max = filters.totalDebtRangeTo
     }
 
     // FILTER 8: Days Past Due
-    if (debouncedFilters.dpdRangeFrom !== undefined) {
-      params.dpd_min = debouncedFilters.dpdRangeFrom
+    if (filters.dpdRangeFrom !== undefined) {
+      params.dpd_min = filters.dpdRangeFrom
     }
-    if (debouncedFilters.dpdRangeTo !== undefined) {
-      params.dpd_max = debouncedFilters.dpdRangeTo
+    if (filters.dpdRangeTo !== undefined) {
+      params.dpd_max = filters.dpdRangeTo
     }
 
     // Existing filters (already working)
-    if (debouncedFilters.debtRangeFrom !== undefined) {
-      params.debt_min = debouncedFilters.debtRangeFrom
+    if (filters.debtRangeFrom !== undefined) {
+      params.debt_min = filters.debtRangeFrom
     }
-    if (debouncedFilters.debtRangeTo !== undefined) {
-      params.debt_max = debouncedFilters.debtRangeTo
+    if (filters.debtRangeTo !== undefined) {
+      params.debt_max = filters.debtRangeTo
     }
 
-    if (debouncedFilters.status && debouncedFilters.status.length > 0) {
-      params.status = debouncedFilters.status.join(',')
+    if (filters.status && filters.status.length > 0) {
+      params.status = filters.status.join(',')
     }
 
     // FILTER 9: Tags
-    if (debouncedFilters.tagIds && debouncedFilters.tagIds.length > 0) {
-      params.tag_ids = debouncedFilters.tagIds.join(',')
+    if (filters.tagIds && filters.tagIds.length > 0) {
+      params.tag_ids = filters.tagIds.join(',')
+    }
+
+    // FILTER 10: Priority
+    if (selectedPriorities.length > 0) {
+      // Map priority labels to lowercase for API
+      const priorityValues = selectedPriorities.map((p) => p.toLowerCase()).join(',')
+      params.priorities = priorityValues
     }
 
     return params
-  }, [debouncedFilters, currentPage, rowsPerPage, sortConfig])
+  }, [filters, currentPage, rowsPerPage, sortBy, sortOrder, selectedPriorities])
 
   // Fetch clients from API
   const { data: clientsResponse, isLoading, isFetching, isError, error } = useClients(apiParams)
@@ -296,41 +406,6 @@ export function ClientManagementPage() {
     return apiClients.map((client) => mapAPIClientToDisplay(client, thresholds))
   }, [apiClients, thresholds])
 
-  // Reset to page 1 when search query or filters change
-  useEffect(() => {
-    if (searchQuery !== prevSearchQueryRef.current) {
-      prevSearchQueryRef.current = searchQuery
-      startTransition(() => {
-        setCurrentPage(1)
-        setSelectedClients(new Set()) // Clear selection when search changes
-      })
-    }
-  }, [searchQuery])
-
-  // Reset to page 1 when filters, page size, or sort changes
-  useEffect(() => {
-    const filtersChanged =
-      JSON.stringify(debouncedFilters) !== JSON.stringify(prevFiltersRef.current)
-    const rowsPerPageChanged = rowsPerPage !== prevRowsPerPageRef.current
-    const sortConfigChanged =
-      JSON.stringify(sortConfig) !== JSON.stringify(prevSortConfigRef.current)
-
-    if (filtersChanged || rowsPerPageChanged || sortConfigChanged) {
-      prevFiltersRef.current = debouncedFilters
-      prevRowsPerPageRef.current = rowsPerPage
-      prevSortConfigRef.current = sortConfig
-      startTransition(() => {
-        setCurrentPage(1)
-        // Only clear selection when filters change, not when rows per page or sort changes
-        if (filtersChanged) {
-          setSelectedClients(new Set())
-          setAllClientsSelected(false)
-          setExcludedClients(new Set())
-        }
-      })
-    }
-  }, [debouncedFilters, rowsPerPage, sortConfig])
-
   // Count applied filters
   const appliedFiltersCount = useMemo(() => {
     let count = 0
@@ -346,8 +421,9 @@ export function ClientManagementPage() {
     if (filters.responsibleEmployee) count++
     if (filters.responsibleSearcher) count++
     if (filters.unassignedOnly) count++
+    if (selectedPriorities.length > 0) count++
     return count
-  }, [filters])
+  }, [filters, selectedPriorities])
 
   // Filter clients (search only - sorting and pagination handled server-side)
   const filteredClients = useMemo(() => {
@@ -424,7 +500,18 @@ export function ClientManagementPage() {
   }, [prioritySummaryData])
 
   const handleSort = (key: string, order: 'asc' | 'desc') => {
-    setSortConfig({ key, order })
+    // Map frontend sort keys to backend sort fields
+    const sortFieldMap: Record<string, string> = {
+      priority: 'priority_score',
+      score: 'priority_score',
+      fullName: 'first_name',
+      id: 'id',
+    }
+    const backendSortField = sortFieldMap[key] || key
+    setSortBy(backendSortField)
+    setSortOrder(order)
+    // Reset to page 1 when sort changes
+    setCurrentPage(1)
   }
 
   // Bulk selection handlers
@@ -620,31 +707,124 @@ export function ClientManagementPage() {
     // Don't clear selection when page changes - keep selections across pages
   }
 
+  // Handler to update filters from ClientFiltersBar
+  // Uses functional updates for array filters to avoid stale closure issues
+  const handleFilterChange = (
+    newFilters: ClientFilters & { _action?: string; _value?: string | number; _checked?: boolean }
+  ) => {
+    // Handle toggle actions with functional updates to avoid stale state
+    if (newFilters._action === 'togglePortfolio') {
+      const portfolio = newFilters._value as string
+      const checked = newFilters._checked as boolean
+      setPortfolioFilter((prev) =>
+        checked ? [...prev, portfolio] : prev.filter((p) => p !== portfolio)
+      )
+      setCurrentPage(1)
+      return
+    }
+
+    if (newFilters._action === 'toggleStatus') {
+      const status = newFilters._value as string
+      const checked = newFilters._checked as boolean
+      setStatusFilter((prev) => (checked ? [...prev, status] : prev.filter((s) => s !== status)))
+      setCurrentPage(1)
+      return
+    }
+
+    if (newFilters._action === 'toggleTag') {
+      const tagId = newFilters._value as number
+      const checked = newFilters._checked as boolean
+      setTagIdsFilter((prev) => (checked ? [...prev, tagId] : prev.filter((id) => id !== tagId)))
+      setCurrentPage(1)
+      return
+    }
+
+    // Handle regular filter updates (non-toggle actions)
+    // Only update if value has actually changed (use JSON.stringify for deep comparison)
+    if (JSON.stringify(newFilters.portfolio) !== JSON.stringify(portfolioFilter)) {
+      setPortfolioFilter(newFilters.portfolio || [])
+    }
+    if (JSON.stringify(newFilters.status) !== JSON.stringify(statusFilter)) {
+      setStatusFilter(newFilters.status || [])
+    }
+    if (JSON.stringify(newFilters.tagIds) !== JSON.stringify(tagIdsFilter)) {
+      setTagIdsFilter(newFilters.tagIds || [])
+    }
+    if (newFilters.responsibleEmployee !== responsibleEmployeeFilter) {
+      setResponsibleEmployeeFilter(newFilters.responsibleEmployee || '')
+    }
+    if (newFilters.responsibleSearcher !== responsibleSearcherFilter) {
+      setResponsibleSearcherFilter(newFilters.responsibleSearcher || '')
+    }
+    if (newFilters.unassignedOnly !== unassignedOnlyFilter) {
+      setUnassignedOnlyFilter(newFilters.unassignedOnly || false)
+    }
+    if (newFilters.dateOfSaleFrom !== dateOfSaleFromFilter) {
+      setDateOfSaleFromFilter(newFilters.dateOfSaleFrom || '')
+    }
+    if (newFilters.dateOfSaleTo !== dateOfSaleToFilter) {
+      setDateOfSaleToFilter(newFilters.dateOfSaleTo || '')
+    }
+    if (newFilters.debtRangeFrom !== debtRangeFromFilter) {
+      setDebtRangeFromFilter(newFilters.debtRangeFrom || 0)
+    }
+    if (newFilters.debtRangeTo !== debtRangeToFilter) {
+      setDebtRangeToFilter(newFilters.debtRangeTo || 0)
+    }
+    if (newFilters.principalRangeFrom !== principalRangeFromFilter) {
+      setPrincipalRangeFromFilter(newFilters.principalRangeFrom || 0)
+    }
+    if (newFilters.principalRangeTo !== principalRangeToFilter) {
+      setPrincipalRangeToFilter(newFilters.principalRangeTo || 0)
+    }
+    if (newFilters.totalDebtRangeFrom !== totalDebtRangeFromFilter) {
+      setTotalDebtRangeFromFilter(newFilters.totalDebtRangeFrom || 0)
+    }
+    if (newFilters.totalDebtRangeTo !== totalDebtRangeToFilter) {
+      setTotalDebtRangeToFilter(newFilters.totalDebtRangeTo || 0)
+    }
+    if (newFilters.dpdRangeFrom !== dpdRangeFromFilter) {
+      setDpdRangeFromFilter(newFilters.dpdRangeFrom || 0)
+    }
+    if (newFilters.dpdRangeTo !== dpdRangeToFilter) {
+      setDpdRangeToFilter(newFilters.dpdRangeTo || 0)
+    }
+
+    // Reset to page 1 when filters change
+    setCurrentPage(1)
+  }
+
   const handleClearAll = () => {
-    // Reset filters to initial state
-    setFilters({
-      // Clear all filter fields
-      debtRangeFrom: undefined,
-      debtRangeTo: undefined,
-      amountOfDebtRangeFrom: undefined,
-      amountOfDebtRangeTo: undefined,
-      dpdRangeFrom: undefined,
-      dpdRangeTo: undefined,
-      dateOfSaleFrom: undefined,
-      dateOfSaleTo: undefined,
-      portfolio: [],
-      status: [],
-      responsibleEmployee: undefined,
-      responsibleSearcher: undefined,
-    })
+    // Clear all URL state filters (useURLState will handle URL updates after debounce)
+    setSelectedPriorities([])
+    setPortfolioFilter([])
+    setStatusFilter([])
+    setTagIdsFilter([])
+    setResponsibleEmployeeFilter('')
+    setResponsibleSearcherFilter('')
+    setUnassignedOnlyFilter(false)
+    setDateOfSaleFromFilter('')
+    setDateOfSaleToFilter('')
+    setDebtRangeFromFilter(0)
+    setDebtRangeToFilter(0)
+    setPrincipalRangeFromFilter(0)
+    setPrincipalRangeToFilter(0)
+    setTotalDebtRangeFromFilter(0)
+    setTotalDebtRangeToFilter(0)
+    setDpdRangeFromFilter(0)
+    setDpdRangeToFilter(0)
 
     // Reset to first page
     setCurrentPage(1)
 
-    // Clear search params
-    const newParams = new URLSearchParams(searchParams)
-    newParams.delete('search')
-    newParams.delete('type')
+    // Reset sorting to defaults
+    setSortBy('priority_score')
+    setSortOrder('desc')
+
+    // Clear search query and type params (these don't use useURLState)
+    const newParams = new URLSearchParams()
+    // Preserve the URL params that useURLState is managing (will be cleared by setters above)
+    // Only remove search and type params that are managed separately
     setSearchParams(newParams)
   }
 
@@ -678,12 +858,12 @@ export function ClientManagementPage() {
       sortable: true,
       sortKey: 'fullName',
       render: (client) => (
-        <button
-          onClick={() => navigate(`/dashboard/${client.id}`)}
-          className="text-dark-500 cursor-pointer text-left"
+        <Link
+          to={`/dashboard/clients/${client.id}`}
+          className="text-dark-500 cursor-pointer text-left hover:underline"
         >
           {client.fullName}
-        </button>
+        </Link>
       ),
     },
     {
@@ -807,189 +987,197 @@ export function ClientManagementPage() {
   }
 
   return (
-    <div className="flex w-full flex-col items-start gap-4">
-      {/* Priority Overview Cards */}
-      <PriorityCards priorityStats={priorityStats} />
+    <TooltipProvider>
+      <div className="flex w-full flex-col items-start gap-4">
+        {/* Priority Overview Cards */}
+        <PriorityCards
+          priorityStats={priorityStats}
+          selected={selectedPriorities}
+          onToggle={handlePriorityToggle}
+        />
 
-      {/* List of Clients Section */}
-      <div className="flex items-center justify-between self-stretch">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-dark-500 text-center text-2xl leading-tight font-light tracking-[-0.48px]">
-              {t('pages.clients.listOfClients')}
-            </span>
-            <span className="text-center text-base leading-[155%] font-light tracking-[-0.32px] text-gray-700">
-              {totalCount}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center justify-end gap-5">
-          {appliedFiltersCount > 0 && (
-            <button
-              onClick={handleClearAll}
-              className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2.5 transition-colors hover:bg-white/10"
-            >
-              <Icons.Cancel01
-                size={20}
-                className="stroke-secondary-800 text-secondary-800"
-                strokeWidth={1.5}
-              />
-              <span className="text-center text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
-                {t('pages.clients.clearAll')}
-              </span>
-            </button>
-          )}
-          <button
-            onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-            className="flex flex-col items-start gap-2.5 rounded-lg bg-white px-5 py-3 shadow-sm"
-          >
+        {/* List of Clients Section */}
+        <div className="flex items-center justify-between self-stretch">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <Icons.FilterVertical size={20} className="text-gray-700" strokeWidth={1.5} />
-              <span className="text-dark-500 text-center text-xs leading-[140%] font-light tracking-[-0.24px]">
-                {t('pages.clients.filtersLabel')}{' '}
-                <span className="font-medium">
-                  ({appliedFiltersCount} {t('pages.clients.applied')})
-                </span>
+              <span className="text-dark-500 text-center text-2xl leading-tight font-light tracking-[-0.48px]">
+                {t('pages.clients.listOfClients')}
               </span>
-              <span className={`transition-transform ${isFiltersOpen ? 'rotate-180' : ''}`}>
-                <Icons.ArrowUp size={18} className="text-dark-500" strokeWidth={1.5} />
+              <span className="text-center text-base leading-[155%] font-light tracking-[-0.32px] text-gray-700">
+                {totalCount}
               </span>
             </div>
-          </button>
-        </div>
-      </div>
-
-      {/* Filters Bar */}
-      {isFiltersOpen && <ClientFiltersBar filters={filters} onFilterChange={setFilters} />}
-
-      {/* Data Table - Show skeleton when fetching */}
-      {isFetching && !isLoading ? (
-        <div className="flex flex-col items-start gap-8 self-stretch">
-          <TableSkeleton columns={columns.length + 1} rows={rowsPerPage} className="w-full" />
-        </div>
-      ) : (
-        <DataTable
-          columns={columns}
-          data={filteredClients}
-          sortConfig={sortConfig}
-          onSort={handleSort}
-          emptyMessage={t('pages.clients.noClientsFound')}
-          className="flex flex-col items-start self-stretch"
-          enableBulkSelection
-          selectedItems={selectedClients}
-          onSelectionChange={handleSelectionChange}
-          totalCount={totalCount}
-          onSelectAll={handleSelectAll}
-          allItemsSelected={allClientsSelected}
-          excludedItemsCount={excludedClients.size}
-          excludedItems={excludedClients}
-          headerActions={
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="primary" size="sm" className="h-10 gap-2 rounded-lg px-4">
-                  <Icons.Settings size={18} className="text-dark-500" strokeWidth={1.5} />
-                  <span className="text-sm font-medium">Bulk Actions</span>
-                  <Icons.ArrowDown size={16} className="text-dark-500" strokeWidth={1.5} />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+          </div>
+          <div className="flex items-center justify-end gap-5">
+            {appliedFiltersCount > 0 && (
+              <button
+                onClick={handleClearAll}
+                className="flex items-center gap-2 rounded-full bg-white/5 px-4 py-2.5 transition-colors hover:bg-white/10"
               >
-                <DropdownMenuItem
-                  onClick={handleBulkAssign}
-                  className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
-                >
-                  <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
-                  <span className="text-dark-500 text-sm font-medium">
-                    {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
+                <Icons.Cancel01
+                  size={20}
+                  className="stroke-secondary-800 text-secondary-800"
+                  strokeWidth={1.5}
+                />
+                <span className="text-center text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
+                  {t('pages.clients.clearAll')}
+                </span>
+              </button>
+            )}
+            <button
+              onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+              className="flex flex-col items-start gap-2.5 rounded-lg bg-white px-5 py-3 shadow-sm"
+            >
+              <div className="flex items-center gap-2">
+                <Icons.FilterVertical size={20} className="text-gray-700" strokeWidth={1.5} />
+                <span className="text-dark-500 text-center text-xs leading-[140%] font-light tracking-[-0.24px]">
+                  {t('pages.clients.filtersLabel')}{' '}
+                  <span className="font-medium">
+                    ({appliedFiltersCount} {t('pages.clients.applied')})
                   </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={handleBulkAddTags}
-                  className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
-                >
-                  <Icons.PlusSignCircle size={18} className="text-dark-500" strokeWidth={1.5} />
-                  <span className="text-dark-500 text-sm font-medium">
-                    {t('pages.clients.bulkActions.addTags', 'Add Tags')}
-                  </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={handleBulkRemoveTags}
-                  className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
-                >
-                  <Icons.Remove02 size={18} className="text-dark-500" strokeWidth={1.5} />
-                  <span className="text-dark-500 text-sm font-medium">
-                    {t('pages.clients.bulkActions.removeTags', 'Remove Tags')}
-                  </span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          }
-        />
-      )}
-
-      {/* Pagination */}
-      {!isFetching && (
-        <div className="flex flex-col items-center gap-8 self-stretch">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            pageSize={rowsPerPage}
-            pageSizeOptions={[10, 20, 50, 100]}
-            onPageChange={handlePageChange}
-            onPageSizeChange={setRowsPerPage}
-          />
+                </span>
+                <span className={`transition-transform ${isFiltersOpen ? 'rotate-180' : ''}`}>
+                  <Icons.ArrowUp size={18} className="text-dark-500" strokeWidth={1.5} />
+                </span>
+              </div>
+            </button>
+          </div>
         </div>
-      )}
 
-      {/* Assign Client Modal */}
-      <AssignClientModal
-        open={assignModalClientId !== null}
-        clientId={assignModalClientId}
-        onClose={() => setAssignModalClientId(null)}
-        onAssign={handleAssignSubmit}
-      />
+        {/* Filters Bar */}
+        {isFiltersOpen && (
+          <ClientFiltersBar filters={filters} onFilterChange={handleFilterChange} />
+        )}
 
-      {/* Bulk Assign Client Modal */}
-      <BulkAssignClientModal
-        open={showBulkAssignModal}
-        selectedClientIds={selectedClients}
-        selectedClients={selectedClientsData}
-        totalSelectedCount={totalSelectedCount}
-        onClose={() => setShowBulkAssignModal(false)}
-        onAssign={handleBulkAssignSubmit}
-      />
+        {/* Data Table - Show skeleton when fetching */}
+        {isFetching && !isLoading ? (
+          <div className="flex flex-col items-start gap-8 self-stretch">
+            <TableSkeleton columns={columns.length + 1} rows={rowsPerPage} className="w-full" />
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={filteredClients}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+            emptyMessage={t('pages.clients.noClientsFound')}
+            className="flex flex-col items-start self-stretch"
+            enableBulkSelection
+            selectedItems={selectedClients}
+            onSelectionChange={handleSelectionChange}
+            totalCount={totalCount}
+            onSelectAll={handleSelectAll}
+            allItemsSelected={allClientsSelected}
+            excludedItemsCount={excludedClients.size}
+            excludedItems={excludedClients}
+            headerActions={
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="primary" size="sm" className="h-10 gap-2 rounded-lg px-4">
+                    <Icons.Settings size={18} className="text-dark-500" strokeWidth={1.5} />
+                    <span className="text-sm font-medium">Bulk Actions</span>
+                    <Icons.ArrowDown size={16} className="text-dark-500" strokeWidth={1.5} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+                >
+                  <DropdownMenuItem
+                    onClick={handleBulkAssign}
+                    className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                  >
+                    <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                    <span className="text-dark-500 text-sm font-medium">
+                      {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
+                    </span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleBulkAddTags}
+                    className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                  >
+                    <Icons.PlusSignCircle size={18} className="text-dark-500" strokeWidth={1.5} />
+                    <span className="text-dark-500 text-sm font-medium">
+                      {t('pages.clients.bulkActions.addTags', 'Add Tags')}
+                    </span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleBulkRemoveTags}
+                    className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                  >
+                    <Icons.Remove02 size={18} className="text-dark-500" strokeWidth={1.5} />
+                    <span className="text-dark-500 text-sm font-medium">
+                      {t('pages.clients.bulkActions.removeTags', 'Remove Tags')}
+                    </span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            }
+          />
+        )}
 
-      {/* Tag Selector Modal */}
-      {selectedClientForTags && (
-        <TagSelectorModal
-          open={tagModalOpen}
-          clientId={selectedClientForTags.id}
-          clientName={selectedClientForTags.name}
-          projectId={1}
-          onClose={() => {
-            setTagModalOpen(false)
-            setSelectedClientForTags(null)
-          }}
+        {/* Pagination */}
+        {!isFetching && (
+          <div className="flex flex-col items-center gap-8 self-stretch">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={rowsPerPage}
+              pageSizeOptions={[10, 20, 50, 100]}
+              onPageChange={handlePageChange}
+              onPageSizeChange={setRowsPerPage}
+            />
+          </div>
+        )}
+
+        {/* Assign Client Modal */}
+        <AssignClientModal
+          open={assignModalClientId !== null}
+          clientId={assignModalClientId}
+          onClose={() => setAssignModalClientId(null)}
+          onAssign={handleAssignSubmit}
         />
-      )}
 
-      {/* Bulk Tag Modal */}
-      <BulkTagModal
-        open={showBulkTagModal}
-        clientIds={
-          allClientsSelected
-            ? apiClients
-                .filter((client) => !excludedClients.has(client.id))
-                .map((client) => client.id)
-            : Array.from(selectedClients).map(Number)
-        }
-        clientCount={totalSelectedCount}
-        action={bulkTagAction}
-        onClose={() => setShowBulkTagModal(false)}
-      />
-    </div>
+        {/* Bulk Assign Client Modal */}
+        <BulkAssignClientModal
+          open={showBulkAssignModal}
+          selectedClientIds={selectedClients}
+          selectedClients={selectedClientsData}
+          totalSelectedCount={totalSelectedCount}
+          onClose={() => setShowBulkAssignModal(false)}
+          onAssign={handleBulkAssignSubmit}
+        />
+
+        {/* Tag Selector Modal */}
+        {selectedClientForTags && (
+          <TagSelectorModal
+            open={tagModalOpen}
+            clientId={selectedClientForTags.id}
+            clientName={selectedClientForTags.name}
+            projectId={1}
+            onClose={() => {
+              setTagModalOpen(false)
+              setSelectedClientForTags(null)
+            }}
+          />
+        )}
+
+        {/* Bulk Tag Modal */}
+        <BulkTagModal
+          open={showBulkTagModal}
+          clientIds={
+            allClientsSelected
+              ? apiClients
+                  .filter((client) => !excludedClients.has(client.id))
+                  .map((client) => client.id)
+              : Array.from(selectedClients).map(Number)
+          }
+          clientCount={totalSelectedCount}
+          action={bulkTagAction}
+          onClose={() => setShowBulkTagModal(false)}
+        />
+      </div>
+    </TooltipProvider>
   )
 }
 

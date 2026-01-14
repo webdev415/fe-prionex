@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { useURLState } from '@/hooks/useURLState'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
@@ -111,21 +112,42 @@ function ImportStatusBadge({
 export function ImportHistoryPage() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
-  const [currentPage, setCurrentPage] = useState(1)
-  const [rowsPerPage, setRowsPerPage] = useState(10) // Change from constant to state
-  const [sortConfig, setSortConfig] = useState<SortConfig | undefined>(undefined)
+
+  // URL state for pagination
+  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
+  const [rowsPerPage, setRowsPerPage] = useURLState<number>('pageSize', 10)
+
+  // URL state for sorting
+  const [sortBy, setSortBy] = useURLState<string>('sort_by', '')
+  const [sortOrder, setSortOrder] = useURLState<'asc' | 'desc'>('sort_order', 'asc')
+
+  // URL state for all filter fields
+  const [searchFilenameFilter, setSearchFilenameFilter] = useURLState<string>('search', '')
+  const [dateRangeFilter, setDateRangeFilter] = useURLState<string>('date_range', '')
+  const [statusFilter, setStatusFilter] = useURLState<string>('status', '')
+  const [uploadedByFilter, setUploadedByFilter] = useURLState<string>('uploaded_by', '')
+
+  // Reconstruct filters object from URL state
+  const filters = useMemo<ImportHistoryFilters>(
+    () => ({
+      searchFilename: searchFilenameFilter || undefined,
+      dateRange: dateRangeFilter || undefined,
+      status: statusFilter || undefined,
+      uploadedBy: uploadedByFilter || undefined,
+    }),
+    [searchFilenameFilter, dateRangeFilter, statusFilter, uploadedByFilter]
+  )
+
+  // Reconstruct sortConfig from URL state
+  const sortConfig = useMemo<SortConfig | undefined>(
+    () => (sortBy ? { key: sortBy, order: sortOrder } : undefined),
+    [sortBy, sortOrder]
+  )
+
   const [selectedJobId, setSelectedJobId] = useState<number | string | null>(null)
 
   // Export errors mutation
   const exportErrorsMutation = useExportImportErrors()
-
-  // Filter state - using the same pattern as SearchFiltersBar
-  const [filters, setFilters] = useState<ImportHistoryFilters>({
-    searchFilename: undefined,
-    dateRange: undefined,
-    status: undefined,
-    uploadedBy: undefined,
-  })
 
   // Track previous filter values to detect changes
   const prevFiltersRef = useRef(filters)
@@ -311,7 +333,14 @@ export function ImportHistoryPage() {
         setCurrentPage(1)
       }, 0)
     }
-  }, [filters.searchFilename, filters.dateRange, filters.status, filters.uploadedBy, filters])
+  }, [
+    filters.searchFilename,
+    filters.dateRange,
+    filters.status,
+    filters.uploadedBy,
+    filters,
+    setCurrentPage,
+  ])
 
   // Ensure current page doesn't exceed total pages when data changes
   useEffect(() => {
@@ -321,10 +350,11 @@ export function ImportHistoryPage() {
         setCurrentPage(1)
       }, 0)
     }
-  }, [maxPage, currentPage])
+  }, [maxPage, currentPage, setCurrentPage])
 
   const handleSort = (key: string, order: 'asc' | 'desc') => {
-    setSortConfig({ key, order })
+    setSortBy(key)
+    setSortOrder(order)
     // Don't reset page when sorting - keep current page if possible
   }
 
@@ -354,10 +384,17 @@ export function ImportHistoryPage() {
     }
   }
 
-  const handleFilterChange = useCallback((newFilters: ImportHistoryFilters) => {
-    setFilters(newFilters)
-    // Page reset is handled by useEffect above
-  }, [])
+  const handleFilterChange = useCallback(
+    (newFilters: ImportHistoryFilters) => {
+      // Update individual URL state for each filter field
+      setSearchFilenameFilter(newFilters.searchFilename || '')
+      setDateRangeFilter(newFilters.dateRange || '')
+      setStatusFilter(newFilters.status || '')
+      setUploadedByFilter(newFilters.uploadedBy || '')
+      // Page reset is handled by useEffect above
+    },
+    [setSearchFilenameFilter, setDateRangeFilter, setStatusFilter, setUploadedByFilter]
+  )
 
   const handleClearFilters = useCallback(() => {
     const clearedFilters: ImportHistoryFilters = {
@@ -366,11 +403,22 @@ export function ImportHistoryPage() {
       status: undefined,
       uploadedBy: undefined,
     }
-    setFilters(clearedFilters)
+    // Update individual URL state for each filter field
+    setSearchFilenameFilter('')
+    setDateRangeFilter('')
+    setStatusFilter('')
+    setUploadedByFilter('')
     setCurrentPage(1)
     // Explicitly trigger filter change to ensure child component syncs
     handleFilterChange(clearedFilters)
-  }, [handleFilterChange])
+  }, [
+    handleFilterChange,
+    setSearchFilenameFilter,
+    setDateRangeFilter,
+    setStatusFilter,
+    setUploadedByFilter,
+    setCurrentPage,
+  ])
 
   const handleGoToImportClients = useCallback(() => {
     navigate('/dashboard/import')
