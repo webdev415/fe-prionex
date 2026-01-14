@@ -26,6 +26,7 @@ import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
 import { useSMSHistory } from '@/features/sms'
 import { useCallStore } from '@/stores/callStore'
 import { useClientTags } from '@/features/tags/hooks/useTags'
+import { TagSelectorModal } from './components/TagSelectorModal'
 
 // Helper function to create mock client detail
 const createMockClientDetail = (
@@ -930,6 +931,7 @@ export function ClientDetailPage() {
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
   const [isCallRecordingModalOpen, setIsCallRecordingModalOpen] = useState(false)
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false)
   const [selectedCallData, setSelectedCallData] = useState<{
     type: string
     clientName: string
@@ -1368,16 +1370,27 @@ export function ClientDetailPage() {
           {/* Credit Details (top part of card) */}
           <div className="flex flex-col items-start gap-3 self-stretch px-6 py-5">
             <div className="flex flex-col gap-2 self-stretch">
-              <div className="flex flex-wrap items-center gap-2 self-stretch">
-                {clientTags && clientTags.length > 0 ? (
-                  clientTags.map((tag) => (
-                    <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
-                  ))
-                ) : (
-                  <span className="text-sm text-gray-500">No tags assigned</span>
-                )}
+              <div className="flex items-center justify-between gap-2 self-stretch">
+                <div className="flex flex-1 flex-wrap items-center gap-2">
+                  {clientTags && clientTags.length > 0 ? (
+                    clientTags.map((tag) => (
+                      <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
+                    ))
+                  ) : (
+                    <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                      No tags assigned
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setIsTagModalOpen(true)}
+                  className="text-gray-500 transition-colors hover:text-gray-700"
+                  title="Manage tags"
+                  type="button"
+                >
+                  <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
+                </button>
               </div>
-              <p className="text-xs text-gray-500">Tags can be managed from the client list page</p>
             </div>
             <div className="flex flex-col gap-1 self-stretch">
               <div className="flex min-h-8 items-center self-stretch p-0">
@@ -2614,6 +2627,15 @@ export function ClientDetailPage() {
         onSent={() => {
           // SMS sent successfully - history will refresh automatically via query invalidation
         }}
+      />
+
+      {/* Tag Selector Modal */}
+      <TagSelectorModal
+        open={isTagModalOpen}
+        clientId={clientId}
+        clientName={client.fullName}
+        projectId={1}
+        onClose={() => setIsTagModalOpen(false)}
       />
     </div>
   )
