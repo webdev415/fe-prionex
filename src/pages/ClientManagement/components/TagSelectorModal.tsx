@@ -153,7 +153,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
                 filteredTags.map((tag) => (
                   <label
                     key={tag.id}
-                    className="flex cursor-pointer items-center gap-3 rounded p-2 hover:bg-gray-50"
+                    className="flex cursor-pointer items-center gap-3 rounded p-2"
                   >
                     <Checkbox
                       checked={selectedTagIds.has(tag.id)}
