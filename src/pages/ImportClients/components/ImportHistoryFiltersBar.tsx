@@ -5,8 +5,9 @@
  * Follows the same pattern and styling as SearchFiltersBar from ProjectManagement.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSyncedState } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import {
   Select,
@@ -37,19 +38,9 @@ export function ImportHistoryFiltersBar({
   isLoading = false,
 }: ImportHistoryFiltersBarProps) {
   const { t } = useTranslation('common')
-  const [searchValue, setSearchValue] = useState(filters.searchFilename || '')
-  const prevSearchFilenameRef = useRef(filters.searchFilename)
 
-  // Sync searchValue with filters when filters change externally (e.g., clear filters)
-  useEffect(() => {
-    if (prevSearchFilenameRef.current !== filters.searchFilename) {
-      prevSearchFilenameRef.current = filters.searchFilename
-      // Use setTimeout to avoid synchronous setState in effect
-      setTimeout(() => {
-        setSearchValue(filters.searchFilename || '')
-      }, 0)
-    }
-  }, [filters.searchFilename])
+  // Use synced state for search input - automatically syncs with external changes (URL restoration)
+  const [searchValue, setSearchValue] = useSyncedState(filters.searchFilename, '')
 
   // Debounce search input
   useEffect(() => {

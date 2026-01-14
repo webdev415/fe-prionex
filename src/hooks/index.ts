@@ -12,7 +12,8 @@ export { usePermissionRefresh } from './usePermissionRefresh'
 export { useURLState, type UseURLStateOptions } from './useURLState'
 
 export {
-  usePersistedURLState,
   useAutoPersistedState,
-  hasActiveFilters,
+  useSyncedState,
+  detectPeriodFromDates,
+  persistedStateStorage,
 } from './usePersistedURLState'

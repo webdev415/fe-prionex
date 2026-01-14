@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSyncedState } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import {
@@ -43,17 +44,44 @@ export function SearchFiltersBar({
   isLoading = false,
 }: SearchFiltersBarProps) {
   const { t } = useTranslation('common')
-  const [searchValue, setSearchValue] = useState(filters.search || '')
-  const [period, setPeriod] = useState<PeriodOption>('any')
+
+  // Use synced state for search input - automatically syncs with external changes (URL restoration)
+  const [searchValue, setSearchValue] = useSyncedState(filters.search, '')
+
+  // Detect period from restored date filters
+  const initialPeriod = useMemo((): PeriodOption => {
+    if (!filters.date_from || !filters.date_to) return 'any'
+
+    const start = new Date(filters.date_from)
+    const end = new Date(filters.date_to)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const daysDiff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+    const isEndToday = end.toDateString() === today.toDateString()
+
+    if (daysDiff === 0 && isEndToday) return 'today'
+    if (daysDiff === 0) {
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+      if (start.toDateString() === yesterday.toDateString()) return 'yesterday'
+    }
+    if (daysDiff === 7 && isEndToday) return 'last_7'
+    if (daysDiff === 30 && isEndToday) return 'last_30'
+
+    return 'any'
+  }, [filters.date_from, filters.date_to])
+
+  const [period, setPeriod] = useState<PeriodOption>(initialPeriod)
   const [localFilters, setLocalFilters] = useState<AuditLogFilters>(filters)
   const [isFiltersDropdownOpen, setIsFiltersDropdownOpen] = useState(false)
 
-  // Update local filters when props change
+  // Sync local filters and period when props change externally (URL restoration)
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setLocalFilters(filters)
-    setSearchValue(filters.search || '')
-  }, [filters])
+    setPeriod(initialPeriod)
+  }, [filters, initialPeriod])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Close filters dropdown when screen size crosses breakpoint
@@ -201,7 +229,7 @@ export function SearchFiltersBar({
     }
     setLocalFilters(clearedFilters)
     onFilterChange(clearedFilters)
-  }, [onFilterChange])
+  }, [onFilterChange, setSearchValue])
 
   // Memoize date values to prevent unnecessary re-renders and ensure proper date comparison
   const dateFromValue = useMemo(() => {

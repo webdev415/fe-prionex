@@ -5,8 +5,9 @@
  * Includes search input, status filter, client filter, and period filter.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSyncedState } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import {
@@ -44,10 +45,40 @@ export function SearchFiltersBar({
   isLoading = false,
 }: SearchFiltersBarProps) {
   const { t } = useTranslation('common')
-  const [searchValue, setSearchValue] = useState(filters.search || '')
-  const [period, setPeriod] = useState<PeriodOption>('any')
+
+  // Use synced state for search input - automatically syncs with external changes (URL restoration)
+  const [searchValue, setSearchValue] = useSyncedState(filters.search, '')
+
+  // Detect period from restored date filters
+  const initialPeriod = useMemo((): PeriodOption => {
+    if (!filters.start_date_from || !filters.start_date_to) return 'any'
+
+    const start = new Date(filters.start_date_from)
+    const end = new Date(filters.start_date_to)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const daysDiff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+    const isEndToday = end.toDateString() === today.toDateString()
+
+    if (!isEndToday) return 'any'
+    if (daysDiff === 30) return 'last_30_days'
+    if (daysDiff === 90) return 'last_90_days'
+
+    const yearStart = new Date(today.getFullYear(), 0, 1)
+    if (start.toDateString() === yearStart.toDateString()) return 'this_year'
+
+    return 'any'
+  }, [filters.start_date_from, filters.start_date_to])
+
+  const [period, setPeriod] = useState<PeriodOption>(initialPeriod)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [isFiltersDropdownOpen, setIsFiltersDropdownOpen] = useState(false)
+
+  // Sync period when dates change externally (URL restoration)
+  useEffect(() => {
+    setPeriod(initialPeriod)
+  }, [initialPeriod])
 
   // Debounce search input
   useEffect(() => {
