@@ -15,6 +15,9 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { cn } from '@/lib/utils'
+import { useAuditLogs, exportAuditLogs } from '@/features/audit'
+import type { AuditLogResponse } from '@/features/audit/api/types'
+import { toast } from 'sonner'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -73,27 +76,157 @@ export function AuditLogsPage() {
   const { t } = useTranslation('common')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+  const [filters, setFilters] = useState<AuditLogFilters>({})
 
-  // Calculate initial date range from mock data dates
-  // Dates in mock data: 2025-11-17 to 2025-11-18
-  const initialDateRange = useMemo(() => {
-    const mockTimestamps = [
-      new Date('2025-11-18T10:30:45'),
-      new Date('2025-11-18T09:15:22'),
-      new Date('2025-11-18T08:45:10'),
-      new Date('2025-11-18T07:20:33'),
-      new Date('2025-11-17T16:55:12'),
-    ]
-    const dates = mockTimestamps.map((d) => d.getTime())
-    const minDate = new Date(Math.min(...dates))
-    const maxDate = new Date(Math.max(...dates))
+  // Convert backend filters to API params
+  const apiParams = useMemo(() => {
+    const params: Record<string, unknown> = {
+      page: currentPage,
+      limit: pageSize,
+    }
+
+    if (filters.date_from) params.from_date = filters.date_from
+    if (filters.date_to) params.to_date = filters.date_to
+    if (filters.entity_type) params.resource_type = filters.entity_type.toLowerCase()
+    if (filters.action) params.action = filters.action.toLowerCase()
+    if (filters.status === 'success') params.success = true
+    if (filters.status === 'failed') params.success = false
+
+    // Handle user filter - try to parse as user_id if numeric, otherwise use username
+    if (filters.user) {
+      const userId = parseInt(filters.user, 10)
+      if (!isNaN(userId)) {
+        params.user_id = userId
+      }
+    }
+
+    // Handle search - map to resource_id if numeric, otherwise use resource_identifier
+    if (filters.search) {
+      const resourceId = parseInt(filters.search, 10)
+      if (!isNaN(resourceId)) {
+        params.resource_id = resourceId
+      } else {
+        params.resource_identifier = filters.search
+      }
+    }
+
+    return params
+  }, [filters, currentPage, pageSize])
+
+  // Fetch audit logs from API
+  // React Query will automatically refetch when apiParams changes (including page changes)
+  // The query key includes all params, so changing currentPage will trigger a new request
+  const { data: auditData, isLoading, error } = useAuditLogs(apiParams)
+
+  // Map backend response to frontend AuditLog type
+  const mapAuditLogResponse = useCallback((log: AuditLogResponse): AuditLog => {
+    // Extract entity name from resource_name (new field) or record_after/record_before
+    let entityName: string | undefined
+    // First check resource_name field (new field from backend)
+    if (log.resource_name) {
+      entityName = log.resource_name
+    }
+    // Fallback to record_after or record_before
+    if (!entityName && log.record_after) {
+      const record = log.record_after as Record<string, unknown>
+      entityName =
+        (record.full_name as string) ||
+        (record.name as string) ||
+        (record.client_name as string) ||
+        (record.username as string) ||
+        (record.email as string)
+    }
+    if (!entityName && log.record_before) {
+      const record = log.record_before as Record<string, unknown>
+      entityName =
+        (record.full_name as string) ||
+        (record.name as string) ||
+        (record.client_name as string) ||
+        (record.username as string) ||
+        (record.email as string)
+    }
+
+    // Map changes to AuditLogChange format
+    const changes: AuditLogChange[] = []
+    if (log.changes) {
+      Object.entries(log.changes).forEach(([field, change]) => {
+        const changeObj = change as { old?: unknown; new?: unknown }
+        let changeType: 'Added' | 'Modified' | 'Removed' | undefined
+        if (changeObj.old === null || changeObj.old === undefined) {
+          changeType = 'Added'
+        } else if (changeObj.new === null || changeObj.new === undefined) {
+          changeType = 'Removed'
+        } else {
+          changeType = 'Modified'
+        }
+
+        changes.push({
+          field_name: field,
+          old_value: changeObj.old ? String(changeObj.old) : null,
+          new_value: changeObj.new ? String(changeObj.new) : null,
+          change_type: changeType,
+        })
+      })
+    }
+
+    // Extract reason from multiple sources: record_after, record_before, or details
+    let reason: string | undefined
+    // First check record_after (backend stores details here)
+    if (log.record_after && typeof log.record_after === 'object') {
+      const details = log.record_after as Record<string, unknown>
+      reason = (details.reason as string) || (details.message as string) || undefined
+    }
+    // Then check record_before
+    if (!reason && log.record_before && typeof log.record_before === 'object') {
+      const details = log.record_before as Record<string, unknown>
+      reason = (details.reason as string) || (details.message as string) || undefined
+    }
+    // Also check details field directly (some services only send details, not record_after/before)
+    if (!reason && log.details && typeof log.details === 'object') {
+      const details = log.details as Record<string, unknown>
+      reason = (details.reason as string) || (details.message as string) || undefined
+    }
+    // Also check if record_after itself is a string (some cases)
+    if (!reason && typeof log.record_after === 'string') {
+      reason = log.record_after
+    }
+
+    // Map action to display format
+    const actionDisplay =
+      log.action.split('.').pop()?.toUpperCase().replace(/_/g, ' ') || log.action
+
     return {
-      date_from: minDate.toISOString().slice(0, 10),
-      date_to: maxDate.toISOString().slice(0, 10),
+      id: log.id,
+      timestamp: log.timestamp,
+      status: log.success ? 'success' : 'failed',
+      user_id: log.user_id ?? undefined,
+      username: log.username || 'unknown',
+      role: log.user_role ?? undefined,
+      action: actionDisplay,
+      entity_type: log.resource_type,
+      entity_id: log.resource_id?.toString() || log.resource_identifier || undefined,
+      entity_name: entityName,
+      ip_address: log.ip_address ?? undefined,
+      session_id: log.session_id ?? undefined,
+      project_id: log.project_id ?? undefined,
+      changes: changes.length > 0 ? changes : undefined,
+      http_method: log.request_method ?? undefined,
+      api_path: log.request_path ?? undefined,
+      response_status: log.response_status
+        ? `${log.response_status} ${log.response_status < 300 ? 'OK' : 'Error'}`
+        : undefined,
+      response_time: log.response_time ?? undefined,
+      user_agent: log.user_agent ?? undefined,
+      reason,
     }
   }, [])
 
-  const [filters, setFilters] = useState<AuditLogFilters>(initialDateRange)
+  // Convert API response to frontend format
+  const auditLogs: AuditLog[] = useMemo(() => {
+    if (!auditData?.logs) return []
+    return auditData.logs.map(mapAuditLogResponse)
+  }, [auditData, mapAuditLogResponse])
+
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: 'timestamp',
     order: 'desc',
@@ -158,8 +291,47 @@ export function AuditLogsPage() {
         const attempts = log.login_attempts || 1
         return `IP: ${log.ip_address}${attempts > 1 ? `\n(${attempts} attempts)` : ''}`
       }
-      if (log.action === 'IMPORT' && log.reason) {
-        return `CSV: ${log.entity_id || 'N/A'} - ${log.reason}`
+      // Handle import events (action will be "STARTED", "COMPLETED", "FILE UPLOADED", etc. after transformation)
+      if (log.entity_type === 'import_job' && log.reason) {
+        return log.reason
+      }
+      // Handle import events by checking if action contains import-related keywords
+      if (
+        (log.action.includes('IMPORT') ||
+          log.action === 'STARTED' ||
+          log.action === 'COMPLETED' ||
+          log.action === 'FILE UPLOADED' ||
+          log.action === 'FAILED') &&
+        log.entity_type === 'import_job' &&
+        log.reason
+      ) {
+        return log.reason
+      }
+      // Handle scoring events (RUN STARTED, RUN COMPLETED, RUN FAILED)
+      if (log.entity_type === 'score' && log.reason) {
+        return log.reason
+      }
+      if (
+        (log.action === 'RUN STARTED' ||
+          log.action === 'RUN COMPLETED' ||
+          log.action === 'RUN FAILED') &&
+        log.entity_type === 'score' &&
+        log.reason
+      ) {
+        return log.reason
+      }
+      // Handle auth events (LOGIN SUCCESS, LOGIN FAILED, LOGOUT)
+      if (log.entity_type === 'auth' && log.reason) {
+        return log.reason
+      }
+      if (
+        (log.action === 'LOGIN SUCCESS' ||
+          log.action === 'LOGIN FAILED' ||
+          log.action === 'LOGOUT') &&
+        log.entity_type === 'auth' &&
+        log.reason
+      ) {
+        return log.reason
       }
       return log.reason || '—'
     },
@@ -179,171 +351,29 @@ export function AuditLogsPage() {
     if (log.action === 'LOGIN_FAILED' && log.reason) {
       return log.reason // e.g., "Invalid password"
     }
+    // For import jobs, show filename if available (from resource_name)
+    if (log.entity_type === 'import_job' && log.entity_name) {
+      return log.entity_name // This will be the filename from resource_name
+    }
+    // For scoring events, show resource name if available (e.g., "Project 1")
+    if (log.entity_type === 'score' && log.entity_name) {
+      return log.entity_name // This will be the project name from resource_name
+    }
+    // For auth events, show username if available (from resource_name)
+    if (log.entity_type === 'auth' && log.entity_name) {
+      return log.entity_name // This will be the username from resource_name
+    }
     if (log.entity_type) {
       return log.entity_type.charAt(0).toUpperCase() + log.entity_type.slice(1)
     }
     return '—'
   }, [])
 
-  // Mock data - replace with actual API call
-  const mockAuditLogs: AuditLog[] = useMemo(
-    () => [
-      {
-        id: 1,
-        timestamp: new Date('2025-11-18T10:30:45').toISOString(),
-        status: 'success',
-        user_id: 42,
-        username: 'maria_s',
-        role: 'Operator',
-        action: 'UPDATE',
-        entity_type: 'client',
-        entity_id: '5678',
-        entity_name: 'Олена Коваленко',
-        field_name: 'debt_amount',
-        old_value: '25000',
-        new_value: '20000',
-        reason: 'Payment received',
-        ip_address: '192.168.1.100',
-        session_id: 'sess_abc123',
-        project_id: 1,
-        http_method: 'PUT',
-        api_path: '/api/clients/5678',
-        response_status: '200 OK',
-        response_time: 245,
-        user_agent: 'Chrome 120.0 (Windows 10)',
-        changes: [
-          {
-            field_name: 'debt_amount',
-            old_value: '25000',
-            new_value: '20000',
-            change_type: 'Modified',
-            calculated_change: '-5,000.00 UAH',
-          },
-          {
-            field_name: 'phone_secondary',
-            old_value: null,
-            new_value: '+380931234567',
-            change_type: 'Added',
-          },
-          {
-            field_name: 'notes',
-            old_value: 'Client prefers morning calls',
-            new_value: 'Payment received. New phone verified.',
-            change_type: 'Modified',
-          },
-        ],
-      },
-      {
-        id: 2,
-        timestamp: new Date('2025-11-18T09:15:22').toISOString(),
-        status: 'success',
-        user_id: 1,
-        username: 'admin',
-        role: 'Admin',
-        action: 'CREATE',
-        entity_type: 'user',
-        entity_id: 'ivan_d',
-        entity_name: 'Project A',
-        new_value: 'Operator',
-        ip_address: '192.168.1.50',
-        session_id: 'sess_def456',
-        project_id: 1,
-        http_method: 'POST',
-        api_path: '/api/users',
-        response_status: '201 Created',
-        response_time: 180,
-        user_agent: 'Chrome 120.0 (Windows 10)',
-        changes: [
-          {
-            field_name: 'role',
-            old_value: null,
-            new_value: 'Operator',
-            change_type: 'Added',
-          },
-          {
-            field_name: 'project',
-            old_value: null,
-            new_value: 'Project A',
-            change_type: 'Added',
-          },
-        ],
-      },
-      {
-        id: 3,
-        timestamp: new Date('2025-11-18T08:45:10').toISOString(),
-        status: 'failed',
-        user_id: 8,
-        username: 'unknown',
-        action: 'LOGIN_FAILED',
-        reason: 'Invalid password',
-        ip_address: '45.123.45.67',
-        login_attempts: 3,
-        session_id: undefined,
-        http_method: 'POST',
-        api_path: '/api/auth/login',
-        response_status: '401 Unauthorized',
-        response_time: 120,
-        user_agent: 'Firefox 119.0 (Linux)',
-      },
-      {
-        id: 4,
-        timestamp: new Date('2025-11-18T07:20:33').toISOString(),
-        status: 'success',
-        user_id: 15,
-        username: 'olena_k',
-        role: 'Supervisor',
-        action: 'IMPORT',
-        entity_type: 'client',
-        entity_id: 'bank_nov.csv',
-        reason: 'Created: 150, Updated: 50, Errors: 5',
-        ip_address: '192.168.1.75',
-        session_id: 'sess_ghi789',
-        project_id: 1,
-        http_method: 'POST',
-        api_path: '/api/clients/import',
-        response_status: '200 OK',
-        response_time: 3500,
-        user_agent: 'Chrome 120.0 (macOS)',
-      },
-      {
-        id: 5,
-        timestamp: new Date('2025-11-17T16:55:12').toISOString(),
-        status: 'success',
-        user_id: 42,
-        username: 'maria_s',
-        role: 'Operator',
-        action: 'OVERRIDE',
-        entity_type: 'client',
-        entity_id: '4523',
-        field_name: 'priority_score',
-        old_value: '45',
-        new_value: '95',
-        reason: 'Lawsuit pending',
-        ip_address: '192.168.1.100',
-        session_id: 'sess_abc123',
-        project_id: 1,
-        http_method: 'PATCH',
-        api_path: '/api/clients/4523/override',
-        response_status: '200 OK',
-        response_time: 190,
-        user_agent: 'Chrome 120.0 (Windows 10)',
-        changes: [
-          {
-            field_name: 'priority_score',
-            old_value: '45',
-            new_value: '95',
-            change_type: 'Modified',
-          },
-        ],
-      },
-    ],
-    []
-  )
-
+  // Apply client-side filtering for search (since API doesn't support text search)
   const filteredLogs = useMemo(() => {
-    let result = [...mockAuditLogs]
+    let result = [...auditLogs]
 
-    // Apply filters
+    // Client-side search filter (API doesn't support text search)
     if (filters.search) {
       const searchLower = filters.search.toLowerCase()
       result = result.filter(
@@ -358,7 +388,7 @@ export function AuditLogsPage() {
       )
     }
 
-    // Filter by users (support both old single user and new multi-user format)
+    // Filter by users (client-side)
     if (filters.users && filters.users.length > 0) {
       result = result.filter(
         (log) =>
@@ -366,29 +396,9 @@ export function AuditLogsPage() {
           (log.user_id && filters.users!.includes(log.user_id.toString()))
       )
     } else if (filters.user) {
-      // Backward compatibility with single user filter
       result = result.filter(
         (log) => log.username === filters.user || log.user_id?.toString() === filters.user
       )
-    }
-
-    if (filters.action) {
-      result = result.filter((log) => log.action === filters.action)
-    }
-
-    if (filters.entity_type) {
-      result = result.filter((log) => log.entity_type === filters.entity_type)
-    }
-
-    if (filters.date_from) {
-      const fromDate = new Date(filters.date_from)
-      result = result.filter((log) => new Date(log.timestamp) >= fromDate)
-    }
-
-    if (filters.date_to) {
-      const toDate = new Date(filters.date_to)
-      toDate.setHours(23, 59, 59, 999) // End of day
-      result = result.filter((log) => new Date(log.timestamp) <= toDate)
     }
 
     // Apply sorting
@@ -413,14 +423,13 @@ export function AuditLogsPage() {
     })
 
     return result
-  }, [mockAuditLogs, filters, sortConfig, formatDetails, formatEntity])
+  }, [auditLogs, filters, sortConfig, formatDetails, formatEntity])
 
-  // Pagination
-  const totalPages = Math.ceil(filteredLogs.length / pageSize)
-  const paginatedLogs = useMemo(
-    () => filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize),
-    [filteredLogs, currentPage, pageSize]
-  )
+  // Pagination - use API pagination
+  // The API already returns paginated results, so we use them directly
+  // Client-side filtering is applied, but NOT client-side pagination
+  const totalPages = auditData ? Math.ceil(auditData.total / pageSize) : 0
+  const paginatedLogs = filteredLogs // Use filtered results directly (API handles pagination)
 
   const handleFilterChange = useCallback((newFilters: AuditLogFilters) => {
     setFilters(newFilters)
@@ -437,31 +446,39 @@ export function AuditLogsPage() {
   }, [])
 
   const handleExportConfirm = useCallback(
-    (options: CSVExportOptions) => {
-      // TODO: Implement actual CSV export logic
-      console.log('Exporting audit logs to CSV with options:', options)
-      console.log('Filtered logs:', filteredLogs)
-      // This would typically call an API or generate CSV client-side
+    async (_options: CSVExportOptions) => {
+      try {
+        // Export as CSV (the dialog is for CSV export)
+        // Note: _options contains export configuration but backend API uses apiParams
+        const blob = await exportAuditLogs('csv', apiParams)
+
+        // Create download link
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+
+        toast.success(t('pages.auditLogs.exportSuccess'))
+      } catch (err) {
+        console.error('Export failed:', err)
+        toast.error(t('pages.auditLogs.exportError'))
+      }
     },
-    [filteredLogs]
+    [apiParams, t]
   )
 
-  // Extract unique values for filters
+  // Extract unique values for filters from API data
   const users = useMemo(() => {
     const userSet = new Set<string>()
-    mockAuditLogs.forEach((log) => {
+    auditLogs.forEach((log) => {
       if (log.username) userSet.add(log.username)
     })
-    // Add additional users to match screenshot examples
-    userSet.add('david_k')
-    userSet.add('emily_r')
-    userSet.add('sara_t')
-    userSet.add('Alex Johnson')
-    userSet.add('Mia Thompson')
-    userSet.add('Liam Smith')
-    userSet.add('Olivia Brown')
     return Array.from(userSet).sort()
-  }, [mockAuditLogs])
+  }, [auditLogs])
 
   const entityTypes = useMemo(() => {
     // Entity types from user story
@@ -626,19 +643,30 @@ export function AuditLogsPage() {
         users={users}
         entityTypes={entityTypes}
         actions={actions}
+        isLoading={isLoading}
       />
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Audit Logs Table */}
         <div className="flex flex-1 flex-col gap-6 overflow-hidden rounded-xl bg-white/50 p-6">
-          <DataTable
-            columns={columns}
-            data={paginatedLogs}
-            emptyMessage={t('pages.auditLogs.noLogsFound')}
-            sortConfig={sortConfig}
-            onSort={handleSort}
-          />
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-muted-foreground">{t('common.loading')}</div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-error-500">{t('pages.auditLogs.loadError')}</div>
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={paginatedLogs}
+              emptyMessage={t('pages.auditLogs.noLogsFound')}
+              sortConfig={sortConfig}
+              onSort={handleSort}
+            />
+          )}
 
           {/* Pagination */}
           {totalPages > 0 && (
@@ -667,7 +695,7 @@ export function AuditLogsPage() {
       />
       <CSVExportDialog
         open={isExportDialogOpen}
-        totalEntries={filteredLogs.length}
+        totalEntries={auditData?.total || 0}
         onClose={() => setIsExportDialogOpen(false)}
         onExport={handleExportConfirm}
       />

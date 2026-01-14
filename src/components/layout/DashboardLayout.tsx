@@ -705,6 +705,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         path: '/dashboard/audit-logs',
         icon: 'transaction-history',
         label: t('navigation.auditLogs'),
+        requiredPermission: PERMISSIONS.SYSTEM.VIEW_AUDIT_LOGS,
       },
       {
         path: '/dashboard/system-settings',

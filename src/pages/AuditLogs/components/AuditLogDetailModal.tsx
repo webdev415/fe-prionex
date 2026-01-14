@@ -153,9 +153,13 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
                     {t('pages.auditLogs.detailModal.result')}:
                   </span>
                   <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                    {log.entity_type && log.entity_id
-                      ? `${log.entity_type.charAt(0).toUpperCase() + log.entity_type.slice(1)} #${log.entity_id}${log.entity_name ? ` (${log.entity_name})` : ''}`
-                      : '—'}
+                    {log.entity_name
+                      ? log.entity_name
+                      : log.entity_type && log.entity_id
+                        ? `${log.entity_type.charAt(0).toUpperCase() + log.entity_type.slice(1)} #${log.entity_id}`
+                        : log.entity_type
+                          ? log.entity_type.charAt(0).toUpperCase() + log.entity_type.slice(1)
+                          : '—'}
                   </span>
                 </div>
                 <div className="flex items-start gap-6 self-stretch">
@@ -281,71 +285,55 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
           )}
 
           {/* Request Information Section */}
-          {(log.http_method ||
-            log.api_path ||
-            log.response_status ||
-            log.response_time ||
-            log.user_agent) && (
-            <div className="flex flex-col gap-2 self-stretch">
-              <span className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
-                {t('pages.auditLogs.detailModal.requestInformation')}
-              </span>
-              <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 px-6 py-5">
-                <div className="flex w-[472px] flex-col items-start gap-2 py-0">
-                  {log.http_method && (
-                    <div className="flex items-start gap-6 self-stretch">
-                      <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
-                        {t('pages.auditLogs.detailModal.httpMethod')}:
-                      </span>
-                      <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                        {log.http_method}
-                      </span>
-                    </div>
-                  )}
-                  {log.api_path && (
-                    <div className="flex items-start gap-6 self-stretch">
-                      <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
-                        {t('pages.auditLogs.detailModal.apiPath')}:
-                      </span>
-                      <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                        {log.api_path}
-                      </span>
-                    </div>
-                  )}
-                  {log.response_status && (
-                    <div className="flex items-start gap-6 self-stretch">
-                      <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
-                        {t('pages.auditLogs.detailModal.responseStatus')}:
-                      </span>
-                      <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                        {log.response_status}
-                      </span>
-                    </div>
-                  )}
-                  {log.response_time !== undefined && (
-                    <div className="flex items-start gap-6 self-stretch">
-                      <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
-                        {t('pages.auditLogs.detailModal.responseTime')}:
-                      </span>
-                      <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                        {log.response_time} ms
-                      </span>
-                    </div>
-                  )}
-                  {log.user_agent && (
-                    <div className="flex items-start gap-6 self-stretch">
-                      <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
-                        {t('pages.auditLogs.detailModal.userAgent')}:
-                      </span>
-                      <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                        {log.user_agent}
-                      </span>
-                    </div>
-                  )}
+          <div className="flex flex-col gap-2 self-stretch">
+            <span className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
+              {t('pages.auditLogs.detailModal.requestInformation')}
+            </span>
+            <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 px-6 py-5">
+              <div className="flex w-[472px] flex-col items-start gap-2 py-0">
+                <div className="flex items-start gap-6 self-stretch">
+                  <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    {t('pages.auditLogs.detailModal.httpMethod')}:
+                  </span>
+                  <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    {log.http_method || '—'}
+                  </span>
+                </div>
+                <div className="flex items-start gap-6 self-stretch">
+                  <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    {t('pages.auditLogs.detailModal.apiPath')}:
+                  </span>
+                  <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    {log.api_path || '—'}
+                  </span>
+                </div>
+                <div className="flex items-start gap-6 self-stretch">
+                  <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    {t('pages.auditLogs.detailModal.responseStatus')}:
+                  </span>
+                  <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    {log.response_status || '—'}
+                  </span>
+                </div>
+                <div className="flex items-start gap-6 self-stretch">
+                  <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    {t('pages.auditLogs.detailModal.responseTime')}:
+                  </span>
+                  <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    {log.response_time !== undefined ? `${log.response_time} ms` : '—'}
+                  </span>
+                </div>
+                <div className="flex items-start gap-6 self-stretch">
+                  <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    {t('pages.auditLogs.detailModal.userAgent')}:
+                  </span>
+                  <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    {log.user_agent || '—'}
+                  </span>
                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </ModalContent>
       <ModalFooter className="flex flex-col gap-3 self-stretch border-none">
