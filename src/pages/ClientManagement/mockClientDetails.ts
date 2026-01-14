@@ -351,7 +351,8 @@ export const createMockClientDetail = (
             date: '03/12/2023',
             number: phoneNumber,
             contactType: 'Outgoing' as const,
-            result: "In a conversation about loans, a friend said it's imp...",
+            // Updated to use a status label shown in the UI dropdown
+            result: 'Refusal to pay',
             promisedAmount: 678.1,
             promisedDate: '03/12/2023',
             comment: 'I received a loan of 678 hryvnias, everything went q...',
@@ -362,7 +363,7 @@ export const createMockClientDetail = (
             date: '04/25/2023',
             number: phoneNumber.replace(/(\d{2})(\d{3})/, '$1$2' + (id + 20)),
             contactType: 'Incoming' as const,
-            result: "We talked about loans, and I emphasized that it's w...",
+            result: 'Agreement for full payment',
             promisedAmount: 765,
             promisedDate: '04/25/2023',
             comment: 'The loan of 765 hryvnias was processed without del...',
@@ -373,7 +374,7 @@ export const createMockClientDetail = (
             date: '05/01/2023',
             number: phoneNumber.replace(/(\d{2})(\d{3})/, '$1$2' + (id + 30)),
             contactType: 'Outgoing' as const,
-            result: 'Discussing loans, I noticed that many are unaware...',
+            result: 'Refusal to pay',
             promisedAmount: 345,
             promisedDate: '05/01/2023',
             comment: 'Getting a loan of 345 hryvnias was easy, I recomm...',
@@ -384,7 +385,7 @@ export const createMockClientDetail = (
             date: '05/14/2023',
             number: phoneNumber,
             contactType: 'Outgoing' as const,
-            result: 'In a conversation about loans, we discussed how i...',
+            result: 'Agreement for partial payment',
             promisedAmount: 901,
             promisedDate: '05/14/2023',
             comment: 'The loan application for 901 hryvnias took just a fe...',
@@ -395,7 +396,7 @@ export const createMockClientDetail = (
             date: '05/30/2023',
             number: phoneNumber.replace(/(\d{2})(\d{3})/, '$1$2' + (id + 40)),
             contactType: 'Outgoing' as const,
-            result: "We talked about loans, and I pointed out that it's i...",
+            result: 'Call back later',
             promisedAmount: 522,
             promisedDate: '05/30/2023',
             comment: 'I received a loan of 522 hryvnias without any difficu...',
@@ -408,18 +409,19 @@ export const createMockClientDetail = (
             date: `0${id}/12/2023`,
             number: phoneNumber,
             contactType: 'Outgoing' as const,
+            // Use simplified status labels for the result column (will be rendered as a status dropdown)
             result:
               id === 2
-                ? 'Discussed loan options and payment plans with the client...'
+                ? 'Agreement for full payment'
                 : id === 3
-                  ? 'Client expressed interest in learning more about available...'
+                  ? 'Refusal to pay'
                   : id === 4
-                    ? 'Follow-up call regarding pending loan application status...'
+                    ? 'Agreement for partial payment'
                     : id === 5
-                      ? 'Client requested additional information about interest rates...'
+                      ? 'Call back later'
                       : id === 6
-                        ? 'Scheduled meeting to review loan documentation and terms...'
-                        : 'Client confirmed receipt of loan agreement and will review...',
+                        ? 'Agreement for full payment'
+                        : 'Agreement for full payment',
             promisedAmount: 600 + id * 10,
             promisedDate: `0${id}/12/2023`,
             comment:
