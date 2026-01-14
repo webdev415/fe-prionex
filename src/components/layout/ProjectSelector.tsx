@@ -1,8 +1,8 @@
 /**
  * ProjectSelector Component
  *
- * Dropdown component that allows users with multiple projects
- * to switch between their assigned projects.
+ * Dropdown component that allows users to view and switch
+ * between their assigned projects (shown when user has >= 1 project).
  * Uses the same style as LanguageSwitcher for consistency.
  */
 
@@ -31,7 +31,7 @@ export function ProjectSelector() {
 
   // Get user's assigned projects
   const userProjects = user?.projects || []
-  const hasMultipleProjects = userProjects.length > 1
+  const hasProjects = userProjects.length >= 1
   const currentProject = userProjects.find((p) => p.id === user?.active_project_id)
 
   // Close dropdown on window resize to prevent positioning issues
@@ -46,8 +46,8 @@ export function ProjectSelector() {
     return () => window.removeEventListener('resize', handleResize)
   }, [isOpen])
 
-  // Don't render if user has only one project or no projects
-  if (!hasMultipleProjects || !currentProject) {
+  // Don't render if user has no projects or no current project
+  if (!hasProjects || !currentProject) {
     return null
   }
 
