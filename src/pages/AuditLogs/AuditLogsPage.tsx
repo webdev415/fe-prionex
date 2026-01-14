@@ -6,6 +6,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useURLState } from '@/hooks/useURLState'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import { AuditLogDetailModal } from './components/AuditLogDetailModal'
 import { CSVExportDialog, type CSVExportOptions } from './components/CSVExportDialog'
@@ -71,8 +72,6 @@ export interface AuditLogFilters {
 
 export function AuditLogsPage() {
   const { t } = useTranslation('common')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
 
   // Calculate initial date range from mock data dates
   // Dates in mock data: 2025-11-17 to 2025-11-18
@@ -93,11 +92,69 @@ export function AuditLogsPage() {
     }
   }, [])
 
-  const [filters, setFilters] = useState<AuditLogFilters>(initialDateRange)
-  const [sortConfig, setSortConfig] = useState<SortConfig>({
-    key: 'timestamp',
-    order: 'desc',
-  })
+  // URL state for pagination
+  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
+  const [pageSize, setPageSize] = useURLState<number>('pageSize', DEFAULT_PAGE_SIZE)
+
+  // URL state for sorting
+  const [sortBy, setSortBy] = useURLState<string>('sort_by', 'timestamp')
+  const [sortOrder, setSortOrder] = useURLState<'asc' | 'desc'>('sort_order', 'desc')
+
+  // URL state for all filter fields
+  const [searchFilter, setSearchFilter] = useURLState<string>('search', '')
+  const [statusFilter, setStatusFilter] = useURLState<string>('status', '')
+  const [clientFilter, setClientFilter] = useURLState<string>('client', '')
+  const [periodFilter, setPeriodFilter] = useURLState<string>('period', '')
+  const [dateFromFilter, setDateFromFilter] = useURLState<string>(
+    'date_from',
+    initialDateRange.date_from
+  )
+  const [dateToFilter, setDateToFilter] = useURLState<string>('date_to', initialDateRange.date_to)
+  const [userFilter, setUserFilter] = useURLState<string>('user', '')
+  const [usersFilter, setUsersFilter] = useURLState<string[]>('users', [])
+  const [entityTypeFilter, setEntityTypeFilter] = useURLState<string>('entity_type', '')
+  const [actionFilter, setActionFilter] = useURLState<string>('action', '')
+  const [roleFilter, setRoleFilter] = useURLState<string>('role', '')
+
+  // Reconstruct filters object from URL state
+  const filters = useMemo<AuditLogFilters>(
+    () => ({
+      search: searchFilter || undefined,
+      status: statusFilter || undefined,
+      client: clientFilter || undefined,
+      period: periodFilter || undefined,
+      date_from: dateFromFilter || undefined,
+      date_to: dateToFilter || undefined,
+      user: userFilter || undefined,
+      users: usersFilter.length > 0 ? usersFilter : undefined,
+      entity_type: entityTypeFilter || undefined,
+      action: actionFilter || undefined,
+      role: roleFilter || undefined,
+    }),
+    [
+      searchFilter,
+      statusFilter,
+      clientFilter,
+      periodFilter,
+      dateFromFilter,
+      dateToFilter,
+      userFilter,
+      usersFilter,
+      entityTypeFilter,
+      actionFilter,
+      roleFilter,
+    ]
+  )
+
+  // Reconstruct sortConfig from URL state
+  const sortConfig = useMemo<SortConfig>(
+    () => ({
+      key: sortBy,
+      order: sortOrder,
+    }),
+    [sortBy, sortOrder]
+  )
+
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
@@ -422,15 +479,47 @@ export function AuditLogsPage() {
     [filteredLogs, currentPage, pageSize]
   )
 
-  const handleFilterChange = useCallback((newFilters: AuditLogFilters) => {
-    setFilters(newFilters)
-    setCurrentPage(1) // Reset to first page on filter change
-  }, [])
+  const handleFilterChange = useCallback(
+    (newFilters: AuditLogFilters) => {
+      // Update individual URL state for each filter field
+      setSearchFilter(newFilters.search || '')
+      setStatusFilter(newFilters.status || '')
+      setClientFilter(newFilters.client || '')
+      setPeriodFilter(newFilters.period || '')
+      setDateFromFilter(newFilters.date_from || initialDateRange.date_from)
+      setDateToFilter(newFilters.date_to || initialDateRange.date_to)
+      setUserFilter(newFilters.user || '')
+      setUsersFilter(newFilters.users || [])
+      setEntityTypeFilter(newFilters.entity_type || '')
+      setActionFilter(newFilters.action || '')
+      setRoleFilter(newFilters.role || '')
+      setCurrentPage(1) // Reset to first page on filter change
+    },
+    [
+      setSearchFilter,
+      setStatusFilter,
+      setClientFilter,
+      setPeriodFilter,
+      setDateFromFilter,
+      setDateToFilter,
+      setUserFilter,
+      setUsersFilter,
+      setEntityTypeFilter,
+      setActionFilter,
+      setRoleFilter,
+      setCurrentPage,
+      initialDateRange,
+    ]
+  )
 
-  const handleSort = useCallback((key: string, order: SortOrder) => {
-    setSortConfig({ key, order })
-    setCurrentPage(1) // Reset to first page on sort change
-  }, [])
+  const handleSort = useCallback(
+    (key: string, order: SortOrder) => {
+      setSortBy(key)
+      setSortOrder(order)
+      setCurrentPage(1) // Reset to first page on sort change
+    },
+    [setSortBy, setSortOrder, setCurrentPage]
+  )
 
   const handleExport = useCallback(() => {
     setIsExportDialogOpen(true)

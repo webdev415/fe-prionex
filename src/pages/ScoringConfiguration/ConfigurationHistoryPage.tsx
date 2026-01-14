@@ -5,9 +5,10 @@
  * Uses reusable components following the same pattern as ImportHistoryPage.
  */
 
-import { useState, useMemo, useEffect } from 'react'
+import { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { useURLState } from '@/hooks/useURLState'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
@@ -62,9 +63,20 @@ export function ConfigurationHistoryPage() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [currentPage, setCurrentPage] = useState(1)
-  const [rowsPerPage, setRowsPerPage] = useState(10)
-  const [sortConfig, setSortConfig] = useState<SortConfig | undefined>(undefined)
+
+  // URL state for pagination
+  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
+  const [rowsPerPage, setRowsPerPage] = useURLState<number>('pageSize', 10)
+
+  // URL state for sorting
+  const [sortBy, setSortBy] = useURLState<string>('sort_by', '')
+  const [sortOrder, setSortOrder] = useURLState<'asc' | 'desc'>('sort_order', 'asc')
+
+  // Reconstruct sortConfig from URL state
+  const sortConfig = useMemo<SortConfig | undefined>(
+    () => (sortBy ? { key: sortBy, order: sortOrder } : undefined),
+    [sortBy, sortOrder]
+  )
 
   // Fetch configuration history
   const { data, isLoading } = useQuery({
@@ -127,7 +139,9 @@ export function ConfigurationHistoryPage() {
 
   // Handle sort
   const handleSort = (key: string, order: 'asc' | 'desc') => {
-    setSortConfig({ key, order })
+    setSortBy(key)
+    setSortOrder(order)
+    setCurrentPage(1) // Reset to first page on sort change
   }
 
   // Apply sorting

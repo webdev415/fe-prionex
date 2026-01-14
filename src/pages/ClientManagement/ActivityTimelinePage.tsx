@@ -7,6 +7,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useURLState } from '@/hooks/useURLState'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
@@ -38,11 +39,27 @@ export function ActivityTimelinePage() {
   const clientId = id ? Number(id) : 1
   const client = mockClientsDetail.find((c) => c.id === clientId) || mockClientsDetail[0]
 
-  const [communicationType, setCommunicationType] = useState<CommunicationType>('calls')
-  const [dateFrom, setDateFrom] = useState<Date | null>(new Date('2024-11-20'))
-  const [dateTo, setDateTo] = useState<Date | null>(new Date('2024-11-27'))
-  const [currentPage, setCurrentPage] = useState(1)
-  const [rowsPerPage, setRowsPerPage] = useState(10)
+  // URL state for pagination
+  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
+  const [rowsPerPage, setRowsPerPage] = useURLState<number>('pageSize', 10)
+
+  // URL state for filters
+  const [communicationTypeUrl, setCommunicationTypeUrl] = useURLState<string>('type', 'calls')
+  const [dateFromUrl, setDateFromUrl] = useURLState<string>('date_from', '2024-11-20')
+  const [dateToUrl, setDateToUrl] = useURLState<string>('date_to', '2024-11-27')
+
+  // Convert URL state to component state
+  const communicationType = communicationTypeUrl as CommunicationType
+  const dateFrom = useMemo(() => (dateFromUrl ? new Date(dateFromUrl) : null), [dateFromUrl])
+  const dateTo = useMemo(() => (dateToUrl ? new Date(dateToUrl) : null), [dateToUrl])
+
+  // Create setters that update URL state
+  const setCommunicationType = (value: CommunicationType) => setCommunicationTypeUrl(value)
+  const setDateFrom = (value: Date | null) =>
+    setDateFromUrl(value ? value.toISOString().split('T')[0] : '')
+  const setDateTo = (value: Date | null) =>
+    setDateToUrl(value ? value.toISOString().split('T')[0] : '')
+
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -279,7 +296,7 @@ export function ActivityTimelinePage() {
       <div className="flex items-center justify-between self-stretch">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate(`/dashboard/${client.id}`)}
+            onClick={() => navigate(`/dashboard/clients/${client.id}`)}
             className="flex h-6 w-6 items-center justify-center"
           >
             <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />

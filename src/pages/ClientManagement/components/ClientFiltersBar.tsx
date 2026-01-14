@@ -150,14 +150,6 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     })
   }
 
-  const handleStatusChange = (status: string, checked: boolean) => {
-    const currentStatuses = filters.status || []
-    onFilterChange({
-      ...filters,
-      status: checked ? [...currentStatuses, status] : currentStatuses.filter((s) => s !== status),
-    })
-  }
-
   const displayedPortfolios = portfolioOptions.slice(0, 3)
   const hiddenPortfoliosCount = portfolioOptions.length - 3
   const selectedPortfolios = filters.portfolio || []
@@ -324,13 +316,12 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     <Checkbox
                       checked={selectedPortfolios.includes(portfolio)}
                       onCheckedChange={(checked) => {
-                        const current = filters.portfolio || []
+                        // Pass toggle action - parent will use functional update to avoid stale state
                         onFilterChange({
-                          ...filters,
-                          portfolio: checked
-                            ? [...current, portfolio]
-                            : current.filter((p) => p !== portfolio),
-                        })
+                          _action: 'togglePortfolio',
+                          _value: portfolio,
+                          _checked: checked,
+                        } as unknown as ClientFilters)
                       }}
                     />
                     <span className="text-dark-500 text-sm">{portfolio}</span>
@@ -386,9 +377,14 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     <label key={status} className="flex cursor-pointer items-center gap-2">
                       <Checkbox
                         checked={(filters.status || []).includes(status)}
-                        onCheckedChange={(checked) =>
-                          handleStatusChange(status, checked as boolean)
-                        }
+                        onCheckedChange={(checked) => {
+                          // Pass toggle action - parent will use functional update to avoid stale state
+                          onFilterChange({
+                            _action: 'toggleStatus',
+                            _value: status,
+                            _checked: checked,
+                          } as unknown as ClientFilters)
+                        }}
                       />
                       <span className="text-dark-500 text-sm">
                         {t(`pages.clients.statuses.${statusKey}`)}
@@ -411,13 +407,12 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     <Checkbox
                       checked={selectedTagIds.includes(tag.id)}
                       onCheckedChange={(checked) => {
-                        const current = filters.tagIds || []
+                        // Pass toggle action - parent will use functional update to avoid stale state
                         onFilterChange({
-                          ...filters,
-                          tagIds: checked
-                            ? [...current, tag.id]
-                            : current.filter((id) => id !== tag.id),
-                        })
+                          _action: 'toggleTag',
+                          _value: tag.id,
+                          _checked: checked,
+                        } as unknown as ClientFilters)
                       }}
                     />
                     <div className="flex items-center gap-1.5">
