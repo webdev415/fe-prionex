@@ -227,11 +227,9 @@ export const router = createBrowserRouter([
     path: '/dashboard/audit-logs',
     element: (
       <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.VIEW_AUDIT_LOGS}>
-          <DashboardLayout>
-            <AuditLogsPage />
-          </DashboardLayout>
-        </PermissionRoute>
+        <DashboardLayout>
+          <AuditLogsPage />
+        </DashboardLayout>
       </ProtectedRoute>
     ),
   },

@@ -58,10 +58,10 @@ export function AuthLayout({ children }: AuthLayoutProps) {
         </div>
 
         {/* Right Panel - Form side */}
-        <div className="flex w-full flex-1 flex-col justify-center lg:h-full lg:w-1/2">
+        <div className="flex w-full flex-1 flex-col items-center justify-center lg:h-full lg:w-1/2">
           {/* Form container */}
-          <div className="bg-light-50 flex w-full items-center justify-center rounded-lg p-4 sm:rounded-xl sm:p-6 md:rounded-2xl md:p-8 lg:p-10 xl:p-12">
-            <div className="w-full max-w-md">{children}</div>
+          <div className="bg-light-50 flex w-[90%] items-center justify-center rounded-lg p-4 py-40 sm:rounded-xl sm:p-6 sm:py-40 md:rounded-2xl md:p-8 md:py-40 lg:p-10 lg:py-40 xl:p-12 xl:py-40">
+            <div className="w-full">{children}</div>
           </div>
         </div>
       </div>
