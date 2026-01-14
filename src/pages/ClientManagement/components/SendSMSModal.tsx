@@ -196,7 +196,10 @@ export function SendSMSModal({
 
   const isDailyLimitReached = smsSentToday >= dailyLimit
   const canSend =
-    !isDailyLimitReached && displayMessage.trim().length > 0 && !sendSMSMutation.isPending
+    !isDailyLimitReached &&
+    displayMessage.trim().length > 0 &&
+    !messageMetrics.exceedsLimit &&
+    !sendSMSMutation.isPending
 
   const handleSend = async () => {
     if (!canSend) return
