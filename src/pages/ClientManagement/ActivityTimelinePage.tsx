@@ -21,6 +21,12 @@ import { mockClientsDetail } from './mockClientDetails'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
 import { useCallStore } from '@/stores/callStore'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/DropdownMenu'
 
 type CommunicationType = 'calls' | 'sms' | 'notes' | 'all'
 
@@ -41,6 +47,25 @@ export function ActivityTimelinePage() {
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Local editable activities state so UI can update result statuses
+  const [activitiesState, setActivitiesState] = useState(() => client.activities || [])
+
+  // Reset activities when client changes (only update when different to avoid cascading renders)
+  useEffect(() => {
+    const newIds = (client.activities || []).map((a) => a.id).join(',')
+    const currentIds = (activitiesState || []).map((a) => a.id).join(',')
+    if (newIds !== currentIds) {
+      const timer = setTimeout(() => setActivitiesState(client.activities || []), 0)
+      return () => clearTimeout(timer)
+    }
+  }, [client, activitiesState])
+
+  const updateActivityResult = (activityId: number, newResult: string) => {
+    setActivitiesState((prev) =>
+      prev.map((a) => (a.id === activityId ? { ...a, result: newResult } : a))
+    )
+  }
+
   // Simulate loading state
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -60,8 +85,52 @@ export function ActivityTimelinePage() {
   }
 
   // Filter activities based on communication type and date range
+  const RESULT_OPTIONS = [
+    {
+      value: 'refusal',
+      label: 'Refusal to pay',
+      textClass: 'text-error-500',
+      outerClass: 'bg-error-200',
+      innerClass: 'bg-error-500',
+    },
+    {
+      value: 'agreement_full',
+      label: 'Agreement for full payment',
+      textClass: 'text-success-500',
+      outerClass: 'bg-success-200',
+      innerClass: 'bg-success-500',
+    },
+    {
+      value: 'agreement_partial',
+      label: 'Agreement for partial payment',
+      textClass: 'text-success-500',
+      outerClass: 'bg-success-200',
+      innerClass: 'bg-success-500',
+    },
+    {
+      value: 'callback',
+      label: 'Call back later',
+      textClass: 'text-dark-500',
+      outerClass: 'bg-black/20',
+      innerClass: 'bg-dark-500',
+    },
+  ]
+
+  const getResultClasses = (label?: string) => {
+    if (!label) return { text: 'text-dark-500', outer: 'bg-black/20', inner: 'bg-dark-500' }
+    if (label === 'Refusal to pay')
+      return { text: 'text-error-500', outer: 'bg-error-200', inner: 'bg-error-500' }
+    if (label === 'Agreement for full payment')
+      return { text: 'text-success-500', outer: 'bg-success-200', inner: 'bg-success-500' }
+    if (label === 'Agreement for partial payment')
+      return { text: 'text-success-500', outer: 'bg-success-200', inner: 'bg-success-500' }
+    if (label === 'Call back later')
+      return { text: 'text-dark-500', outer: 'bg-black/20', inner: 'bg-dark-500' }
+    return { text: 'text-dark-500', outer: 'bg-black/20', inner: 'bg-dark-500' }
+  }
+
   const filteredActivities = useMemo(() => {
-    let result = [...(client.activities || [])]
+    let result = [...(activitiesState || [])]
 
     // Filter by communication type
     if (communicationType !== 'all') {
@@ -102,7 +171,7 @@ export function ActivityTimelinePage() {
     }
 
     return result
-  }, [client.activities, communicationType, dateFrom, dateTo])
+  }, [activitiesState, communicationType, dateFrom, dateTo])
 
   // Paginate activities
   const paginatedActivities = useMemo(() => {
@@ -128,7 +197,58 @@ export function ActivityTimelinePage() {
       header: t('pages.clients.activity.tableHeaders.contactType'),
       align: 'left',
     },
-    { key: 'result', header: t('pages.clients.activity.tableHeaders.result'), align: 'left' },
+    {
+      key: 'result',
+      header: t('pages.clients.activity.tableHeaders.result'),
+      align: 'left',
+      render: (activity) => {
+        const {
+          text: textClass,
+          outer: outerClass,
+          inner: innerClass,
+        } = getResultClasses(activity.result as string)
+        return (
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={`flex w-full cursor-pointer items-center justify-between rounded px-3 py-2 text-sm font-medium ${textClass}`}
+                aria-label={`Result for activity ${activity.id}`}
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span
+                    className={`flex h-3 w-3 items-center justify-center rounded-full ${outerClass}`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${innerClass}`} />
+                  </span>
+                  <span className="min-w-0 truncate">{activity.result || '-'}</span>
+                </div>
+                <Icons.ArrowDown size={14} className="text-dark-500 ml-2" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent sideOffset={8} align="start" className="min-w-[220px]">
+              {RESULT_OPTIONS.map((opt) => (
+                <DropdownMenuItem
+                  key={opt.value}
+                  onSelect={() => updateActivityResult(activity.id as number, opt.label)}
+                >
+                  <div
+                    className={`flex cursor-pointer items-center gap-3 px-3 py-2 ${opt.textClass}`}
+                  >
+                    <span
+                      className={`flex h-3 w-3 items-center justify-center rounded-full ${opt.outerClass}`}
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${opt.innerClass}`} />
+                    </span>
+                    <span className="text-sm">{opt.label}</span>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      },
+    },
     {
       key: 'promisedAmount',
       header: t('pages.clients.activity.tableHeaders.promisedAmount'),

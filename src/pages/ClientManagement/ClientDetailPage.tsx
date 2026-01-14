@@ -371,20 +371,21 @@ const createMockClientDetail = (
       date: `0${id}/12/2023`,
       number: phoneNumber,
       contactType: 'Outgoing' as const,
+      // Use simplified status labels for the result column
       result:
         id === 1
-          ? "In a conversation about loans, a friend said it's imp..."
+          ? 'Refusal to pay'
           : id === 2
-            ? 'Discussed loan options and payment plans with the client...'
+            ? 'Agreement for full payment'
             : id === 3
-              ? 'Client expressed interest in learning more about available...'
+              ? 'Refusal to pay'
               : id === 4
-                ? 'Follow-up call regarding pending loan application status...'
+                ? 'Agreement for partial payment'
                 : id === 5
-                  ? 'Client requested additional information about interest rates...'
+                  ? 'Call back later'
                   : id === 6
-                    ? 'Scheduled meeting to review loan documentation and terms...'
-                    : 'Client confirmed receipt of loan agreement and will review...',
+                    ? 'Agreement for full payment'
+                    : 'Agreement for full payment',
       promisedAmount: 600 + id * 10,
       promisedDate: `0${id}/12/2023`,
       comment:
