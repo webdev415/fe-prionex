@@ -1386,12 +1386,24 @@
         "optional": "Optional",
         "project": "Project",
         "projectNote": "Tags are automatically assigned to your active project",
-        "tagName": "Tag Name"
+        "tagName": "Tag Name",
+        "validation": {
+          "nameRequired": "Name is required",
+          "nameMaxLength": "Name must be 50 characters or less",
+          "colorFormat": "Please enter a valid color in hex format (#RRGGBB)",
+          "descriptionMaxLength": "Description must be 200 characters or less"
+        }
       },
       "actions": {
         "edit": "Edit",
         "delete": "Delete"
-      }
+      },
+      "deleteTag": "Delete Tag",
+      "deleteConfirmation": "Are you sure you want to delete this tag?",
+      "usageWarning": "This tag is currently in use",
+      "deleteWarningMessage": "This tag is assigned to {{count}} client(s). Deleting it will remove the tag from all clients.",
+      "deleteNotice": "This action cannot be undone.",
+      "deleting": "Deleting..."
     },
     "sellers": {
       "title": "Seller Management",
