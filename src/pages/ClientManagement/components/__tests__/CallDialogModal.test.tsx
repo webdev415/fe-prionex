@@ -91,7 +91,7 @@ describe('CallDialogModal', () => {
     it('should render call dialog in initial state', () => {
       render(<CallDialogModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      expect(screen.getByText(/callClient/i)).toBeInTheDocument()
+      expect(screen.getByText('Call Client')).toBeInTheDocument()
       expect(screen.getByDisplayValue('Test Client')).toBeInTheDocument()
       expect(screen.getByDisplayValue('+380971234567')).toBeInTheDocument()
     })
@@ -107,7 +107,7 @@ describe('CallDialogModal', () => {
     it('should call onCallStart when Call Now button is clicked', () => {
       render(<CallDialogModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      const callNowButton = screen.getByRole('button', { name: /callNow/i })
+      const callNowButton = screen.getByRole('button', { name: 'Call Now' })
       fireEvent.click(callNowButton)
 
       expect(mockOnCallStart).toHaveBeenCalledWith('white-line')
@@ -125,12 +125,12 @@ describe('CallDialogModal', () => {
     it('should allow selecting call type', () => {
       render(<CallDialogModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      const grayLineRadio = screen.getByRole('radio', { name: /gray-line/i })
+      const grayLineRadio = screen.getAllByRole('radio')[1] // Gray Line is the second radio
       expect(grayLineRadio).toBeInTheDocument()
 
       fireEvent.click(grayLineRadio)
 
-      const callNowButton = screen.getByRole('button', { name: /callNow/i })
+      const callNowButton = screen.getByRole('button', { name: 'Call Now' })
       fireEvent.click(callNowButton)
 
       expect(mockOnCallStart).toHaveBeenCalledWith('gray-line')
@@ -170,9 +170,9 @@ describe('CallDialogModal', () => {
         wrapper: createWrapper(),
       })
 
-      expect(screen.getByRole('button', { name: /mute/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /hold/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /hangUp/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Mute' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Hold' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Hang Up' })).toBeInTheDocument()
     })
 
     it('should toggle mute state when mute button is clicked', () => {
@@ -180,7 +180,7 @@ describe('CallDialogModal', () => {
         wrapper: createWrapper(),
       })
 
-      const muteButton = screen.getByRole('button', { name: /mute/i })
+      const muteButton = screen.getByRole('button', { name: 'Mute' })
       fireEvent.click(muteButton)
 
       // Button should have danger variant applied (red background)
@@ -192,7 +192,7 @@ describe('CallDialogModal', () => {
         wrapper: createWrapper(),
       })
 
-      const hangUpButton = screen.getByRole('button', { name: /hangUp/i })
+      const hangUpButton = screen.getByRole('button', { name: 'Hang Up' })
       fireEvent.click(hangUpButton)
 
       expect(mockOnCallEnd).toHaveBeenCalledWith(0, 'missed')
@@ -213,7 +213,7 @@ describe('CallDialogModal', () => {
         wrapper: createWrapper(),
       })
 
-      const hangUpButton = screen.getByRole('button', { name: /hangUp/i })
+      const hangUpButton = screen.getByRole('button', { name: 'Hang Up' })
       fireEvent.click(hangUpButton)
 
       expect(mockOnCallEnd).toHaveBeenCalledWith(0, 'answered')
@@ -226,7 +226,7 @@ describe('CallDialogModal', () => {
         wrapper: createWrapper(),
       })
 
-      expect(screen.getByText(/callEnded/i)).toBeInTheDocument()
+      expect(screen.getByText('Call Ended')).toBeInTheDocument()
     })
 
     it('should display auto-close countdown', () => {
@@ -234,7 +234,7 @@ describe('CallDialogModal', () => {
         wrapper: createWrapper(),
       })
 
-      expect(screen.getByText(/autoClosingIn/i)).toBeInTheDocument()
+      expect(screen.getByText(/Auto-closing in/i)).toBeInTheDocument()
       expect(screen.getByText('3')).toBeInTheDocument()
     })
 
@@ -244,7 +244,7 @@ describe('CallDialogModal', () => {
       })
 
       // Should display countdown
-      expect(screen.getByText(/autoClosingIn/i)).toBeInTheDocument()
+      expect(screen.getByText(/Auto-closing in/i)).toBeInTheDocument()
     })
   })
 
@@ -270,7 +270,7 @@ describe('CallDialogModal', () => {
         wrapper: createWrapper(),
       })
 
-      expect(screen.getByText(/incomingCall/i)).toBeInTheDocument()
+      expect(screen.getByText('Incoming Call')).toBeInTheDocument()
     })
 
     it('should have answer and reject buttons in incoming state', () => {
@@ -278,8 +278,8 @@ describe('CallDialogModal', () => {
         wrapper: createWrapper(),
       })
 
-      expect(screen.getByRole('button', { name: /answerCall/i })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /reject/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Answer Call' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Reject' })).toBeInTheDocument()
     })
 
     it('should call onAnswer when answer button is clicked', () => {
@@ -287,7 +287,7 @@ describe('CallDialogModal', () => {
         wrapper: createWrapper(),
       })
 
-      const answerButton = screen.getByRole('button', { name: /answerCall/i })
+      const answerButton = screen.getByRole('button', { name: 'Answer Call' })
       fireEvent.click(answerButton)
 
       expect(mockOnAnswer).toHaveBeenCalled()
@@ -298,7 +298,7 @@ describe('CallDialogModal', () => {
         wrapper: createWrapper(),
       })
 
-      const rejectButton = screen.getByRole('button', { name: /reject/i })
+      const rejectButton = screen.getByRole('button', { name: 'Reject' })
       fireEvent.click(rejectButton)
 
       expect(mockOnReject).toHaveBeenCalled()

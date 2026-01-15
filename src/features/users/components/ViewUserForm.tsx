@@ -126,9 +126,6 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
 
       {/* Call Settings Section */}
       <div className="space-y-4">
-        <div className="border-t border-gray-200 pt-4">
-          <span className="text-sm font-medium text-gray-700">Call Settings</span>
-        </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
             <span className="text-sm font-light text-gray-500">Asterisk Extension:</span>
@@ -168,6 +165,8 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
             </div>
           </div>
         )}
+
+        <div className="border-t border-gray-200"></div>
       </div>
 
       {/* Assign Projects Section */}

@@ -78,7 +78,7 @@ describe('useCallWebSocket', () => {
     expect(mockSocket.emit).toHaveBeenCalledWith('join', { agent_extension: agentExtension })
   })
 
-  it('should update connection status on connect', () => {
+  it('should update connection status on connect', async () => {
     const agentExtension = '1003'
 
     const { result } = renderHook(() => useCallWebSocket(agentExtension), {
@@ -89,8 +89,10 @@ describe('useCallWebSocket', () => {
     const connectHandler = mockSocket.on.mock.calls.find((call) => call[0] === 'connect')?.[1]
     connectHandler?.()
 
-    expect(result.current.connected).toBe(true)
-    expect(result.current.reconnecting).toBe(false)
+    await waitFor(() => {
+      expect(result.current.connected).toBe(true)
+      expect(result.current.reconnecting).toBe(false)
+    })
   })
 
   it('should update connection status on disconnect', () => {
@@ -164,7 +166,7 @@ describe('useCallWebSocket', () => {
     expect(toast.info).toHaveBeenCalledWith('Reconnecting to call service...')
   })
 
-  it('should enable polling fallback after max reconnect attempts', () => {
+  it('should enable polling fallback after max reconnect attempts', async () => {
     const agentExtension = '1003'
 
     const { result } = renderHook(() => useCallWebSocket(agentExtension), {
@@ -178,8 +180,10 @@ describe('useCallWebSocket', () => {
 
     reconnectAttemptHandler?.(11) // More than MAX_RECONNECT_ATTEMPTS (10)
 
-    expect(result.current.usingPollingFallback).toBe(true)
-    expect(toast.warning).toHaveBeenCalledWith('Using fallback mode for call updates')
+    await waitFor(() => {
+      expect(result.current.usingPollingFallback).toBe(true)
+      expect(toast.warning).toHaveBeenCalledWith('Using fallback mode for call updates')
+    })
   })
 
   it('should show success notification on reconnect', () => {
@@ -244,7 +248,7 @@ describe('useCallWebSocket', () => {
     consoleSpy.mockRestore()
   })
 
-  it('should handle reconnection failure', () => {
+  it('should handle reconnection failure', async () => {
     const agentExtension = '1003'
 
     const { result } = renderHook(() => useCallWebSocket(agentExtension), {
@@ -260,8 +264,10 @@ describe('useCallWebSocket', () => {
 
     reconnectFailedHandler?.()
 
-    expect(result.current.usingPollingFallback).toBe(true)
-    expect(consoleSpy).toHaveBeenCalledWith('Reconnection failed after max attempts')
+    await waitFor(() => {
+      expect(result.current.usingPollingFallback).toBe(true)
+      expect(consoleSpy).toHaveBeenCalledWith('Reconnection failed after max attempts')
+    })
 
     consoleSpy.mockRestore()
   })

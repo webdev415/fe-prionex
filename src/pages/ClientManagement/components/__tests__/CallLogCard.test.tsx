@@ -85,13 +85,13 @@ describe('CallLogCard', () => {
     it('should render status indicator for no answer calls', () => {
       render(<CallLogCard {...defaultCallProps} status="No Answer" />)
 
-      expect(screen.getByText(/noAnswer/i)).toBeInTheDocument()
+      expect(screen.getByText('No Answer')).toBeInTheDocument()
     })
 
     it('should render call type information', () => {
       render(<CallLogCard {...defaultCallProps} />)
 
-      expect(screen.getByText(/outgoing/i)).toBeInTheDocument()
+      expect(screen.getByText('Outgoing')).toBeInTheDocument()
     })
 
     it('should render operator name', () => {
@@ -138,7 +138,7 @@ describe('CallLogCard', () => {
     it('should render custom message when no template provided', () => {
       render(<CallLogCard {...defaultSMSProps} template={undefined} />)
 
-      expect(screen.getByText(/customMessage/i)).toBeInTheDocument()
+      expect(screen.getByText('Custom Message')).toBeInTheDocument()
     })
 
     it('should render status indicator for delivered SMS', () => {
@@ -164,7 +164,7 @@ describe('CallLogCard', () => {
     it('should translate outgoing call type', () => {
       render(<CallLogCard {...defaultCallProps} type="Outgoing" />)
 
-      expect(screen.getByText(/outgoing/i)).toBeInTheDocument()
+      expect(screen.getByText('Outgoing')).toBeInTheDocument()
     })
   })
 
@@ -299,7 +299,7 @@ describe('CallLogCard', () => {
 
       expect(mockSetSelectedCallData).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: expect.stringContaining('incoming'),
+          type: 'Incoming Call',
         })
       )
     })
