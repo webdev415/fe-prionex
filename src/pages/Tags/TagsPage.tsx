@@ -22,7 +22,7 @@ import { TagFormModal } from './components/TagFormModal'
 import { DeleteTagDialog } from './components/DeleteTagDialog'
 
 export function TagsPage() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editTag, setEditTag] = useState<Tag | null>(null)
   const [deleteTagId, setDeleteTagId] = useState<number | null>(null)
@@ -61,64 +61,69 @@ export function TagsPage() {
   // Find the tag being deleted for display in dialog
   const tagToDelete = tags.find((tag) => tag.id === deleteTagId)
 
-  // Table columns definition
-  const columns: Column<Tag>[] = [
-    {
-      key: 'name',
-      header: t('pages.tags.tableHeaders.name', 'Tag Name'),
-      render: (tag) => (
-        <div className="flex items-center gap-2">
-          <div className="h-4 w-4 rounded-full" style={{ backgroundColor: tag.color }} />
-          <span className="font-medium">{tag.name}</span>
-        </div>
-      ),
-    },
-    {
-      key: 'project_name',
-      header: t('pages.tags.tableHeaders.project', 'Project'),
-      render: (tag) => <span className="text-gray-700">{tag.project_name || '-'}</span>,
-    },
-    {
-      key: 'description',
-      header: t('pages.tags.tableHeaders.description', 'Description'),
-      render: (tag) => <span className="text-gray-700">{tag.description || '-'}</span>,
-    },
-    {
-      key: 'client_count',
-      header: t('pages.tags.tableHeaders.clients', 'Clients'),
-      align: 'center',
-      render: (tag) => <span className="font-medium">{tag.client_count || 0}</span>,
-    },
-    {
-      key: 'actions',
-      header: t('pages.tags.tableHeaders.actions', 'Actions'),
-      align: 'center',
-      render: (tag) => (
-        <div className="flex items-center justify-center gap-2">
-          <PermissionGuard permission={PERMISSIONS.TAGS.EDIT}>
-            <LinkButton
-              variant="regular-black"
-              size="xs"
-              onClick={() => handleEdit(tag)}
-              leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
-            >
-              {t('pages.tags.actions.edit', 'Edit')}
-            </LinkButton>
-          </PermissionGuard>
-          <PermissionGuard permission={PERMISSIONS.TAGS.DELETE}>
-            <LinkButton
-              variant="regular-black"
-              size="xs"
-              onClick={() => handleDelete(tag.id)}
-              leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
-            >
-              {t('pages.tags.actions.delete', 'Delete')}
-            </LinkButton>
-          </PermissionGuard>
-        </div>
-      ),
-    },
-  ]
+  // Table columns definition - recalculate when language changes
+  const columns: Column<Tag>[] = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: t('pages.tags.tableHeaders.name', 'Tag Name'),
+        render: (tag) => (
+          <div className="flex items-center gap-2">
+            <div className="h-4 w-4 rounded-full" style={{ backgroundColor: tag.color }} />
+            <span className="font-medium">{tag.name}</span>
+          </div>
+        ),
+      },
+      {
+        key: 'project_name',
+        header: t('pages.tags.tableHeaders.project', 'Project'),
+        render: (tag) => <span className="text-gray-700">{tag.project_name || '-'}</span>,
+      },
+      {
+        key: 'description',
+        header: t('pages.tags.tableHeaders.description', 'Description'),
+        render: (tag) => <span className="text-gray-700">{tag.description || '-'}</span>,
+      },
+      {
+        key: 'client_count',
+        header: t('pages.tags.tableHeaders.clients', 'Clients'),
+        align: 'center',
+        render: (tag) => <span className="font-medium">{tag.client_count || 0}</span>,
+      },
+      {
+        key: 'actions',
+        header: t('pages.tags.tableHeaders.actions', 'Actions'),
+        align: 'center',
+        render: (tag) => (
+          <div className="flex items-center justify-center gap-2">
+            <PermissionGuard permission={PERMISSIONS.TAGS.EDIT}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => handleEdit(tag)}
+                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('pages.tags.actions.edit', 'Edit')}
+              </LinkButton>
+            </PermissionGuard>
+            <PermissionGuard permission={PERMISSIONS.TAGS.DELETE}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => handleDelete(tag.id)}
+                leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('pages.tags.actions.delete', 'Delete')}
+              </LinkButton>
+            </PermissionGuard>
+          </div>
+        ),
+      },
+    ],
+    // i18n.language is needed to recalculate columns when language changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, i18n?.language]
+  )
 
   return (
     <div>

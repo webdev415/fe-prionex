@@ -366,7 +366,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
  * - Dark teal/green gradient background
  */
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const navigate = useNavigate()
   const { logout, isImpersonating, impersonatedUser, exitImpersonation } = useAuth()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
@@ -705,7 +705,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const bottomItems = systemSettingsItem ? [systemSettingsItem] : []
 
     return { navItems: regularItems, bottomNavItems: bottomItems }
-  }, [user?.permissions, t])
+    // i18n.language is needed to recalculate navigation items when language changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.permissions, t, i18n.language])
 
   const { navItems, bottomNavItems } = navItemsResult
   const { toggleSidebar } = useSidebarStore()

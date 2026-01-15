@@ -60,7 +60,7 @@ function ChangeTypeBadge({ changeType }: { changeType: string }) {
 }
 
 export function ConfigurationHistoryPage() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -218,72 +218,77 @@ export function ConfigurationHistoryPage() {
     })
   }
 
-  // Define table columns
-  const columns: Column<ConfigHistoryEntry>[] = [
-    {
-      key: 'changed_at',
-      header: t('pages.scoringConfiguration.history.tableHeaders.dateTime', 'Date & Time'),
-      sortable: true,
-      render: (item) => <span>{formatTimestamp(item.changed_at)}</span>,
-    },
-    {
-      key: 'change_type',
-      header: t('pages.scoringConfiguration.history.tableHeaders.changeType', 'Change Type'),
-      sortable: true,
-      render: (item) => <ChangeTypeBadge changeType={item.change_type} />,
-    },
-    {
-      key: 'changed_by_username',
-      header: t('pages.scoringConfiguration.history.tableHeaders.changedBy', 'Changed By'),
-      sortable: true,
-      render: (item) => (
-        <span className="text-dark-500 text-sm">
-          {item.changed_by_username || `User #${item.changed_by_user_id}`}
-        </span>
-      ),
-    },
-    {
-      key: 'change_reason',
-      header: t('pages.scoringConfiguration.history.tableHeaders.reason', 'Reason'),
-      sortable: false,
-      render: (item) => (
-        <span className="text-dark-600 text-sm font-medium">
-          {formatReason(item.change_reason, item.seller_id)}
-        </span>
-      ),
-    },
-    {
-      key: 'changes_summary',
-      header: t('pages.scoringConfiguration.history.tableHeaders.changes', 'Changes'),
-      sortable: false,
-      render: (item) => {
-        if (!item.changes_summary || Object.keys(item.changes_summary).length === 0) {
-          return <span className="text-sm text-gray-500">-</span>
-        }
-
-        // Display detailed JSON for changes
-        try {
-          const formattedJson = JSON.stringify(item.changes_summary, null, 2)
-          return (
-            <div className="text-dark-700 my-2 max-h-48 max-w-xl overflow-auto rounded-md border border-slate-200 bg-slate-50 p-4 font-mono text-xs shadow-sm">
-              <pre className="m-0 leading-relaxed break-words whitespace-pre-wrap">
-                {formattedJson}
-              </pre>
-            </div>
-          )
-        } catch {
-          // Fallback to string representation if JSON.stringify fails
-          return (
-            <div className="text-dark-700 my-2 max-h-48 max-w-xl overflow-auto rounded-md border border-slate-200 bg-slate-50 p-4 font-mono text-xs shadow-sm">
-              <pre className="m-0 leading-relaxed break-words whitespace-pre-wrap">
-                {String(item.changes_summary)}
-              </pre>
-            </div>
-          )
-        }
+  // Define table columns - recalculate when language changes
+  const columns: Column<ConfigHistoryEntry>[] = useMemo(
+    () => [
+      {
+        key: 'changed_at',
+        header: t('pages.scoringConfiguration.history.tableHeaders.dateTime', 'Date & Time'),
+        sortable: true,
+        render: (item) => <span>{formatTimestamp(item.changed_at)}</span>,
       },
-    },
-  ]
+      {
+        key: 'change_type',
+        header: t('pages.scoringConfiguration.history.tableHeaders.changeType', 'Change Type'),
+        sortable: true,
+        render: (item) => <ChangeTypeBadge changeType={item.change_type} />,
+      },
+      {
+        key: 'changed_by_username',
+        header: t('pages.scoringConfiguration.history.tableHeaders.changedBy', 'Changed By'),
+        sortable: true,
+        render: (item) => (
+          <span className="text-dark-500 text-sm">
+            {item.changed_by_username || `User #${item.changed_by_user_id}`}
+          </span>
+        ),
+      },
+      {
+        key: 'change_reason',
+        header: t('pages.scoringConfiguration.history.tableHeaders.reason', 'Reason'),
+        sortable: false,
+        render: (item) => (
+          <span className="text-dark-600 text-sm font-medium">
+            {formatReason(item.change_reason, item.seller_id)}
+          </span>
+        ),
+      },
+      {
+        key: 'changes_summary',
+        header: t('pages.scoringConfiguration.history.tableHeaders.changes', 'Changes'),
+        sortable: false,
+        render: (item) => {
+          if (!item.changes_summary || Object.keys(item.changes_summary).length === 0) {
+            return <span className="text-sm text-gray-500">-</span>
+          }
+
+          // Display detailed JSON for changes
+          try {
+            const formattedJson = JSON.stringify(item.changes_summary, null, 2)
+            return (
+              <div className="text-dark-700 my-2 max-h-48 max-w-xl overflow-auto rounded-md border border-slate-200 bg-slate-50 p-4 font-mono text-xs shadow-sm">
+                <pre className="m-0 leading-relaxed break-words whitespace-pre-wrap">
+                  {formattedJson}
+                </pre>
+              </div>
+            )
+          } catch {
+            // Fallback to string representation if JSON.stringify fails
+            return (
+              <div className="text-dark-700 my-2 max-h-48 max-w-xl overflow-auto rounded-md border border-slate-200 bg-slate-50 p-4 font-mono text-xs shadow-sm">
+                <pre className="m-0 leading-relaxed break-words whitespace-pre-wrap">
+                  {String(item.changes_summary)}
+                </pre>
+              </div>
+            )
+          }
+        },
+      },
+    ],
+    // i18n.language is needed to recalculate columns when language changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, i18n.language]
+  )
 
   const hasNoData = !isLoading && totalItems === 0
 
@@ -297,7 +302,7 @@ export function ConfigurationHistoryPage() {
             onClick={handleGoBack}
             leftIcon={<Icons.ArrowLeft size={16} className="text-dark-500" />}
           >
-            {t('common.back', 'Back')}
+            {t('actions.back', 'Back')}
           </LinkButton>
           <h1 className="text-dark-500 text-2xl font-light">
             {t('pages.scoringConfiguration.history.title', 'Configuration History')}

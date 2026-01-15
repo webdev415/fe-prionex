@@ -4,7 +4,7 @@
  * Modal for creating and editing tags with color picker.
  */
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -43,14 +43,11 @@ const PRESET_COLORS = [
   '#DFDFDF',
 ]
 
-// Form validation schema
-const tagSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(50, 'Name must be 50 characters or less'),
-  color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Please enter a valid color in hex format (#RRGGBB)'),
-  description: z.string().max(200, 'Description must be 200 characters or less').optional(),
-})
-
-type TagFormData = z.infer<typeof tagSchema>
+type TagFormData = {
+  name: string
+  color: string
+  description?: string
+}
 
 export function TagFormModal({
   open,
@@ -59,8 +56,44 @@ export function TagFormModal({
   onClose,
   onSuccess,
 }: TagFormModalProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const isEdit = !!tag
+
+  // Form validation schema - defined inside component to use translations
+  const tagSchema = useMemo(
+    () =>
+      z.object({
+        name: z
+          .string()
+          .min(1, t('pages.tags.fields.validation.nameRequired', 'Name is required'))
+          .max(
+            50,
+            t('pages.tags.fields.validation.nameMaxLength', 'Name must be 50 characters or less')
+          ),
+        color: z
+          .string()
+          .regex(
+            /^#[0-9A-F]{6}$/i,
+            t(
+              'pages.tags.fields.validation.colorFormat',
+              'Please enter a valid color in hex format (#RRGGBB)'
+            )
+          ),
+        description: z
+          .string()
+          .max(
+            200,
+            t(
+              'pages.tags.fields.validation.descriptionMaxLength',
+              'Description must be 200 characters or less'
+            )
+          )
+          .optional(),
+      }),
+    // i18n.language is needed to recalculate schema when language changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, i18n.language]
+  )
 
   const createMutation = useCreateTag()
   const updateMutation = useUpdateTag()
@@ -82,7 +115,6 @@ export function TagFormModal({
   })
 
   // Watch color value for preview
-  // eslint-disable-next-line react-hooks/incompatible-library
   const selectedColor = watch('color')
 
   // Reset form when modal opens/closes or tag changes
@@ -198,10 +230,10 @@ export function TagFormModal({
 
         <ModalFooter>
           <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
-            {t('common.cancel', 'Cancel')}
+            {t('actions.cancel', 'Cancel')}
           </Button>
           <Button type="submit" isLoading={isSubmitting}>
-            {isEdit ? t('common.save', 'Save') : t('common.create', 'Create')}
+            {isEdit ? t('actions.save', 'Save') : t('actions.create', 'Create')}
           </Button>
         </ModalFooter>
       </form>
