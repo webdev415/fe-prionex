@@ -246,7 +246,7 @@ export function DataTable<T extends { id: number | string }>({
 
   return (
     <div
-      className={`data-table-scroll overflow-x-auto rounded-xl border border-[#EBECE8] bg-[#EBECE8] shadow-sm ${className || ''}`}
+      className={`data-table-scroll overflow-x-auto rounded-xl border border-[#EBECE8] bg-[#EBECE8] pb-2 shadow-sm ${className || ''}`}
     >
       <div className="min-w-full">
         {/* Header Row - shown when bulk selection is enabled OR when tableHeaderActions/tableHeaderTitle is provided */}

@@ -7,7 +7,7 @@
     "home": "Главная",
     "dashboard": "Панель управления",
     "clients": "Клиенты",
-    "settings": "Настройки",
+    "profile": "Профиль",
     "logout": "Выйти",
     "activity": "Активность",
     "importClients": "Импорт клиентов",
@@ -133,19 +133,19 @@
         }
       },
       "forms": {
-        "username": "Имя пользователя:",
-        "email": "Электронная почта:",
+        "username": "Имя пользователя",
+        "email": "Электронная почта *",
         "password": "Пароль:",
-        "confirmPassword": "Подтвердить пароль:",
+        "confirmPassword": "Подтвердить пароль",
         "mustChangePassword": "Пользователь должен изменить пароль при первом входе",
-        "firstName": "Имя:",
-        "lastName": "Фамилия:",
-        "middleName": "Отчество:",
-        "phone": "Телефон:",
-        "language": "Язык:",
-        "timezone": "Часовой пояс:",
-        "assignProjects": "Назначить проекты:",
-        "rolePerProject": "Роль на проект:",
+        "firstName": "Имя *",
+        "lastName": "Фамилия *",
+        "middleName": "Отчество",
+        "phone": "Телефон",
+        "language": "Язык",
+        "timezone": "Часовой пояс",
+        "assignProjects": "Назначить проекты",
+        "rolePerProject": "Роль на проект",
         "notAssigned": "Не назначено",
         "noRolesAvailable": "Роли недоступны",
         "errorCreating": "Ошибка создания пользователя",
@@ -1452,6 +1452,23 @@
         }
       }
     },
+    "profile": {
+      "title": "Настройки профиля",
+      "roleLabel": "Роль:",
+      "resetPassword": "Сбросить пароль",
+      "passwordChanged": "Пароль изменён",
+      "passwordChangeFailed": "Не удалось изменить пароль",
+      "profileUpdated": "Профиль обновлён",
+      "profileUpdateFailed": "Не удалось обновить профиль",
+      "saveChanges": "Сохранить изменения",
+      "currentPassword": "Текущий пароль *",
+      "newPassword": "Новый пароль *",
+      "confirmNewPassword": "Подтвердите новый пароль *",
+      "currentPasswordRequired": "Текущий пароль обязателен",
+      "newPasswordRequired": "Новый пароль обязателен",
+      "changePassword": "Изменить пароль",
+      "changing": "Изменение..."
+    },
     "reports": {
       "title": "Панель отчетов",
       "periods": {
@@ -1567,8 +1584,7 @@
         "allActions": "Все действия",
         "allUsers": "Все пользователи",
         "applyFilters": "Применить фильтры",
-        "clearAll": "Очистить все",
-        "search": "Поиск"
+        "clearAll": "Очистить все"
       },
       "tableHeaders": {
         "status": "Статус",
