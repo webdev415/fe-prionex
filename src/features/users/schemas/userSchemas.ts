@@ -97,6 +97,8 @@ export const createUserSchema = z.object({
   }),
   timezone: z.string().min(1, 'Please select a timezone'),
   must_change_password: z.boolean().default(true),
+  asterisk_extension: z.string().regex(/^\d{3,10}$/, 'Extension must be 3-10 digits').optional().or(z.literal('')),
+  is_agent: z.boolean().optional().default(false),
 })
 
 /**
@@ -116,6 +118,8 @@ export const updateUserSchema = z.object({
     message: 'Please select a language',
   }),
   timezone: z.string().min(1, 'Please select a timezone'),
+  asterisk_extension: z.string().regex(/^\d{3,10}$/, 'Extension must be 3-10 digits').optional().or(z.literal('')),
+  is_agent: z.boolean().optional(),
 })
 
 /**

@@ -170,6 +170,9 @@
           "passwordsDontMatch": "Passwords don't match",
           "selectAtLeastOneProject": "Please select at least one project",
           "assignRoleForEachProject": "Please assign a role for each selected project"
+        },
+        "helpers": {
+          "asteriskExtension": "3-10 digit extension number for Asterisk phone system (e.g., 1001, 1002)"
         }
       },
       "editForm": {

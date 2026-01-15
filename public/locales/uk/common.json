@@ -168,6 +168,9 @@
           "passwordsDontMatch": "Паролі не співпадають",
           "selectAtLeastOneProject": "Будь ласка, виберіть хоча б один проєкт",
           "assignRoleForEachProject": "Будь ласка, призначте роль для кожного вибраного проєкту"
+        },
+        "helpers": {
+          "asteriskExtension": "3-10 цифровий номер внутрішнього зв'язку для телефонної системи Asterisk (наприклад, 1001, 1002)"
         }
       },
       "editForm": {
