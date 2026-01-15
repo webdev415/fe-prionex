@@ -106,24 +106,24 @@ export function ProfileSettingsPage() {
 
   return (
     <div className="flex flex-col items-start gap-4 self-stretch p-0">
-      <span className="text-dark-500 text-2xl leading-[120%] font-light tracking-[-0.48px]">
+      <span className="text-dark-500 text-xl leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
         {t('pages.profile.title')}
       </span>
 
-      <div className="flex items-start gap-5 self-stretch">
+      <div className="flex flex-col items-start gap-4 self-stretch lg:flex-row lg:gap-5">
         {/* Left panel */}
-        <div className="flex w-[25%] flex-col items-center gap-5 self-stretch rounded-xl bg-white/50 px-6 py-11">
+        <div className="flex w-full flex-col items-center gap-4 self-stretch rounded-xl bg-white/50 px-4 py-6 sm:gap-5 sm:px-6 sm:py-8 lg:w-[25%] lg:py-11">
           <div className="flex flex-col items-center gap-4 self-stretch">
             <div className="bg-secondary-800 relative flex flex-col items-center justify-center gap-[10px] rounded-full border border-white p-3">
               <div className="border-primary-300 absolute flex h-15 w-15 items-center justify-center rounded-full border-2 bg-transparent"></div>
               <Icons.User02 size={40} className="text-primary-500" />
             </div>
-            <div className="text-dark-500 text-xl leading-[132%] font-medium tracking-[-0.4px]">
+            <div className="text-dark-500 text-lg leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
               {user?.username}
             </div>
             <div className="flex flex-col items-center gap-3 self-stretch">
               <ProjectSelector />
-              <span className="text-base leading-[155%] font-light tracking-[-0.32px] text-gray-700">
+              <span className="text-sm leading-[155%] font-light tracking-[-0.32px] text-gray-700 sm:text-base">
                 {t('pages.profile.roleLabel')}{' '}
                 <span className="text-dark-500 font-medium">{user?.active_role_name || ''}</span>
               </span>
@@ -132,7 +132,7 @@ export function ProfileSettingsPage() {
           <Button
             onClick={() => setIsChangePasswordOpen(true)}
             variant="secondary"
-            className="h-12 rounded-md"
+            className="h-12 w-full rounded-md lg:w-auto"
             leftIcon={<Icons.LockSync01 size={24} />}
           >
             {t('pages.profile.resetPassword')}
@@ -155,33 +155,39 @@ export function ProfileSettingsPage() {
         </div>
 
         {/* Right: form */}
-        <div className="flex flex-1 flex-col items-start gap-3 rounded-xl bg-white/50 p-6">
-          <form onSubmit={handleSave} className="flex flex-col items-center gap-6 self-stretch">
-            <span className="text-dark-500 self-stretch text-[18px] leading-[150%] font-medium tracking-[-0.36px]">
+        <div className="flex w-full flex-1 flex-col items-start gap-3 rounded-xl bg-white/50 p-4 sm:p-6">
+          <form
+            onSubmit={handleSave}
+            className="flex w-full flex-col items-center gap-4 self-stretch sm:gap-6"
+          >
+            <span className="text-dark-500 self-stretch text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
               {t('pages.users.modals.edit.title')}
             </span>
-            <div className="flex flex-col items-center gap-4 self-stretch">
-              <div className="flex items-start gap-4 self-stretch">
+            <div className="flex w-full flex-col items-center gap-4 self-stretch">
+              <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
                 <Input
                   label={t('pages.users.forms.username')}
                   value={form.username}
                   disabled
                   onChange={() => {}}
                   helperText={t('pages.users.editForm.usernameCannotBeChanged')}
+                  className="w-full"
                 />
                 <Input
                   label={t('pages.users.forms.email')}
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   required
+                  className="w-full"
                 />
               </div>
-              <div className="flex items-start gap-4 self-stretch">
+              <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
                 <Input
                   label={t('pages.users.forms.firstName')}
                   value={form.first_name}
                   onChange={(e) => setForm({ ...form, first_name: e.target.value })}
                   required
+                  className="w-full"
                 />
 
                 <Input
@@ -189,13 +195,15 @@ export function ProfileSettingsPage() {
                   value={form.last_name}
                   onChange={(e) => setForm({ ...form, last_name: e.target.value })}
                   required
+                  className="w-full"
                 />
               </div>
-              <div className="flex items-start gap-4 self-stretch">
+              <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
                 <Input
                   label={t('pages.users.forms.middleName')}
                   value={form.middle_name}
                   onChange={(e) => setForm({ ...form, middle_name: e.target.value })}
+                  className="w-full"
                 />
 
                 <Input
@@ -203,9 +211,10 @@ export function ProfileSettingsPage() {
                   placeholder={t('pages.users.forms.placeholders.phone')}
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className="w-full"
                 />
               </div>
-              <div className="flex items-start gap-4 self-stretch">
+              <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
                 <div className="flex w-full flex-col gap-2 self-stretch">
                   <Label htmlFor="language">{t('pages.users.forms.language')}</Label>
                   <LanguageSwitcher
@@ -236,21 +245,21 @@ export function ProfileSettingsPage() {
                 </div>
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-4">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
               <Button
                 type="button"
                 variant="cancel"
                 onClick={handleCancel}
-                className="h-12 rounded-full px-10"
+                className="h-12 w-48 rounded-full px-10"
               >
                 {t('actions.cancel')}
               </Button>
               <DoubleButton
                 type="submit"
-                icon={<Icons.Success size={24} />}
+                icon={<Icons.Success size={28} />}
                 iconPosition="left"
                 disabled={isUpdatingLocal || isChangingLocal}
-                className="h-12"
+                className="h-12 w-48"
                 onClick={() => {
                   // Handle double button click
                 }}
