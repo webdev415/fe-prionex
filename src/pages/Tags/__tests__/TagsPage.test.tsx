@@ -174,9 +174,9 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       const Wrapper = createTestWrapper()
       render(<TagsPage />, { wrapper: Wrapper })
 
-      // Click create button
-      const createButton = screen.getByRole('button', { name: /create tag/i })
-      await user.click(createButton)
+      // Click create button - use getAllByRole since there are two buttons (desktop and mobile)
+      const createButtons = screen.getAllByRole('button', { name: /create tag/i })
+      await user.click(createButtons[0])
 
       // Modal should open
       await waitFor(() => {
@@ -189,8 +189,9 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       const Wrapper = createTestWrapper()
       render(<TagsPage />, { wrapper: Wrapper })
 
-      // Open modal
-      await user.click(screen.getByRole('button', { name: /create tag/i }))
+      // Open modal - use getAllByRole since there are two buttons (desktop and mobile)
+      const createButtons = screen.getAllByRole('button', { name: /create tag/i })
+      await user.click(createButtons[0])
 
       // Fill form
       await waitFor(() => {
@@ -220,8 +221,9 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       const Wrapper = createTestWrapper()
       render(<TagsPage />, { wrapper: Wrapper })
 
-      // Open modal
-      await user.click(screen.getByRole('button', { name: /create tag/i }))
+      // Open modal - use getAllByRole since there are two buttons (desktop and mobile)
+      const createButtons = screen.getAllByRole('button', { name: /create tag/i })
+      await user.click(createButtons[0])
 
       await waitFor(() => {
         expect(screen.getByLabelText(/name/i)).toBeInTheDocument()
@@ -241,8 +243,9 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       const Wrapper = createTestWrapper()
       render(<TagsPage />, { wrapper: Wrapper })
 
-      // Open modal
-      await user.click(screen.getByRole('button', { name: /create tag/i }))
+      // Open modal - use getAllByRole since there are two buttons (desktop and mobile)
+      const createButtons = screen.getAllByRole('button', { name: /create tag/i })
+      await user.click(createButtons[0])
 
       await waitFor(() => {
         expect(screen.getByDisplayValue('#80D80A')).toBeInTheDocument()
