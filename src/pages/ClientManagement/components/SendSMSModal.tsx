@@ -227,7 +227,19 @@ export function SendSMSModal({
                 custom_message: displayMessage,
               }
 
-      await sendSMSMutation.mutateAsync(request)
+      const response = await sendSMSMutation.mutateAsync(request)
+      
+      // Check the status field in response
+      if (response.status === 'failed') {
+        toast.error(
+          t('pages.clients.modals.sendSMS.smsFailedToSend') || 
+          'SMS failed to send. Please check your SMS provider configuration or try again later.'
+        )
+        // Don't close modal - let user try again or check configuration
+        return
+      }
+      
+      // Success case
       toast.success(
         t('pages.clients.modals.sendSMS.smsSentSuccessfully') || 'SMS sent successfully'
       )
