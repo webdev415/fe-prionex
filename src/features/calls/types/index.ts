@@ -27,7 +27,7 @@ export interface OriginateCallRequest {
   caller_id_name?: string
   caller_id_number?: string
   campaign_id?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export interface OriginateCallResponse {
@@ -89,7 +89,7 @@ export interface CallStateEvent {
     call_id: string
     state: CallState
     duration?: number
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 

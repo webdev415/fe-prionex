@@ -13,8 +13,12 @@ export function useOriginateCall() {
       // Invalidate call history to refetch
       queryClient.invalidateQueries({ queryKey: ['callHistory'] })
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to initiate call')
+    onError: (error: unknown) => {
+      const message =
+        error && typeof error === 'object' && 'response' in error
+          ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+          : undefined
+      toast.error(message || 'Failed to initiate call')
     },
   })
 }

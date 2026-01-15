@@ -205,6 +205,34 @@ export function UserManagementPage() {
       },
     },
     {
+      key: 'extension',
+      header: t('pages.users.tableHeaders.extension'),
+      align: 'center',
+      render: (user) => (
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-sm text-gray-700">{user.asterisk_extension || '—'}</span>
+          {user.is_agent && (
+            <div className="flex items-center gap-1">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  user.agent_status === 'online'
+                    ? 'bg-green-500'
+                    : user.agent_status === 'busy'
+                      ? 'bg-yellow-500'
+                      : user.agent_status === 'on-call'
+                        ? 'bg-red-500'
+                        : 'bg-gray-400'
+                }`}
+              />
+              <span className="text-xs text-gray-500 capitalize">
+                {user.agent_status || 'offline'}
+              </span>
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
       key: 'status',
       header: t('pages.users.tableHeaders.status'),
       align: 'center',

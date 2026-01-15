@@ -159,8 +159,5 @@ export function useCallWebSocket(agentExtension: string | null) {
     enablePollingFallback,
   ])
 
-  return {
-    connectionStatus,
-    socket: socketRef.current,
-  }
+  return connectionStatus
 }

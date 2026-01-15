@@ -44,6 +44,9 @@ export interface ApiUser {
   created_at: string
   updated_at?: string
   projects?: ProjectRole[]
+  asterisk_extension?: string
+  is_agent: boolean
+  agent_status?: 'online' | 'offline' | 'busy' | 'on-call'
 }
 
 /**

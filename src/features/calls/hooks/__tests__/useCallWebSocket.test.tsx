@@ -89,8 +89,8 @@ describe('useCallWebSocket', () => {
     const connectHandler = mockSocket.on.mock.calls.find((call) => call[0] === 'connect')?.[1]
     connectHandler?.()
 
-    expect(result.current.connectionStatus.connected).toBe(true)
-    expect(result.current.connectionStatus.reconnecting).toBe(false)
+    expect(result.current.connected).toBe(true)
+    expect(result.current.reconnecting).toBe(false)
   })
 
   it('should update connection status on disconnect', () => {
@@ -108,7 +108,7 @@ describe('useCallWebSocket', () => {
     const disconnectHandler = mockSocket.on.mock.calls.find((call) => call[0] === 'disconnect')?.[1]
     disconnectHandler?.()
 
-    expect(result.current.connectionStatus.connected).toBe(false)
+    expect(result.current.connected).toBe(false)
   })
 
   it('should handle call state change events', async () => {
@@ -178,7 +178,7 @@ describe('useCallWebSocket', () => {
 
     reconnectAttemptHandler?.(11) // More than MAX_RECONNECT_ATTEMPTS (10)
 
-    expect(result.current.connectionStatus.usingPollingFallback).toBe(true)
+    expect(result.current.usingPollingFallback).toBe(true)
     expect(toast.warning).toHaveBeenCalledWith('Using fallback mode for call updates')
   })
 
@@ -260,20 +260,10 @@ describe('useCallWebSocket', () => {
 
     reconnectFailedHandler?.()
 
-    expect(result.current.connectionStatus.usingPollingFallback).toBe(true)
+    expect(result.current.usingPollingFallback).toBe(true)
     expect(consoleSpy).toHaveBeenCalledWith('Reconnection failed after max attempts')
 
     consoleSpy.mockRestore()
-  })
-
-  it('should expose socket reference', () => {
-    const agentExtension = '1003'
-
-    const { result } = renderHook(() => useCallWebSocket(agentExtension), {
-      wrapper: createWrapper(),
-    })
-
-    expect(result.current.socket).toBeDefined()
   })
 
   it('should handle multiple state change events', async () => {

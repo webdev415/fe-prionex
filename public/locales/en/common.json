@@ -76,6 +76,7 @@
         "fullName": "Full Name",
         "email": "Email",
         "projectRole": "Project & Role",
+        "extension": "Extension / Agent",
         "status": "Status",
         "actions": "Actions"
       },
@@ -146,6 +147,9 @@
         "phone": "Phone:",
         "language": "Language:",
         "timezone": "Timezone:",
+        "asteriskExtension": "Asterisk Extension:",
+        "agentStatus": "Agent Status:",
+        "isAgent": "Is Agent",
         "assignProjects": "Assign Projects:",
         "rolePerProject": "Role per Project:",
         "notAssigned": "Not assigned",
@@ -172,6 +176,12 @@
         "errorUpdating": "Error updating user",
         "failedToUpdate": "Failed to update user",
         "usernameCannotBeChanged": "Username cannot be changed"
+      },
+      "agentStatuses": {
+        "online": "Online",
+        "offline": "Offline",
+        "busy": "Busy",
+        "onCall": "On Call"
       }
     },
     "projects": {

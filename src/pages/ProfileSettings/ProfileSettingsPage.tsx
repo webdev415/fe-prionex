@@ -121,6 +121,25 @@ export function ProfileSettingsPage() {
             <div className="flex flex-col items-center gap-3 self-stretch">
               <ProjectSelector variant="profile" />
               <div className="text-xs text-gray-500">Role: {user?.active_role_name || ''}</div>
+              {user?.asterisk_extension && (
+                <div className="text-xs text-gray-500">Extension: {user.asterisk_extension}</div>
+              )}
+              {user?.is_agent && user?.agent_status && (
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      user.agent_status === 'online'
+                        ? 'bg-green-500'
+                        : user.agent_status === 'busy'
+                          ? 'bg-yellow-500'
+                          : user.agent_status === 'on-call'
+                            ? 'bg-red-500'
+                            : 'bg-gray-400'
+                    }`}
+                  />
+                  <span className="text-xs text-gray-500 capitalize">{user.agent_status}</span>
+                </div>
+              )}
             </div>
           </div>
           <Button
@@ -238,6 +257,45 @@ export function ProfileSettingsPage() {
                   </Select>
                 </div>
               </div>
+
+              {/* Call Settings Section - Only visible if user has extension */}
+              {user?.asterisk_extension && (
+                <>
+                  <div className="border-t border-gray-200 pt-4">
+                    <span className="text-dark-500 text-base font-medium">Call Settings</span>
+                  </div>
+                  <div className="flex items-start gap-4 self-stretch">
+                    <Input
+                      label="Asterisk Extension:"
+                      value={user.asterisk_extension}
+                      disabled
+                      onChange={() => {}}
+                      helperText="Extension number is managed by system administrator"
+                    />
+                    {user.is_agent && (
+                      <div className="flex w-full flex-col gap-2 self-stretch">
+                        <Label>Agent Status:</Label>
+                        <div className="flex items-center gap-2 rounded-md border border-gray-300 bg-gray-50 px-3 py-2">
+                          <span
+                            className={`h-2 w-2 rounded-full ${
+                              user.agent_status === 'online'
+                                ? 'bg-green-500'
+                                : user.agent_status === 'busy'
+                                  ? 'bg-yellow-500'
+                                  : user.agent_status === 'on-call'
+                                    ? 'bg-red-500'
+                                    : 'bg-gray-400'
+                            }`}
+                          />
+                          <span className="text-sm text-gray-700 capitalize">
+                            {user.agent_status || 'offline'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
             <div className="mt-4 flex items-center gap-4">
               <Button

@@ -9,7 +9,7 @@
  * - Incoming: Incoming call popup
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
@@ -125,36 +125,39 @@ export function CallDialogModal({
     }
   }, [open, initialState])
 
-  // Update UI based on real call state from backend
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => {
-    if (!callDetails || !open) return
+  // Derive call state and elapsed time from backend state
+  const derivedState = useMemo(() => {
+    if (!callDetails || !open) {
+      return { state: callState, time: elapsedTime }
+    }
 
     // Map backend state to frontend state
     switch (callDetails.state) {
       case 'initiated':
-        setCallState('dialing')
-        setElapsedTime(callDetails.ring_duration || 0)
-        break
       case 'ringing':
-        setCallState('dialing')
-        setElapsedTime(callDetails.ring_duration || 0)
-        break
+        return { state: 'dialing' as CallState, time: callDetails.ring_duration || 0 }
       case 'active':
-        setCallState('connected')
-        setElapsedTime(callDetails.talk_duration || 0)
-        break
+        return { state: 'connected' as CallState, time: callDetails.talk_duration || 0 }
       case 'completed':
-        setCallState('ended')
-        setElapsedTime(callDetails.total_duration || 0)
-        // Auto-close countdown already handles this
-        break
+        return { state: 'ended' as CallState, time: callDetails.total_duration || 0 }
       case 'failed':
-        setCallState('ended')
-        setElapsedTime(0)
-        break
+        return { state: 'ended' as CallState, time: 0 }
+      default:
+        return { state: callState, time: elapsedTime }
     }
-  }, [callDetails, open])
+  }, [callDetails, open, callState, elapsedTime])
+
+  // Sync derived state to local state
+  // This is intentional state synchronization with external system (backend call state)
+  useEffect(() => {
+    if (derivedState.state !== callState) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCallState(derivedState.state)
+    }
+    if (derivedState.time !== elapsedTime) {
+      setElapsedTime(derivedState.time)
+    }
+  }, [derivedState, callState, elapsedTime])
 
   // Timer for dialing and connected states
   useEffect(() => {
