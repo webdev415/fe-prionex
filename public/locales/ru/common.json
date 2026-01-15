@@ -1653,6 +1653,36 @@
           "successStatus": "Статус успеха"
         }
       }
+    },
+    "tags": {
+      "title": "Теги",
+      "createTag": "Создать тег",
+      "editTag": "Редактировать тег",
+      "newTag": "Новый тег",
+      "noTagsFound": "Теги не найдены",
+      "errorLoading": "Не удалось загрузить теги",
+      "tableHeaders": {
+        "name": "Название тега",
+        "project": "Проект",
+        "description": "Описание",
+        "clients": "Клиенты",
+        "actions": "Действия"
+      },
+      "fields": {
+        "name": "Название",
+        "namePlaceholder": "Введите название тега",
+        "color": "Цвет",
+        "description": "Описание",
+        "descriptionPlaceholder": "Введите описание тега",
+        "optional": "Необязательно",
+        "project": "Проект",
+        "projectNote": "Теги автоматически назначаются вашему активному проекту",
+        "tagName": "Название тега"
+      },
+      "actions": {
+        "edit": "Редактировать",
+        "delete": "Удалить"
+      }
     }
   }
 }

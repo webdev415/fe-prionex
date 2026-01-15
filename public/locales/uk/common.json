@@ -1655,6 +1655,36 @@
           "successStatus": "Статус успіху"
         }
       }
+    },
+    "tags": {
+      "title": "Теги",
+      "createTag": "Створити тег",
+      "editTag": "Редагувати тег",
+      "newTag": "Новий тег",
+      "noTagsFound": "Теги не знайдено",
+      "errorLoading": "Не вдалося завантажити теги",
+      "tableHeaders": {
+        "name": "Назва тега",
+        "project": "Проєкт",
+        "description": "Опис",
+        "clients": "Клієнти",
+        "actions": "Дії"
+      },
+      "fields": {
+        "name": "Назва",
+        "namePlaceholder": "Введіть назву тега",
+        "color": "Колір",
+        "description": "Опис",
+        "descriptionPlaceholder": "Введіть опис тега",
+        "optional": "Необов'язково",
+        "project": "Проєкт",
+        "projectNote": "Теги автоматично призначаються вашому активному проєкту",
+        "tagName": "Назва тега"
+      },
+      "actions": {
+        "edit": "Редагувати",
+        "delete": "Видалити"
+      }
     }
   }
 }
