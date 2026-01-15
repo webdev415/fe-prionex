@@ -1276,6 +1276,8 @@
         "usageCount": "Количество использований",
         "characters": "символов",
         "cyrillicLimit": "Кириллический лимит",
+        "latinLimit": "Латинский лимит",
+        "messageExceedsLimit": "Сообщение превышает лимит символов. Пожалуйста, сократите сообщение.",
         "variablesDetected": "Обнаруженные переменные",
         "clickToInsert": "Нажмите, чтобы вставить",
         "availableVariables": "Доступные переменные",
