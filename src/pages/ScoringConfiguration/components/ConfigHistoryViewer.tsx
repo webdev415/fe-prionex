@@ -5,7 +5,7 @@
  * Shows before/after comparison for each change.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
@@ -29,7 +29,7 @@ interface ConfigHistoryViewerProps {
 }
 
 export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
 
   // State
   const [history, setHistory] = useState<ConfigHistoryEntry[]>([])
@@ -135,13 +135,18 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
     setPage(1)
   }
 
-  const sellerOptions = [
-    { value: '', label: t('common.all', 'All Sellers') },
-    ...sellers.map((seller) => ({
-      value: seller.id.toString(),
-      label: seller.name,
-    })),
-  ]
+  const sellerOptions = useMemo(
+    () => [
+      { value: '', label: t('common.all', 'All') },
+      ...sellers.map((seller) => ({
+        value: seller.id.toString(),
+        label: seller.name,
+      })),
+    ],
+    // i18n.language is needed to recalculate sellerOptions when language changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, sellers, i18n.language]
+  )
 
   const totalPages = Math.ceil(totalCount / pageSize)
 
@@ -159,7 +164,7 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
             </label>
             <Select value={sellerFilter} onValueChange={setSellerFilter}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={t('common.all', 'All Sellers')} />
+                <SelectValue placeholder={t('common.all', 'All')} />
               </SelectTrigger>
               <SelectContent>
                 {sellerOptions.map((option) => (
@@ -233,7 +238,7 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
                       </span>
                       {entry.seller_id && (
                         <span className="text-dark-400 text-xs">
-                          Seller:{' '}
+                          {t('pages.scoringConfiguration.seller', 'Seller')}:{' '}
                           {sellers.find((s) => s.id === entry.seller_id)?.name ||
                             `ID ${entry.seller_id}`}
                         </span>
@@ -241,7 +246,8 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
                     </div>
 
                     <div className="text-dark-500 mb-1 text-sm font-medium">
-                      Changed by: {entry.changed_by_username}
+                      {t('pages.scoringConfiguration.history.tableHeaders.changedBy', 'Changed By')}
+                      : {entry.changed_by_username}
                     </div>
                     <div className="text-dark-400 mb-2 text-xs">
                       {new Date(entry.changed_at).toLocaleString()}
@@ -249,7 +255,8 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
 
                     {entry.change_reason && (
                       <div className="text-dark-400 mb-3 text-sm italic">
-                        Reason: {entry.change_reason}
+                        {t('pages.scoringConfiguration.history.tableHeaders.reason', 'Reason')}:{' '}
+                        {entry.change_reason}
                       </div>
                     )}
 

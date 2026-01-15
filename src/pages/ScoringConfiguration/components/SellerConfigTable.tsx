@@ -20,7 +20,7 @@ interface SellerConfigTableProps {
 }
 
 export function SellerConfigTable({ configs, onEdit, onDelete }: SellerConfigTableProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [deletingSellerId, setDeletingSellerId] = useState<number | null>(null)
   const [deleteCandidate, setDeleteCandidate] = useState<SellerConfig | null>(null)
   const isDeleteModalOpen = !!deleteCandidate
@@ -127,7 +127,7 @@ export function SellerConfigTable({ configs, onEdit, onDelete }: SellerConfigTab
               className="rounded-md"
             >
               <Icons.PencilEdit02 size={16} />
-              {t('common.edit', 'Edit')}
+              {t('actions.edit', 'Edit')}
             </Button>
             <Button
               type="button"
@@ -143,13 +143,15 @@ export function SellerConfigTable({ configs, onEdit, onDelete }: SellerConfigTab
               <Icons.Delete size={16} />
               {deletingSellerId === item.seller_id
                 ? t('common.deleting', 'Deleting...')
-                : t('common.delete', 'Delete')}
+                : t('actions.delete', 'Delete')}
             </Button>
           </div>
         ),
       },
     ],
-    [t, deletingSellerId, onEdit]
+    // i18n.language is needed to recalculate columns when language changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, i18n.language, deletingSellerId, onEdit]
   )
 
   return (
@@ -181,7 +183,10 @@ export function SellerConfigTable({ configs, onEdit, onDelete }: SellerConfigTab
             <p>
               {t(
                 'pages.scoringConfiguration.confirmDeleteSeller',
-                `Are you sure you want to delete the custom configuration for "${deleteCandidate?.seller_name}"? This will revert to project-level thresholds for this seller.`
+                'Are you sure you want to delete the custom configuration for "{{sellerName}}"? This will revert to project-level thresholds for this seller.',
+                {
+                  sellerName: deleteCandidate?.seller_name || '',
+                }
               )}
             </p>
           </div>
@@ -205,7 +210,7 @@ export function SellerConfigTable({ configs, onEdit, onDelete }: SellerConfigTab
           >
             {deletingSellerId !== null
               ? t('common.deleting', 'Deleting...')
-              : t('common.delete', 'Delete')}
+              : t('actions.delete', 'Delete')}
           </Button>
         </ModalFooter>
       </Modal>
