@@ -1278,6 +1278,8 @@
         "usageCount": "Кількість використань",
         "characters": "символів",
         "cyrillicLimit": "Кириличний ліміт",
+        "latinLimit": "Латинський ліміт",
+        "messageExceedsLimit": "Повідомлення перевищує ліміт символів. Будь ласка, скоротьте повідомлення.",
         "variablesDetected": "Виявлені змінні",
         "clickToInsert": "Натисніть, щоб вставити",
         "availableVariables": "Доступні змінні",

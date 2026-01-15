@@ -1318,6 +1318,8 @@
         "usageCount": "Usage Count",
         "characters": "characters",
         "cyrillicLimit": "Cyrillic limit",
+        "latinLimit": "Latin limit",
+        "messageExceedsLimit": "Message exceeds character limit. Please shorten your message.",
         "variablesDetected": "Variables Detected",
         "clickToInsert": "Click to insert",
         "availableVariables": "Available Variables",
