@@ -87,6 +87,8 @@ export interface CreateUserInput {
   timezone: string
   must_change_password: boolean
   project_assignments: ProjectRoleAssignment[]
+  asterisk_extension?: string
+  is_agent?: boolean
 }
 
 /**
@@ -101,6 +103,8 @@ export interface UpdateUserInput {
   language?: 'uk' | 'ru' | 'en'
   timezone?: string
   project_assignments?: ProjectRoleAssignment[]
+  asterisk_extension?: string
+  is_agent?: boolean
 }
 
 /**

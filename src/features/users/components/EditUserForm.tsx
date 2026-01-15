@@ -64,6 +64,8 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
     handleSubmit,
     control,
     reset,
+    getValues,
+    setValue,
     formState: { errors },
   } = useForm<UpdateUserFormData>({
     resolver: zodResolver(updateUserSchema),
