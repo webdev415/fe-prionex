@@ -85,6 +85,7 @@ export interface AuditLogSearchParams {
   resource_id?: number
   resource_identifier?: string
   project_id?: number
+  user_role?: string
   from_date?: string // YYYY-MM-DD
   to_date?: string // YYYY-MM-DD
   success?: boolean
@@ -127,6 +128,10 @@ export interface FailedLoginsResponse {
   }
   attempts: Array<Record<string, unknown>>
   suspicious_ips: Array<Record<string, unknown>>
+}
+
+export interface DistinctRolesResponse {
+  roles: string[]
 }
 
 export interface CSVExportOptions {

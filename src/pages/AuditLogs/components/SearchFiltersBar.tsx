@@ -27,6 +27,7 @@ interface SearchFiltersBarProps {
   filters: AuditLogFilters
   onFilterChange: (filters: AuditLogFilters) => void
   users: string[]
+  roles: string[]
   entityTypes: string[]
   actions: string[]
   isLoading?: boolean
@@ -38,6 +39,7 @@ export function SearchFiltersBar({
   filters,
   onFilterChange,
   users,
+  roles,
   entityTypes,
   actions,
   isLoading = false,
@@ -416,6 +418,11 @@ export function SearchFiltersBar({
                 </SelectTrigger>
                 <SelectContent className="bg-white">
                   <SelectItem value="all">All Roles</SelectItem>
+                  {roles.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {role}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

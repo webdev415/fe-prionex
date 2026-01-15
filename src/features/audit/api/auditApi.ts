@@ -9,6 +9,7 @@ import api from '@/lib/api'
 import type {
   AuditLogSearchParams,
   AuditLogSearchResponse,
+  DistinctRolesResponse,
   ResourceHistoryResponse,
   UserActivityResponse,
   FailedLoginsResponse,
@@ -94,5 +95,14 @@ export async function exportAuditLogs(
     },
     responseType: 'blob',
   })
+  return response.data
+}
+
+/**
+ * Get distinct user roles from audit logs
+ * Requires Admin role
+ */
+export async function getDistinctRoles(): Promise<DistinctRolesResponse> {
+  const response = await api.get<DistinctRolesResponse>(`${BASE_URL}/roles`)
   return response.data
 }

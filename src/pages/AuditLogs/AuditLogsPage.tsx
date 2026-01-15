@@ -5,6 +5,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import { AuditLogDetailModal } from './components/AuditLogDetailModal'
@@ -15,7 +16,7 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { cn } from '@/lib/utils'
-import { useAuditLogs, exportAuditLogs } from '@/features/audit'
+import { useAuditLogs, exportAuditLogs, getDistinctRoles } from '@/features/audit'
 import type { AuditLogResponse } from '@/features/audit/api/types'
 import { toast } from 'sonner'
 
@@ -91,6 +92,7 @@ export function AuditLogsPage() {
     if (filters.action) params.action = filters.action.toLowerCase()
     if (filters.status === 'success') params.success = true
     if (filters.status === 'failed') params.success = false
+    if (filters.role) params.user_role = filters.role // Send role filter to API
 
     // Handle user filter - try to parse as user_id if numeric, otherwise use username
     if (filters.user) {
@@ -117,6 +119,14 @@ export function AuditLogsPage() {
   // React Query will automatically refetch when apiParams changes (including page changes)
   // The query key includes all params, so changing currentPage will trigger a new request
   const { data: auditData, isLoading, error } = useAuditLogs(apiParams)
+
+  // Fetch distinct roles from API (separate query, cached)
+  const { data: rolesData } = useQuery({
+    queryKey: ['audit', 'roles'],
+    queryFn: getDistinctRoles,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+  })
 
   // Map backend response to frontend AuditLog type
   const mapAuditLogResponse = useCallback((log: AuditLogResponse): AuditLog => {
@@ -401,6 +411,9 @@ export function AuditLogsPage() {
       )
     }
 
+    // Role filtering is now handled by API, so we don't need client-side filtering for role
+    // (Keeping this commented for reference, but role filter is sent to API)
+
     // Apply sorting
     result.sort((a, b) => {
       const aValue = (a as unknown as Record<string, unknown>)[sortConfig.key]
@@ -426,10 +439,17 @@ export function AuditLogsPage() {
   }, [auditLogs, filters, sortConfig, formatDetails, formatEntity])
 
   // Pagination - use API pagination
-  // The API already returns paginated results, so we use them directly
-  // Client-side filtering is applied, but NOT client-side pagination
-  const totalPages = auditData ? Math.ceil(auditData.total / pageSize) : 0
-  const paginatedLogs = filteredLogs // Use filtered results directly (API handles pagination)
+  // Role filter is now handled by API, so we use API total
+  // Only search and user filters are client-side (API doesn't support them well)
+  const hasClientSideFilters = !!(filters.search || filters.users || filters.user)
+  const totalItems = hasClientSideFilters ? filteredLogs.length : auditData?.total || 0
+  const totalPages = totalItems > 0 ? Math.ceil(totalItems / pageSize) : 0
+
+  // Apply client-side pagination only if client-side filtering is active
+  // Otherwise, API handles pagination
+  const paginatedLogs = hasClientSideFilters
+    ? filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    : filteredLogs // API already paginated
 
   const handleFilterChange = useCallback((newFilters: AuditLogFilters) => {
     setFilters(newFilters)
@@ -479,6 +499,23 @@ export function AuditLogsPage() {
     })
     return Array.from(userSet).sort()
   }, [auditLogs])
+
+  // Normalize roles from API response: always use title case for display
+  const roles = useMemo(() => {
+    if (!rolesData?.roles) return []
+
+    const roleSet = new Set<string>()
+    rolesData.roles.forEach((role) => {
+      if (role) {
+        // Normalize to title case: first letter uppercase, rest lowercase
+        const normalized = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
+        roleSet.add(normalized)
+      }
+    })
+
+    // Return sorted list of normalized role names
+    return Array.from(roleSet).sort()
+  }, [rolesData])
 
   const entityTypes = useMemo(() => {
     // Entity types from user story
@@ -641,6 +678,7 @@ export function AuditLogsPage() {
         filters={filters}
         onFilterChange={handleFilterChange}
         users={users}
+        roles={roles}
         entityTypes={entityTypes}
         actions={actions}
         isLoading={isLoading}
