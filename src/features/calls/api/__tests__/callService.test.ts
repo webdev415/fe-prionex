@@ -46,7 +46,7 @@ describe('CallService', () => {
       const result = await callService.originateCall(mockRequest)
 
       expect(axios.post).toHaveBeenCalledWith(
-        'http://localhost:8005/api/v1/calls/originate',
+        'http://localhost:8000/api/v1/calls/originate',
         mockRequest
       )
       expect(result).toEqual(mockResponse.data)
@@ -90,7 +90,7 @@ describe('CallService', () => {
 
       const result = await callService.getCallDetails(mockCallId)
 
-      expect(axios.get).toHaveBeenCalledWith('http://localhost:8005/api/v1/calls/CALL-123')
+      expect(axios.get).toHaveBeenCalledWith('http://localhost:8000/api/v1/calls/CALL-123')
       expect(result).toEqual(mockResponse.data)
     })
 
@@ -134,7 +134,7 @@ describe('CallService', () => {
 
       const result = await callService.getCallHistory(mockClientId)
 
-      expect(axios.get).toHaveBeenCalledWith('http://localhost:8005/api/v1/calls/client/123', {
+      expect(axios.get).toHaveBeenCalledWith('http://localhost:8000/api/v1/calls/client/123', {
         params: undefined,
       })
       expect(result).toEqual(mockResponse.data)
@@ -161,7 +161,7 @@ describe('CallService', () => {
 
       const result = await callService.getCallHistory(mockClientId, mockFilters)
 
-      expect(axios.get).toHaveBeenCalledWith('http://localhost:8005/api/v1/calls/client/123', {
+      expect(axios.get).toHaveBeenCalledWith('http://localhost:8000/api/v1/calls/client/123', {
         params: mockFilters,
       })
       expect(result).toEqual(mockResponse.data)
@@ -199,7 +199,7 @@ describe('CallService', () => {
       await callService.updateCallOutcome(mockCallId, mockOutcome)
 
       expect(axios.patch).toHaveBeenCalledWith(
-        'http://localhost:8005/api/v1/calls/CALL-123/outcome',
+        'http://localhost:8000/api/v1/calls/CALL-123/outcome',
         mockOutcome
       )
     })
@@ -253,7 +253,7 @@ describe('CallService', () => {
   describe('getRecordingUrl', () => {
     it('should return correct recording URL', () => {
       const mockCallId = 'CALL-123'
-      const expectedUrl = 'http://localhost:8005/api/v1/calls/CALL-123/recording'
+      const expectedUrl = 'http://localhost:8000/api/v1/calls/CALL-123/recording'
 
       const result = callService.getRecordingUrl(mockCallId)
 
@@ -274,7 +274,7 @@ describe('CallService', () => {
 
       const result = await callService.getAMIHealth()
 
-      expect(axios.get).toHaveBeenCalledWith('http://localhost:8005/health/ami')
+      expect(axios.get).toHaveBeenCalledWith('http://localhost:8000/health/ami')
       expect(result).toEqual(mockResponse.data)
     })
 

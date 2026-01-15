@@ -9,7 +9,8 @@ import type {
   AMIHealthResponse,
 } from '../types'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8005'
+// Use same base URL as other services - all requests go through Kong Gateway
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
 class CallService {
   async originateCall(request: OriginateCallRequest): Promise<OriginateCallResponse> {
