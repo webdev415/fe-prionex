@@ -49,6 +49,7 @@ interface ExtendedSidebarItem extends SidebarItem {
 function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
   const { t } = useTranslation('common')
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
   const { minimizedCall, clearMinimizedCall, setOpenCallModal } = useCallStore()
   const [isRestored, setIsRestored] = useState(false)
@@ -316,11 +317,12 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
         {/* Settings */}
         <DropdownMenuItem
           onClick={() => {
-            toast.info(t('navigation.profile'))
+            setIsOpen(false)
+            navigate('/dashboard/profile')
           }}
           className="text-dark-500 text-sm"
         >
-          <Icons.User02 size={16} className="mr-2" />
+          <Icons.SlidersHorizontal size={16} className="mr-2" />
           <span>{t('navigation.profile')}</span>
         </DropdownMenuItem>
 
