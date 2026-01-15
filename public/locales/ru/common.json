@@ -19,7 +19,9 @@
       "transactions": "Транзакции",
       "auditLogs": "Журнал аудита",
       "reports": "Отчеты",
-    "scoringConfiguration": "Конфигурация оценки"
+    "scoringConfiguration": "Конфигурация оценки",
+    "systemSettings": "Системные настройки",
+    "tags": "Теги"
   },
   "search": {
     "placeholder": "Поиск",
