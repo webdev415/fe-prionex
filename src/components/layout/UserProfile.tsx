@@ -67,7 +67,7 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
           onClick={handleSettingsClick}
           className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
         >
-          <Icons.User02 size={16} className="text-dark-500" />
+          <Icons.SlidersHorizontal size={16} className="text-dark-500" />
           <span>{t('navigation.profile')}</span>
         </DropdownMenuItem>
 

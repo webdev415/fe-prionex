@@ -128,6 +128,7 @@ import {
   LanguageSquareIcon,
   Settings05Icon,
   LockSync01Icon,
+  SlidersHorizontalIcon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -310,6 +311,9 @@ export const Icons = {
   LanguageSquare: (props: Omit<IconProps, 'icon'>) => <Icon icon={LanguageSquareIcon} {...props} />,
   Settings05: (props: Omit<IconProps, 'icon'>) => <Icon icon={Settings05Icon} {...props} />,
   LockSync01: (props: Omit<IconProps, 'icon'>) => <Icon icon={LockSync01Icon} {...props} />,
+  SlidersHorizontal: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={SlidersHorizontalIcon} {...props} />
+  ),
 }
 
 /**
@@ -429,6 +433,7 @@ export {
   LanguageSquareIcon,
   Settings05Icon,
   LockSync01Icon,
+  SlidersHorizontalIcon,
 }
 
 /**

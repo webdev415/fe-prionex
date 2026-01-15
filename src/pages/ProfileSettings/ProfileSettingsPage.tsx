@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -23,7 +23,7 @@ import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ChangePasswordModal } from '@/features/auth'
 export function ProfileSettingsPage() {
   const { user, isLoading: authLoading } = useAuth()
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const { mutateAsync: updateUserMutateAsync } = useUpdateUser()
   const [isUpdatingLocal, setIsUpdatingLocal] = useState(false)
   const [isChangingLocal, setIsChangingLocal] = useState(false)
@@ -31,6 +31,8 @@ export function ProfileSettingsPage() {
 
   // Local form state initialized from store user
   const initialForm = useMemo(() => {
+    // Get current language from i18n (which reads from localStorage via LanguageDetector)
+    const currentLanguage = (i18n.language as 'en' | 'uk' | 'ru') || 'en'
     return {
       username: user?.username || '',
       email: user?.email || '',
@@ -38,14 +40,22 @@ export function ProfileSettingsPage() {
       last_name: user?.lastName || '',
       middle_name: '',
       phone: '',
-      language: 'en',
+      language: currentLanguage,
       timezone: 'Europe/Kyiv',
       currentPassword: '',
       newPassword: '',
     }
-  }, [user])
+  }, [user, i18n.language])
 
   const [form, setForm] = useState(initialForm)
+
+  // Sync form language with i18n language when it changes externally (e.g., from header)
+  useEffect(() => {
+    const currentLanguage = (i18n.language as 'en' | 'uk' | 'ru') || 'en'
+    if (form.language !== currentLanguage) {
+      setForm((prev) => ({ ...prev, language: currentLanguage }))
+    }
+  }, [i18n.language, form.language])
 
   const { mutateAsync: changePassword } = useMutation({
     mutationFn: (payload: { current_password: string; new_password: string }) =>
@@ -221,7 +231,9 @@ export function ProfileSettingsPage() {
                     id="language"
                     variant="dashboard"
                     value={form.language}
-                    onValueChange={(v: string) => setForm({ ...form, language: v })}
+                    onValueChange={(v: string) =>
+                      setForm({ ...form, language: v as 'en' | 'uk' | 'ru' })
+                    }
                   />
                 </div>
 
