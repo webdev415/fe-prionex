@@ -27,7 +27,16 @@ const BASE_URL = '/api/v1/audit'
 export async function searchAuditLogs(
   params: AuditLogSearchParams = {}
 ): Promise<AuditLogSearchResponse> {
-  const response = await api.get<AuditLogSearchResponse>(`${BASE_URL}/logs`, { params })
+  // FastAPI expects array parameters as multiple query params with same name
+  // e.g., ?actions=UPDATED&actions=CREATED (not ?actions[]=UPDATED)
+  // axios by default serializes arrays correctly for this
+  const response = await api.get<AuditLogSearchResponse>(`${BASE_URL}/logs`, {
+    params,
+    // Ensure arrays are serialized as multiple params with same name (not brackets)
+    paramsSerializer: {
+      indexes: null, // This makes axios send ?actions=val1&actions=val2 instead of ?actions[]=val1
+    },
+  })
   return response.data
 }
 

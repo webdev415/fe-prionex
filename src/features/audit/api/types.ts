@@ -81,14 +81,18 @@ export interface AuditLogResponse {
 export interface AuditLogSearchParams {
   user_id?: number
   action?: string
+  actions?: string[] // Multiple actions (display names like 'UPDATED', 'CREATED')
   resource_type?: string
+  resource_types?: string[] // Multiple resource types
   resource_id?: number
   resource_identifier?: string
   project_id?: number
+  usernames?: string[] // Multiple usernames
   user_role?: string
   from_date?: string // YYYY-MM-DD
   to_date?: string // YYYY-MM-DD
   success?: boolean
+  search?: string
   page?: number
   limit?: number
 }

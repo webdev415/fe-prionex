@@ -90,6 +90,7 @@ export function AuditLogsPage() {
   const [filters, setFilters] = useState<AuditLogFilters>({})
 
   // Convert backend filters to API params
+  // Include ALL filters so that any filter change triggers a backend request
   const apiParams = useMemo(() => {
     const params: Record<string, unknown> = {
       page: currentPage,
@@ -100,20 +101,24 @@ export function AuditLogsPage() {
     if (filters.date_to) params.to_date = filters.date_to
 
     // Handle entity types filter (multiple or single)
+    // Backend now supports multiple resource types
+    // Convert display names (e.g., "Sms template") back to database format (e.g., "sms_template")
     if (filters.entity_types && filters.entity_types.length > 0) {
-      // For multiple entity types, send the first one to API and filter client-side for multiple
-      params.resource_type = filters.entity_types[0].toLowerCase()
+      params.resource_types = filters.entity_types.map((et) => {
+        // Convert display name back to database format: replace spaces with underscores, lowercase
+        return et.toLowerCase().replace(/\s+/g, '_')
+      })
     } else if (filters.entity_type) {
-      params.resource_type = filters.entity_type.toLowerCase()
+      // Convert display name back to database format
+      params.resource_type = filters.entity_type.toLowerCase().replace(/\s+/g, '_')
     }
 
     // Handle actions filter (multiple or single)
-    // Note: filters.actions contains display names (e.g., "LOGIN SUCCESS")
-    // We need to convert back to original format (e.g., "auth.login_success") for API
-    // For now, skip API filtering for actions and do client-side only
-    // (The API expects original action format like "auth.login_success")
-    if (filters.action) {
-      params.action = filters.action.toLowerCase()
+    // Backend now supports multiple actions and display names (e.g., "UPDATED")
+    if (filters.actions && filters.actions.length > 0) {
+      params.actions = filters.actions // Send display names as-is, backend will match
+    } else if (filters.action) {
+      params.action = filters.action // Send display name as-is
     }
 
     if (filters.status === 'success') params.success = true
@@ -125,11 +130,18 @@ export function AuditLogsPage() {
       params.search = filters.search
     }
 
-    // Handle user filter - try to parse as user_id if numeric, otherwise use username
-    if (filters.user) {
+    // Handle user filter - send usernames array to backend
+    // Backend now supports multiple usernames
+    if (filters.users && filters.users.length > 0) {
+      params.usernames = filters.users
+    } else if (filters.user) {
+      // Single user - try to parse as user_id if numeric, otherwise use username
       const userId = parseInt(filters.user, 10)
       if (!isNaN(userId)) {
         params.user_id = userId
+      } else {
+        // If not numeric, send as single username in array
+        params.usernames = [filters.user]
       }
     }
 
@@ -424,50 +436,13 @@ export function AuditLogsPage() {
     return '—'
   }, [])
 
-  // Apply client-side filtering (search is now handled by backend)
+  // All filtering is now handled by backend API
+  // No client-side filtering needed
   const filteredLogs = useMemo(() => {
-    let result = [...auditLogs]
+    const result = [...auditLogs]
 
-    // Search is now handled by backend API, so no client-side search filtering needed
-
-    // Client-side entity types filter (if multiple selected)
-    if (filters.entity_types && filters.entity_types.length > 0) {
-      result = result.filter((log) => {
-        const logEntityType = log.entity_type?.toLowerCase()
-        return filters.entity_types!.some((type) => {
-          // Match normalized display name or original value
-          return type.toLowerCase() === logEntityType || logEntityType?.includes(type.toLowerCase())
-        })
-      })
-    }
-
-    // Client-side actions filter (if multiple selected)
-    // log.action is in display format (e.g., "LOGIN SUCCESS")
-    if (filters.actions && filters.actions.length > 0) {
-      result = result.filter((log) => {
-        const logAction = log.action?.toUpperCase()
-        return filters.actions!.some((action) => {
-          // Match action display name (both are in uppercase format)
-          return action.toUpperCase() === logAction
-        })
-      })
-    }
-
-    // Filter by users (client-side)
-    if (filters.users && filters.users.length > 0) {
-      result = result.filter(
-        (log) =>
-          filters.users!.includes(log.username) ||
-          (log.user_id && filters.users!.includes(log.user_id.toString()))
-      )
-    } else if (filters.user) {
-      result = result.filter(
-        (log) => log.username === filters.user || log.user_id?.toString() === filters.user
-      )
-    }
-
-    // Role filtering is now handled by API, so we don't need client-side filtering for role
-    // (Keeping this commented for reference, but role filter is sent to API)
+    // All filters (actions, entity types, users, search, role) are handled by backend
+    // Only sorting is done client-side (could be moved to backend later)
 
     // Apply sorting
     result.sort((a, b) => {
@@ -491,20 +466,14 @@ export function AuditLogsPage() {
     })
 
     return result
-  }, [auditLogs, filters, sortConfig])
+  }, [auditLogs, sortConfig])
 
-  // Pagination - use API pagination
-  // Role filter is now handled by API, so we use API total
-  // Only search and user filters are client-side (API doesn't support them well)
-  const hasClientSideFilters = !!(filters.search || filters.users || filters.user)
-  const totalItems = hasClientSideFilters ? filteredLogs.length : auditData?.total || 0
+  // Pagination - always use API pagination since all filtering is done by backend
+  const totalItems = auditData?.total || 0
   const totalPages = totalItems > 0 ? Math.ceil(totalItems / pageSize) : 0
 
-  // Apply client-side pagination only if client-side filtering is active
-  // Otherwise, API handles pagination
-  const paginatedLogs = hasClientSideFilters
-    ? filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-    : filteredLogs // API already paginated
+  // API already handles pagination, so use filteredLogs directly
+  const paginatedLogs = filteredLogs
 
   const handleFilterChange = useCallback((newFilters: AuditLogFilters) => {
     setFilters(newFilters)
