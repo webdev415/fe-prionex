@@ -77,7 +77,17 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
       <div className="w-full">
         {label && (
           <label htmlFor={inputId} className="text-dark-500 mb-1.5 block text-sm font-light">
-            {label}
+            {label.split(/(\*)/).map((token, i) =>
+              token === '*' ? (
+                <span key={i} className="text-error-500 font-light">
+                  *
+                </span>
+              ) : (
+                <span key={i} className="font-light">
+                  {token}
+                </span>
+              )
+            )}
           </label>
         )}
         <div className="relative">

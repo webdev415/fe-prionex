@@ -26,6 +26,7 @@ import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
 import { useSMSHistory } from '@/features/sms'
 import { useCallStore } from '@/stores/callStore'
 import { useClientTags } from '@/features/tags/hooks/useTags'
+import { TagSelectorModal } from './components/TagSelectorModal'
 
 // Helper function to create mock client detail
 const createMockClientDetail = (
@@ -371,20 +372,21 @@ const createMockClientDetail = (
       date: `0${id}/12/2023`,
       number: phoneNumber,
       contactType: 'Outgoing' as const,
+      // Use simplified status labels for the result column
       result:
         id === 1
-          ? "In a conversation about loans, a friend said it's imp..."
+          ? 'Refusal to pay'
           : id === 2
-            ? 'Discussed loan options and payment plans with the client...'
+            ? 'Agreement for full payment'
             : id === 3
-              ? 'Client expressed interest in learning more about available...'
+              ? 'Refusal to pay'
               : id === 4
-                ? 'Follow-up call regarding pending loan application status...'
+                ? 'Agreement for partial payment'
                 : id === 5
-                  ? 'Client requested additional information about interest rates...'
+                  ? 'Call back later'
                   : id === 6
-                    ? 'Scheduled meeting to review loan documentation and terms...'
-                    : 'Client confirmed receipt of loan agreement and will review...',
+                    ? 'Agreement for full payment'
+                    : 'Agreement for full payment',
       promisedAmount: 600 + id * 10,
       promisedDate: `0${id}/12/2023`,
       comment:
@@ -843,7 +845,10 @@ export function ClientDetailPage() {
 
   // Fetch client data from API
   const clientId = id ? Number(id) : 0
-  const { data: apiClient, isLoading, isError, error } = useClient(clientId, !!clientId)
+
+  // Ensure clientId is valid before making API call
+  const isValidClientId = clientId > 0 && !isNaN(clientId)
+  const { data: apiClient, isLoading, isError, error } = useClient(clientId, isValidClientId)
 
   // Fetch SMS history from API
   const { data: smsHistoryData } = useSMSHistory(clientId, undefined)
@@ -926,6 +931,7 @@ export function ClientDetailPage() {
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
   const [isCallRecordingModalOpen, setIsCallRecordingModalOpen] = useState(false)
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false)
   const [selectedCallData, setSelectedCallData] = useState<{
     type: string
     clientName: string
@@ -1317,7 +1323,7 @@ export function ClientDetailPage() {
             size="md"
             variant="transparent-black"
             className="flex flex-row rounded-full text-sm font-medium"
-            onClick={() => navigate(`/dashboard/${id}/debt-summary`)}
+            onClick={() => navigate(`/dashboard/clients/${id}/debt-summary`)}
           >
             {t('pages.clients.debtSummary.title')}
           </Button>
@@ -1364,16 +1370,27 @@ export function ClientDetailPage() {
           {/* Credit Details (top part of card) */}
           <div className="flex flex-col items-start gap-3 self-stretch px-6 py-5">
             <div className="flex flex-col gap-2 self-stretch">
-              <div className="flex flex-wrap items-center gap-2 self-stretch">
-                {clientTags && clientTags.length > 0 ? (
-                  clientTags.map((tag) => (
-                    <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
-                  ))
-                ) : (
-                  <span className="text-sm text-gray-500">No tags assigned</span>
-                )}
+              <div className="flex items-center justify-between gap-2 self-stretch">
+                <div className="flex flex-1 flex-wrap items-center gap-2">
+                  {clientTags && clientTags.length > 0 ? (
+                    clientTags.map((tag) => (
+                      <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
+                    ))
+                  ) : (
+                    <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                      No tags assigned
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setIsTagModalOpen(true)}
+                  className="text-gray-500 transition-colors hover:text-gray-700"
+                  title="Manage tags"
+                  type="button"
+                >
+                  <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
+                </button>
               </div>
-              <p className="text-xs text-gray-500">Tags can be managed from the client list page</p>
             </div>
             <div className="flex flex-col gap-1 self-stretch">
               <div className="flex min-h-8 items-center self-stretch p-0">
@@ -2507,7 +2524,7 @@ export function ClientDetailPage() {
           <LinkButton
             variant="regular-secondary"
             size="xs"
-            onClick={() => navigate(`/dashboard/${client.id}/activity`)}
+            onClick={() => navigate(`/dashboard/clients/${client.id}/activity`)}
             rightIcon={<Icons.ArrowRight size={18} />}
           >
             {t('pages.clients.detail.viewAll')}
@@ -2610,6 +2627,15 @@ export function ClientDetailPage() {
         onSent={() => {
           // SMS sent successfully - history will refresh automatically via query invalidation
         }}
+      />
+
+      {/* Tag Selector Modal */}
+      <TagSelectorModal
+        open={isTagModalOpen}
+        clientId={clientId}
+        clientName={client.fullName}
+        projectId={1}
+        onClose={() => setIsTagModalOpen(false)}
       />
     </div>
   )

@@ -5,7 +5,7 @@
  * Integrated with real API using React Query.
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTags } from '@/features/tags'
 import type { Tag } from '@/features/tags'
@@ -18,14 +18,21 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { ErrorState } from '@/components/ErrorState'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { LinkButton } from '@/components/ui/LinkButton'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
 import { TagFormModal } from './components/TagFormModal'
 import { DeleteTagDialog } from './components/DeleteTagDialog'
 
 export function TagsPage() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editTag, setEditTag] = useState<Tag | null>(null)
   const [deleteTagId, setDeleteTagId] = useState<number | null>(null)
+  const [openDropdownTagId, setOpenDropdownTagId] = useState<number | null>(null)
 
   // Get current user and active project
   const { user } = useAuth()
@@ -37,6 +44,25 @@ export function TagsPage() {
 
   // Fetch tags
   const { data: tags = [], isLoading, isError, error } = useTags()
+
+  // Close dropdown when screen size crosses breakpoint (in either direction)
+  useEffect(() => {
+    let wasMobile = window.innerWidth < 1024 // lg breakpoint
+
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 1024
+
+      // Close dropdown if transitioning across breakpoint (mobile <-> desktop)
+      if (wasMobile !== isMobile && openDropdownTagId !== null) {
+        setOpenDropdownTagId(null)
+      }
+
+      wasMobile = isMobile
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [openDropdownTagId])
 
   const handleEdit = (tag: Tag) => {
     setEditTag(tag)
@@ -61,83 +87,150 @@ export function TagsPage() {
   // Find the tag being deleted for display in dialog
   const tagToDelete = tags.find((tag) => tag.id === deleteTagId)
 
-  // Table columns definition
-  const columns: Column<Tag>[] = [
-    {
-      key: 'name',
-      header: t('pages.tags.tableHeaders.name', 'Tag Name'),
-      render: (tag) => (
-        <div className="flex items-center gap-2">
-          <div className="h-4 w-4 rounded-full" style={{ backgroundColor: tag.color }} />
-          <span className="font-medium">{tag.name}</span>
-        </div>
-      ),
-    },
-    {
-      key: 'project_name',
-      header: t('pages.tags.tableHeaders.project', 'Project'),
-      render: (tag) => <span className="text-gray-700">{tag.project_name || '-'}</span>,
-    },
-    {
-      key: 'description',
-      header: t('pages.tags.tableHeaders.description', 'Description'),
-      render: (tag) => <span className="text-gray-700">{tag.description || '-'}</span>,
-    },
-    {
-      key: 'client_count',
-      header: t('pages.tags.tableHeaders.clients', 'Clients'),
-      align: 'center',
-      render: (tag) => <span className="font-medium">{tag.client_count || 0}</span>,
-    },
-    {
-      key: 'actions',
-      header: t('pages.tags.tableHeaders.actions', 'Actions'),
-      align: 'center',
-      render: (tag) => (
-        <div className="flex items-center justify-center gap-2">
-          <PermissionGuard permission={PERMISSIONS.TAGS.EDIT}>
-            <LinkButton
-              variant="regular-black"
-              size="xs"
-              onClick={() => handleEdit(tag)}
-              leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
-            >
-              {t('pages.tags.actions.edit', 'Edit')}
-            </LinkButton>
-          </PermissionGuard>
-          <PermissionGuard permission={PERMISSIONS.TAGS.DELETE}>
-            <LinkButton
-              variant="regular-black"
-              size="xs"
-              onClick={() => handleDelete(tag.id)}
-              leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
-            >
-              {t('pages.tags.actions.delete', 'Delete')}
-            </LinkButton>
-          </PermissionGuard>
-        </div>
-      ),
-    },
-  ]
+  // Table columns definition - recalculate when language changes
+  const columns: Column<Tag>[] = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: t('pages.tags.tableHeaders.name', 'Tag Name'),
+        render: (tag) => (
+          <div className="flex items-center gap-2">
+            <div className="h-4 w-4 rounded-full" style={{ backgroundColor: tag.color }} />
+            <span className="font-medium">{tag.name}</span>
+          </div>
+        ),
+      },
+      {
+        key: 'project_name',
+        header: t('pages.tags.tableHeaders.project', 'Project'),
+        render: (tag) => <span className="text-gray-700">{tag.project_name || '-'}</span>,
+      },
+      {
+        key: 'description',
+        header: t('pages.tags.tableHeaders.description', 'Description'),
+        render: (tag) => <span className="text-gray-700">{tag.description || '-'}</span>,
+      },
+      {
+        key: 'client_count',
+        header: t('pages.tags.tableHeaders.clients', 'Clients'),
+        align: 'center',
+        render: (tag) => <span className="font-medium">{tag.client_count || 0}</span>,
+      },
+      {
+        key: 'actions',
+        header: t('pages.tags.tableHeaders.actions', 'Actions'),
+        align: 'center',
+        render: (tag) => (
+          <div className="flex items-center justify-center gap-2">
+            {/* Desktop: Individual link buttons */}
+            <div className="hidden items-center gap-4 lg:flex">
+              <PermissionGuard permission={PERMISSIONS.TAGS.EDIT}>
+                <LinkButton
+                  variant="regular-black"
+                  size="xs"
+                  onClick={() => handleEdit(tag)}
+                  leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+                >
+                  {t('pages.tags.actions.edit', 'Edit')}
+                </LinkButton>
+              </PermissionGuard>
+              <PermissionGuard permission={PERMISSIONS.TAGS.DELETE}>
+                <LinkButton
+                  variant="regular-black"
+                  size="xs"
+                  onClick={() => handleDelete(tag.id)}
+                  leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
+                >
+                  {t('pages.tags.actions.delete', 'Delete')}
+                </LinkButton>
+              </PermissionGuard>
+            </div>
+
+            {/* Mobile/Tablet: Dropdown button group */}
+            <div className="lg:hidden">
+              <DropdownMenu
+                modal={false}
+                open={openDropdownTagId === tag.id}
+                onOpenChange={(open) => setOpenDropdownTagId(open ? tag.id : null)}
+              >
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
+                    aria-label={t('pages.tags.tableHeaders.actions', 'Actions')}
+                  >
+                    <Icons.FilterVertical size={16} strokeWidth={1.5} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-white">
+                  <PermissionGuard permission={PERMISSIONS.TAGS.EDIT}>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        handleEdit(tag)
+                        setOpenDropdownTagId(null)
+                      }}
+                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    >
+                      <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                      <span>{t('pages.tags.actions.edit', 'Edit')}</span>
+                    </DropdownMenuItem>
+                  </PermissionGuard>
+                  <PermissionGuard permission={PERMISSIONS.TAGS.DELETE}>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        handleDelete(tag.id)
+                        setOpenDropdownTagId(null)
+                      }}
+                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    >
+                      <Icons.Delete size={16} strokeWidth={1.5} />
+                      <span>{t('pages.tags.actions.delete', 'Delete')}</span>
+                    </DropdownMenuItem>
+                  </PermissionGuard>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        ),
+      },
+    ],
+    // i18n.language is needed to recalculate columns when language changes
+    // openDropdownTagId is needed to update dropdown state in render function
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, i18n?.language, openDropdownTagId]
+  )
 
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-dark-500 text-2xl font-light">{t('pages.tags.title', 'Tags')}</h1>
-          <span className="text-base font-light text-gray-500">{tags.length}</span>
+      <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+            {t('pages.tags.title', 'Tags')}
+          </h1>
+          <span className="text-sm font-light text-gray-500 sm:text-base">{tags.length}</span>
         </div>
 
         <PermissionGuard permission={PERMISSIONS.TAGS.CREATE}>
-          <DoubleButton
-            size="md"
-            icon={<Icons.Add size={20} strokeWidth={2} />}
-            iconPosition="left"
+          {/* Desktop: Full button with text */}
+          <div className="hidden sm:block">
+            <DoubleButton
+              size="md"
+              icon={<Icons.Add size={20} strokeWidth={2} />}
+              iconPosition="left"
+              onClick={() => setShowCreateModal(true)}
+            >
+              {t('pages.tags.createTag', 'Create Tag')}
+            </DoubleButton>
+          </div>
+          {/* Mobile: Icon-only button */}
+          <button
             onClick={() => setShowCreateModal(true)}
+            className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+            aria-label={t('pages.tags.createTag', 'Create Tag')}
           >
-            {t('pages.tags.createTag', 'Create Tag')}
-          </DoubleButton>
+            <Icons.Add size={20} strokeWidth={2} />
+          </button>
         </PermissionGuard>
       </div>
 

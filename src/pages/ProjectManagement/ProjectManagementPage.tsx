@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { useProjects, useProjectDetail } from '@/features/projects/hooks/useProjects'
 import { useProjectExport, useDeleteProject } from '@/features/projects/hooks/useProjectMutations'
 import { EditProjectModal } from './components/EditProjectModal'
@@ -26,18 +27,73 @@ const DEFAULT_PAGE_SIZE = 10
 
 export function ProjectManagementPage() {
   const { t } = useTranslation('common')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+
+  // URL state for pagination
+  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
+  const [pageSize, setPageSize] = useURLState<number>('pageSize', DEFAULT_PAGE_SIZE)
+
+  // URL state for sorting
+  const [sortBy, setSortBy] = useURLState<string>('sort_by', 'created_at')
+  const [sortOrder, setSortOrder] = useURLState<'asc' | 'desc'>('sort_order', 'desc')
+
+  // URL state for all filter fields
+  const [searchFilter, setSearchFilter] = useURLState<string>('search', '')
+  const [statusFilter, setStatusFilter] = useURLState<string>('status', 'active')
+  const [clientCompanyFilter, setClientCompanyFilter] = useURLState<string>('client_company', '')
+  const [startDateFromFilter, setStartDateFromFilter] = useURLState<string>('start_date_from', '')
+  const [startDateToFilter, setStartDateToFilter] = useURLState<string>('start_date_to', '')
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'project-management-state',
+    {
+      currentPage,
+      pageSize,
+      sortBy,
+      sortOrder,
+      searchFilter,
+      statusFilter,
+      clientCompanyFilter,
+      startDateFromFilter,
+      startDateToFilter,
+    },
+    {
+      currentPage: setCurrentPage,
+      pageSize: setPageSize,
+      sortBy: setSortBy,
+      sortOrder: setSortOrder,
+      searchFilter: setSearchFilter,
+      statusFilter: setStatusFilter,
+      clientCompanyFilter: setClientCompanyFilter,
+      startDateFromFilter: setStartDateFromFilter,
+      startDateToFilter: setStartDateToFilter,
+    }
+  )
+
+  // Reconstruct filters object from URL state
+  const filters = useMemo<ProjectFilters>(
+    () => ({
+      search: searchFilter || undefined,
+      status: (statusFilter as 'active' | 'inactive' | 'archived' | 'all' | undefined) || undefined,
+      client_company: clientCompanyFilter || undefined,
+      start_date_from: startDateFromFilter || undefined,
+      start_date_to: startDateToFilter || undefined,
+    }),
+    [searchFilter, statusFilter, clientCompanyFilter, startDateFromFilter, startDateToFilter]
+  )
+
+  // Reconstruct sortConfig from URL state
+  const sortConfig = useMemo<SortConfig>(
+    () => ({
+      key: sortBy,
+      order: sortOrder,
+    }),
+    [sortBy, sortOrder]
+  )
+
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [editingProject, setEditingProject] = useState<ApiProjectDetail | null>(null)
   const [deletingProject, setDeletingProject] = useState<ApiProjectDetail | null>(null)
-  const [filters, setFilters] = useState<ProjectFilters>({
-    status: 'active',
-  })
-  const [sortConfig, setSortConfig] = useState<SortConfig>({
-    key: 'created_at',
-    order: 'desc',
-  })
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024) // lg breakpoint
   const [showDetailModal, setShowDetailModal] = useState(false)
 
@@ -100,15 +156,34 @@ export function ProjectManagementPage() {
     return Array.from(companies).sort()
   }, [projects])
 
-  const handleFilterChange = useCallback((newFilters: ProjectFilters) => {
-    setFilters(newFilters)
-    setCurrentPage(1) // Reset to first page on filter change
-  }, [])
+  const handleFilterChange = useCallback(
+    (newFilters: ProjectFilters) => {
+      // Update individual URL state for each filter field
+      setSearchFilter(newFilters.search || '')
+      setStatusFilter(newFilters.status || 'active')
+      setClientCompanyFilter(newFilters.client_company || '')
+      setStartDateFromFilter(newFilters.start_date_from || '')
+      setStartDateToFilter(newFilters.start_date_to || '')
+      setCurrentPage(1) // Reset to first page on filter change
+    },
+    [
+      setSearchFilter,
+      setStatusFilter,
+      setClientCompanyFilter,
+      setStartDateFromFilter,
+      setStartDateToFilter,
+      setCurrentPage,
+    ]
+  )
 
-  const handleSort = useCallback((key: string, order: SortOrder) => {
-    setSortConfig({ key, order })
-    setCurrentPage(1) // Reset to first page on sort change
-  }, [])
+  const handleSort = useCallback(
+    (key: string, order: SortOrder) => {
+      setSortBy(key)
+      setSortOrder(order)
+      setCurrentPage(1) // Reset to first page on sort change
+    },
+    [setSortBy, setSortOrder, setCurrentPage]
+  )
 
   const handleExport = useCallback(() => {
     exportMutation.mutate({

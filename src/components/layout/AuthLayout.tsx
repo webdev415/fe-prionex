@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 
 interface AuthLayoutProps {
   children: ReactNode
@@ -30,7 +29,6 @@ export function AuthLayout({ children }: AuthLayoutProps) {
             alt="logo"
             className="h-auto w-[90px] min-[375px]:w-[100px] sm:w-[120px]"
           />
-          <LanguageSwitcher />
         </div>
 
         {/* Left Panel - Dark/Brand side (hidden on mobile) */}
@@ -64,11 +62,6 @@ export function AuthLayout({ children }: AuthLayoutProps) {
             <div className="w-full">{children}</div>
           </div>
         </div>
-      </div>
-
-      {/* Desktop Language Switcher - Top Right */}
-      <div className="absolute top-3 right-3 z-20 hidden sm:top-4 sm:right-4 lg:block xl:top-6 xl:right-12 2xl:right-20">
-        <LanguageSwitcher />
       </div>
     </div>
   )

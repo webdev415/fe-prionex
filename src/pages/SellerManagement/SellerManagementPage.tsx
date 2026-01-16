@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
@@ -27,9 +28,27 @@ const DEFAULT_PAGE_SIZE = 10
 
 export function SellerManagementPage() {
   const { t } = useTranslation('common')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
-  const [searchQuery, setSearchQuery] = useState('')
+
+  // URL state for pagination and search
+  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
+  const [pageSize, setPageSize] = useURLState<number>('pageSize', DEFAULT_PAGE_SIZE)
+  const [searchQuery, setSearchQuery] = useURLState<string>('search', '')
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'seller-management-state',
+    {
+      currentPage,
+      pageSize,
+      searchQuery,
+    },
+    {
+      currentPage: setCurrentPage,
+      pageSize: setPageSize,
+      searchQuery: setSearchQuery,
+    }
+  )
+
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editSellerId, setEditSellerId] = useState<number | null>(null)
   const [deletingSeller, setDeletingSeller] = useState<Seller | null>(null)
@@ -75,7 +94,7 @@ export function SellerManagementPage() {
 
   const handleSearch = useCallback(() => {
     setCurrentPage(1) // Reset to first page on search
-  }, [])
+  }, [setCurrentPage])
 
   const handleEdit = (seller: Seller) => {
     setEditSellerId(seller.id)

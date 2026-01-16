@@ -7,6 +7,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
@@ -21,6 +22,12 @@ import { mockClientsDetail } from './mockClientDetails'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
 import { useCallStore } from '@/stores/callStore'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/DropdownMenu'
 
 type CommunicationType = 'calls' | 'sms' | 'notes' | 'all'
 
@@ -32,14 +39,68 @@ export function ActivityTimelinePage() {
   const clientId = id ? Number(id) : 1
   const client = mockClientsDetail.find((c) => c.id === clientId) || mockClientsDetail[0]
 
-  const [communicationType, setCommunicationType] = useState<CommunicationType>('calls')
-  const [dateFrom, setDateFrom] = useState<Date | null>(new Date('2024-11-20'))
-  const [dateTo, setDateTo] = useState<Date | null>(new Date('2024-11-27'))
-  const [currentPage, setCurrentPage] = useState(1)
-  const [rowsPerPage, setRowsPerPage] = useState(10)
+  // URL state for pagination
+  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
+  const [rowsPerPage, setRowsPerPage] = useURLState<number>('pageSize', 10)
+
+  // URL state for filters
+  const [communicationTypeUrl, setCommunicationTypeUrl] = useURLState<string>('type', 'calls')
+  const [dateFromUrl, setDateFromUrl] = useURLState<string>('date_from', '2024-11-20')
+  const [dateToUrl, setDateToUrl] = useURLState<string>('date_to', '2024-11-27')
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'activity-timeline-state',
+    {
+      currentPage,
+      rowsPerPage,
+      communicationTypeUrl,
+      dateFromUrl,
+      dateToUrl,
+    },
+    {
+      currentPage: setCurrentPage,
+      rowsPerPage: setRowsPerPage,
+      communicationTypeUrl: setCommunicationTypeUrl,
+      dateFromUrl: setDateFromUrl,
+      dateToUrl: setDateToUrl,
+    }
+  )
+
+  // Convert URL state to component state
+  const communicationType = communicationTypeUrl as CommunicationType
+  const dateFrom = useMemo(() => (dateFromUrl ? new Date(dateFromUrl) : null), [dateFromUrl])
+  const dateTo = useMemo(() => (dateToUrl ? new Date(dateToUrl) : null), [dateToUrl])
+
+  // Create setters that update URL state
+  const setCommunicationType = (value: CommunicationType) => setCommunicationTypeUrl(value)
+  const setDateFrom = (value: Date | null) =>
+    setDateFromUrl(value ? value.toISOString().split('T')[0] : '')
+  const setDateTo = (value: Date | null) =>
+    setDateToUrl(value ? value.toISOString().split('T')[0] : '')
+
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+
+  // Local editable activities state so UI can update result statuses
+  const [activitiesState, setActivitiesState] = useState(() => client.activities || [])
+
+  // Reset activities when client changes (only update when different to avoid cascading renders)
+  useEffect(() => {
+    const newIds = (client.activities || []).map((a) => a.id).join(',')
+    const currentIds = (activitiesState || []).map((a) => a.id).join(',')
+    if (newIds !== currentIds) {
+      const timer = setTimeout(() => setActivitiesState(client.activities || []), 0)
+      return () => clearTimeout(timer)
+    }
+  }, [client, activitiesState])
+
+  const updateActivityResult = (activityId: number, newResult: string) => {
+    setActivitiesState((prev) =>
+      prev.map((a) => (a.id === activityId ? { ...a, result: newResult } : a))
+    )
+  }
 
   // Simulate loading state
   useEffect(() => {
@@ -60,8 +121,52 @@ export function ActivityTimelinePage() {
   }
 
   // Filter activities based on communication type and date range
+  const RESULT_OPTIONS = [
+    {
+      value: 'refusal',
+      label: 'Refusal to pay',
+      textClass: 'text-error-500',
+      outerClass: 'bg-error-200',
+      innerClass: 'bg-error-500',
+    },
+    {
+      value: 'agreement_full',
+      label: 'Agreement for full payment',
+      textClass: 'text-success-500',
+      outerClass: 'bg-success-200',
+      innerClass: 'bg-success-500',
+    },
+    {
+      value: 'agreement_partial',
+      label: 'Agreement for partial payment',
+      textClass: 'text-success-500',
+      outerClass: 'bg-success-200',
+      innerClass: 'bg-success-500',
+    },
+    {
+      value: 'callback',
+      label: 'Call back later',
+      textClass: 'text-dark-500',
+      outerClass: 'bg-black/20',
+      innerClass: 'bg-dark-500',
+    },
+  ]
+
+  const getResultClasses = (label?: string) => {
+    if (!label) return { text: 'text-dark-500', outer: 'bg-black/20', inner: 'bg-dark-500' }
+    if (label === 'Refusal to pay')
+      return { text: 'text-error-500', outer: 'bg-error-200', inner: 'bg-error-500' }
+    if (label === 'Agreement for full payment')
+      return { text: 'text-success-500', outer: 'bg-success-200', inner: 'bg-success-500' }
+    if (label === 'Agreement for partial payment')
+      return { text: 'text-success-500', outer: 'bg-success-200', inner: 'bg-success-500' }
+    if (label === 'Call back later')
+      return { text: 'text-dark-500', outer: 'bg-black/20', inner: 'bg-dark-500' }
+    return { text: 'text-dark-500', outer: 'bg-black/20', inner: 'bg-dark-500' }
+  }
+
   const filteredActivities = useMemo(() => {
-    let result = [...(client.activities || [])]
+    let result = [...(activitiesState || [])]
 
     // Filter by communication type
     if (communicationType !== 'all') {
@@ -102,7 +207,7 @@ export function ActivityTimelinePage() {
     }
 
     return result
-  }, [client.activities, communicationType, dateFrom, dateTo])
+  }, [activitiesState, communicationType, dateFrom, dateTo])
 
   // Paginate activities
   const paginatedActivities = useMemo(() => {
@@ -128,7 +233,58 @@ export function ActivityTimelinePage() {
       header: t('pages.clients.activity.tableHeaders.contactType'),
       align: 'left',
     },
-    { key: 'result', header: t('pages.clients.activity.tableHeaders.result'), align: 'left' },
+    {
+      key: 'result',
+      header: t('pages.clients.activity.tableHeaders.result'),
+      align: 'left',
+      render: (activity) => {
+        const {
+          text: textClass,
+          outer: outerClass,
+          inner: innerClass,
+        } = getResultClasses(activity.result as string)
+        return (
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={`flex w-full cursor-pointer items-center justify-between rounded px-3 py-2 text-sm font-medium ${textClass}`}
+                aria-label={`Result for activity ${activity.id}`}
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span
+                    className={`flex h-3 w-3 items-center justify-center rounded-full ${outerClass}`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${innerClass}`} />
+                  </span>
+                  <span className="min-w-0 truncate">{activity.result || '-'}</span>
+                </div>
+                <Icons.ArrowDown size={14} className="text-dark-500 ml-2" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent sideOffset={8} align="start" className="min-w-[220px]">
+              {RESULT_OPTIONS.map((opt) => (
+                <DropdownMenuItem
+                  key={opt.value}
+                  onSelect={() => updateActivityResult(activity.id as number, opt.label)}
+                >
+                  <div
+                    className={`flex cursor-pointer items-center gap-3 px-3 py-2 ${opt.textClass}`}
+                  >
+                    <span
+                      className={`flex h-3 w-3 items-center justify-center rounded-full ${opt.outerClass}`}
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${opt.innerClass}`} />
+                    </span>
+                    <span className="text-sm">{opt.label}</span>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      },
+    },
     {
       key: 'promisedAmount',
       header: t('pages.clients.activity.tableHeaders.promisedAmount'),
@@ -159,7 +315,7 @@ export function ActivityTimelinePage() {
       <div className="flex items-center justify-between self-stretch">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate(`/dashboard/${client.id}`)}
+            onClick={() => navigate(`/dashboard/clients/${client.id}`)}
             className="flex h-6 w-6 items-center justify-center"
           >
             <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />

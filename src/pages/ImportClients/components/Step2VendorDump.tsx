@@ -257,9 +257,9 @@ export function Step2VendorDump({
         const hasFile = item.file !== null
 
         return (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
             {hasFile ? (
-              <span className="text-dark-500 text-xs font-medium">
+              <span className="text-dark-500 text-xs font-medium break-words">
                 {item.file?.name} ({formatFileSize(item.file?.size || 0)})
               </span>
             ) : (
@@ -267,7 +267,7 @@ export function Step2VendorDump({
                 variant="outline"
                 onClick={() => handleBrowseClick(item.type)}
                 disabled={isImportInProgress}
-                className="h-8 text-xs font-medium"
+                className="h-8 w-full text-xs font-medium sm:w-auto"
               >
                 {isDocuments
                   ? t('pages.imports.step2.vendor.chooseZip')
@@ -290,31 +290,31 @@ export function Step2VendorDump({
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Section Title */}
-      <h2 className="text-dark-500 mb-6 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
+      <h2 className="text-dark-500 mb-4 text-center text-xl leading-[120%] font-light tracking-[-0.48px] sm:mb-6 sm:text-2xl">
         {t('pages.imports.step2.vendor.title')}
       </h2>
 
       {/* Error Alert - shown when import fails */}
       {importError && (
-        <div className="flex items-center justify-center gap-3 rounded-lg bg-white p-6">
-          <Icons.Warning size={24} className="text-error-500" />
-          <span className="text-error-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+        <div className="flex items-center justify-center gap-2 rounded-lg bg-white p-4 sm:gap-3 sm:p-6">
+          <Icons.Warning size={20} className="text-error-500 sm:size-6" />
+          <span className="text-error-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
             {importError}
           </span>
         </div>
       )}
 
       {/* Instructions */}
-      <p className="text-dark-500 mb-6 text-center text-base leading-[155%] font-light tracking-[-0.32px]">
+      <p className="text-dark-500 mb-4 text-center text-sm leading-[155%] font-light tracking-[-0.32px] sm:mb-6 sm:text-base">
         {t('pages.imports.step2.vendor.dragCsvs')}
       </p>
 
       {/* File Upload Drop Zone */}
       <div
         className={cn(
-          'relative flex flex-col items-center gap-6 self-stretch rounded-lg border-2 border-dashed px-6 py-12 transition-colors',
+          'relative flex flex-col items-center gap-4 self-stretch rounded-lg border-2 border-dashed px-4 py-8 transition-colors sm:gap-6 sm:px-6 sm:py-12',
           isDragging ? 'border-primary-500 bg-primary-50' : 'border-gray-300',
           isImportInProgress && 'pointer-events-none opacity-50'
         )}
@@ -324,11 +324,11 @@ export function Step2VendorDump({
       >
         {/* Cloud Icon */}
         <div className="flex aspect-square items-center justify-center px-1 py-1.5">
-          <Icons.CloudDownload size={48} className="text-dark-500" strokeWidth={0.5} />
+          <Icons.CloudDownload size={40} className="text-dark-500 sm:size-12" strokeWidth={0.5} />
         </div>
 
-        <div className="align-self-stretch flex flex-col items-center justify-center gap-4">
-          <div className="text-dark-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
+        <div className="align-self-stretch flex flex-col items-center justify-center gap-3 sm:gap-4">
+          <div className="text-dark-500 text-center text-lg leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
             {t('pages.imports.step2.vendor.dragDropFiles')}
           </div>
 
@@ -337,7 +337,7 @@ export function Step2VendorDump({
             variant="outline"
             onClick={() => handleBrowseClick()}
             disabled={isImportInProgress}
-            className="flex h-12 flex-col items-center justify-center rounded-full text-sm"
+            className="flex h-10 w-full flex-col items-center justify-center rounded-full text-xs sm:h-12 sm:w-auto sm:text-sm"
           >
             {t('pages.imports.step2.vendor.browseFile')}
           </Button>
@@ -355,21 +355,24 @@ export function Step2VendorDump({
       />
 
       {/* Dataset Table */}
-      <div className="mt-6">
-        <DataTable
-          columns={columns}
-          data={data.files}
-          emptyMessage={t('pages.imports.step2.vendor.noDatasetsConfigured')}
-        />
+      <div className="mt-4 sm:mt-6">
+        <div className="overflow-x-auto">
+          <DataTable
+            columns={columns}
+            data={data.files}
+            emptyMessage={t('pages.imports.step2.vendor.noDatasetsConfigured')}
+          />
+        </div>
       </div>
 
       {/* Start Import Button */}
-      <div className="mt-8 flex justify-center">
+      <div className="mt-6 flex justify-center sm:mt-8">
         <DoubleButton
           icon={<Icons.ArrowRight02 size={24} />}
           iconPosition="right"
           onClick={handleStartImport}
           disabled={!requiredFilesSelected || isImportInProgress || isStartingImport}
+          className="w-full justify-center sm:w-auto"
         >
           {t('pages.imports.step2.vendor.startImport')}
         </DoubleButton>

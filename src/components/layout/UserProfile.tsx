@@ -5,8 +5,8 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { useAuth } from '@/features/auth'
 import {
@@ -24,6 +24,7 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
   const { t } = useTranslation('common')
   const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
+  const navigate = useNavigate()
 
   // Get display name: prefer firstName + lastName, fallback to username
   const displayName =
@@ -44,9 +45,9 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
   }, [isOpen])
 
   const handleSettingsClick = () => {
-    // TODO: Navigate to settings page or open settings modal
-    console.log('Settings clicked')
-    toast.info(t('navigation.settings'))
+    // Navigate to profile settings page
+    setIsOpen(false)
+    navigate('/dashboard/profile')
   }
 
   return (
@@ -66,8 +67,8 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
           onClick={handleSettingsClick}
           className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
         >
-          <Icons.Setting07 size={16} className="text-dark-500" />
-          <span>{t('navigation.settings')}</span>
+          <Icons.SlidersHorizontal size={16} className="text-dark-500" />
+          <span>{t('navigation.profile')}</span>
         </DropdownMenuItem>
 
         {/* Logout */}

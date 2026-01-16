@@ -4,6 +4,7 @@
  * Modal for creating a new SMS template.
  */
 
+import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { CreateTemplateForm } from '@/pages/SmsTemplates/components/CreateTemplateForm'
@@ -18,10 +19,15 @@ interface CreateTemplateModalProps {
 
 export function CreateTemplateModal({ open, onClose, onSuccess }: CreateTemplateModalProps) {
   const { t } = useTranslation('common')
+  const [exceedsLimit, setExceedsLimit] = React.useState(false)
 
   const handleSuccess = () => {
     onSuccess()
     onClose()
+  }
+
+  const handleLimitChange = (exceeds: boolean) => {
+    setExceedsLimit(exceeds)
   }
 
   return (
@@ -35,7 +41,11 @@ export function CreateTemplateModal({ open, onClose, onSuccess }: CreateTemplate
         title={t('pages.smsTemplates.modals.create.title')}
       />
       <ModalContent>
-        <CreateTemplateForm onSuccess={handleSuccess} onCancel={onClose} />
+        <CreateTemplateForm
+          onSuccess={handleSuccess}
+          onCancel={onClose}
+          onLimitChange={handleLimitChange}
+        />
       </ModalContent>
       <ModalFooter>
         <Button type="button" variant="cancel" onClick={onClose} className="h-[45px] flex-1">
@@ -46,6 +56,7 @@ export function CreateTemplateModal({ open, onClose, onSuccess }: CreateTemplate
           form="create-template-form"
           variant="primary"
           className="h-[45px] flex-1"
+          disabled={exceedsLimit}
         >
           {t('actions.save')}
         </Button>
