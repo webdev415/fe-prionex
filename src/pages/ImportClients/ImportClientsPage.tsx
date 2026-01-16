@@ -339,41 +339,43 @@ export function ImportClientsPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-6">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 sm:gap-6">
           {currentStep > 1 && (
             <Button
               variant="white-secondary"
               onClick={handlePreviousStep}
               leftIcon={<Icons.ArrowLeft02 size={20} />}
-              className="flex h-12 flex-row items-center justify-center rounded-full text-sm leading-[150%] font-medium"
+              className="flex h-10 flex-row items-center justify-center rounded-full text-sm leading-[150%] font-medium sm:h-12"
             >
-              {t('pages.imports.back')}
+              <span className="hidden sm:inline">{t('pages.imports.back')}</span>
             </Button>
           )}
-          <h1 className="text-dark-500 text-2xl font-light">{t('pages.imports.title')}</h1>
+          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+            {t('pages.imports.title')}
+          </h1>
         </div>
 
         <Button
           variant="primary"
           onClick={handleViewHistory}
           leftIcon={<Icons.TransactionHistory size={20} className="text-dark-500" />}
-          className="flex h-12 flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium"
+          className="flex h-10 w-full flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:h-12 sm:w-auto"
         >
           {t('pages.imports.viewHistory')}
         </Button>
       </div>
 
       {/* Main Content */}
-      <div className="flex gap-5">
+      <div className="flex flex-col gap-5 lg:flex-row">
         {/* Left Panel - Step Indicator */}
-        <div className="flex w-[24%] shrink-0 gap-0 rounded-xl bg-white/50 px-6 py-11 shadow-sm">
+        <div className="flex w-full shrink-0 gap-0 rounded-xl bg-white/50 px-4 py-6 shadow-sm lg:w-[24%] lg:px-6 lg:py-11">
           <StepIndicator steps={STEPS} currentStep={currentStep} />
         </div>
 
         {/* Right Panel - Form Content */}
-        <div className="flex-1 flex-col gap-3">
-          <div className="rounded-xl bg-white/50 p-6 shadow-sm">
+        <div className="flex flex-1 flex-col gap-3">
+          <div className="rounded-xl bg-white/50 p-4 shadow-sm sm:p-6">
             {currentStep === 1 && <Step1LoanSource data={step1Data} onChange={handleStep1Change} />}
 
             {currentStep === 2 && step1Data.importType === 'simple' && (
@@ -423,60 +425,68 @@ export function ImportClientsPage() {
         </div>
       </div>
 
-      {/* Import Progress Banner - Absolutely Positioned */}
+      {/* Import Progress Banner - Centered */}
       {isImportInProgress && importProgress ? (
-        <div className="fixed bottom-6 left-1/2 z-50 flex w-[calc(100%-3rem)] max-w-7xl -translate-x-1/2 transform items-center justify-between gap-4 rounded-[10px] border border-gray-200 bg-white px-6 py-4 shadow-[0_12px_16px_-4px_rgba(16,24,40,0.08),0_4px_6px_-2px_rgba(16,24,40,0.03)]">
-          <div className="text-warning-500 flex items-center gap-2.5 py-1 pl-3">
-            {/* Icon - document with refresh symbol */}
-            <Icons.FileImport size={20} />
-            <span className="text-sm font-medium whitespace-nowrap">
-              {t('pages.imports.importInProgress')}
-            </span>
+        <div className="flex justify-center p-10">
+          <div className="flex w-[calc(100%-2rem)] max-w-7xl flex-col justify-center rounded-[10px] border border-gray-200 bg-white px-4 py-3 shadow-[0_12px_16px_-4px_rgba(16,24,40,0.08),0_4px_6px_-2px_rgba(16,24,40,0.03)] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-6 sm:py-4">
+            <div className="text-warning-500 flex items-center gap-2.5 py-3">
+              {/* Icon - document with refresh symbol */}
+              <Icons.FileImport size={20} />
+              <span className="text-xs font-medium whitespace-nowrap sm:text-sm">
+                {t('pages.imports.importInProgress')}
+              </span>
+            </div>
+            <div className="flex w-full flex-wrap items-center justify-center gap-5">
+              <div className="flex flex-wrap gap-3">
+                <span className="text-dark-500 font-sans text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+                  {t('pages.imports.file')}:{' '}
+                  <span className="text-dark-500 font-sans text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+                    {importProgress.fileName}
+                  </span>
+                </span>
+                <span className="text-dark-500 font-sans text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+                  {t('pages.imports.started')}:{' '}
+                  <span className="text-dark-500 font-sans text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+                    {importProgress.startedAt}
+                  </span>
+                </span>
+                <span className="text-dark-500 font-sans text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
+                  {t('pages.imports.status')}:{' '}
+                  <span className="text-dark-500 font-sans text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+                    {importProgress?.status === 'pending'
+                      ? t('pages.imports.queued')
+                      : `${importProgress.progressPercentage}% ${t('pages.imports.complete')}`}
+                  </span>
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={handleViewDetails}
+                  className="flex h-9 w-full flex-1 rounded-lg text-xs font-medium sm:h-10 sm:w-auto sm:text-sm"
+                >
+                  {t('pages.imports.viewDetails')}
+                </Button>
+                <Button
+                  variant="cancel"
+                  onClick={handleCancelImport}
+                  disabled={cancelImportMutation.isPending}
+                  className="flex h-9 w-full flex-1 rounded-lg text-xs font-medium sm:h-10 sm:w-auto sm:text-sm"
+                >
+                  {cancelImportMutation.isPending
+                    ? t('pages.imports.cancelling')
+                    : t('pages.imports.cancelImport')}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleGoToImportHistory}
+                  className="flex h-9 w-full flex-1 rounded-lg text-xs font-medium sm:h-10 sm:w-auto sm:text-sm"
+                >
+                  {t('pages.imports.goToImportHistory')}
+                </Button>
+              </div>
+            </div>
           </div>
-          <span className="text-dark-500 font-sans text-sm leading-[150%] font-light tracking-[-0.28px]">
-            {t('pages.imports.file')}:{' '}
-            <span className="text-dark-500 font-sans text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              {importProgress.fileName}
-            </span>
-          </span>
-          <span className="text-dark-500 font-sans text-sm leading-[150%] font-light tracking-[-0.28px]">
-            {t('pages.imports.started')}:{' '}
-            <span className="text-dark-500 font-sans text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              {importProgress.startedAt}
-            </span>
-          </span>
-          <span className="text-dark-500 font-sans text-sm leading-[150%] font-light tracking-[-0.28px]">
-            {t('pages.imports.status')}:{' '}
-            <span className="text-dark-500 font-sans text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              {importProgress.status === 'pending'
-                ? t('pages.imports.queued')
-                : `${importProgress.progressPercentage}% ${t('pages.imports.complete')}`}
-            </span>
-          </span>
-          <Button
-            variant="secondary"
-            onClick={handleViewDetails}
-            className="h-10 rounded-lg text-sm font-medium"
-          >
-            {t('pages.imports.viewDetails')}
-          </Button>
-          <Button
-            variant="cancel"
-            onClick={handleCancelImport}
-            disabled={cancelImportMutation.isPending}
-            className="h-10 rounded-lg text-sm font-medium"
-          >
-            {cancelImportMutation.isPending
-              ? t('pages.imports.cancelling')
-              : t('pages.imports.cancelImport')}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleGoToImportHistory}
-            className="h-10 rounded-lg text-sm font-medium"
-          >
-            {t('pages.imports.goToImportHistory')}
-          </Button>
         </div>
       ) : null}
 

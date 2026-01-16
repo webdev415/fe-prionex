@@ -295,16 +295,17 @@ export function ConfigurationHistoryPage() {
   return (
     <div className="flex w-full flex-col items-start gap-4">
       {/* Header */}
-      <div className="mb-4 flex w-full items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="mb-4 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 sm:gap-4">
           <LinkButton
             variant="regular-black"
             onClick={handleGoBack}
             leftIcon={<Icons.ArrowLeft size={16} className="text-dark-500" />}
+            className="text-sm"
           >
             {t('actions.back', 'Back')}
           </LinkButton>
-          <h1 className="text-dark-500 text-2xl font-light">
+          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
             {t('pages.scoringConfiguration.history.title', 'Configuration History')}
           </h1>
         </div>
@@ -324,24 +325,24 @@ export function ConfigurationHistoryPage() {
       <div className="min-h-[400px] w-full overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
         {isLoading ? (
           // Loading State - Show skeleton table while fetching data
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <TableSkeleton columns={5} rows={rowsPerPage} />
           </div>
         ) : hasNoData ? (
           // Empty State - No configuration history at all
-          <div className="flex min-h-[448px] flex-col items-center justify-center gap-6 p-6">
+          <div className="flex min-h-[448px] flex-col items-center justify-center gap-6 p-4 sm:p-6">
             {/* Icon */}
             <div className="flex h-20 w-20 items-center justify-center">
               <Icons.FolderRemove size={48} className="text-gray-400" strokeWidth={1} />
             </div>
 
             {/* Primary Message */}
-            <h3 className="text-dark-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
+            <h3 className="text-dark-500 text-center text-xl leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
               {t('pages.scoringConfiguration.history.noHistoryYet', 'No configuration changes yet')}
             </h3>
 
             {/* Secondary Message */}
-            <p className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.32px]">
+            <p className="text-dark-500 text-center text-sm leading-[150%] font-medium tracking-[-0.32px] sm:text-base">
               {t(
                 'pages.scoringConfiguration.history.makeFirstChange',
                 'Make your first configuration change to see history here'
@@ -377,7 +378,7 @@ export function ConfigurationHistoryPage() {
 
       {/* Pagination Footer - Only show if there's data */}
       {totalItems > 0 && (
-        <div className="mt-6 flex w-full items-center justify-center">
+        <div className="mt-4 flex w-full items-center justify-center sm:mt-6">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

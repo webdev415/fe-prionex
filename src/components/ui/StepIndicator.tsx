@@ -34,28 +34,28 @@ export function StepIndicator({ steps, currentStep, className }: StepIndicatorPr
         return (
           <div key={step.number} className="relative flex flex-col items-start">
             {/* Step Circle and Content */}
-            <div className="flex items-start gap-3">
+            <div className="mb-14 flex items-start gap-2 sm:gap-3">
               {/* Step Circle Container */}
               <div className="relative z-10 flex shrink-0 items-center justify-center">
                 {/* Outer ring for each step */}
                 <div
                   className={cn(
-                    'absolute z-1 h-11 w-11 rounded-full border',
+                    'absolute z-1 h-9 w-9 rounded-full border sm:h-11 sm:w-11',
                     isActive ? 'border-primary-300' : 'border-gray-200'
                   )}
                 />
 
-                {/* Main circle - 48px as per design */}
+                {/* Main circle - responsive size */}
                 <div
                   className={cn(
-                    'relative flex h-12 w-12 items-center justify-center rounded-full border border-white text-base',
+                    'relative flex h-10 w-10 items-center justify-center rounded-full border border-white text-sm sm:h-12 sm:w-12 sm:text-base',
                     isActive || isCompleted
                       ? 'bg-secondary-800 text-[#BBFB5B]'
                       : 'bg-white text-gray-500'
                   )}
                 >
                   {isCompleted ? (
-                    <Icons.Tick01 size={24} className="text-primary-300" />
+                    <Icons.Tick01 size={20} className="text-primary-300 sm:size-6" />
                   ) : (
                     step.number
                   )}
@@ -67,7 +67,7 @@ export function StepIndicator({ steps, currentStep, className }: StepIndicatorPr
                 {/* Step X text */}
                 <div
                   className={cn(
-                    'text-base leading-tight',
+                    'text-sm leading-tight sm:text-base',
                     isActive || isCompleted ? 'text-secondary-800' : 'text-gray-500'
                   )}
                 >
@@ -75,13 +75,13 @@ export function StepIndicator({ steps, currentStep, className }: StepIndicatorPr
                 </div>
 
                 {/* Step Label/Description */}
-                <div className="text-dark-500 text-base leading-tight">{step.label}</div>
+                <div className="text-dark-500 text-sm leading-tight sm:text-base">{step.label}</div>
               </div>
             </div>
             {/* Vertical connecting line */}
             {!isLast && (
-              <div className="flex w-12 justify-center gap-10 align-middle">
-                <div className="mx-2 flex h-20 w-0.5 flex-shrink-0 justify-center bg-gray-100 align-middle outline-3 outline-white outline-solid" />
+              <div className="absolute flex w-10 justify-center gap-10 align-middle sm:w-12">
+                <div className="mx-2 flex h-25 w-0.5 flex-shrink-0 justify-center bg-gray-100 align-middle outline-3 outline-white outline-solid sm:h-35" />
               </div>
             )}
           </div>

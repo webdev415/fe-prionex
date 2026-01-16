@@ -340,8 +340,8 @@ export function ScoringConfigurationPage() {
   return (
     <div className="flex w-full flex-col items-start gap-4">
       {/* Header */}
-      <div className="mb-4 flex w-full items-center justify-between">
-        <h1 className="text-dark-500 text-2xl font-light">
+      <div className="mb-4 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
           {t('pages.scoringConfiguration.title', 'Scoring Configuration')} -{' '}
           <span className="font-semibold">{projectName}</span>
         </h1>
@@ -349,16 +349,42 @@ export function ScoringConfigurationPage() {
           variant="primary"
           onClick={handleViewHistory}
           leftIcon={<Icons.TransactionHistory size={20} className="text-dark-500" />}
-          className="flex h-12 flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium"
+          className="flex h-12 w-full flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:w-auto"
         >
           {t('pages.scoringConfiguration.viewHistory', 'View History')}
         </Button>
       </div>
 
+      {/* Mobile Tabs (Top Navigation) */}
+      <div className="flex w-full gap-2 lg:hidden">
+        <button
+          onClick={() => setActiveTab('weights')}
+          className={cn(
+            'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors duration-200',
+            activeTab === 'weights'
+              ? 'bg-secondary-800 text-white shadow-sm'
+              : 'text-dark-500 bg-white hover:bg-gray-50'
+          )}
+        >
+          {t('pages.scoringConfiguration.scoreWeights', 'Score Weights')}
+        </button>
+        <button
+          onClick={() => setActiveTab('thresholds')}
+          className={cn(
+            'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors duration-200',
+            activeTab === 'thresholds'
+              ? 'bg-secondary-800 text-white shadow-sm'
+              : 'text-dark-500 bg-white hover:bg-gray-50'
+          )}
+        >
+          {t('pages.scoringConfiguration.priorityThresholds', 'Priority Thresholds')}
+        </button>
+      </div>
+
       {/* Side Tabs Layout */}
-      <div className="flex w-full gap-6">
-        {/* Side Tabs */}
-        <div className="flex w-[200px] flex-shrink-0 flex-col gap-1">
+      <div className="flex w-full flex-col gap-6 lg:flex-row">
+        {/* Side Tabs - Hidden on mobile, shown on desktop */}
+        <div className="hidden w-[200px] flex-shrink-0 flex-col gap-1 lg:flex">
           <button
             onClick={() => setActiveTab('weights')}
             className={cn(
@@ -387,10 +413,10 @@ export function ScoringConfigurationPage() {
         <div className="flex flex-1 flex-col gap-4">
           {/* Score Weights Tab */}
           {activeTab === 'weights' && (
-            <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
+            <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-4 sm:p-6">
               <div className="mb-2 flex items-center justify-between">
                 <div>
-                  <h2 className="text-dark-500 mb-1 text-lg font-semibold">
+                  <h2 className="text-dark-500 mb-1 text-base font-semibold sm:text-lg">
                     {t('pages.scoringConfiguration.scoreWeights', 'Score Weights')}
                   </h2>
                   <p className="text-dark-400 text-sm font-light">
@@ -517,10 +543,10 @@ export function ScoringConfigurationPage() {
           {/* Priority Thresholds Tab */}
           {activeTab === 'thresholds' && (
             <div className="flex w-full flex-col gap-4">
-              <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
-                <div className="mb-2 flex items-center justify-between">
+              <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-4 sm:p-6">
+                <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h2 className="text-dark-500 mb-1 text-lg font-semibold">
+                    <h2 className="text-dark-500 mb-1 text-base font-semibold sm:text-lg">
                       {t(
                         'pages.scoringConfiguration.priorityThresholds',
                         'Priority Classification Thresholds'
@@ -537,16 +563,16 @@ export function ScoringConfigurationPage() {
                     variant="secondary"
                     size="sm"
                     onClick={handleResetDefaults}
-                    className="rounded-md"
+                    className="w-full rounded-md sm:w-auto"
                   >
                     {t('pages.scoringConfiguration.resetDefaults', 'Reset Defaults')}
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                   <div className="flex flex-col gap-4">
                     {/* Critical Priority */}
-                    <div className="flex items-center gap-4 rounded-lg border border-gray-200 bg-white p-4">
+                    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
                       <PriorityBadge priority="Critical" variant="compact" />
                       <div className="flex flex-1 items-center gap-3">
                         <span className="text-dark-500 text-sm font-medium">
@@ -567,7 +593,7 @@ export function ScoringConfigurationPage() {
                     </div>
 
                     {/* High Priority */}
-                    <div className="flex items-center gap-4 rounded-lg border border-gray-200 bg-white p-4">
+                    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
                       <PriorityBadge priority="High" variant="compact" />
                       <div className="flex flex-1 items-center gap-3">
                         <span className="text-dark-500 text-sm font-medium">
@@ -589,7 +615,7 @@ export function ScoringConfigurationPage() {
                   </div>
                   <div className="flex flex-col gap-4">
                     {/* Medium Priority */}
-                    <div className="flex items-center gap-4 rounded-lg border border-gray-200 bg-white p-4">
+                    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
                       <PriorityBadge priority="Medium" variant="compact" />
                       <div className="flex flex-1 items-center gap-3">
                         <span className="text-dark-500 text-sm font-medium">
@@ -610,7 +636,7 @@ export function ScoringConfigurationPage() {
                     </div>
 
                     {/* Low Priority */}
-                    <div className="flex items-center gap-4 rounded-lg border border-gray-200 bg-white p-4">
+                    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center">
                       <PriorityBadge priority="Low" variant="compact" />
                       <div className="flex flex-1 items-center gap-3">
                         <span className="text-dark-500 text-sm font-medium">
@@ -678,10 +704,10 @@ export function ScoringConfigurationPage() {
               </div>
 
               {/* Configuration Preview Section */}
-              <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-6">
-                <div className="flex items-center justify-between">
+              <div className="flex w-full flex-col gap-4 rounded-xl border border-white/100 bg-white/50 p-4 sm:p-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h2 className="text-dark-500 mb-1 text-lg font-semibold">
+                    <h2 className="text-dark-500 mb-1 text-base font-semibold sm:text-lg">
                       {t(
                         'pages.scoringConfiguration.configurationPreview',
                         'Configuration Preview'
@@ -699,7 +725,7 @@ export function ScoringConfigurationPage() {
                     size="sm"
                     onClick={handlePreview}
                     disabled={isPreviewing}
-                    className="rounded-md"
+                    className="w-full rounded-md sm:w-auto"
                   >
                     {isPreviewing
                       ? t('pages.scoringConfiguration.previewing', 'Previewing...')
@@ -725,7 +751,7 @@ export function ScoringConfigurationPage() {
                       <h3 className="text-dark-500 text-sm font-semibold">
                         {t('pages.scoringConfiguration.thresholdDetails', 'Threshold Details:')}
                       </h3>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
                         <div>
                           <span className="text-dark-400 font-medium">
                             {t('pages.scoringConfiguration.current', 'Current')}:
@@ -749,7 +775,7 @@ export function ScoringConfigurationPage() {
                     </div>
 
                     {/* Distribution Comparison */}
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                       {/* Current Distribution */}
                       <div className="flex flex-col gap-3">
                         <h3 className="text-dark-500 text-sm font-semibold">

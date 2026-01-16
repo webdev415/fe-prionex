@@ -57,7 +57,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
 
         <div className="space-y-4">
           {/* First Row: Seller/Creditor and Project Code side by side */}
-          <div className="flex items-end gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
             {/* Seller / Creditor */}
             <div className="flex-1">
               <Label htmlFor="seller-creditor" required className="mb-1.5 block">
@@ -158,7 +158,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
           {t('pages.imports.step1.importType')}
         </h2>
 
-        <div className="flex gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row">
           <RadioCard
             name="importType"
             value="simple"
