@@ -89,13 +89,21 @@ export async function getFailedLogins(
  */
 export async function exportAuditLogs(
   format: 'csv' | 'json',
-  params?: AuditLogSearchParams
+  params?: AuditLogSearchParams & {
+    columns?: string
+    date_format?: string
+    delimiter?: string
+    encoding?: string
+    include_headers?: boolean
+    search?: string
+    usernames?: string
+  }
 ): Promise<Blob> {
   const response = await api.get(`${BASE_URL}/logs/export`, {
     params: {
       ...params,
       format,
-    },
+    } as Record<string, unknown>,
     responseType: 'blob',
   })
   return response.data

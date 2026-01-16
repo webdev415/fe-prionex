@@ -521,11 +521,20 @@ export function AuditLogsPage() {
   }, [])
 
   const handleExportConfirm = useCallback(
-    async (_options: CSVExportOptions) => {
+    async (options: CSVExportOptions) => {
       try {
-        // Export as CSV (the dialog is for CSV export)
-        // Note: _options contains export configuration but backend API uses apiParams
-        const blob = await exportAuditLogs('csv', apiParams)
+        // Combine apiParams (filters) with CSV options
+        const exportParams: Parameters<typeof exportAuditLogs>[1] = {
+          ...apiParams,
+          // CSV customization options
+          columns: options.columns.join(','),
+          date_format: options.dateFormat,
+          delimiter: options.fieldDelimiter,
+          encoding: options.encoding,
+          include_headers: options.includeHeaders,
+        }
+
+        const blob = await exportAuditLogs('csv', exportParams)
 
         // Create download link
         const url = window.URL.createObjectURL(blob)
