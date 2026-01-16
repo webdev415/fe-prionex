@@ -10,6 +10,9 @@ import type {
   AuditLogSearchParams,
   AuditLogSearchResponse,
   DistinctRolesResponse,
+  DistinctUsersResponse,
+  DistinctEntityTypesResponse,
+  DistinctActionsResponse,
   ResourceHistoryResponse,
   UserActivityResponse,
   FailedLoginsResponse,
@@ -104,5 +107,32 @@ export async function exportAuditLogs(
  */
 export async function getDistinctRoles(): Promise<DistinctRolesResponse> {
   const response = await api.get<DistinctRolesResponse>(`${BASE_URL}/roles`)
+  return response.data
+}
+
+/**
+ * Get distinct users from audit logs and users table
+ * Requires Admin role
+ */
+export async function getDistinctUsers(): Promise<DistinctUsersResponse> {
+  const response = await api.get<DistinctUsersResponse>(`${BASE_URL}/users`)
+  return response.data
+}
+
+/**
+ * Get distinct entity types from audit logs
+ * Requires Admin role
+ */
+export async function getDistinctEntityTypes(): Promise<DistinctEntityTypesResponse> {
+  const response = await api.get<DistinctEntityTypesResponse>(`${BASE_URL}/entity-types`)
+  return response.data
+}
+
+/**
+ * Get distinct actions from audit logs
+ * Requires Admin role
+ */
+export async function getDistinctActions(): Promise<DistinctActionsResponse> {
+  const response = await api.get<DistinctActionsResponse>(`${BASE_URL}/actions`)
   return response.data
 }

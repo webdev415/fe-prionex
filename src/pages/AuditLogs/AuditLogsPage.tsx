@@ -16,7 +16,14 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { cn } from '@/lib/utils'
-import { useAuditLogs, exportAuditLogs, getDistinctRoles } from '@/features/audit'
+import {
+  useAuditLogs,
+  exportAuditLogs,
+  getDistinctRoles,
+  getDistinctUsers,
+  getDistinctEntityTypes,
+  getDistinctActions,
+} from '@/features/audit'
 import type { AuditLogResponse } from '@/features/audit/api/types'
 import { toast } from 'sonner'
 
@@ -38,7 +45,8 @@ export interface AuditLog {
   username: string
   role?: string
   action: string // UPDATE, CREATE, LOGIN_FAILED, etc.
-  entity_type?: string // user, client, sms_template, etc.
+  entity_type?: string // user, client, sms_template, etc. (legacy single filter)
+  entity_types?: string[] // Multiple entity types filter
   entity_id?: string
   entity_name?: string // Display name for the entity (e.g., "Олена Коваленко")
   field_name?: string
@@ -68,8 +76,10 @@ export interface AuditLogFilters {
   date_to?: string
   user?: string // For backward compatibility, but can be comma-separated
   users?: string[] // Array of selected usernames
-  entity_type?: string
-  action?: string
+  entity_type?: string // Legacy single filter
+  entity_types?: string[] // Multiple entity types filter
+  action?: string // Legacy single filter
+  actions?: string[] // Multiple actions filter
   role?: string
 }
 
@@ -88,27 +98,38 @@ export function AuditLogsPage() {
 
     if (filters.date_from) params.from_date = filters.date_from
     if (filters.date_to) params.to_date = filters.date_to
-    if (filters.entity_type) params.resource_type = filters.entity_type.toLowerCase()
-    if (filters.action) params.action = filters.action.toLowerCase()
+
+    // Handle entity types filter (multiple or single)
+    if (filters.entity_types && filters.entity_types.length > 0) {
+      // For multiple entity types, send the first one to API and filter client-side for multiple
+      params.resource_type = filters.entity_types[0].toLowerCase()
+    } else if (filters.entity_type) {
+      params.resource_type = filters.entity_type.toLowerCase()
+    }
+
+    // Handle actions filter (multiple or single)
+    // Note: filters.actions contains display names (e.g., "LOGIN SUCCESS")
+    // We need to convert back to original format (e.g., "auth.login_success") for API
+    // For now, skip API filtering for actions and do client-side only
+    // (The API expects original action format like "auth.login_success")
+    if (filters.action) {
+      params.action = filters.action.toLowerCase()
+    }
+
     if (filters.status === 'success') params.success = true
     if (filters.status === 'failed') params.success = false
     if (filters.role) params.user_role = filters.role // Send role filter to API
+
+    // Send search query to backend for server-side search
+    if (filters.search) {
+      params.search = filters.search
+    }
 
     // Handle user filter - try to parse as user_id if numeric, otherwise use username
     if (filters.user) {
       const userId = parseInt(filters.user, 10)
       if (!isNaN(userId)) {
         params.user_id = userId
-      }
-    }
-
-    // Handle search - map to resource_id if numeric, otherwise use resource_identifier
-    if (filters.search) {
-      const resourceId = parseInt(filters.search, 10)
-      if (!isNaN(resourceId)) {
-        params.resource_id = resourceId
-      } else {
-        params.resource_identifier = filters.search
       }
     }
 
@@ -124,8 +145,32 @@ export function AuditLogsPage() {
   const { data: rolesData } = useQuery({
     queryKey: ['audit', 'roles'],
     queryFn: getDistinctRoles,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    staleTime: 0, // Always fetch fresh data - no cache
+    gcTime: 0, // Don't keep in cache
+  })
+
+  // Fetch distinct users from API (separate query, cached)
+  const { data: usersData } = useQuery({
+    queryKey: ['audit', 'users'],
+    queryFn: getDistinctUsers,
+    staleTime: 0, // Always fetch fresh data - no cache
+    gcTime: 0, // Don't keep in cache
+  })
+
+  // Fetch distinct entity types from API (separate query, cached)
+  const { data: entityTypesData } = useQuery({
+    queryKey: ['audit', 'entity-types'],
+    queryFn: getDistinctEntityTypes,
+    staleTime: 0, // Always fetch fresh data - no cache
+    gcTime: 0, // Don't keep in cache
+  })
+
+  // Fetch distinct actions from API (separate query, cached)
+  const { data: actionsData } = useQuery({
+    queryKey: ['audit', 'actions'],
+    queryFn: getDistinctActions,
+    staleTime: 0, // Always fetch fresh data - no cache
+    gcTime: 0, // Don't keep in cache
   })
 
   // Map backend response to frontend AuditLog type
@@ -379,23 +424,33 @@ export function AuditLogsPage() {
     return '—'
   }, [])
 
-  // Apply client-side filtering for search (since API doesn't support text search)
+  // Apply client-side filtering (search is now handled by backend)
   const filteredLogs = useMemo(() => {
     let result = [...auditLogs]
 
-    // Client-side search filter (API doesn't support text search)
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase()
-      result = result.filter(
-        (log) =>
-          log.entity_id?.toLowerCase().includes(searchLower) ||
-          log.username.toLowerCase().includes(searchLower) ||
-          log.entity_type?.toLowerCase().includes(searchLower) ||
-          log.entity_name?.toLowerCase().includes(searchLower) ||
-          formatDetails(log).toLowerCase().includes(searchLower) ||
-          formatEntity(log).toLowerCase().includes(searchLower) ||
-          log.ip_address?.toLowerCase().includes(searchLower)
-      )
+    // Search is now handled by backend API, so no client-side search filtering needed
+
+    // Client-side entity types filter (if multiple selected)
+    if (filters.entity_types && filters.entity_types.length > 0) {
+      result = result.filter((log) => {
+        const logEntityType = log.entity_type?.toLowerCase()
+        return filters.entity_types!.some((type) => {
+          // Match normalized display name or original value
+          return type.toLowerCase() === logEntityType || logEntityType?.includes(type.toLowerCase())
+        })
+      })
+    }
+
+    // Client-side actions filter (if multiple selected)
+    // log.action is in display format (e.g., "LOGIN SUCCESS")
+    if (filters.actions && filters.actions.length > 0) {
+      result = result.filter((log) => {
+        const logAction = log.action?.toUpperCase()
+        return filters.actions!.some((action) => {
+          // Match action display name (both are in uppercase format)
+          return action.toUpperCase() === logAction
+        })
+      })
     }
 
     // Filter by users (client-side)
@@ -436,7 +491,7 @@ export function AuditLogsPage() {
     })
 
     return result
-  }, [auditLogs, filters, sortConfig, formatDetails, formatEntity])
+  }, [auditLogs, filters, sortConfig])
 
   // Pagination - use API pagination
   // Role filter is now handled by API, so we use API total
@@ -491,14 +546,11 @@ export function AuditLogsPage() {
     [apiParams, t]
   )
 
-  // Extract unique values for filters from API data
+  // Get users from API data (all users in system, not just from audit logs)
   const users = useMemo(() => {
-    const userSet = new Set<string>()
-    auditLogs.forEach((log) => {
-      if (log.username) userSet.add(log.username)
-    })
-    return Array.from(userSet).sort()
-  }, [auditLogs])
+    if (!usersData?.users) return []
+    return usersData.users.sort()
+  }, [usersData])
 
   // Normalize roles from API response: always use title case for display
   const roles = useMemo(() => {
@@ -517,23 +569,31 @@ export function AuditLogsPage() {
     return Array.from(roleSet).sort()
   }, [rolesData])
 
+  // Get entity types from API data (all entity types that appear in audit logs)
   const entityTypes = useMemo(() => {
-    // Entity types from user story
-    return ['User', 'Client', 'SMS Template', 'System Setting']
-  }, [])
+    if (!entityTypesData?.entity_types) return []
+    // Normalize to title case for display: first letter uppercase, rest lowercase, replace underscores with spaces
+    return entityTypesData.entity_types
+      .map((type) => {
+        return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase().replace(/_/g, ' ')
+      })
+      .sort()
+  }, [entityTypesData])
 
+  // Get actions from API data (all actions that appear in audit logs)
+  // Normalize to match table display format: UPPERCASE with spaces (e.g., "LOGIN SUCCESS")
   const actions = useMemo(() => {
-    // Action types from user story - map display names to actual action values
-    return [
-      'UPDATE',
-      'CREATE',
-      'DELETE',
-      'IMPORT',
-      'OVERRIDE',
-      'LOGIN_FAILED',
-      'Configuration Change',
-    ]
-  }, [])
+    if (!actionsData?.actions) return []
+    // Normalize action names to match table display: extract last part, uppercase, replace underscores with spaces
+    const normalizedActions = actionsData.actions.map((action) => {
+      // Split by dot and take the last part (matches table display logic)
+      const lastPart = action.split('.').pop() || action
+      // Convert to UPPERCASE and replace underscores with spaces (matches table format)
+      return lastPart.toUpperCase().replace(/_/g, ' ')
+    })
+    // Remove duplicates and sort
+    return Array.from(new Set(normalizedActions)).sort()
+  }, [actionsData])
 
   // Handle View Details click
   const handleViewDetails = useCallback((log: AuditLog) => {

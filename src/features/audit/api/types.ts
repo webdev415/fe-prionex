@@ -134,6 +134,18 @@ export interface DistinctRolesResponse {
   roles: string[]
 }
 
+export interface DistinctUsersResponse {
+  users: string[]
+}
+
+export interface DistinctEntityTypesResponse {
+  entity_types: string[]
+}
+
+export interface DistinctActionsResponse {
+  actions: string[]
+}
+
 export interface CSVExportOptions {
   format: 'csv' | 'json'
   from_date?: string
