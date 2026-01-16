@@ -7,7 +7,7 @@
 
 export function ProjectDetailPanelSkeleton() {
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white/50 p-6">
+    <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white/50 p-6">
       {/* Header Skeleton */}
       <div className="flex items-center gap-2">
         <div className="h-6 w-16 animate-pulse rounded bg-gray-300" />

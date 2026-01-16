@@ -271,7 +271,9 @@
   /* Firefox */
   .data-table-scroll {
     scrollbar-width: thin;
-    scrollbar-color: #90947b #ebece8;
+    scrollbar-color: #90947b transparent;
+    margin: 0;
+    padding: 0;
   }
   .sidebar-scrollbar {
     scrollbar-gutter: stable;

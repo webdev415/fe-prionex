@@ -337,7 +337,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                   }}
                 >
                   <IconComponent size={20} className="shrink-0 text-gray-400" strokeWidth={1.5} />
-                  <span className="ml-3 text-sm text-gray-400">{item.label}</span>
+                  <span className="ml-3 truncate text-sm text-gray-400">{item.label}</span>
                 </div>
               )
             }
@@ -402,7 +402,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                     {isSidebarVisible && (
                       <div
                         className={cn(
-                          'ml-3 flex-1 text-sm font-medium text-nowrap',
+                          'ml-3 min-w-0 flex-1 truncate text-sm font-medium',
                           isActive ? 'text-white' : 'text-dark-500'
                         )}
                       >
@@ -454,7 +454,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                 />
                 <span
                   className={cn(
-                    'ml-3 text-sm font-medium text-nowrap',
+                    'ml-3 truncate text-sm font-medium',
                     isActive ? 'text-white' : 'text-dark-500'
                   )}
                 >
@@ -508,7 +508,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                         className="shrink-0 text-gray-400"
                         strokeWidth={1.5}
                       />
-                      <span className="ml-3 text-sm text-gray-400">{item.label}</span>
+                      <span className="ml-3 truncate text-sm text-gray-400">{item.label}</span>
                     </div>
                   )
                 }
@@ -574,7 +574,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                         {isSidebarVisible && (
                           <div
                             className={cn(
-                              'ml-3 flex-1 text-sm font-medium text-nowrap',
+                              'ml-3 min-w-0 flex-1 truncate text-sm font-medium',
                               isActive ? 'text-white' : 'text-dark-500'
                             )}
                           >
@@ -619,7 +619,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                     />
                     <span
                       className={cn(
-                        'ml-3 text-sm font-medium text-nowrap',
+                        'ml-3 truncate text-sm font-medium',
                         isActive ? 'text-white' : 'text-dark-500'
                       )}
                     >
@@ -670,7 +670,9 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                   }}
                 >
                   <ActionIcon size={20} className="shrink-0 text-gray-700" strokeWidth={1.5} />
-                  <span className="text-dark-500 ml-3 text-sm font-medium">{action.label}</span>
+                  <span className="text-dark-500 ml-3 truncate text-sm font-medium">
+                    {action.label}
+                  </span>
                 </button>
               )
             })}
@@ -720,7 +722,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                         strokeWidth={1.5}
                       />
                     )}
-                    <span className="text-sm text-gray-400">{subItem.label}</span>
+                    <span className="truncate text-sm text-gray-400">{subItem.label}</span>
                   </div>
                 )
               }
@@ -749,7 +751,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                       strokeWidth={1.5}
                     />
                   )}
-                  <span className="text-sm font-medium">{subItem.label}</span>
+                  <span className="truncate text-sm font-medium">{subItem.label}</span>
                 </NavLink>
               )
             })}

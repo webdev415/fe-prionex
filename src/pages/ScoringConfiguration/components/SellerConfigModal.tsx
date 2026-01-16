@@ -287,14 +287,14 @@ export function SellerConfigModal({
 
       <ModalFooter>
         <Button variant="secondary" onClick={onClose} disabled={isSaving}>
-          {t('common.cancel', 'Cancel')}
+          {t('actions.cancel', 'Cancel')}
         </Button>
         <Button onClick={handleSave} disabled={isSaving || !sellerId}>
           {isSaving
             ? t('common.saving', 'Saving...')
             : isEditMode
               ? t('common.update', 'Update')
-              : t('common.create', 'Create')}
+              : t('actions.create', 'Create')}
         </Button>
       </ModalFooter>
     </Modal>

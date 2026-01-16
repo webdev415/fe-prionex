@@ -522,20 +522,23 @@ export function ImportHistoryPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-4 flex w-full items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="mb-4 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 sm:gap-4">
           <LinkButton
             variant="regular-black"
             onClick={handleGoToImportClients}
             leftIcon={<Icons.ArrowLeft size={16} className="text-dark-500" />}
+            className="text-sm"
           >
             {t('common.back', 'Back')}
           </LinkButton>
-          <h1 className="text-dark-500 text-2xl font-light">{t('pages.imports.history.title')}</h1>
+          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+            {t('pages.imports.history.title')}
+          </h1>
         </div>
       </div>
       <div className="mb-6">
-        <div className="mb-6 flex w-full items-center justify-between gap-3">
+        <div className="mb-6 flex w-full flex-row items-center justify-between gap-3">
           {/* Filters Section - using the reusable component */}
           <ImportHistoryFiltersBar
             filters={filters}
@@ -546,11 +549,11 @@ export function ImportHistoryPage() {
 
           {/* Action Buttons */}
           <div className="flex w-[30%] items-center justify-end gap-2">
+            {/* Download Errors Button - icon-only on mobile/tablet, full on desktop */}
             <Button
               onClick={handleDownloadErrors}
               variant="primary"
-              size="xs"
-              leftIcon={<Icons.FileDownload size={20} />}
+              size="md"
               disabled={
                 exportErrorsMutation.isPending ||
                 (!selectedJobId && paginatedData.length === 0) ||
@@ -558,18 +561,35 @@ export function ImportHistoryPage() {
                   ? !paginatedData.find((item) => item.id === selectedJobId)?.errors
                   : !paginatedData[0]?.errors)
               }
-              className="flex h-12 items-center rounded-full text-xs font-medium"
+              leftIcon={<Icons.FileDownload size={16} className="text-dark-500" />}
+              className="hidden h-[45px] rounded-full text-xs lg:flex"
             >
               {exportErrorsMutation.isPending
                 ? t('pages.imports.history.exporting')
                 : t('pages.imports.history.downloadErrors')}
             </Button>
+            {/* Mobile/Tablet: Icon-only button */}
+            <button
+              type="button"
+              onClick={handleDownloadErrors}
+              disabled={
+                exportErrorsMutation.isPending ||
+                (!selectedJobId && paginatedData.length === 0) ||
+                (selectedJobId
+                  ? !paginatedData.find((item) => item.id === selectedJobId)?.errors
+                  : !paginatedData[0]?.errors)
+              }
+              className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60 lg:hidden"
+              aria-label={t('pages.imports.history.downloadErrors')}
+            >
+              <Icons.FileDownload size={18} className="text-dark-500" strokeWidth={1.5} />
+            </button>
           </div>
         </div>
       </div>
 
       {/* Data Table or Empty State */}
-      <div className="min-h-[400px] rounded-xl bg-white/50 p-6 shadow-sm">
+      <div className="rounded-xl bg-white/50 p-4 shadow-sm sm:p-6">
         {isLoading ? (
           // Loading State - Show skeleton table while fetching data
           <TableSkeleton columns={5} rows={rowsPerPage} />
@@ -582,7 +602,7 @@ export function ImportHistoryPage() {
             </div>
 
             {/* Message */}
-            <h3 className="text-dark-500 flex flex-col items-center justify-center gap-6 p-6 text-2xl leading-[120%] font-light tracking-[-0.48px]">
+            <h3 className="text-dark-500 flex flex-col items-center justify-center gap-6 p-6 text-xl leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
               {t('pages.imports.history.noImportsFound')}
             </h3>
 
@@ -605,12 +625,12 @@ export function ImportHistoryPage() {
             </div>
 
             {/* Primary Message */}
-            <h3 className="text-dark-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
+            <h3 className="text-dark-500 text-center text-xl leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
               {t('pages.imports.history.noHistoryYet')}
             </h3>
 
             {/* Secondary Message */}
-            <p className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.32px]">
+            <p className="text-dark-500 text-center text-sm leading-[150%] font-medium tracking-[-0.32px] sm:text-base">
               {t('pages.imports.history.runFirstImport')}
             </p>
 
@@ -638,7 +658,7 @@ export function ImportHistoryPage() {
 
       {/* Pagination Footer - Only show if there's data */}
       {filteredAndSortedData.length > 0 && (
-        <div className="mt-6 flex items-center justify-center">
+        <div className="mt-4 flex items-center justify-center sm:mt-6">
           {/* Pagination */}
           <Pagination
             currentPage={currentPage}

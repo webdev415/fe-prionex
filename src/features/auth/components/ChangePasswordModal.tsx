@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Button } from '@/components/ui/Button'
@@ -24,6 +25,7 @@ export function ChangePasswordModal({
   onSubmit,
   isLoading = false,
 }: ChangePasswordModalProps) {
+  const { t } = useTranslation('common')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -33,17 +35,18 @@ export function ChangePasswordModal({
     const newErrors: Record<string, string> = {}
 
     if (!currentPassword) {
-      newErrors.currentPassword = 'Current password is required'
+      newErrors.currentPassword = t('pages.profile.currentPasswordRequired')
     }
 
     if (!newPassword) {
-      newErrors.newPassword = 'New password is required'
+      newErrors.newPassword = t('pages.profile.newPasswordRequired')
     } else if (newPassword.length < 8) {
-      newErrors.newPassword = 'Password must be at least 8 characters'
+      // Reuse auth namespace message when possible
+      newErrors.newPassword = t('passwordMinLength', { ns: 'auth' })
     }
 
     if (newPassword !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match'
+      newErrors.confirmPassword = t('pages.users.forms.errors.passwordsDontMatch')
     }
 
     setErrors(newErrors)
@@ -85,7 +88,7 @@ export function ChangePasswordModal({
             <Icons.LockSync01 size={24} className="text-dark-500" strokeWidth={2} />
           </div>
           <span className="text-dark-500 text-3xl leading-[129%] font-light tracking-[-0.6px]">
-            Reset User Password
+            {t('pages.profile.resetPassword')}
           </span>
         </div>
       </div>
@@ -94,7 +97,7 @@ export function ChangePasswordModal({
           {/* Current Password */}
           <PasswordInput
             id="currentPassword"
-            label="Current Password:"
+            label={t('pages.profile.currentPassword')}
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             variant={errors.currentPassword ? 'error' : 'default'}
@@ -105,7 +108,7 @@ export function ChangePasswordModal({
           {/* New Password */}
           <PasswordInput
             id="newPassword"
-            label="New Password:"
+            label={t('pages.profile.newPassword')}
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
             variant={errors.newPassword ? 'error' : 'default'}
@@ -116,7 +119,7 @@ export function ChangePasswordModal({
           {/* Confirm Password */}
           <PasswordInput
             id="confirmPassword"
-            label="Confirm New Password:"
+            label={t('pages.profile.confirmNewPassword')}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             variant={errors.confirmPassword ? 'error' : 'default'}
@@ -133,7 +136,7 @@ export function ChangePasswordModal({
           disabled={isLoading}
           className="h-[45px] flex-1 rounded-md"
         >
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button
           type="submit"
@@ -142,7 +145,7 @@ export function ChangePasswordModal({
           disabled={isLoading}
           className="h-[45px] flex-1 rounded-md"
         >
-          {isLoading ? 'Changing...' : 'Change Password'}
+          {isLoading ? t('pages.profile.changing') : t('pages.profile.changePassword')}
         </Button>
       </ModalFooter>
     </Modal>

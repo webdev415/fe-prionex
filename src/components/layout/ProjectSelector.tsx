@@ -1,8 +1,8 @@
 /**
  * ProjectSelector Component
  *
- * Dropdown component that allows users with multiple projects
- * to switch between their assigned projects.
+ * Dropdown component that allows users to view and switch
+ * between their assigned projects (shown when user has >= 1 project).
  * Uses the same style as LanguageSwitcher for consistency.
  */
 
@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { cn } from '@/lib/utils'
 
-export function ProjectSelector({ variant = 'default' }: { variant?: 'default' | 'profile' }) {
+export function ProjectSelector() {
   const { t } = useTranslation('common')
   const { user } = useAuth()
   const [isSwitchingProject, setIsSwitchingProject] = useState(false)
@@ -31,7 +31,7 @@ export function ProjectSelector({ variant = 'default' }: { variant?: 'default' |
 
   // Get user's assigned projects
   const userProjects = user?.projects || []
-  const hasMultipleProjects = userProjects.length > 1
+  const hasProjects = userProjects.length >= 1
   const currentProject = userProjects.find((p) => p.id === user?.active_project_id)
 
   // Close dropdown on window resize to prevent positioning issues
@@ -46,8 +46,8 @@ export function ProjectSelector({ variant = 'default' }: { variant?: 'default' |
     return () => window.removeEventListener('resize', handleResize)
   }, [isOpen])
 
-  // Don't render if user has only one project or no projects
-  if (!hasMultipleProjects || !currentProject) {
+  // Don't render if user has no projects or no current project
+  if (!hasProjects || !currentProject) {
     return null
   }
 
@@ -126,44 +126,23 @@ export function ProjectSelector({ variant = 'default' }: { variant?: 'default' |
     }
   }
 
-  const isProfile = variant === 'profile'
-
   return (
     <DropdownMenu modal={false} open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           className={cn(
-            // profile variant: larger text link without pill background
-            isProfile
-              ? 'text-secondary-800 inline-flex cursor-pointer items-center gap-1.5 rounded-md px-1 py-0 text-lg font-medium hover:opacity-90'
-              : 'bg-secondary-800 inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-white transition-colors hover:opacity-90',
-            isSwitchingProject &&
-              (isProfile ? 'cursor-not-allowed opacity-50' : 'cursor-not-allowed opacity-50')
+            'text-secondary-800 inline-flex cursor-pointer items-center gap-1.5 rounded-md px-1 py-0 text-lg font-medium hover:opacity-90',
+            isSwitchingProject && 'cursor-not-allowed opacity-50'
           )}
           disabled={isSwitchingProject}
         >
-          <span
-            className={cn(
-              isProfile
-                ? 'max-w-[220px] truncate text-center'
-                : 'max-w-[120px] truncate font-medium'
-            )}
-          >
-            {currentProject.name}
-          </span>
-          <Icons.ArrowDown
-            size={isProfile ? 18 : 14}
-            strokeWidth={1.5}
-            className={isProfile ? 'text-secondary-800' : 'text-white'}
-          />
+          <span className={cn('max-w-[220px] truncate text-center')}>{currentProject.name}</span>
+          <Icons.ArrowDown size={18} strokeWidth={1.5} className={'text-secondary-800'} />
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent
-        align={isProfile ? 'center' : 'end'}
-        className={cn(isProfile ? 'w-56' : 'w-48')}
-      >
+      <DropdownMenuContent align={'center'} className={cn('w-56')}>
         {userProjects.map((project) => {
           const isActive = project.id === user?.active_project_id
           const projectRole = project.roles?.[0]
