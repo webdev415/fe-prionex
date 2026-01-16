@@ -53,18 +53,23 @@ export function DeleteTemplateModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} maxWidth="md">
+    <Modal
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      className="w-[95%] max-w-[500px] sm:w-[500px]"
+    >
       <ModalHeader
         icon={
-          <div className="bg-error-500 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Delete size={20} className="text-white" strokeWidth={2} />
+          <div className="bg-error-500 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.Delete size={18} className="text-white sm:size-5" strokeWidth={2} />
           </div>
         }
         title={t('pages.smsTemplates.modals.delete.title')}
       />
       <ModalContent>
         <div className="space-y-4">
-          <p className="text-dark-500 text-sm">
+          <p className="text-dark-500 text-xs sm:text-sm">
             {t('pages.smsTemplates.modals.delete.confirmMessage')}{' '}
             <strong>"{template.name}"</strong>?
           </p>
@@ -94,7 +99,7 @@ export function DeleteTemplateModal({
           variant="cancel"
           onClick={onClose}
           disabled={isDeleting}
-          className="h-[45px] flex-1"
+          className="h-10 w-full flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
           {t('actions.cancel')}
         </Button>
@@ -104,7 +109,7 @@ export function DeleteTemplateModal({
             variant="danger"
             onClick={handleDelete}
             disabled={isDeleting}
-            className="h-[45px] flex-1"
+            className="h-10 w-full flex-1 text-xs sm:h-[45px] sm:text-sm"
           >
             {isDeleting ? t('pages.smsTemplates.modals.delete.deleting') : t('actions.delete')}
           </Button>
