@@ -603,17 +603,17 @@ export function Step2FileUpload({
   const displayFile = data.csvFile || data.invalidFile || errorFile
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Section Title */}
-      <h2 className="text-dark-500 mb-6 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
+      <h2 className="text-dark-500 mb-4 text-center text-xl leading-[120%] font-light tracking-[-0.48px] sm:mb-6 sm:text-2xl">
         {t('pages.imports.step2.simple.title')}
       </h2>
 
       {/* Warning Alert - shown when import is in progress */}
       {isImportInProgress && (
-        <div className="flex items-center justify-center gap-3 rounded-lg bg-white p-6">
-          <Icons.Warning size={24} className="text-error-500" />
-          <span className="text-error-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+        <div className="flex items-center justify-center gap-2 rounded-lg bg-white p-4 sm:gap-3 sm:p-6">
+          <Icons.Warning size={20} className="text-error-500 sm:size-6" />
+          <span className="text-error-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
             {t('pages.imports.step2.simple.cannotStartAnother')}
           </span>
         </div>
@@ -624,9 +624,9 @@ export function Step2FileUpload({
         mutationErrorMsg ||
         uploadImportMutation.isError ||
         hasInvalidCSVStructure) && (
-        <div className="mb-4 flex items-center justify-center gap-3 rounded-lg border-2 border-red-500 bg-white p-6">
-          <Icons.Warning size={24} className="text-error-500" />
-          <span className="text-error-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+        <div className="mb-4 flex items-center justify-center gap-2 rounded-lg border-2 border-red-500 bg-white p-4 sm:gap-3 sm:p-6">
+          <Icons.Warning size={20} className="text-error-500 sm:size-6" />
+          <span className="text-error-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
             {importError ||
               mutationErrorMsg ||
               data.csvValidationError?.errorMessage ||
@@ -644,7 +644,7 @@ export function Step2FileUpload({
       {/* File Upload Drop Zone */}
       <div
         className={cn(
-          'relative flex flex-col items-center gap-6 self-stretch rounded-lg border-2 border-dashed p-6 transition-colors',
+          'relative flex flex-col items-center gap-4 self-stretch rounded-lg border-2 border-dashed p-4 transition-colors sm:gap-6 sm:p-6',
           isDragging ? 'border-primary-500 bg-primary-50' : 'border-gray-300',
           isImportInProgress && 'pointer-events-none opacity-50' // Disable when import in progress
         )}
@@ -655,47 +655,47 @@ export function Step2FileUpload({
         {/* CSV Error Icon - shown when invalid CSV structure */}
         {hasInvalidCSVStructure && (
           <div className="flex aspect-square items-center justify-center px-1 py-1.5">
-            <Icons.Csv02 size={48} strokeWidth={0.5} className="text-error-500" />
+            <Icons.Csv02 size={40} strokeWidth={0.5} className="text-error-500 sm:size-12" />
           </div>
         )}
 
         {/* Error Icon - shown when invalid file type */}
         {hasInvalidFile && !hasInvalidCSVStructure && (
           <div className="flex aspect-square items-center justify-center px-1 py-1.5">
-            <Icons.FileRemove size={48} strokeWidth={0.5} className="text-error-500" />
+            <Icons.FileRemove size={40} strokeWidth={0.5} className="text-error-500 sm:size-12" />
           </div>
         )}
 
         {/* Cloud Icon - shown when no file or valid file */}
         {!hasInvalidFile && !hasInvalidCSVStructure && (
           <div className="flex aspect-square items-center justify-center px-1 py-1.5">
-            <Icons.CloudDownload size={48} strokeWidth={0.5} className="text-dark-500" />
+            <Icons.CloudDownload size={40} strokeWidth={0.5} className="text-dark-500 sm:size-12" />
           </div>
         )}
 
-        <div className="align-self-stretch flex flex-col items-center justify-center gap-4">
+        <div className="align-self-stretch flex flex-col items-center justify-center gap-3 sm:gap-4">
           {/* Invalid CSV Structure Error Message */}
           {hasInvalidCSVStructure && (
-            <div className="text-error-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
+            <div className="text-error-500 text-center text-lg leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
               {t('pages.imports.step2.simple.invalidCsvStructure')}
             </div>
           )}
 
           {/* Invalid File Type Error Message */}
           {hasInvalidFile && !hasInvalidCSVStructure && (
-            <div className="text-error-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
+            <div className="text-error-500 text-center text-lg leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
               {t('pages.imports.step2.simple.invalidFileType')}
             </div>
           )}
 
           {/* File Name Display */}
           {displayFile ? (
-            <div className="text-dark-500 text-center text-base leading-[155%] font-light tracking-[-0.32px]">
+            <div className="text-dark-500 text-center text-sm leading-[155%] font-light tracking-[-0.32px] break-words sm:text-base">
               {displayFile.name} ({formatFileSize(displayFile.size)})
             </div>
           ) : (
             !hasInvalidCSVStructure && (
-              <div className="text-dark-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
+              <div className="text-dark-500 text-center text-lg leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
                 {t('pages.imports.step2.simple.chooseCsvFile')}
               </div>
             )
@@ -703,7 +703,7 @@ export function Step2FileUpload({
 
           {/* Show "Choose CSV File" text even when invalid CSV structure */}
           {hasInvalidCSVStructure && (
-            <div className="text-dark-500 text-center text-base leading-[155%] font-light tracking-[-0.32px]">
+            <div className="text-dark-500 text-center text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
               {t('pages.imports.step2.simple.chooseCsvFile')}
             </div>
           )}
@@ -712,11 +712,11 @@ export function Step2FileUpload({
           {hasInvalidCSVStructure &&
             data.csvValidationError?.missingColumns &&
             data.csvValidationError.missingColumns.length > 0 && (
-              <div className="flex w-full flex-col items-center gap-3">
-                <div className="text-dark-500 text-center text-base leading-[155%] font-bold tracking-[-0.32px]">
+              <div className="flex w-full flex-col items-center gap-2 sm:gap-3">
+                <div className="text-dark-500 text-center text-sm leading-[155%] font-bold tracking-[-0.32px] sm:text-base">
                   {t('pages.imports.step2.simple.missingRequiredColumns')}
                 </div>
-                <div className="flex w-full flex-wrap items-center justify-center gap-3">
+                <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:gap-3">
                   {data.csvValidationError.missingColumns.map((column) => {
                     // Format column name: first_name -> First Name, debt_amount -> Debt Amount
                     const formattedName = column
@@ -725,9 +725,9 @@ export function Step2FileUpload({
                       .join(' ')
 
                     return (
-                      <div key={column} className="flex items-center gap-2">
-                        <Icons.Close size={16} className="text-error-500" />
-                        <span className="text-error-500 text-base leading-[155%] font-light tracking-[-0.32px]">
+                      <div key={column} className="flex items-center gap-1.5 sm:gap-2">
+                        <Icons.Close size={14} className="text-error-500 sm:size-4" />
+                        <span className="text-error-500 text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                           {formattedName}
                         </span>
                       </div>
@@ -742,14 +742,14 @@ export function Step2FileUpload({
             data.csvValidationError?.errorMessage &&
             (!data.csvValidationError.missingColumns ||
               data.csvValidationError.missingColumns.length === 0) && (
-              <div className="text-error-500 text-center text-base leading-[155%] font-medium tracking-[-0.32px]">
+              <div className="text-error-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] break-words sm:text-base">
                 {data.csvValidationError.errorMessage}
               </div>
             )}
 
           {/* Error Message - Only .csv files supported */}
           {hasInvalidFile && !hasInvalidCSVStructure && (
-            <div className="text-dark-500 text-center text-base leading-[155%] font-medium tracking-[-0.32px]">
+            <div className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
               {t('pages.imports.step2.simple.onlyCsvSupported')}
             </div>
           )}
@@ -757,28 +757,32 @@ export function Step2FileUpload({
           {/* File Requirements - hidden when invalid file or invalid CSV structure */}
           {!hasInvalidFile && !hasInvalidCSVStructure && (
             <>
-              <div className="text-dark-500 text-center text-base leading-[155%] font-light tracking-[-0.32px]">
+              <div className="text-dark-500 text-center text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                 {t('pages.imports.step2.simple.fileRequirements')}
               </div>
-              <div className="text-dark-500 flex items-center justify-center gap-1 self-stretch">
-                <span className="text-base leading-[155%] font-medium tracking-[-0.32px]">
+              <div className="text-dark-500 flex flex-wrap items-center justify-center gap-1 self-stretch text-center">
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {t('pages.imports.step2.simple.oneCsvOnly')}
                 </span>
-                <span className="text-base leading-[155%] font-light tracking-[-0.32px]">
+                <span className="text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                   {t('pages.imports.step2.simple.maxRows')}
                 </span>
               </div>
-              <div className="text-dark-500 flex items-center justify-center gap-1 self-stretch">
-                <span className="text-base leading-[155%] font-medium tracking-[-0.32px]">
+              <div className="text-dark-500 flex flex-wrap items-center justify-center gap-1 self-stretch text-center">
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {t('pages.imports.step2.simple.required')}:
                 </span>{' '}
-                {t('pages.imports.step2.simple.requiredColumns')}
+                <span className="text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
+                  {t('pages.imports.step2.simple.requiredColumns')}
+                </span>
               </div>
-              <div className="text-dark-500 flex items-center justify-center gap-1 self-stretch">
-                <span className="text-base leading-[155%] font-medium tracking-[-0.32px]">
+              <div className="text-dark-500 flex flex-wrap items-center justify-center gap-1 self-stretch text-center">
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {t('pages.imports.step2.simple.optional')}:
                 </span>{' '}
-                {t('pages.imports.step2.simple.optionalColumns')}
+                <span className="text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
+                  {t('pages.imports.step2.simple.optionalColumns')}
+                </span>
               </div>
             </>
           )}
@@ -789,7 +793,7 @@ export function Step2FileUpload({
           variant="outline"
           onClick={handleBrowseClick}
           disabled={isImportInProgress}
-          className="flex h-12 flex-col items-center justify-center rounded-full text-sm"
+          className="flex h-10 w-full flex-col items-center justify-center rounded-full text-xs sm:h-12 sm:w-auto sm:text-sm"
         >
           {t('pages.imports.step2.simple.browseFile')}
         </Button>
@@ -799,14 +803,14 @@ export function Step2FileUpload({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-start justify-center gap-6">
+      <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-start sm:gap-6">
         {/* Download Template Button */}
         <Button
           variant="white-secondary"
           onClick={handleDownloadTemplate}
           disabled={isImportInProgress}
           leftIcon={<Icons.FileDownload size={20} />}
-          className="flex h-12 items-center justify-center rounded-full text-sm leading-[150%] font-medium"
+          className="flex h-10 w-full items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:h-12 sm:w-auto sm:text-sm"
         >
           {t('pages.imports.step2.simple.downloadSampleTemplate')}
         </Button>
@@ -841,6 +845,7 @@ export function Step2FileUpload({
             )
           }
           iconPosition="right"
+          className="justify-center"
           onClick={handleStartImport}
           disabled={
             !hasValidFile || hasInvalidCSVStructure || isImportInProgress || isStartingImport

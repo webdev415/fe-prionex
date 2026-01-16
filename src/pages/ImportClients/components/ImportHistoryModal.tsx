@@ -96,7 +96,12 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
   }
 
   return (
-    <Modal open={open} onClose={onClose} maxWidth="lg" className="w-[600px] max-w-none">
+    <Modal
+      open={open}
+      onClose={onClose}
+      maxWidth="lg"
+      className="w-[95%] max-w-[600px] sm:w-[600px]"
+    >
       <ModalHeader
         icon={<Icons.CloudDownload size={24} className="text-dark-500" strokeWidth={1.5} />}
         title={t('pages.imports.modal.lastImportSummary')}
@@ -106,26 +111,26 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
         <div className="space-y-6">
           {/* Import Details */}
           <div className="space-y-4">
-            <div className="flex flex-row justify-between">
-              <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+              <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
                 {t('pages.imports.modal.file')}:{' '}
               </span>
-              <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+              <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] break-words sm:text-base">
                 {data.file}
               </span>
             </div>
 
-            <div className="flex flex-row justify-between">
-              <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+              <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
                 {t('pages.imports.modal.uploadedBy')}:{' '}
               </span>
-              <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+              <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] break-words sm:text-base">
                 {data.uploadedBy} at {data.uploadedAt}
               </span>
             </div>
 
-            <div className="flex flex-row justify-between">
-              <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+              <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
                 {t('pages.imports.modal.status')}:{' '}
               </span>
               <StatusBadge status={status} />
@@ -135,47 +140,47 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
           {/* Summary Statistics - Only show if not failed */}
           {status !== 'failed' && data.totalRows !== undefined && (
             <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+                <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
                   {t('pages.imports.modal.totalRows')}:
                 </span>
-                <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {data.totalRows.toLocaleString()}
                 </span>
               </div>
 
-              <div className="flex justify-between">
-                <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+                <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
                   {t('pages.imports.modal.newClients')}:
                 </span>
-                <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {data.newClients?.toLocaleString() || 0}
                 </span>
               </div>
 
-              <div className="flex justify-between">
-                <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+                <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
                   {t('pages.imports.modal.updatedClients')}:
                 </span>
-                <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {data.updatedClients?.toLocaleString() || 0}
                 </span>
               </div>
 
-              <div className="flex justify-between">
-                <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+                <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
                   {t('pages.imports.modal.error')}:
                 </span>
-                <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {data.errors || 0}
                 </span>
               </div>
 
-              <div className="flex justify-between">
-                <span className="text-dark-500 w-40 text-base leading-[155%] font-light tracking-[-0.32px]">
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+                <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
                   {t('pages.imports.modal.processingTime')}:
                 </span>
-                <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {data.processingTime || 'N/A'}
                 </span>
               </div>
@@ -204,14 +209,14 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
       </ModalContent>
 
       <ModalFooter>
-        <div className="flex w-full items-center gap-3">
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center">
           {status === 'completed_with_errors' ? (
             <>
               <Button
                 variant="white-secondary"
                 onClick={handleViewDetails}
                 disabled={!jobId}
-                className="flex flex-1 items-center text-sm font-medium"
+                className="flex w-full flex-1 items-center text-sm font-medium sm:w-auto"
               >
                 {t('pages.imports.modal.viewDetails')}
               </Button>
@@ -220,7 +225,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
                 onClick={handleDownloadErrors}
                 disabled={!jobId || exportErrorsMutation.isPending}
                 leftIcon={<Icons.FileDownload size={20} className="text-dark-500" />}
-                className="flex flex-1 items-center text-sm font-medium"
+                className="flex w-full flex-1 items-center text-sm font-medium sm:w-auto"
               >
                 {exportErrorsMutation.isPending
                   ? t('pages.imports.modal.exporting')
