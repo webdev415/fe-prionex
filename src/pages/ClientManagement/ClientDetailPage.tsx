@@ -850,15 +850,26 @@ export function ClientDetailPage() {
   const { user } = useAuth()
   const { mutate: originateCall, isPending: isOriginatingCall } = useOriginateCall()
 
+  // Track call error state for displaying in modal
+  const [callError, setCallError] = useState<string | null>(null)
+
   // Enable WebSocket for real-time call updates
   useCallWebSocket(user?.asterisk_extension || null)
+
+  // Clear call error when modal opens
+  const handleClearCallError = () => {
+    setCallError(null)
+  }
 
   // Handle call origination with custom success handler
   const handleOriginateCall = (phoneNumber: string, clientName: string, clientId: string) => {
     if (!user?.asterisk_extension) {
-      toast.error('Your account is not configured for calling. Please contact administrator.')
+      setCallError('Your account is not configured for calling. Please contact administrator.')
       return
     }
+
+    // Clear any previous error
+    setCallError(null)
 
     originateCall(
       {
@@ -872,11 +883,31 @@ export function ClientDetailPage() {
       },
       {
         onSuccess: (data) => {
-          // Store the call ID to track this call
+          // Store the call ID to track this call with backend
           setCurrentCallId(data.call_id)
-          // Open the call dialog modal to show call progress
-          setOpenCallModal('call-dialog')
-          setIsCallModalOpen(true)
+          // Modal is already open and will transition to 'dialing' state
+          // No need to re-open it
+        },
+        onError: (err: unknown) => {
+          // Extract error message from response
+          let message: string | undefined
+          if (err && typeof err === 'object' && 'response' in err) {
+            const response = (
+              err as { response?: { data?: { message?: string; detail?: unknown } } }
+            ).response
+            const data = response?.data
+            if (data?.message) {
+              message = data.message
+            } else if (data?.detail) {
+              // detail can be a string or an object with message property
+              if (typeof data.detail === 'string') {
+                message = data.detail
+              } else if (typeof data.detail === 'object' && data.detail !== null) {
+                message = (data.detail as { message?: string }).message
+              }
+            }
+          }
+          setCallError(message || 'Failed to initiate call. Please try again.')
         },
       }
     )
@@ -1421,7 +1452,7 @@ export function ClientDetailPage() {
             size="md"
             leftIcon={<Icons.Headset size={20} />}
             className="rounded-full"
-            disabled={!user?.asterisk_extension || isOriginatingCall}
+            disabled={!user?.asterisk_extension}
             onClick={() => {
               const phoneNumber = client.phones?.[0]?.number
               if (!phoneNumber) {
@@ -1437,13 +1468,12 @@ export function ClientDetailPage() {
                 return
               }
 
-              // Originate call via API
-              handleOriginateCall(phoneNumber, client.fullName, client.id.toString())
+              // Open modal in 'initial' state to let user select call type
+              setOpenCallModal('call-dialog')
+              setIsCallModalOpen(true)
             }}
           >
-            {isOriginatingCall
-              ? t('pages.clients.modals.callDialog.calling')
-              : t('pages.clients.activity.call')}
+            {t('pages.clients.activity.call')}
           </Button>
           <Button
             size="md"
@@ -2673,18 +2703,32 @@ export function ClientDetailPage() {
           setOpenCallModal(null)
           setIsCallModalOpen(false)
           setCurrentCallId(null)
+          handleClearCallError()
         }}
         clientName={client.fullName}
         phoneNumber={client.phones?.[0]?.number || ''}
         callId={currentCallId}
         initialState="initial"
-        onCallStart={(callType: CallType) => {
-          console.log('Call started with type:', callType)
+        error={callError}
+        isLoading={isOriginatingCall}
+        onCallStart={(_callType: CallType) => {
+          // User selected call type and clicked "Call Now"
+          const phoneNumber = client.phones?.[0]?.number
+          if (!phoneNumber) {
+            setCallError('Client has no phone number')
+            return
+          }
+
+          // Originate call via API (callType can be used for future call type handling)
+          handleOriginateCall(phoneNumber, client.fullName, client.id.toString())
         }}
         onCallEnd={(duration: number, status: CallStatus) => {
           console.log('Call ended:', { duration, status })
           setOpenCallModal(null)
           setCurrentCallId(null)
+        }}
+        onRetry={() => {
+          handleClearCallError()
         }}
       />
 

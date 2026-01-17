@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ChangePasswordModal } from '@/features/auth'
 export function ProfileSettingsPage() {
-  const { user, isLoading: authLoading } = useAuth()
+  const { user, isLoading: authLoading, updateCurrentUser } = useAuth()
   const { t, i18n } = useTranslation('common')
   const { mutateAsync: updateUserMutateAsync } = useUpdateUser()
   const [isUpdatingLocal, setIsUpdatingLocal] = useState(false)
@@ -42,6 +42,7 @@ export function ProfileSettingsPage() {
       phone: '',
       language: currentLanguage,
       timezone: 'Europe/Kyiv',
+      agent_status: user?.agent_status || 'offline',
       currentPassword: '',
       newPassword: '',
     }
@@ -98,12 +99,19 @@ export function ProfileSettingsPage() {
       phone: form.phone || undefined,
       language: (form.language as 'en' | 'uk' | 'ru') || undefined,
       timezone: form.timezone || undefined,
+      agent_status: user?.is_agent ? form.agent_status : undefined,
     }
 
     try {
       setIsUpdatingLocal(true)
       await updateUserMutateAsync({ userId: Number(user.id), data: updatePayload })
-      toast.success(t('pages.profile.profileUpdated'))
+      // Update auth store directly with new values to sync left sidebar
+      updateCurrentUser({
+        email: form.email,
+        firstName: form.first_name,
+        lastName: form.last_name,
+        agent_status: form.agent_status,
+      })
       setForm((f) => ({ ...f, currentPassword: '', newPassword: '' }))
     } finally {
       setIsUpdatingLocal(false)
@@ -278,41 +286,59 @@ export function ProfileSettingsPage() {
 
               {/* Call Settings Section - Only visible if user has extension */}
               {user?.asterisk_extension && (
-                <>
-                  <div className="border-t border-gray-200 pt-4">
-                    <span className="text-dark-500 text-base font-medium">Call Settings</span>
-                  </div>
-                  <div className="flex items-start gap-4 self-stretch">
-                    <Input
-                      label="Asterisk Extension:"
-                      value={user.asterisk_extension}
-                      disabled
-                      onChange={() => {}}
-                      helperText="Extension number is managed by system administrator"
-                    />
-                    {user.is_agent && (
-                      <div className="flex w-full flex-col gap-2 self-stretch">
-                        <Label>Agent Status:</Label>
-                        <div className="flex items-center gap-2 rounded-md border border-gray-300 bg-gray-50 px-3 py-2">
-                          <span
-                            className={`h-2 w-2 rounded-full ${
-                              user.agent_status === 'online'
-                                ? 'bg-green-500'
-                                : user.agent_status === 'busy'
-                                  ? 'bg-yellow-500'
-                                  : user.agent_status === 'on-call'
-                                    ? 'bg-red-500'
-                                    : 'bg-gray-400'
-                            }`}
-                          />
-                          <span className="text-sm text-gray-700 capitalize">
-                            {user.agent_status || 'offline'}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </>
+                <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
+                  <Input
+                    label={t('pages.users.forms.asteriskExtension') || 'Asterisk Extension'}
+                    value={user.asterisk_extension}
+                    disabled
+                    onChange={() => {}}
+                    className="w-full"
+                  />
+                  {user.is_agent && (
+                    <div className="w-full">
+                      <label
+                        htmlFor="agent-status"
+                        className="text-dark-500 mb-1.5 block text-sm font-light"
+                      >
+                        {t('pages.users.forms.agentStatus') || 'Agent Status'}
+                      </label>
+                      <Select
+                        value={form.agent_status}
+                        onValueChange={(v: string) => setForm({ ...form, agent_status: v })}
+                      >
+                        <SelectTrigger id="agent-status">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="online">
+                            <div className="flex items-center gap-2">
+                              <span className="h-2 w-2 rounded-full bg-green-500" />
+                              <span>{t('pages.profile.agentStatus.online') || 'Online'}</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="busy">
+                            <div className="flex items-center gap-2">
+                              <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                              <span>{t('pages.profile.agentStatus.busy') || 'Busy'}</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="on-call">
+                            <div className="flex items-center gap-2">
+                              <span className="h-2 w-2 rounded-full bg-red-500" />
+                              <span>{t('pages.profile.agentStatus.onCall') || 'On Call'}</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="offline">
+                            <div className="flex items-center gap-2">
+                              <span className="h-2 w-2 rounded-full bg-gray-400" />
+                              <span>{t('pages.profile.agentStatus.offline') || 'Offline'}</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
             <div className="mt-4 flex flex-wrap items-center justify-center gap-4">

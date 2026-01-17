@@ -13,12 +13,9 @@ export function useOriginateCall() {
       // Invalidate call history to refetch
       queryClient.invalidateQueries({ queryKey: ['callHistory'] })
     },
-    onError: (error: unknown) => {
-      const message =
-        error && typeof error === 'object' && 'response' in error
-          ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
-          : undefined
-      toast.error(message || 'Failed to initiate call')
+    onError: (_error: unknown) => {
+      // Error handling is done in the component via onError callback
+      // The component extracts the error message from the mutation error
     },
   })
 }

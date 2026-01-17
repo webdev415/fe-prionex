@@ -884,6 +884,9 @@
           "calling": "Calling...",
           "connected": "Connected",
           "callEnded": "Call Ended",
+          "callFailed": "Call Failed",
+          "callFailedMessage": "Failed to connect the call. Please try again.",
+          "tryAgain": "Try Again",
           "elapsedTime": "Elapsed Time",
           "talkTime": "Talk Time",
           "dialing": "Dialing...",
@@ -1577,7 +1580,15 @@
       "currentPasswordRequired": "Current password is required",
       "newPasswordRequired": "New password is required",
       "changePassword": "Change Password",
-      "changing": "Changing..."
+      "changing": "Changing...",
+      "callSettings": "Call Settings",
+      "extensionHelperText": "Extension number is managed by system administrator",
+      "agentStatus": {
+        "online": "Online",
+        "offline": "Offline",
+        "busy": "Busy",
+        "onCall": "On Call"
+      }
     },
     "reports": {
       "title": "Reports Dashboard",

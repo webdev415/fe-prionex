@@ -69,7 +69,7 @@ describe('useOriginateCall', () => {
     expect(toast.success).toHaveBeenCalledWith('Call initiated successfully')
   })
 
-  it('should show error toast on failure', async () => {
+  it('should set error state on failure', async () => {
     const mockRequest: OriginateCallRequest = {
       agent_extension: '1003',
       customer_number: '+380971234567',
@@ -93,10 +93,11 @@ describe('useOriginateCall', () => {
       expect(result.current.isError).toBe(true)
     })
 
-    expect(toast.error).toHaveBeenCalledWith('Extension not configured')
+    // Error handling is delegated to component, no toast shown from hook
+    expect(result.current.error).toBeDefined()
   })
 
-  it('should show generic error message when no message provided', async () => {
+  it('should set error state on network failure', async () => {
     const mockRequest: OriginateCallRequest = {
       agent_extension: '1003',
       customer_number: '+380971234567',
@@ -114,7 +115,8 @@ describe('useOriginateCall', () => {
       expect(result.current.isError).toBe(true)
     })
 
-    expect(toast.error).toHaveBeenCalledWith('Failed to initiate call')
+    // Error handling is delegated to component, no toast shown from hook
+    expect(result.current.error).toBeDefined()
   })
 
   it('should invalidate call history on success', async () => {

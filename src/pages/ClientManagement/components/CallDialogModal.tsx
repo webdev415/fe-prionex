@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 import { useCallStore } from '@/stores/callStore'
 import { useCallDetails } from '@/features/calls/hooks/useCall'
 
-export type CallState = 'initial' | 'dialing' | 'connected' | 'ended' | 'incoming'
+export type CallState = 'initial' | 'dialing' | 'connected' | 'ended' | 'failed' | 'incoming'
 export type CallType = 'white-line' | 'gray-line' | 'spam-calls'
 export type CallStatus = 'answered' | 'missed' | 'rejected'
 
@@ -30,11 +30,14 @@ export interface CallDialogModalProps {
   phoneNumber: string
   callId?: string | null // Optional call ID for tracking real-time call state
   initialState?: CallState
+  error?: string | null // Error message to display when call fails
+  isLoading?: boolean // Loading state for call initiation
   onCallStart?: (callType: CallType) => void
   onCallEnd?: (duration: number, status: CallStatus) => void
   onAnswer?: () => void
   onReject?: () => void
   onMinimize?: () => void
+  onRetry?: () => void // Callback to retry failed call
   // For incoming call
   loans?: Array<{
     id: string
@@ -64,11 +67,14 @@ export function CallDialogModal({
   phoneNumber,
   callId,
   initialState = 'initial',
+  error,
+  isLoading,
   onCallStart,
   onCallEnd,
   onAnswer,
   onReject,
   onMinimize,
+  onRetry,
   loans = [],
 }: CallDialogModalProps) {
   const { t } = useTranslation('common')
@@ -127,6 +133,11 @@ export function CallDialogModal({
 
   // Derive call state and elapsed time from backend state
   const derivedState = useMemo(() => {
+    // If there's an error prop, show failed state
+    if (error) {
+      return { state: 'failed' as CallState, time: 0 }
+    }
+
     if (!callDetails || !open) {
       return { state: callState, time: elapsedTime }
     }
@@ -141,11 +152,11 @@ export function CallDialogModal({
       case 'completed':
         return { state: 'ended' as CallState, time: callDetails.total_duration || 0 }
       case 'failed':
-        return { state: 'ended' as CallState, time: 0 }
+        return { state: 'failed' as CallState, time: 0 }
       default:
         return { state: callState, time: elapsedTime }
     }
-  }, [callDetails, open, callState, elapsedTime])
+  }, [callDetails, open, callState, elapsedTime, error])
 
   // Sync derived state to local state
   // This is intentional state synchronization with external system (backend call state)
@@ -515,15 +526,19 @@ export function CallDialogModal({
                 size="md"
                 onClick={handleCallNow}
                 className="flex-1"
-                leftIcon={<Icons.Headset size={20} />}
+                leftIcon={isLoading ? undefined : <Icons.Headset size={20} />}
+                disabled={isLoading}
               >
-                {t('pages.clients.modals.callDialog.callNow')}
+                {isLoading ? t('status.loading') : t('pages.clients.modals.callDialog.callNow')}
               </Button>
             </ModalFooter>
           </>
         )}
 
-        {(callState === 'dialing' || callState === 'connected' || callState === 'ended') && (
+        {(callState === 'dialing' ||
+          callState === 'connected' ||
+          callState === 'ended' ||
+          callState === 'failed') && (
           <>
             {/* Contact Info */}
             <div className="flex flex-col items-center gap-3">
@@ -538,32 +553,30 @@ export function CallDialogModal({
                     ? 'bg-primary-300'
                     : callState === 'connected'
                       ? 'bg-success-500'
-                      : 'bg-gray-800'
+                      : callState === 'failed'
+                        ? 'bg-error-500'
+                        : 'bg-gray-800'
                 )}
               >
                 <div
                   className={cn(
                     'h-2 w-2 rounded-full',
-                    callState === 'dialing'
-                      ? 'bg-primary-500'
-                      : callState === 'connected'
-                        ? 'bg-white'
-                        : 'bg-white'
+                    callState === 'dialing' ? 'bg-primary-500' : 'bg-white'
                   )}
                 />
                 <span
                   className={cn(
                     'text-sm font-medium',
-                    callState === 'dialing' || callState === 'ended'
-                      ? 'text-dark-500'
-                      : 'text-white'
+                    callState === 'dialing' ? 'text-dark-500' : 'text-white'
                   )}
                 >
                   {callState === 'dialing'
                     ? t('pages.clients.modals.callDialog.calling')
                     : callState === 'connected'
                       ? t('pages.clients.modals.callDialog.connected')
-                      : t('pages.clients.modals.callDialog.callEnded')}
+                      : callState === 'failed'
+                        ? t('pages.clients.modals.callDialog.callFailed')
+                        : t('pages.clients.modals.callDialog.callEnded')}
                 </span>
               </div>
               <div className="text-dark-500 text-sm">{phoneNumber}</div>
@@ -611,8 +624,40 @@ export function CallDialogModal({
               </>
             )}
 
+            {callState === 'failed' && (
+              <>
+                <div className="border-error-200 bg-error-50 flex flex-col items-center justify-center gap-3 rounded-lg border p-4">
+                  <div className="bg-error-100 flex h-12 w-12 items-center justify-center rounded-full">
+                    <Icons.Cancel01 size={24} className="text-error-500" />
+                  </div>
+                  <div className="text-error-600 text-center text-sm font-medium">
+                    {error || t('pages.clients.modals.callDialog.callFailedMessage')}
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="cancel" size="md" onClick={handleClose} className="flex-1">
+                    {t('actions.close')}
+                  </Button>
+                  {onRetry && (
+                    <Button
+                      variant="primary"
+                      size="md"
+                      onClick={() => {
+                        setCallState('initial')
+                        onRetry()
+                      }}
+                      className="flex-1"
+                      leftIcon={<Icons.Headset size={20} />}
+                    >
+                      {t('pages.clients.modals.callDialog.tryAgain')}
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
+
             {/* Action Buttons */}
-            {callState !== 'ended' && (
+            {callState !== 'ended' && callState !== 'failed' && (
               <div className="flex gap-3">
                 <Button
                   variant={isMuted ? 'danger' : 'outline'}
