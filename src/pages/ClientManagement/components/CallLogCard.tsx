@@ -63,6 +63,7 @@ type CallData = {
   operator: string
   duration: string
   phone: string
+  call_id?: string
 }
 
 type SMSData = {
@@ -90,6 +91,7 @@ type CallLogCardProps = {
   className?: string
   clientName?: string
   icon?: React.ReactNode
+  call_id?: string
   setSelectedCallData?: React.Dispatch<React.SetStateAction<CallData | null>>
   setIsCallRecordingModalOpen?: (open: boolean) => void
   setSelectedSMSData?: React.Dispatch<React.SetStateAction<SMSData | null>>
@@ -117,6 +119,7 @@ export function CallLogCard({
   icon,
   clientName,
   className,
+  call_id,
   setSelectedCallData,
   setIsCallRecordingModalOpen,
   setSelectedSMSData,
@@ -202,6 +205,7 @@ export function CallLogCard({
                       operator: operator || '',
                       duration: duration || '',
                       phone: phone || '',
+                      call_id: call_id,
                     })
                     setOpenCallModal('call-recording')
                     setIsCallRecordingModalOpen?.(true)

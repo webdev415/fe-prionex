@@ -89,6 +89,7 @@
         "fullName": "Full Name",
         "email": "Email",
         "projectRole": "Project & Role",
+        "extension": "Extension / Agent",
         "status": "Status",
         "actions": "Actions"
       },
@@ -159,6 +160,9 @@
         "phone": "Phone",
         "language": "Language",
         "timezone": "Timezone",
+        "asteriskExtension": "Asterisk Extension",
+        "agentStatus": "Agent Status",
+        "isAgent": "Is Agent",
         "assignProjects": "Assign Projects",
         "rolePerProject": "Role per Project",
         "notAssigned": "Not assigned",
@@ -179,12 +183,21 @@
           "passwordsDontMatch": "Passwords don't match",
           "selectAtLeastOneProject": "Please select at least one project",
           "assignRoleForEachProject": "Please assign a role for each selected project"
+        },
+        "helpers": {
+          "asteriskExtension": "3-10 digit extension number for Asterisk phone system (e.g., 1001, 1002)"
         }
       },
       "editForm": {
         "errorUpdating": "Error updating user",
         "failedToUpdate": "Failed to update user",
         "usernameCannotBeChanged": "Username cannot be changed"
+      },
+      "agentStatuses": {
+        "online": "Online",
+        "offline": "Offline",
+        "busy": "Busy",
+        "onCall": "On Call"
       }
     },
     "projects": {
@@ -871,6 +884,9 @@
           "calling": "Calling...",
           "connected": "Connected",
           "callEnded": "Call Ended",
+          "callFailed": "Call Failed",
+          "callFailedMessage": "Failed to connect the call. Please try again.",
+          "tryAgain": "Try Again",
           "elapsedTime": "Elapsed Time",
           "talkTime": "Talk Time",
           "dialing": "Dialing...",
@@ -1564,7 +1580,15 @@
       "currentPasswordRequired": "Current password is required",
       "newPasswordRequired": "New password is required",
       "changePassword": "Change Password",
-      "changing": "Changing..."
+      "changing": "Changing...",
+      "callSettings": "Call Settings",
+      "extensionHelperText": "Extension number is managed by system administrator",
+      "agentStatus": {
+        "online": "Online",
+        "offline": "Offline",
+        "busy": "Busy",
+        "onCall": "On Call"
+      }
     },
     "reports": {
       "title": "Reports Dashboard",

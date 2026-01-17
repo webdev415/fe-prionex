@@ -64,6 +64,8 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
     handleSubmit,
     control,
     reset,
+    getValues,
+    setValue,
     formState: { errors },
   } = useForm<UpdateUserFormData>({
     resolver: zodResolver(updateUserSchema),
@@ -75,6 +77,8 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       phone: user?.phone || '',
       language: (user?.language as 'uk' | 'ru' | 'en') || 'uk',
       timezone: user?.timezone || 'Europe/Kyiv',
+      asterisk_extension: user?.asterisk_extension || '',
+      is_agent: user?.is_agent || false,
     },
   })
 
@@ -89,6 +93,8 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
         phone: user.phone || '',
         language: (user.language as 'uk' | 'ru' | 'en') || 'uk',
         timezone: user.timezone || 'Europe/Kyiv',
+        asterisk_extension: user.asterisk_extension || '',
+        is_agent: user.is_agent || false,
       })
     }
   }, [user, reset])
@@ -112,6 +118,8 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       phone: data.phone,
       language: data.language,
       timezone: data.timezone,
+      asterisk_extension: data.asterisk_extension || undefined,
+      is_agent: data.is_agent,
     }
 
     // Build project assignments array from all selected projects
@@ -301,6 +309,40 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
             {errors.timezone && (
               <p className="mt-1 text-sm text-red-500">{errors.timezone.message}</p>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Call Settings Section */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="asterisk_extension">{t('pages.users.forms.asteriskExtension')}</Label>
+            <Input
+              id="asterisk_extension"
+              placeholder="1001"
+              {...register('asterisk_extension')}
+              aria-invalid={!!errors.asterisk_extension}
+              variant={errors.asterisk_extension ? 'error' : 'default'}
+              className="mt-1"
+            />
+            {errors.asterisk_extension && (
+              <p className="mt-1 text-sm text-red-500">{errors.asterisk_extension.message}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              {t('pages.users.forms.helpers.asteriskExtension')}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 pt-7">
+            <Checkbox
+              id="is_agent"
+              checked={getValues('is_agent') || false}
+              onCheckedChange={(checked) => setValue('is_agent', checked === true)}
+            />
+            <Label htmlFor="is_agent" className="mb-0 cursor-pointer">
+              {t('pages.users.forms.isAgent')}
+            </Label>
           </div>
         </div>
       </div>

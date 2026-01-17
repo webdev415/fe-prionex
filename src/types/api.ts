@@ -68,6 +68,9 @@ export interface CurrentUserResponse {
   permissions: string[]
   last_login_at?: string | null
   created_at: string
+  asterisk_extension?: string
+  is_agent?: boolean
+  agent_status?: string
 }
 
 export interface User {
@@ -83,6 +86,9 @@ export interface User {
   permissions?: string[]
   createdAt?: string
   updatedAt?: string
+  asterisk_extension?: string
+  is_agent?: boolean
+  agent_status?: string
 }
 
 export interface LoginRequest {

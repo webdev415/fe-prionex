@@ -44,6 +44,9 @@ export interface ApiUser {
   created_at: string
   updated_at?: string
   projects?: ProjectRole[]
+  asterisk_extension?: string
+  is_agent: boolean
+  agent_status?: 'online' | 'offline' | 'busy' | 'on-call'
 }
 
 /**
@@ -84,6 +87,8 @@ export interface CreateUserInput {
   timezone: string
   must_change_password: boolean
   project_assignments: ProjectRoleAssignment[]
+  asterisk_extension?: string
+  is_agent?: boolean
 }
 
 /**
@@ -98,6 +103,8 @@ export interface UpdateUserInput {
   language?: 'uk' | 'ru' | 'en'
   timezone?: string
   project_assignments?: ProjectRoleAssignment[]
+  asterisk_extension?: string
+  is_agent?: boolean
 }
 
 /**

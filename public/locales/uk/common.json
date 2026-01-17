@@ -89,6 +89,7 @@
         "fullName": "Повне ім'я",
         "email": "Електронна пошта",
         "projectRole": "Проєкт та роль",
+        "extension": "Розширення / Агент",
         "status": "Статус",
         "actions": "Дії"
       },
@@ -159,6 +160,9 @@
         "phone": "Телефон",
         "language": "Мова",
         "timezone": "Часовий пояс",
+        "asteriskExtension": "Розширення Asterisk",
+        "agentStatus": "Статус агента",
+        "isAgent": "Агент",
         "assignProjects": "Призначити проєкти",
         "rolePerProject": "Роль на проєкт",
         "notAssigned": "Не призначено",
@@ -179,12 +183,21 @@
           "passwordsDontMatch": "Паролі не співпадають",
           "selectAtLeastOneProject": "Будь ласка, виберіть хоча б один проєкт",
           "assignRoleForEachProject": "Будь ласка, призначте роль для кожного вибраного проєкту"
+        },
+        "helpers": {
+          "asteriskExtension": "3-10 цифровий номер внутрішнього зв'язку для телефонної системи Asterisk (наприклад, 1001, 1002)"
         }
       },
       "editForm": {
         "errorUpdating": "Помилка оновлення користувача",
         "failedToUpdate": "Не вдалося оновити користувача",
         "usernameCannotBeChanged": "Ім'я користувача не можна змінити"
+      },
+      "agentStatuses": {
+        "online": "Онлайн",
+        "offline": "Офлайн",
+        "busy": "Зайнятий",
+        "onCall": "На дзвінку"
       }
     },
     "projects": {
@@ -833,6 +846,9 @@
           "calling": "Дзвонить...",
           "connected": "Підключено",
           "callEnded": "Дзвінок завершено",
+          "callFailed": "Дзвінок не вдався",
+          "callFailedMessage": "Не вдалося підключити дзвінок. Спробуйте ще раз.",
+          "tryAgain": "Спробувати знову",
           "elapsedTime": "Минуло часу",
           "talkTime": "Час розмови",
           "dialing": "Набір номера...",
@@ -1486,7 +1502,15 @@
       "currentPasswordRequired": "Поточний пароль обов'язковий",
       "newPasswordRequired": "Новий пароль обов'язковий",
       "changePassword": "Змінити пароль",
-      "changing": "Зміна..."
+      "changing": "Зміна...",
+      "callSettings": "Налаштування дзвінків",
+      "extensionHelperText": "Номер розширення керується системним адміністратором",
+      "agentStatus": {
+        "online": "Онлайн",
+        "offline": "Офлайн",
+        "busy": "Зайнятий",
+        "onCall": "На дзвінку"
+      }
     },
     "reports": {
       "title": "Панель звітів",

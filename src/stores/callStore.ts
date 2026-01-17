@@ -14,7 +14,7 @@ export interface MinimizedCallInfo {
   clientName: string
   phoneNumber: string
   // For call dialog
-  callState?: 'initial' | 'dialing' | 'connected' | 'ended' | 'incoming'
+  callState?: 'initial' | 'dialing' | 'connected' | 'ended' | 'failed' | 'incoming'
   callType?: 'white-line' | 'gray-line' | 'spam-calls'
   elapsedTime?: number
   // For call recording

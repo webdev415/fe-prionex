@@ -172,6 +172,8 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
         language: formData.language || 'uk',
         timezone: formData.timezone || 'Europe/Kyiv',
         must_change_password: formData.must_change_password || false,
+        asterisk_extension: formData.asterisk_extension || undefined,
+        is_agent: formData.is_agent || false,
         project_assignments,
       },
       {
@@ -403,6 +405,40 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
             {errors.timezone && (
               <p className="mt-1 text-sm text-red-500">{errors.timezone.message}</p>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Call Settings Section */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="asterisk_extension">{t('pages.users.forms.asteriskExtension')}</Label>
+            <Input
+              id="asterisk_extension"
+              placeholder="1001"
+              {...register('asterisk_extension')}
+              aria-invalid={!!errors.asterisk_extension}
+              variant={errors.asterisk_extension ? 'error' : 'default'}
+              className="mt-1"
+            />
+            {errors.asterisk_extension && (
+              <p className="mt-1 text-sm text-red-500">{errors.asterisk_extension.message}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              {t('pages.users.forms.helpers.asteriskExtension')}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 pt-7">
+            <Checkbox
+              id="is_agent"
+              checked={getValues('is_agent') || false}
+              onCheckedChange={(checked) => setValue('is_agent', checked === true)}
+            />
+            <Label htmlFor="is_agent" className="mb-0 cursor-pointer">
+              {t('pages.users.forms.isAgent')}
+            </Label>
           </div>
         </div>
       </div>

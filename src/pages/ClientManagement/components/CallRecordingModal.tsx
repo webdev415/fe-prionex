@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useCallStore } from '@/stores/callStore'
+import { callService } from '@/features/calls/api/callService'
 
 export interface CallRecordingModalProps {
   open: boolean
@@ -23,6 +24,7 @@ export interface CallRecordingModalProps {
     operator: string
     duration: string
     phone: string
+    call_id?: string // Optional call ID for fetching recording
   }
   onMinimize?: () => void
 }
@@ -56,10 +58,13 @@ export function CallRecordingModal({
   }, [open, setOpenCallModal, minimizedCall])
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0)
   const [showSpeedMenu, setShowSpeedMenu] = useState(false)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const recordingDuration = 83 // 1:23 in seconds (mock data)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Get recording URL from call service
+  const recordingUrl = callData.call_id ? callService.getRecordingUrl(callData.call_id) : null
 
   // Format date for display
   const formatDate = (dateStr: string, timeStr: string) => {
@@ -88,32 +93,33 @@ export function CallRecordingModal({
     }
   }
 
-  // Timer for playback
+  // Setup audio element event listeners
   useEffect(() => {
-    if (isPlaying && open) {
-      intervalRef.current = setInterval(() => {
-        setCurrentTime((prev) => {
-          const next = prev + playbackSpeed
-          if (next >= recordingDuration) {
-            setIsPlaying(false)
-            return recordingDuration
-          }
-          return next
-        })
-      }, 1000)
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
+    const audio = audioRef.current
+    if (!audio) return
+
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration)
     }
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime)
     }
-  }, [isPlaying, open, playbackSpeed, recordingDuration])
+
+    const handleEnded = () => {
+      setIsPlaying(false)
+    }
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata)
+    audio.addEventListener('timeupdate', handleTimeUpdate)
+    audio.addEventListener('ended', handleEnded)
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      audio.removeEventListener('timeupdate', handleTimeUpdate)
+      audio.removeEventListener('ended', handleEnded)
+    }
+  }, [open])
 
   // Reset when modal closes
   useEffect(() => {
@@ -128,28 +134,46 @@ export function CallRecordingModal({
   }, [open])
 
   const handlePlayPause = () => {
-    setIsPlaying(!isPlaying)
+    const audio = audioRef.current
+    if (!audio) return
+
+    if (isPlaying) {
+      audio.pause()
+      setIsPlaying(false)
+    } else {
+      audio.play()
+      setIsPlaying(true)
+    }
   }
 
   const handleSkipBackward = () => {
-    setCurrentTime((prev) => Math.max(0, prev - 10))
+    const audio = audioRef.current
+    if (!audio) return
+    audio.currentTime = Math.max(0, audio.currentTime - 10)
   }
 
   const handleSkipForward = () => {
-    setCurrentTime((prev) => Math.min(recordingDuration, prev + 10))
+    const audio = audioRef.current
+    if (!audio) return
+    audio.currentTime = Math.min(audio.duration, audio.currentTime + 10)
   }
 
   const handleSpeedChange = (speed: number) => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.playbackRate = speed
     setPlaybackSpeed(speed)
     setShowSpeedMenu(false)
   }
 
   const handleProgressChange = (e: React.MouseEvent<HTMLDivElement>) => {
+    const audio = audioRef.current
+    if (!audio) return
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
     const percentage = x / rect.width
-    const newTime = percentage * recordingDuration
-    setCurrentTime(Math.max(0, Math.min(recordingDuration, newTime)))
+    const newTime = percentage * audio.duration
+    audio.currentTime = Math.max(0, Math.min(audio.duration, newTime))
   }
 
   const handleMinimize = () => {
@@ -170,10 +194,17 @@ export function CallRecordingModal({
     }
   }
 
-  const progressPercentage = (currentTime / recordingDuration) * 100
+  const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="xl" className="p-6">
+      {/* Hidden audio element for playback */}
+      {recordingUrl && (
+        <audio ref={audioRef} src={recordingUrl} preload="metadata" className="hidden">
+          <track kind="captions" />
+        </audio>
+      )}
+
       {/* Minimize Button */}
       <button
         onClick={handleMinimize}
@@ -257,7 +288,7 @@ export function CallRecordingModal({
               tabIndex={0}
               aria-label={t('pages.clients.modals.callRecording.audioProgress')}
               aria-valuemin={0}
-              aria-valuemax={recordingDuration}
+              aria-valuemax={duration}
               aria-valuenow={currentTime}
             >
               <div
@@ -266,7 +297,7 @@ export function CallRecordingModal({
               />
             </div>
             <span className="text-dark-500 text-sm font-medium">
-              {formatTime(recordingDuration)}
+              {formatTime(Math.floor(duration))}
             </span>
           </div>
           <button className="text-dark-500 cursor-pointer hover:text-gray-800">
@@ -347,9 +378,16 @@ export function CallRecordingModal({
             size="md"
             className="flex-1"
             onClick={() => {
-              // TODO: Implement download functionality
-              console.log('Download recording')
+              if (recordingUrl) {
+                const link = document.createElement('a')
+                link.href = recordingUrl
+                link.download = `call-${callData.call_id || 'recording'}.wav`
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+              }
             }}
+            disabled={!recordingUrl}
           >
             <Icons.Mp301 size={20} className="mr-2" />
             {t('pages.clients.modals.callRecording.download')}

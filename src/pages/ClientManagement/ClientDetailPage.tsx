@@ -27,6 +27,9 @@ import { useSMSHistory } from '@/features/sms'
 import { useCallStore } from '@/stores/callStore'
 import { useClientTags } from '@/features/tags/hooks/useTags'
 import { TagSelectorModal } from './components/TagSelectorModal'
+import { useAuth } from '@/features/auth/hooks/useAuth'
+import { useOriginateCall, useCallHistory } from '@/features/calls/hooks/useCall'
+import { useCallWebSocket } from '@/features/calls/hooks/useCallWebSocket'
 
 // Helper function to create mock client detail
 const createMockClientDetail = (
@@ -843,6 +846,73 @@ export function ClientDetailPage() {
   const [activeLoanTab, setActiveLoanTab] = useState<'process' | 'closed' | 'rr'>('process')
   const [activeCommentTab, setActiveCommentTab] = useState<'comments' | 'primary'>('comments')
 
+  // Get current user for call integration
+  const { user } = useAuth()
+  const { mutate: originateCall, isPending: isOriginatingCall } = useOriginateCall()
+
+  // Track call error state for displaying in modal
+  const [callError, setCallError] = useState<string | null>(null)
+
+  // Enable WebSocket for real-time call updates
+  useCallWebSocket(user?.asterisk_extension || null)
+
+  // Clear call error when modal opens
+  const handleClearCallError = () => {
+    setCallError(null)
+  }
+
+  // Handle call origination with custom success handler
+  const handleOriginateCall = (phoneNumber: string, clientName: string, clientId: string) => {
+    if (!user?.asterisk_extension) {
+      setCallError('Your account is not configured for calling. Please contact administrator.')
+      return
+    }
+
+    // Clear any previous error
+    setCallError(null)
+
+    originateCall(
+      {
+        agent_extension: user.asterisk_extension,
+        customer_number: phoneNumber,
+        caller_id_name: 'CRM Call',
+        metadata: {
+          client_id: clientId,
+          client_name: clientName,
+        },
+      },
+      {
+        onSuccess: (data) => {
+          // Store the call ID to track this call with backend
+          setCurrentCallId(data.call_id)
+          // Modal is already open and will transition to 'dialing' state
+          // No need to re-open it
+        },
+        onError: (err: unknown) => {
+          // Extract error message from response
+          let message: string | undefined
+          if (err && typeof err === 'object' && 'response' in err) {
+            const response = (
+              err as { response?: { data?: { message?: string; detail?: unknown } } }
+            ).response
+            const data = response?.data
+            if (data?.message) {
+              message = data.message
+            } else if (data?.detail) {
+              // detail can be a string or an object with message property
+              if (typeof data.detail === 'string') {
+                message = data.detail
+              } else if (typeof data.detail === 'object' && data.detail !== null) {
+                message = (data.detail as { message?: string }).message
+              }
+            }
+          }
+          setCallError(message || 'Failed to initiate call. Please try again.')
+        },
+      }
+    )
+  }
+
   // Fetch client data from API
   const clientId = id ? Number(id) : 0
 
@@ -855,6 +925,9 @@ export function ClientDetailPage() {
 
   // Fetch client tags from API
   const { data: clientTags } = useClientTags(clientId)
+
+  // Fetch call history from API
+  const { data: callHistoryData } = useCallHistory(clientId, { limit: 100 })
 
   // Use mock data as fallback for missing fields until backend is fully integrated
   const client = useMemo(() => {
@@ -884,6 +957,42 @@ export function ClientDetailPage() {
         template: sms.template_name || '',
         operator: sms.operator_name || '',
         status: statusStr as 'Delivered' | 'Pending' | 'Failed',
+      }
+    })
+
+    // Map API call history to expected format - use real data from API
+    const apiCallHistory = callHistoryData?.calls || []
+    const mappedCallHistory = apiCallHistory.map((call, index) => {
+      const initiatedAt = call.initiated_at ? new Date(call.initiated_at) : new Date()
+      // Map backend state/outcome to frontend status
+      const statusStr =
+        call.outcome === 'answered'
+          ? 'Answered'
+          : call.state === 'failed' || call.outcome === 'failed'
+            ? 'No Answer'
+            : 'No Answer'
+
+      // Format duration
+      const durationSeconds = call.talk_duration || 0
+      const minutes = Math.floor(durationSeconds / 60)
+      const seconds = durationSeconds % 60
+      const durationStr = `${minutes}m ${seconds}s`
+
+      // Determine call type (Incoming vs Outgoing)
+      const callType = call.agent_extension ? 'Outgoing' : 'Incoming'
+
+      return {
+        id: index + 1,
+        date: initiatedAt.toISOString().split('T')[0],
+        time: initiatedAt.toTimeString().slice(0, 5), // HH:MM format
+        duration: durationStr,
+        status: statusStr as 'Answered' | 'No Answer',
+        type: callType as 'Incoming' | 'Outgoing',
+        phone: call.customer_number,
+        phoneLabel: 'Primary', // TODO: Get from backend if available
+        line: 'White Line', // TODO: Get from backend if available
+        operator: 'Agent', // TODO: Get operator name from backend
+        call_id: call.call_id, // Include call_id for recording playback
       }
     })
 
@@ -922,14 +1031,16 @@ export function ClientDetailPage() {
       },
       callSmsHistory: {
         ...mockClient.callSmsHistory,
+        calls: mappedCallHistory as typeof mockClient.callSmsHistory.calls, // Use real API data instead of mock
         sms: mappedSmsHistory as typeof mockClient.callSmsHistory.sms, // Use real API data instead of mock
       },
     }
-  }, [apiClient, smsHistoryData])
+  }, [apiClient, smsHistoryData, callHistoryData])
 
   // Tags are now fetched from useClientTags hook instead of local state
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
+  const [currentCallId, setCurrentCallId] = useState<string | null>(null)
   const [isCallRecordingModalOpen, setIsCallRecordingModalOpen] = useState(false)
   const [isTagModalOpen, setIsTagModalOpen] = useState(false)
   const [selectedCallData, setSelectedCallData] = useState<{
@@ -940,6 +1051,7 @@ export function ClientDetailPage() {
     operator: string
     duration: string
     phone: string
+    call_id?: string
   } | null>(null)
   const [isViewSMSModalOpen, setIsViewSMSModalOpen] = useState(false)
   const [selectedSMSData, setSelectedSMSData] = useState<{
@@ -1340,7 +1452,14 @@ export function ClientDetailPage() {
             size="md"
             leftIcon={<Icons.Headset size={20} />}
             className="rounded-full"
+            disabled={!user?.asterisk_extension}
             onClick={() => {
+              const phoneNumber = client.phones?.[0]?.number
+              if (!phoneNumber) {
+                toast.error('Client has no phone number')
+                return
+              }
+
               if (isCallActive()) {
                 toast.warning(
                   t('pages.clients.modals.callDialog.callInProgress') ||
@@ -1348,6 +1467,8 @@ export function ClientDetailPage() {
                 )
                 return
               }
+
+              // Open modal in 'initial' state to let user select call type
               setOpenCallModal('call-dialog')
               setIsCallModalOpen(true)
             }}
@@ -2194,6 +2315,9 @@ export function ClientDetailPage() {
                                     phone={call.phone}
                                     line={call.line}
                                     operator={call.operator}
+                                    call_id={
+                                      'call_id' in call ? (call.call_id as string) : undefined
+                                    }
                                     icon={
                                       <Icons.PlayCircle02
                                         size={20}
@@ -2338,6 +2462,9 @@ export function ClientDetailPage() {
                                       phone={call.phone}
                                       line={call.line}
                                       operator={call.operator}
+                                      call_id={
+                                        'call_id' in call ? (call.call_id as string) : undefined
+                                      }
                                       icon={
                                         <Icons.PlayCircle02
                                           size={20}
@@ -2575,16 +2702,33 @@ export function ClientDetailPage() {
         onClose={() => {
           setOpenCallModal(null)
           setIsCallModalOpen(false)
+          setCurrentCallId(null)
+          handleClearCallError()
         }}
         clientName={client.fullName}
         phoneNumber={client.phones?.[0]?.number || ''}
+        callId={currentCallId}
         initialState="initial"
-        onCallStart={(callType: CallType) => {
-          console.log('Call started with type:', callType)
+        error={callError}
+        isLoading={isOriginatingCall}
+        onCallStart={(_callType: CallType) => {
+          // User selected call type and clicked "Call Now"
+          const phoneNumber = client.phones?.[0]?.number
+          if (!phoneNumber) {
+            setCallError('Client has no phone number')
+            return
+          }
+
+          // Originate call via API (callType can be used for future call type handling)
+          handleOriginateCall(phoneNumber, client.fullName, client.id.toString())
         }}
         onCallEnd={(duration: number, status: CallStatus) => {
           console.log('Call ended:', { duration, status })
           setOpenCallModal(null)
+          setCurrentCallId(null)
+        }}
+        onRetry={() => {
+          handleClearCallError()
         }}
       />
 

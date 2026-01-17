@@ -22,6 +22,8 @@ interface AuthState {
   logout: () => Promise<void>
   forceLogin: () => Promise<void>
   checkAuth: () => Promise<void>
+  refreshUser: () => Promise<void>
+  updateCurrentUser: (updates: Partial<User>) => void
   clearError: () => void
   startImpersonation: (userId: number) => Promise<void>
   exitImpersonation: () => Promise<void>
@@ -96,6 +98,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           permissions: backendUser.permissions || [],
           createdAt: backendUser.created_at,
           updatedAt: backendUser.created_at,
+          asterisk_extension: backendUser.asterisk_extension,
+          is_agent: backendUser.is_agent,
+          agent_status: backendUser.agent_status,
         }
 
         set({
@@ -262,6 +267,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           permissions: backendUser.permissions || [],
           createdAt: backendUser.created_at,
           updatedAt: backendUser.created_at,
+          asterisk_extension: backendUser.asterisk_extension,
+          is_agent: backendUser.is_agent,
+          agent_status: backendUser.agent_status,
         }
 
         set({
@@ -382,6 +390,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             permissions: backendUser.permissions || [],
             createdAt: backendUser.created_at,
             updatedAt: backendUser.created_at,
+            asterisk_extension: backendUser.asterisk_extension,
+            is_agent: backendUser.is_agent,
+            agent_status: backendUser.agent_status,
           }
 
           if (isImpersonating) {
@@ -527,6 +538,56 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         impersonatedUser: null,
         originalAdminUser: null,
       })
+    }
+  },
+
+  refreshUser: async () => {
+    const { isAuthenticated } = get()
+
+    if (!isAuthenticated) {
+      return
+    }
+
+    try {
+      const userResponse = await authApi.me()
+      const backendUser = userResponse.data
+
+      // Map backend user data to frontend User type
+      const user: User = {
+        id: String(backendUser.id),
+        username: backendUser.username,
+        email: backendUser.email,
+        firstName: backendUser.first_name,
+        lastName: backendUser.last_name,
+        projects:
+          backendUser.projects?.map((p) => ({
+            id: String(p.id),
+            name: p.name,
+            roles: [{ id: String(p.id), name: p.role_name }],
+          })) || [],
+        active_project_id: backendUser.active_project
+          ? String(backendUser.active_project.id)
+          : null,
+        active_role_id: backendUser.role ? String(backendUser.role.id) : null,
+        active_role_name: backendUser.role?.name || null,
+        permissions: backendUser.permissions || [],
+        asterisk_extension: backendUser.asterisk_extension,
+        is_agent: backendUser.is_agent,
+        agent_status: backendUser.agent_status,
+        createdAt: backendUser.created_at,
+        updatedAt: backendUser.created_at,
+      }
+
+      set({ user })
+    } catch (error) {
+      console.error('Failed to refresh user data:', error)
+    }
+  },
+
+  updateCurrentUser: (updates: Partial<User>) => {
+    const { user } = get()
+    if (user) {
+      set({ user: { ...user, ...updates } })
     }
   },
 
@@ -676,6 +737,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         permissions: admin_user.permissions || [],
         createdAt: admin_user.created_at,
         updatedAt: admin_user.created_at,
+        asterisk_extension: admin_user.asterisk_extension,
+        is_agent: admin_user.is_agent,
+        agent_status: admin_user.agent_status,
       }
 
       // Clear stored admin from sessionStorage

@@ -124,6 +124,51 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
         </div>
       </div>
 
+      {/* Call Settings Section */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+            <span className="text-sm font-light text-gray-500">Asterisk Extension:</span>
+            <span className="text-sm font-semibold break-words text-gray-950">
+              {user.asterisk_extension || '—'}
+            </span>
+          </div>
+
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+            <span className="text-sm font-light text-gray-500">Is Agent:</span>
+            <span className="text-sm font-semibold break-words text-gray-950">
+              {user.is_agent ? 'Yes' : 'No'}
+            </span>
+          </div>
+        </div>
+
+        {user.is_agent && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+              <span className="text-sm font-light text-gray-500">Agent Status:</span>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`h-2 w-2 rounded-full ${
+                    user.agent_status === 'online'
+                      ? 'bg-green-500'
+                      : user.agent_status === 'busy'
+                        ? 'bg-yellow-500'
+                        : user.agent_status === 'on-call'
+                          ? 'bg-red-500'
+                          : 'bg-gray-400'
+                  }`}
+                />
+                <span className="text-sm font-semibold text-gray-950 capitalize">
+                  {user.agent_status || 'offline'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="border-t border-gray-200"></div>
+      </div>
+
       {/* Assign Projects Section */}
       {user.projects && user.projects.length > 0 && (
         <div className="space-y-4">
