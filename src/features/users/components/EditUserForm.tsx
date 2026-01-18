@@ -64,8 +64,6 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
     handleSubmit,
     control,
     reset,
-    getValues,
-    setValue,
     formState: { errors },
   } = useForm<UpdateUserFormData>({
     resolver: zodResolver(updateUserSchema),
@@ -335,10 +333,16 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
           </div>
 
           <div className="flex items-center gap-2 pt-7">
-            <Checkbox
-              id="is_agent"
-              checked={getValues('is_agent') || false}
-              onCheckedChange={(checked) => setValue('is_agent', checked === true)}
+            <Controller
+              name="is_agent"
+              control={control}
+              render={({ field }) => (
+                <Checkbox
+                  id="is_agent"
+                  checked={field.value || false}
+                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                />
+              )}
             />
             <Label htmlFor="is_agent" className="mb-0 cursor-pointer">
               {t('pages.users.forms.isAgent')}
