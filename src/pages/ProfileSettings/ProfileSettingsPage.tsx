@@ -284,17 +284,18 @@ export function ProfileSettingsPage() {
                 </div>
               </div>
 
-              {/* Call Settings Section - Only visible if user has extension */}
-              {user?.asterisk_extension && (
+              {/* Call Settings Section - Only visible for agents */}
+              {user?.is_agent && (
                 <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
                   <Input
                     label={t('pages.users.forms.asteriskExtension') || 'Asterisk Extension'}
-                    value={user.asterisk_extension}
+                    value={user?.asterisk_extension || ''}
                     disabled
                     onChange={() => {}}
+                    placeholder={t('pages.users.forms.placeholders.notSet') || 'Not set'}
                     className="w-full"
                   />
-                  {user.is_agent && (
+                  {user?.agent_status !== undefined && (
                     <div className="w-full">
                       <label
                         htmlFor="agent-status"

@@ -84,7 +84,6 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
     handleSubmit,
     control,
     setValue,
-    getValues,
     trigger,
     formState: { errors },
   } = useForm<CreateUserFormData>({
@@ -264,10 +263,16 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Checkbox
-            id="must_change_password"
-            checked={getValues('must_change_password') || false}
-            onCheckedChange={(checked) => setValue('must_change_password', checked === true)}
+          <Controller
+            name="must_change_password"
+            control={control}
+            render={({ field }) => (
+              <Checkbox
+                id="must_change_password"
+                checked={field.value || false}
+                onCheckedChange={(checked) => field.onChange(checked === true)}
+              />
+            )}
           />
           <Label htmlFor="must_change_password" className="mb-0 cursor-pointer">
             {t('pages.users.forms.mustChangePassword')}
@@ -431,10 +436,16 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
           </div>
 
           <div className="flex items-center gap-2 pt-7">
-            <Checkbox
-              id="is_agent"
-              checked={getValues('is_agent') || false}
-              onCheckedChange={(checked) => setValue('is_agent', checked === true)}
+            <Controller
+              name="is_agent"
+              control={control}
+              render={({ field }) => (
+                <Checkbox
+                  id="is_agent"
+                  checked={field.value || false}
+                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                />
+              )}
             />
             <Label htmlFor="is_agent" className="mb-0 cursor-pointer">
               {t('pages.users.forms.isAgent')}
