@@ -34,21 +34,60 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Determine API URL for build
+      - name: Determine API and WebSocket URLs for build
         id: set-api-url
         run: |
           if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            API_URL="${{ secrets.VITE_API_BASE_URL_PROD || secrets.VITE_API_BASE_URL || 'https://api.crm-prionex.com' }}"
+            # Production environment
+            API_URL="${{ secrets.VITE_API_BASE_URL_PROD }}"
+            if [ -z "$API_URL" ]; then
+              API_URL="${{ secrets.VITE_API_BASE_URL }}"
+            fi
+            if [ -z "$API_URL" ]; then
+              API_URL="https://api.crm-prionex.com"
+            fi
+            WS_URL="${{ secrets.VITE_WS_URL_PROD }}"
+            if [ -z "$WS_URL" ]; then
+              WS_URL="wss://api.crm-prionex.com"
+            fi
           elif [ "${{ github.ref }}" == "refs/heads/staging" ]; then
-            API_URL="${{ secrets.VITE_API_BASE_URL_STAGING || 'https://api.staging.crm-prionex.com' }}"
+            # Staging environment
+            API_URL="${{ secrets.VITE_API_BASE_URL_STAGING }}"
+            if [ -z "$API_URL" ]; then
+              API_URL="https://api.staging.crm-prionex.com"
+            fi
+            WS_URL="${{ secrets.VITE_WS_URL_STAGING }}"
+            if [ -z "$WS_URL" ]; then
+              WS_URL="wss://api.staging.crm-prionex.com"
+            fi
           elif [ "${{ github.ref }}" == "refs/heads/development" ]; then
-            API_URL="${{ secrets.VITE_API_BASE_URL_DEV || 'https://api.dev.crm-prionex.com' }}"
+            # Development environment
+            API_URL="${{ secrets.VITE_API_BASE_URL_DEV }}"
+            if [ -z "$API_URL" ]; then
+              API_URL="https://api.dev.crm-prionex.com"
+            fi
+            WS_URL="${{ secrets.VITE_WS_URL_DEV }}"
+            if [ -z "$WS_URL" ]; then
+              WS_URL="wss://api.dev.crm-prionex.com"
+            fi
           else
             # Default to production for tags or other branches
-            API_URL="${{ secrets.VITE_API_BASE_URL_PROD || secrets.VITE_API_BASE_URL || 'https://api.crm-prionex.com' }}"
+            API_URL="${{ secrets.VITE_API_BASE_URL_PROD }}"
+            if [ -z "$API_URL" ]; then
+              API_URL="${{ secrets.VITE_API_BASE_URL }}"
+            fi
+            if [ -z "$API_URL" ]; then
+              API_URL="https://api.crm-prionex.com"
+            fi
+            WS_URL="${{ secrets.VITE_WS_URL_PROD }}"
+            if [ -z "$WS_URL" ]; then
+              WS_URL="wss://api.crm-prionex.com"
+            fi
           fi
           echo "API_URL=$API_URL" >> $GITHUB_OUTPUT
+          echo "WS_URL=$WS_URL" >> $GITHUB_OUTPUT
           echo "📋 Building with API URL: $API_URL"
+          echo "📋 Building with WS URL: $WS_URL"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -83,6 +122,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VITE_API_BASE_URL=${{ steps.set-api-url.outputs.API_URL }}
+            VITE_WS_URL=${{ steps.set-api-url.outputs.WS_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
