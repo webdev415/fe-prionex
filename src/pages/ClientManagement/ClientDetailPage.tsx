@@ -2318,12 +2318,7 @@ export function ClientDetailPage() {
                                     call_id={
                                       'call_id' in call ? (call.call_id as string) : undefined
                                     }
-                                    icon={
-                                      <Icons.PlayCircle02
-                                        size={20}
-                                        className="text-secondary-800"
-                                      />
-                                    }
+                                    icon={<Icons.Play size={24} className="text-secondary-800" />}
                                     setSelectedCallData={setSelectedCallData}
                                     setIsCallRecordingModalOpen={setIsCallRecordingModalOpen}
                                   />
@@ -2340,12 +2335,7 @@ export function ClientDetailPage() {
                                     template={sms.template}
                                     message={sms.message}
                                     operator={sms.operator}
-                                    icon={
-                                      <Icons.ChatFeedback01
-                                        size={20}
-                                        className="text-secondary-800"
-                                      />
-                                    }
+                                    icon={<Icons.Chat size={24} className="text-secondary-800" />}
                                     setSelectedSMSData={setSelectedSMSData}
                                     setIsViewSMSModalOpen={setIsViewSMSModalOpen}
                                   />

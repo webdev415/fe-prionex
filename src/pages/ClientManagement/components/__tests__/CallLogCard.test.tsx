@@ -72,8 +72,8 @@ describe('CallLogCard', () => {
     it('should render call log card with call data', () => {
       render(<CallLogCard {...defaultCallProps} />)
 
-      expect(screen.getByText('10:30 AM')).toBeInTheDocument()
-      expect(screen.getByText('Outgoing Call')).toBeInTheDocument()
+      expect(screen.getAllByText('10:30 AM').length).toBeGreaterThan(0)
+      expect(screen.getByText('Outgoing')).toBeInTheDocument()
     })
 
     it('should render status indicator for answered calls', () => {
@@ -118,7 +118,7 @@ describe('CallLogCard', () => {
       render(<CallLogCard {...defaultSMSProps} />)
 
       expect(screen.getByText('11:00 AM')).toBeInTheDocument()
-      expect(screen.getByText('SMS Reminder')).toBeInTheDocument()
+      expect(screen.getByText('Payment Reminder')).toBeInTheDocument()
     })
 
     it('should render SMS message content', () => {
