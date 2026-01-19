@@ -26,6 +26,7 @@ import { PaymentVerificationQueueModal } from './components/PaymentVerificationQ
 import { ExportPaymentsCSVModal } from './components/ExportPaymentsCSVModal'
 import { PaymentDetailsModal } from './components/PaymentDetailsModal'
 import { CancelPaymentModal } from './components/CancelPaymentModal'
+import { EditPaymentModal } from './components/EditPaymentModal'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { useCallStore } from '@/stores/callStore'
@@ -389,6 +390,7 @@ export function PaymentHistoryPage() {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   const [isPaymentDetailsModalOpen, setIsPaymentDetailsModalOpen] = useState(false)
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
   const dateRangeInitialized = useRef(false)
 
@@ -608,12 +610,35 @@ export function PaymentHistoryPage() {
 
   const handleCancelPaymentFromQueue = (
     paymentId: string,
-    payment: import('./components/PaymentVerificationQueueModal').PendingPayment
+    _payment: import('./components/PaymentVerificationQueueModal').PendingPayment
   ) => {
-    // TODO: Implement API call to cancel payment
-    console.log('Cancel payment', paymentId, payment)
-    // Close modal after cancellation
+    // Close PaymentVerificationQueueModal
     setIsVerificationModalOpen(false)
+    setSelectedPaymentId(null)
+
+    // Find the payment in paymentHistory and set it as selectedPayment
+    if (paymentHistory) {
+      const paymentToCancel = paymentHistory.payments.find((p) => p.id.toString() === paymentId)
+      if (paymentToCancel) {
+        setSelectedPayment(paymentToCancel)
+        setIsCancelModalOpen(true)
+      }
+    }
+  }
+
+  const handleSaveEditPayment = (data: {
+    amount: number
+    date: Date
+    method: 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
+    referenceNumber?: string
+    last4Digits?: string
+    paymentMethodDetails?: string
+  }) => {
+    // TODO: Implement API call to save edit payment
+    console.log('Save edit payment', selectedPayment?.id, data)
+    setIsEditModalOpen(false)
+    setSelectedPayment(null)
+    // Optionally refresh the payment history data
   }
 
   const handleExport = (data: {
@@ -635,8 +660,19 @@ export function PaymentHistoryPage() {
 
   const handleCancelPayment = () => {
     if (selectedPayment) {
+      // Close PaymentDetailsModal and open CancelPaymentModal
       setIsPaymentDetailsModalOpen(false)
+      // Use setTimeout to ensure state updates happen in sequence
       setIsCancelModalOpen(true)
+    }
+  }
+
+  const handleEditPayment = () => {
+    if (selectedPayment) {
+      // Close PaymentDetailsModal and open EditPaymentModal
+      setIsPaymentDetailsModalOpen(false)
+      // Use setTimeout to ensure state updates happen in sequence
+      setIsEditModalOpen(true)
     }
   }
 
@@ -1060,7 +1096,7 @@ export function PaymentHistoryPage() {
       {/* Main Content */}
       <div className="flex items-start gap-5 self-stretch">
         {/* Left Column - Client Summary */}
-        <div className="flex w-[35%] flex-col items-start gap-5 self-stretch">
+        <div className="flex w-[35%] flex-col items-start gap-5">
           {/* Client Information Card */}
           <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-6">
             <div className="flex flex-col items-center justify-center gap-4 self-stretch">
@@ -1589,18 +1625,7 @@ export function PaymentHistoryPage() {
                 : undefined,
           }}
           onCancelPayment={handleCancelPayment}
-          onEditPayment={() => {
-            // Edit payment modal is handled internally by PaymentDetailsModal
-            console.log('Edit payment', selectedPayment.id)
-          }}
-          onSaveEdit={(data) => {
-            // TODO: Handle save edit payment
-            console.log('Save edit payment', selectedPayment.id, data)
-            // Close the payment details modal after saving
-            setIsPaymentDetailsModalOpen(false)
-            setSelectedPayment(null)
-            // Optionally refresh the payment history data
-          }}
+          onEditPayment={handleEditPayment}
           onViewClientProfile={handleViewClientProfile}
           onPrintReceipt={() => {
             // TODO: Handle print receipt
@@ -1639,6 +1664,42 @@ export function PaymentHistoryPage() {
             setIsCancelModalOpen(false)
             setSelectedPayment(null)
           }}
+        />
+      )}
+
+      {/* Edit Payment Modal */}
+      {selectedPayment && paymentHistory && (
+        <EditPaymentModal
+          open={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false)
+            setSelectedPayment(null)
+          }}
+          payment={{
+            paymentId: `PMT-${selectedPayment.id}`,
+            amount: selectedPayment.amount,
+            paymentDate: selectedPayment.date,
+            method: (() => {
+              // Normalize payment method to match EditPaymentModal expected types
+              const method = selectedPayment.method
+              if (method === 'Card') return 'Card'
+              if (method === 'Bank Transfer' || method === 'Bank') return 'Bank Transfer'
+              if (method === 'Online Gateway' || method === 'Online') return 'Online Gateway'
+              if (method === 'Cash') return 'Cash'
+              return 'Other'
+            })(),
+            reference:
+              selectedPayment.reference || `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
+            createdBy: 'Operator Sidorov',
+            createdAt: '2025-12-10 09:15:32',
+            currentDebt: paymentHistory.totalDebt,
+            referenceNumber: selectedPayment.reference || undefined,
+            last4Digits: selectedPayment.reference?.match(/^\d{4}$/)
+              ? selectedPayment.reference
+              : undefined,
+            paymentMethodDetails: undefined,
+          }}
+          onSave={handleSaveEditPayment}
         />
       )}
 

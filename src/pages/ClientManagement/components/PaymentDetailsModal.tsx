@@ -4,7 +4,6 @@
  * Modal for viewing detailed information about a payment.
  */
 
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
@@ -12,7 +11,6 @@ import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { EditPaymentModal } from './EditPaymentModal'
 // TODO: When backend API is ready, import: import api from '@/lib/api'
 
 export interface PaymentDetails {
@@ -41,17 +39,11 @@ export interface PaymentDetailsModalProps {
   open: boolean
   onClose: () => void
   payment: PaymentDetails
-  onCancelPayment?: () => void
-  onEditPayment?: () => void
+  onCancelPayment: () => void
+  onEditPayment: () => void
   onViewClientProfile?: () => void
   onPrintReceipt?: () => void
   onDownloadReceipt?: () => void
-  onSaveEdit?: (data: {
-    amount: number
-    date: Date
-    method: 'Bank Transfer' | 'Card Payment' | 'Other'
-    reference: string
-  }) => void
 }
 
 export function PaymentDetailsModal({
@@ -63,7 +55,6 @@ export function PaymentDetailsModal({
   onViewClientProfile,
   onPrintReceipt,
   onDownloadReceipt,
-  onSaveEdit,
 }: PaymentDetailsModalProps) {
   const { t, i18n } = useTranslation('common')
 
@@ -74,7 +65,6 @@ export function PaymentDetailsModal({
       maximumFractionDigits: 2,
     })}`
   }
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const hasDebt = payment.newDebt > 0
 
   // Helper function to check if payment date is less than 7 days old
@@ -116,56 +106,13 @@ export function PaymentDetailsModal({
     payment.status === 'Pending' && isPaymentLessThan7DaysOld(payment.paymentDate)
 
   const handleEditPayment = () => {
-    setIsEditModalOpen(true)
-    if (onEditPayment) {
-      onEditPayment()
-    }
+    // Trigger parent to close PaymentDetailsModal and open EditPaymentModal
+    onEditPayment()
   }
 
-  const handleSaveEdit = (data: {
-    amount: number
-    date: Date
-    method: 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
-    referenceNumber?: string
-    last4Digits?: string
-    paymentMethodDetails?: string
-  }) => {
-    if (onSaveEdit) {
-      // Convert to old format for backward compatibility if needed
-      onSaveEdit({
-        amount: data.amount,
-        date: data.date,
-        method:
-          data.method === 'Card'
-            ? 'Card Payment'
-            : (data.method as 'Bank Transfer' | 'Card Payment' | 'Other'),
-        reference: data.referenceNumber || '',
-      })
-    }
-    setIsEditModalOpen(false)
-  }
-
-  // Convert payment method to EditPaymentModal format (for backward compatibility)
-  const getPaymentMethod = ():
-    | 'Bank Transfer'
-    | 'Card Payment'
-    | 'Other'
-    | 'Online Gateway'
-    | 'Cash'
-    | 'Card' => {
-    if (payment.method === 'Bank' || payment.method === 'Bank Transfer') {
-      return 'Bank Transfer'
-    }
-    if (payment.method === 'Card' || payment.method === 'Card Payment') {
-      return 'Card'
-    }
-    if (payment.method === 'Online Gateway') {
-      return 'Online Gateway'
-    }
-    if (payment.method === 'Cash') {
-      return 'Cash'
-    }
-    return 'Other'
+  const handleCancelPayment = () => {
+    // Trigger parent to close PaymentDetailsModal and open CancelPaymentModal
+    onCancelPayment()
   }
 
   const handleDownloadReceipt = async () => {
@@ -230,16 +177,14 @@ export function PaymentDetailsModal({
           {/* Action Buttons - Only show for Pending status when payment is < 7 days old */}
           {canEditOrCancel && (
             <div className="mb-4 flex items-center gap-5 self-stretch">
-              {onCancelPayment && (
-                <Button
-                  variant="secondary"
-                  leftIcon={<Icons.CancelCircle size={20} />}
-                  onClick={onCancelPayment}
-                  className="h-12 flex-1 rounded-md"
-                >
-                  {t('pages.clients.modals.paymentDetails.cancelPayment')}
-                </Button>
-              )}
+              <Button
+                variant="secondary"
+                leftIcon={<Icons.CancelCircle size={20} />}
+                onClick={handleCancelPayment}
+                className="h-12 flex-1 rounded-md"
+              >
+                {t('pages.clients.modals.paymentDetails.cancelPayment')}
+              </Button>
               <Button
                 variant="primary"
                 leftIcon={<Icons.PencilEdit size={20} />}
@@ -573,26 +518,6 @@ export function PaymentDetailsModal({
           </Button>
         </ModalFooter>
       </Modal>
-
-      {/* Edit Payment Modal */}
-      <EditPaymentModal
-        open={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        payment={{
-          paymentId: payment.paymentId,
-          amount: payment.amount,
-          paymentDate: payment.paymentDate,
-          method: getPaymentMethod(),
-          reference: payment.reference,
-          createdBy: payment.createdBy,
-          createdAt: payment.createdAt,
-          currentDebt: payment.currentDebt,
-          referenceNumber: payment.reference,
-          last4Digits: payment.reference?.match(/^\d{4}$/) ? payment.reference : undefined,
-          paymentMethodDetails: undefined, // Not stored in PaymentDetails interface yet
-        }}
-        onSave={handleSaveEdit}
-      />
     </>
   )
 }

@@ -16,6 +16,7 @@ import { DoubleButton } from '@/components/ui/DoubleButton'
 import { RecordPaymentModal } from './components/RecordPaymentModal'
 import { PaymentVerificationQueueModal } from './components/PaymentVerificationQueueModal'
 import { PaymentDetailsModal } from './components/PaymentDetailsModal'
+import { CancelPaymentModal } from './components/CancelPaymentModal'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { useCallStore } from '@/stores/callStore'
@@ -627,6 +628,7 @@ export function DebtSummaryPage() {
   const [showAllPayments, setShowAllPayments] = useState(false)
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false)
   const [isPaymentDetailsModalOpen, setIsPaymentDetailsModalOpen] = useState(false)
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
   const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null)
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
 
@@ -869,16 +871,44 @@ export function DebtSummaryPage() {
 
   const handleCancelPaymentFromQueue = (
     paymentId: string,
-    payment: import('./components/PaymentVerificationQueueModal').PendingPayment
+    _payment: import('./components/PaymentVerificationQueueModal').PendingPayment
   ) => {
-    // TODO: Implement API call to cancel payment
-    console.log('Cancel payment', paymentId, payment)
+    // Close PaymentVerificationQueueModal
     setIsVerificationModalOpen(false)
+    setSelectedPaymentId(null)
+
+    // Find the payment in debtSummary and set it as selectedPayment
+    if (debtSummary) {
+      const paymentToCancel = debtSummary.payments.find((p) => p.id.toString() === paymentId)
+      if (paymentToCancel) {
+        setSelectedPayment(paymentToCancel)
+        setIsCancelModalOpen(true)
+      }
+    }
   }
 
   const handleViewDetails = (payment: Payment) => {
     setSelectedPayment(payment)
     setIsPaymentDetailsModalOpen(true)
+  }
+
+  const handleCancelPayment = () => {
+    if (selectedPayment) {
+      // Close PaymentDetailsModal and open CancelPaymentModal
+      setIsPaymentDetailsModalOpen(false)
+      // Use setTimeout to ensure state updates happen in sequence
+      setTimeout(() => {
+        setIsCancelModalOpen(true)
+      }, 0)
+    }
+  }
+
+  const handleEditPayment = () => {
+    if (selectedPayment) {
+      setIsPaymentDetailsModalOpen(false)
+      // TODO: Add EditPaymentModal support for DebtSummaryPage if needed
+      console.log('Edit payment', selectedPayment.id)
+    }
   }
 
   const mockProcessedPayments = [
@@ -1173,7 +1203,7 @@ export function DebtSummaryPage() {
       {/* Main Content */}
       <div className="flex items-start gap-5 self-stretch">
         {/* Left Panel - Customer Info and Summary */}
-        <div className="flex w-[35%] flex-col items-start gap-5 self-stretch">
+        <div className="flex w-[35%] flex-col items-start gap-5">
           <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-6">
             <div className="flex flex-col items-center justify-center gap-4 self-stretch">
               <div className="flex items-center justify-center gap-4">
@@ -1670,6 +1700,8 @@ export function DebtSummaryPage() {
                 ? 'Incorrect payment amount entered. Client requested cancellation.'
                 : undefined,
           }}
+          onCancelPayment={handleCancelPayment}
+          onEditPayment={handleEditPayment}
           onViewClientProfile={() => {
             if (id) {
               setIsPaymentDetailsModalOpen(false)
@@ -1683,6 +1715,36 @@ export function DebtSummaryPage() {
           onDownloadReceipt={() => {
             // TODO: Handle download receipt
             console.log('Download receipt', selectedPayment.id)
+          }}
+        />
+      )}
+
+      {/* Cancel Payment Modal */}
+      {selectedPayment && debtSummary && isCancelModalOpen && (
+        <CancelPaymentModal
+          open={isCancelModalOpen}
+          onClose={() => {
+            setIsCancelModalOpen(false)
+            setSelectedPayment(null)
+          }}
+          payment={{
+            paymentId: `PMT-${selectedPayment.id}`,
+            client: customerName,
+            amount: selectedPayment.amount,
+            paymentDate: selectedPayment.date,
+            method: normalizePaymentMethod(selectedPayment.method),
+            reference:
+              selectedPayment.reference || `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
+            status: selectedPayment.status as 'Verified' | 'Pending' | 'Cancelled',
+            createdBy: 'Operator Sidorov',
+            createdAt: '2025-12-10 09:15:32',
+            currentDebt: debtSummary.totalDebt,
+          }}
+          onConfirm={(data) => {
+            // TODO: Handle cancel payment
+            console.log('Cancel payment:', data)
+            setIsCancelModalOpen(false)
+            setSelectedPayment(null)
           }}
         />
       )}

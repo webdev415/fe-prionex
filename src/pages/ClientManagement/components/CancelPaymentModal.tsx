@@ -164,20 +164,32 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
                       <span
                         className={cn(
                           'flex h-4 w-4 items-center justify-center rounded-full',
-                          payment.status === 'Verified' ? 'bg-success-200' : 'bg-error-200'
+                          payment.status === 'Verified'
+                            ? 'bg-success-200'
+                            : payment.status === 'Pending'
+                              ? 'bg-gray-200'
+                              : 'bg-error-200'
                         )}
                       >
                         <span
                           className={cn(
                             'h-2 w-2 rounded-full',
-                            payment.status === 'Verified' ? 'bg-success-500' : 'bg-error-500'
+                            payment.status === 'Verified'
+                              ? 'bg-success-500'
+                              : payment.status === 'Pending'
+                                ? 'bg-gray-500'
+                                : 'bg-error-500'
                           )}
                         />
                       </span>
                       <span
                         className={cn(
                           'text-sm font-medium',
-                          payment.status === 'Verified' ? 'text-success-500' : 'text-error-500'
+                          payment.status === 'Verified'
+                            ? 'text-success-500'
+                            : payment.status === 'Pending'
+                              ? 'text-gray-500'
+                              : 'text-error-500'
                         )}
                       >
                         {t(

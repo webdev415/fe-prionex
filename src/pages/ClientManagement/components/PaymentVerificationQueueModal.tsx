@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { CancelPaymentModal } from './CancelPaymentModal'
 
 export interface PendingPayment {
   id: string
@@ -97,11 +96,6 @@ export function PaymentVerificationQueueModal({
 
   const [expandedPayments, setExpandedPayments] = useState<Set<string>>(initialExpandedPayments)
 
-  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
-  const [selectedPaymentForCancel, setSelectedPaymentForCancel] = useState<PendingPayment | null>(
-    null
-  )
-
   const toggleExpanded = (paymentId: string) => {
     const newExpanded = new Set(expandedPayments)
     if (newExpanded.has(paymentId)) {
@@ -113,32 +107,14 @@ export function PaymentVerificationQueueModal({
   }
 
   const handleCancelClick = (payment: PendingPayment) => {
-    setSelectedPaymentForCancel(payment)
-    setIsCancelModalOpen(true)
-  }
-
-  const handleCancelConfirm = (_data: { reason: string; additionalDetails: string }) => {
-    if (selectedPaymentForCancel) {
-      onCancel(selectedPaymentForCancel.id, selectedPaymentForCancel)
-      setIsCancelModalOpen(false)
-      setSelectedPaymentForCancel(null)
-    }
-  }
-
-  // Prevent closing parent modal when cancel modal is open
-  const handleParentClose = () => {
-    if (!isCancelModalOpen) {
-      onClose()
-    }
+    // Close PaymentVerificationQueueModal
+    onClose()
+    // Trigger parent to open CancelPaymentModal
+    onCancel(payment.id, payment)
   }
 
   return (
-    <Modal
-      key={initialExpandedPaymentId || 'default'}
-      open={open}
-      onClose={handleParentClose}
-      maxWidth="2xl"
-    >
+    <Modal key={initialExpandedPaymentId || 'default'} open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex items-center justify-center rounded-full p-2.5">
@@ -437,29 +413,6 @@ export function PaymentVerificationQueueModal({
           </div>
         )}
       </ModalContent>
-      {/* Cancel Payment Modal */}
-      {selectedPaymentForCancel && (
-        <CancelPaymentModal
-          open={isCancelModalOpen}
-          onClose={() => {
-            setIsCancelModalOpen(false)
-            setSelectedPaymentForCancel(null)
-          }}
-          payment={{
-            paymentId: selectedPaymentForCancel.paymentId,
-            client: selectedPaymentForCancel.client,
-            amount: selectedPaymentForCancel.amount,
-            paymentDate: selectedPaymentForCancel.date,
-            method: selectedPaymentForCancel.method,
-            reference: selectedPaymentForCancel.reference,
-            status: 'Verified',
-            createdBy: 'Operator Sidorov',
-            createdAt: '2025-12-10 09:15:32',
-            currentDebt: selectedPaymentForCancel.currentDebt,
-          }}
-          onConfirm={handleCancelConfirm}
-        />
-      )}
     </Modal>
   )
 }
