@@ -5,8 +5,8 @@
  */
 
 import { useState, useCallback, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useURLState, useAutoPersistedState } from '@/hooks'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import { AuditLogDetailModal } from './components/AuditLogDetailModal'
 import { CSVExportDialog, type CSVExportOptions } from './components/CSVExportDialog'
@@ -16,6 +16,16 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { cn } from '@/lib/utils'
+import {
+  useAuditLogs,
+  exportAuditLogs,
+  getDistinctRoles,
+  getDistinctUsers,
+  getDistinctEntityTypes,
+  getDistinctActions,
+} from '@/features/audit'
+import type { AuditLogResponse } from '@/features/audit/api/types'
+import { toast } from 'sonner'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -35,7 +45,8 @@ export interface AuditLog {
   username: string
   role?: string
   action: string // UPDATE, CREATE, LOGIN_FAILED, etc.
-  entity_type?: string // user, client, sms_template, etc.
+  entity_type?: string // user, client, sms_template, etc. (legacy single filter)
+  entity_types?: string[] // Multiple entity types filter
   entity_id?: string
   entity_name?: string // Display name for the entity (e.g., "Олена Коваленко")
   field_name?: string
@@ -65,135 +76,228 @@ export interface AuditLogFilters {
   date_to?: string
   user?: string // For backward compatibility, but can be comma-separated
   users?: string[] // Array of selected usernames
-  entity_type?: string
-  action?: string
+  entity_type?: string // Legacy single filter
+  entity_types?: string[] // Multiple entity types filter
+  action?: string // Legacy single filter
+  actions?: string[] // Multiple actions filter
   role?: string
 }
 
 export function AuditLogsPage() {
   const { t } = useTranslation('common')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+  const [filters, setFilters] = useState<AuditLogFilters>({})
 
-  // Calculate initial date range from mock data dates
-  // Dates in mock data: 2025-11-17 to 2025-11-18
-  const initialDateRange = useMemo(() => {
-    const mockTimestamps = [
-      new Date('2025-11-18T10:30:45'),
-      new Date('2025-11-18T09:15:22'),
-      new Date('2025-11-18T08:45:10'),
-      new Date('2025-11-18T07:20:33'),
-      new Date('2025-11-17T16:55:12'),
-    ]
-    const dates = mockTimestamps.map((d) => d.getTime())
-    const minDate = new Date(Math.min(...dates))
-    const maxDate = new Date(Math.max(...dates))
+  // Convert backend filters to API params
+  // Include ALL filters so that any filter change triggers a backend request
+  const apiParams = useMemo(() => {
+    const params: Record<string, unknown> = {
+      page: currentPage,
+      limit: pageSize,
+    }
+
+    if (filters.date_from) params.from_date = filters.date_from
+    if (filters.date_to) params.to_date = filters.date_to
+
+    // Handle entity types filter (multiple or single)
+    // Backend now supports multiple resource types
+    // Convert display names (e.g., "Sms template") back to database format (e.g., "sms_template")
+    if (filters.entity_types && filters.entity_types.length > 0) {
+      params.resource_types = filters.entity_types.map((et) => {
+        // Convert display name back to database format: replace spaces with underscores, lowercase
+        return et.toLowerCase().replace(/\s+/g, '_')
+      })
+    } else if (filters.entity_type) {
+      // Convert display name back to database format
+      params.resource_type = filters.entity_type.toLowerCase().replace(/\s+/g, '_')
+    }
+
+    // Handle actions filter (multiple or single)
+    // Backend now supports multiple actions and display names (e.g., "UPDATED")
+    if (filters.actions && filters.actions.length > 0) {
+      params.actions = filters.actions // Send display names as-is, backend will match
+    } else if (filters.action) {
+      params.action = filters.action // Send display name as-is
+    }
+
+    if (filters.status === 'success') params.success = true
+    if (filters.status === 'failed') params.success = false
+    if (filters.role) params.user_role = filters.role // Send role filter to API
+
+    // Send search query to backend for server-side search
+    if (filters.search) {
+      params.search = filters.search
+    }
+
+    // Handle user filter - send usernames array to backend
+    // Backend now supports multiple usernames
+    if (filters.users && filters.users.length > 0) {
+      params.usernames = filters.users
+    } else if (filters.user) {
+      // Single user - try to parse as user_id if numeric, otherwise use username
+      const userId = parseInt(filters.user, 10)
+      if (!isNaN(userId)) {
+        params.user_id = userId
+      } else {
+        // If not numeric, send as single username in array
+        params.usernames = [filters.user]
+      }
+    }
+
+    return params
+  }, [filters, currentPage, pageSize])
+
+  // Fetch audit logs from API
+  // React Query will automatically refetch when apiParams changes (including page changes)
+  // The query key includes all params, so changing currentPage will trigger a new request
+  const { data: auditData, isLoading, error } = useAuditLogs(apiParams)
+
+  // Fetch distinct roles from API (separate query, cached)
+  const { data: rolesData } = useQuery({
+    queryKey: ['audit', 'roles'],
+    queryFn: getDistinctRoles,
+    staleTime: 0, // Always fetch fresh data - no cache
+    gcTime: 0, // Don't keep in cache
+  })
+
+  // Fetch distinct users from API (separate query, cached)
+  const { data: usersData } = useQuery({
+    queryKey: ['audit', 'users'],
+    queryFn: getDistinctUsers,
+    staleTime: 0, // Always fetch fresh data - no cache
+    gcTime: 0, // Don't keep in cache
+  })
+
+  // Fetch distinct entity types from API (separate query, cached)
+  const { data: entityTypesData } = useQuery({
+    queryKey: ['audit', 'entity-types'],
+    queryFn: getDistinctEntityTypes,
+    staleTime: 0, // Always fetch fresh data - no cache
+    gcTime: 0, // Don't keep in cache
+  })
+
+  // Fetch distinct actions from API (separate query, cached)
+  const { data: actionsData } = useQuery({
+    queryKey: ['audit', 'actions'],
+    queryFn: getDistinctActions,
+    staleTime: 0, // Always fetch fresh data - no cache
+    gcTime: 0, // Don't keep in cache
+  })
+
+  // Map backend response to frontend AuditLog type
+  const mapAuditLogResponse = useCallback((log: AuditLogResponse): AuditLog => {
+    // Extract entity name from resource_name (new field) or record_after/record_before
+    let entityName: string | undefined
+    // First check resource_name field (new field from backend)
+    if (log.resource_name) {
+      entityName = log.resource_name
+    }
+    // Fallback to record_after or record_before
+    if (!entityName && log.record_after) {
+      const record = log.record_after as Record<string, unknown>
+      entityName =
+        (record.full_name as string) ||
+        (record.name as string) ||
+        (record.client_name as string) ||
+        (record.username as string) ||
+        (record.email as string)
+    }
+    if (!entityName && log.record_before) {
+      const record = log.record_before as Record<string, unknown>
+      entityName =
+        (record.full_name as string) ||
+        (record.name as string) ||
+        (record.client_name as string) ||
+        (record.username as string) ||
+        (record.email as string)
+    }
+
+    // Map changes to AuditLogChange format
+    const changes: AuditLogChange[] = []
+    if (log.changes) {
+      Object.entries(log.changes).forEach(([field, change]) => {
+        const changeObj = change as { old?: unknown; new?: unknown }
+        let changeType: 'Added' | 'Modified' | 'Removed' | undefined
+        if (changeObj.old === null || changeObj.old === undefined) {
+          changeType = 'Added'
+        } else if (changeObj.new === null || changeObj.new === undefined) {
+          changeType = 'Removed'
+        } else {
+          changeType = 'Modified'
+        }
+
+        changes.push({
+          field_name: field,
+          old_value: changeObj.old ? String(changeObj.old) : null,
+          new_value: changeObj.new ? String(changeObj.new) : null,
+          change_type: changeType,
+        })
+      })
+    }
+
+    // Extract reason from multiple sources: record_after, record_before, or details
+    let reason: string | undefined
+    // First check record_after (backend stores details here)
+    if (log.record_after && typeof log.record_after === 'object') {
+      const details = log.record_after as Record<string, unknown>
+      reason = (details.reason as string) || (details.message as string) || undefined
+    }
+    // Then check record_before
+    if (!reason && log.record_before && typeof log.record_before === 'object') {
+      const details = log.record_before as Record<string, unknown>
+      reason = (details.reason as string) || (details.message as string) || undefined
+    }
+    // Also check details field directly (some services only send details, not record_after/before)
+    if (!reason && log.details && typeof log.details === 'object') {
+      const details = log.details as Record<string, unknown>
+      reason = (details.reason as string) || (details.message as string) || undefined
+    }
+    // Also check if record_after itself is a string (some cases)
+    if (!reason && typeof log.record_after === 'string') {
+      reason = log.record_after
+    }
+
+    // Map action to display format
+    const actionDisplay =
+      log.action.split('.').pop()?.toUpperCase().replace(/_/g, ' ') || log.action
+
     return {
-      date_from: minDate.toISOString().slice(0, 10),
-      date_to: maxDate.toISOString().slice(0, 10),
+      id: log.id,
+      timestamp: log.timestamp,
+      status: log.success ? 'success' : 'failed',
+      user_id: log.user_id ?? undefined,
+      username: log.username || 'unknown',
+      role: log.user_role ?? undefined,
+      action: actionDisplay,
+      entity_type: log.resource_type,
+      entity_id: log.resource_id?.toString() || log.resource_identifier || undefined,
+      entity_name: entityName,
+      ip_address: log.ip_address ?? undefined,
+      session_id: log.session_id ?? undefined,
+      project_id: log.project_id ?? undefined,
+      changes: changes.length > 0 ? changes : undefined,
+      http_method: log.request_method ?? undefined,
+      api_path: log.request_path ?? undefined,
+      response_status: log.response_status
+        ? `${log.response_status} ${log.response_status < 300 ? 'OK' : 'Error'}`
+        : undefined,
+      response_time: log.response_time ?? undefined,
+      user_agent: log.user_agent ?? undefined,
+      reason,
     }
   }, [])
 
-  // URL state for pagination
-  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
-  const [pageSize, setPageSize] = useURLState<number>('pageSize', DEFAULT_PAGE_SIZE)
+  // Convert API response to frontend format
+  const auditLogs: AuditLog[] = useMemo(() => {
+    if (!auditData?.logs) return []
+    return auditData.logs.map(mapAuditLogResponse)
+  }, [auditData, mapAuditLogResponse])
 
-  // URL state for sorting
-  const [sortBy, setSortBy] = useURLState<string>('sort_by', 'timestamp')
-  const [sortOrder, setSortOrder] = useURLState<'asc' | 'desc'>('sort_order', 'desc')
-
-  // URL state for all filter fields
-  const [searchFilter, setSearchFilter] = useURLState<string>('search', '')
-  const [statusFilter, setStatusFilter] = useURLState<string>('status', '')
-  const [clientFilter, setClientFilter] = useURLState<string>('client', '')
-  const [periodFilter, setPeriodFilter] = useURLState<string>('period', '')
-  const [dateFromFilter, setDateFromFilter] = useURLState<string>(
-    'date_from',
-    initialDateRange.date_from
-  )
-  const [dateToFilter, setDateToFilter] = useURLState<string>('date_to', initialDateRange.date_to)
-  const [userFilter, setUserFilter] = useURLState<string>('user', '')
-  const [usersFilter, setUsersFilter] = useURLState<string[]>('users', [])
-  const [entityTypeFilter, setEntityTypeFilter] = useURLState<string>('entity_type', '')
-  const [actionFilter, setActionFilter] = useURLState<string>('action', '')
-  const [roleFilter, setRoleFilter] = useURLState<string>('role', '')
-
-  // Add persistence for state
-  useAutoPersistedState(
-    'audit-logs-state',
-    {
-      currentPage,
-      pageSize,
-      sortBy,
-      sortOrder,
-      searchFilter,
-      statusFilter,
-      clientFilter,
-      periodFilter,
-      dateFromFilter,
-      dateToFilter,
-      userFilter,
-      usersFilter,
-      entityTypeFilter,
-      actionFilter,
-      roleFilter,
-    },
-    {
-      currentPage: setCurrentPage,
-      pageSize: setPageSize,
-      sortBy: setSortBy,
-      sortOrder: setSortOrder,
-      searchFilter: setSearchFilter,
-      statusFilter: setStatusFilter,
-      clientFilter: setClientFilter,
-      periodFilter: setPeriodFilter,
-      dateFromFilter: setDateFromFilter,
-      dateToFilter: setDateToFilter,
-      userFilter: setUserFilter,
-      usersFilter: setUsersFilter,
-      entityTypeFilter: setEntityTypeFilter,
-      actionFilter: setActionFilter,
-      roleFilter: setRoleFilter,
-    }
-  )
-
-  // Reconstruct filters object from URL state
-  const filters = useMemo<AuditLogFilters>(
-    () => ({
-      search: searchFilter || undefined,
-      status: statusFilter || undefined,
-      client: clientFilter || undefined,
-      period: periodFilter || undefined,
-      date_from: dateFromFilter || undefined,
-      date_to: dateToFilter || undefined,
-      user: userFilter || undefined,
-      users: usersFilter.length > 0 ? usersFilter : undefined,
-      entity_type: entityTypeFilter || undefined,
-      action: actionFilter || undefined,
-      role: roleFilter || undefined,
-    }),
-    [
-      searchFilter,
-      statusFilter,
-      clientFilter,
-      periodFilter,
-      dateFromFilter,
-      dateToFilter,
-      userFilter,
-      usersFilter,
-      entityTypeFilter,
-      actionFilter,
-      roleFilter,
-    ]
-  )
-
-  // Reconstruct sortConfig from URL state
-  const sortConfig = useMemo<SortConfig>(
-    () => ({
-      key: sortBy,
-      order: sortOrder,
-    }),
-    [sortBy, sortOrder]
-  )
-
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: 'timestamp',
+    order: 'desc',
+  })
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
@@ -254,8 +358,47 @@ export function AuditLogsPage() {
         const attempts = log.login_attempts || 1
         return `IP: ${log.ip_address}${attempts > 1 ? `\n(${attempts} attempts)` : ''}`
       }
-      if (log.action === 'IMPORT' && log.reason) {
-        return `CSV: ${log.entity_id || 'N/A'} - ${log.reason}`
+      // Handle import events (action will be "STARTED", "COMPLETED", "FILE UPLOADED", etc. after transformation)
+      if (log.entity_type === 'import_job' && log.reason) {
+        return log.reason
+      }
+      // Handle import events by checking if action contains import-related keywords
+      if (
+        (log.action.includes('IMPORT') ||
+          log.action === 'STARTED' ||
+          log.action === 'COMPLETED' ||
+          log.action === 'FILE UPLOADED' ||
+          log.action === 'FAILED') &&
+        log.entity_type === 'import_job' &&
+        log.reason
+      ) {
+        return log.reason
+      }
+      // Handle scoring events (RUN STARTED, RUN COMPLETED, RUN FAILED)
+      if (log.entity_type === 'score' && log.reason) {
+        return log.reason
+      }
+      if (
+        (log.action === 'RUN STARTED' ||
+          log.action === 'RUN COMPLETED' ||
+          log.action === 'RUN FAILED') &&
+        log.entity_type === 'score' &&
+        log.reason
+      ) {
+        return log.reason
+      }
+      // Handle auth events (LOGIN SUCCESS, LOGIN FAILED, LOGOUT)
+      if (log.entity_type === 'auth' && log.reason) {
+        return log.reason
+      }
+      if (
+        (log.action === 'LOGIN SUCCESS' ||
+          log.action === 'LOGIN FAILED' ||
+          log.action === 'LOGOUT') &&
+        log.entity_type === 'auth' &&
+        log.reason
+      ) {
+        return log.reason
       }
       return log.reason || '—'
     },
@@ -275,217 +418,31 @@ export function AuditLogsPage() {
     if (log.action === 'LOGIN_FAILED' && log.reason) {
       return log.reason // e.g., "Invalid password"
     }
+    // For import jobs, show filename if available (from resource_name)
+    if (log.entity_type === 'import_job' && log.entity_name) {
+      return log.entity_name // This will be the filename from resource_name
+    }
+    // For scoring events, show resource name if available (e.g., "Project 1")
+    if (log.entity_type === 'score' && log.entity_name) {
+      return log.entity_name // This will be the project name from resource_name
+    }
+    // For auth events, show username if available (from resource_name)
+    if (log.entity_type === 'auth' && log.entity_name) {
+      return log.entity_name // This will be the username from resource_name
+    }
     if (log.entity_type) {
       return log.entity_type.charAt(0).toUpperCase() + log.entity_type.slice(1)
     }
     return '—'
   }, [])
 
-  // Mock data - replace with actual API call
-  const mockAuditLogs: AuditLog[] = useMemo(
-    () => [
-      {
-        id: 1,
-        timestamp: new Date('2025-11-18T10:30:45').toISOString(),
-        status: 'success',
-        user_id: 42,
-        username: 'maria_s',
-        role: 'Operator',
-        action: 'UPDATE',
-        entity_type: 'client',
-        entity_id: '5678',
-        entity_name: 'Олена Коваленко',
-        field_name: 'debt_amount',
-        old_value: '25000',
-        new_value: '20000',
-        reason: 'Payment received',
-        ip_address: '192.168.1.100',
-        session_id: 'sess_abc123',
-        project_id: 1,
-        http_method: 'PUT',
-        api_path: '/api/clients/5678',
-        response_status: '200 OK',
-        response_time: 245,
-        user_agent: 'Chrome 120.0 (Windows 10)',
-        changes: [
-          {
-            field_name: 'debt_amount',
-            old_value: '25000',
-            new_value: '20000',
-            change_type: 'Modified',
-            calculated_change: '-5,000.00 UAH',
-          },
-          {
-            field_name: 'phone_secondary',
-            old_value: null,
-            new_value: '+380931234567',
-            change_type: 'Added',
-          },
-          {
-            field_name: 'notes',
-            old_value: 'Client prefers morning calls',
-            new_value: 'Payment received. New phone verified.',
-            change_type: 'Modified',
-          },
-        ],
-      },
-      {
-        id: 2,
-        timestamp: new Date('2025-11-18T09:15:22').toISOString(),
-        status: 'success',
-        user_id: 1,
-        username: 'admin',
-        role: 'Admin',
-        action: 'CREATE',
-        entity_type: 'user',
-        entity_id: 'ivan_d',
-        entity_name: 'Project A',
-        new_value: 'Operator',
-        ip_address: '192.168.1.50',
-        session_id: 'sess_def456',
-        project_id: 1,
-        http_method: 'POST',
-        api_path: '/api/users',
-        response_status: '201 Created',
-        response_time: 180,
-        user_agent: 'Chrome 120.0 (Windows 10)',
-        changes: [
-          {
-            field_name: 'role',
-            old_value: null,
-            new_value: 'Operator',
-            change_type: 'Added',
-          },
-          {
-            field_name: 'project',
-            old_value: null,
-            new_value: 'Project A',
-            change_type: 'Added',
-          },
-        ],
-      },
-      {
-        id: 3,
-        timestamp: new Date('2025-11-18T08:45:10').toISOString(),
-        status: 'failed',
-        user_id: 8,
-        username: 'unknown',
-        action: 'LOGIN_FAILED',
-        reason: 'Invalid password',
-        ip_address: '45.123.45.67',
-        login_attempts: 3,
-        session_id: undefined,
-        http_method: 'POST',
-        api_path: '/api/auth/login',
-        response_status: '401 Unauthorized',
-        response_time: 120,
-        user_agent: 'Firefox 119.0 (Linux)',
-      },
-      {
-        id: 4,
-        timestamp: new Date('2025-11-18T07:20:33').toISOString(),
-        status: 'success',
-        user_id: 15,
-        username: 'olena_k',
-        role: 'Supervisor',
-        action: 'IMPORT',
-        entity_type: 'client',
-        entity_id: 'bank_nov.csv',
-        reason: 'Created: 150, Updated: 50, Errors: 5',
-        ip_address: '192.168.1.75',
-        session_id: 'sess_ghi789',
-        project_id: 1,
-        http_method: 'POST',
-        api_path: '/api/clients/import',
-        response_status: '200 OK',
-        response_time: 3500,
-        user_agent: 'Chrome 120.0 (macOS)',
-      },
-      {
-        id: 5,
-        timestamp: new Date('2025-11-17T16:55:12').toISOString(),
-        status: 'success',
-        user_id: 42,
-        username: 'maria_s',
-        role: 'Operator',
-        action: 'OVERRIDE',
-        entity_type: 'client',
-        entity_id: '4523',
-        field_name: 'priority_score',
-        old_value: '45',
-        new_value: '95',
-        reason: 'Lawsuit pending',
-        ip_address: '192.168.1.100',
-        session_id: 'sess_abc123',
-        project_id: 1,
-        http_method: 'PATCH',
-        api_path: '/api/clients/4523/override',
-        response_status: '200 OK',
-        response_time: 190,
-        user_agent: 'Chrome 120.0 (Windows 10)',
-        changes: [
-          {
-            field_name: 'priority_score',
-            old_value: '45',
-            new_value: '95',
-            change_type: 'Modified',
-          },
-        ],
-      },
-    ],
-    []
-  )
-
+  // All filtering is now handled by backend API
+  // No client-side filtering needed
   const filteredLogs = useMemo(() => {
-    let result = [...mockAuditLogs]
+    const result = [...auditLogs]
 
-    // Apply filters
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase()
-      result = result.filter(
-        (log) =>
-          log.entity_id?.toLowerCase().includes(searchLower) ||
-          log.username.toLowerCase().includes(searchLower) ||
-          log.entity_type?.toLowerCase().includes(searchLower) ||
-          log.entity_name?.toLowerCase().includes(searchLower) ||
-          formatDetails(log).toLowerCase().includes(searchLower) ||
-          formatEntity(log).toLowerCase().includes(searchLower) ||
-          log.ip_address?.toLowerCase().includes(searchLower)
-      )
-    }
-
-    // Filter by users (support both old single user and new multi-user format)
-    if (filters.users && filters.users.length > 0) {
-      result = result.filter(
-        (log) =>
-          filters.users!.includes(log.username) ||
-          (log.user_id && filters.users!.includes(log.user_id.toString()))
-      )
-    } else if (filters.user) {
-      // Backward compatibility with single user filter
-      result = result.filter(
-        (log) => log.username === filters.user || log.user_id?.toString() === filters.user
-      )
-    }
-
-    if (filters.action) {
-      result = result.filter((log) => log.action === filters.action)
-    }
-
-    if (filters.entity_type) {
-      result = result.filter((log) => log.entity_type === filters.entity_type)
-    }
-
-    if (filters.date_from) {
-      const fromDate = new Date(filters.date_from)
-      result = result.filter((log) => new Date(log.timestamp) >= fromDate)
-    }
-
-    if (filters.date_to) {
-      const toDate = new Date(filters.date_to)
-      toDate.setHours(23, 59, 59, 999) // End of day
-      result = result.filter((log) => new Date(log.timestamp) <= toDate)
-    }
+    // All filters (actions, entity types, users, search, role) are handled by backend
+    // Only sorting is done client-side (could be moved to backend later)
 
     // Apply sorting
     result.sort((a, b) => {
@@ -509,105 +466,112 @@ export function AuditLogsPage() {
     })
 
     return result
-  }, [mockAuditLogs, filters, sortConfig, formatDetails, formatEntity])
+  }, [auditLogs, sortConfig])
 
-  // Pagination
-  const totalPages = Math.ceil(filteredLogs.length / pageSize)
-  const paginatedLogs = useMemo(
-    () => filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize),
-    [filteredLogs, currentPage, pageSize]
-  )
+  // Pagination - always use API pagination since all filtering is done by backend
+  const totalItems = auditData?.total || 0
+  const totalPages = totalItems > 0 ? Math.ceil(totalItems / pageSize) : 0
 
-  const handleFilterChange = useCallback(
-    (newFilters: AuditLogFilters) => {
-      // Update individual URL state for each filter field
-      setSearchFilter(newFilters.search || '')
-      setStatusFilter(newFilters.status || '')
-      setClientFilter(newFilters.client || '')
-      setPeriodFilter(newFilters.period || '')
-      setDateFromFilter(newFilters.date_from || initialDateRange.date_from)
-      setDateToFilter(newFilters.date_to || initialDateRange.date_to)
-      setUserFilter(newFilters.user || '')
-      setUsersFilter(newFilters.users || [])
-      setEntityTypeFilter(newFilters.entity_type || '')
-      setActionFilter(newFilters.action || '')
-      setRoleFilter(newFilters.role || '')
-      setCurrentPage(1) // Reset to first page on filter change
-    },
-    [
-      setSearchFilter,
-      setStatusFilter,
-      setClientFilter,
-      setPeriodFilter,
-      setDateFromFilter,
-      setDateToFilter,
-      setUserFilter,
-      setUsersFilter,
-      setEntityTypeFilter,
-      setActionFilter,
-      setRoleFilter,
-      setCurrentPage,
-      initialDateRange,
-    ]
-  )
+  // API already handles pagination, so use filteredLogs directly
+  const paginatedLogs = filteredLogs
 
-  const handleSort = useCallback(
-    (key: string, order: SortOrder) => {
-      setSortBy(key)
-      setSortOrder(order)
-      setCurrentPage(1) // Reset to first page on sort change
-    },
-    [setSortBy, setSortOrder, setCurrentPage]
-  )
+  const handleFilterChange = useCallback((newFilters: AuditLogFilters) => {
+    setFilters(newFilters)
+    setCurrentPage(1) // Reset to first page on filter change
+  }, [])
+
+  const handleSort = useCallback((key: string, order: SortOrder) => {
+    setSortConfig({ key, order })
+    setCurrentPage(1) // Reset to first page on sort change
+  }, [])
 
   const handleExport = useCallback(() => {
     setIsExportDialogOpen(true)
   }, [])
 
   const handleExportConfirm = useCallback(
-    (options: CSVExportOptions) => {
-      // TODO: Implement actual CSV export logic
-      console.log('Exporting audit logs to CSV with options:', options)
-      console.log('Filtered logs:', filteredLogs)
-      // This would typically call an API or generate CSV client-side
+    async (options: CSVExportOptions) => {
+      try {
+        // Combine apiParams (filters) with CSV options
+        const exportParams: Parameters<typeof exportAuditLogs>[1] = {
+          ...apiParams,
+          // CSV customization options
+          columns: options.columns.join(','),
+          date_format: options.dateFormat,
+          delimiter: options.fieldDelimiter,
+          encoding: options.encoding,
+          include_headers: options.includeHeaders,
+        }
+
+        const blob = await exportAuditLogs('csv', exportParams)
+
+        // Create download link
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+
+        toast.success(t('pages.auditLogs.exportSuccess'))
+      } catch (err) {
+        console.error('Export failed:', err)
+        toast.error(t('pages.auditLogs.exportError'))
+      }
     },
-    [filteredLogs]
+    [apiParams, t]
   )
 
-  // Extract unique values for filters
+  // Get users from API data (all users in system, not just from audit logs)
   const users = useMemo(() => {
-    const userSet = new Set<string>()
-    mockAuditLogs.forEach((log) => {
-      if (log.username) userSet.add(log.username)
+    if (!usersData?.users) return []
+    return usersData.users.sort()
+  }, [usersData])
+
+  // Normalize roles from API response: always use title case for display
+  const roles = useMemo(() => {
+    if (!rolesData?.roles) return []
+
+    const roleSet = new Set<string>()
+    rolesData.roles.forEach((role) => {
+      if (role) {
+        // Normalize to title case: first letter uppercase, rest lowercase
+        const normalized = role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
+        roleSet.add(normalized)
+      }
     })
-    // Add additional users to match screenshot examples
-    userSet.add('david_k')
-    userSet.add('emily_r')
-    userSet.add('sara_t')
-    userSet.add('Alex Johnson')
-    userSet.add('Mia Thompson')
-    userSet.add('Liam Smith')
-    userSet.add('Olivia Brown')
-    return Array.from(userSet).sort()
-  }, [mockAuditLogs])
 
+    // Return sorted list of normalized role names
+    return Array.from(roleSet).sort()
+  }, [rolesData])
+
+  // Get entity types from API data (all entity types that appear in audit logs)
   const entityTypes = useMemo(() => {
-    // Entity types from user story
-    return ['User', 'Client', 'SMS Template', 'System Setting']
-  }, [])
+    if (!entityTypesData?.entity_types) return []
+    // Normalize to title case for display: first letter uppercase, rest lowercase, replace underscores with spaces
+    return entityTypesData.entity_types
+      .map((type) => {
+        return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase().replace(/_/g, ' ')
+      })
+      .sort()
+  }, [entityTypesData])
 
+  // Get actions from API data (all actions that appear in audit logs)
+  // Normalize to match table display format: UPPERCASE with spaces (e.g., "LOGIN SUCCESS")
   const actions = useMemo(() => {
-    // Action types from user story - map display names to actual action values
-    return [
-      'UPDATE',
-      'CREATE',
-      'DELETE',
-      'IMPORT',
-      'OVERRIDE',
-      'LOGIN_FAILED',
-      'Configuration Change',
-    ]
-  }, [])
+    if (!actionsData?.actions) return []
+    // Normalize action names to match table display: extract last part, uppercase, replace underscores with spaces
+    const normalizedActions = actionsData.actions.map((action) => {
+      // Split by dot and take the last part (matches table display logic)
+      const lastPart = action.split('.').pop() || action
+      // Convert to UPPERCASE and replace underscores with spaces (matches table format)
+      return lastPart.toUpperCase().replace(/_/g, ' ')
+    })
+    // Remove duplicates and sort
+    return Array.from(new Set(normalizedActions)).sort()
+  }, [actionsData])
 
   // Handle View Details click
   const handleViewDetails = useCallback((log: AuditLog) => {
@@ -752,21 +716,33 @@ export function AuditLogsPage() {
         filters={filters}
         onFilterChange={handleFilterChange}
         users={users}
+        roles={roles}
         entityTypes={entityTypes}
         actions={actions}
+        isLoading={isLoading}
       />
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Audit Logs Table */}
         <div className="flex flex-1 flex-col gap-6 overflow-hidden rounded-xl bg-white/50 p-6">
-          <DataTable
-            columns={columns}
-            data={paginatedLogs}
-            emptyMessage={t('pages.auditLogs.noLogsFound')}
-            sortConfig={sortConfig}
-            onSort={handleSort}
-          />
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-muted-foreground">{t('common.loading')}</div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-error-500">{t('pages.auditLogs.loadError')}</div>
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={paginatedLogs}
+              emptyMessage={t('pages.auditLogs.noLogsFound')}
+              sortConfig={sortConfig}
+              onSort={handleSort}
+            />
+          )}
 
           {/* Pagination */}
           {totalPages > 0 && (
@@ -795,7 +771,7 @@ export function AuditLogsPage() {
       />
       <CSVExportDialog
         open={isExportDialogOpen}
-        totalEntries={filteredLogs.length}
+        totalEntries={auditData?.total || 0}
         onClose={() => setIsExportDialogOpen(false)}
         onExport={handleExportConfirm}
       />

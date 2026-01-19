@@ -23,11 +23,13 @@ import { Button } from '@/components/ui/Button'
 import type { AuditLogFilters } from '../AuditLogsPage'
 import { Input } from '@/components/ui/Input'
 import { UserFilterDropdown } from './UserFilterDropdown'
+import { FilterDropdown } from './FilterDropdown'
 
 interface SearchFiltersBarProps {
   filters: AuditLogFilters
   onFilterChange: (filters: AuditLogFilters) => void
   users: string[]
+  roles: string[]
   entityTypes: string[]
   actions: string[]
   isLoading?: boolean
@@ -39,6 +41,7 @@ export function SearchFiltersBar({
   filters,
   onFilterChange,
   users,
+  roles,
   entityTypes,
   actions,
   isLoading = false,
@@ -167,20 +170,22 @@ export function SearchFiltersBar({
   )
 
   const handleEntityTypeChange = useCallback(
-    (value: string) => {
+    (entityTypes: string[]) => {
       setLocalFilters({
         ...localFilters,
-        entity_type: value === 'all' ? undefined : value,
+        entity_types: entityTypes.length > 0 ? entityTypes : undefined,
+        entity_type: undefined, // Clear old single entity filter
       })
     },
     [localFilters]
   )
 
   const handleActionChange = useCallback(
-    (value: string) => {
+    (actions: string[]) => {
       setLocalFilters({
         ...localFilters,
-        action: value === 'all' ? undefined : value,
+        actions: actions.length > 0 ? actions : undefined,
+        action: undefined, // Clear old single action filter
       })
     },
     [localFilters]
@@ -224,7 +229,9 @@ export function SearchFiltersBar({
       user: undefined,
       users: undefined,
       action: undefined,
+      actions: undefined,
       entity_type: undefined,
+      entity_types: undefined,
       role: undefined,
     }
     setLocalFilters(clearedFilters)
@@ -381,46 +388,66 @@ export function SearchFiltersBar({
               <span className="text-dark-500 w-12 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                 {t('pages.auditLogs.searchFilters.action')}:
               </span>
-              <Select
-                value={localFilters.action || 'all'}
-                onValueChange={handleActionChange}
+              <FilterDropdown
+                items={actions}
+                selectedItems={localFilters.actions || []}
+                onItemChange={handleActionChange}
                 disabled={isLoading}
-              >
-                <SelectTrigger className="max-h-[45px] w-full rounded-md border border-gray-200 bg-white text-xs">
-                  <SelectValue placeholder={t('pages.auditLogs.searchFilters.selectSearcher')} />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="all">All Actions</SelectItem>
-                  {actions.map((action) => (
-                    <SelectItem key={action} value={action}>
-                      {action}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                allItemsLabel="All Actions"
+                searchPlaceholder="Search actions"
+                noItemsFoundLabel="No actions found"
+                trigger={
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    className="text-dark-500 focus:border-primary-500 flex h-[45px] w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span className="truncate text-left">
+                      {localFilters.actions && localFilters.actions.length > 0
+                        ? localFilters.actions.length === actions.length
+                          ? 'All Actions'
+                          : localFilters.actions.length === 1
+                            ? localFilters.actions[0]
+                            : `${localFilters.actions.length} actions selected`
+                        : 'All Actions'}
+                    </span>
+                    <Icons.ArrowDown size={16} className="shrink-0 text-gray-400" />
+                  </button>
+                }
+              />
             </div>
             {/* Entity Filter */}
             <div className="flex min-w-[220px] flex-1 items-center gap-3">
               <span className="text-dark-500 w-12 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                 {t('pages.auditLogs.searchFilters.entity')}:
               </span>
-              <Select
-                value={localFilters.entity_type || 'all'}
-                onValueChange={handleEntityTypeChange}
+              <FilterDropdown
+                items={entityTypes}
+                selectedItems={localFilters.entity_types || []}
+                onItemChange={handleEntityTypeChange}
                 disabled={isLoading}
-              >
-                <SelectTrigger className="max-h-[45px] w-full rounded-md border border-gray-200 bg-white text-xs">
-                  <SelectValue placeholder={t('pages.auditLogs.searchFilters.allTypes')} />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="all">All Types</SelectItem>
-                  {entityTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                allItemsLabel="All Types"
+                searchPlaceholder="Search entity types"
+                noItemsFoundLabel="No entity types found"
+                trigger={
+                  <button
+                    type="button"
+                    disabled={isLoading}
+                    className="text-dark-500 focus:border-primary-500 flex h-[45px] w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span className="truncate text-left">
+                      {localFilters.entity_types && localFilters.entity_types.length > 0
+                        ? localFilters.entity_types.length === entityTypes.length
+                          ? 'All Types'
+                          : localFilters.entity_types.length === 1
+                            ? localFilters.entity_types[0]
+                            : `${localFilters.entity_types.length} types selected`
+                        : 'All Types'}
+                    </span>
+                    <Icons.ArrowDown size={16} className="shrink-0 text-gray-400" />
+                  </button>
+                }
+              />
             </div>
           </div>
           <div className="flex items-start gap-10 self-stretch">
@@ -444,6 +471,11 @@ export function SearchFiltersBar({
                 </SelectTrigger>
                 <SelectContent className="bg-white">
                   <SelectItem value="all">All Roles</SelectItem>
+                  {roles.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {role}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
