@@ -1016,11 +1016,23 @@
           "selectDate": "Select date",
           "paymentMethod": "Payment Method:",
           "bankTransfer": "Bank Transfer",
-          "cardPayment": "Card Payment",
+          "onlineGateway": "Online Gateway",
+          "cash": "Cash",
+          "card": "Card",
           "other": "Other",
+          "referenceNumber": "Reference Number",
+          "referenceNumberPlaceholder": "Enter reference number",
+          "referenceNumberRequired": "Reference number is required",
+          "last4Digits": "Last 4 Digits",
+          "last4DigitsPlaceholder": "Enter last 4 digits",
+          "last4DigitsRequired": "Last 4 digits is required",
+          "last4DigitsMustBe4": "Last 4 digits must be exactly 4 numbers",
+          "paymentMethodDetails": "Payment Method Details",
+          "paymentMethodDetailsPlaceholder": "Enter additional payment details (optional)",
           "impactPreview": "Impact Preview",
           "currentTotalDebt": "Current Total Debt:",
           "paymentAmountLabel": "Payment Amount:",
+          "newTotalDebt": "New Total Debt:",
           "newStatus": "New Status:",
           "stillHasDebt": "still has debt",
           "verification": "Verification",
@@ -1034,7 +1046,9 @@
           "saveAndVerify": "Save & Verify",
           "cancel": "Cancel",
           "min": "min:",
-          "max": "max:"
+          "max": "max:",
+          "validationPaymentExceedsDebt": "Payment cannot exceed current debt ({{amount}})",
+          "validationPaymentMustBePositive": "Payment amount must be positive."
         },
         "editPayment": {
           "title": "Edit Payment #{{paymentId}}",
@@ -1088,6 +1102,8 @@
           "project": "Project:",
           "debtImpact": "Debt Impact",
           "currentTotalDebt": "Current Total Debt:",
+          "debtBefore": "Debt Before:",
+          "debtAfter": "Debt After:",
           "paymentAmount": "Payment Amount:",
           "clientStatus": "Client Status:",
           "stillHasDebt": "still has debt",
@@ -1096,6 +1112,9 @@
           "createdAt": "Created at:",
           "verifiedBy": "Verified by:",
           "verifiedAt": "Verified at:",
+          "cancelledBy": "Cancelled by:",
+          "cancelledAt": "Cancelled at:",
+          "cancellationReason": "Cancellation Reason:",
           "printReceipt": "Print Receipt",
           "downloadReceiptPDF": "Download Receipt PDF",
           "close": "Close"
@@ -1211,7 +1230,7 @@
           "reference": "Reference:",
           "currentDebt": "Current Debt:",
           "newDebt": "New Debt:",
-          "rejectPayment": "Reject Payment",
+          "cancelPayment": "Cancel Payment",
           "verifyAndApprove": "Verify & Approve",
           "expandDetails": "Expand Details",
           "recentlyProcessed": "Recently Processed",
@@ -1246,10 +1265,11 @@
           "actions": "Actions"
         },
         "paymentMethod": {
-          "online": "Online",
-          "bank": "Bank",
+          "bankTransfer": "Bank Transfer",
+          "onlineGateway": "Online Gateway",
+          "cash": "Cash",
           "card": "Card",
-          "directDebit": "Direct Debit"
+          "other": "Other"
         },
         "paymentStatus": {
           "verified": "Verified",
@@ -1296,6 +1316,7 @@
           "date": "Date",
           "amount": "Amount",
           "method": "Method",
+          "reference": "Reference",
           "status": "Status",
           "actions": "Actions"
         },

@@ -38,9 +38,18 @@ interface Payment {
   id: number
   date: string
   amount: number
-  method: 'Online' | 'Bank' | 'Card' | 'Direct Debit'
+  method:
+    | 'Bank Transfer'
+    | 'Online Gateway'
+    | 'Cash'
+    | 'Card'
+    | 'Other'
+    | 'Online'
+    | 'Bank'
+    | 'Direct Debit' // Support both old and new values
   status: 'Verified' | 'Pending' | 'Cancelled'
   receipt?: string
+  reference?: string
 }
 
 interface PaymentHistoryData {
@@ -63,8 +72,50 @@ const mockClientDetail = {
   fullName: 'Savchenko Ivan Petrovich',
 }
 
+// Helper function to normalize payment method values (for backward compatibility)
+const normalizePaymentMethod = (
+  method: Payment['method']
+): 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other' => {
+  // Map old values to new values
+  if (method === 'Bank' || method === 'Bank Transfer') return 'Bank Transfer'
+  if (method === 'Card') return 'Card'
+  if (method === 'Online' || method === 'Online Gateway') return 'Online Gateway'
+  if (method === 'Cash') return 'Cash'
+  if (method === 'Direct Debit' || method === 'Other') return 'Other'
+  return 'Other' // Default fallback
+}
+
+// Helper function to format date as MM/DD/YYYY
+const formatDate = (date: Date): string => {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const year = date.getFullYear()
+  return `${month}/${day}/${year}`
+}
+
 // Mock payment history data - replace with actual API call
 const getMockPaymentHistory = (): Omit<PaymentHistoryData, 'customerName'> => {
+  const today = new Date()
+
+  // Generate dates for testing:
+  // - Some payments within last 7 days (for Verify button testing)
+  // - Some payments older than 7 days
+  const dates = {
+    today: formatDate(today),
+    yesterday: formatDate(new Date(today.getTime() - 1 * 24 * 60 * 60 * 1000)),
+    twoDaysAgo: formatDate(new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000)),
+    threeDaysAgo: formatDate(new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000)),
+    fourDaysAgo: formatDate(new Date(today.getTime() - 4 * 24 * 60 * 60 * 1000)),
+    fiveDaysAgo: formatDate(new Date(today.getTime() - 5 * 24 * 60 * 60 * 1000)),
+    sixDaysAgo: formatDate(new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000)),
+    sevenDaysAgo: formatDate(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)),
+    eightDaysAgo: formatDate(new Date(today.getTime() - 8 * 24 * 60 * 60 * 1000)),
+    tenDaysAgo: formatDate(new Date(today.getTime() - 10 * 24 * 60 * 60 * 1000)),
+    twoWeeksAgo: formatDate(new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000)),
+    threeWeeksAgo: formatDate(new Date(today.getTime() - 21 * 24 * 60 * 60 * 1000)),
+    oneMonthAgo: formatDate(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)),
+  }
+
   return {
     status: 'Active',
     progressPercentage: 15,
@@ -79,177 +130,200 @@ const getMockPaymentHistory = (): Omit<PaymentHistoryData, 'customerName'> => {
     payments: [
       {
         id: 1,
-        date: '10/7/2023',
+        date: dates.today, // Today - Pending, should show Verify button
         amount: 10080,
-        method: 'Online',
+        method: 'Other',
         status: 'Pending',
+        reference: 'REF-001234',
       },
       {
         id: 2,
-        date: '10/6/2023',
+        date: dates.yesterday, // Yesterday - Verified
         amount: 900,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: 'TRX98765',
       },
       {
         id: 3,
-        date: '10/7/2023',
+        date: dates.twoDaysAgo, // 2 days ago - Pending, should show Verify button
         amount: 780,
-        method: 'Online',
+        method: 'Other',
         status: 'Pending',
+        reference: 'REF-001235',
       },
       {
         id: 4,
-        date: '10/8/2023',
+        date: dates.threeDaysAgo, // 3 days ago - Verified
         amount: 820,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: 'TRX98766',
       },
       {
         id: 5,
-        date: '10/9/2023',
+        date: dates.fourDaysAgo, // 4 days ago - Verified
         amount: 870,
-        method: 'Online',
+        method: 'Other',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: 'REF-001236',
       },
       {
         id: 6,
-        date: '10/10/2023',
+        date: dates.fiveDaysAgo, // 5 days ago - Pending, should show Verify button
         amount: 810,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Pending',
+        reference: 'TRX98767',
       },
       {
         id: 7,
-        date: '10/11/2023',
+        date: dates.sixDaysAgo, // 6 days ago - Cancelled
         amount: 830,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Cancelled',
+        reference: 'TRX98768',
       },
       {
         id: 8,
-        date: '10/5/2023',
+        date: dates.sevenDaysAgo, // 7 days ago - Verified (exactly 7 days, should NOT show Verify)
         amount: 850,
         method: 'Card',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: '****1234',
       },
       {
         id: 9,
-        date: '10/11/2023',
+        date: dates.eightDaysAgo, // 8 days ago - Pending, should NOT show Verify button (too old)
         amount: 830,
-        method: 'Bank',
-        status: 'Cancelled',
+        method: 'Bank Transfer',
+        status: 'Pending',
+        reference: 'TRX98769',
       },
       {
         id: 10,
-        date: '10/5/2023',
+        date: dates.tenDaysAgo, // 10 days ago - Verified
         amount: 850,
         method: 'Card',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: '****5678',
       },
       {
         id: 11,
-        date: '10/4/2023',
+        date: dates.twoWeeksAgo, // 14 days ago - Verified
         amount: 920,
-        method: 'Online',
+        method: 'Other',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: 'REF-001237',
       },
       {
         id: 12,
-        date: '10/3/2023',
+        date: dates.threeDaysAgo, // 3 days ago - Pending, should show Verify button
         amount: 750,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Pending',
+        reference: 'TRX98770',
       },
       {
         id: 13,
-        date: '10/2/2023',
+        date: dates.twoWeeksAgo, // 14 days ago - Verified
         amount: 680,
         method: 'Card',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: '****9012',
       },
       {
         id: 14,
-        date: '10/1/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Verified
         amount: 950,
-        method: 'Online',
+        method: 'Other',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: 'REF-001238',
       },
       {
         id: 15,
-        date: '9/30/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Pending, should NOT show Verify button (too old)
         amount: 720,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Pending',
+        reference: 'TRX98771',
       },
       {
         id: 16,
-        date: '9/29/2023',
+        date: dates.threeWeeksAgo, // 21 days ago - Verified
         amount: 880,
         method: 'Card',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: '****3456',
       },
       {
         id: 17,
-        date: '9/28/2023',
+        date: dates.tenDaysAgo, // 10 days ago - Cancelled
         amount: 640,
-        method: 'Online',
+        method: 'Other',
         status: 'Cancelled',
+        reference: 'REF-001239',
       },
       {
         id: 18,
-        date: '9/27/2023',
+        date: dates.twoWeeksAgo, // 14 days ago - Verified
         amount: 790,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: 'TRX98772',
       },
       {
         id: 19,
-        date: '9/26/2023',
+        date: dates.threeWeeksAgo, // 21 days ago - Verified
         amount: 910,
         method: 'Card',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: '****7890',
       },
       {
         id: 20,
-        date: '9/25/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Pending, should NOT show Verify button (too old)
         amount: 560,
-        method: 'Online',
+        method: 'Other',
         status: 'Pending',
+        reference: 'REF-001240',
       },
       {
         id: 21,
-        date: '9/24/2023',
+        date: dates.threeWeeksAgo, // 21 days ago - Verified
         amount: 1020,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: 'TRX98773',
       },
       {
         id: 22,
-        date: '9/23/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Verified
         amount: 730,
         method: 'Card',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: '****2345',
       },
       {
         id: 23,
-        date: '9/22/2023',
+        date: dates.fourDaysAgo, // 4 days ago - Pending, should show Verify button
         amount: 890,
-        method: 'Online',
+        method: 'Other',
         status: 'Pending',
+        reference: 'REF-001241',
       },
     ],
   }
@@ -311,14 +385,15 @@ export function PaymentHistoryPage() {
 
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryData | null>(null)
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false)
-  // Note: selectedPaymentId is set but not currently read, reserved for future use
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null)
+  const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   const [isPaymentDetailsModalOpen, setIsPaymentDetailsModalOpen] = useState(false)
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
   const dateRangeInitialized = useRef(false)
+
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState<{ key: string; order: 'asc' | 'desc' } | null>(null)
 
   // Call functionality state
   const { isCallActive, setOpenCallModal } = useCallStore()
@@ -417,38 +492,85 @@ export function PaymentHistoryPage() {
     return client?.fullName || mockClientDetail.fullName
   }, [client])
 
-  // Mock data for verification queue (will use customerName from state)
-  const mockPendingPayments = useMemo(
-    () => [
-      {
-        id: '1',
-        paymentId: 'PMT-2025-12-001',
-        submittedAt: '2 hours ago',
+  // Helper function to check if payment date is less than 7 days old
+  const isPaymentLessThan7DaysOld = useCallback((paymentDate: string): boolean => {
+    try {
+      // Parse payment date in format MM/DD/YYYY
+      const [month, day, year] = paymentDate.split('/')
+      const paymentDateObj = new Date(Number(year), Number(month) - 1, Number(day))
+
+      // Check if date is valid
+      if (isNaN(paymentDateObj.getTime())) {
+        return false
+      }
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      paymentDateObj.setHours(0, 0, 0, 0)
+
+      // Calculate difference in days
+      const diffTime = today.getTime() - paymentDateObj.getTime()
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+
+      // Return true if payment is less than 7 days old
+      return diffDays < 7 && diffDays >= 0
+    } catch (error) {
+      console.error('Error parsing payment date:', paymentDate, error)
+      return false
+    }
+  }, [])
+
+  // Convert Payment to PendingPayment format
+  const convertPaymentToPendingPayment = useCallback(
+    (payment: Payment): import('./components/PaymentVerificationQueueModal').PendingPayment => {
+      // Calculate time ago (simple implementation)
+      const paymentDate = new Date(payment.date)
+      const now = new Date()
+      const diffMs = now.getTime() - paymentDate.getTime()
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+      const diffDays = Math.floor(diffHours / 24)
+
+      let submittedAt = ''
+      if (diffDays > 0) {
+        submittedAt = `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`
+      } else if (diffHours > 0) {
+        submittedAt = `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`
+      } else {
+        submittedAt = 'Just now'
+      }
+
+      // Calculate current debt and new debt
+      // For now, use paymentHistory.totalDebt as current debt
+      const currentDebt = paymentHistory?.totalDebt || 0
+      const newDebt = Math.max(0, currentDebt - payment.amount)
+
+      return {
+        id: payment.id.toString(),
+        paymentId: `PMT-${payment.id}`,
+        submittedAt,
         client: customerName,
-        project: 'PrivatBank Collection',
-        amount: 5000.0,
-        method: 'Bank Transfer',
-        date: '2025-12-15',
-        reference: 'TRX98765',
-        currentDebt: 125450.0,
-        newDebt: 120450.0,
-      },
-      {
-        id: '2',
-        paymentId: 'PMT-2025-12-002',
-        submittedAt: '6 hours ago',
-        client: customerName,
-        project: 'PrivatBank Collection',
-        amount: 12000.0,
-        method: 'Bank Transfer',
-        date: '2025-12-15',
-        reference: 'TRX98766',
-        currentDebt: 125450.0,
-        newDebt: 113450.0,
-      },
-    ],
-    [customerName]
+        project: 'PrivatBank Collection', // Default project, can be enhanced later
+        amount: payment.amount,
+        method: normalizePaymentMethod(payment.method),
+        date: payment.date,
+        reference: payment.reference || `TRX${payment.id.toString().padStart(5, '0')}`,
+        currentDebt,
+        newDebt,
+      }
+    },
+    [customerName, paymentHistory]
   )
+
+  // Filter pending payments that are less than 7 days old
+  const pendingPaymentsForVerification = useMemo(() => {
+    if (!paymentHistory) return []
+
+    return paymentHistory.payments
+      .filter((payment) => {
+        return payment.status === 'Pending' && isPaymentLessThan7DaysOld(payment.date)
+      })
+      .map(convertPaymentToPendingPayment)
+  }, [paymentHistory, isPaymentLessThan7DaysOld, convertPaymentToPendingPayment])
 
   const mockProcessedPayments = [
     {
@@ -470,9 +592,9 @@ export function PaymentHistoryPage() {
     {
       id: '3',
       paymentId: 'PMT-2025-12-000',
-      status: 'Rejected' as const,
+      status: 'Cancelled' as const,
       amount: 7500.0,
-      action: 'Rejected by You',
+      action: 'Cancelled by You',
       time: '3 hours ago',
     },
   ]
@@ -484,10 +606,13 @@ export function PaymentHistoryPage() {
     setIsVerificationModalOpen(false)
   }
 
-  const handleRejectPayment = (paymentId: string) => {
-    // TODO: Implement API call to reject payment
-    console.log('Reject payment', paymentId)
-    // Close modal after rejection
+  const handleCancelPaymentFromQueue = (
+    paymentId: string,
+    payment: import('./components/PaymentVerificationQueueModal').PendingPayment
+  ) => {
+    // TODO: Implement API call to cancel payment
+    console.log('Cancel payment', paymentId, payment)
+    // Close modal after cancellation
     setIsVerificationModalOpen(false)
   }
 
@@ -589,13 +714,48 @@ export function PaymentHistoryPage() {
     )
   }
 
-  // Filter payments
+  // Handle sort
+  const handleSort = (key: string) => {
+    const newOrder: 'asc' | 'desc' =
+      sortConfig?.key === key && sortConfig.order === 'asc' ? 'desc' : 'asc'
+    setSortConfig({ key, order: newOrder })
+  }
+
+  // Get sort icon for column header
+  const getSortIcon = (columnKey: string) => {
+    const isActive = sortConfig?.key === columnKey
+
+    if (!isActive) {
+      return (
+        <span className="ml-1 opacity-40">
+          <Icons.Sorting01Icon size={14} className="text-gray-500" strokeWidth={1.5} />
+        </span>
+      )
+    }
+
+    return sortConfig.order === 'asc' ? (
+      <span className="ml-1 inline-block rotate-180">
+        <Icons.Sorting01Icon size={14} className="text-information-400" strokeWidth={2} />
+      </span>
+    ) : (
+      <span className="ml-1">
+        <Icons.Sorting01Icon size={14} className="text-information-400" strokeWidth={2} />
+      </span>
+    )
+  }
+
+  // Filter and sort payments
   const filteredPayments = useMemo(() => {
     if (!paymentHistory) return []
 
-    return paymentHistory.payments.filter((payment) => {
+    let result = paymentHistory.payments.filter((payment) => {
       if (statusFilter !== 'All' && payment.status !== statusFilter) return false
-      if (methodFilter !== 'All' && payment.method !== methodFilter) return false
+      if (methodFilter !== 'All') {
+        // Normalize payment method for comparison
+        const normalizedPaymentMethod = normalizePaymentMethod(payment.method)
+        const normalizedFilterMethod = normalizePaymentMethod(methodFilter as Payment['method'])
+        if (normalizedPaymentMethod !== normalizedFilterMethod) return false
+      }
 
       // Date range filtering
       if (startDate || endDate) {
@@ -618,7 +778,42 @@ export function PaymentHistoryPage() {
 
       return true
     })
-  }, [paymentHistory, statusFilter, methodFilter, startDate, endDate])
+
+    // Apply sorting
+    if (sortConfig) {
+      result = [...result].sort((a, b) => {
+        let aValue: string | number
+        let bValue: string | number
+
+        switch (sortConfig.key) {
+          case 'date': {
+            // Parse dates in format MM/DD/YYYY
+            const [aMonth, aDay, aYear] = a.date.split('/')
+            const [bMonth, bDay, bYear] = b.date.split('/')
+            aValue = new Date(Number(aYear), Number(aMonth) - 1, Number(aDay)).getTime()
+            bValue = new Date(Number(bYear), Number(bMonth) - 1, Number(bDay)).getTime()
+            break
+          }
+          case 'amount':
+            aValue = a.amount
+            bValue = b.amount
+            break
+          default:
+            return 0
+        }
+
+        if (aValue < bValue) {
+          return sortConfig.order === 'asc' ? -1 : 1
+        }
+        if (aValue > bValue) {
+          return sortConfig.order === 'asc' ? 1 : -1
+        }
+        return 0
+      })
+    }
+
+    return result
+  }, [paymentHistory, statusFilter, methodFilter, startDate, endDate, sortConfig])
 
   // Paginate payments
   const totalPages = Math.ceil(filteredPayments.length / pageSize)
@@ -1131,17 +1326,20 @@ export function PaymentHistoryPage() {
                       <SelectItem value="All">
                         {t('pages.clients.paymentHistory.filters.all')}
                       </SelectItem>
-                      <SelectItem value="Bank">
-                        {t('pages.clients.debtSummary.paymentMethod.bank')}
+                      <SelectItem value="Bank Transfer">
+                        {t('pages.clients.modals.recordPayment.bankTransfer')}
+                      </SelectItem>
+                      <SelectItem value="Online Gateway" disabled>
+                        {t('pages.clients.modals.recordPayment.onlineGateway')}
+                      </SelectItem>
+                      <SelectItem value="Cash" disabled>
+                        {t('pages.clients.modals.recordPayment.cash')}
                       </SelectItem>
                       <SelectItem value="Card">
-                        {t('pages.clients.debtSummary.paymentMethod.card')}
+                        {t('pages.clients.modals.recordPayment.card')}
                       </SelectItem>
-                      <SelectItem value="Online">
-                        {t('pages.clients.debtSummary.paymentMethod.online')}
-                      </SelectItem>
-                      <SelectItem value="Direct Debit">
-                        {t('pages.clients.debtSummary.paymentMethod.directDebit')}
+                      <SelectItem value="Other">
+                        {t('pages.clients.modals.recordPayment.other')}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -1173,14 +1371,29 @@ export function PaymentHistoryPage() {
                 <table className="min-w-full border-collapse">
                   <thead>
                     <tr className="bg-white">
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-left text-xs font-medium">
-                        {t('pages.clients.paymentHistory.tableHeaders.date')}
+                      <th
+                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-6 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50"
+                        onClick={() => handleSort('date')}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {t('pages.clients.paymentHistory.tableHeaders.date')}
+                          {getSortIcon('date')}
+                        </span>
                       </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-right text-xs font-medium">
-                        {t('pages.clients.paymentHistory.tableHeaders.amount')}
+                      <th
+                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-6 text-right text-xs font-medium transition-colors select-none hover:bg-gray-50"
+                        onClick={() => handleSort('amount')}
+                      >
+                        <span className="inline-flex items-center justify-end gap-1">
+                          {t('pages.clients.paymentHistory.tableHeaders.amount')}
+                          {getSortIcon('amount')}
+                        </span>
                       </th>
                       <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-left text-xs font-medium">
                         {t('pages.clients.paymentHistory.tableHeaders.method')}
+                      </th>
+                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-left text-xs font-medium">
+                        {t('pages.clients.paymentHistory.tableHeaders.reference')}
                       </th>
                       <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-left text-xs font-medium">
                         {t('pages.clients.paymentHistory.tableHeaders.status')}
@@ -1194,7 +1407,7 @@ export function PaymentHistoryPage() {
                     {paginatedPayments.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={5}
+                          colSpan={6}
                           className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium"
                         >
                           {t('pages.clients.paymentHistory.noPaymentHistory')}
@@ -1215,11 +1428,27 @@ export function PaymentHistoryPage() {
                             {formatCurrency(payment.amount)}
                           </td>
                           <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-xs font-medium">
-                            {payment.method === 'Direct Debit'
-                              ? t('pages.clients.debtSummary.paymentMethod.directDebit')
-                              : t(
-                                  `pages.clients.debtSummary.paymentMethod.${payment.method.toLowerCase()}`
-                                )}
+                            {(() => {
+                              const normalizedMethod = normalizePaymentMethod(payment.method)
+                              const methodTranslations: Record<
+                                'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other',
+                                string
+                              > = {
+                                'Bank Transfer': t(
+                                  'pages.clients.modals.recordPayment.bankTransfer'
+                                ),
+                                'Online Gateway': t(
+                                  'pages.clients.modals.recordPayment.onlineGateway'
+                                ),
+                                Cash: t('pages.clients.modals.recordPayment.cash'),
+                                Card: t('pages.clients.modals.recordPayment.card'),
+                                Other: t('pages.clients.modals.recordPayment.other'),
+                              }
+                              return methodTranslations[normalizedMethod]
+                            })()}
+                          </td>
+                          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-xs font-medium">
+                            {payment.reference || '-'}
                           </td>
                           <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-xs font-medium">
                             <div className="flex items-center gap-2">
@@ -1235,7 +1464,7 @@ export function PaymentHistoryPage() {
                           </td>
                           <td className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium">
                             <div className="flex items-center justify-center gap-2">
-                              {payment.status === 'Verified' && payment.receipt && (
+                              {payment.status === 'Verified' && (
                                 <LinkButton
                                   variant="regular-secondary"
                                   size="xs"
@@ -1248,19 +1477,20 @@ export function PaymentHistoryPage() {
                                   {t('pages.clients.paymentHistory.actions.pdf')}
                                 </LinkButton>
                               )}
-                              {payment.status === 'Pending' && (
-                                <LinkButton
-                                  variant="regular-secondary"
-                                  size="xs"
-                                  leftIcon={<Icons.Success size={14} />}
-                                  onClick={() => {
-                                    setSelectedPaymentId(payment.id)
-                                    setIsVerificationModalOpen(true)
-                                  }}
-                                >
-                                  {t('pages.clients.paymentHistory.actions.verify')}
-                                </LinkButton>
-                              )}
+                              {payment.status === 'Pending' &&
+                                isPaymentLessThan7DaysOld(payment.date) && (
+                                  <LinkButton
+                                    variant="regular-secondary"
+                                    size="xs"
+                                    leftIcon={<Icons.Success size={14} />}
+                                    onClick={() => {
+                                      setSelectedPaymentId(payment.id)
+                                      setIsVerificationModalOpen(true)
+                                    }}
+                                  >
+                                    {t('pages.clients.paymentHistory.actions.verify')}
+                                  </LinkButton>
+                                )}
                               <LinkButton
                                 variant="regular-secondary"
                                 size="xs"
@@ -1305,14 +1535,15 @@ export function PaymentHistoryPage() {
           setIsVerificationModalOpen(false)
           setSelectedPaymentId(null)
         }}
-        pendingPayments={mockPendingPayments}
+        pendingPayments={pendingPaymentsForVerification}
         processedPayments={mockProcessedPayments}
         onVerify={handleVerifyPayment}
-        onReject={handleRejectPayment}
+        onCancel={handleCancelPaymentFromQueue}
         onRefresh={() => {
           // TODO: Refresh pending payments
           console.log('Refresh payments')
         }}
+        initialExpandedPaymentId={selectedPaymentId?.toString() || null}
       />
 
       {/* Export CSV Modal */}
@@ -1338,7 +1569,8 @@ export function PaymentHistoryPage() {
             amount: selectedPayment.amount,
             paymentDate: selectedPayment.date,
             method: selectedPayment.method,
-            reference: `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
+            reference:
+              selectedPayment.reference || `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
             clientId: id || '',
             clientName: paymentHistory.customerName,
             phone: '+380 50 123 4567',
@@ -1349,6 +1581,12 @@ export function PaymentHistoryPage() {
             createdAt: '2025-12-10 09:15:32',
             verifiedBy: selectedPayment.status === 'Verified' ? 'Supervisor Petrov' : undefined,
             verifiedAt: selectedPayment.status === 'Verified' ? '2025-12-10 14:30:18' : undefined,
+            cancelledBy: selectedPayment.status === 'Cancelled' ? 'Supervisor Petrov' : undefined,
+            cancelledAt: selectedPayment.status === 'Cancelled' ? '2025-12-10 16:45:22' : undefined,
+            cancellationReason:
+              selectedPayment.status === 'Cancelled'
+                ? 'Incorrect payment amount entered. Client requested cancellation.'
+                : undefined,
           }}
           onCancelPayment={handleCancelPayment}
           onEditPayment={() => {

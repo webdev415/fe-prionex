@@ -399,7 +399,11 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
         </div>
       </ModalContent>
       <ModalFooter className="flex items-start gap-4 self-stretch border-none">
-        <Button variant="cancel" onClick={handleClose} className="flex-1 self-stretch p-0">
+        <Button
+          variant="cancel"
+          onClick={handleClose}
+          className="h-12 flex-1 self-stretch rounded-md p-0"
+        >
           {t('pages.clients.modals.recordPayment.cancel')}
         </Button>
         <div className="flex flex-1 flex-col items-center gap-2">
@@ -408,7 +412,7 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
             leftIcon={<Icons.Success size={18} className="text-dark-500" />}
             onClick={handleConfirm}
             disabled={!canConfirm}
-            className="self-stretch p-0"
+            className="h-12 self-stretch rounded-md p-0"
           >
             {t('pages.clients.modals.cancelPayment.confirmCancellation')}
           </Button>

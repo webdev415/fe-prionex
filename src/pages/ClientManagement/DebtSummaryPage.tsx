@@ -4,7 +4,7 @@
  * Displays customer debt summary with payment progress and payment history.
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -14,6 +14,8 @@ import { LinkButton } from '@/components/ui/LinkButton'
 import { cn } from '@/lib/utils'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { RecordPaymentModal } from './components/RecordPaymentModal'
+import { PaymentVerificationQueueModal } from './components/PaymentVerificationQueueModal'
+import { PaymentDetailsModal } from './components/PaymentDetailsModal'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { useCallStore } from '@/stores/callStore'
@@ -283,9 +285,10 @@ interface Payment {
   id: number
   date: string
   amount: number
-  method: 'Online' | 'Bank' | 'Card'
+  method: 'Online' | 'Bank' | 'Card' | 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Other'
   status: 'Verified' | 'Pending' | 'Cancelled'
   receipt?: string
+  reference?: string
 }
 
 interface DebtSummaryData {
@@ -304,18 +307,40 @@ interface DebtSummaryData {
   pendingVerification: number
 }
 
-// Helper function to calculate days past due from debt_close_date
+// Mock debt data with debt_close_date for Days Past Due calculation
+const getMockDebts = (): Array<{ debt_close_date?: string | null }> => {
+  const today = new Date()
+  // Create a due date that's 18 days ago (for realistic mock data)
+  const dueDate = new Date(today)
+  dueDate.setDate(dueDate.getDate() - 18)
+
+  return [
+    {
+      debt_close_date: dueDate.toISOString().split('T')[0], // Format: YYYY-MM-DD
+    },
+    {
+      debt_close_date: null, // Some debts might not have a close date
+    },
+  ]
+}
+
+/**
+ * Calculate Days Past Due: (current date - last due date) days
+ *
+ * Finds the most recent debt_close_date (last due date) from all debts
+ * and calculates the difference in days from today.
+ *
+ * @param debts - Array of debt objects with debt_close_date field
+ * @returns Number of days past due (0 if not past due or no valid dates)
+ */
 const calculateDaysPastDue = (debts?: Array<{ debt_close_date?: string | null }>): number => {
   if (!debts || debts.length === 0) {
-    // Fallback to mock calculation if no debts available
-    const mockDueDate = new Date('2023-10-15') // Mock due date
-    const today = new Date()
-    const diffTime = today.getTime() - mockDueDate.getTime()
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-    return Math.max(0, diffDays)
+    // Fallback: Use mock debt data for calculation
+    const mockDebts = getMockDebts()
+    return calculateDaysPastDue(mockDebts)
   }
 
-  // Find the most recent debt_close_date
+  // Find all valid debt_close_date values (last due dates)
   const validDueDates = debts
     .map((debt) => {
       if (!debt.debt_close_date) return null
@@ -329,22 +354,55 @@ const calculateDaysPastDue = (debts?: Array<{ debt_close_date?: string | null }>
     return 0
   }
 
-  // Get the most recent due date
+  // Get the most recent due date (last due date)
   const lastDueDate = new Date(Math.max(...validDueDates.map((d) => d.getTime())))
   const today = new Date()
+
+  // Normalize both dates to start of day for accurate day calculation
   today.setHours(0, 0, 0, 0)
   lastDueDate.setHours(0, 0, 0, 0)
 
+  // Calculate: (current date - last due date) days
   const diffTime = today.getTime() - lastDueDate.getTime()
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+
+  // Return 0 if not past due (negative or zero days)
   return Math.max(0, diffDays)
+}
+
+// Helper function to format date as MM/DD/YYYY
+const formatDate = (date: Date): string => {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const year = date.getFullYear()
+  return `${month}/${day}/${year}`
 }
 
 // Mock debt summary data - replace with actual API call
 const getMockDebtSummary = (
   debts?: Array<{ debt_close_date?: string | null }>
 ): Omit<DebtSummaryData, 'customerName'> => {
-  const daysPastDue = calculateDaysPastDue(debts)
+  // Use provided debts if available, otherwise use mock debts
+  const debtsToUse = debts && debts.length > 0 ? debts : getMockDebts()
+  const daysPastDue = calculateDaysPastDue(debtsToUse)
+
+  const today = new Date()
+
+  // Generate dates for testing:
+  // - Some payments within last 7 days (for Verify button testing)
+  // - Some payments older than 7 days
+  const dates = {
+    today: formatDate(today),
+    yesterday: formatDate(new Date(today.getTime() - 1 * 24 * 60 * 60 * 1000)),
+    twoDaysAgo: formatDate(new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000)),
+    threeDaysAgo: formatDate(new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000)),
+    fourDaysAgo: formatDate(new Date(today.getTime() - 4 * 24 * 60 * 60 * 1000)),
+    fiveDaysAgo: formatDate(new Date(today.getTime() - 5 * 24 * 60 * 60 * 1000)),
+    sixDaysAgo: formatDate(new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000)),
+    sevenDaysAgo: formatDate(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)),
+    eightDaysAgo: formatDate(new Date(today.getTime() - 8 * 24 * 60 * 60 * 1000)),
+    oneMonthAgo: formatDate(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)),
+  }
 
   return {
     status: 'Active',
@@ -354,182 +412,205 @@ const getMockDebtSummary = (
     daysPastDue,
     lastPayment: {
       amount: 5000.0,
-      date: '10/11/2023',
+      date: dates.today,
     },
     payments: [
       {
         id: 1,
-        date: '10/7/2023',
+        date: dates.today, // Today - Pending, should show Verify button
         amount: 10080,
-        method: 'Online',
+        method: 'Other',
         status: 'Pending',
+        reference: 'REF-001234',
       },
       {
         id: 2,
-        date: '10/6/2023',
+        date: dates.yesterday, // Yesterday - Verified
         amount: 900,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: 'TRX98765',
       },
       {
         id: 3,
-        date: '10/7/2023',
+        date: dates.twoDaysAgo, // 2 days ago - Pending, should show Verify button
         amount: 780,
-        method: 'Online',
+        method: 'Other',
         status: 'Pending',
+        reference: 'REF-001235',
       },
       {
         id: 4,
-        date: '10/8/2023',
+        date: dates.threeDaysAgo, // 3 days ago - Verified
         amount: 820,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: 'TRX98766',
       },
       {
         id: 5,
-        date: '10/9/2023',
+        date: dates.fourDaysAgo, // 4 days ago - Verified
         amount: 870,
-        method: 'Online',
+        method: 'Other',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: 'REF-001236',
       },
       {
         id: 6,
-        date: '10/10/2023',
+        date: dates.fiveDaysAgo, // 5 days ago - Pending, should show Verify button
         amount: 810,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Pending',
+        reference: 'TRX98767',
       },
       {
         id: 7,
-        date: '10/11/2023',
+        date: dates.sixDaysAgo, // 6 days ago - Cancelled
         amount: 830,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Cancelled',
+        reference: 'TRX98768',
       },
       {
         id: 8,
-        date: '10/5/2023',
+        date: dates.sevenDaysAgo, // 7 days ago - Verified (exactly 7 days, should NOT show Verify)
         amount: 850,
         method: 'Card',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: '****1234',
       },
       {
         id: 9,
-        date: '10/11/2023',
+        date: dates.eightDaysAgo, // 8 days ago - Pending, should NOT show Verify button (too old)
         amount: 830,
-        method: 'Bank',
-        status: 'Cancelled',
+        method: 'Bank Transfer',
+        status: 'Pending',
+        reference: 'TRX98769',
       },
       {
         id: 10,
-        date: '10/5/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Verified
         amount: 850,
         method: 'Card',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: '****5678',
       },
       {
         id: 11,
-        date: '10/4/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Verified
         amount: 920,
-        method: 'Online',
+        method: 'Other',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: 'REF-001237',
       },
       {
         id: 12,
-        date: '10/3/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Pending, should NOT show Verify button (too old)
         amount: 750,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Pending',
+        reference: 'TRX98770',
       },
       {
         id: 13,
-        date: '10/2/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Verified
         amount: 680,
         method: 'Card',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: '****9012',
       },
       {
         id: 14,
-        date: '10/1/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Verified
         amount: 950,
-        method: 'Online',
+        method: 'Other',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: 'REF-001238',
       },
       {
         id: 15,
-        date: '9/30/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Pending, should NOT show Verify button (too old)
         amount: 720,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Pending',
+        reference: 'TRX98771',
       },
       {
         id: 16,
-        date: '9/29/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Verified
         amount: 880,
         method: 'Card',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: '****3456',
       },
       {
         id: 17,
-        date: '9/28/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Cancelled
         amount: 640,
-        method: 'Online',
+        method: 'Other',
         status: 'Cancelled',
+        reference: 'REF-001239',
       },
       {
         id: 18,
-        date: '9/27/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Verified
         amount: 790,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: 'TRX98772',
       },
       {
         id: 19,
-        date: '9/26/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Verified
         amount: 910,
         method: 'Card',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: '****7890',
       },
       {
         id: 20,
-        date: '9/25/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Pending, should NOT show Verify button (too old)
         amount: 560,
-        method: 'Online',
+        method: 'Other',
         status: 'Pending',
+        reference: 'REF-001240',
       },
       {
         id: 21,
-        date: '9/24/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Verified
         amount: 1020,
-        method: 'Bank',
+        method: 'Bank Transfer',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: 'TRX98773',
       },
       {
         id: 22,
-        date: '9/23/2023',
+        date: dates.oneMonthAgo, // 30 days ago - Verified
         amount: 730,
         method: 'Card',
         status: 'Verified',
         receipt: 'receipt.pdf',
+        reference: '****2345',
       },
       {
         id: 23,
-        date: '9/22/2023',
+        date: dates.fourDaysAgo, // 4 days ago - Pending, should show Verify button
         amount: 890,
-        method: 'Online',
+        method: 'Other',
         status: 'Pending',
+        reference: 'REF-001241',
       },
     ],
     totalVerified: 100456,
@@ -544,6 +625,10 @@ export function DebtSummaryPage() {
   const [debtSummary, setDebtSummary] = useState<DebtSummaryData | null>(null)
   const [isRecordPaymentModalOpen, setIsRecordPaymentModalOpen] = useState(false)
   const [showAllPayments, setShowAllPayments] = useState(false)
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false)
+  const [isPaymentDetailsModalOpen, setIsPaymentDetailsModalOpen] = useState(false)
+  const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null)
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
 
   // Call functionality state
   const { isCallActive, setOpenCallModal } = useCallStore()
@@ -665,13 +750,42 @@ export function DebtSummaryPage() {
   // Get customer name from client object
   const customerName = client?.fullName || 'Unknown Client'
 
+  // Helper function to check if payment date is less than 7 days old
+  const isPaymentLessThan7DaysOld = useCallback((paymentDate: string): boolean => {
+    try {
+      // Parse payment date in format MM/DD/YYYY
+      const [month, day, year] = paymentDate.split('/')
+      const paymentDateObj = new Date(Number(year), Number(month) - 1, Number(day))
+
+      // Check if date is valid
+      if (isNaN(paymentDateObj.getTime())) {
+        return false
+      }
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      paymentDateObj.setHours(0, 0, 0, 0)
+
+      // Calculate difference in days
+      const diffTime = today.getTime() - paymentDateObj.getTime()
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+
+      // Return true if payment is less than 7 days old
+      return diffDays < 7 && diffDays >= 0
+    } catch (error) {
+      console.error('Error parsing payment date:', paymentDate, error)
+      return false
+    }
+  }, [])
+
   // Load debt summary data
   useEffect(() => {
     if (customerName) {
       // TODO: Replace with actual API call to fetch debt summary
       // For now, use mock data but with real customer name from client data
-      // Calculate daysPastDue from actual debt data if available
-      const debts = apiClient && 'debts' in apiClient ? apiClient.debts : undefined
+      // Calculate daysPastDue from actual debt data if available, otherwise use mock debts
+      const debts =
+        apiClient && 'debts' in apiClient && apiClient.debts ? apiClient.debts : undefined
       const mockData = getMockDebtSummary(debts)
       const data: DebtSummaryData = {
         ...mockData,
@@ -683,6 +797,116 @@ export function DebtSummaryPage() {
       }, 500)
     }
   }, [customerName, apiClient])
+
+  // Helper function to normalize payment method
+  const normalizePaymentMethod = useCallback(
+    (method: Payment['method']): 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other' => {
+      // Handle both old and new method values
+      if (method === 'Bank' || method === 'Bank Transfer') return 'Bank Transfer'
+      if (method === 'Card') return 'Card'
+      if (method === 'Online' || method === 'Online Gateway') return 'Online Gateway'
+      if (method === 'Cash') return 'Cash'
+      return 'Other'
+    },
+    []
+  )
+
+  // Convert Payment to PendingPayment format
+  const convertPaymentToPendingPayment = useCallback(
+    (payment: Payment): import('./components/PaymentVerificationQueueModal').PendingPayment => {
+      const paymentDate = new Date(payment.date)
+      const now = new Date()
+      const diffMs = now.getTime() - paymentDate.getTime()
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+      const diffDays = Math.floor(diffHours / 24)
+
+      let submittedAt = ''
+      if (diffDays > 0) {
+        submittedAt = `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`
+      } else if (diffHours > 0) {
+        submittedAt = `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`
+      } else {
+        submittedAt = 'Just now'
+      }
+
+      const currentDebt = debtSummary?.totalDebt || 0
+      const newDebt = Math.max(0, currentDebt - payment.amount)
+
+      return {
+        id: payment.id.toString(),
+        paymentId: `PMT-${payment.id}`,
+        submittedAt,
+        client: customerName,
+        project: 'PrivatBank Collection',
+        amount: payment.amount,
+        method: normalizePaymentMethod(payment.method),
+        date: payment.date,
+        reference: `TRX${payment.id.toString().padStart(5, '0')}`,
+        currentDebt,
+        newDebt,
+      }
+    },
+    [customerName, debtSummary, normalizePaymentMethod]
+  )
+
+  // Filter pending payments that are less than 7 days old
+  const pendingPaymentsForVerification = useMemo(() => {
+    if (!debtSummary) return []
+
+    return debtSummary.payments
+      .filter((payment) => {
+        return payment.status === 'Pending' && isPaymentLessThan7DaysOld(payment.date)
+      })
+      .map(convertPaymentToPendingPayment)
+  }, [debtSummary, isPaymentLessThan7DaysOld, convertPaymentToPendingPayment])
+
+  // Handlers
+  const handleVerifyPayment = (paymentId: string) => {
+    // TODO: Implement API call to verify payment
+    console.log('Verify payment', paymentId)
+    setIsVerificationModalOpen(false)
+  }
+
+  const handleCancelPaymentFromQueue = (
+    paymentId: string,
+    payment: import('./components/PaymentVerificationQueueModal').PendingPayment
+  ) => {
+    // TODO: Implement API call to cancel payment
+    console.log('Cancel payment', paymentId, payment)
+    setIsVerificationModalOpen(false)
+  }
+
+  const handleViewDetails = (payment: Payment) => {
+    setSelectedPayment(payment)
+    setIsPaymentDetailsModalOpen(true)
+  }
+
+  const mockProcessedPayments = [
+    {
+      id: '1',
+      paymentId: 'PMT-2025-12-000',
+      status: 'Verified' as const,
+      amount: 3500.0,
+      action: 'Verified by You',
+      time: '30 mins ago',
+    },
+    {
+      id: '2',
+      paymentId: 'PMT-2025-12-000',
+      status: 'Verified' as const,
+      amount: 6500.0,
+      action: 'Verified by You',
+      time: '2 hours ago',
+    },
+    {
+      id: '3',
+      paymentId: 'PMT-2025-12-000',
+      status: 'Cancelled' as const,
+      amount: 7500.0,
+      action: 'Cancelled by You',
+      time: '3 hours ago',
+    },
+  ]
 
   // Show loading state while fetching client or debt summary
   if (isLoadingClient || !debtSummary) {
@@ -909,10 +1133,13 @@ export function DebtSummaryPage() {
   const handleRecordPayment = (data: {
     amount: number
     date: Date
-    method: 'Bank Transfer' | 'Card Payment' | 'Other'
+    method: 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
     status: 'Pending Verification' | 'Verified'
     generateReceipt: boolean
     updateBalance: boolean
+    referenceNumber?: string
+    last4Digits?: string
+    paymentMethodDetails?: string
   }) => {
     // TODO: Implement API call to record payment
     console.log('Record payment:', data)
@@ -1057,6 +1284,7 @@ export function DebtSummaryPage() {
                   console.log('Generate payment plan')
                 }}
                 className="flex-1"
+                disabled
               >
                 {t('pages.clients.debtSummary.generatePaymentPlan')}
               </LinkButton>
@@ -1224,9 +1452,24 @@ export function DebtSummaryPage() {
                             {formatCurrency(payment.amount)}
                           </td>
                           <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-xs font-medium">
-                            {t(
-                              `pages.clients.debtSummary.paymentMethod.${payment.method.toLowerCase()}`
-                            )}
+                            {(() => {
+                              const normalizedMethod = normalizePaymentMethod(payment.method)
+                              const methodTranslations: Record<
+                                'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other',
+                                string
+                              > = {
+                                'Bank Transfer': t(
+                                  'pages.clients.modals.recordPayment.bankTransfer'
+                                ),
+                                'Online Gateway': t(
+                                  'pages.clients.modals.recordPayment.onlineGateway'
+                                ),
+                                Cash: t('pages.clients.modals.recordPayment.cash'),
+                                Card: t('pages.clients.modals.recordPayment.card'),
+                                Other: t('pages.clients.modals.recordPayment.other'),
+                              }
+                              return methodTranslations[normalizedMethod] || normalizedMethod
+                            })()}
                           </td>
                           <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-xs font-medium">
                             <div className="flex items-center gap-2">
@@ -1239,48 +1482,50 @@ export function DebtSummaryPage() {
                             </div>
                           </td>
                           <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-medium">
-                            {payment.receipt ? (
+                            {payment.status === 'Verified' && (
                               <LinkButton
                                 variant="regular-secondary"
                                 size="xs"
                                 leftIcon={<Icons.FileDownload size={14} />}
                                 onClick={() => {
-                                  // TODO: Handle view receipt
-                                  console.log('View receipt', payment.id)
+                                  // TODO: Handle download PDF
+                                  console.log('Download PDF', payment.id)
                                 }}
                               >
-                                PDF
+                                {t('pages.clients.paymentHistory.actions.pdf')}
                               </LinkButton>
-                            ) : (
-                              <span className="text-xs text-gray-500"></span>
                             )}
                           </td>
                           <td className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium">
-                            {payment.status === 'Pending' ? (
-                              <LinkButton
-                                variant="regular-secondary"
-                                size="xs"
-                                leftIcon={<Icons.Success size={14} />}
-                                onClick={() => {
-                                  // TODO: Handle verify payment
-                                  console.log('Verify payment', payment.id)
-                                }}
-                              >
-                                {t('pages.clients.debtSummary.actions.verify')}
-                              </LinkButton>
-                            ) : (
-                              <LinkButton
-                                variant="regular-secondary"
-                                size="xs"
-                                leftIcon={<Icons.View size={14} />}
-                                onClick={() => {
-                                  // TODO: Handle view details
-                                  console.log('View details', payment.id)
-                                }}
-                              >
-                                {t('pages.clients.debtSummary.actions.viewDetails')}
-                              </LinkButton>
-                            )}
+                            <div className="flex items-center justify-center gap-2">
+                              {payment.status === 'Pending' &&
+                                isPaymentLessThan7DaysOld(payment.date) && (
+                                  <LinkButton
+                                    variant="regular-secondary"
+                                    size="xs"
+                                    leftIcon={<Icons.Success size={14} />}
+                                    onClick={() => {
+                                      setSelectedPaymentId(payment.id)
+                                      setIsVerificationModalOpen(true)
+                                    }}
+                                  >
+                                    {t('pages.clients.debtSummary.actions.verify')}
+                                  </LinkButton>
+                                )}
+                              {(payment.status === 'Verified' ||
+                                payment.status === 'Cancelled' ||
+                                (payment.status === 'Pending' &&
+                                  !isPaymentLessThan7DaysOld(payment.date))) && (
+                                <LinkButton
+                                  variant="regular-secondary"
+                                  size="xs"
+                                  leftIcon={<Icons.View size={14} />}
+                                  onClick={() => handleViewDetails(payment)}
+                                >
+                                  {t('pages.clients.debtSummary.actions.viewDetails')}
+                                </LinkButton>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -1374,6 +1619,73 @@ export function DebtSummaryPage() {
           handleClearCallError()
         }}
       />
+
+      {/* Payment Verification Queue Modal */}
+      <PaymentVerificationQueueModal
+        open={isVerificationModalOpen}
+        onClose={() => {
+          setIsVerificationModalOpen(false)
+          setSelectedPaymentId(null)
+        }}
+        pendingPayments={pendingPaymentsForVerification}
+        processedPayments={mockProcessedPayments}
+        onVerify={handleVerifyPayment}
+        onCancel={handleCancelPaymentFromQueue}
+        onRefresh={() => {
+          // TODO: Refresh pending payments
+          console.log('Refresh payments')
+        }}
+        initialExpandedPaymentId={selectedPaymentId?.toString() || null}
+      />
+
+      {/* Payment Details Modal */}
+      {selectedPayment && debtSummary && (
+        <PaymentDetailsModal
+          open={isPaymentDetailsModalOpen}
+          onClose={() => {
+            setIsPaymentDetailsModalOpen(false)
+            setSelectedPayment(null)
+          }}
+          payment={{
+            paymentId: `PMT-${selectedPayment.id}`,
+            status: selectedPayment.status,
+            amount: selectedPayment.amount,
+            paymentDate: selectedPayment.date,
+            method: normalizePaymentMethod(selectedPayment.method),
+            reference: `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
+            clientId: id || '',
+            clientName: customerName,
+            phone: client?.phones?.[0]?.number || '',
+            project: 'PrivatBank Collection',
+            currentDebt: debtSummary.totalDebt,
+            newDebt: Math.max(0, debtSummary.totalDebt - selectedPayment.amount),
+            createdBy: 'Operator Sidorov',
+            createdAt: '2025-12-10 09:15:32',
+            verifiedBy: selectedPayment.status === 'Verified' ? 'Supervisor Petrov' : undefined,
+            verifiedAt: selectedPayment.status === 'Verified' ? '2025-12-10 10:30:15' : undefined,
+            cancelledBy: selectedPayment.status === 'Cancelled' ? 'Supervisor Petrov' : undefined,
+            cancelledAt: selectedPayment.status === 'Cancelled' ? '2025-12-10 16:45:22' : undefined,
+            cancellationReason:
+              selectedPayment.status === 'Cancelled'
+                ? 'Incorrect payment amount entered. Client requested cancellation.'
+                : undefined,
+          }}
+          onViewClientProfile={() => {
+            if (id) {
+              setIsPaymentDetailsModalOpen(false)
+              navigate(`/dashboard/clients/${id}`)
+            }
+          }}
+          onPrintReceipt={() => {
+            // TODO: Handle print receipt
+            console.log('Print receipt', selectedPayment.id)
+          }}
+          onDownloadReceipt={() => {
+            // TODO: Handle download receipt
+            console.log('Download receipt', selectedPayment.id)
+          }}
+        />
+      )}
     </div>
   )
 }

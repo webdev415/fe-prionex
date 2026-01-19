@@ -6,13 +6,14 @@
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { EditPaymentModal } from './EditPaymentModal'
-import { generatePaymentReceiptPDF } from '@/lib/pdfReceiptGenerator'
+// TODO: When backend API is ready, import: import api from '@/lib/api'
 
 export interface PaymentDetails {
   paymentId: string
@@ -31,6 +32,9 @@ export interface PaymentDetails {
   createdAt: string
   verifiedBy?: string
   verifiedAt?: string
+  cancelledBy?: string
+  cancelledAt?: string
+  cancellationReason?: string
 }
 
 export interface PaymentDetailsModalProps {
@@ -54,7 +58,7 @@ export function PaymentDetailsModal({
   open,
   onClose,
   payment,
-  onCancelPayment: _onCancelPayment, // Not used - Cancel Payment button is disabled
+  onCancelPayment,
   onEditPayment,
   onViewClientProfile,
   onPrintReceipt,
@@ -73,6 +77,44 @@ export function PaymentDetailsModal({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const hasDebt = payment.newDebt > 0
 
+  // Helper function to check if payment date is less than 7 days old
+  const isPaymentLessThan7DaysOld = (paymentDate: string): boolean => {
+    try {
+      // Parse payment date - could be MM/DD/YYYY or YYYY-MM-DD format
+      let paymentDateObj: Date
+      if (paymentDate.includes('/')) {
+        // MM/DD/YYYY format
+        const [month, day, year] = paymentDate.split('/')
+        paymentDateObj = new Date(Number(year), Number(month) - 1, Number(day))
+      } else {
+        // YYYY-MM-DD format
+        paymentDateObj = new Date(paymentDate)
+      }
+
+      // Check if date is valid
+      if (isNaN(paymentDateObj.getTime())) {
+        return false
+      }
+
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      paymentDateObj.setHours(0, 0, 0, 0)
+
+      // Calculate difference in days
+      const diffTime = today.getTime() - paymentDateObj.getTime()
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+
+      // Return true if payment is less than 7 days old
+      return diffDays < 7 && diffDays >= 0
+    } catch (error) {
+      console.error('Error parsing payment date:', paymentDate, error)
+      return false
+    }
+  }
+
+  const canEditOrCancel =
+    payment.status === 'Pending' && isPaymentLessThan7DaysOld(payment.paymentDate)
+
   const handleEditPayment = () => {
     setIsEditModalOpen(true)
     if (onEditPayment) {
@@ -83,86 +125,92 @@ export function PaymentDetailsModal({
   const handleSaveEdit = (data: {
     amount: number
     date: Date
-    method: 'Bank Transfer' | 'Card Payment' | 'Other'
-    reference: string
+    method: 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
+    referenceNumber?: string
+    last4Digits?: string
+    paymentMethodDetails?: string
   }) => {
     if (onSaveEdit) {
-      onSaveEdit(data)
+      // Convert to old format for backward compatibility if needed
+      onSaveEdit({
+        amount: data.amount,
+        date: data.date,
+        method:
+          data.method === 'Card'
+            ? 'Card Payment'
+            : (data.method as 'Bank Transfer' | 'Card Payment' | 'Other'),
+        reference: data.referenceNumber || '',
+      })
     }
     setIsEditModalOpen(false)
   }
 
-  // Convert payment method to EditPaymentModal format
-  const getPaymentMethod = (): 'Bank Transfer' | 'Card Payment' | 'Other' => {
+  // Convert payment method to EditPaymentModal format (for backward compatibility)
+  const getPaymentMethod = ():
+    | 'Bank Transfer'
+    | 'Card Payment'
+    | 'Other'
+    | 'Online Gateway'
+    | 'Cash'
+    | 'Card' => {
     if (payment.method === 'Bank' || payment.method === 'Bank Transfer') {
       return 'Bank Transfer'
     }
     if (payment.method === 'Card' || payment.method === 'Card Payment') {
-      return 'Card Payment'
+      return 'Card'
+    }
+    if (payment.method === 'Online Gateway') {
+      return 'Online Gateway'
+    }
+    if (payment.method === 'Cash') {
+      return 'Cash'
     }
     return 'Other'
   }
 
-  const handleDownloadReceipt = () => {
-    // Generate receipt number in format RCP-YYYY-MM-XXX
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    // Extract number from payment ID or use a default
-    const paymentNum = payment.paymentId.match(/\d+/)?.[0] || '000'
-    const receiptNumber = `RCP-${year}-${month}-${paymentNum.padStart(3, '0')}`
+  const handleDownloadReceipt = async () => {
+    try {
+      // TODO: Backend API endpoint not ready yet
+      // When backend is ready, implement the following:
+      //
+      // 1. Extract payment ID from paymentId (format: PMT-123 or just 123)
+      //    const paymentId = payment.paymentId.replace(/^PMT-/, '')
+      //
+      // 2. Call backend API endpoint:
+      //    import api from '@/lib/api'
+      //    const response = await api.get(`/api/payments/${paymentId}/receipt`, {
+      //      params: { format: 'pdf' },
+      //      responseType: 'blob',
+      //    })
+      //
+      // 3. Create blob URL and trigger download:
+      //    const blob = new Blob([response.data], { type: 'application/pdf' })
+      //    const url = URL.createObjectURL(blob)
+      //    const a = document.createElement('a')
+      //    a.href = url
+      //
+      // 4. Extract filename from Content-Disposition header or use default:
+      //    const contentDisposition = response.headers['content-disposition']
+      //    const filenameMatch = contentDisposition?.match(/filename="?([^"]+)"?/i)
+      //    const filename = filenameMatch?.[1] || `receipt_${payment.paymentId}.pdf`
+      //
+      // 5. Trigger download:
+      //    a.download = filename
+      //    document.body.appendChild(a)
+      //    a.click()
+      //    document.body.removeChild(a)
+      //    URL.revokeObjectURL(url)
 
-    // Calculate days past due (mock calculation - replace with actual data)
-    const paymentDate = new Date(payment.paymentDate)
-    const today = new Date()
-    const daysPastDue = Math.floor(
-      (today.getTime() - paymentDate.getTime()) / (1000 * 60 * 60 * 24)
-    )
+      // Temporary: Show message that backend is not ready
+      toast.info('Receipt download will be available when backend API is ready')
 
-    // Format payment method to match template
-    const formatPaymentMethod = (method: string): string => {
-      if (method === 'Bank' || method === 'Bank Transfer') {
-        return 'Bank Transfer'
+      // Call the optional callback
+      if (onDownloadReceipt) {
+        onDownloadReceipt()
       }
-      if (method === 'Card' || method === 'Card Payment') {
-        return 'Card Payment'
-      }
-      return method
-    }
-
-    // Generate PDF receipt
-    // Use payment date for dateIssued if available, otherwise use createdAt
-    const dateIssued = payment.paymentDate || payment.createdAt
-
-    generatePaymentReceiptPDF({
-      receiptNumber,
-      paymentId: payment.reference || payment.paymentId,
-      dateIssued: dateIssued,
-      clientName: payment.clientName,
-      clientId: payment.clientId,
-      phone: payment.phone,
-      contract: `CONTRACT-${new Date(payment.createdAt).getFullYear()}-${payment.clientId.padStart(4, '0')}`,
-      paymentDate: payment.paymentDate,
-      paymentMethod: formatPaymentMethod(payment.method),
-      transactionRef: payment.reference,
-      paymentAmount: payment.amount,
-      daysPastDue: daysPastDue > 0 ? daysPastDue : 0,
-      status: payment.status === 'Verified' ? 'ACTIVE' : payment.status.toUpperCase(),
-      outstandingBalanceBefore: payment.currentDebt + payment.amount,
-      paymentApplied: payment.amount,
-      remainingBalance: payment.newDebt,
-      receivedBy: payment.createdBy,
-      verifiedBy: payment.verifiedBy,
-      verifiedOn: payment.verifiedAt,
-      companyName: 'PrivatBank Debt Collection',
-      companyAddress: 'Kyiv, Ukraine, 01001',
-      companyPhone: '+380 44 123 4567',
-      companyEmail: 'collections@privatbank.ua',
-    })
-
-    // Call the optional callback
-    if (onDownloadReceipt) {
-      onDownloadReceipt()
+    } catch (error) {
+      console.error('Error downloading receipt:', error)
+      toast.error('Failed to download receipt. Please try again.')
     }
   }
 
@@ -179,28 +227,29 @@ export function PaymentDetailsModal({
           className="pb-6"
         />
         <ModalContent className="max-h-[calc(90vh-250px)]">
-          {/* Action Buttons */}
-          <div className="mb-4 flex items-center gap-5 self-stretch">
-            <Button
-              variant="secondary"
-              leftIcon={<Icons.CancelCircle size={20} />}
-              onClick={() => {
-                // Cancel Payment button should not do anything
-                // Only "Reject Payment" in PaymentVerificationQueueModal opens CancelPaymentModal
-              }}
-              className="h-12 flex-1 rounded-md"
-            >
-              {t('pages.clients.modals.paymentDetails.cancelPayment')}
-            </Button>
-            <Button
-              variant="primary"
-              leftIcon={<Icons.PencilEdit size={20} />}
-              onClick={handleEditPayment}
-              className="h-12 flex-1 rounded-md"
-            >
-              {t('pages.clients.modals.paymentDetails.editPayment')}
-            </Button>
-          </div>
+          {/* Action Buttons - Only show for Pending status when payment is < 7 days old */}
+          {canEditOrCancel && (
+            <div className="mb-4 flex items-center gap-5 self-stretch">
+              {onCancelPayment && (
+                <Button
+                  variant="secondary"
+                  leftIcon={<Icons.CancelCircle size={20} />}
+                  onClick={onCancelPayment}
+                  className="h-12 flex-1 rounded-md"
+                >
+                  {t('pages.clients.modals.paymentDetails.cancelPayment')}
+                </Button>
+              )}
+              <Button
+                variant="primary"
+                leftIcon={<Icons.PencilEdit size={20} />}
+                onClick={handleEditPayment}
+                className="h-12 flex-1 rounded-md"
+              >
+                {t('pages.clients.modals.paymentDetails.editPayment')}
+              </Button>
+            </div>
+          )}
 
           {/* Payment Information Section */}
           <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
@@ -291,6 +340,16 @@ export function PaymentDetailsModal({
                   </div>
                 </div>
               </div>
+              {payment.status === 'Cancelled' && payment.cancellationReason && (
+                <div className="border-error-200 bg-error-50 mt-4 flex flex-col items-start gap-2 self-stretch rounded-lg border px-4 py-3">
+                  <span className="text-error-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    {t('pages.clients.modals.paymentDetails.cancellationReason')}
+                  </span>
+                  <span className="text-error-600 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    {payment.cancellationReason}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -356,7 +415,7 @@ export function PaymentDetailsModal({
             <div className="flex flex-col items-start justify-center gap-2 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
               <div className="flex items-start gap-5 self-stretch">
                 <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
-                  {t('pages.clients.modals.paymentDetails.currentTotalDebt')}
+                  {t('pages.clients.modals.paymentDetails.debtBefore')}
                 </span>
                 <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                   {formatCurrency(payment.currentDebt)}
@@ -376,7 +435,7 @@ export function PaymentDetailsModal({
 
                 <div className="flex items-center gap-5 self-stretch">
                   <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    {t('pages.clients.modals.paymentDetails.paymentAmount')}
+                    {t('pages.clients.modals.paymentDetails.debtAfter')}
                   </span>
                   <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                     {formatCurrency(payment.newDebt)}
@@ -442,47 +501,74 @@ export function PaymentDetailsModal({
                     </span>
                   </div>
                 </div>
-                <div className="mx-2 h-[50px] w-px bg-gray-200"></div>
-                {/* {payment.verifiedBy && payment.verifiedAt && ( */}
-                <div className="flex flex-1 flex-col items-start gap-2 p-0">
-                  <div className="flex items-start gap-6 self-stretch">
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                      {t('pages.clients.modals.paymentDetails.verifiedBy')}{' '}
-                      <span className="font-medium">{payment.verifiedBy}</span>
-                    </span>
-                  </div>
-                  <div className="flex items-start gap-6 self-stretch">
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                      {t('pages.clients.modals.paymentDetails.verifiedAt')}{' '}
-                      <span className="font-medium">{payment.verifiedAt}</span>
-                    </span>
-                  </div>
-                </div>
-                {/* )} */}
+                {payment.status === 'Verified' && payment.verifiedBy && payment.verifiedAt && (
+                  <>
+                    <div className="mx-2 h-[50px] w-px bg-gray-200"></div>
+                    <div className="flex flex-1 flex-col items-start gap-2 p-0">
+                      <div className="flex items-start gap-6 self-stretch">
+                        <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                          {t('pages.clients.modals.paymentDetails.verifiedBy')}{' '}
+                          <span className="font-medium">{payment.verifiedBy}</span>
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-6 self-stretch">
+                        <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                          {t('pages.clients.modals.paymentDetails.verifiedAt')}{' '}
+                          <span className="font-medium">{payment.verifiedAt}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {payment.status === 'Cancelled' && payment.cancelledBy && payment.cancelledAt && (
+                  <>
+                    <div className="mx-2 h-[50px] w-px bg-gray-200"></div>
+                    <div className="flex flex-1 flex-col items-start gap-2 p-0">
+                      <div className="flex items-start gap-6 self-stretch">
+                        <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                          {t('pages.clients.modals.paymentDetails.cancelledBy')}{' '}
+                          <span className="font-medium">{payment.cancelledBy}</span>
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-6 self-stretch">
+                        <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                          {t('pages.clients.modals.paymentDetails.cancelledAt')}{' '}
+                          <span className="font-medium">{payment.cancelledAt}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
         </ModalContent>
         <ModalFooter className="flex flex-col self-stretch border-none">
-          <div className="flex items-center gap-3 self-stretch">
-            <Button
-              variant="white-secondary"
-              leftIcon={<Icons.Printer size={20} />}
-              onClick={onPrintReceipt}
-              className="h-12 flex-1 rounded-md"
-            >
-              {t('pages.clients.modals.paymentDetails.printReceipt')}
-            </Button>
-            <Button
-              variant="white-secondary"
-              leftIcon={<Icons.FileDownload size={20} />}
-              onClick={handleDownloadReceipt}
-              className="h-12 flex-1 rounded-md"
-            >
-              {t('pages.clients.modals.paymentDetails.downloadReceiptPDF')}
-            </Button>
-          </div>
-          <Button variant="cancel" onClick={onClose} className="flex h-12 self-stretch rounded-md">
+          {payment.status === 'Verified' && (
+            <div className="flex w-full items-center gap-3 self-stretch">
+              <Button
+                variant="white-secondary"
+                leftIcon={<Icons.Printer size={20} />}
+                onClick={onPrintReceipt}
+                className="h-12 w-full flex-1 self-stretch rounded-md"
+              >
+                {t('pages.clients.modals.paymentDetails.printReceipt')}
+              </Button>
+              <Button
+                variant="white-secondary"
+                leftIcon={<Icons.FileDownload size={20} />}
+                onClick={handleDownloadReceipt}
+                className="h-12 w-full flex-1 self-stretch rounded-md"
+              >
+                {t('pages.clients.modals.paymentDetails.downloadReceiptPDF')}
+              </Button>
+            </div>
+          )}
+          <Button
+            variant="cancel"
+            onClick={onClose}
+            className="flex h-12 w-full self-stretch rounded-md"
+          >
             {t('pages.clients.modals.paymentDetails.close')}
           </Button>
         </ModalFooter>
@@ -501,6 +587,9 @@ export function PaymentDetailsModal({
           createdBy: payment.createdBy,
           createdAt: payment.createdAt,
           currentDebt: payment.currentDebt,
+          referenceNumber: payment.reference,
+          last4Digits: payment.reference?.match(/^\d{4}$/) ? payment.reference : undefined,
+          paymentMethodDetails: undefined, // Not stored in PaymentDetails interface yet
         }}
         onSave={handleSaveEdit}
       />

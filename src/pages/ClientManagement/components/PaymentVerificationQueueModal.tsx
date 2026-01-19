@@ -4,7 +4,7 @@
  * Modal for verifying pending payments with expandable payment cards.
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -38,7 +38,7 @@ export interface PendingPayment {
 export interface ProcessedPayment {
   id: string
   paymentId: string
-  status: 'Verified' | 'Rejected'
+  status: 'Verified' | 'Cancelled'
   amount: number
   action: string
   time: string
@@ -50,8 +50,9 @@ export interface PaymentVerificationQueueModalProps {
   pendingPayments: PendingPayment[]
   processedPayments: ProcessedPayment[]
   onVerify: (paymentId: string) => void
-  onReject: (paymentId: string, payment: PendingPayment) => void
+  onCancel: (paymentId: string, payment: PendingPayment) => void
   onRefresh?: () => void
+  initialExpandedPaymentId?: string | null
 }
 
 export function PaymentVerificationQueueModal({
@@ -60,8 +61,9 @@ export function PaymentVerificationQueueModal({
   pendingPayments,
   processedPayments,
   onVerify,
-  onReject,
+  onCancel,
   onRefresh,
+  initialExpandedPaymentId,
 }: PaymentVerificationQueueModalProps) {
   const { t, i18n } = useTranslation('common')
 
@@ -80,9 +82,21 @@ export function PaymentVerificationQueueModal({
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [sortBy, setSortBy] = useState('Oldest First')
   const [filter, setFilter] = useState('All Projects')
-  const [expandedPayments, setExpandedPayments] = useState<Set<string>>(
-    new Set([pendingPayments[0]?.id])
-  )
+
+  // Compute initial expanded payments based on props
+  // Using key prop on Modal to reset state when initialExpandedPaymentId changes
+  const initialExpandedPayments = useMemo<Set<string>>(() => {
+    if (initialExpandedPaymentId) {
+      return new Set([initialExpandedPaymentId])
+    }
+    if (pendingPayments.length > 0 && pendingPayments[0]?.id) {
+      return new Set([pendingPayments[0].id])
+    }
+    return new Set<string>()
+  }, [initialExpandedPaymentId, pendingPayments])
+
+  const [expandedPayments, setExpandedPayments] = useState<Set<string>>(initialExpandedPayments)
+
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
   const [selectedPaymentForCancel, setSelectedPaymentForCancel] = useState<PendingPayment | null>(
     null
@@ -98,14 +112,14 @@ export function PaymentVerificationQueueModal({
     setExpandedPayments(newExpanded)
   }
 
-  const handleRejectClick = (payment: PendingPayment) => {
+  const handleCancelClick = (payment: PendingPayment) => {
     setSelectedPaymentForCancel(payment)
     setIsCancelModalOpen(true)
   }
 
   const handleCancelConfirm = (_data: { reason: string; additionalDetails: string }) => {
     if (selectedPaymentForCancel) {
-      onReject(selectedPaymentForCancel.id, selectedPaymentForCancel)
+      onCancel(selectedPaymentForCancel.id, selectedPaymentForCancel)
       setIsCancelModalOpen(false)
       setSelectedPaymentForCancel(null)
     }
@@ -119,7 +133,12 @@ export function PaymentVerificationQueueModal({
   }
 
   return (
-    <Modal open={open} onClose={handleParentClose} maxWidth="2xl">
+    <Modal
+      key={initialExpandedPaymentId || 'default'}
+      open={open}
+      onClose={handleParentClose}
+      maxWidth="2xl"
+    >
       <ModalHeader
         icon={
           <div className="bg-primary-300 flex items-center justify-center rounded-full p-2.5">
@@ -208,11 +227,13 @@ export function PaymentVerificationQueueModal({
               <div key={payment.id} className="mb-4 flex flex-col items-start gap-2 self-stretch">
                 {/* Payment Header */}
                 <div className="flex items-start justify-between self-stretch">
-                  <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                    {t('pages.clients.modals.paymentVerificationQueue.payment', {
-                      paymentId: payment.paymentId,
-                    })}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                      {t('pages.clients.modals.paymentVerificationQueue.payment', {
+                        paymentId: payment.paymentId,
+                      })}
+                    </span>
+                  </div>
                   <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
                     {t('pages.clients.modals.paymentVerificationQueue.submitted')}{' '}
                     {formatTimeAgo(payment.submittedAt)}
@@ -294,10 +315,10 @@ export function PaymentVerificationQueueModal({
                       <Button
                         variant="secondary"
                         leftIcon={<Icons.CancelCircle size={18} className="text-white" />}
-                        onClick={() => handleRejectClick(payment)}
+                        onClick={() => handleCancelClick(payment)}
                         className="flex-1"
                       >
-                        {t('pages.clients.modals.paymentVerificationQueue.rejectPayment')}
+                        {t('pages.clients.modals.paymentVerificationQueue.cancelPayment')}
                       </Button>
                       <Button
                         variant="primary"
@@ -387,7 +408,7 @@ export function PaymentVerificationQueueModal({
                       >
                         {payment.status === 'Verified'
                           ? t('pages.clients.modals.paymentVerificationQueue.verified')
-                          : t('pages.clients.modals.paymentVerificationQueue.rejected')}
+                          : t('pages.clients.debtSummary.paymentStatus.cancelled')}
                       </span>
                     </div>
                     <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">

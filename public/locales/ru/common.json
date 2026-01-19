@@ -960,11 +960,23 @@
           "selectDate": "Выберите дату",
           "paymentMethod": "Способ оплаты:",
           "bankTransfer": "Банковский перевод",
-          "cardPayment": "Оплата картой",
+          "onlineGateway": "Онлайн-шлюз",
+          "cash": "Наличные",
+          "card": "Карта",
           "other": "Другое",
+          "referenceNumber": "Номер ссылки",
+          "referenceNumberPlaceholder": "Введите номер ссылки",
+          "referenceNumberRequired": "Номер ссылки обязателен",
+          "last4Digits": "Последние 4 цифры",
+          "last4DigitsPlaceholder": "Введите последние 4 цифры",
+          "last4DigitsRequired": "Последние 4 цифры обязательны",
+          "last4DigitsMustBe4": "Последние 4 цифры должны быть ровно 4 числами",
+          "paymentMethodDetails": "Детали способа оплаты",
+          "paymentMethodDetailsPlaceholder": "Введите дополнительные детали оплаты (необязательно)",
           "impactPreview": "Предварительный просмотр влияния",
           "currentTotalDebt": "Текущий общий долг:",
           "paymentAmountLabel": "Сумма платежа:",
+          "newTotalDebt": "Новый общий долг:",
           "newStatus": "Новый статус:",
           "stillHasDebt": "еще имеет долг",
           "verification": "Верификация",
@@ -978,7 +990,9 @@
           "saveAndVerify": "Сохранить и подтвердить",
           "cancel": "Отменить",
           "min": "мин:",
-          "max": "макс:"
+          "max": "макс:",
+          "validationPaymentExceedsDebt": "Платеж не может превышать текущий долг ({{amount}})",
+          "validationPaymentMustBePositive": "Сумма платежа должна быть положительной."
         },
         "editPayment": {
           "title": "Редактировать платеж #{{paymentId}}",
@@ -1032,6 +1046,8 @@
           "project": "Проект:",
           "debtImpact": "Влияние на долг",
           "currentTotalDebt": "Текущий общий долг:",
+          "debtBefore": "Долг до:",
+          "debtAfter": "Долг после:",
           "paymentAmount": "Сумма платежа:",
           "clientStatus": "Статус клиента:",
           "stillHasDebt": "еще имеет долг",
@@ -1040,6 +1056,9 @@
           "createdAt": "Создано в:",
           "verifiedBy": "Подтверждено:",
           "verifiedAt": "Подтверждено в:",
+          "cancelledBy": "Отменено:",
+          "cancelledAt": "Отменено в:",
+          "cancellationReason": "Причина отмены:",
           "printReceipt": "Печать квитанции",
           "downloadReceiptPDF": "Скачать квитанцию PDF",
           "close": "Закрыть"
@@ -1155,7 +1174,7 @@
           "reference": "Референс:",
           "currentDebt": "Текущий долг:",
           "newDebt": "Новый долг:",
-          "rejectPayment": "Отклонить платеж",
+          "cancelPayment": "Отменить платеж",
           "verifyAndApprove": "Подтвердить и одобрить",
           "expandDetails": "Развернуть детали",
           "recentlyProcessed": "Недавно обработано",
@@ -1190,10 +1209,11 @@
           "actions": "Действия"
         },
         "paymentMethod": {
-          "online": "Онлайн",
-          "bank": "Банк",
+          "bankTransfer": "Банковский перевод",
+          "onlineGateway": "Онлайн-шлюз",
+          "cash": "Наличные",
           "card": "Карта",
-          "directDebit": "Прямое списание"
+          "other": "Другое"
         },
         "paymentStatus": {
           "verified": "Подтверждено",
@@ -1240,6 +1260,7 @@
           "date": "Дата",
           "amount": "Сумма",
           "method": "Способ",
+          "reference": "Номер ссылки",
           "status": "Статус",
           "actions": "Действия"
         },
