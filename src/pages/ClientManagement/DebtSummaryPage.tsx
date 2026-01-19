@@ -952,9 +952,9 @@ export function DebtSummaryPage() {
         </div>
 
         {/* Main Content Skeleton */}
-        <div className="flex flex-col items-start gap-5 self-stretch lg:flex-row">
+        <div className="flex flex-col items-start gap-5 self-stretch xl:flex-row">
           {/* Left Panel Skeleton */}
-          <div className="flex w-full flex-col items-start gap-5 self-stretch lg:w-[35%]">
+          <div className="flex w-full flex-col items-start gap-5 self-stretch xl:w-[35%]">
             {/* Client Info Card Skeleton */}
             <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-4 sm:p-6">
               {/* Client Name Skeleton */}
@@ -1530,7 +1530,15 @@ export function DebtSummaryPage() {
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
                               <div className="flex items-center gap-2">
                                 {getStatusDot(payment.status)}
-                                <span>
+                                <span
+                                  className={cn(
+                                    payment.status === 'Verified'
+                                      ? 'text-success-500'
+                                      : payment.status === 'Pending'
+                                        ? 'text-gray-500'
+                                        : 'text-error-500'
+                                  )}
+                                >
                                   {t(
                                     `pages.clients.debtSummary.paymentStatus.${payment.status.toLowerCase()}`
                                   )}

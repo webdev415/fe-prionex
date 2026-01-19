@@ -270,19 +270,19 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
         title={t('pages.clients.modals.editPayment.title', { paymentId: payment.paymentId })}
         className="pb-6"
       />
-      <ModalContent className="max-h-[calc(90vh-200px)]">
+      <ModalContent className="max-h-[calc(90vh-300px)] sm:max-h-[calc(90vh-200px)]">
         {/* Editing Payment Info */}
         <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
           <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
             {t('pages.clients.modals.editPayment.editingPayment')}
           </span>
-          <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
+          <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 p-4 sm:p-5 sm:px-6">
             <div className="flex flex-col items-start gap-2 self-stretch">
-              <div className="flex items-start gap-6 self-stretch">
-                <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
+              <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
+                <span className="text-dark-500 w-full text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
                   {t('pages.clients.modals.editPayment.canEdit')}
                 </span>
-                <span className="text-dark-500 w-[120px] flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.editPayment.created', {
                     days: daysSinceCreation,
                     daysText:
@@ -295,11 +295,11 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                   </span>
                 </span>
               </div>
-              <div className="flex items-start gap-6 self-stretch">
-                <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
+              <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
+                <span className="text-dark-500 w-full text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
                   {t('pages.clients.modals.editPayment.requires')}
                 </span>
-                <span className="text-dark-500 w-[120px] flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.editPayment.supervisorApproval')}
                 </span>
               </div>
@@ -312,34 +312,35 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
           <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
             {t('pages.clients.modals.editPayment.originalPayment')}
           </span>
-          <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
-            <div className="flex items-center gap-4 self-stretch">
+          <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 p-4 sm:p-5 sm:px-6">
+            <div className="flex flex-col items-start gap-4 self-stretch sm:flex-row sm:items-center sm:gap-4">
               <div className="flex flex-1 flex-col items-start gap-1 p-0">
                 <div className="flex items-start gap-6 self-stretch">
-                  <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.modals.editPayment.amount')}{' '}
                     <span className="font-medium">{formatCurrency(payment.amount)}</span>
                   </span>
                 </div>
                 <div className="flex items-start gap-6 self-stretch">
-                  <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.modals.editPayment.date')}{' '}
                     <span className="font-medium">{payment.paymentDate}</span>
                   </span>
                 </div>
               </div>
 
-              <div className="mx-2 h-[46px] w-px bg-gray-200"></div>
+              <div className="hidden h-[46px] w-px bg-gray-200 sm:mx-2 sm:block"></div>
+              <div className="h-px w-full bg-gray-200 sm:hidden"></div>
 
               <div className="flex flex-1 flex-col items-start gap-1 p-0">
                 <div className="flex items-start gap-6 self-stretch">
-                  <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.modals.editPayment.method')}{' '}
                     <span className="font-medium">{payment.method}</span>
                   </span>
                 </div>
                 <div className="flex items-start gap-6 self-stretch">
-                  <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.modals.editPayment.reference')}{' '}
                     <span className="font-medium">
                       {payment.referenceNumber || payment.reference || '-'}
@@ -349,8 +350,8 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
               </div>
             </div>
 
-            <div className="flex items-start gap-6 self-stretch">
-              <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+            <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
+              <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                 {t('pages.clients.modals.editPayment.createdBy')}{' '}
                 <span className="font-medium">
                   {payment.createdBy} {t('pages.clients.modals.editPayment.on')}{' '}
@@ -380,10 +381,10 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
           <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
             {t('pages.clients.modals.editPayment.editPaymentInformation')}
           </span>
-          <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
-            <div className="flex items-start gap-5 self-stretch">
+          <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 p-4 sm:p-5 sm:px-6">
+            <div className="flex flex-col items-start gap-4 self-stretch sm:flex-row sm:items-start sm:gap-5">
               {/* Payment Amount */}
-              <div className="flex flex-1 flex-col items-start justify-end gap-2">
+              <div className="flex w-full flex-1 flex-col items-start justify-end gap-2 sm:w-auto">
                 <Label required className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
                   {t('pages.clients.modals.recordPayment.paymentAmount')}
                 </Label>
@@ -393,13 +394,13 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                   onChange={(e) => handleAmountChange(e.target.value)}
                   placeholder="0.00"
                   inputSize="md"
-                  className="rounded-md"
+                  className="w-full rounded-md sm:w-auto"
                   error={amountError || undefined}
                 />
                 {!amountError && (
                   <div className="flex items-center gap-2 self-stretch">
-                    <Icons.Money01 size={20} className="text-gray-700" />
-                    <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
+                    <Icons.Money01 size={18} className="text-gray-700 sm:size-5" />
+                    <span className="text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-700 sm:text-sm">
                       ({t('pages.clients.modals.recordPayment.min')} {formatCurrency(100)},{' '}
                       {t('pages.clients.modals.recordPayment.max')} {formatCurrency(originalDebt)})
                     </span>
@@ -407,8 +408,8 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                 )}
               </div>
               {/* Payment Date */}
-              <div className="flex flex-1 flex-col items-start justify-center gap-2">
-                <label className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+              <div className="flex w-full flex-1 flex-col items-start justify-center gap-2 sm:w-auto">
+                <label className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.editPayment.paymentDateRequired')}{' '}
                   <span className="text-error-500">*</span>
                 </label>
@@ -416,7 +417,7 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                   value={paymentDate}
                   onChange={({ value }) => setPaymentDate(value)}
                   format="yyyy-MM-dd"
-                  className="max-h-[42px] rounded-md"
+                  className="max-h-[42px] w-full rounded-md sm:w-auto"
                   min={oneYearAgo}
                   max={today}
                 />
@@ -431,13 +432,13 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
               <RadioGroup
                 value={paymentMethod}
                 onValueChange={handlePaymentMethodChange}
-                className="mt-2 space-y-2"
+                className="mt-2 flex flex-col space-y-2 sm:block"
               >
                 <div className="flex items-center gap-2">
                   <RadioItem value="Bank Transfer" id="method-bank" />
                   <Label
                     htmlFor="method-bank"
-                    className="text-dark-500 cursor-pointer text-sm font-light"
+                    className="text-dark-500 cursor-pointer text-xs font-light sm:text-sm"
                   >
                     {t('pages.clients.modals.recordPayment.bankTransfer')}
                   </Label>
@@ -446,7 +447,7 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                   <RadioItem value="Online Gateway" id="method-online" disabled />
                   <Label
                     htmlFor="method-online"
-                    className="text-dark-500 cursor-not-allowed text-sm font-light opacity-50"
+                    className="text-dark-500 cursor-not-allowed text-xs font-light opacity-50 sm:text-sm"
                   >
                     {t('pages.clients.modals.recordPayment.onlineGateway')}
                   </Label>
@@ -455,7 +456,7 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                   <RadioItem value="Cash" id="method-cash" disabled />
                   <Label
                     htmlFor="method-cash"
-                    className="text-dark-500 cursor-not-allowed text-sm font-light opacity-50"
+                    className="text-dark-500 cursor-not-allowed text-xs font-light opacity-50 sm:text-sm"
                   >
                     {t('pages.clients.modals.recordPayment.cash')}
                   </Label>
@@ -464,7 +465,7 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                   <RadioItem value="Card" id="method-card" />
                   <Label
                     htmlFor="method-card"
-                    className="text-dark-500 cursor-pointer text-sm font-light"
+                    className="text-dark-500 cursor-pointer text-xs font-light sm:text-sm"
                   >
                     {t('pages.clients.modals.recordPayment.card')}
                   </Label>
@@ -473,7 +474,7 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                   <RadioItem value="Other" id="method-other" />
                   <Label
                     htmlFor="method-other"
-                    className="text-dark-500 cursor-pointer text-sm font-light"
+                    className="text-dark-500 cursor-pointer text-xs font-light sm:text-sm"
                   >
                     {t('pages.clients.modals.recordPayment.other')}
                   </Label>
@@ -540,25 +541,25 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
           <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
             {t('pages.clients.modals.editPayment.impactComparison')}
           </span>
-          <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
-            <div className="flex items-center gap-5 self-stretch">
+          <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 p-4 sm:p-5 sm:px-6">
+            <div className="flex flex-col items-start gap-4 self-stretch sm:flex-row sm:items-center sm:gap-5">
               {/* Before Column */}
               <div className="flex flex-1 flex-col items-start gap-2 p-0">
-                <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                   {t('pages.clients.modals.editPayment.before')}
                 </span>
-                <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.editPayment.payment')}{' '}
                   <span className="font-medium">{formatCurrency(originalAmount)}</span>
                 </span>
-                <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.editPayment.debt')}{' '}
                   <span className="font-medium">{formatCurrencySimple(originalDebt)}</span>
                 </span>
               </div>
 
               {/* Arrow Icon */}
-              <div className="w-[26px] self-stretch">
+              <div className="hidden w-[26px] self-stretch sm:block">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="27"
@@ -570,17 +571,18 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                   <path d="M0.446289 0.22589L20.4463 39.7259L0.446286 79.2259" stroke="#DFDFDF" />
                 </svg>
               </div>
+              <div className="h-px w-full bg-gray-200 sm:hidden"></div>
 
               {/* After Column */}
               <div className="flex flex-1 flex-col items-start gap-2 p-0">
-                <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                   {t('pages.clients.modals.editPayment.after')}
                 </span>
-                <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.editPayment.payment')}{' '}
                   <span className="font-medium">{formatCurrency(amountValue)}</span>
                 </span>
-                <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.editPayment.debt')}{' '}
                   <span className="font-medium">{formatCurrencySimple(newDebt)}</span>
                 </span>
@@ -590,7 +592,7 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
             <div className="h-px w-full bg-gray-200" />
 
             {/* Change Summary */}
-            <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+            <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
               {t('pages.clients.modals.editPayment.change')}{' '}
               <span className="font-medium">
                 {formatCurrency(Math.abs(debtChange))}{' '}
@@ -603,26 +605,26 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
           </div>
         </div>
       </ModalContent>
-      <ModalFooter className="flex flex-col gap-3 self-stretch border-none sm:flex-col">
-        <div className="flex items-center gap-3 self-stretch">
+      <ModalFooter className="flex flex-col gap-3 self-stretch border-none">
+        <div className="flex flex-col items-stretch gap-3 self-stretch sm:w-full sm:flex-row sm:items-center">
           <Button
             variant="cancel"
             onClick={handleClose}
-            className="h-12 flex-1 self-stretch rounded-md p-0"
+            className="h-12 w-full self-stretch rounded-md p-0"
           >
             {t('pages.clients.modals.recordPayment.cancel')}
           </Button>
-          <div className="flex flex-1 flex-col items-center gap-1">
+          <div className="flex w-full flex-col items-center gap-1">
             <Button
               variant="primary"
-              leftIcon={<Icons.Success size={20} />}
+              leftIcon={<Icons.Success size={18} className="sm:size-5" />}
               onClick={handleSave}
-              className="h-12 w-full self-stretch rounded-md"
+              className="h-12 w-full self-stretch rounded-md sm:w-auto"
               disabled={hasValidationErrors}
             >
               {t('pages.clients.modals.editPayment.saveChanges')}
             </Button>
-            <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
+            <span className="text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-700 sm:text-sm">
               {t('pages.clients.modals.editPayment.requiresSupervisorApproval')}
             </span>
           </div>
