@@ -7,6 +7,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { useURLState, useAutoPersistedState } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
@@ -26,6 +27,11 @@ import { ExportPaymentsCSVModal } from './components/ExportPaymentsCSVModal'
 import { PaymentDetailsModal } from './components/PaymentDetailsModal'
 import { CancelPaymentModal } from './components/CancelPaymentModal'
 import { useClient } from '@/features/clients/hooks/useClients'
+import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
+import { useCallStore } from '@/stores/callStore'
+import { useAuth } from '@/features/auth/hooks/useAuth'
+import { useOriginateCall } from '@/features/calls/hooks/useCall'
+import { useCallWebSocket } from '@/features/calls/hooks/useCallWebSocket'
 
 // Types
 interface Payment {
@@ -314,6 +320,69 @@ export function PaymentHistoryPage() {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
   const dateRangeInitialized = useRef(false)
 
+  // Call functionality state
+  const { isCallActive, setOpenCallModal } = useCallStore()
+  const { user } = useAuth()
+  const { mutate: originateCall, isPending: isOriginatingCall } = useOriginateCall()
+  const [isCallModalOpen, setIsCallModalOpen] = useState(false)
+  const [currentCallId, setCurrentCallId] = useState<string | null>(null)
+  const [callError, setCallError] = useState<string | null>(null)
+
+  // Enable WebSocket for real-time call updates
+  useCallWebSocket(user?.asterisk_extension || null)
+
+  // Clear call error when modal opens
+  const handleClearCallError = () => {
+    setCallError(null)
+  }
+
+  // Handle call origination
+  const handleOriginateCall = (phoneNumber: string, clientName: string, clientId: string) => {
+    if (!user?.asterisk_extension) {
+      setCallError('Your account is not configured for calling. Please contact administrator.')
+      return
+    }
+
+    // Clear any previous error
+    setCallError(null)
+
+    originateCall(
+      {
+        agent_extension: user.asterisk_extension,
+        customer_number: phoneNumber,
+        caller_id_name: 'CRM Call',
+        metadata: {
+          client_id: clientId,
+          client_name: clientName,
+        },
+      },
+      {
+        onSuccess: (data) => {
+          setCurrentCallId(data.call_id)
+        },
+        onError: (err: unknown) => {
+          let message: string | undefined
+          if (err && typeof err === 'object' && 'response' in err) {
+            const response = (
+              err as { response?: { data?: { message?: string; detail?: unknown } } }
+            ).response
+            const data = response?.data
+            if (data?.message) {
+              message = data.message
+            } else if (data?.detail) {
+              if (typeof data.detail === 'string') {
+                message = data.detail
+              } else if (typeof data.detail === 'object' && data.detail !== null) {
+                message = (data.detail as { message?: string }).message
+              }
+            }
+          }
+          setCallError(message || 'Failed to initiate call. Please try again.')
+        },
+      }
+    )
+  }
+
   // Fetch client data from API (same as DebtSummaryPage)
   const clientId = id ? Number(id) : 0
   const {
@@ -323,16 +392,30 @@ export function PaymentHistoryPage() {
     error: clientError,
   } = useClient(clientId, !!clientId)
 
+  // Get client name and create client object for call functionality
+  const client = useMemo(() => {
+    if (!apiClient) return null
+
+    const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
+      .filter(Boolean)
+      .join(' ')
+
+    return {
+      id: apiClient.id,
+      fullName: fullName || mockClientDetail.fullName,
+      phones: [
+        { number: apiClient.phone_primary, type: 'primary' as const },
+        ...(apiClient.phone_secondary
+          ? [{ number: apiClient.phone_secondary, type: 'secondary' as const }]
+          : []),
+      ],
+    }
+  }, [apiClient])
+
   // Get client name from API or fallback to mock
   const customerName = useMemo(() => {
-    if (apiClient) {
-      const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
-        .filter(Boolean)
-        .join(' ')
-      return fullName || mockClientDetail.fullName
-    }
-    return mockClientDetail.fullName
-  }, [apiClient])
+    return client?.fullName || mockClientDetail.fullName
+  }, [client])
 
   // Mock data for verification queue (will use customerName from state)
   const mockPendingPayments = useMemo(
@@ -886,9 +969,25 @@ export function PaymentHistoryPage() {
                 variant="primary"
                 leftIcon={<Icons.Headset size={20} />}
                 className="flex-1 rounded-full"
+                disabled={!user?.asterisk_extension}
                 onClick={() => {
-                  // TODO: Handle call
-                  console.log('Call customer')
+                  const phoneNumber = client?.phones?.[0]?.number
+                  if (!phoneNumber) {
+                    toast.error('Client has no phone number')
+                    return
+                  }
+
+                  if (isCallActive()) {
+                    toast.warning(
+                      t('pages.clients.modals.callDialog.callInProgress') ||
+                        'Another call or recording is already in progress. Please finish or close it first.'
+                    )
+                    return
+                  }
+
+                  // Open modal in 'initial' state to let user select call type
+                  setOpenCallModal('call-dialog')
+                  setIsCallModalOpen(true)
                 }}
               >
                 {t('pages.clients.paymentHistory.call')}
@@ -1304,6 +1403,40 @@ export function PaymentHistoryPage() {
           }}
         />
       )}
+
+      {/* Call Dialog Modal */}
+      <CallDialogModal
+        open={isCallModalOpen}
+        onClose={() => {
+          setOpenCallModal(null)
+          setIsCallModalOpen(false)
+          setCurrentCallId(null)
+          handleClearCallError()
+        }}
+        clientName={client?.fullName || ''}
+        phoneNumber={client?.phones?.[0]?.number || ''}
+        callId={currentCallId}
+        initialState="initial"
+        error={callError}
+        isLoading={isOriginatingCall}
+        onCallStart={(_callType: CallType) => {
+          const phoneNumber = client?.phones?.[0]?.number
+          if (!phoneNumber) {
+            setCallError('Client has no phone number')
+            return
+          }
+
+          handleOriginateCall(phoneNumber, client?.fullName || '', client?.id?.toString() || '')
+        }}
+        onCallEnd={(duration: number, status: CallStatus) => {
+          console.log('Call ended:', { duration, status })
+          setOpenCallModal(null)
+          setCurrentCallId(null)
+        }}
+        onRetry={() => {
+          handleClearCallError()
+        }}
+      />
     </div>
   )
 }

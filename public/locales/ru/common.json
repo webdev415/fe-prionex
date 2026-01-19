@@ -1175,7 +1175,7 @@
         "lastPayment": "Последний платеж",
         "date": "Дата",
         "totalDebt": "Общий долг",
-        "daysPastDue": "Дней просрочки:",
+        "daysPastDue": "Дней просрочки",
         "paymentHistory": "История платежей",
         "last10": "Последние 10",
         "all": "Все",

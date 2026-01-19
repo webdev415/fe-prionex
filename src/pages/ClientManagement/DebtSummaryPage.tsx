@@ -7,6 +7,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
@@ -14,6 +15,11 @@ import { cn } from '@/lib/utils'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { RecordPaymentModal } from './components/RecordPaymentModal'
 import { useClient } from '@/features/clients/hooks/useClients'
+import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
+import { useCallStore } from '@/stores/callStore'
+import { useAuth } from '@/features/auth/hooks/useAuth'
+import { useOriginateCall } from '@/features/calls/hooks/useCall'
+import { useCallWebSocket } from '@/features/calls/hooks/useCallWebSocket'
 
 // Import the same mock client data structure from ClientDetailPage
 // Helper function to create mock client detail (same as ClientDetailPage)
@@ -298,14 +304,54 @@ interface DebtSummaryData {
   pendingVerification: number
 }
 
+// Helper function to calculate days past due from debt_close_date
+const calculateDaysPastDue = (debts?: Array<{ debt_close_date?: string | null }>): number => {
+  if (!debts || debts.length === 0) {
+    // Fallback to mock calculation if no debts available
+    const mockDueDate = new Date('2023-10-15') // Mock due date
+    const today = new Date()
+    const diffTime = today.getTime() - mockDueDate.getTime()
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    return Math.max(0, diffDays)
+  }
+
+  // Find the most recent debt_close_date
+  const validDueDates = debts
+    .map((debt) => {
+      if (!debt.debt_close_date) return null
+      const date = new Date(debt.debt_close_date)
+      return isNaN(date.getTime()) ? null : date
+    })
+    .filter((date): date is Date => date !== null)
+
+  if (validDueDates.length === 0) {
+    // No valid due dates, return 0
+    return 0
+  }
+
+  // Get the most recent due date
+  const lastDueDate = new Date(Math.max(...validDueDates.map((d) => d.getTime())))
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  lastDueDate.setHours(0, 0, 0, 0)
+
+  const diffTime = today.getTime() - lastDueDate.getTime()
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+  return Math.max(0, diffDays)
+}
+
 // Mock debt summary data - replace with actual API call
-const getMockDebtSummary = (): Omit<DebtSummaryData, 'customerName'> => {
+const getMockDebtSummary = (
+  debts?: Array<{ debt_close_date?: string | null }>
+): Omit<DebtSummaryData, 'customerName'> => {
+  const daysPastDue = calculateDaysPastDue(debts)
+
   return {
     status: 'Active',
     progressPercentage: 15,
     totalPaid: 15450.0,
     totalDebt: 125450.0,
-    daysPastDue: 18,
+    daysPastDue,
     lastPayment: {
       amount: 5000.0,
       date: '10/11/2023',
@@ -499,6 +545,69 @@ export function DebtSummaryPage() {
   const [isRecordPaymentModalOpen, setIsRecordPaymentModalOpen] = useState(false)
   const [showAllPayments, setShowAllPayments] = useState(false)
 
+  // Call functionality state
+  const { isCallActive, setOpenCallModal } = useCallStore()
+  const { user } = useAuth()
+  const { mutate: originateCall, isPending: isOriginatingCall } = useOriginateCall()
+  const [isCallModalOpen, setIsCallModalOpen] = useState(false)
+  const [currentCallId, setCurrentCallId] = useState<string | null>(null)
+  const [callError, setCallError] = useState<string | null>(null)
+
+  // Enable WebSocket for real-time call updates
+  useCallWebSocket(user?.asterisk_extension || null)
+
+  // Clear call error when modal opens
+  const handleClearCallError = () => {
+    setCallError(null)
+  }
+
+  // Handle call origination
+  const handleOriginateCall = (phoneNumber: string, clientName: string, clientId: string) => {
+    if (!user?.asterisk_extension) {
+      setCallError('Your account is not configured for calling. Please contact administrator.')
+      return
+    }
+
+    // Clear any previous error
+    setCallError(null)
+
+    originateCall(
+      {
+        agent_extension: user.asterisk_extension,
+        customer_number: phoneNumber,
+        caller_id_name: 'CRM Call',
+        metadata: {
+          client_id: clientId,
+          client_name: clientName,
+        },
+      },
+      {
+        onSuccess: (data) => {
+          setCurrentCallId(data.call_id)
+        },
+        onError: (err: unknown) => {
+          let message: string | undefined
+          if (err && typeof err === 'object' && 'response' in err) {
+            const response = (
+              err as { response?: { data?: { message?: string; detail?: unknown } } }
+            ).response
+            const data = response?.data
+            if (data?.message) {
+              message = data.message
+            } else if (data?.detail) {
+              if (typeof data.detail === 'string') {
+                message = data.detail
+              } else if (typeof data.detail === 'object' && data.detail !== null) {
+                message = (data.detail as { message?: string }).message
+              }
+            }
+          }
+          setCallError(message || 'Failed to initiate call. Please try again.')
+        },
+      }
+    )
+  }
+
   // Fetch client data from API (same as ClientDetailPage)
   const clientId = id ? Number(id) : 0
   const {
@@ -561,7 +670,9 @@ export function DebtSummaryPage() {
     if (customerName) {
       // TODO: Replace with actual API call to fetch debt summary
       // For now, use mock data but with real customer name from client data
-      const mockData = getMockDebtSummary()
+      // Calculate daysPastDue from actual debt data if available
+      const debts = apiClient && 'debts' in apiClient ? apiClient.debts : undefined
+      const mockData = getMockDebtSummary(debts)
       const data: DebtSummaryData = {
         ...mockData,
         customerName,
@@ -571,7 +682,7 @@ export function DebtSummaryPage() {
         setDebtSummary(data)
       }, 500)
     }
-  }, [customerName])
+  }, [customerName, apiClient])
 
   // Show loading state while fetching client or debt summary
   if (isLoadingClient || !debtSummary) {
@@ -957,11 +1068,25 @@ export function DebtSummaryPage() {
                 variant="primary"
                 leftIcon={<Icons.Headset size={20} />}
                 className="flex-1 rounded-full"
+                disabled={!user?.asterisk_extension}
                 onClick={() => {
-                  // Navigate to client detail page for calling functionality
-                  if (id) {
-                    navigate(`/dashboard/clients/${id}`)
+                  const phoneNumber = client.phones?.[0]?.number
+                  if (!phoneNumber) {
+                    toast.error('Client has no phone number')
+                    return
                   }
+
+                  if (isCallActive()) {
+                    toast.warning(
+                      t('pages.clients.modals.callDialog.callInProgress') ||
+                        'Another call or recording is already in progress. Please finish or close it first.'
+                    )
+                    return
+                  }
+
+                  // Open modal in 'initial' state to let user select call type
+                  setOpenCallModal('call-dialog')
+                  setIsCallModalOpen(true)
                 }}
               >
                 {t('pages.clients.debtSummary.call')}
@@ -1023,7 +1148,7 @@ export function DebtSummaryPage() {
                 {formatCurrency(debtSummary.totalDebt)}
               </span>
               <span className="text-dark-500 text-center text-base leading-[155%] font-medium tracking-[-0.32px]">
-                {t('pages.clients.debtSummary.daysPastDue')}: {debtSummary.daysPastDue}
+                {debtSummary.daysPastDue}
               </span>
             </div>
             <div className="from-primary-300 to-secondary-800 absolute bottom-0 h-[3px] w-full bg-gradient-to-r"></div>
@@ -1215,6 +1340,40 @@ export function DebtSummaryPage() {
           onSave={handleRecordPayment}
         />
       )}
+
+      {/* Call Dialog Modal */}
+      <CallDialogModal
+        open={isCallModalOpen}
+        onClose={() => {
+          setOpenCallModal(null)
+          setIsCallModalOpen(false)
+          setCurrentCallId(null)
+          handleClearCallError()
+        }}
+        clientName={client?.fullName || ''}
+        phoneNumber={client?.phones?.[0]?.number || ''}
+        callId={currentCallId}
+        initialState="initial"
+        error={callError}
+        isLoading={isOriginatingCall}
+        onCallStart={(_callType: CallType) => {
+          const phoneNumber = client?.phones?.[0]?.number
+          if (!phoneNumber) {
+            setCallError('Client has no phone number')
+            return
+          }
+
+          handleOriginateCall(phoneNumber, client?.fullName || '', client?.id?.toString() || '')
+        }}
+        onCallEnd={(duration: number, status: CallStatus) => {
+          console.log('Call ended:', { duration, status })
+          setOpenCallModal(null)
+          setCurrentCallId(null)
+        }}
+        onRetry={() => {
+          handleClearCallError()
+        }}
+      />
     </div>
   )
 }
