@@ -172,25 +172,27 @@ export function BulkAssignClientModal({
             <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {t('pages.clients.modals.bulkAssignClient.selectedClientsPreview')}
             </span>
-            <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white/100 bg-white/50 p-[20px_24px]">
+            <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white/100 bg-white/50 p-4 sm:p-5 md:p-6">
               {/* Preview list */}
-              <div className="flex flex-col items-start gap-2 self-stretch">
+              <div className="flex flex-col items-start gap-3 self-stretch sm:gap-2">
                 {previewClients.map((client) => (
-                  <div key={client.id} className="flex items-center gap-2 self-stretch">
-                    <span className="text-dark-500 w-[50%] text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                  <div
+                    key={client.id}
+                    className="flex w-full flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-2"
+                  >
+                    <span className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[50%] sm:text-sm sm:tracking-[-0.28px]">
                       {client.fullName} (#{client.id})
                     </span>
-                    <div className="w-[25%]">
+                    <div className="w-full sm:w-[25%]">
                       <PriorityBadge priority={client.priority} variant="compact" />
                     </div>
-                    <span className="text-dark-500 w-[25%] text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                      {' '}
+                    <span className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[25%] sm:text-sm sm:tracking-[-0.28px]">
                       {formatUAH(client.debt)} ₴
                     </span>
                   </div>
                 ))}
                 {remainingCount > 0 && (
-                  <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                     {t('pages.clients.modals.bulkAssignClient.andMoreClients', {
                       count: remainingCount,
                       client: t(
@@ -202,15 +204,15 @@ export function BulkAssignClientModal({
               </div>
               <div className="my-2 h-px w-full bg-gray-200" />
               {/* Summary */}
-              <div className="flex items-center gap-5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-5">
                 <div>
-                  <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                     {t('pages.clients.modals.bulkAssignClient.totalDebt')}{' '}
                     <span className="font-medium">{formatUAH(summary.totalDebt)} ₴</span>
                   </span>
                 </div>
                 <div>
-                  <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                     {t('pages.clients.modals.bulkAssignClient.avgScore')}{' '}
                     <span className="font-medium">{summary.avgScore}</span>
                   </span>
@@ -224,10 +226,10 @@ export function BulkAssignClientModal({
             <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {t('pages.clients.modals.bulkAssignClient.assignmentOptions')}
             </span>
-            <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white/100 bg-white/50 p-[20px_24px]">
-              <div className="flex items-start gap-4 self-stretch">
+            <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white/100 bg-white/50 p-4 sm:gap-5 sm:p-5 md:p-6">
+              <div className="flex w-full flex-col gap-4 self-stretch sm:flex-row sm:items-start sm:gap-4">
                 {/* Employee Dropdown */}
-                <div className="flex h-[63px] flex-1 flex-col items-start justify-center gap-1">
+                <div className="flex min-h-[63px] w-full flex-col items-start justify-center gap-1 sm:flex-1">
                   <Label
                     htmlFor="bulk-employee"
                     className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
@@ -235,7 +237,10 @@ export function BulkAssignClientModal({
                     {t('pages.clients.modals.bulkAssignClient.assignEmployeeToAll')}
                   </Label>
                   <Select value={employeeId} onValueChange={setEmployeeId}>
-                    <SelectTrigger id="bulk-employee" className="h-[45px] flex-1 rounded-md">
+                    <SelectTrigger
+                      id="bulk-employee"
+                      className="h-[45px] w-full rounded-md sm:flex-1"
+                    >
                       <SelectValue
                         placeholder={t('pages.clients.modals.bulkAssignClient.selectEmployee')}
                       />
@@ -257,7 +262,7 @@ export function BulkAssignClientModal({
                 </div>
 
                 {/* Searcher Dropdown */}
-                <div className="flex h-[63px] flex-1 flex-col items-start justify-center gap-1">
+                <div className="flex min-h-[63px] w-full flex-col items-start justify-center gap-1 sm:flex-1">
                   <Label
                     htmlFor="bulk-searcher"
                     className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
@@ -265,7 +270,10 @@ export function BulkAssignClientModal({
                     {t('pages.clients.modals.bulkAssignClient.assignSearcherToAll')}
                   </Label>
                   <Select value={searcherId} onValueChange={setSearcherId}>
-                    <SelectTrigger id="bulk-searcher" className="h-[45px] flex-1 rounded-md">
+                    <SelectTrigger
+                      id="bulk-searcher"
+                      className="h-[45px] w-full rounded-md sm:flex-1"
+                    >
                       <SelectValue
                         placeholder={t('pages.clients.modals.bulkAssignClient.selectSearcher')}
                       />
@@ -286,9 +294,9 @@ export function BulkAssignClientModal({
                   </Select>
                 </div>
               </div>
-              <div className="flex items-start gap-2 self-stretch">
+              <div className="flex w-full flex-col gap-4 self-stretch sm:flex-row sm:items-start sm:gap-2">
                 {/* Distribution Method */}
-                <div className="flex flex-col items-start justify-center gap-1 self-stretch">
+                <div className="flex w-full flex-col items-start justify-center gap-1 sm:self-stretch">
                   <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
                     {t('pages.clients.modals.bulkAssignClient.distributionMethod')}
                   </Label>
@@ -322,7 +330,7 @@ export function BulkAssignClientModal({
                 </div>
 
                 {/* Assignment Reason Dropdown */}
-                <div className="flex h-[63px] flex-1 flex-col items-start justify-center gap-1">
+                <div className="flex min-h-[63px] w-full flex-col items-start justify-center gap-1 sm:flex-1">
                   <Label
                     htmlFor="bulk-reason"
                     className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
@@ -330,7 +338,10 @@ export function BulkAssignClientModal({
                     {t('pages.clients.modals.bulkAssignClient.assignmentReason')}
                   </Label>
                   <Select value={reason} onValueChange={setReason}>
-                    <SelectTrigger id="bulk-reason" className="h-[45px] flex-1 rounded-md">
+                    <SelectTrigger
+                      id="bulk-reason"
+                      className="h-[45px] w-full rounded-md sm:flex-1"
+                    >
                       <SelectValue
                         placeholder={t('pages.clients.modals.bulkAssignClient.selectReason')}
                       />
@@ -357,9 +368,9 @@ export function BulkAssignClientModal({
                   </Select>
                 </div>
               </div>
-              <div className="flex items-start gap-4 self-stretch">
+              <div className="flex w-full items-start gap-4 self-stretch">
                 {/* Notes */}
-                <div className="flex flex-1 flex-col items-start justify-center gap-1">
+                <div className="flex w-full flex-col items-start justify-center gap-1 sm:flex-1">
                   <Label
                     htmlFor="bulk-notes"
                     className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
@@ -372,7 +383,7 @@ export function BulkAssignClientModal({
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder={t('pages.clients.modals.bulkAssignClient.enterAdditionalNotes')}
                     textareaSize="md"
-                    className="text-dark-500 rounded-md text-xs leading-[140%] font-light tracking-[-0.24px]"
+                    className="text-dark-500 w-full rounded-md text-xs leading-[140%] font-light tracking-[-0.24px]"
                   />
                 </div>
               </div>
@@ -398,7 +409,7 @@ export function BulkAssignClientModal({
           type="button"
           variant="cancel"
           onClick={handleCancel}
-          className="h-[45px] flex-1 text-sm"
+          className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
           {t('actions.cancel', 'Cancel')}
         </Button>
@@ -407,7 +418,7 @@ export function BulkAssignClientModal({
           variant="primary"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="h-[45px] flex-1 text-sm"
+          className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
           {t('pages.clients.modals.bulkAssignClient.assignAllClients')}
         </Button>

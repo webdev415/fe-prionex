@@ -125,7 +125,7 @@ export function PriorityCards({ priorityStats, selected = [], onToggle }: Priori
   }
 
   return (
-    <div className="flex w-full items-start gap-5">
+    <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
       {priorityCards.map((card) => {
         const isSelected = selected.includes(card.priority)
         const colors = getColorClasses(card.color, isSelected)
@@ -140,34 +140,34 @@ export function PriorityCards({ priorityStats, selected = [], onToggle }: Priori
             aria-label={`${card.label}: ${card.clientCount} clients, ${formatCurrency(card.totalDebt)} UAH total debt${isSelected ? ' (selected)' : ''}`}
             onClick={() => isClickable && handleCardClick(card.priority)}
             onKeyDown={(e) => isClickable && handleKeyDown(e, card.priority)}
-            className={`flex flex-1 flex-col items-start gap-4 rounded-xl border-2 bg-white/50 p-6 transition-all duration-200 ${colors.card} ${isClickable ? 'cursor-pointer focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none' : ''} `}
+            className={`flex flex-1 flex-col items-start gap-3 rounded-xl border-2 bg-white/50 p-4 transition-all duration-200 sm:gap-4 sm:p-5 lg:p-6 ${colors.card} ${isClickable ? 'cursor-pointer focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none' : ''} `}
           >
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-2 sm:gap-3">
               <PriorityBadge priority={card.priority} />
               <h3
-                className={`text-base leading-[155%] font-medium tracking-[-0.32px] ${colors.text}`}
+                className={`text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px] ${colors.text}`}
               >
                 {card.label}
               </h3>
             </div>
 
-            <div className="flex items-start justify-between self-stretch">
+            <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:justify-between sm:gap-0">
               <div className="flex flex-row items-start gap-1">
-                <p className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-800">
+                <p className="text-xs leading-[150%] font-light tracking-[-0.24px] text-gray-800 sm:text-sm sm:tracking-[-0.28px]">
                   {t('pages.clients.priorityCards.totalDebt')}
                 </p>
                 <p
-                  className={`text-sm leading-[150%] font-medium tracking-[-0.28px] ${colors.text}`}
+                  className={`text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px] ${colors.text}`}
                 >
                   {formatCurrency(card.totalDebt)} UAH
                 </p>
               </div>
               <div className="flex flex-row items-start gap-1">
-                <p className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-800">
+                <p className="text-xs leading-[150%] font-light tracking-[-0.24px] text-gray-800 sm:text-sm sm:tracking-[-0.28px]">
                   {t('pages.clients.priorityCards.client')}
                 </p>
                 <p
-                  className={`text-sm leading-[150%] font-medium tracking-[-0.28px] ${colors.text}`}
+                  className={`text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px] ${colors.text}`}
                 >
                   {card.clientCount}
                 </p>

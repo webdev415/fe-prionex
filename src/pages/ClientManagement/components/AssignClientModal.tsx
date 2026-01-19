@@ -216,51 +216,51 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
               <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                 {t('pages.clients.modals.assignClient.clientInformation')}
               </span>
-              <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white/100 bg-white/50 p-[20px_24px]">
-                <div className="flex flex-col items-start gap-2 self-stretch">
-                  <div className="flex items-start gap-6 self-stretch">
-                    <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+              <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white/100 bg-white/50 p-4 sm:gap-5 sm:p-5 md:p-6">
+                <div className="flex flex-col items-start gap-3 self-stretch sm:gap-2">
+                  <div className="flex flex-col gap-1 self-stretch sm:flex-row sm:items-start sm:gap-6">
+                    <span className="w-full text-xs leading-[150%] font-light tracking-[-0.24px] text-gray-600 sm:w-[120px] sm:text-sm sm:tracking-[-0.28px]">
                       {t('pages.clients.modals.assignClient.name')}
                     </span>
-                    <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                       {fullName}
                     </span>
                   </div>
-                  <div className="flex items-start gap-6 self-stretch">
-                    <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+                  <div className="flex flex-col gap-1 self-stretch sm:flex-row sm:items-start sm:gap-6">
+                    <span className="w-full text-xs leading-[150%] font-light tracking-[-0.24px] text-gray-600 sm:w-[120px] sm:text-sm sm:tracking-[-0.28px]">
                       {t('pages.clients.modals.assignClient.email')}
                     </span>
-                    <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                       {email}
                     </span>
                   </div>
-                  <div className="flex items-start gap-6 self-stretch">
-                    <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+                  <div className="flex flex-col gap-1 self-stretch sm:flex-row sm:items-start sm:gap-6">
+                    <span className="w-full text-xs leading-[150%] font-light tracking-[-0.24px] text-gray-600 sm:w-[120px] sm:text-sm sm:tracking-[-0.28px]">
                       {t('pages.clients.modals.assignClient.phone')}
                     </span>
-                    <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                       {phone}
                     </span>
                   </div>
-                  <div className="flex items-start gap-6 self-stretch">
-                    <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+                  <div className="flex flex-col gap-1 self-stretch sm:flex-row sm:items-start sm:gap-6">
+                    <span className="w-full text-xs leading-[150%] font-light tracking-[-0.24px] text-gray-600 sm:w-[120px] sm:text-sm sm:tracking-[-0.28px]">
                       {t('pages.clients.modals.assignClient.priority')}
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
                       <PriorityBadge
                         priority={priority as 'Critical' | 'High' | 'Medium' | 'Low'}
                         variant="compact"
                       />
-                      <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                      <span className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                         {t('pages.clients.modals.assignClient.score')}: {score}
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-start gap-6 self-stretch">
-                    <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+                  <div className="flex flex-col gap-1 self-stretch sm:flex-row sm:items-start sm:gap-6">
+                    <span className="w-full text-xs leading-[150%] font-light tracking-[-0.24px] text-gray-600 sm:w-[120px] sm:text-sm sm:tracking-[-0.28px]">
                       {t('pages.clients.modals.assignClient.totalDebt')}
                     </span>
-                    <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                       {formatUAH(totalDebt)} ₴ ({debtCount}{' '}
                       {debtCount === 1
                         ? t('pages.clients.modals.assignClient.debt')
@@ -277,10 +277,10 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
               <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                 {t('pages.clients.modals.assignClient.assignmentDetails')}
               </span>
-              <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white/100 bg-white/50 p-[20px_24px]">
-                <div className="flex items-start gap-4 self-stretch">
+              <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white/100 bg-white/50 p-4 sm:gap-5 sm:p-5 md:p-6">
+                <div className="flex w-full flex-col gap-4 self-stretch sm:flex-row sm:items-start sm:gap-4">
                   {/* Employee Dropdown */}
-                  <div className="flex h-[63px] flex-1 flex-col items-start justify-center gap-1">
+                  <div className="flex min-h-[63px] w-full flex-col items-start justify-center gap-1 sm:flex-1">
                     <Label
                       htmlFor="employee"
                       className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
@@ -288,7 +288,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                       {t('pages.clients.modals.assignClient.employee')}
                     </Label>
                     <Select value={employeeId} onValueChange={setEmployeeId}>
-                      <SelectTrigger id="employee" className="h-[45px] flex-1 rounded-md">
+                      <SelectTrigger id="employee" className="h-[45px] w-full rounded-md sm:flex-1">
                         <SelectValue
                           placeholder={t('pages.clients.modals.assignClient.selectEmployee')}
                         />
@@ -310,7 +310,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                   </div>
 
                   {/* Searcher Dropdown */}
-                  <div className="flex h-[63px] flex-1 flex-col items-start justify-center gap-1">
+                  <div className="flex min-h-[63px] w-full flex-col items-start justify-center gap-1 sm:flex-1">
                     <Label
                       htmlFor="searcher"
                       className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
@@ -318,7 +318,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                       {t('pages.clients.modals.assignClient.searcher')}
                     </Label>
                     <Select value={searcherId} onValueChange={setSearcherId}>
-                      <SelectTrigger id="searcher" className="h-[45px] flex-1 rounded-md">
+                      <SelectTrigger id="searcher" className="h-[45px] w-full rounded-md sm:flex-1">
                         <SelectValue
                           placeholder={t('pages.clients.modals.assignClient.selectSearcher')}
                         />
@@ -339,9 +339,9 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                     </Select>
                   </div>
                 </div>
-                <div className="flex items-start gap-4 self-stretch">
+                <div className="flex w-full flex-col gap-4 self-stretch sm:flex-row sm:items-start sm:gap-4">
                   {/* Assignment Reason */}
-                  <div className="flex flex-1 flex-col items-start justify-center gap-1">
+                  <div className="flex w-full flex-col items-start justify-center gap-1 sm:flex-1">
                     <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {t('pages.clients.modals.assignClient.assignmentReason')}
                     </Label>
@@ -378,7 +378,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                   </div>
 
                   {/* Notes */}
-                  <div className="flex flex-1 flex-col items-start justify-center gap-1">
+                  <div className="flex w-full flex-col items-start justify-center gap-1 sm:flex-1">
                     <Label
                       htmlFor="notes"
                       className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
@@ -391,7 +391,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder={t('pages.clients.modals.assignClient.enterAdditionalNotes')}
                       textareaSize="md"
-                      className="text-dark-500 rounded-md text-xs leading-[140%] font-light tracking-[-0.24px]"
+                      className="text-dark-500 w-full rounded-md text-xs leading-[140%] font-light tracking-[-0.24px]"
                     />
                   </div>
                 </div>
@@ -419,7 +419,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
           type="button"
           variant="cancel"
           onClick={handleCancel}
-          className="h-[45px] flex-1 text-sm"
+          className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
           {t('actions.cancel', 'Cancel')}
         </Button>
@@ -428,7 +428,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
           variant="primary"
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className="h-[45px] flex-1 text-sm"
+          className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
           {t('pages.clients.modals.assignClient.assignClient')}
         </Button>
