@@ -95,7 +95,7 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
         title={t('pages.clients.modals.cancelPayment.title')}
         className="pb-6"
       />
-      <ModalContent className="max-h-[calc(90vh-200px)]">
+      <ModalContent className="max-h-[calc(90vh-300px)] sm:max-h-[calc(90vh-200px)]">
         {/* Warning Banner */}
         <div className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white bg-white/50 px-6 py-3">
           <Icons.Warning size={24} className="text-error-500" />
@@ -112,52 +112,53 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
                 {t('pages.clients.modals.cancelPayment.paymentToCancel')}
               </span>
             </div>
-            <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 px-6 py-5">
-              <div className="flex items-start gap-3 self-stretch">
+            <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 px-4 py-4 sm:px-6 sm:py-5">
+              <div className="flex flex-col items-start gap-4 self-stretch sm:flex-row sm:items-start sm:gap-3">
                 <div className="flex flex-1 flex-col items-start gap-1 p-0">
                   <div className="flex items-start gap-6 self-stretch">
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.paymentId')}{' '}
                       <span className="font-medium">{payment.paymentId}</span>
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.client')}{' '}
                       <span className="font-medium">{payment.client}</span>
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.amount')}{' '}
                       <span className="font-medium">{formatCurrency(payment.amount)}</span>
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.paymentDate')}{' '}
                       <span className="font-medium">{payment.paymentDate}</span>
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.method')}{' '}
                       <span className="font-medium">{payment.method}</span>
                     </span>
                   </div>
                 </div>
 
-                <div className="mx-2 h-[121px] w-px bg-gray-200"></div>
+                <div className="hidden h-[121px] w-px bg-gray-200 sm:mx-2 sm:block"></div>
+                <div className="h-px w-full bg-gray-200 sm:hidden"></div>
 
                 <div className="flex flex-1 flex-col items-start gap-1 p-0">
                   <div className="flex items-start gap-6 self-stretch">
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.reference')}{' '}
                       <span className="font-medium">{payment.reference}</span>
                     </span>
                   </div>
-                  <div className="flex items-start gap-2 self-stretch">
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-start">
+                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.status')}
                     </span>
                     <div className="flex items-center gap-1">
@@ -184,7 +185,7 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
                       </span>
                       <span
                         className={cn(
-                          'text-sm font-medium',
+                          'text-xs font-medium sm:text-sm',
                           payment.status === 'Verified'
                             ? 'text-success-500'
                             : payment.status === 'Pending'
@@ -199,19 +200,19 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
                     </div>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.reference')}{' '}
                       <span className="font-medium">{payment.paymentDate}</span>
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.created')}{' '}
                       <span className="font-medium">{payment.createdBy}</span>
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.created')}{' '}
                       <span className="font-medium">{payment.createdAt}</span>
                     </span>
@@ -227,23 +228,23 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
                 {t('pages.clients.modals.cancelPayment.impactOnClient')}
               </span>
             </div>
-            <div className="flex w-full flex-col items-start justify-center gap-2 rounded-xl border border-white bg-white/50 px-6 py-5">
-              <div className="flex items-center gap-3 self-stretch">
+            <div className="flex w-full flex-col items-start justify-center gap-2 rounded-xl border border-white bg-white/50 px-4 py-4 sm:px-6 sm:py-5">
+              <div className="flex flex-col items-start gap-4 self-stretch sm:flex-row sm:items-center sm:gap-3">
                 <div className="flex flex-1 flex-col items-start gap-2 p-0">
                   <div className="flex items-start gap-6 self-stretch">
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.currentDebt')}{' '}
                       <span className="font-medium">{formatCurrency(payment.currentDebt)}</span>
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.cancelledPayment')}{' '}
                       <span className="font-medium">+{formatCurrency(cancelledAmount)}</span>
                     </span>
                   </div>
                 </div>
-                <div className="w-[26px] self-stretch">
+                <div className="hidden w-[26px] self-stretch sm:block">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="27"
@@ -255,12 +256,13 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
                     <path d="M0.443097 0.23175L13.52 25.2318L0.443095 50.2317" stroke="#DFDFDF" />
                   </svg>
                 </div>
+                <div className="h-px w-full bg-gray-200 sm:hidden"></div>
                 <div className="flex flex-1 flex-col items-start gap-2 p-0">
                   <div className="flex flex-col items-start gap-1 self-stretch">
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.newDebtAfterCancel')}
                     </span>
-                    <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                       {formatCurrency(newDebtAfterCancel)}
                     </span>
                   </div>
@@ -268,8 +270,8 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
               </div>
               <div className="my-2 h-px w-full bg-gray-200" />
               <div className="flex items-center justify-center gap-1 self-stretch">
-                <Icons.ArrowUp02 size={16} className="text-error-500" />
-                <span className="text-error-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                <Icons.ArrowUp02 size={14} className="text-error-500 sm:size-4" />
+                <span className="text-error-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.cancelPayment.clientDebtWillIncrease')}{' '}
                   {formatCurrency(debtIncrease)}
                 </span>
@@ -285,7 +287,7 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
               {t('pages.clients.modals.cancelPayment.cancellationReason')}
             </span>
           </div>
-          <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
+          <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white bg-white/50 p-4 px-4 sm:p-5 sm:px-6">
             <div className="flex flex-col items-start gap-1 self-stretch">
               <Label
                 required
@@ -294,7 +296,7 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
                 {t('pages.clients.modals.cancelPayment.selectReason')}
               </Label>
               <Select value={reason} onValueChange={setReason}>
-                <SelectTrigger className="mt-1.5 h-[45px]">
+                <SelectTrigger className="mt-1.5 h-[45px] w-full">
                   <SelectValue
                     placeholder={t('pages.clients.modals.cancelPayment.selectReasonOfCancellation')}
                   />
@@ -353,10 +355,10 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
             {t('pages.clients.modals.cancelPayment.consequences')}
           </span>
           <div className="flex flex-col items-start justify-center gap-2.5 self-stretch rounded-xl border border-white/50 bg-white/50 p-5 px-6">
-            <div className="flex items-start justify-between self-stretch">
+            <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-start sm:justify-between">
               <div className="flex flex-1 items-start gap-1">
-                <Icons.ArrowRight02 size={20} className="text-gray-700" />
-                <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                <Icons.ArrowRight02 size={18} className="text-gray-700 sm:size-5" />
+                <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.cancelPayment.paymentStatusCancelled')}{' '}
                   <span className="font-medium">
                     {t('pages.clients.modals.cancelPayment.cancelled')}
@@ -364,30 +366,30 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
                 </span>
               </div>
               <div className="flex flex-1 items-start gap-1">
-                <Icons.ArrowRight02 size={20} className="text-gray-700" />
-                <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                <Icons.ArrowRight02 size={18} className="text-gray-700 sm:size-5" />
+                <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.cancelPayment.clientDebtRestored')}
                 </span>
               </div>
             </div>
-            <div className="flex items-start justify-between self-stretch">
+            <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-start sm:justify-between">
               <div className="flex flex-1 items-start gap-1">
-                <Icons.ArrowRight02 size={20} className="text-gray-700" />
-                <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                <Icons.ArrowRight02 size={18} className="text-gray-700 sm:size-5" />
+                <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.cancelPayment.receiptInvalidated')}
                 </span>
               </div>
               <div className="flex flex-1 items-start gap-1">
-                <Icons.ArrowRight02 size={20} className="text-gray-700" />
-                <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                <Icons.ArrowRight02 size={18} className="text-gray-700 sm:size-5" />
+                <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.cancelPayment.cannotBeUndone')}
                 </span>
               </div>
             </div>
-            <div className="flex items-start justify-between self-stretch">
+            <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-start sm:justify-between">
               <div className="flex flex-1 items-start gap-1">
-                <Icons.ArrowRight02 size={20} className="text-gray-700" />
-                <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                <Icons.ArrowRight02 size={18} className="text-gray-700 sm:size-5" />
+                <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.cancelPayment.loggedInAuditTrail')}
                 </span>
               </div>
@@ -410,25 +412,25 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
           </Label>
         </div>
       </ModalContent>
-      <ModalFooter className="flex items-start gap-4 self-stretch border-none">
+      <ModalFooter className="flex flex-col items-stretch gap-4 self-stretch border-none sm:flex-row sm:items-start">
         <Button
           variant="cancel"
           onClick={handleClose}
-          className="h-12 flex-1 self-stretch rounded-md p-0"
+          className="h-12 w-full self-stretch rounded-md p-0"
         >
           {t('pages.clients.modals.recordPayment.cancel')}
         </Button>
-        <div className="flex flex-1 flex-col items-center gap-2">
+        <div className="flex w-full flex-col items-center gap-2 self-stretch">
           <Button
             variant="primary"
             leftIcon={<Icons.Success size={18} className="text-dark-500" />}
             onClick={handleConfirm}
             disabled={!canConfirm}
-            className="h-12 self-stretch rounded-md p-0"
+            className="h-12 w-full self-stretch rounded-md p-0 sm:w-auto"
           >
             {t('pages.clients.modals.cancelPayment.confirmCancellation')}
           </Button>
-          <p className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
+          <p className="text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-700 sm:text-sm">
             {t('pages.clients.modals.cancelPayment.requiresSupervisorApproval')}
           </p>
         </div>

@@ -269,27 +269,27 @@ export function RecordPaymentModal({
         className="pb-6"
       />
 
-      <ModalContent className="max-h-[calc(90vh-250px)]">
+      <ModalContent className="max-h-[calc(90vh-300px)] sm:max-h-[calc(90vh-250px)]">
         {/* Client Info Section */}
-        <div className="mb-6 flex items-center justify-between self-stretch">
-          <div className="flex items-center justify-center gap-4">
+        <div className="mb-6 flex flex-col items-start gap-3 self-stretch sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center justify-center gap-2 sm:gap-4">
             <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-              <Icons.User size={20} className="text-dark-500" />
+              <Icons.User size={18} className="text-dark-500 sm:size-5" />
             </div>
-            <span className="text-dark-500 text-[18px] leading-[150%] font-medium tracking-[-0.36px]">
+            <span className="text-dark-500 text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
               {customerName}
             </span>
           </div>
-          <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
+          <span className="text-dark-500 text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
             {t('pages.clients.modals.recordPayment.currentDebt')}{' '}
             <span className="font-medium">{formatCurrency(currentDebt)}</span>
           </span>
         </div>
 
         {/* Two Column Layout */}
-        <div className="mb-6 flex items-start gap-4 self-stretch">
+        <div className="mb-6 flex flex-col items-start gap-4 self-stretch lg:flex-row">
           {/* Left Column - Payment Information */}
-          <div className="flex flex-1 flex-col items-start gap-2">
+          <div className="flex w-full flex-1 flex-col items-start gap-2 lg:w-auto">
             <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {t('pages.clients.modals.recordPayment.paymentInformation')}
             </span>
@@ -447,12 +447,12 @@ export function RecordPaymentModal({
           </div>
 
           {/* Right Column - Impact Preview */}
-          <div className="flex flex-1 flex-col items-start gap-2 self-stretch">
+          <div className="flex w-full flex-1 flex-col items-start gap-2 self-stretch lg:w-auto">
             <h3 className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {t('pages.clients.modals.recordPayment.impactPreview')}
             </h3>
 
-            <div className="flex flex-1 flex-col items-start gap-6 self-stretch rounded-xl border border-white/100 bg-white/50 p-6">
+            <div className="flex flex-1 flex-col items-start gap-6 self-stretch rounded-xl border border-white/100 bg-white/50 p-4 sm:p-6">
               <div className="flex flex-col items-start gap-4 self-stretch">
                 <div className="flex items-center gap-5 self-stretch">
                   <span className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
@@ -532,12 +532,12 @@ export function RecordPaymentModal({
           </div>
         </div>
         <div className="flex flex-col items-start gap-4 self-stretch">
-          <div className="flex items-start gap-4 self-stretch">
+          <div className="flex flex-row items-start gap-4 self-stretch">
             <div className="flex flex-1 flex-col items-start gap-2">
               <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                 {t('pages.clients.modals.recordPayment.verification')}
               </span>
-              <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white bg-white/50 p-[20px_24px]">
+              <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white bg-white/50 p-4 sm:p-[20px_24px]">
                 <div className="flex flex-col items-start gap-2 self-stretch">
                   <Label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
                     {t('pages.clients.modals.recordPayment.paymentStatus')}
@@ -547,7 +547,7 @@ export function RecordPaymentModal({
                     onValueChange={(value) =>
                       setPaymentStatus(value as 'Pending Verification' | 'Verified')
                     }
-                    className="flex items-start gap-4 self-stretch"
+                    className="flex flex-col items-start gap-3 self-stretch sm:flex-row sm:gap-4"
                   >
                     <div className="flex flex-1 items-center gap-1">
                       <RadioItem value="Pending Verification" id="status-pending" />
@@ -610,12 +610,12 @@ export function RecordPaymentModal({
         </div>
       </ModalContent>
       <ModalFooter className="flex flex-col items-start gap-4 self-stretch border-none">
-        <div className="flex w-full items-center gap-6 self-stretch">
+        <div className="flex w-full flex-col items-stretch gap-3 gap-6 self-stretch sm:flex-row">
           <Button
             variant="secondary"
             leftIcon={<Icons.Clock04 size={18} />}
             onClick={() => handleSave('Pending Verification')}
-            className="h-12 flex-1 rounded-md"
+            className="h-12 w-full rounded-md sm:w-auto"
             disabled={hasValidationErrors}
           >
             {t('pages.clients.modals.recordPayment.saveAsPending')}
@@ -624,7 +624,7 @@ export function RecordPaymentModal({
             variant="primary"
             leftIcon={<Icons.CheckmarkSquare03 size={18} />}
             onClick={() => handleSave('Verified')}
-            className="h-12 flex-1 rounded-md"
+            className="h-12 w-full rounded-md sm:w-auto"
             disabled={hasValidationErrors}
           >
             {t('pages.clients.modals.recordPayment.saveAndVerify')}
@@ -634,7 +634,7 @@ export function RecordPaymentModal({
         <Button
           variant="cancel"
           onClick={handleClose}
-          className="flex h-12 self-stretch rounded-md"
+          className="flex h-12 w-full self-stretch rounded-md"
         >
           {t('pages.clients.modals.recordPayment.cancel')}
         </Button>

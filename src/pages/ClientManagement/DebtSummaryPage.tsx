@@ -943,103 +943,103 @@ export function DebtSummaryPage() {
     return (
       <div className="flex flex-1 flex-col items-start gap-5 self-stretch">
         {/* Header Skeleton */}
-        <div className="flex items-center justify-between self-stretch">
+        <div className="flex flex-col gap-3 self-stretch sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <div className="h-10 w-10 animate-pulse rounded-full bg-gray-200" />
-            <div className="h-8 w-40 animate-pulse rounded bg-gray-200" />
+            <div className="h-6 w-32 animate-pulse rounded bg-gray-200 sm:h-8 sm:w-40" />
           </div>
-          <div className="h-12 w-40 animate-pulse rounded-full bg-gray-200" />
+          <div className="h-10 w-10 animate-pulse rounded-full bg-gray-200 sm:h-12 sm:w-40" />
         </div>
 
         {/* Main Content Skeleton */}
-        <div className="flex items-start gap-5 self-stretch">
+        <div className="flex flex-col items-start gap-5 self-stretch lg:flex-row">
           {/* Left Panel Skeleton */}
-          <div className="flex w-[35%] flex-col items-start gap-5 self-stretch">
+          <div className="flex w-full flex-col items-start gap-5 self-stretch lg:w-[35%]">
             {/* Client Info Card Skeleton */}
-            <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-6">
+            <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-4 sm:p-6">
               {/* Client Name Skeleton */}
               <div className="flex flex-col items-center justify-center gap-4 self-stretch">
-                <div className="flex items-center justify-center gap-4">
-                  <div className="h-10 w-10 animate-pulse rounded-full bg-gray-200" />
-                  <div className="h-6 w-48 animate-pulse rounded bg-gray-200" />
+                <div className="flex items-center justify-center gap-2 sm:gap-4">
+                  <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
+                  <div className="h-5 w-36 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-48" />
                 </div>
-                <div className="h-8 w-24 animate-pulse rounded-full bg-gray-200" />
+                <div className="h-6 w-20 animate-pulse rounded-full bg-gray-200 sm:h-8 sm:w-24" />
               </div>
 
               {/* Progress Circle Skeleton */}
               <div className="mb-6 flex justify-center">
-                <div className="relative flex h-[150px] w-[150px] items-center justify-center">
-                  <div className="h-[150px] w-[150px] animate-pulse rounded-full bg-gray-200" />
-                  <div className="absolute h-12 w-12 animate-pulse rounded-full bg-gray-300" />
+                <div className="relative flex h-[120px] w-[120px] items-center justify-center sm:h-[150px] sm:w-[150px]">
+                  <div className="h-[120px] w-[120px] animate-pulse rounded-full bg-gray-200 sm:h-[150px] sm:w-[150px]" />
+                  <div className="absolute h-10 w-10 animate-pulse rounded-full bg-gray-300 sm:h-12 sm:w-12" />
                 </div>
               </div>
 
               {/* Total Paid Skeleton */}
               <div className="flex flex-col items-center gap-5 self-stretch">
-                <div className="h-6 w-32 animate-pulse rounded bg-gray-200" />
-                <div className="h-10 w-full animate-pulse rounded bg-gray-200" />
-                <div className="h-10 w-full animate-pulse rounded bg-gray-200" />
+                <div className="h-5 w-28 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-32" />
+                <div className="h-9 w-full animate-pulse rounded bg-gray-200 sm:h-10" />
+                <div className="h-9 w-full animate-pulse rounded bg-gray-200 sm:h-10" />
               </div>
 
               {/* Action Buttons Skeleton */}
-              <div className="flex items-start gap-3">
-                <div className="h-10 flex-1 animate-pulse rounded-full bg-gray-200" />
-                <div className="h-10 flex-1 animate-pulse rounded-full bg-gray-200" />
+              <div className="flex w-full flex-col items-start gap-3 sm:flex-row">
+                <div className="h-10 w-full flex-1 animate-pulse rounded-full bg-gray-200 sm:w-auto" />
+                <div className="h-10 w-full flex-1 animate-pulse rounded-full bg-gray-200 sm:w-auto" />
               </div>
             </div>
 
             {/* Last Payment Card Skeleton */}
-            <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white/100 bg-white/50 p-5 px-0">
-              <div className="flex items-start justify-between self-stretch px-6">
-                <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
-                <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+            <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white/100 bg-white/50 p-4 px-0 sm:p-5">
+              <div className="flex flex-col items-start gap-2 self-stretch px-4 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+                <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
+                <div className="h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
               </div>
-              <div className="flex items-center justify-between self-stretch px-6 py-0">
-                <div className="h-6 w-32 animate-pulse rounded bg-gray-200" />
-                <div className="h-5 w-24 animate-pulse rounded bg-gray-200" />
+              <div className="flex flex-col items-start gap-2 self-stretch px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
+                <div className="h-5 w-28 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-32" />
+                <div className="h-4 w-20 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-24" />
               </div>
             </div>
 
             {/* Total Debt Card Skeleton */}
-            <div className="relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border border-white bg-white/50 px-0 pt-5 pb-6">
-              <div className="flex items-start justify-between self-stretch px-6">
-                <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
-                <div className="h-4 w-32 animate-pulse rounded bg-gray-200" />
+            <div className="relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+              <div className="flex flex-col items-start gap-2 self-stretch px-4 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+                <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
+                <div className="h-3 w-28 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-32" />
               </div>
-              <div className="flex items-center justify-between self-stretch px-6 py-0">
-                <div className="h-6 w-32 animate-pulse rounded bg-gray-200" />
-                <div className="h-5 w-40 animate-pulse rounded bg-gray-200" />
+              <div className="flex flex-col items-start gap-2 self-stretch px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
+                <div className="h-5 w-28 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-32" />
+                <div className="h-4 w-36 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-40" />
               </div>
             </div>
           </div>
 
           {/* Right Panel Skeleton - Payment History Table */}
-          <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-6">
+          <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
             <div className="flex flex-col items-start gap-3 self-stretch">
-              <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
+              <div className="h-4 w-40 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-48" />
 
               {/* Table Skeleton */}
-              <div className="w-full overflow-hidden rounded-xl border border-[#EBECE8] bg-[#EBECE8] shadow-sm">
+              <div className="w-full overflow-x-auto overflow-y-hidden rounded-xl border border-[#EBECE8] bg-[#EBECE8] shadow-sm">
                 <table className="min-w-full border-collapse">
                   <thead>
                     <tr className="bg-white">
-                      <th className="h-[49px] border-r border-[#EBECE8] px-6 text-left">
-                        <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
+                        <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
                       </th>
-                      <th className="h-[49px] border-r border-[#EBECE8] px-6 text-right">
-                        <div className="ml-auto h-4 w-20 animate-pulse rounded bg-gray-200" />
+                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-right sm:px-6">
+                        <div className="ml-auto h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
                       </th>
-                      <th className="h-[49px] border-r border-[#EBECE8] px-6 text-left">
-                        <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
+                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
+                        <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
                       </th>
-                      <th className="h-[49px] border-r border-[#EBECE8] px-6 text-left">
-                        <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
+                        <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
                       </th>
-                      <th className="h-[49px] border-r border-[#EBECE8] px-6 text-center">
-                        <div className="mx-auto h-4 w-20 animate-pulse rounded bg-gray-200" />
+                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-center sm:px-6">
+                        <div className="mx-auto h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
                       </th>
-                      <th className="h-[49px] px-6 text-center">
-                        <div className="mx-auto h-4 w-20 animate-pulse rounded bg-gray-200" />
+                      <th className="h-[49px] px-3 text-center sm:px-6">
+                        <div className="mx-auto h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
                       </th>
                     </tr>
                   </thead>
@@ -1049,50 +1049,61 @@ export function DebtSummaryPage() {
                         key={rowIndex}
                         className={rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'}
                       >
-                        <td className="h-[49px] border-r border-[#EBECE8] px-6">
-                          <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
+                        <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
+                          <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
                         </td>
-                        <td className="h-[49px] border-r border-[#EBECE8] px-6 text-right">
-                          <div className="ml-auto h-4 w-24 animate-pulse rounded bg-gray-200" />
+                        <td className="h-[49px] border-r border-[#EBECE8] px-3 text-right sm:px-6">
+                          <div className="ml-auto h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
                         </td>
-                        <td className="h-[49px] border-r border-[#EBECE8] px-6">
-                          <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+                        <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
+                          <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
                         </td>
-                        <td className="h-[49px] border-r border-[#EBECE8] px-6">
+                        <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
                           <div className="flex items-center gap-2">
                             <div className="h-3 w-3 animate-pulse rounded-full bg-gray-200" />
-                            <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
+                            <div className="hidden h-4 w-16 animate-pulse rounded bg-gray-200 sm:block sm:w-20" />
                           </div>
                         </td>
-                        <td className="h-[49px] border-r border-[#EBECE8] px-6 text-center">
-                          <div className="mx-auto h-6 w-12 animate-pulse rounded bg-gray-200" />
+                        <td className="h-[49px] border-r border-[#EBECE8] px-3 text-center sm:px-6">
+                          <div className="mx-auto h-5 w-10 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-12" />
                         </td>
-                        <td className="h-[49px] px-6 text-center">
-                          <div className="mx-auto h-6 w-24 animate-pulse rounded bg-gray-200" />
+                        <td className="h-[49px] px-3 text-center sm:px-6">
+                          <div className="mx-auto h-5 w-20 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-24" />
                         </td>
                       </tr>
                     ))}
                   </tbody>
+                  <tfoot>
+                    {/* View All Link Skeleton */}
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="border-x border-[#EBECE8] bg-[linear-gradient(0deg,#f2f3f0,#f2f3f0),#ffffff] p-0"
+                      >
+                        <div className="flex min-h-[49px] items-center justify-center gap-1 p-2 px-4">
+                          <div className="h-4 w-28 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-32" />
+                        </div>
+                      </td>
+                    </tr>
+                    {/* Summary Row Skeleton */}
+                    <tr className="bg-white">
+                      <td
+                        colSpan={3}
+                        className="flex flex-col items-start gap-1 border-r border-[#EBECE8] px-4 py-3 sm:flex-row sm:items-center sm:px-6 sm:py-4"
+                      >
+                        <div className="h-3 w-28 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-32" />
+                        <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
+                      </td>
+                      <td
+                        colSpan={3}
+                        className="flex flex-col items-start gap-1 px-4 py-3 sm:flex-row sm:items-center sm:px-6 sm:py-4"
+                      >
+                        <div className="h-3 w-36 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-40" />
+                        <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
+                      </td>
+                    </tr>
+                  </tfoot>
                 </table>
-
-                {/* View All Link Skeleton */}
-                <div className="flex items-center justify-center gap-[1px] self-stretch rounded-none border-x border-[#EBECE8]">
-                  <div className="flex min-h-[49px] flex-1 items-center justify-center gap-1 bg-[linear-gradient(0deg,#f2f3f0,#f2f3f0),#ffffff] p-2 px-4">
-                    <div className="h-5 w-32 animate-pulse rounded bg-gray-200" />
-                  </div>
-                </div>
-
-                {/* Summary Row Skeleton */}
-                <div className="flex w-full items-center justify-between border-[#EBECE8] bg-white">
-                  <div className="flex flex-1 items-center border-r border-[#EBECE8] px-6 py-4">
-                    <div className="h-4 w-32 animate-pulse rounded bg-gray-200" />
-                    <div className="ml-4 h-4 w-24 animate-pulse rounded bg-gray-200" />
-                  </div>
-                  <div className="flex flex-1 items-center px-6 py-4">
-                    <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
-                    <div className="ml-4 h-4 w-24 animate-pulse rounded bg-gray-200" />
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -1179,38 +1190,49 @@ export function DebtSummaryPage() {
   return (
     <div className="flex flex-1 flex-col items-start gap-5 self-stretch">
       {/* Header */}
-      <div className="flex items-center justify-between self-stretch">
-        <div className="flex items-center">
+      <div className="flex flex-row items-center justify-between gap-3 self-stretch">
+        <div className="flex items-center gap-2">
           <LinkButton
             variant="regular-secondary"
             onClick={() => navigate(`/dashboard/clients/${id}`)}
           >
             <Icons.ArrowLeft02 size={24} />
           </LinkButton>
-          <span className="text-dark-500 flex-1 text-2xl leading-tight font-light tracking-[-0.48px]">
+          <span className="text-dark-500 flex-1 text-xl leading-tight font-light tracking-[-0.48px] sm:text-2xl">
             {t('pages.clients.debtSummary.title')}
           </span>
         </div>
+        {/* Mobile: Icon-only button */}
+        <Button
+          variant="primary"
+          size="icon-md"
+          onClick={() => setIsRecordPaymentModalOpen(true)}
+          className="rounded-full sm:hidden"
+        >
+          <Icons.Add size={20} className="text-dark-500" />
+        </Button>
+        {/* Desktop: Full button with text */}
         <DoubleButton
           icon={<Icons.Add size={24} />}
           iconPosition="left"
           onClick={() => setIsRecordPaymentModalOpen(true)}
+          className="hidden sm:flex"
         >
           {t('pages.clients.debtSummary.recordPayment')}
         </DoubleButton>
       </div>
 
       {/* Main Content */}
-      <div className="flex items-start gap-5 self-stretch">
+      <div className="flex flex-col items-start gap-5 self-stretch xl:flex-row">
         {/* Left Panel - Customer Info and Summary */}
-        <div className="flex w-[35%] flex-col items-start gap-5">
-          <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-6">
+        <div className="flex w-full flex-col items-start gap-5 xl:w-[35%]">
+          <div className="flex flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-4 sm:p-6">
             <div className="flex flex-col items-center justify-center gap-4 self-stretch">
-              <div className="flex items-center justify-center gap-4">
+              <div className="flex items-center justify-center gap-2 sm:gap-4">
                 <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                  <Icons.User size={24} className="text-dark-500" />
+                  <Icons.User size={20} className="text-dark-500 sm:size-[24px]" />
                 </div>
-                <span className="text-dark-500 text-xl leading-[132%] font-medium tracking-[-0.4px]">
+                <span className="text-dark-500 text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
                   {debtSummary.customerName}
                 </span>
               </div>
@@ -1261,8 +1283,11 @@ export function DebtSummaryPage() {
 
             {/* Progress Circle */}
             <div className="mb-6 flex justify-center">
-              <div className="relative flex h-[150px] w-[150px] items-center justify-center">
-                <svg className="h-[150px] w-[150px] -rotate-90 transform" viewBox="0 0 100 100">
+              <div className="relative flex h-[120px] w-[120px] items-center justify-center sm:h-[150px] sm:w-[150px]">
+                <svg
+                  className="h-[120px] w-[120px] -rotate-90 transform sm:h-[150px] sm:w-[150px]"
+                  viewBox="0 0 100 100"
+                >
                   {/* Background circle */}
                   <circle
                     cx="50"
@@ -1287,33 +1312,33 @@ export function DebtSummaryPage() {
                     className="transition-all duration-500 ease-in-out"
                   />
                 </svg>
-                <span className="text-secondary-800 absolute text-[36px] leading-[126%] font-medium tracking-[-0.72px]">
+                <span className="text-secondary-800 absolute text-[28px] leading-[126%] font-medium tracking-[-0.72px] sm:text-[36px]">
                   {Math.round(debtSummary.progressPercentage)}%
                 </span>
               </div>
             </div>
             <div className="flex flex-col items-center gap-5 self-stretch">
-              <span className="text-dark-500 text-center text-xl leading-[132%] font-light tracking-[-0.4px]">
+              <span className="text-dark-500 text-center text-base leading-[132%] font-light tracking-[-0.4px] sm:text-xl">
                 {t('pages.clients.debtSummary.totalPaid')}{' '}
                 <span className="font-medium">{formatCurrency(debtSummary.totalPaid)}</span>
               </span>
               <LinkButton
                 variant="regular-secondary"
-                leftIcon={<Icons.MoneyReceive01 size={24} />}
+                leftIcon={<Icons.MoneyReceive01 size={20} className="sm:size-[24px]" />}
                 onClick={() => navigate(`/dashboard/clients/${id}/payment-history`)}
-                className="flex-1"
+                className="w-auto flex-1"
               >
                 {t('pages.clients.debtSummary.viewPaymentHistory')}
               </LinkButton>
 
               <LinkButton
                 variant="regular-secondary"
-                leftIcon={<Icons.PieChart08 size={24} />}
+                leftIcon={<Icons.PieChart08 size={20} className="sm:size-[24px]" />}
                 onClick={() => {
                   // TODO: Handle generate payment plan
                   console.log('Generate payment plan')
                 }}
-                className="flex-1"
+                className="w-auto flex-1"
                 disabled
               >
                 {t('pages.clients.debtSummary.generatePaymentPlan')}
@@ -1321,11 +1346,11 @@ export function DebtSummaryPage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-start gap-3">
+            <div className="flex w-full flex-col items-start gap-3 sm:flex-row">
               <Button
                 variant="primary"
-                leftIcon={<Icons.Headset size={20} />}
-                className="flex-1 rounded-full"
+                leftIcon={<Icons.Headset size={18} />}
+                className="w-full rounded-full sm:w-auto sm:flex-1"
                 disabled={!user?.asterisk_extension}
                 onClick={() => {
                   const phoneNumber = client.phones?.[0]?.number
@@ -1351,8 +1376,8 @@ export function DebtSummaryPage() {
               </Button>
               <Button
                 variant="secondary"
-                leftIcon={<Icons.PencilEdit02 size={20} />}
-                className="flex-1 rounded-full"
+                leftIcon={<Icons.PencilEdit02 size={18} />}
+                className="w-full rounded-full sm:w-auto sm:flex-1"
                 onClick={() => {
                   // Navigate to client detail page for editing
                   if (id) {
@@ -1366,46 +1391,46 @@ export function DebtSummaryPage() {
           </div>
 
           {/* Last Payment Card */}
-          <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white/100 bg-white/50 p-5 px-0">
-            <div className="flex items-start justify-between self-stretch px-6">
+          <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white/100 bg-white/50 p-4">
+            <div className="flex flex-row items-start justify-between gap-2 self-stretch">
               <div className="flex items-center gap-3">
-                <Icons.Money01 size={18} className="text-gray-700" />
-                <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                <Icons.Money01 size={16} className="text-gray-700 sm:size-[18px]" />
+                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                   {t('pages.clients.debtSummary.lastPayment')}
                 </span>
               </div>
-              <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+              <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                 {t('pages.clients.debtSummary.date')}
               </span>
             </div>
-            <div className="flex items-center justify-between self-stretch px-6 py-0">
-              <span className="text-dark-500 text-center text-[18px] leading-[150%] font-medium tracking-[-0.36px]">
+            <div className="flex flex-row items-center justify-between gap-2 self-stretch">
+              <span className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
                 {formatCurrency(debtSummary.lastPayment.amount)}
               </span>
-              <span className="text-dark-500 text-center text-base leading-[155%] font-medium tracking-[-0.32px]">
+              <span className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                 {debtSummary.lastPayment.date}
               </span>
             </div>
           </div>
 
           {/* Total Debt Card */}
-          <div className="relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border border-white bg-white/50 px-0 pt-5 pb-6">
-            <div className="flex items-start justify-between self-stretch px-6">
+          <div className="relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+            <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 sm:px-6">
               <div className="flex items-center gap-2">
-                <Icons.Wallet01 size={18} className="text-gray-700" />
-                <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                <Icons.Wallet01 size={16} className="text-gray-700 sm:size-[18px]" />
+                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                   {t('pages.clients.debtSummary.totalDebt')}
                 </span>
               </div>
-              <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+              <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                 {t('pages.clients.debtSummary.daysPastDue')}
               </span>
             </div>
-            <div className="flex items-center justify-between self-stretch px-6 py-0">
-              <span className="text-dark-500 text-center text-[18px] leading-[150%] font-medium tracking-[-0.36px]">
+            <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 sm:px-6 sm:py-0">
+              <span className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
                 {formatCurrency(debtSummary.totalDebt)}
               </span>
-              <span className="text-dark-500 text-center text-base leading-[155%] font-medium tracking-[-0.32px]">
+              <span className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                 {debtSummary.daysPastDue}
               </span>
             </div>
@@ -1414,9 +1439,9 @@ export function DebtSummaryPage() {
         </div>
 
         {/* Right Panel - Payment History */}
-        <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-6">
+        <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
           <div className="flex flex-col items-start gap-3 self-stretch">
-            <span className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
+            <span className="text-dark-500 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
               {t('pages.clients.debtSummary.paymentHistory')}{' '}
               <span className="font-light">
                 (
@@ -1429,143 +1454,150 @@ export function DebtSummaryPage() {
 
             {/* Custom Table */}
             <div className="w-full overflow-hidden rounded-xl border border-[#EBECE8] bg-[#EBECE8] shadow-sm">
-              <table className="min-w-full border-collapse">
-                <thead>
-                  <tr className="bg-white">
-                    <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-left text-xs font-medium">
-                      {t('pages.clients.debtSummary.tableHeaders.date')}
-                    </th>
-                    <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-right text-xs font-medium">
-                      {t('pages.clients.debtSummary.tableHeaders.amount')}
-                    </th>
-                    <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-left text-xs font-medium">
-                      {t('pages.clients.debtSummary.tableHeaders.method')}
-                    </th>
-                    <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-left text-xs font-medium">
-                      {t('pages.clients.debtSummary.tableHeaders.status')}
-                    </th>
-                    <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-medium">
-                      {t('pages.clients.debtSummary.tableHeaders.receipt')}
-                    </th>
-                    <th className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium">
-                      {t('pages.clients.debtSummary.tableHeaders.actions')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(() => {
-                    const displayedPayments = showAllPayments
-                      ? debtSummary.payments
-                      : debtSummary.payments.slice(0, 10)
+              <div className="data-table-scroll mx-0 w-full overflow-x-auto px-0">
+                <table className="min-w-full border-collapse">
+                  <thead>
+                    <tr className="bg-white">
+                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                        {t('pages.clients.debtSummary.tableHeaders.date')}
+                      </th>
+                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
+                        {t('pages.clients.debtSummary.tableHeaders.amount')}
+                      </th>
+                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                        {t('pages.clients.debtSummary.tableHeaders.method')}
+                      </th>
+                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                        {t('pages.clients.debtSummary.tableHeaders.status')}
+                      </th>
+                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-center text-xs font-medium sm:px-6">
+                        {t('pages.clients.debtSummary.tableHeaders.receipt')}
+                      </th>
+                      <th className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
+                        {t('pages.clients.debtSummary.tableHeaders.actions')}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      const displayedPayments = showAllPayments
+                        ? debtSummary.payments
+                        : debtSummary.payments.slice(0, 10)
 
-                    return displayedPayments.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={6}
-                          className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium"
-                        >
-                          {t('pages.clients.debtSummary.noPaymentHistory')}
-                        </td>
-                      </tr>
-                    ) : (
-                      displayedPayments.map((payment, index) => (
-                        <tr
-                          key={payment.id}
-                          className={`transition-colors ${
-                            index % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
-                          }`}
-                        >
-                          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-xs font-medium">
-                            {payment.date}
+                      return displayedPayments.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium"
+                          >
+                            {t('pages.clients.debtSummary.noPaymentHistory')}
                           </td>
-                          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-right text-xs font-medium">
-                            {formatCurrency(payment.amount)}
-                          </td>
-                          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-xs font-medium">
-                            {(() => {
-                              const normalizedMethod = normalizePaymentMethod(payment.method)
-                              const methodTranslations: Record<
-                                'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other',
-                                string
-                              > = {
-                                'Bank Transfer': t(
-                                  'pages.clients.modals.recordPayment.bankTransfer'
-                                ),
-                                'Online Gateway': t(
-                                  'pages.clients.modals.recordPayment.onlineGateway'
-                                ),
-                                Cash: t('pages.clients.modals.recordPayment.cash'),
-                                Card: t('pages.clients.modals.recordPayment.card'),
-                                Other: t('pages.clients.modals.recordPayment.other'),
-                              }
-                              return methodTranslations[normalizedMethod] || normalizedMethod
-                            })()}
-                          </td>
-                          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-xs font-medium">
-                            <div className="flex items-center gap-2">
-                              {getStatusDot(payment.status)}
-                              <span>
-                                {t(
-                                  `pages.clients.debtSummary.paymentStatus.${payment.status.toLowerCase()}`
-                                )}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-medium">
-                            {payment.status === 'Verified' && (
-                              <LinkButton
-                                variant="regular-secondary"
-                                size="xs"
-                                leftIcon={<Icons.FileDownload size={14} />}
-                                onClick={() => {
-                                  // TODO: Handle download PDF
-                                  console.log('Download PDF', payment.id)
-                                }}
-                              >
-                                {t('pages.clients.paymentHistory.actions.pdf')}
-                              </LinkButton>
-                            )}
-                          </td>
-                          <td className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium">
-                            <div className="flex items-center justify-center gap-2">
-                              {payment.status === 'Pending' &&
-                                isPaymentLessThan7DaysOld(payment.date) && (
-                                  <LinkButton
-                                    variant="regular-secondary"
-                                    size="xs"
-                                    leftIcon={<Icons.Success size={14} />}
-                                    onClick={() => {
-                                      setSelectedPaymentId(payment.id)
-                                      setIsVerificationModalOpen(true)
-                                    }}
-                                  >
-                                    {t('pages.clients.debtSummary.actions.verify')}
-                                  </LinkButton>
-                                )}
-                              {(payment.status === 'Verified' ||
-                                payment.status === 'Cancelled' ||
-                                (payment.status === 'Pending' &&
-                                  !isPaymentLessThan7DaysOld(payment.date))) && (
+                        </tr>
+                      ) : (
+                        displayedPayments.map((payment, index) => (
+                          <tr
+                            key={payment.id}
+                            className={`transition-colors ${
+                              index % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
+                            }`}
+                          >
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              {payment.date}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
+                              {formatCurrency(payment.amount)}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              {(() => {
+                                const normalizedMethod = normalizePaymentMethod(payment.method)
+                                const methodTranslations: Record<
+                                  'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other',
+                                  string
+                                > = {
+                                  'Bank Transfer': t(
+                                    'pages.clients.modals.recordPayment.bankTransfer'
+                                  ),
+                                  'Online Gateway': t(
+                                    'pages.clients.modals.recordPayment.onlineGateway'
+                                  ),
+                                  Cash: t('pages.clients.modals.recordPayment.cash'),
+                                  Card: t('pages.clients.modals.recordPayment.card'),
+                                  Other: t('pages.clients.modals.recordPayment.other'),
+                                }
+                                return methodTranslations[normalizedMethod] || normalizedMethod
+                              })()}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              <div className="flex items-center gap-2">
+                                {getStatusDot(payment.status)}
+                                <span>
+                                  {t(
+                                    `pages.clients.debtSummary.paymentStatus.${payment.status.toLowerCase()}`
+                                  )}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-center text-xs font-medium sm:px-6">
+                              {payment.status === 'Verified' && (
                                 <LinkButton
                                   variant="regular-secondary"
                                   size="xs"
-                                  leftIcon={<Icons.View size={14} />}
-                                  onClick={() => handleViewDetails(payment)}
+                                  leftIcon={<Icons.FileDownload size={14} />}
+                                  onClick={() => {
+                                    // TODO: Handle download PDF
+                                    console.log('Download PDF', payment.id)
+                                  }}
+                                  className="text-xs"
                                 >
-                                  {t('pages.clients.debtSummary.actions.viewDetails')}
+                                  <span>{t('pages.clients.paymentHistory.actions.pdf')}</span>
                                 </LinkButton>
                               )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )
-                  })()}
-                </tbody>
-              </table>
+                            </td>
+                            <td className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
+                              <div className="flex items-center justify-center gap-1 sm:gap-2">
+                                {payment.status === 'Pending' &&
+                                  isPaymentLessThan7DaysOld(payment.date) && (
+                                    <LinkButton
+                                      variant="regular-secondary"
+                                      size="xs"
+                                      leftIcon={<Icons.Success size={14} />}
+                                      onClick={() => {
+                                        setSelectedPaymentId(payment.id)
+                                        setIsVerificationModalOpen(true)
+                                      }}
+                                      className="text-xs"
+                                    >
+                                      <span>{t('pages.clients.debtSummary.actions.verify')}</span>
+                                    </LinkButton>
+                                  )}
+                                {(payment.status === 'Verified' ||
+                                  payment.status === 'Cancelled' ||
+                                  (payment.status === 'Pending' &&
+                                    !isPaymentLessThan7DaysOld(payment.date))) && (
+                                  <LinkButton
+                                    variant="regular-secondary"
+                                    size="xs"
+                                    leftIcon={<Icons.View size={14} />}
+                                    onClick={() => handleViewDetails(payment)}
+                                    className="text-xs"
+                                  >
+                                    <span>
+                                      {t('pages.clients.debtSummary.actions.viewDetails')}
+                                    </span>
+                                  </LinkButton>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )
+                    })()}
+                  </tbody>
+                </table>
+              </div>
 
               {/* View All Link - Part of table structure */}
-              <div className="flex items-center justify-center gap-[1px] self-stretch rounded-none border-x border-[#EBECE8]">
+              <div className="flex w-full items-center justify-center gap-[1px] self-stretch rounded-none border-x border-[#EBECE8]">
                 <div className="flex min-h-[49px] flex-1 items-center justify-center gap-1 bg-[linear-gradient(0deg,#f2f3f0,#f2f3f0),#ffffff] p-2 px-4">
                   <LinkButton
                     variant="regular-secondary"
@@ -1582,20 +1614,20 @@ export function DebtSummaryPage() {
               </div>
 
               {/* Summary Row - Part of table structure */}
-              <div className="flex w-full items-center justify-between border-[#EBECE8] bg-white">
-                <div className="flex flex-1 items-center border-r border-[#EBECE8] px-6 py-4">
-                  <span className="text-dark-500 line-clamp-1 flex-1 overflow-hidden text-left text-sm leading-[150%] font-medium tracking-[-0.28px]">
+              <div className="flex w-full flex-col items-stretch border-[#EBECE8] bg-white sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex w-full flex-1 flex-col items-start gap-1 border-r-0 border-b border-[#EBECE8] px-4 py-3 sm:flex-row sm:items-center sm:border-r sm:border-b-0 sm:px-6 sm:py-4">
+                  <span className="text-dark-500 line-clamp-1 flex-1 overflow-hidden text-left text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.debtSummary.summary.totalVerified')}
                   </span>
-                  <span className="text-dark-500 line-clamp-1 flex-1 overflow-hidden text-left text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                  <span className="text-dark-500 line-clamp-1 flex-1 overflow-hidden text-left text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                     {formatCurrency(debtSummary.totalVerified)}
                   </span>
                 </div>
-                <div className="flex flex-1 items-center px-6 py-4">
-                  <span className="text-dark-500 line-clamp-1 flex-1 overflow-hidden text-left text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                <div className="flex flex-1 flex-col items-start gap-1 px-4 py-3 sm:flex-row sm:items-center sm:px-6 sm:py-4">
+                  <span className="text-dark-500 line-clamp-1 flex-1 overflow-hidden text-left text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.debtSummary.summary.pendingVerification')}
                   </span>
-                  <span className="text-dark-500 line-clamp-1 flex-1 overflow-hidden text-left text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                  <span className="text-dark-500 line-clamp-1 flex-1 overflow-hidden text-left text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                     {formatCurrency(debtSummary.pendingVerification)}
                   </span>
                 </div>

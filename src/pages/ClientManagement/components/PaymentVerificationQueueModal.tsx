@@ -126,8 +126,8 @@ export function PaymentVerificationQueueModal({
       />
       <ModalContent className="max-h-[calc(90vh-200px)]">
         {/* Pending Verification Section */}
-        <div className="mb-4 flex items-start justify-between self-stretch">
-          <span className="text-dark-500 text-xl leading-[132%] font-light tracking-[-0.4px]">
+        <div className="mb-4 flex flex-col items-start gap-3 self-stretch sm:flex-row sm:items-start sm:justify-between">
+          <span className="text-dark-500 text-lg leading-[132%] font-light tracking-[-0.4px] sm:text-xl">
             {t('pages.clients.modals.paymentVerificationQueue.pendingVerification')}{' '}
             <span className="text-gray-700">({pendingPayments.length})</span>
           </span>
@@ -147,8 +147,8 @@ export function PaymentVerificationQueueModal({
             </LinkButton>
           </div>
         </div>
-        <div className="mb-4 flex items-start gap-4 self-stretch">
-          <div className="flex h-[63px] flex-1 flex-col items-start justify-center gap-1">
+        <div className="mb-4 flex flex-col items-start gap-3 self-stretch sm:flex-row sm:gap-4">
+          <div className="flex h-[63px] w-full flex-1 flex-col items-start justify-center gap-1 sm:w-auto">
             <span className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
               {t('pages.clients.modals.paymentVerificationQueue.sortBy')}
             </span>
@@ -172,12 +172,12 @@ export function PaymentVerificationQueueModal({
               </SelectContent>
             </Select>
           </div>
-          <div className="flex h-[63px] flex-1 flex-col items-start justify-center gap-1">
+          <div className="flex h-[63px] w-full flex-1 flex-col items-start justify-center gap-1 sm:w-auto">
             <span className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
               {t('pages.clients.modals.paymentVerificationQueue.filter')}
             </span>
             <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger className="h-[45px] flex-1 rounded-md">
+              <SelectTrigger className="h-[45px] w-full flex-1 rounded-md sm:w-auto">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -202,15 +202,15 @@ export function PaymentVerificationQueueModal({
             return (
               <div key={payment.id} className="mb-4 flex flex-col items-start gap-2 self-stretch">
                 {/* Payment Header */}
-                <div className="flex items-start justify-between self-stretch">
+                <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.paymentVerificationQueue.payment', {
                         paymentId: payment.paymentId,
                       })}
                     </span>
                   </div>
-                  <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
+                  <span className="text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-700 sm:text-sm">
                     {t('pages.clients.modals.paymentVerificationQueue.submitted')}{' '}
                     {formatTimeAgo(payment.submittedAt)}
                   </span>
@@ -218,81 +218,81 @@ export function PaymentVerificationQueueModal({
 
                 {/* Payment Details - Always visible */}
                 {isExpanded && (
-                  <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white/100 bg-white/50 p-[20px_24px]">
+                  <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white/100 bg-white/50 p-4 sm:p-[20px_24px]">
                     <div className="flex flex-col items-start gap-2 self-stretch">
-                      <div className="flex items-start gap-6 self-stretch">
-                        <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+                      <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
+                        <span className="w-full text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-600 sm:w-[120px] sm:text-sm">
                           {t('pages.clients.modals.paymentVerificationQueue.client')}
                         </span>
-                        <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                           {payment.client}
                         </span>
                       </div>
-                      <div className="flex items-start gap-6 self-stretch">
-                        <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+                      <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
+                        <span className="w-full text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-600 sm:w-[120px] sm:text-sm">
                           {t('pages.clients.modals.paymentVerificationQueue.project')}
                         </span>
-                        <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                           {payment.project}
                         </span>
                       </div>
-                      <div className="flex items-start gap-6 self-stretch">
-                        <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+                      <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
+                        <span className="w-full text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-600 sm:w-[120px] sm:text-sm">
                           {t('pages.clients.modals.paymentVerificationQueue.amount')}
                         </span>
-                        <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                           {formatCurrency(payment.amount)}
                         </span>
                       </div>
-                      <div className="flex items-start gap-6 self-stretch">
-                        <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+                      <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
+                        <span className="w-full text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-600 sm:w-[120px] sm:text-sm">
                           {t('pages.clients.modals.paymentVerificationQueue.method')}
                         </span>
-                        <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                           {payment.method}
                         </span>
                       </div>
-                      <div className="flex items-start gap-6 self-stretch">
-                        <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+                      <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
+                        <span className="w-full text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-600 sm:w-[120px] sm:text-sm">
                           {t('pages.clients.modals.paymentVerificationQueue.date')}
                         </span>
-                        <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                           {payment.date}
                         </span>
                       </div>
-                      <div className="flex items-start gap-6 self-stretch">
-                        <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+                      <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
+                        <span className="w-full text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-600 sm:w-[120px] sm:text-sm">
                           {t('pages.clients.modals.paymentVerificationQueue.reference')}
                         </span>
-                        <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                           {payment.reference}
                         </span>
                       </div>
-                      <div className="flex items-start gap-6 self-stretch">
-                        <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+                      <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
+                        <span className="w-full text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-600 sm:w-[120px] sm:text-sm">
                           {t('pages.clients.modals.paymentVerificationQueue.currentDebt')}
                         </span>
-                        <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                           {formatCurrency(payment.currentDebt)}
                         </span>
                       </div>
-                      <div className="flex items-start gap-6 self-stretch">
-                        <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+                      <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
+                        <span className="w-full text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-600 sm:w-[120px] sm:text-sm">
                           {t('pages.clients.modals.paymentVerificationQueue.newDebt')}
                         </span>
-                        <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                           {formatCurrency(payment.newDebt)}
                         </span>
                       </div>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex items-start gap-5 self-stretch">
+                    <div className="flex w-full flex-col items-stretch gap-3 self-stretch sm:flex-row sm:gap-5">
                       <Button
                         variant="secondary"
                         leftIcon={<Icons.CancelCircle size={18} className="text-white" />}
                         onClick={() => handleCancelClick(payment)}
-                        className="flex-1"
+                        className="w-full rounded-md"
                       >
                         {t('pages.clients.modals.paymentVerificationQueue.cancelPayment')}
                       </Button>
@@ -300,7 +300,7 @@ export function PaymentVerificationQueueModal({
                         variant="primary"
                         leftIcon={<Icons.CheckmarkSquare03 size={18} className="text-dark-500" />}
                         onClick={() => onVerify(payment.id)}
-                        className="flex-1"
+                        className="w-full rounded-md"
                       >
                         {t('pages.clients.modals.paymentVerificationQueue.verifyAndApprove')}
                       </Button>
@@ -309,29 +309,29 @@ export function PaymentVerificationQueueModal({
                 )}
                 {/* Collapsed View - Show minimal info */}
                 {!isExpanded && (
-                  <div className="flex flex-col items-start justify-center gap-2 self-stretch rounded-xl border border-white/100 bg-white/50 p-[20px_24px]">
+                  <div className="flex flex-col items-start justify-center gap-2 self-stretch rounded-xl border border-white/100 bg-white/50 p-4 sm:p-[20px_24px]">
                     <div className="flex flex-col items-start gap-1 self-stretch">
-                      <div className="flex items-start gap-6 self-stretch">
-                        <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+                      <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
+                        <span className="w-full text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-600 sm:w-[120px] sm:text-sm">
                           {t('pages.clients.modals.paymentVerificationQueue.client')}
                         </span>
-                        <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                           {payment.client}
                         </span>
                       </div>
-                      <div className="flex items-start gap-6 self-stretch">
-                        <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+                      <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
+                        <span className="w-full text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-600 sm:w-[120px] sm:text-sm">
                           {t('pages.clients.modals.paymentVerificationQueue.amount')}
                         </span>
-                        <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                           {formatCurrency(payment.amount)}
                         </span>
                       </div>
-                      <div className="flex items-start gap-6 self-stretch">
-                        <span className="w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-600">
+                      <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
+                        <span className="w-full text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-600 sm:w-[120px] sm:text-sm">
                           {t('pages.clients.modals.paymentVerificationQueue.method')}
                         </span>
-                        <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                           {payment.method}
                         </span>
                       </div>
@@ -361,7 +361,10 @@ export function PaymentVerificationQueueModal({
             <div className="flex flex-col items-start justify-center gap-0 self-stretch rounded-xl border border-white bg-white/50 p-3 px-6">
               {processedPayments.map((payment) => (
                 <>
-                  <div key={payment.id} className="flex items-center gap-5 self-stretch">
+                  <div
+                    key={payment.id}
+                    className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-center sm:gap-5"
+                  >
                     <div className="flex items-center gap-2">
                       <span
                         className={cn(
@@ -378,7 +381,7 @@ export function PaymentVerificationQueueModal({
                       </span>
                       <span
                         className={cn(
-                          'text-sm leading-[150%] font-medium tracking-[-0.28px]',
+                          'text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm',
                           payment.status === 'Verified' ? 'text-success-500' : 'text-error-500'
                         )}
                       >
@@ -387,19 +390,19 @@ export function PaymentVerificationQueueModal({
                           : t('pages.clients.debtSummary.paymentStatus.cancelled')}
                       </span>
                     </div>
-                    <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                       {payment.paymentId}
                     </span>
                     <div className="flex flex-1 items-start justify-center gap-2.5">
-                      <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                      <span className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                         {formatCurrency(payment.amount)}
                       </span>
                     </div>
                     <div className="flex flex-1 flex-col items-start gap-1">
-                      <span className="text-dark-500 flex-1 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                      <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                         {payment.action}
                       </span>
-                      <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                      <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                         {formatTimeAgo(payment.time)}
                       </span>
                     </div>
