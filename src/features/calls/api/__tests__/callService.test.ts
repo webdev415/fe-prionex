@@ -30,7 +30,8 @@ describe('CallService', () => {
         agent_extension: '1003',
         customer_number: '+380971234567',
         caller_id_name: 'CRM Call',
-        metadata: { client_id: 123 },
+        client_id: 123,
+        metadata: { client_name: 'Test Client' },
       }
 
       const mockResponse = {
