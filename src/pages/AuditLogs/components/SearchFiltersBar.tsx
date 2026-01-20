@@ -6,7 +6,7 @@
  * and additional filters (date range, user, entity, action, role, quick ranges).
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSyncedState } from '@/hooks'
 import { Icons } from '@/lib/icons'
@@ -51,40 +51,90 @@ export function SearchFiltersBar({
   // Use synced state for search input - automatically syncs with external changes (URL restoration)
   const [searchValue, setSearchValue] = useSyncedState(filters.search, '')
 
-  // Detect period from restored date filters
+  // Helper function to detect period from date range values
+  const detectPeriodFromDates = useCallback(
+    (dateFrom: string | undefined, dateTo: string | undefined): PeriodOption => {
+      if (!dateFrom || !dateTo) return 'any'
+
+      const start = new Date(dateFrom)
+      const end = new Date(dateTo)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      start.setHours(0, 0, 0, 0)
+      end.setHours(0, 0, 0, 0)
+
+      const daysDiff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+      const isEndToday = end.toDateString() === today.toDateString()
+      const isStartToday = start.toDateString() === today.toDateString()
+
+      // Today: same day and it's today
+      if (daysDiff === 0 && isStartToday && isEndToday) return 'today'
+
+      // Yesterday: same day and it's yesterday
+      if (daysDiff === 0) {
+        const yesterday = new Date(today)
+        yesterday.setDate(yesterday.getDate() - 1)
+        if (
+          start.toDateString() === yesterday.toDateString() &&
+          end.toDateString() === yesterday.toDateString()
+        ) {
+          return 'yesterday'
+        }
+      }
+
+      // Last 7 days: 7 days difference and ends today
+      if (daysDiff === 7 && isEndToday) return 'last_7'
+
+      // Last 30 days: 30 days difference and ends today
+      if (daysDiff === 30 && isEndToday) return 'last_30'
+
+      return 'any'
+    },
+    []
+  )
+
+  // Detect period from restored date filters (for initial state)
   const initialPeriod = useMemo((): PeriodOption => {
-    if (!filters.date_from || !filters.date_to) return 'any'
+    return detectPeriodFromDates(filters.date_from, filters.date_to)
+  }, [filters.date_from, filters.date_to, detectPeriodFromDates])
 
-    const start = new Date(filters.date_from)
-    const end = new Date(filters.date_to)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const daysDiff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-    const isEndToday = end.toDateString() === today.toDateString()
-
-    if (daysDiff === 0 && isEndToday) return 'today'
-    if (daysDiff === 0) {
-      const yesterday = new Date(today)
-      yesterday.setDate(yesterday.getDate() - 1)
-      if (start.toDateString() === yesterday.toDateString()) return 'yesterday'
-    }
-    if (daysDiff === 7 && isEndToday) return 'last_7'
-    if (daysDiff === 30 && isEndToday) return 'last_30'
-
-    return 'any'
-  }, [filters.date_from, filters.date_to])
-
-  const [period, setPeriod] = useState<PeriodOption>(initialPeriod)
   const [localFilters, setLocalFilters] = useState<AuditLogFilters>(filters)
   const [isFiltersDropdownOpen, setIsFiltersDropdownOpen] = useState(false)
 
-  // Sync local filters and period when props change externally (URL restoration)
+  // Track if period was manually set by user clicking a quick range button
+  const periodManuallySetRef = useRef(false)
+
+  // Compute period from localFilters - this will update automatically when dates change
+  const computedPeriod = useMemo((): PeriodOption => {
+    return detectPeriodFromDates(localFilters.date_from, localFilters.date_to)
+  }, [localFilters.date_from, localFilters.date_to, detectPeriodFromDates])
+
+  // Use state for period to allow manual selection, but sync with computed period when dates change manually
+  const [period, setPeriod] = useState<PeriodOption>(initialPeriod)
+
+  // Sync period state with computed period when dates change manually (not from quick range button)
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    // Only update period if it wasn't manually set by user clicking a button
+    // When user clicks a quick range button, periodManuallySetRef is set to true
+    // When dates change manually, periodManuallySetRef is false, so we sync
+    if (!periodManuallySetRef.current) {
+      setPeriod(computedPeriod)
+    } else {
+      // Reset the flag after syncing, so next manual date change will update period
+      periodManuallySetRef.current = false
+    }
+  }, [computedPeriod])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Sync local filters when props change externally (URL restoration)
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setLocalFilters(filters)
-    setPeriod(initialPeriod)
-  }, [filters, initialPeriod])
+    const newPeriod = detectPeriodFromDates(filters.date_from, filters.date_to)
+    setPeriod(newPeriod)
+    periodManuallySetRef.current = false
+  }, [filters, detectPeriodFromDates])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Close filters dropdown when screen size crosses breakpoint
@@ -105,41 +155,50 @@ export function SearchFiltersBar({
     return () => window.removeEventListener('resize', handleResize)
   }, [isFiltersDropdownOpen])
 
+  // Helper function to format date in local timezone (YYYY-MM-DD)
+  const formatDateLocal = useCallback((date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }, [])
+
   const handlePeriodChange = useCallback(
     (value: PeriodOption) => {
+      periodManuallySetRef.current = true // Mark that period was manually set
       setPeriod(value)
 
       const today = new Date()
-      const formatDate = (date: Date) => date.toISOString().slice(0, 10)
+      today.setHours(0, 0, 0, 0) // Set to local midnight to avoid timezone issues
 
       let date_from: string | undefined
       let date_to: string | undefined
 
       switch (value) {
         case 'today': {
-          date_from = formatDate(today)
-          date_to = formatDate(today)
+          date_from = formatDateLocal(today)
+          date_to = formatDateLocal(today)
           break
         }
         case 'yesterday': {
           const yesterday = new Date(today)
           yesterday.setDate(yesterday.getDate() - 1)
-          date_from = formatDate(yesterday)
-          date_to = formatDate(yesterday)
+          date_from = formatDateLocal(yesterday)
+          date_to = formatDateLocal(yesterday)
           break
         }
         case 'last_7': {
           const from = new Date(today)
           from.setDate(from.getDate() - 7)
-          date_from = formatDate(from)
-          date_to = formatDate(today)
+          date_from = formatDateLocal(from)
+          date_to = formatDateLocal(today)
           break
         }
         case 'last_30': {
           const from = new Date(today)
           from.setDate(from.getDate() - 30)
-          date_from = formatDate(from)
-          date_to = formatDate(today)
+          date_from = formatDateLocal(from)
+          date_to = formatDateLocal(today)
           break
         }
         case 'any':
@@ -155,7 +214,7 @@ export function SearchFiltersBar({
         date_to,
       })
     },
-    [localFilters]
+    [localFilters, formatDateLocal]
   )
 
   const handleUserChange = useCallback(
@@ -194,25 +253,29 @@ export function SearchFiltersBar({
   const handleDateFromChange = useCallback(
     (args: { value: Date | null }) => {
       const date = args.value
-      const dateStr = date ? date.toISOString().split('T')[0] : ''
-      setLocalFilters({
+      const dateStr = date ? formatDateLocal(date) : ''
+      const newFilters = {
         ...localFilters,
         date_from: dateStr || undefined,
-      })
+      }
+      setLocalFilters(newFilters)
+      // Period will be updated automatically by the useEffect that watches date_from/date_to
     },
-    [localFilters]
+    [localFilters, formatDateLocal]
   )
 
   const handleDateToChange = useCallback(
     (args: { value: Date | null }) => {
       const date = args.value
-      const dateStr = date ? date.toISOString().split('T')[0] : ''
-      setLocalFilters({
+      const dateStr = date ? formatDateLocal(date) : ''
+      const newFilters = {
         ...localFilters,
         date_to: dateStr || undefined,
-      })
+      }
+      setLocalFilters(newFilters)
+      // Period will be updated automatically by the useEffect that watches date_from/date_to
     },
-    [localFilters]
+    [localFilters, formatDateLocal]
   )
 
   const handleApplyFilters = useCallback(() => {
@@ -266,53 +329,56 @@ export function SearchFiltersBar({
   }, [localFilters.date_from])
 
   return (
-    <div className="mb-4 flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-6">
-      <div className="flex flex-col items-center gap-6 self-stretch">
+    <div className="mb-4 flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-3 sm:p-6">
+      <div className="flex flex-col items-center gap-4 self-stretch sm:gap-6">
         {/* Advanced Filters Section */}
-        <div className="flex flex-col items-center gap-7 self-stretch">
-          <div className="flex items-center gap-10 self-stretch">
+        <div className="flex flex-col items-center gap-4 self-stretch sm:gap-7">
+          {/* Date Range and Quick Ranges */}
+          <div className="flex flex-col gap-4 self-stretch xl:flex-row xl:items-center xl:gap-10">
             {/* Date Range */}
-            <div className="flex flex-1 flex-col items-end gap-5">
-              <div className="flex items-center gap-3 self-stretch">
-                <span className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex flex-1 flex-col gap-2 self-stretch sm:items-end sm:gap-5">
+              <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-3">
+                <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                   {t('pages.auditLogs.searchFilters.dateRange')}:
                 </span>
-                <DateSelect
-                  key={`date-from-${localFilters.date_from || 'empty'}`}
-                  value={dateFromValue}
-                  onChange={handleDateFromChange}
-                  placeholder={t('pages.auditLogs.searchFilters.selectStartDate')}
-                  disabled={isLoading}
-                  max={dateFromMax}
-                  format="MM/dd/yyyy"
-                  className="flex-1 [&_input]:h-9 [&_input]:text-xs"
-                />
-                <span className="text-base leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
-                  -
-                </span>
-                <DateSelect
-                  key={`date-to-${localFilters.date_to || 'empty'}`}
-                  value={dateToValue}
-                  onChange={handleDateToChange}
-                  placeholder={t('pages.auditLogs.searchFilters.selectEndDate')}
-                  disabled={isLoading}
-                  min={dateToMin}
-                  format="MM/dd/yyyy"
-                  className="flex-1 [&_input]:h-9 [&_input]:text-xs"
-                />
+                <div className="flex flex-1 items-center gap-2">
+                  <DateSelect
+                    key={`date-from-${localFilters.date_from || 'empty'}`}
+                    value={dateFromValue}
+                    onChange={handleDateFromChange}
+                    placeholder={t('pages.auditLogs.searchFilters.selectStartDate')}
+                    disabled={isLoading}
+                    max={dateFromMax}
+                    format="MM/dd/yyyy"
+                    className="flex-1 [&_input]:h-9 [&_input]:text-xs"
+                  />
+                  <span className="text-base leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                    -
+                  </span>
+                  <DateSelect
+                    key={`date-to-${localFilters.date_to || 'empty'}`}
+                    value={dateToValue}
+                    onChange={handleDateToChange}
+                    placeholder={t('pages.auditLogs.searchFilters.selectEndDate')}
+                    disabled={isLoading}
+                    min={dateToMin}
+                    format="MM/dd/yyyy"
+                    className="flex-1 [&_input]:h-9 [&_input]:text-xs"
+                  />
+                </div>
               </div>
             </div>
             {/* Quick Ranges */}
-            <div className="flex flex-1 items-center gap-3">
-              <span className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-3 xl:flex-1">
+              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[100px] sm:text-sm">
                 {t('pages.auditLogs.searchFilters.quickRanges')}:
               </span>
-              <div className="flex flex-1 items-center gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-1 sm:items-center sm:gap-2">
                 <button
                   type="button"
                   onClick={() => handlePeriodChange('today')}
                   className={cn(
-                    'text-dark-500 flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm',
+                    'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
                     period === 'today' ? 'bg-primary-300 text-white' : 'hover:bg-gray-50'
                   )}
                 >
@@ -322,7 +388,7 @@ export function SearchFiltersBar({
                   type="button"
                   onClick={() => handlePeriodChange('yesterday')}
                   className={cn(
-                    'text-dark-500 flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm',
+                    'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
                     period === 'yesterday' ? 'bg-primary-300 text-white' : 'hover:bg-gray-50'
                   )}
                 >
@@ -332,7 +398,7 @@ export function SearchFiltersBar({
                   type="button"
                   onClick={() => handlePeriodChange('last_7')}
                   className={cn(
-                    'text-dark-500 flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm',
+                    'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
                     period === 'last_7' ? 'bg-primary-300 text-white' : 'hover:bg-gray-50'
                   )}
                 >
@@ -342,7 +408,7 @@ export function SearchFiltersBar({
                   type="button"
                   onClick={() => handlePeriodChange('last_30')}
                   className={cn(
-                    'text-dark-500 flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm',
+                    'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
                     period === 'last_30' ? 'bg-primary-300 text-white' : 'hover:bg-gray-50'
                   )}
                 >
@@ -352,10 +418,11 @@ export function SearchFiltersBar({
             </div>
           </div>
           <div className="h-px w-full bg-gray-200" />
-          <div className="flex items-start gap-10 self-stretch">
+          {/* Filters Row 1: User, Action, Entity */}
+          <div className="flex flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-6 lg:gap-10">
             {/* User Filter */}
-            <div className="flex min-w-[220px] flex-1 items-center gap-3">
-              <span className="text-dark-500 w-12 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
                 {t('pages.auditLogs.searchFilters.user')}:
               </span>
               <UserFilterDropdown
@@ -384,8 +451,8 @@ export function SearchFiltersBar({
               />
             </div>
             {/* Action Filter */}
-            <div className="flex min-w-[220px] flex-1 items-center gap-3">
-              <span className="text-dark-500 w-12 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
                 {t('pages.auditLogs.searchFilters.action')}:
               </span>
               <FilterDropdown
@@ -417,8 +484,8 @@ export function SearchFiltersBar({
               />
             </div>
             {/* Entity Filter */}
-            <div className="flex min-w-[220px] flex-1 items-center gap-3">
-              <span className="text-dark-500 w-12 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
                 {t('pages.auditLogs.searchFilters.entity')}:
               </span>
               <FilterDropdown
@@ -450,10 +517,11 @@ export function SearchFiltersBar({
               />
             </div>
           </div>
-          <div className="flex items-start gap-10 self-stretch">
+          {/* Filters Row 2: Role, Search, Buttons */}
+          <div className="flex flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-6 lg:gap-10">
             {/* Role Filter */}
-            <div className="flex min-w-[220px] flex-1 items-center gap-3">
-              <span className="text-dark-500 w-12 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
                 {t('pages.auditLogs.searchFilters.role')}:
               </span>
               <Select
@@ -480,8 +548,8 @@ export function SearchFiltersBar({
               </Select>
             </div>
             {/* Search Input */}
-            <div className="flex min-w-[220px] flex-1 items-center gap-3">
-              <span className="text-dark-500 w-12 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
                 {t('pages.auditLogs.searchFilters.search')}:
               </span>
               <Input
@@ -493,12 +561,12 @@ export function SearchFiltersBar({
               />
             </div>
             {/* Action Buttons */}
-            <div className="flex flex-1 items-center justify-end gap-6">
+            <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:justify-end sm:gap-4 lg:flex-1 lg:gap-6">
               <Button
                 type="button"
                 variant="secondary"
                 onClick={handleApplyFilters}
-                className="h-[45px] flex-1 rounded"
+                className="h-[45px] w-full rounded sm:flex-1"
                 disabled={isLoading}
               >
                 {t('pages.auditLogs.searchFilters.applyFilters')}
@@ -507,7 +575,7 @@ export function SearchFiltersBar({
                 type="button"
                 variant="white-secondary"
                 onClick={handleClearAll}
-                className="h-[45px] flex-1 rounded"
+                className="h-[45px] w-full rounded sm:flex-1"
                 leftIcon={<Icons.Reload size={16} />}
               >
                 {t('pages.auditLogs.searchFilters.clearAll')}

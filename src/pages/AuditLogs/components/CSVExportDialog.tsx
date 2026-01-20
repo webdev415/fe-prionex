@@ -108,35 +108,35 @@ export function CSVExportDialog({ open, totalEntries, onClose, onExport }: CSVEx
         title={t('pages.auditLogs.csvExport.title')}
         className="border-none pb-4"
       />
-      <ModalContent>
+      <ModalContent className="max-h-[calc(90vh-250px)]">
         {/* Export Scope Subtitle */}
         <div className="mb-4">
-          <p className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
+          <p className="text-dark-500 text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
             {t('pages.auditLogs.csvExport.exportScope', { count: totalEntries })}
           </p>
         </div>
         <div className="my-2 h-px w-full bg-gray-200" />
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 sm:gap-6">
           {/* CSV Options Section */}
-          <div className="flex flex-col gap-4">
-            <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+          <div className="flex flex-col gap-3 sm:gap-4">
+            <span className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
               {t('pages.auditLogs.csvExport.csvOptions')}
             </span>
 
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4 sm:gap-6">
               {/* Columns to Include */}
-              <div className="flex flex-col gap-3">
-                <h4 className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+              <div className="flex flex-col gap-2 sm:gap-3">
+                <h4 className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.auditLogs.csvExport.columnsToInclude')}:
                 </h4>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {AVAILABLE_COLUMNS.map((column) => (
                     <div key={column} className="flex items-center gap-2">
                       <Checkbox
                         checked={selectedColumns.includes(column)}
                         onCheckedChange={() => handleColumnToggle(column)}
                       />
-                      <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                      <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                         {t(`pages.auditLogs.csvExport.columns.${column}`)}
                       </span>
                     </div>
@@ -147,18 +147,18 @@ export function CSVExportDialog({ open, totalEntries, onClose, onExport }: CSVEx
 
             <div className="my-2 h-px w-full bg-gray-200" />
 
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 sm:gap-4">
               {/* Format Settings */}
-              <div className="flex flex-col gap-4">
-                <h4 className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+              <div className="flex flex-col gap-3 sm:gap-4">
+                <h4 className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.auditLogs.csvExport.formatSettings')}:
                 </h4>
                 <div className="flex flex-col items-start gap-2 self-stretch">
-                  <label className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <label className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                     {t('pages.auditLogs.csvExport.dateFormat')}:
                   </label>
                   <Select value={dateFormat} onValueChange={setDateFormat}>
-                    <SelectTrigger className="h-[42px] w-full rounded-md text-sm">
+                    <SelectTrigger className="h-[42px] w-full rounded-md text-xs sm:text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -171,11 +171,11 @@ export function CSVExportDialog({ open, totalEntries, onClose, onExport }: CSVEx
                   </Select>
                 </div>
                 <div className="flex flex-col items-start gap-2 self-stretch">
-                  <label className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <label className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                     {t('pages.auditLogs.csvExport.fieldDelimiter')}:
                   </label>
                   <Select value={fieldDelimiter} onValueChange={setFieldDelimiter}>
-                    <SelectTrigger className="h-[42px] w-full rounded-md text-sm">
+                    <SelectTrigger className="h-[42px] w-full rounded-md text-xs sm:text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -188,11 +188,11 @@ export function CSVExportDialog({ open, totalEntries, onClose, onExport }: CSVEx
                   </Select>
                 </div>
                 <div className="flex flex-col items-start gap-2 self-stretch">
-                  <label className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <label className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                     {t('pages.auditLogs.csvExport.encoding')}:
                   </label>
                   <Select value={encoding} onValueChange={setEncoding}>
-                    <SelectTrigger className="h-[42px] w-full rounded-md text-sm">
+                    <SelectTrigger className="h-[42px] w-full rounded-md text-xs sm:text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -212,7 +212,7 @@ export function CSVExportDialog({ open, totalEntries, onClose, onExport }: CSVEx
                   checked={includeHeaders}
                   onCheckedChange={(checked) => setIncludeHeaders(checked === true)}
                 />
-                <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.auditLogs.csvExport.includeHeaders')}
                 </span>
               </div>
@@ -221,12 +221,12 @@ export function CSVExportDialog({ open, totalEntries, onClose, onExport }: CSVEx
         </div>
       </ModalContent>
       <ModalFooter className="flex flex-col gap-3 self-stretch">
-        <div className="flex w-full items-center gap-3 self-stretch">
+        <div className="flex w-full flex-col items-center gap-3 self-stretch sm:flex-row">
           <Button
             type="button"
             variant="cancel"
             onClick={onClose}
-            className="h-12 flex-1 self-stretch rounded-md"
+            className="h-12 w-full rounded-md"
           >
             {t('actions.cancel')}
           </Button>
@@ -234,7 +234,7 @@ export function CSVExportDialog({ open, totalEntries, onClose, onExport }: CSVEx
             type="button"
             variant="primary"
             onClick={handleExport}
-            className="h-12 flex-1 self-stretch rounded-md"
+            className="h-12 w-full rounded-md"
           >
             {t('pages.auditLogs.csvExport.exportDownload')}
           </Button>

@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import { AuditLogDetailModal } from './components/AuditLogDetailModal'
 import { CSVExportDialog, type CSVExportOptions } from './components/CSVExportDialog'
+import { AuditLogsPageSkeleton } from './components/AuditLogsPageSkeleton'
 import { DataTable, type Column, type SortConfig, type SortOrder } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Button } from '@/components/ui/Button'
@@ -154,7 +155,7 @@ export function AuditLogsPage() {
   const { data: auditData, isLoading, error } = useAuditLogs(apiParams)
 
   // Fetch distinct roles from API (separate query, cached)
-  const { data: rolesData } = useQuery({
+  const { data: rolesData, isLoading: isLoadingRoles } = useQuery({
     queryKey: ['audit', 'roles'],
     queryFn: getDistinctRoles,
     staleTime: 0, // Always fetch fresh data - no cache
@@ -162,7 +163,7 @@ export function AuditLogsPage() {
   })
 
   // Fetch distinct users from API (separate query, cached)
-  const { data: usersData } = useQuery({
+  const { data: usersData, isLoading: isLoadingUsers } = useQuery({
     queryKey: ['audit', 'users'],
     queryFn: getDistinctUsers,
     staleTime: 0, // Always fetch fresh data - no cache
@@ -170,7 +171,7 @@ export function AuditLogsPage() {
   })
 
   // Fetch distinct entity types from API (separate query, cached)
-  const { data: entityTypesData } = useQuery({
+  const { data: entityTypesData, isLoading: isLoadingEntityTypes } = useQuery({
     queryKey: ['audit', 'entity-types'],
     queryFn: getDistinctEntityTypes,
     staleTime: 0, // Always fetch fresh data - no cache
@@ -178,12 +179,16 @@ export function AuditLogsPage() {
   })
 
   // Fetch distinct actions from API (separate query, cached)
-  const { data: actionsData } = useQuery({
+  const { data: actionsData, isLoading: isLoadingActions } = useQuery({
     queryKey: ['audit', 'actions'],
     queryFn: getDistinctActions,
     staleTime: 0, // Always fetch fresh data - no cache
     gcTime: 0, // Don't keep in cache
   })
+
+  // Check if initial load is happening (first time loading audit logs or filter options)
+  const isInitialLoading =
+    isLoading || isLoadingRoles || isLoadingUsers || isLoadingEntityTypes || isLoadingActions
 
   // Map backend response to frontend AuditLog type
   const mapAuditLogResponse = useCallback((log: AuditLogResponse): AuditLog => {
@@ -632,17 +637,17 @@ export function AuditLogsPage() {
         sortable: true,
         sortKey: 'username',
         render: (log) => (
-          <div className="flex flex-row items-center justify-between">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <span className="truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E]">
               {log.username || '—'}
             </span>
             {log.role && (
-              <span className="truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E]">
+              <span className="truncate overflow-hidden text-xs leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E] sm:text-sm">
                 {log.role}
               </span>
             )}
             {!log.role && log.username === 'unknown' && (
-              <span className="truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E]">
+              <span className="truncate overflow-hidden text-xs leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E] sm:text-sm">
                 —
               </span>
             )}
@@ -674,7 +679,7 @@ export function AuditLogsPage() {
         header: t('pages.auditLogs.tableHeaders.details'),
         sortable: false,
         render: (log) => (
-          <div className="flex flex-row items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <span className="truncate overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px] text-[#1E1E1E]">
               {formatDetails(log)}
             </span>
@@ -683,6 +688,7 @@ export function AuditLogsPage() {
               size="xs"
               onClick={() => handleViewDetails(log)}
               leftIcon={<Icons.View size={14} strokeWidth={2} />}
+              className="self-start sm:self-auto"
             >
               {t('pages.auditLogs.viewDetails')}
             </LinkButton>
@@ -693,10 +699,15 @@ export function AuditLogsPage() {
     [formatTimestamp, formatEntity, formatDetails, handleViewDetails, t]
   )
 
+  // Show skeleton during initial load
+  if (isInitialLoading && !auditData) {
+    return <AuditLogsPageSkeleton />
+  }
+
   return (
     <div className="flex h-full flex-col">
       {/* Page Header */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
           {t('pages.auditLogs.title')}
         </h1>
@@ -705,7 +716,7 @@ export function AuditLogsPage() {
           size="md"
           onClick={handleExport}
           leftIcon={<Icons.Download size={16} className="text-dark-500" />}
-          className="h-[45px] rounded-full text-xs"
+          className="h-[45px] w-full rounded-full text-xs sm:w-auto"
         >
           {t('pages.auditLogs.exportCsv')}
         </Button>
@@ -725,7 +736,7 @@ export function AuditLogsPage() {
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Audit Logs Table */}
-        <div className="flex flex-1 flex-col gap-6 overflow-hidden rounded-xl bg-white/50 p-6">
+        <div className="flex flex-1 flex-col gap-4 overflow-hidden rounded-xl bg-white/50 p-3 sm:gap-6 sm:p-6">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-muted-foreground">{t('common.loading')}</div>

@@ -5,7 +5,7 @@
  * Supports "All Types" option and individual entity type selection with checkboxes.
  */
 
-import React, { useState, useMemo, useRef, useCallback } from 'react'
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Checkbox } from '@/components/ui/Checkbox'
 import {
@@ -42,25 +42,45 @@ export function EntityFilterDropdown({
     return entityTypes.filter((type) => type.toLowerCase().includes(searchQuery.toLowerCase()))
   }, [entityTypes, searchQuery])
 
-  // Handle open change
-  const handleOpenChange = useCallback((open: boolean) => {
-    setIsOpen(open)
-    if (!open) {
-      setSearchQuery('')
-    } else {
-      // Measure trigger width after DOM updates
-      requestAnimationFrame(() => {
-        if (wrapperRef.current) {
-          // Find the actual trigger button inside the wrapper
-          const triggerButton = wrapperRef.current.querySelector('button')
-          if (triggerButton) {
-            const width = triggerButton.offsetWidth
-            setTriggerWidth(width)
-          }
-        }
-      })
+  // Function to measure and update trigger width
+  const updateTriggerWidth = useCallback(() => {
+    if (wrapperRef.current) {
+      // Find the actual trigger button inside the wrapper
+      const triggerButton = wrapperRef.current.querySelector('button')
+      if (triggerButton) {
+        const width = triggerButton.offsetWidth
+        setTriggerWidth(width)
+      }
     }
   }, [])
+
+  // Handle open change
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      setIsOpen(open)
+      if (!open) {
+        setSearchQuery('')
+      } else {
+        // Measure trigger width after DOM updates
+        requestAnimationFrame(() => {
+          updateTriggerWidth()
+        })
+      }
+    },
+    [updateTriggerWidth]
+  )
+
+  // Update trigger width when window is resized and dropdown is open
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleResize = () => {
+      updateTriggerWidth()
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isOpen, updateTriggerWidth])
 
   const handleToggleEntityType = (entityType: string) => {
     if (entityType === 'all') {
@@ -101,7 +121,7 @@ export function EntityFilterDropdown({
           align="start"
           sideOffset={8}
           style={{ width: triggerWidth ? `${triggerWidth}px` : undefined }}
-          className="rounded-md border border-gray-200 bg-white p-0 shadow-lg"
+          className="max-w-[calc(100vw-2rem)] rounded-md border border-gray-200 bg-white p-0 shadow-lg sm:max-w-none"
         >
           {/* Search Input */}
           <div className="border-b border-gray-200 p-3">
@@ -122,7 +142,7 @@ export function EntityFilterDropdown({
           </div>
 
           {/* Entity Type List */}
-          <div className="max-h-[300px] overflow-y-auto">
+          <div className="max-h-[200px] overflow-y-auto sm:max-h-[300px]">
             {filteredEntityTypes.length === 0 && searchQuery ? (
               <div className="py-4 text-center text-sm text-gray-500">No entity types found</div>
             ) : (
