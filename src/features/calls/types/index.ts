@@ -27,6 +27,7 @@ export interface OriginateCallRequest {
   caller_id_name?: string
   caller_id_number?: string
   campaign_id?: string
+  client_id?: number
   metadata?: Record<string, unknown>
 }
 
