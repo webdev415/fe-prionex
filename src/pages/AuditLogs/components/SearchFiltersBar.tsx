@@ -422,7 +422,7 @@ export function SearchFiltersBar({
           <div className="flex flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-6 lg:gap-10">
             {/* User Filter */}
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-12 sm:text-sm">
+              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
                 {t('pages.auditLogs.searchFilters.user')}:
               </span>
               <UserFilterDropdown
@@ -452,7 +452,7 @@ export function SearchFiltersBar({
             </div>
             {/* Action Filter */}
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-12 sm:text-sm">
+              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
                 {t('pages.auditLogs.searchFilters.action')}:
               </span>
               <FilterDropdown
@@ -485,7 +485,7 @@ export function SearchFiltersBar({
             </div>
             {/* Entity Filter */}
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-12 sm:text-sm">
+              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
                 {t('pages.auditLogs.searchFilters.entity')}:
               </span>
               <FilterDropdown
@@ -521,7 +521,7 @@ export function SearchFiltersBar({
           <div className="flex flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-6 lg:gap-10">
             {/* Role Filter */}
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-12 sm:text-sm">
+              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
                 {t('pages.auditLogs.searchFilters.role')}:
               </span>
               <Select
@@ -549,7 +549,7 @@ export function SearchFiltersBar({
             </div>
             {/* Search Input */}
             <div className="flex flex-col gap-2 self-stretch sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-12 sm:text-sm">
+              <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-19 sm:text-sm">
                 {t('pages.auditLogs.searchFilters.search')}:
               </span>
               <Input
