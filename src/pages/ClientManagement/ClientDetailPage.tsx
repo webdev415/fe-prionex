@@ -1487,7 +1487,7 @@ export function ClientDetailPage() {
       </div>
       <div className="flex items-start gap-5 self-stretch">
         {/* Client Card */}
-        <div className="flex min-h-[44px] w-[428px] flex-col items-start justify-center gap-0 rounded-lg bg-white/50 p-0">
+        <div className="flex min-h-[44px] w-[30%] flex-col items-start justify-center gap-0 rounded-lg bg-white/50 p-0">
           {/* Credit Details (top part of card) */}
           <div className="flex flex-col items-start gap-3 self-stretch px-6 py-5">
             <div className="flex flex-col gap-2 self-stretch">
@@ -1588,77 +1588,115 @@ export function ClientDetailPage() {
             </div>
           </div>
 
-          <div className="flex h-px w-[428px] flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
+          <div className="flex h-px w-full flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
 
           {/* Personal & Contact Details - 4 left tabs inside client card */}
           <div className="flex items-center gap-6 self-stretch pr-6">
             {/* Vertical tab icons */}
-            <div className="flex min-h-[44px] flex-col items-start gap-1 self-stretch rounded-bl-lg bg-white py-2.5">
+            <div className="my-2.5 flex min-h-[44px] flex-col items-start gap-1 self-stretch rounded-bl-lg border-r-1 border-gray-200 px-2.5">
               <button
                 type="button"
                 onClick={() => setActiveClientCardTab('personal')}
                 className={cn(
-                  'flex max-w-[100px] flex-col items-start justify-center self-stretch rounded-none border-l-2 bg-white/10 p-4',
-                  activeClientCardTab === 'personal' ? 'border-primary-300' : 'border-transparent'
+                  'hover:bg-primary-200/10 flex cursor-pointer flex-row items-center justify-start self-stretch rounded-none border-l-2 p-4',
+                  activeClientCardTab === 'personal'
+                    ? 'border-primary-300 bg-primary-200/10'
+                    : 'border-transparent'
                 )}
               >
                 <Icons.UserAccount
                   size={24}
                   className={cn(
-                    'mx-0.5 my-1',
+                    'mx-1 my-1',
                     activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
                   )}
                 />
+                <span
+                  className={cn(
+                    'text-sm font-medium',
+                    activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
+                  )}
+                >
+                  Personal
+                </span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveClientCardTab('work')}
                 className={cn(
-                  'flex max-w-[100px] flex-col items-start justify-center self-stretch rounded-none border-l-2 bg-white/10 p-4',
-                  activeClientCardTab === 'work' ? 'border-primary-300' : 'border-transparent'
+                  'hover:bg-primary-200/10 flex cursor-pointer flex-row items-center justify-start self-stretch rounded-none border-l-2 p-4',
+                  activeClientCardTab === 'work'
+                    ? 'border-primary-300 bg-primary-200/10'
+                    : 'border-transparent'
                 )}
               >
                 <Icons.Briefcase01
                   size={24}
                   className={cn(
-                    'mx-0.5 my-1',
+                    'mx-1 my-1',
                     activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
                   )}
                 />
+                <span
+                  className={cn(
+                    'text-sm font-medium',
+                    activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
+                  )}
+                >
+                  Work
+                </span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveClientCardTab('recommenders')}
                 className={cn(
-                  'flex max-w-[100px] flex-col items-start justify-center self-stretch rounded-none border-l-2 bg-white/10 p-4',
+                  'hover:bg-primary-200/10 flex cursor-pointer flex-row items-center justify-start self-stretch rounded-none border-l-2 p-4',
                   activeClientCardTab === 'recommenders'
-                    ? 'border-primary-300'
+                    ? 'border-primary-300 bg-primary-200/10'
                     : 'border-transparent'
                 )}
               >
                 <Icons.UserCheck01
                   size={24}
                   className={cn(
-                    'mx-0.5 my-1',
+                    'mx-1 my-1',
                     activeClientCardTab === 'recommenders' ? 'text-secondary-800' : 'text-gray-700'
                   )}
                 />
+                <span
+                  className={cn(
+                    'text-sm font-medium',
+                    activeClientCardTab === 'recommenders' ? 'text-secondary-800' : 'text-gray-700'
+                  )}
+                >
+                  Recommenders
+                </span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveClientCardTab('addresses')}
                 className={cn(
-                  'flex max-w-[100px] flex-col items-start justify-center self-stretch rounded-none border-l-2 bg-white/10 p-4',
-                  activeClientCardTab === 'addresses' ? 'border-primary-300' : 'border-transparent'
+                  'hover:bg-primary-200/10 flex cursor-pointer flex-row items-center justify-start self-stretch rounded-none border-l-2 p-4',
+                  activeClientCardTab === 'addresses'
+                    ? 'border-primary-300 bg-primary-200/10'
+                    : 'border-transparent'
                 )}
               >
                 <Icons.Location01
                   size={24}
                   className={cn(
-                    'mx-0.5 my-1',
+                    'mx-1 my-1',
                     activeClientCardTab === 'addresses' ? 'text-secondary-800' : 'text-gray-700'
                   )}
                 />
+                <span
+                  className={cn(
+                    'text-sm font-medium',
+                    activeClientCardTab === 'addresses' ? 'text-secondary-800' : 'text-gray-700'
+                  )}
+                >
+                  Addresses
+                </span>
               </button>
             </div>
 
@@ -1881,132 +1919,111 @@ export function ClientDetailPage() {
           </div>
         </div>
 
-        {/* Right Column - Data + Comments Card with 6 left tabs */}
-        <div className="flex flex-1 flex-col items-start gap-5 self-stretch">
-          <div className="flex min-h-[44px] flex-1 items-start justify-center gap-0 self-stretch rounded-lg bg-white/50 p-0">
-            {/* Vertical tab icons - 6 tabs */}
-            <div className="flex flex-col items-start gap-2.5 self-stretch rounded-l-lg bg-white py-2.5">
-              {/* Tab 1: Loans (Calendar icon) */}
+        {/* Right Column - Data + Comments Card with 6 horizontal top tabs */}
+        <div className="flex w-[64%] flex-1 flex-col items-start gap-5 self-stretch">
+          <div className="flex flex-1 flex-col items-start gap-0 self-stretch rounded-lg bg-white/50 p-0">
+            {/* Horizontal tab bar - 6 tabs at the top */}
+            <div className="mx-3 flex items-center gap-0 self-stretch border-b border-gray-200">
+              {/* Tab 1: Loans */}
               <button
                 type="button"
                 onClick={() => setActiveRightCardTab('loans')}
                 className={cn(
-                  'border-primary-300 flex flex-col items-start justify-center gap-2 rounded-none border-l-2 bg-white/10 p-4',
-                  activeRightCardTab === 'loans' ? 'border-primary-300' : 'border-transparent'
+                  'hover:bg-primary-200/10 flex cursor-pointer items-center justify-center gap-2 border-b-2 px-4 py-4 transition-colors',
+                  activeRightCardTab === 'loans'
+                    ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                    : 'hover:text-secondary-800 border-transparent text-gray-600'
                 )}
               >
-                <Icons.Briefcase08
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeRightCardTab === 'loans' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
+                <Icons.Folder size={20} className="text-current" />
+                <span className="text-sm font-medium">Loans</span>
               </button>
-              {/* Tab 2: Payments (Contact icon) */}
+              {/* Tab 2: Payments */}
               <button
                 type="button"
                 onClick={() => setActiveRightCardTab('payments')}
                 className={cn(
-                  'border-primary-300 flex flex-col items-start justify-center gap-2 rounded-none border-l-2 bg-white/10 p-4',
-                  activeRightCardTab === 'payments' ? 'border-primary-300' : 'border-transparent'
+                  'hover:bg-primary-200/10 flex cursor-pointer items-center justify-center gap-2 border-b-2 px-4 py-4 transition-colors',
+                  activeRightCardTab === 'payments'
+                    ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                    : 'hover:text-secondary-800 border-transparent text-gray-600'
                 )}
               >
-                <Icons.PieChart02
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeRightCardTab === 'payments' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
+                <Icons.Wallet01 size={20} className="text-current" />
+                <span className="text-sm font-medium">{t('pages.clients.detail.payments')}</span>
               </button>
-              {/* Tab 3: documents */}
-              <button
-                type="button"
-                onClick={() => setActiveRightCardTab('documents')}
-                className={cn(
-                  'border-primary-300 flex flex-col items-start justify-center gap-2 rounded-none border-l-2 bg-white/10 p-4',
-                  activeRightCardTab === 'documents' ? 'border-primary-300' : 'border-transparent'
-                )}
-              >
-                <Icons.UserStatus
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeRightCardTab === 'documents' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
-              </button>
-              {/* Tab 4: tasks (User icon) */}
-              <button
-                type="button"
-                onClick={() => setActiveRightCardTab('tasks')}
-                className={cn(
-                  'border-primary-300 flex flex-col items-start justify-center gap-2 rounded-none border-l-2 bg-white/10 p-4',
-                  activeRightCardTab === 'tasks' ? 'border-primary-300' : 'border-transparent'
-                )}
-              >
-                <Icons.Calendar03
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeRightCardTab === 'tasks' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
-              </button>
-              {/* Tab 5: call-sms-history (Activity icon) */}
-              <button
-                type="button"
-                onClick={() => setActiveRightCardTab('call-sms-history')}
-                className={cn(
-                  'border-primary-300 flex flex-col items-start justify-center gap-2 rounded-none border-l-2 bg-white/10 p-4',
-                  activeRightCardTab === 'call-sms-history'
-                    ? 'border-primary-300'
-                    : 'border-transparent'
-                )}
-              >
-                <Icons.TransactionHistory
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeRightCardTab === 'call-sms-history'
-                      ? 'text-secondary-800'
-                      : 'text-gray-700'
-                  )}
-                />
-              </button>
-              {/* Tab 6: operators (File icon) */}
+              {/* Tab 3: Operators */}
               <button
                 type="button"
                 onClick={() => setActiveRightCardTab('operators')}
                 className={cn(
-                  'border-primary-300 flex flex-col items-start justify-center gap-2 rounded-none border-l-2 bg-white/10 p-4',
-                  activeRightCardTab === 'operators' ? 'border-primary-300' : 'border-transparent'
+                  'hover:bg-primary-200/10 flex cursor-pointer items-center justify-center gap-2 border-b-2 px-4 py-4 transition-colors',
+                  activeRightCardTab === 'operators'
+                    ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                    : 'hover:text-secondary-800 border-transparent text-gray-600'
                 )}
               >
-                <Icons.UserMultiple02
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeRightCardTab === 'operators' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
+                <Icons.UserMultiple02 size={20} className="text-current" />
+                <span className="text-sm font-medium">{t('pages.clients.detail.operators')}</span>
+              </button>
+              {/* Tab 4: Call/SMS */}
+              <button
+                type="button"
+                onClick={() => setActiveRightCardTab('call-sms-history')}
+                className={cn(
+                  'hover:bg-primary-200/10 flex cursor-pointer items-center justify-center gap-2 border-b-2 px-4 py-4 transition-colors',
+                  activeRightCardTab === 'call-sms-history'
+                    ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                    : 'hover:text-secondary-800 border-transparent text-gray-600'
+                )}
+              >
+                <Icons.Clock01 size={20} className="text-current" />
+                <span className="text-sm font-medium">Call / SMS</span>
+              </button>
+              {/* Tab 5: Tasks */}
+              <button
+                type="button"
+                onClick={() => setActiveRightCardTab('tasks')}
+                className={cn(
+                  'hover:bg-primary-200/10 flex cursor-pointer items-center justify-center gap-2 border-b-2 px-4 py-4 transition-colors',
+                  activeRightCardTab === 'tasks'
+                    ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                    : 'hover:text-secondary-800 border-transparent text-gray-600'
+                )}
+              >
+                <Icons.CheckmarkSquare03 size={20} className="text-current" />
+                <span className="text-sm font-medium">Tasks</span>
+              </button>
+              {/* Tab 6: Docs */}
+              <button
+                type="button"
+                onClick={() => setActiveRightCardTab('documents')}
+                className={cn(
+                  'hover:bg-primary-200/10 flex cursor-pointer items-center justify-center gap-2 border-b-2 px-4 py-4 transition-colors',
+                  activeRightCardTab === 'documents'
+                    ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                    : 'hover:text-secondary-800 border-transparent text-gray-600'
+                )}
+              >
+                <Icons.File size={20} className="text-current" />
+                <span className="text-sm font-medium">Docs</span>
               </button>
             </div>
 
-            {/* Right side content for selected right card tab */}
-            <div className="flex flex-1 flex-col items-start gap-6 p-0">
+            {/* Content area for selected tab */}
+            <div className="flex w-full flex-col items-start gap-0 self-stretch p-0">
               {/* Tab 1: Loans */}
               {activeRightCardTab === 'loans' && (
-                <div className="flex w-full flex-col gap-4">
-                  <div className="flex min-h-[44px] items-center gap-6 self-stretch border-b border-gray-200 px-6 pt-6 pb-0">
+                <div className="flex w-full flex-col gap-0">
+                  {/* Secondary filters below primary tabs */}
+                  <div className="mx-6 flex items-center gap-6 self-stretch pt-6 pb-0">
                     <button
                       onClick={() => setActiveLoanTab('process')}
                       className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
+                        'hover:bg-secondary-800/20 flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs font-medium tracking-[-0.28px]',
                         activeLoanTab === 'process'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
+                          ? 'bg-secondary-800/10 text-secondary-800'
+                          : 'hover:text-secondary-800 text-gray-600'
                       )}
                     >
                       {t('pages.clients.detail.loansInProcess')}
@@ -2014,10 +2031,10 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setActiveLoanTab('closed')}
                       className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
+                        'hover:bg-secondary-800/20 flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs font-medium tracking-[-0.28px]',
                         activeLoanTab === 'closed'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
+                          ? 'bg-secondary-800/10 text-secondary-800'
+                          : 'hover:text-secondary-800 text-gray-600'
                       )}
                     >
                       {t('pages.clients.detail.closedLoans')}
@@ -2025,19 +2042,21 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setActiveLoanTab('rr')}
                       className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
+                        'hover:bg-secondary-800/20 flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs font-medium tracking-[-0.28px]',
                         activeLoanTab === 'rr'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
+                          ? 'bg-secondary-800/10 text-secondary-800'
+                          : 'hover:text-secondary-800 text-gray-600'
                       )}
                     >
                       {t('pages.clients.detail.loansOnRR')}
                     </button>
                   </div>
-                  <div className="flex flex-col items-start gap-2.5 self-stretch px-6">
+                  {/* Data table */}
+                  <div className="flex flex-col items-start gap-2.5 self-stretch px-6 py-4">
                     <DataTable columns={loanColumns} data={client.loans} className="w-full" />
                   </div>
-                  <div className="flex flex-wrap content-start items-start gap-3 self-stretch p-[0_24px_24px_24px]">
+                  {/* Action buttons at the bottom */}
+                  <div className="flex flex-wrap items-center gap-3 self-stretch px-6 py-4">
                     <Button
                       variant="secondary"
                       leftIcon={<Icons.MoneyRemove01 size={20} />}
@@ -2087,14 +2106,14 @@ export function ClientDetailPage() {
               {/* Tab 2: Payments */}
               {activeRightCardTab === 'payments' && (
                 <div className="flex w-full flex-col gap-4">
-                  <div className="flex min-h-[44px] items-center gap-6 self-stretch border-b border-gray-200 px-6 pt-6 pb-0">
+                  <div className="mx-6 flex min-h-[44px] items-center gap-6 self-stretch pt-6 pb-0">
                     <button
                       onClick={() => setActivePaymentTab('payments')}
                       className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
+                        'text-dark-500 flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs leading-[150%] font-medium tracking-[-0.28px]',
                         activePaymentTab === 'payments'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
+                          ? 'bg-secondary-800/10 text-secondary-800'
+                          : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
                       )}
                     >
                       {t('pages.clients.detail.payments')}
@@ -2102,10 +2121,10 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setActivePaymentTab('writes-off')}
                       className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
+                        'text-dark-500 flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs leading-[150%] font-medium tracking-[-0.28px]',
                         activePaymentTab === 'writes-off'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
+                          ? 'bg-secondary-800/10 text-secondary-800'
+                          : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
                       )}
                     >
                       {t('pages.clients.detail.writesOff')}
@@ -2113,10 +2132,10 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setActivePaymentTab('primary-creditor')}
                       className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
+                        'text-dark-500 flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs leading-[150%] font-medium tracking-[-0.28px]',
                         activePaymentTab === 'primary-creditor'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
+                          ? 'bg-secondary-800/10 text-secondary-800'
+                          : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
                       )}
                     >
                       {t('pages.clients.detail.paymentToPrimaryCreditor')}
@@ -2151,14 +2170,14 @@ export function ClientDetailPage() {
               {/* Tab 3: Operators/Searchers */}
               {activeRightCardTab === 'operators' && (
                 <div className="flex w-full flex-col gap-4">
-                  <div className="flex min-h-[44px] items-center gap-6 self-stretch border-b border-gray-200 px-6 pt-6 pb-0">
+                  <div className="mx-6 flex min-h-[44px] items-center gap-6 self-stretch pt-6 pb-0">
                     <button
                       onClick={() => setActiveOperatorTab('operators')}
                       className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
+                        'flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600',
                         activeOperatorTab === 'operators'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
+                          ? 'bg-secondary-800/10 text-secondary-800'
+                          : 'hover:bg-secondary-800/20 hover:text-secondary-800'
                       )}
                     >
                       {t('pages.clients.detail.operators')}
@@ -2166,10 +2185,10 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setActiveOperatorTab('searchers')}
                       className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
+                        'flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600',
                         activeOperatorTab === 'searchers'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
+                          ? 'bg-secondary-800/10 text-secondary-800'
+                          : 'hover:bg-secondary-800/20 hover:text-secondary-800'
                       )}
                     >
                       {t('pages.clients.detail.searchers')}
@@ -2196,21 +2215,21 @@ export function ClientDetailPage() {
 
               {/* Tab 4: Call and SMS History */}
               {activeRightCardTab === 'call-sms-history' && (
-                <div className="flex flex-1 flex-col items-start justify-end gap-5 self-stretch p-6">
+                <div className="flex flex-1 flex-col items-start gap-5 self-stretch p-6">
                   <div className="flex h-[41px] items-center gap-5 self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2.5">
                       <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                         {t('pages.clients.detail.callAndSMSHistory')}
                       </span>
                     </div>
-                    <div className="flex flex-1 items-center justify-between gap-1 rounded-lg bg-white p-1 shadow-sm">
+                    <div className="flex flex-1 items-center justify-between gap-1 rounded-lg bg-white/50 p-1 shadow-sm">
                       <button
                         onClick={() => setActiveCallSmsTab('all')}
                         className={cn(
-                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 transition-colors',
+                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm transition-colors',
                           activeCallSmsTab === 'all'
-                            ? 'bg-secondary-800 text-white'
-                            : 'text-dark-500 hover:text-secondary-800 hover:bg-primary-500/10 cursor-pointer'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
                         )}
                       >
                         {t('pages.clients.activity.all')}
@@ -2218,10 +2237,10 @@ export function ClientDetailPage() {
                       <button
                         onClick={() => setActiveCallSmsTab('calls')}
                         className={cn(
-                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 transition-colors',
+                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm transition-colors',
                           activeCallSmsTab === 'calls'
-                            ? 'bg-secondary-800 text-white'
-                            : 'text-dark-500 hover:text-secondary-800 hover:bg-primary-500/10 cursor-pointer'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
                         )}
                       >
                         {t('pages.clients.activity.calls')}
@@ -2229,10 +2248,10 @@ export function ClientDetailPage() {
                       <button
                         onClick={() => setActiveCallSmsTab('sms')}
                         className={cn(
-                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 transition-colors',
+                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm transition-colors',
                           activeCallSmsTab === 'sms'
-                            ? 'bg-secondary-800 text-white'
-                            : 'text-dark-500 hover:text-secondary-800 hover:bg-primary-500/10 cursor-pointer'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
                         )}
                       >
                         {t('pages.clients.activity.sms')}
@@ -2571,7 +2590,7 @@ export function ClientDetailPage() {
                 </div>
               )}
 
-              {/* Tab 3: Documents - Shows Call and SMS History table per Figma */}
+              {/* Tab 6: Documents */}
               {activeRightCardTab === 'documents' && (
                 <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-6">
                   <DataTable
