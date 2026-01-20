@@ -89,22 +89,23 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
       />
 
       <ModalContent>
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* Search Input */}
           <Input
             placeholder={t('pages.clients.modals.bulkTag.searchTags', 'Search tags...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
           />
 
           {/* Tags List */}
-          <div className="max-h-96 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-4">
+          <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3 sm:max-h-96 sm:p-4">
             {isLoading ? (
-              <div className="py-4 text-center text-sm text-gray-500">
+              <div className="py-4 text-center text-xs text-gray-500 sm:text-sm">
                 {t('pages.clients.modals.bulkTag.loadingTags', 'Loading tags...')}
               </div>
             ) : filteredTags?.length === 0 ? (
-              <div className="py-4 text-center text-sm text-gray-500">
+              <div className="py-4 text-center text-xs text-gray-500 sm:text-sm">
                 {t('pages.clients.modals.bulkTag.noTagsFound', 'No tags found')}
               </div>
             ) : (
@@ -119,7 +120,9 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
                   />
                   <TagBadge name={tag.name} color={tag.color} size="sm" />
                   {tag.description && (
-                    <span className="text-xs text-gray-500">- {tag.description}</span>
+                    <span className="hidden text-xs text-gray-500 sm:inline">
+                      - {tag.description}
+                    </span>
                   )}
                 </label>
               ))
@@ -128,7 +131,7 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
 
           {/* Selected count */}
           {selectedTagIds.length > 0 && (
-            <div className="text-sm text-gray-600">
+            <div className="text-xs text-gray-600 sm:text-sm">
               {selectedTagIds.length}{' '}
               {t('pages.clients.modals.bulkTag.tagsSelected', 'tag(s) selected')}
             </div>
@@ -142,7 +145,7 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
           variant="cancel"
           onClick={onClose}
           disabled={bulkTagMutation.isPending}
-          className="h-[45px] flex-1 text-sm"
+          className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
           {t('actions.cancel', 'Cancel')}
         </Button>
@@ -151,7 +154,7 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
           variant="primary"
           onClick={handleSave}
           disabled={selectedTagIds.length === 0 || bulkTagMutation.isPending}
-          className="h-[45px] flex-1 text-sm"
+          className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
           {bulkTagMutation.isPending
             ? t('pages.clients.modals.bulkTag.processing', 'Processing...')

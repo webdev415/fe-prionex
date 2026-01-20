@@ -247,6 +247,7 @@ export function ClientManagementPage() {
     id: number
     name: string
   } | null>(null)
+  const [openDropdownClientId, setOpenDropdownClientId] = useState<number | null>(null)
   const hasSetDefaultFilter = useRef(false)
   // User-specific storage key to prevent filter leakage between users
   const STORAGE_KEY = user?.id ? `client-filters-state-${user.id}` : null
@@ -403,6 +404,25 @@ export function ClientManagementPage() {
     // Only run once when user is available
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
+
+  // Close dropdown when screen size crosses breakpoint (in either direction)
+  useEffect(() => {
+    let wasMobile = window.innerWidth < 1024 // lg breakpoint
+
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 1024
+
+      // Close dropdown if transitioning across breakpoint (mobile <-> desktop)
+      if (wasMobile !== isMobile && openDropdownClientId !== null) {
+        setOpenDropdownClientId(null)
+      }
+
+      wasMobile = isMobile
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [openDropdownClientId])
 
   // NO need to debounce filters - useURLState already does this with 300ms debounce
   // const filters = useDebounce(filters, 500)
@@ -1086,28 +1106,70 @@ export function ClientManagementPage() {
         const isBulkActionActive = selectedClients.size > 0 || allClientsSelected
         return (
           <div
-            className="flex items-center justify-center gap-2"
+            className="flex items-center justify-center gap-2 sm:gap-4"
             data-testid={`client-actions-${client.id}`}
           >
-            <LinkButton
-              leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
-              onClick={() => handleAssign(client.id)}
-              variant="regular-black"
-              size="xs"
-              disabled={isBulkActionActive}
-            >
-              {t('pages.clients.assign')}
-            </LinkButton>
-            <LinkButton
-              leftIcon={<Icons.File size={16} color="#05040D" strokeWidth={1.5} />}
-              onClick={() => handleManageTags(client.id, client.fullName)}
-              variant="regular-black"
-              size="xs"
-              disabled={isBulkActionActive}
-              data-testid={`tag-button-${client.id}`}
-            >
-              {t('pages.clients.manageTags')}
-            </LinkButton>
+            {/* Desktop: Individual buttons */}
+            <div className="hidden items-center gap-4 lg:flex">
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => handleAssign(client.id)}
+                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+                disabled={isBulkActionActive}
+              >
+                {t('pages.clients.assign')}
+              </LinkButton>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => handleManageTags(client.id, client.fullName)}
+                leftIcon={<Icons.File size={16} color="#05040D" strokeWidth={1.5} />}
+                disabled={isBulkActionActive}
+                data-testid={`tag-button-${client.id}`}
+              >
+                {t('pages.clients.manageTags')}
+              </LinkButton>
+            </div>
+
+            {/* Mobile/Tablet: Dropdown button group */}
+            <div className="lg:hidden">
+              <DropdownMenu
+                modal={false}
+                open={openDropdownClientId === client.id}
+                onOpenChange={(open) => setOpenDropdownClientId(open ? client.id : null)}
+              >
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label={t('pages.clients.tableHeaders.actions')}
+                    disabled={isBulkActionActive}
+                  >
+                    <Icons.FilterVertical size={16} strokeWidth={1.5} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-white">
+                  <DropdownMenuItem
+                    onClick={() => handleAssign(client.id)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    disabled={isBulkActionActive}
+                  >
+                    <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                    <span>{t('pages.clients.assign')}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleManageTags(client.id, client.fullName)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    disabled={isBulkActionActive}
+                    data-testid={`tag-button-${client.id}`}
+                  >
+                    <Icons.File size={16} strokeWidth={1.5} />
+                    <span>{t('pages.clients.manageTags')}</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         )
       },
@@ -1134,7 +1196,7 @@ export function ClientManagementPage() {
 
   return (
     <TooltipProvider>
-      <div className="flex w-full flex-col items-start gap-4">
+      <div className="flex w-full flex-col items-start gap-3 px-2 sm:gap-4 sm:px-0">
         {/* Priority Overview Cards */}
         <PriorityCards
           priorityStats={priorityStats}
@@ -1143,18 +1205,18 @@ export function ClientManagementPage() {
         />
 
         {/* List of Clients Section */}
-        <div className="flex items-center justify-between self-stretch">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-dark-500 text-center text-2xl leading-tight font-light tracking-[-0.48px]">
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex flex-row items-center gap-2">
+              <span className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.4px] sm:text-2xl sm:tracking-[-0.48px]">
                 {t('pages.clients.listOfClients')}
               </span>
-              <span className="text-center text-base leading-[155%] font-light tracking-[-0.32px] text-gray-700">
+              <span className="text-center text-sm leading-[155%] font-light tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
                 {totalCount}
               </span>
             </div>
           </div>
-          <div className="flex items-center justify-end gap-5">
+          <div className="flex flex-wrap items-center justify-end gap-5">
             {appliedFiltersCount > 0 && (
               <button
                 onClick={handleClearAll}
@@ -1197,74 +1259,89 @@ export function ClientManagementPage() {
 
         {/* Data Table - Show skeleton when fetching */}
         {isFetching && !isLoading ? (
-          <div className="flex flex-col items-start gap-8 self-stretch">
+          <div className="flex w-full flex-col items-start gap-4 self-stretch sm:gap-8">
             <TableSkeleton columns={columns.length + 1} rows={rowsPerPage} className="w-full" />
           </div>
         ) : (
-          <DataTable
-            columns={columns}
-            data={filteredClients}
-            sortConfig={sortConfig}
-            onSort={handleSort}
-            emptyMessage={t('pages.clients.noClientsFound')}
-            className="flex flex-col items-start self-stretch"
-            enableBulkSelection
-            selectedItems={selectedClients}
-            onSelectionChange={handleSelectionChange}
-            totalCount={totalCount}
-            onSelectAll={handleSelectAll}
-            allItemsSelected={allClientsSelected}
-            excludedItemsCount={excludedClients.size}
-            excludedItems={excludedClients}
-            headerActions={
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="primary" size="sm" className="h-10 gap-2 rounded-lg px-4">
-                    <Icons.Settings size={18} className="text-dark-500" strokeWidth={1.5} />
-                    <span className="text-sm font-medium">Bulk Actions</span>
-                    <Icons.ArrowDown size={16} className="text-dark-500" strokeWidth={1.5} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
-                >
-                  <DropdownMenuItem
-                    onClick={handleBulkAssign}
-                    className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+          <div className="mx-0 w-full overflow-x-auto px-0">
+            <DataTable
+              columns={columns}
+              data={filteredClients}
+              sortConfig={sortConfig}
+              onSort={handleSort}
+              emptyMessage={t('pages.clients.noClientsFound')}
+              className="flex flex-col items-start self-stretch"
+              enableBulkSelection
+              selectedItems={selectedClients}
+              onSelectionChange={handleSelectionChange}
+              totalCount={totalCount}
+              onSelectAll={handleSelectAll}
+              allItemsSelected={allClientsSelected}
+              excludedItemsCount={excludedClients.size}
+              excludedItems={excludedClients}
+              headerActions={
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="h-9 gap-1.5 rounded-lg px-3 text-xs sm:h-10 sm:gap-2 sm:px-4 sm:text-sm"
+                    >
+                      <Icons.Settings
+                        size={16}
+                        className="text-dark-500 sm:h-[18px] sm:w-[18px]"
+                        strokeWidth={1.5}
+                      />
+                      <span className="hidden font-medium sm:inline">Bulk Actions</span>
+                      <span className="font-medium sm:hidden">Actions</span>
+                      <Icons.ArrowDown
+                        size={14}
+                        className="text-dark-500 sm:h-4 sm:w-4"
+                        strokeWidth={1.5}
+                      />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-56 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
                   >
-                    <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
-                    <span className="text-dark-500 text-sm font-medium">
-                      {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
-                    </span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={handleBulkAddTags}
-                    className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
-                  >
-                    <Icons.PlusSignCircle size={18} className="text-dark-500" strokeWidth={1.5} />
-                    <span className="text-dark-500 text-sm font-medium">
-                      {t('pages.clients.bulkActions.addTags', 'Add Tags')}
-                    </span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={handleBulkRemoveTags}
-                    className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
-                  >
-                    <Icons.Remove02 size={18} className="text-dark-500" strokeWidth={1.5} />
-                    <span className="text-dark-500 text-sm font-medium">
-                      {t('pages.clients.bulkActions.removeTags', 'Remove Tags')}
-                    </span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            }
-          />
+                    <DropdownMenuItem
+                      onClick={handleBulkAssign}
+                      className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                    >
+                      <Icons.UserCheck01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                      <span className="text-dark-500 text-sm font-medium">
+                        {t('pages.clients.bulkActions.assignEmployee', 'Assign Employee')}
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={handleBulkAddTags}
+                      className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                    >
+                      <Icons.PlusSignCircle size={18} className="text-dark-500" strokeWidth={1.5} />
+                      <span className="text-dark-500 text-sm font-medium">
+                        {t('pages.clients.bulkActions.addTags', 'Add Tags')}
+                      </span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={handleBulkRemoveTags}
+                      className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                    >
+                      <Icons.Remove02 size={18} className="text-dark-500" strokeWidth={1.5} />
+                      <span className="text-dark-500 text-sm font-medium">
+                        {t('pages.clients.bulkActions.removeTags', 'Remove Tags')}
+                      </span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              }
+            />
+          </div>
         )}
 
         {/* Pagination */}
         {!isFetching && (
-          <div className="flex flex-col items-center gap-8 self-stretch">
+          <div className="flex w-full flex-col items-center gap-4 self-stretch sm:gap-8">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

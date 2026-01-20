@@ -652,7 +652,7 @@
       },
       "activity": {
         "score": "Оцінка",
-        "addNoteAboutClient": "Додати примітку про клієнта",
+        "addNote": "Додати примітку",
         "call": "Дзвінок",
         "deleteClient": "Видалити клієнта",
         "typeOfCommunication": "Тип комунікації",
@@ -750,7 +750,20 @@
         "deliveryRate": "Рівень доставки",
         "delivered": "доставлено",
         "failed": "не вдалося",
-        "pending": "очікується"
+        "pending": "очікується",
+        "noTagsAssigned": "Теги не призначені",
+        "totalCalls": "Всього дзвінків",
+        "avgDuration": "Серед. тривалість",
+        "tabs": {
+          "personal": "Особисте",
+          "work": "Робота",
+          "recommenders": "Поручителі",
+          "addresses": "Адреси",
+          "loans": "Позики",
+          "tasks": "Завдання",
+          "docs": "Документи",
+          "callSms": "Дзвінок / SMS"
+        }
       },
       "modals": {
         "addNote": {
@@ -961,6 +974,10 @@
             "oct": "Жов",
             "nov": "Лис",
             "dec": "Гру"
+          },
+          "time": {
+            "am": "AM",
+            "pm": "PM"
           }
         },
         "portfolioDropdown": {
@@ -978,11 +995,23 @@
           "selectDate": "Виберіть дату",
           "paymentMethod": "Спосіб оплати:",
           "bankTransfer": "Банківський переказ",
-          "cardPayment": "Оплата карткою",
+          "onlineGateway": "Онлайн-шлюз",
+          "cash": "Готівка",
+          "card": "Картка",
           "other": "Інше",
+          "referenceNumber": "Номер посилання",
+          "referenceNumberPlaceholder": "Введіть номер посилання",
+          "referenceNumberRequired": "Номер посилання обов'язковий",
+          "last4Digits": "Останні 4 цифри",
+          "last4DigitsPlaceholder": "Введіть останні 4 цифри",
+          "last4DigitsRequired": "Останні 4 цифри обов'язкові",
+          "last4DigitsMustBe4": "Останні 4 цифри повинні бути рівно 4 числами",
+          "paymentMethodDetails": "Деталі способу оплати",
+          "paymentMethodDetailsPlaceholder": "Введіть додаткові деталі оплати (необов'язково)",
           "impactPreview": "Попередній перегляд впливу",
           "currentTotalDebt": "Поточний загальний борг:",
           "paymentAmountLabel": "Сума платежу:",
+          "newTotalDebt": "Новий загальний борг:",
           "newStatus": "Новий статус:",
           "stillHasDebt": "ще має борг",
           "verification": "Верифікація",
@@ -996,7 +1025,9 @@
           "saveAndVerify": "Зберегти та підтвердити",
           "cancel": "Скасувати",
           "min": "мін:",
-          "max": "макс:"
+          "max": "макс:",
+          "validationPaymentExceedsDebt": "Платіж не може перевищувати поточний борг ({{amount}})",
+          "validationPaymentMustBePositive": "Сума платежу повинна бути позитивною."
         },
         "editPayment": {
           "title": "Редагувати платіж #{{paymentId}}",
@@ -1050,6 +1081,8 @@
           "project": "Проєкт:",
           "debtImpact": "Вплив на борг",
           "currentTotalDebt": "Поточний загальний борг:",
+          "debtBefore": "Борг до:",
+          "debtAfter": "Борг після:",
           "paymentAmount": "Сума платежу:",
           "clientStatus": "Статус клієнта:",
           "stillHasDebt": "ще має борг",
@@ -1058,6 +1091,9 @@
           "createdAt": "Створено о:",
           "verifiedBy": "Підтверджено:",
           "verifiedAt": "Підтверджено о:",
+          "cancelledBy": "Скасовано:",
+          "cancelledAt": "Скасовано о:",
+          "cancellationReason": "Причина скасування:",
           "printReceipt": "Друкувати квитанцію",
           "downloadReceiptPDF": "Завантажити квитанцію PDF",
           "close": "Закрити"
@@ -1173,7 +1209,7 @@
           "reference": "Референс:",
           "currentDebt": "Поточний борг:",
           "newDebt": "Новий борг:",
-          "rejectPayment": "Відхилити платіж",
+          "cancelPayment": "Скасувати платіж",
           "verifyAndApprove": "Підтвердити та схвалити",
           "expandDetails": "Розгорнути деталі",
           "recentlyProcessed": "Нещодавно оброблено",
@@ -1193,7 +1229,7 @@
         "lastPayment": "Останній платіж",
         "date": "Дата",
         "totalDebt": "Загальний борг",
-        "daysPastDue": "Днів прострочення:",
+        "daysPastDue": "Днів прострочен:",
         "paymentHistory": "Історія платежів",
         "last10": "Останні 10",
         "all": "Всі",
@@ -1208,10 +1244,11 @@
           "actions": "Дії"
         },
         "paymentMethod": {
-          "online": "Онлайн",
-          "bank": "Банк",
+          "bankTransfer": "Банківський переказ",
+          "onlineGateway": "Онлайн-шлюз",
+          "cash": "Готівка",
           "card": "Картка",
-          "directDebit": "Пряме списання"
+          "other": "Інше"
         },
         "paymentStatus": {
           "verified": "Підтверджено",
@@ -1258,6 +1295,7 @@
           "date": "Дата",
           "amount": "Сума",
           "method": "Спосіб",
+          "reference": "Номер посилання",
           "status": "Статус",
           "actions": "Дії"
         },

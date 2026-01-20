@@ -12,29 +12,29 @@ const TABLE_COLUMNS = 12 // id, fullName, taxIdNumber, tags, phoneNumber, dateOf
 
 export function ClientManagementPageSkeleton() {
   return (
-    <div className="flex w-full flex-col items-start gap-5 pt-1 pr-7 pb-6 pl-7">
+    <div className="flex w-full flex-col items-start gap-3 px-2 pt-1 pb-6 sm:gap-4 sm:px-0 sm:pr-7 sm:pl-7">
       {/* Priority Cards Skeleton */}
-      <div className="flex w-full items-start gap-5">
+      <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={index}
-            className="flex flex-1 flex-col items-start gap-4 rounded-xl border border-white bg-white/50 p-6"
+            className="flex flex-1 flex-col items-start gap-3 rounded-xl border border-white bg-white/50 p-4 sm:gap-4 sm:p-5 lg:p-6"
           >
             {/* Badge and Title */}
-            <div className="flex items-start gap-3">
-              <div className="h-[25px] w-16 animate-pulse rounded-[16px] bg-gray-200" />
-              <div className="h-6 w-32 animate-pulse rounded bg-gray-200" />
+            <div className="flex items-start gap-2 sm:gap-3">
+              <div className="h-[20px] w-14 animate-pulse rounded-[16px] bg-gray-200 sm:h-[25px] sm:w-16" />
+              <div className="h-5 w-24 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-32" />
             </div>
 
             {/* Stats */}
-            <div className="flex items-start justify-between self-stretch">
+            <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:justify-between sm:gap-0">
               <div className="flex flex-row items-start gap-1">
-                <div className="h-5 w-16 animate-pulse rounded bg-gray-200" />
-                <div className="h-5 w-20 animate-pulse rounded bg-gray-200" />
+                <div className="h-4 w-12 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-16" />
+                <div className="h-4 w-16 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-20" />
               </div>
               <div className="flex flex-row items-start gap-1">
-                <div className="h-5 w-12 animate-pulse rounded bg-gray-200" />
-                <div className="h-5 w-8 animate-pulse rounded bg-gray-200" />
+                <div className="h-4 w-10 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-12" />
+                <div className="h-4 w-6 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-8" />
               </div>
             </div>
           </div>
@@ -42,19 +42,21 @@ export function ClientManagementPageSkeleton() {
       </div>
 
       {/* List Header Skeleton */}
-      <div className="flex items-center justify-between self-stretch">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-40 animate-pulse rounded bg-gray-200" />
-          <div className="h-6 w-12 animate-pulse rounded bg-gray-200" />
+      <div className="flex w-full flex-col gap-3 self-stretch sm:flex-row sm:items-center sm:justify-between sm:gap-0">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+            <div className="h-6 w-32 animate-pulse rounded bg-gray-200 sm:h-8 sm:w-40" />
+            <div className="h-5 w-10 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-12" />
+          </div>
         </div>
-        <div className="flex items-center justify-end gap-5">
-          <div className="h-10 w-32 animate-pulse rounded-full bg-gray-200" />
-          <div className="h-12 w-40 animate-pulse rounded-lg bg-gray-200" />
+        <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end sm:gap-5">
+          <div className="h-9 w-24 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-32" />
+          <div className="h-10 w-32 animate-pulse rounded-lg bg-gray-200 sm:h-12 sm:w-40" />
         </div>
       </div>
 
       {/* Table Skeleton with Bulk Selection */}
-      <div className="flex flex-col items-start gap-8 self-stretch">
+      <div className="flex w-full flex-col items-start gap-4 self-stretch sm:gap-8">
         <TableSkeleton
           columns={TABLE_COLUMNS}
           rows={ITEMS_PER_PAGE}
@@ -65,10 +67,13 @@ export function ClientManagementPageSkeleton() {
       </div>
 
       {/* Pagination Skeleton */}
-      <div className="flex flex-col items-center gap-8 self-stretch">
-        <div className="flex items-center justify-center gap-2">
+      <div className="flex w-full flex-col items-center gap-4 self-stretch sm:gap-8">
+        <div className="flex items-center justify-center gap-1 sm:gap-2">
           {Array.from({ length: 7 }).map((_, index) => (
-            <div key={index} className="h-10 w-10 animate-pulse rounded bg-gray-200" />
+            <div
+              key={index}
+              className="h-8 w-8 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10"
+            />
           ))}
         </div>
       </div>

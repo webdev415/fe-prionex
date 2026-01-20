@@ -162,27 +162,27 @@ export function ExportPaymentsCSVModal({
         title={t('pages.clients.modals.exportPaymentsCSV.title')}
         className="pb-6"
       />
-      <ModalContent className="max-h-[calc(90vh-200px)]">
+      <ModalContent className="max-h-[calc(90vh-300px)] sm:max-h-[calc(90vh-200px)]">
         {/* Export Filters Section */}
         <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
           <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
             {t('pages.clients.modals.exportPaymentsCSV.exportFilters')}
           </span>
-          <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
+          <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white bg-white/50 p-4 sm:p-5 sm:px-6">
             <div className="flex flex-col items-start gap-2 self-stretch">
               {/* Date Range */}
-              <div className="flex items-center gap-5 self-stretch">
-                <Label className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+              <div className="flex flex-col items-start gap-3 self-stretch sm:flex-row sm:items-center sm:gap-5">
+                <Label className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.exportPaymentsCSV.dateRange')}
                 </Label>
-                <div className="flex flex-1 items-center gap-3">
+                <div className="flex w-full flex-1 items-center gap-2 self-stretch sm:gap-3">
                   <DateSelect
                     value={startDate}
                     onChange={({ value }) => setStartDate(value)}
                     placeholder={t('pages.clients.modals.exportPaymentsCSV.startDate')}
                     className="flex-1"
                   />
-                  <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
+                  <span className="text-xs leading-[155%] font-medium tracking-[-0.32px] text-gray-700 sm:text-base">
                     -
                   </span>
                   <DateSelect
@@ -200,12 +200,12 @@ export function ExportPaymentsCSVModal({
                 </span>
                 <div className="h-px w-full bg-gray-200" />
               </div>
-              <div className="flex items-start gap-2 self-stretch">
+              <div className="grid grid-cols-2 items-start gap-2 self-stretch sm:flex sm:gap-2">
                 <Button
                   variant="white-secondary"
                   size="md"
                   onClick={() => handleQuickRange('thisMonth')}
-                  className="flex-1 rounded-md shadow-xs"
+                  className="w-full flex-1 rounded-md shadow-xs sm:w-auto"
                 >
                   {t('pages.clients.modals.exportPaymentsCSV.thisMonth')}
                 </Button>
@@ -213,7 +213,7 @@ export function ExportPaymentsCSVModal({
                   variant="white-secondary"
                   size="md"
                   onClick={() => handleQuickRange('lastMonth')}
-                  className="flex-1 rounded-md shadow-xs"
+                  className="w-full flex-1 rounded-md shadow-xs sm:w-auto"
                 >
                   {t('pages.clients.modals.exportPaymentsCSV.lastMonth')}
                 </Button>
@@ -221,7 +221,7 @@ export function ExportPaymentsCSVModal({
                   variant="white-secondary"
                   size="md"
                   onClick={() => handleQuickRange('thisQuarter')}
-                  className="flex-1 rounded-md shadow-xs"
+                  className="w-full flex-1 rounded-md shadow-xs sm:w-auto"
                 >
                   {t('pages.clients.modals.exportPaymentsCSV.thisQuarter')}
                 </Button>
@@ -229,7 +229,7 @@ export function ExportPaymentsCSVModal({
                   variant="white-secondary"
                   size="md"
                   onClick={() => handleQuickRange('thisYear')}
-                  className="flex-1 rounded-md shadow-xs"
+                  className="w-full flex-1 rounded-md shadow-xs sm:w-auto"
                 >
                   {t('pages.clients.modals.exportPaymentsCSV.thisYear')}
                 </Button>
@@ -241,7 +241,7 @@ export function ExportPaymentsCSVModal({
               <Label className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                 {t('pages.clients.modals.exportPaymentsCSV.statusLabel')}
               </Label>
-              <div className="flex items-start gap-2 self-stretch">
+              <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:gap-2">
                 <div className="flex flex-1 items-center gap-1">
                   <Checkbox
                     checked={statuses.includes('Verified')}
@@ -250,7 +250,7 @@ export function ExportPaymentsCSVModal({
                   />
                   <Label
                     htmlFor="status-verified"
-                    className="cursor-pointer text-sm font-light text-gray-950"
+                    className="cursor-pointer text-xs font-light text-gray-950 sm:text-sm"
                   >
                     {t('pages.clients.modals.exportPaymentsCSV.verified')}
                   </Label>
@@ -263,7 +263,7 @@ export function ExportPaymentsCSVModal({
                   />
                   <Label
                     htmlFor="status-pending"
-                    className="cursor-pointer text-sm font-light text-gray-950"
+                    className="cursor-pointer text-xs font-light text-gray-950 sm:text-sm"
                   >
                     {t('pages.clients.modals.exportPaymentsCSV.pending')}
                   </Label>
@@ -276,7 +276,7 @@ export function ExportPaymentsCSVModal({
                   />
                   <Label
                     htmlFor="status-cancelled"
-                    className="cursor-pointer text-sm font-light text-gray-950"
+                    className="cursor-pointer text-xs font-light text-gray-950 sm:text-sm"
                   >
                     {t('pages.clients.modals.exportPaymentsCSV.cancelled')}
                   </Label>
@@ -292,13 +292,13 @@ export function ExportPaymentsCSVModal({
               <RadioGroup
                 value={method}
                 onValueChange={setMethod}
-                className="flex items-start gap-2 self-stretch"
+                className="flex flex-col items-start gap-2 self-stretch sm:flex-row"
               >
                 <div className="flex flex-1 items-center gap-1">
                   <RadioItem value="All" id="method-all" />
                   <Label
                     htmlFor="method-all"
-                    className="cursor-pointer text-sm font-light text-gray-950"
+                    className="cursor-pointer text-xs font-light text-gray-950 sm:text-sm"
                   >
                     {t('pages.clients.modals.exportPaymentsCSV.all')}
                   </Label>
@@ -307,7 +307,7 @@ export function ExportPaymentsCSVModal({
                   <RadioItem value="Bank Only" id="method-bank" />
                   <Label
                     htmlFor="method-bank"
-                    className="cursor-pointer text-sm font-light text-gray-950"
+                    className="cursor-pointer text-xs font-light text-gray-950 sm:text-sm"
                   >
                     {t('pages.clients.modals.exportPaymentsCSV.bankOnly')}
                   </Label>
@@ -316,7 +316,7 @@ export function ExportPaymentsCSVModal({
                   <RadioItem value="Other Only" id="method-other" />
                   <Label
                     htmlFor="method-other"
-                    className="cursor-pointer text-sm font-light text-gray-950"
+                    className="cursor-pointer text-xs font-light text-gray-950 sm:text-sm"
                   >
                     {t('pages.clients.modals.exportPaymentsCSV.otherOnly')}
                   </Label>
@@ -332,13 +332,13 @@ export function ExportPaymentsCSVModal({
               <RadioGroup
                 value={project}
                 onValueChange={setProject}
-                className="flex items-start gap-2 self-stretch"
+                className="flex flex-col items-start gap-2 self-stretch sm:flex-row"
               >
                 <div className="flex flex-1 items-center gap-1">
                   <RadioItem value="All Projects" id="project-all" />
                   <Label
                     htmlFor="project-all"
-                    className="cursor-pointer text-sm font-light text-gray-950"
+                    className="cursor-pointer text-xs font-light text-gray-950 sm:text-sm"
                   >
                     {t('pages.clients.modals.exportPaymentsCSV.allProjects')}
                   </Label>
@@ -347,7 +347,7 @@ export function ExportPaymentsCSVModal({
                   <RadioItem value="PrivatBank" id="project-privatbank" />
                   <Label
                     htmlFor="project-privatbank"
-                    className="cursor-pointer text-sm font-light text-gray-950"
+                    className="cursor-pointer text-xs font-light text-gray-950 sm:text-sm"
                   >
                     {t('pages.clients.modals.exportPaymentsCSV.privatBank')}
                   </Label>
@@ -356,7 +356,7 @@ export function ExportPaymentsCSVModal({
                   <RadioItem value="Mono" id="project-mono" />
                   <Label
                     htmlFor="project-mono"
-                    className="cursor-pointer text-sm font-light text-gray-950"
+                    className="cursor-pointer text-xs font-light text-gray-950 sm:text-sm"
                   >
                     {t('pages.clients.modals.exportPaymentsCSV.mono')}
                   </Label>
@@ -365,7 +365,7 @@ export function ExportPaymentsCSVModal({
                   <RadioItem value="Other" id="project-other" />
                   <Label
                     htmlFor="project-other"
-                    className="cursor-pointer text-sm font-light text-gray-950"
+                    className="cursor-pointer text-xs font-light text-gray-950 sm:text-sm"
                   >
                     {t('pages.clients.modals.exportPaymentsCSV.other')}
                   </Label>
@@ -385,25 +385,27 @@ export function ExportPaymentsCSVModal({
               {t('pages.clients.modals.exportPaymentsCSV.basedOnCurrentFilters')}
             </span>
           </div>
-          <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white/100 bg-white/50 p-5 px-6">
-            <div className="flex items-center gap-4 self-stretch">
+          <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white/100 bg-white/50 p-4 sm:p-5 sm:px-6">
+            <div className="flex flex-col items-start gap-4 self-stretch sm:flex-row sm:items-center sm:gap-4">
               <div className="flex flex-1 flex-col items-start gap-2 p-0">
                 <div className="flex items-start gap-6 self-stretch">
-                  <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.modals.exportPaymentsCSV.matchingPayments')}{' '}
                     <span className="font-medium">{previewData.matchingPayments}</span>
                   </span>
                 </div>
                 <div className="flex items-start gap-6 self-stretch">
-                  <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.modals.exportPaymentsCSV.totalAmount')}{' '}
                     <span className="font-medium">{formatCurrency(previewData.totalAmount)}</span>
                   </span>
                 </div>
               </div>
+              <div className="hidden h-[50px] w-px bg-gray-200 sm:block"></div>
+              <div className="h-px w-full bg-gray-200 sm:hidden"></div>
               <div className="flex flex-1 flex-col items-start gap-2 p-0">
                 <div className="flex items-start gap-6 self-stretch">
-                  <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.modals.exportPaymentsCSV.dates')}{' '}
                     <span className="font-medium">
                       {startDate?.toISOString().split('T')[0]}{' '}
@@ -413,7 +415,7 @@ export function ExportPaymentsCSVModal({
                   </span>
                 </div>
                 <div className="flex items-start gap-6 self-stretch">
-                  <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                  <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.modals.exportPaymentsCSV.estimatedFileSize')}{' '}
                     <span className="font-medium">{previewData.estimatedFileSize}</span>
                   </span>
@@ -422,25 +424,25 @@ export function ExportPaymentsCSVModal({
             </div>
 
             {/* Status Breakdown Cards */}
-            <div className="flex items-start gap-5 self-stretch">
+            <div className="flex flex-col items-start gap-3 self-stretch sm:flex-row sm:gap-5">
               {/* {previewData.verifiedCount > 0 && ( */}
-              <div className="relative flex flex-1 flex-col items-start gap-1 overflow-hidden rounded-xl border border-white bg-white px-0 py-3">
-                <div className="flex items-start justify-between self-stretch px-6">
+              <div className="relative flex w-full flex-1 flex-col items-start gap-1 overflow-hidden rounded-xl border border-white bg-white px-0 py-3 sm:w-auto">
+                <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
                   <div className="mb-2 flex items-center gap-2">
-                    <Icons.AddInvoice size={18} className="text-gray-700" />
-                    <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                    <Icons.AddInvoice size={16} className="text-gray-700 sm:size-[18px]" />
+                    <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                       {t('pages.clients.modals.exportPaymentsCSV.verified')}
                     </span>
                   </div>
-                  <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                  <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                     {previewData.verifiedCount}
                   </span>
                 </div>
-                <div className="flex items-start justify-between self-stretch px-6">
-                  <span className="text-dark-500 text-center text-[18px] leading-[150%] font-medium tracking-[-0.36px]">
+                <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
+                  <span className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
                     {formatCurrency(previewData.verifiedAmount)}
                   </span>
-                  <span className="text-dark-500 text-center text-[18px] leading-[150%] font-medium tracking-[-0.36px]">
+                  <span className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
                     {previewData.verifiedPercentage}%
                   </span>
                 </div>
@@ -448,23 +450,23 @@ export function ExportPaymentsCSVModal({
               </div>
               {/* )} */}
               {/* {previewData.pendingCount > 0 && ( */}
-              <div className="flex flex-1 flex-col items-start gap-1 rounded-xl border border-gray-100 bg-white px-0 py-3">
-                <div className="flex items-start justify-between self-stretch px-6">
+              <div className="flex w-full flex-1 flex-col items-start gap-1 rounded-xl border border-gray-100 bg-white px-0 py-3 sm:w-auto">
+                <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
                   <div className="mb-2 flex items-center gap-2">
-                    <Icons.Invoice01 size={18} className="text-gray-700" />
-                    <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                    <Icons.Invoice01 size={16} className="text-gray-700 sm:size-[18px]" />
+                    <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                       {t('pages.clients.modals.exportPaymentsCSV.pending')}
                     </span>
                   </div>
-                  <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                  <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                     {previewData.pendingCount}
                   </span>
                 </div>
-                <div className="flex items-start justify-between self-stretch px-6">
-                  <span className="text-dark-500 text-center text-[18px] leading-[150%] font-medium tracking-[-0.36px]">
+                <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
+                  <span className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
                     {formatCurrency(previewData.pendingAmount)}
                   </span>
-                  <span className="text-dark-500 text-center text-[18px] leading-[150%] font-medium tracking-[-0.36px]">
+                  <span className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
                     {previewData.pendingPercentage}%
                   </span>
                 </div>
@@ -484,11 +486,14 @@ export function ExportPaymentsCSVModal({
               {t('pages.clients.modals.exportPaymentsCSV.fixed')}
             </span>
           </div>
-          <div className="flex flex-wrap items-start gap-1.5 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
+          <div className="flex flex-wrap items-start gap-1.5 self-stretch rounded-xl border border-white bg-white/50 p-4 sm:p-5 sm:px-6">
             {CSV_COLUMNS.map((column) => (
-              <div key={column.id} className="flex flex-1 items-center gap-1">
-                <Icons.Tick02 size={20} className="text-secondary-800" />
-                <span className="text-dark-500 w-[120px] text-sm leading-[150%] font-light tracking-[-0.28px]">
+              <div
+                key={column.id}
+                className="flex min-w-[140px] flex-1 items-center gap-1 sm:min-w-[120px]"
+              >
+                <Icons.Tick02 size={18} className="text-secondary-800 sm:size-5" />
+                <span className="text-dark-500 w-full text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
                   {t(`pages.clients.modals.exportPaymentsCSV.${column.translationKey}`)}
                 </span>
               </div>
@@ -496,15 +501,15 @@ export function ExportPaymentsCSVModal({
           </div>
         </div>
       </ModalContent>
-      <ModalFooter className="justify-between border-none">
-        <Button variant="cancel" onClick={handleClose} className="h-12 flex-1 rounded-md">
+      <ModalFooter className="flex flex-col items-stretch gap-3 border-none sm:flex-row sm:justify-between">
+        <Button variant="cancel" onClick={handleClose} className="h-12 w-full rounded-md">
           {t('pages.clients.modals.recordPayment.cancel')}
         </Button>
         <Button
           variant="primary"
-          leftIcon={<Icons.FileDownload size={20} />}
+          leftIcon={<Icons.FileDownload size={18} className="sm:size-5" />}
           onClick={handleExport}
-          className="h-12 flex-1 rounded-md"
+          className="h-12 w-full rounded-md"
         >
           {t('pages.clients.modals.exportPaymentsCSV.downloadCSV')}
         </Button>

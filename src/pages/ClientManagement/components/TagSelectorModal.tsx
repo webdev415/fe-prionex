@@ -130,30 +130,31 @@ export const TagSelectorModal = memo(function TagSelectorModal({
 
       <ModalContent>
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="text-gray-600">Loading tags...</div>
+          <div className="flex items-center justify-center py-6 sm:py-8">
+            <div className="text-xs text-gray-600 sm:text-sm">Loading tags...</div>
           </div>
         ) : (
           <>
-            <div className="mb-4">
+            <div className="mb-3 sm:mb-4">
               <Input
                 placeholder="Search tags..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 leftIcon={<Icons.Search size={16} />}
+                className="w-full"
               />
             </div>
 
-            <div className="mb-4 text-sm text-gray-600">
+            <div className="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm">
               {selectedTagIds.size} of {allTags?.length || 0} tags selected
             </div>
 
-            <div className="max-h-96 space-y-2 overflow-y-auto">
+            <div className="max-h-64 space-y-2 overflow-y-auto sm:max-h-96">
               {filteredTags && filteredTags.length > 0 ? (
                 filteredTags.map((tag) => (
                   <label
                     key={tag.id}
-                    className="flex cursor-pointer items-center gap-3 rounded p-2"
+                    className="flex cursor-pointer items-center gap-2 rounded p-2 sm:gap-3"
                   >
                     <Checkbox
                       checked={selectedTagIds.has(tag.id)}
@@ -161,12 +162,14 @@ export const TagSelectorModal = memo(function TagSelectorModal({
                     />
                     <TagBadge name={tag.name} color={tag.color} size="sm" />
                     {tag.description && (
-                      <span className="text-xs text-gray-500">{tag.description}</span>
+                      <span className="hidden text-xs text-gray-500 sm:inline">
+                        {tag.description}
+                      </span>
                     )}
                   </label>
                 ))
               ) : (
-                <div className="py-8 text-center text-sm text-gray-500">
+                <div className="py-6 text-center text-xs text-gray-500 sm:py-8 sm:text-sm">
                   {debouncedSearchQuery
                     ? 'No tags found matching your search'
                     : 'No tags available'}
@@ -178,10 +181,20 @@ export const TagSelectorModal = memo(function TagSelectorModal({
       </ModalContent>
 
       <ModalFooter>
-        <Button variant="outline" onClick={onClose} disabled={isSaving}>
+        <Button
+          variant="outline"
+          onClick={onClose}
+          disabled={isSaving}
+          className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
+        >
           Cancel
         </Button>
-        <Button onClick={handleSave} isLoading={isSaving} disabled={isLoading}>
+        <Button
+          onClick={handleSave}
+          isLoading={isSaving}
+          disabled={isLoading}
+          className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
+        >
           Save Tags
         </Button>
       </ModalFooter>

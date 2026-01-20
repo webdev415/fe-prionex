@@ -312,36 +312,40 @@ export function ActivityTimelinePage() {
   return (
     <div className="flex flex-col gap-4">
       {/* Client Header */}
-      <div className="flex items-center justify-between self-stretch">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate(`/dashboard/clients/${client.id}`)}
-            className="flex h-6 w-6 items-center justify-center"
-          >
-            <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
-          </button>
-          <h1 className="text-dark-500 text-center text-2xl leading-[150%] font-light">
-            {client.fullName}
-          </h1>
-          <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0">
-            {client.score} {t('pages.clients.activity.score')}
-          </span>
-          <PriorityBadge priority={client.priority} />
+      <div className="flex flex-col gap-4 self-stretch 2xl:flex-row 2xl:items-center 2xl:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-row items-center gap-2">
+            <button
+              onClick={() => navigate(`/dashboard/clients/${client.id}`)}
+              className="flex h-6 w-6 items-center justify-center"
+            >
+              <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
+            </button>
+            <h1 className="text-dark-500 text-center text-xl leading-[150%] font-light md:text-2xl">
+              {client.fullName}
+            </h1>
+          </div>
+          <div className="flex flex-row items-center gap-2">
+            <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0 text-sm">
+              {client.score} {t('pages.clients.activity.score')}
+            </span>
+            <PriorityBadge priority={client.priority} />
+          </div>
         </div>
-        <div className="flex items-center gap-5">
+        <div className="flex flex-wrap items-center gap-2 md:gap-5">
           <Button
             size="md"
-            variant="transparent-black"
+            variant="outline"
             leftIcon={<Icons.PencilEdit size={20} />}
-            className="rounded-full text-sm font-medium"
+            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
             onClick={() => setIsNoteModalOpen(true)}
           >
-            {t('pages.clients.activity.addNoteAboutClient')}
+            {t('pages.clients.activity.addNote')}
           </Button>
           <Button
             size="md"
             leftIcon={<Icons.Headset size={20} />}
-            className="rounded-full"
+            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
             onClick={() => {
               if (isCallActive()) {
                 toast.warning(
@@ -360,24 +364,24 @@ export function ActivityTimelinePage() {
             size="md"
             variant="secondary"
             leftIcon={<Icons.RemoveMale size={20} />}
-            className="rounded-full"
+            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
           >
             {t('pages.clients.activity.deleteClient')}
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-col items-start gap-5 self-stretch rounded-xl bg-white/50 p-6">
-        <div className="flex items-center justify-between self-stretch">
+      <div className="flex flex-col items-start gap-5 self-stretch rounded-xl bg-white/50 p-3 md:p-6">
+        <div className="flex flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:justify-between">
           {/* Type of communication */}
-          <div className="flex flex-1 items-center gap-6">
-            <label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+          <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center lg:flex-1">
+            <label className="text-dark-500 shrink-0 text-xs leading-[140%] font-medium tracking-[-0.24px]">
               {t('pages.clients.activity.typeOfCommunication')}:
             </label>
             <RadioGroup
               value={communicationType}
               onValueChange={(value) => setCommunicationType(value as CommunicationType)}
-              className="flex flex-1 items-center gap-2"
+              className="flex flex-1 flex-wrap items-center gap-2 sm:gap-4"
             >
               <div className="flex items-center gap-2">
                 <RadioItem value="calls" id="calls" />
@@ -407,20 +411,18 @@ export function ActivityTimelinePage() {
           </div>
 
           {/* Date range */}
-          <div className="flex flex-1 items-center gap-3">
-            <label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+          <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center lg:flex-1 lg:justify-end">
+            <label className="text-dark-500 shrink-0 text-xs leading-[140%] font-medium tracking-[-0.24px]">
               {t('pages.clients.activity.dateRange')}:
             </label>
-            <div className="flex flex-1 items-start gap-2">
+            <div className="flex flex-1 items-center gap-2">
               <DateSelect
                 value={dateFrom}
                 onChange={({ value }) => setDateFrom(value)}
                 placeholder={t('pages.clients.activity.fromDate')}
                 format="yyyy-MM-dd"
               />
-            </div>
-            <span className="text-dark-500">-</span>
-            <div className="flex flex-1 items-start gap-2">
+              <span className="text-dark-500 shrink-0">-</span>
               <DateSelect
                 value={dateTo}
                 onChange={({ value }) => setDateTo(value)}
@@ -429,11 +431,11 @@ export function ActivityTimelinePage() {
               />
             </div>
           </div>
-          <div className="flex items-center justify-end gap-5">
+          <div className="flex items-center justify-end gap-2 self-stretch sm:justify-end lg:w-auto lg:flex-none">
             {hasFilters && (
               <button
                 onClick={handleClearFilters}
-                className="ml-auto flex cursor-pointer items-center gap-2 rounded-full bg-white/5 px-4 py-2 text-gray-700 transition-colors hover:bg-white/10"
+                className="flex cursor-pointer items-center gap-2 rounded-full bg-white/5 px-3 py-2 text-gray-700 transition-colors hover:bg-white/10 sm:px-4"
               >
                 <Icons.Close size={16} className="text-gray-700" />
                 <span className="text-xs font-medium">{t('pages.clients.activity.clearAll')}</span>
@@ -443,9 +445,9 @@ export function ActivityTimelinePage() {
         </div>
         {/* Activity Table or Empty State */}
         {filteredActivities.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-6 self-stretch">
+          <div className="flex flex-col items-center justify-center gap-4 self-stretch md:gap-6">
             <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-            <p className="text-dark-500 text-center text-2xl font-light tracking-[-0.48px]">
+            <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
               {t('pages.clients.activity.noActivityRecordedYet')}
             </p>
             {hasFilters && (
@@ -459,9 +461,7 @@ export function ActivityTimelinePage() {
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-6 self-stretch">
-            <DataTable columns={activityColumns} data={paginatedActivities} className="w-full" />
-          </div>
+          <DataTable columns={activityColumns} data={paginatedActivities} className="w-full" />
         )}
       </div>
 

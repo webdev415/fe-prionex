@@ -185,6 +185,9 @@
 }
 
 @layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
   /* Dashboard background image */
   .bg-dashboard-light {
     background-image: url(/assets/images/dashboard-light-bg.svg);

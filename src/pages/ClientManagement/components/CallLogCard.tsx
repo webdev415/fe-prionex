@@ -1,58 +1,11 @@
-import React, { useId } from 'react'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useCallStore } from '@/stores/callStore'
+import { Icons } from '@/lib/icons'
 
 function cn(...parts: Array<string | undefined | false>) {
   return parts.filter(Boolean).join(' ')
-}
-
-type SvgCardShapeProps = {
-  className?: string
-  fillColorClassName?: string
-  strokeColorClassName?: string
-}
-
-function SvgCardShape({ className, fillColorClassName, strokeColorClassName }: SvgCardShapeProps) {
-  const raw = useId()
-  const uid = raw.replace(/[:]/g, '')
-  const maskId = `path-1-outside-1_${uid}`
-
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 378 179"
-      className={cn('block', className)}
-      aria-hidden="true"
-      focusable="false"
-    >
-      <mask
-        id={maskId}
-        maskUnits="userSpaceOnUse"
-        x={0}
-        y={0}
-        width={378}
-        height={179}
-        style={{ fill: 'black' }}
-      >
-        <rect width={378} height={179} fill="white" />
-        <path d="M240.347 1C250.288 1 258.347 9.05888 258.347 19V29C258.347 38.9411 266.406 47 276.347 47H359C368.941 47 377 55.0589 377 65V166C377 172.627 371.627 178 365 178H13C6.37258 178 1 172.627 1 166V13C1 6.37258 6.37258 1 13 1H240.347Z" />
-      </mask>
-
-      {/* Fill */}
-      <path
-        d="M240.347 1C250.288 1 258.347 9.05888 258.347 19V29C258.347 38.9411 266.406 47 276.347 47H359C368.941 47 377 55.0589 377 65V166C377 172.627 371.627 178 365 178H13C6.37258 178 1 172.627 1 166V13C1 6.37258 6.37258 1 13 1H240.347Z"
-        className={cn('fill-white', fillColorClassName)}
-      />
-
-      {/* Outline */}
-      <path
-        d="M1 166H0H1ZM258.347 19H257.347V29H258.347H259.347V19H258.347ZM276.347 47V48H359V47V46H276.347V47ZM377 65H376V166H377H378V65H377ZM377 166H376C376 172.075 371.075 177 365 177V178V179C372.18 179 378 173.18 378 166H377ZM365 178V177H13V178V179H365V178ZM13 178V177C6.92487 177 2 172.075 2 166H1H0C0 173.18 5.8203 179 13 179V178ZM1 166H2V13H1H0V166H1ZM1 13H2C2 6.92487 6.92487 2 13 2V1V0C5.8203 0 0 5.8203 0 13H1ZM13 1V2H240.347V1V0H13V1ZM359 47V48C368.389 48 376 55.6112 376 65H377H378C378 54.5066 369.493 46 359 46V47ZM258.347 29H257.347C257.347 39.4934 265.853 48 276.347 48V47V46C266.958 46 259.347 38.3888 259.347 29H258.347ZM258.347 19H259.347C259.347 8.50659 250.84 0 240.347 0V1V2C249.736 2 257.347 9.61116 257.347 19H258.347Z"
-        className={cn('fill-[#EDEDED]', strokeColorClassName)}
-        mask={`url(#${maskId})`}
-      />
-    </svg>
-  )
 }
 
 type CallData = {
@@ -99,13 +52,19 @@ type CallLogCardProps = {
 }
 
 /**
- * Responsive version:
- * - Use `aspect-[378/179]` so height scales with width
- * - Header becomes stacked on very small widths
- * - Body label/value stacks on mobile and becomes 2-column from `sm:`
+ * CallLogCard Component
+ *
+ * Displays call or SMS log cards in a clean grid layout matching the design:
+ * - Call cards: Show direction, status, time, duration, and phone number
+ * - SMS cards: Show status, message title, and message content
+ *
+ * Layout:
+ * - Left: Icon in light grey square container
+ * - Middle: Content (varies by type)
+ * - Right: Date, Time, and Agent name (right-aligned)
  */
 export function CallLogCard({
-  title,
+  title: _title, // Not used in new design - kept for backward compatibility
   time,
   date,
   duration,
@@ -114,8 +73,8 @@ export function CallLogCard({
   template,
   operator,
   type,
-  line,
   phone,
+  line,
   icon,
   clientName,
   className,
@@ -151,204 +110,204 @@ export function CallLogCard({
         return t('pages.clients.modals.callLogCard.callTypes.incoming')
       case 'Outgoing':
         return t('pages.clients.modals.callLogCard.callTypes.outgoing')
-      case 'Incoming Call':
-        return t('pages.clients.modals.callLogCard.callTypes.incomingCall')
       default:
         return callType
     }
   }
 
+  // Determine status dot color
+  const getStatusDotColor = () => {
+    if (status === 'Answered' || status === 'Delivered') {
+      return 'bg-success-500'
+    }
+    if (status === 'No Answer' || status === 'Failed') {
+      return 'bg-error-500'
+    }
+    return 'bg-gray-500'
+  }
+  const getStatusBorderColor = () => {
+    if (status === 'Answered' || status === 'Delivered') {
+      return 'bg-success-200'
+    }
+    if (status === 'No Answer' || status === 'Failed') {
+      return 'bg-error-200'
+    }
+    return 'bg-gray-200'
+  }
+
+  // Get status text color
+  const getStatusTextColor = () => {
+    if (status === 'Answered' || status === 'Delivered') {
+      return 'text-success-500'
+    }
+    if (status === 'No Answer' || status === 'Failed') {
+      return 'text-error-500'
+    }
+    return 'text-gray-500'
+  }
+
+  // Handle card click
+  const handleCardClick = () => {
+    if (type) {
+      // Call card clicked
+      if (isCallActive()) {
+        toast.warning(
+          t('pages.clients.modals.callDialog.callInProgress') ||
+            'Another call or recording is already in progress. Please finish or close it first.'
+        )
+        return
+      }
+      setSelectedCallData?.({
+        type:
+          type === 'Incoming'
+            ? t('pages.clients.modals.callLogCard.callTypes.incomingCall')
+            : getTranslatedCallType(type),
+        clientName: clientName || '',
+        date: date || '',
+        time: time || '',
+        operator: operator || '',
+        duration: duration || '',
+        phone: phone || '',
+        call_id: call_id,
+      })
+      setOpenCallModal('call-recording')
+      setIsCallRecordingModalOpen?.(true)
+    } else {
+      // SMS card clicked
+      setSelectedSMSData?.({
+        date: date || '',
+        time: time || '',
+        template: template || t('pages.clients.modals.sendSMS.customMessage') || 'Custom Message',
+        operator: operator || '',
+        status: status || '',
+        message: message || '',
+        phone: phone || '',
+      })
+      setIsViewSMSModalOpen?.(true)
+    }
+  }
+
+  const isCall = !!type
+
   return (
-    <div
+    <button
+      onClick={handleCardClick}
       className={cn(
-        'relative aspect-[378/179] w-full',
-        // Helpful defaults; override freely
-        'max-w-[920px]',
+        'group relative w-full cursor-pointer rounded-lg border border-[#E0E0E0] bg-white p-3 text-left transition-shadow hover:shadow-md md:p-4',
         className
       )}
     >
-      {/* Background shape */}
-      <SvgCardShape className="absolute inset-0 h-full w-full" />
+      <div className="flex h-full min-w-0 items-start gap-2 md:gap-4">
+        {/* Left Section - Icon */}
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#F0F0F0] md:h-10 md:w-10">
+          <div className="text-secondary-800/50 group-hover:text-secondary-800">{icon}</div>
+        </div>
 
-      {/* Content */}
-      <div className="absolute inset-0">
-        <div className="flex h-full w-full items-start gap-5 px-9 py-8">
-          <div className="flex h-full flex-col gap-10">
-            {/* Header */}
-            <div className="flex flex-row items-center gap-14">
-              {/* Time */}
-              <div className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
-                {time}
-              </div>
-
-              {/* Title */}
-              <button
-                className="flex cursor-pointer items-start gap-2"
-                onClick={() => {
-                  if (type) {
-                    // Check if there's an active call/recording
-                    if (isCallActive()) {
-                      toast.warning(
-                        t('pages.clients.modals.callDialog.callInProgress') ||
-                          'Another call or recording is already in progress. Please finish or close it first.'
-                      )
-                      return
-                    }
-                    setSelectedCallData?.({
-                      type:
-                        type === 'Incoming'
-                          ? t('pages.clients.modals.callLogCard.callTypes.incomingCall')
-                          : getTranslatedCallType(type),
-                      clientName: clientName || '',
-                      date: date || '',
-                      time: time || '',
-                      operator: operator || '',
-                      duration: duration || '',
-                      phone: phone || '',
-                      call_id: call_id,
-                    })
-                    setOpenCallModal('call-recording')
-                    setIsCallRecordingModalOpen?.(true)
-                  } else {
-                    setSelectedSMSData?.({
-                      date: date || '',
-                      time: time || '',
-                      template:
-                        template ||
-                        t('pages.clients.modals.sendSMS.customMessage') ||
-                        'Custom Message', // Show "Custom Message" if no template
-                      operator: operator || 'Svitlana',
-                      status: status || '',
-                      message: message || 'Dear Ivan, this is a reminder about your loan payment.',
-                      phone: phone || '',
-                    })
-                    setIsViewSMSModalOpen?.(true)
-                  }
-                }}
-              >
-                <div>{icon}</div>
-                <div className="text-secondary-800 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                  {title}
-                </div>
-              </button>
-              {/* Status */}
-              <div className="order-2 flex items-center justify-between gap-2">
-                {/* On very small widths, align status to the right and keep title below */}
-                <div className="absolute top-5 right-12 ml-auto flex items-center gap-2">
-                  <span
-                    className={cn(
-                      'inline-flex h-5 w-5 items-center justify-center rounded-full',
-                      status === 'Answered' || status === 'Delivered'
-                        ? 'bg-success-100'
-                        : status === 'No Answer' || status === 'Failed'
-                          ? 'bg-error-100'
-                          : 'bg-gray-100'
+        {/* Middle Section - Content */}
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5 overflow-hidden md:gap-1">
+          {isCall ? (
+            /* Call Card Content */
+            <>
+              {/* Line 1: Direction + Status */}
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="flex shrink-0 flex-row items-center gap-1 text-sm text-[#666666]">
+                  <span>
+                    {type === 'Incoming' ? (
+                      <Icons.CallIncoming04
+                        size={16}
+                        className="text-secondary-800"
+                        aria-hidden="true"
+                        focusable="false"
+                      />
+                    ) : (
+                      <Icons.CallOutgoing04
+                        size={16}
+                        className="text-secondary-800"
+                        aria-hidden="true"
+                        focusable="false"
+                      />
                     )}
-                  >
-                    <span
-                      className={cn(
-                        'h-3 w-3 rounded-full',
-                        status === 'Answered' || status === 'Delivered'
-                          ? 'bg-success-500'
-                          : status === 'No Answer' || status === 'Failed'
-                            ? 'bg-error-500'
-                            : 'bg-gray-500'
-                      )}
-                    />
                   </span>
-                  <div
-                    className={cn(
-                      'text-sm leading-[150%] font-medium tracking-[-0.28px]',
-                      status === 'Answered' || status === 'Delivered'
-                        ? 'text-success-500'
-                        : status === 'No Answer' || status === 'Failed'
-                          ? 'text-error-500'
-                          : 'text-gray-500'
-                    )}
-                  >
-                    {status ? getTranslatedStatus(status) : ''}
-                  </div>
-                </div>
+                  <span>{getTranslatedCallType(type || '')}</span>
+                </span>
+                <span
+                  className={cn(
+                    'flex h-3 w-3 shrink-0 items-center justify-center rounded-full',
+                    getStatusBorderColor()
+                  )}
+                >
+                  <span className={cn('h-1.5 w-1.5 rounded-full', getStatusDotColor())} />
+                </span>
+                <span className={cn('shrink-0 text-sm', getStatusTextColor())}>
+                  {status ? getTranslatedStatus(status) : ''}
+                </span>
               </div>
+
+              {/* Line 2: Time + Duration */}
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="shrink-0 text-sm font-bold text-[#333333]">{time}</span>
+                <span className="shrink-0 text-sm text-[#666666]">
+                  {duration ? `(${duration})` : ''}
+                </span>
+              </div>
+
+              {/* Line 3: Phone Number */}
+              <div className="truncate text-sm text-[#666666]">{phone}</div>
+
+              {/* Line 4: Line Information */}
+              {line && <div className="truncate text-sm text-[#666666]">{line}</div>}
+            </>
+          ) : (
+            /* SMS Card Content */
+            <>
+              {/* Line 1: Status */}
+              <div className="flex min-w-0 shrink-0 items-center gap-2">
+                <span
+                  className={cn(
+                    'flex h-3 w-3 shrink-0 items-center justify-center rounded-full',
+                    getStatusBorderColor()
+                  )}
+                >
+                  <span className={cn('h-1.5 w-1.5 rounded-full', getStatusDotColor())} />
+                </span>
+                <span className={cn('shrink-0 text-sm', getStatusTextColor())}>
+                  {status ? getTranslatedStatus(status) : ''}
+                </span>
+              </div>
+
+              {/* Line 2: Message Title (Template) */}
+              <div className="truncate text-sm font-bold text-[#333333]">
+                {template || t('pages.clients.modals.sendSMS.customMessage') || 'Custom Message'}
+              </div>
+
+              {/* Line 3: Message Content */}
+              <div className="line-clamp-2 overflow-hidden text-sm break-words text-[#666666]">
+                {message}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Right Section - Metadata */}
+        <div className="flex shrink-0 flex-col items-end gap-0.5 md:gap-1">
+          {/* Date */}
+          {date && (
+            <div className="text-[10px] whitespace-nowrap text-[#888888] md:text-xs">{date}</div>
+          )}
+
+          {/* Time */}
+          {time && (
+            <div className="text-[10px] whitespace-nowrap text-[#888888] md:text-xs">{time}</div>
+          )}
+
+          {/* Agent/Operator Name */}
+          {operator && (
+            <div className="mt-auto text-[10px] font-medium whitespace-nowrap text-[#333333] md:text-xs">
+              {operator}
             </div>
-
-            {/* Body for sms */}
-            {!type && (
-              <div className="flex flex-col items-start gap-4 self-stretch">
-                <div className="flex items-start gap-6 self-stretch">
-                  <div className="w-[70px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    {t('pages.clients.modals.callLogCard.message')}:
-                  </div>
-                  <div className="text-dark-500 line-clamp-2 flex-1 overflow-hidden text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    {message}
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-6 self-stretch">
-                  <div className="w-[70px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    {t('pages.clients.modals.callLogCard.template')}:
-                  </div>
-                  <div className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    {template ||
-                      t('pages.clients.modals.sendSMS.customMessage') ||
-                      'Custom Message'}
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-6 self-stretch">
-                  <div className="w-[70px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    {t('pages.clients.modals.callLogCard.operator')}:
-                  </div>
-                  <div className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    {operator}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Body for call */}
-            {type && (
-              <div className="flex flex-col items-start gap-4 self-stretch">
-                <div className="flex items-start gap-6 self-stretch">
-                  <div className="w-[70px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    {t('pages.clients.modals.callLogCard.type')}:
-                  </div>
-                  <div className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    {type ? getTranslatedCallType(type) : type}
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-6 self-stretch">
-                  <div className="w-[70px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    {t('pages.clients.modals.callLogCard.operator')}:
-                  </div>
-                  <div className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    {operator}
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-6 self-stretch">
-                  <div className="w-[70px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    {t('pages.clients.modals.callLogCard.phone')}:
-                  </div>
-                  <div className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    {phone}
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-6 self-stretch">
-                  <div className="w-[70px] text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                    {t('pages.clients.modals.callLogCard.line')}:
-                  </div>
-                  <div className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    {line}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
-    </div>
+    </button>
   )
 }

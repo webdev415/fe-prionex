@@ -161,19 +161,20 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   const selectedTagIds = filters.tagIds || []
 
   return (
-    <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-6">
-      <div className="flex flex-col items-center gap-6 self-stretch">
-        <div className="flex flex-col items-center gap-7 self-stretch">
-          <div className="flex items-center gap-10 self-stretch">
+    <div className="flex w-full flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
+      <div className="flex w-full flex-col items-center gap-4 self-stretch sm:gap-6">
+        <div className="flex w-full flex-col items-center gap-4 self-stretch sm:gap-7">
+          {/* First Row: Debt Range & DPD Range */}
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             {/* Debt Range */}
-            <div className="flex flex-1 items-center gap-3">
-              <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.debtRange')}
               </label>
-              <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
-                ₴
-              </span>
-              <div className="flex flex-1 items-center gap-2">
+              <div className="flex w-full items-center gap-2 sm:flex-1">
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                  ₴
+                </span>
                 <DebouncedNumberInput
                   value={filters.debtRangeFrom}
                   onChange={(value) =>
@@ -186,7 +187,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
                 />
-                <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
                   -
                 </span>
                 <DebouncedNumberInput
@@ -204,11 +205,11 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               </div>
             </div>
             {/* DPD Range */}
-            <div className="flex flex-1 items-center gap-3">
-              <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.dpdRange')}
               </label>
-              <div className="flex flex-1 items-center gap-2">
+              <div className="flex w-full flex-1 items-center gap-2">
                 <DebouncedNumberInput
                   value={filters.dpdRangeFrom}
                   onChange={(value) =>
@@ -220,7 +221,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   placeholder="10"
                   className="flex flex-1 flex-col items-start gap-2"
                 />
-                <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
                   -
                 </span>
                 <DebouncedNumberInput
@@ -234,22 +235,24 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   placeholder="60"
                   className="flex flex-1 flex-col items-start gap-2"
                 />
-                <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                <span className="text-xs leading-[150%] font-medium tracking-[-0.24px] text-gray-700 sm:text-sm sm:tracking-[-0.28px]">
                   {t('pages.clients.filters.days')}
                 </span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-10 self-stretch">
+
+          {/* Second Row: Amount of debt range & Date of sale */}
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             {/* Amount of debt range */}
-            <div className="flex flex-1 items-center gap-3">
-              <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.amountOfDebtRange')}
               </label>
-              <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
-                ₴
-              </span>
-              <div className="flex flex-1 items-center gap-2">
+              <div className="flex w-full items-center gap-2 sm:flex-1">
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                  ₴
+                </span>
                 <DebouncedNumberInput
                   value={filters.amountOfDebtRangeFrom}
                   onChange={(value) =>
@@ -262,7 +265,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
                 />
-                <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
                   -
                 </span>
                 <DebouncedNumberInput
@@ -281,38 +284,45 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             </div>
 
             {/* Date of sale */}
-            <div className="flex flex-1 items-center gap-3">
-              <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.dateOfSale')}
               </label>
-              <DateSelect
-                value={filters.dateOfSaleFrom || null}
-                onChange={({ value }) => handleDateChange('dateOfSaleFrom', value)}
-                placeholder={`${new Date().getFullYear()}-01-01`}
-                format="yyyy-MM-dd"
-                className="flex flex-1 flex-col gap-2"
-              />
-              <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
-                -
-              </span>
-              <DateSelect
-                value={filters.dateOfSaleTo || null}
-                onChange={({ value }) => handleDateChange('dateOfSaleTo', value)}
-                placeholder={`${new Date().getFullYear()}-12-31`}
-                format="yyyy-MM-dd"
-                className="flex flex-1 flex-col gap-2"
-              />
+              <div className="flex w-full flex-1 items-center gap-2">
+                <DateSelect
+                  value={filters.dateOfSaleFrom || null}
+                  onChange={({ value }) => handleDateChange('dateOfSaleFrom', value)}
+                  placeholder={`${new Date().getFullYear()}-01-01`}
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                  -
+                </span>
+                <DateSelect
+                  value={filters.dateOfSaleTo || null}
+                  onChange={({ value }) => handleDateChange('dateOfSaleTo', value)}
+                  placeholder={`${new Date().getFullYear()}-12-31`}
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-10 self-stretch">
+
+          {/* Third Row: Portfolio & Status */}
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             {/* Portfolio */}
-            <div className="flex min-w-[220px] flex-1 items-center gap-3">
-              <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.portfolio')}
               </label>
-              <div className="flex flex-1 flex-wrap items-start gap-3">
+              <div className="flex w-full flex-1 flex-wrap items-start gap-2 sm:gap-3">
                 {displayedPortfolios.map((portfolio) => (
-                  <label key={portfolio} className="flex cursor-pointer items-center gap-2">
+                  <label
+                    key={portfolio}
+                    className="flex cursor-pointer items-center gap-1.5 sm:gap-2"
+                  >
                     <Checkbox
                       checked={selectedPortfolios.includes(portfolio)}
                       onCheckedChange={(checked) => {
@@ -324,14 +334,12 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                         } as unknown as ClientFilters)
                       }}
                     />
-                    <span className="text-dark-500 text-sm">{portfolio}</span>
+                    <span className="text-dark-500 text-xs sm:text-sm">{portfolio}</span>
                   </label>
                 ))}
-              </div>
-              <div className="flex items-center gap-2">
                 {hiddenPortfoliosCount > 0 && (
-                  <>
-                    <span className="text-secondary-800 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="text-secondary-800 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                       + {hiddenPortfoliosCount} {t('pages.clients.filters.more')}
                     </span>
                     <PortfolioDropdown
@@ -360,21 +368,24 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                         </button>
                       }
                     />
-                  </>
+                  </div>
                 )}
               </div>
             </div>
 
             {/* Status */}
-            <div className="flex min-w-[220px] flex-1 items-center gap-3">
-              <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.status')}
               </label>
-              <div className="flex flex-1 items-center gap-8">
+              <div className="flex w-full flex-1 flex-wrap items-center gap-4 sm:gap-8">
                 {statusOptions.map((status) => {
                   const statusKey = status.toLowerCase().replace(/[\s_]/g, '')
                   return (
-                    <label key={status} className="flex cursor-pointer items-center gap-2">
+                    <label
+                      key={status}
+                      className="flex cursor-pointer items-center gap-1.5 sm:gap-2"
+                    >
                       <Checkbox
                         checked={(filters.status || []).includes(status)}
                         onCheckedChange={(checked) => {
@@ -386,7 +397,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                           } as unknown as ClientFilters)
                         }}
                       />
-                      <span className="text-dark-500 text-sm">
+                      <span className="text-dark-500 text-xs sm:text-sm">
                         {t(`pages.clients.statuses.${statusKey}`)}
                       </span>
                     </label>
@@ -395,15 +406,17 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-10 self-stretch">
+
+          {/* Fourth Row: Tags Filter */}
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             {/* Tags Filter */}
-            <div className="flex min-w-[220px] flex-1 items-center gap-3">
-              <label className="text-dark-500 w-[100px] text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.tags')}
               </label>
-              <div className="flex flex-1 flex-wrap items-start gap-3">
+              <div className="flex w-full flex-1 flex-wrap items-start gap-2 sm:gap-3">
                 {displayedTags.map((tag) => (
-                  <label key={tag.id} className="flex cursor-pointer items-center gap-2">
+                  <label key={tag.id} className="flex cursor-pointer items-center gap-1.5 sm:gap-2">
                     <Checkbox
                       checked={selectedTagIds.includes(tag.id)}
                       onCheckedChange={(checked) => {
@@ -415,20 +428,18 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                         } as unknown as ClientFilters)
                       }}
                     />
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1 sm:gap-1.5">
                       <div
-                        className="h-2.5 w-2.5 rounded-full"
+                        className="h-2 w-2 rounded-full sm:h-2.5 sm:w-2.5"
                         style={{ backgroundColor: tag.color }}
                       />
-                      <span className="text-dark-500 text-sm">{tag.name}</span>
+                      <span className="text-dark-500 text-xs sm:text-sm">{tag.name}</span>
                     </div>
                   </label>
                 ))}
-              </div>
-              <div className="flex items-center gap-2">
                 {hiddenTagsCount > 0 && (
-                  <>
-                    <span className="text-secondary-800 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="text-secondary-800 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                       + {hiddenTagsCount} {t('pages.clients.filters.more')}
                     </span>
                     <TagsDropdown
@@ -458,19 +469,21 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                         </button>
                       }
                     />
-                  </>
+                  </div>
                 )}
               </div>
             </div>
-            <div className="flex min-w-[220px] flex-1" />
+            <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
           </div>
-          <div className="flex items-start gap-10 self-stretch">
+
+          {/* Fifth Row: Responsible employee & Responsible searcher */}
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-10">
             {/* Responsible employee */}
-            <div className="flex min-w-[220px] flex-1 items-center gap-3">
-              <label className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-auto sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.responsibleEmployee')}
               </label>
-              <div className="flex flex-1 flex-col items-start gap-2">
+              <div className="flex w-full flex-1 flex-col items-start gap-2">
                 <Select
                   value={filters.responsibleEmployee || undefined}
                   onValueChange={(value) =>
@@ -504,11 +517,11 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             </div>
 
             {/* Responsible searcher */}
-            <div className="flex min-w-[220px] flex-1 items-center gap-3">
-              <label className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+            <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-auto sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.responsibleSearcher')}
               </label>
-              <div className="flex flex-1 flex-col items-start gap-2">
+              <div className="flex w-full flex-1 flex-col items-start gap-2">
                 <Select
                   value={filters.responsibleSearcher || undefined}
                   onValueChange={(value) =>
@@ -541,10 +554,12 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               </div>
             </div>
           </div>
-          <div className="flex items-start gap-10 self-stretch">
+
+          {/* Sixth Row: Unassigned only checkbox */}
+          <div className="flex w-full items-start gap-4 self-stretch lg:gap-10">
             {/* Unassigned only checkbox */}
-            <div className="flex min-w-[220px] flex-1 items-center gap-3">
-              <label className="flex cursor-pointer items-center gap-2">
+            <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="flex cursor-pointer items-center gap-1.5 sm:gap-2">
                 <Checkbox
                   checked={filters.unassignedOnly || false}
                   onCheckedChange={(checked) =>
@@ -554,12 +569,12 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     })
                   }
                 />
-                <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                <span className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                   {t('pages.clients.filters.unassignedOnly')}
                 </span>
               </label>
             </div>
-            <div className="flex min-w-[220px] flex-1" />
+            <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
           </div>
         </div>
       </div>

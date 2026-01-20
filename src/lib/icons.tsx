@@ -129,6 +129,10 @@ import {
   Settings05Icon,
   LockSync01Icon,
   SlidersHorizontalIcon,
+  PlayIcon,
+  ChatIcon,
+  CallOutgoing04Icon,
+  CallIncoming04Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -314,6 +318,10 @@ export const Icons = {
   SlidersHorizontal: (props: Omit<IconProps, 'icon'>) => (
     <Icon icon={SlidersHorizontalIcon} {...props} />
   ),
+  Play: (props: Omit<IconProps, 'icon'>) => <Icon icon={PlayIcon} {...props} />,
+  Chat: (props: Omit<IconProps, 'icon'>) => <Icon icon={ChatIcon} {...props} />,
+  CallOutgoing04: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallOutgoing04Icon} {...props} />,
+  CallIncoming04: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallIncoming04Icon} {...props} />,
 }
 
 /**
@@ -434,6 +442,10 @@ export {
   Settings05Icon,
   LockSync01Icon,
   SlidersHorizontalIcon,
+  PlayIcon,
+  ChatIcon,
+  CallOutgoing04Icon,
+  CallIncoming04Icon,
 }
 
 /**
