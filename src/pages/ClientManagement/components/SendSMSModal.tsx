@@ -370,25 +370,25 @@ export function SendSMSModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} maxWidth="xl" className="p-10">
+    <Modal open={open} onClose={onClose} maxWidth="xl" className="p-4 sm:p-6 md:p-10">
       {/* Header */}
-      <div className="flex items-center justify-between self-stretch">
-        <div className="flex items-center gap-6">
-          <div className="bg-primary-300 flex h-12 w-12 items-center justify-center rounded-full">
-            <Icons.ChatFeedback01 size={24} className="text-dark-500" strokeWidth={1.5} />
+      <div className="flex flex-col items-start justify-between gap-3 self-stretch sm:flex-row sm:items-center sm:gap-0">
+        <div className="flex items-center gap-3 sm:gap-6">
+          <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+            <Icons.ChatFeedback01 size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
           </div>
-          <span className="text-dark-500 text-2xl font-medium">
+          <span className="text-dark-500 text-xl font-medium sm:text-2xl">
             {t('pages.clients.modals.sendSMS.title')}
           </span>
         </div>
-        <div className="flex items-center justify-end gap-1 pr-4">
+        <div className="flex items-center justify-end gap-1 sm:pr-4">
           <div
             className={cn(
               'h-2 w-2 rounded-full',
               isDailyLimitReached ? 'bg-error-500' : 'bg-success-500'
             )}
           />
-          <span className="text-dark-500 text-base font-light">
+          <span className="text-dark-500 text-xs font-light sm:text-base">
             {t('pages.clients.modals.sendSMS.smsSentToday')}:{' '}
             <span className="font-medium">
               {smsSentToday}/{dailyLimit}
@@ -399,25 +399,29 @@ export function SendSMSModal({
       <div className="flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
       {/* Content */}
       <ModalContent className="p-0">
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 sm:gap-6">
           {/* Recipient Info */}
-          <div className="flex items-start justify-between self-stretch">
-            <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
+          <div className="flex flex-col items-start justify-between gap-2 self-stretch sm:flex-row sm:items-center">
+            <span className="text-dark-500 text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
               {t('pages.clients.modals.sendSMS.sendSMSTo')} {clientName}
             </span>
-            <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
+            <span className="text-dark-500 text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
               {phoneNumber}
             </span>
           </div>
           {/* Daily Limit Reached State */}
           {isDailyLimitReached ? (
-            <div className="flex flex-col items-center gap-5 self-stretch rounded-xl border border-white bg-white/50 px-6 py-5">
-              <Icons.MailBlock02 size={48} className="text-error-500" strokeWidth={0.5} />
-              <p className="text-error-500 self-stretch text-center text-xl leading-[132%] font-light tracking-[-0.4px]">
+            <div className="flex flex-col items-center gap-4 self-stretch rounded-xl border border-white bg-white/50 px-4 py-4 sm:gap-5 sm:px-6 sm:py-5">
+              <Icons.MailBlock02
+                size={40}
+                className="text-error-500 sm:size-12"
+                strokeWidth={0.5}
+              />
+              <p className="text-error-500 self-stretch text-center text-base leading-[132%] font-light tracking-[-0.4px] sm:text-xl">
                 {t('pages.clients.modals.sendSMS.dailyLimitReached')}: {smsSentToday}/{dailyLimit}{' '}
                 {t('pages.clients.modals.sendSMS.smsSentToThisNumber')}
               </p>
-              <p className="text-dark-500 self-stretch text-center text-[18px] leading-[150%] font-light tracking-[-0.36px]">
+              <p className="text-dark-500 self-stretch text-center text-sm leading-[150%] font-light tracking-[-0.36px] sm:text-[18px]">
                 {t('pages.clients.modals.sendSMS.nextSMSAvailableTomorrow')}{' '}
                 <span className="font-medium">00:00</span>
               </p>
@@ -426,7 +430,7 @@ export function SendSMSModal({
             <>
               {/* Template Selection */}
               <div className="flex flex-col gap-2">
-                <label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
+                <label className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-950 sm:text-sm">
                   {t('pages.clients.modals.sendSMS.template')}:
                 </label>
                 <Select
@@ -464,7 +468,7 @@ export function SendSMSModal({
 
               {/* Message */}
               <div className="flex flex-col gap-2">
-                <label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
+                <label className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-950 sm:text-sm">
                   {t('pages.clients.modals.sendSMS.message')}:
                 </label>
                 <textarea
@@ -479,28 +483,28 @@ export function SendSMSModal({
                   }}
                   disabled={!!selectedTemplateId && isLoadingTemplates}
                   placeholder={t('pages.clients.modals.sendSMS.typeYourMessageHere')}
-                  className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[120px] resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100"
+                  className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[100px] resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 sm:min-h-[120px] sm:text-sm"
                 />
               </div>
 
               {/* Message Metrics */}
-              <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 px-6 py-5">
-                <div className="flex items-center gap-5 self-stretch">
-                  <div className="flex flex-1 items-center gap-1">
+              <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white bg-white/50 px-4 py-4 sm:gap-5 sm:px-6 sm:py-5">
+                <div className="flex flex-col items-start gap-3 self-stretch sm:flex-row sm:items-center sm:gap-5">
+                  <div className="flex w-full flex-1 items-center gap-1 sm:w-auto">
                     <div
                       className={cn(
                         'h-2 w-2 rounded-full',
                         messageMetrics.exceedsLimit ? 'bg-error-500' : 'bg-success-500'
                       )}
                     />
-                    <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {messageMetrics.charCount}/{messageMetrics.maxChars}{' '}
                       {t('pages.clients.modals.sendSMS.characters')}
                     </span>
                   </div>
-                  <div className="flex flex-1 items-center gap-2">
-                    <Icons.TypeCursor size={20} className="text-gray-600" />
-                    <span className="text-dark-500 text-sm font-light">
+                  <div className="flex w-full flex-1 items-center gap-2 sm:w-auto">
+                    <Icons.TypeCursor size={18} className="text-gray-600 sm:size-5" />
+                    <span className="text-dark-500 text-xs font-light sm:text-sm">
                       {t('pages.clients.modals.sendSMS.script')}:{' '}
                       <span className="text-dark-500 font-medium">
                         {messageMetrics.hasCyrillic
@@ -510,10 +514,10 @@ export function SendSMSModal({
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-5 self-stretch">
-                  <div className="flex flex-1 items-center gap-2">
-                    <Icons.Mail size={20} className="text-gray-600" />
-                    <span className="text-dark-500 text-sm font-medium">
+                <div className="flex flex-col items-start gap-3 self-stretch sm:flex-row sm:items-center sm:gap-5">
+                  <div className="flex w-full flex-1 items-center gap-2 sm:w-auto">
+                    <Icons.Mail size={18} className="text-gray-600 sm:size-5" />
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
                       {messageMetrics.smsParts}{' '}
                       <span className="font-light">
                         {messageMetrics.smsParts !== 1
@@ -522,9 +526,9 @@ export function SendSMSModal({
                       </span>
                     </span>
                   </div>
-                  <div className="flex flex-1 items-center gap-2">
-                    <Icons.Money04 size={20} className="text-gray-600" />
-                    <span className="text-dark-500 text-sm font-light">
+                  <div className="flex w-full flex-1 items-center gap-2 sm:w-auto">
+                    <Icons.Money04 size={18} className="text-gray-600 sm:size-5" />
+                    <span className="text-dark-500 text-xs font-light sm:text-sm">
                       {t('pages.clients.modals.sendSMS.cost')}:{' '}
                       <span className="text-dark-500 font-medium">
                         ₴{formatCurrency(messageMetrics.cost)}
@@ -535,8 +539,12 @@ export function SendSMSModal({
                 {/* Warning if exceeds limit */}
                 {messageMetrics.exceedsLimit && (
                   <div className="flex items-center justify-center gap-2 self-stretch">
-                    <Icons.Warning size={20} className="text-warning-500" strokeWidth={2} />
-                    <span className="text-error-500 text-sm font-medium">
+                    <Icons.Warning
+                      size={18}
+                      className="text-warning-500 sm:size-5"
+                      strokeWidth={2}
+                    />
+                    <span className="text-error-500 text-xs font-medium sm:text-sm">
                       {t('pages.clients.modals.sendSMS.messageWillBeSplit')}{' '}
                       {messageMetrics.smsParts} {t('pages.clients.modals.sendSMS.smsParts')}
                     </span>
@@ -545,27 +553,27 @@ export function SendSMSModal({
               </div>
 
               {/* Client Name and Debt Amount */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
+                  <label className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-950 sm:text-sm">
                     {t('pages.clients.modals.sendSMS.clientName')}:
                   </label>
                   <input
                     type="text"
                     value={clientNameField}
                     onChange={(e) => setClientNameField(e.target.value)}
-                    className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light focus:ring-2 focus:outline-none"
+                    className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none sm:text-sm"
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
+                  <label className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-950 sm:text-sm">
                     {t('pages.clients.modals.sendSMS.debtAmount')}:
                   </label>
                   <input
                     type="text"
                     value={debtAmountField}
                     onChange={(e) => setDebtAmountField(e.target.value)}
-                    className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light focus:ring-2 focus:outline-none"
+                    className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none sm:text-sm"
                   />
                 </div>
               </div>
@@ -575,17 +583,17 @@ export function SendSMSModal({
       </ModalContent>
 
       {/* Footer */}
-      <ModalFooter>
-        <Button variant="cancel" size="md" onClick={onClose} className="flex-1">
+      <ModalFooter className="flex-col gap-2 sm:flex-row sm:gap-3">
+        <Button variant="cancel" size="sm" onClick={onClose} className="w-full rounded-md">
           {t('actions.cancel')}
         </Button>
         <Button
           variant="primary"
-          size="md"
+          size="sm"
           onClick={handleSend}
           disabled={!canSend || sendSMSMutation.isPending}
-          className="flex-1"
-          leftIcon={<Icons.MailSend01 size={20} className="mr-2" />}
+          className="w-full rounded-md"
+          leftIcon={<Icons.MailSend01 size={18} className="sm:size-5" />}
         >
           {sendSMSMutation.isPending
             ? t('pages.clients.modals.sendSMS.sending') || 'Sending...'

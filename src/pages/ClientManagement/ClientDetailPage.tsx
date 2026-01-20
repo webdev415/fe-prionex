@@ -3,7 +3,7 @@
  *
  * Full page view for displaying detailed client information.
  */
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -1077,6 +1077,144 @@ export function ClientDetailPage() {
   const [activeOperatorTab, setActiveOperatorTab] = useState<'operators' | 'searchers'>('operators')
   const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms'>('all')
 
+  // Tab navigation scroll state
+  const tabContainerRef = useRef<HTMLDivElement>(null)
+  const [showLeftArrow, setShowLeftArrow] = useState(false)
+  const [showRightArrow, setShowRightArrow] = useState(false)
+
+  // Client card tab navigation scroll state
+  const clientCardTabContainerRef = useRef<HTMLDivElement>(null)
+  const [showClientCardLeftArrow, setShowClientCardLeftArrow] = useState(false)
+  const [showClientCardRightArrow, setShowClientCardRightArrow] = useState(false)
+
+  // Check scroll position and show/hide arrows
+  const checkScrollPosition = () => {
+    if (!tabContainerRef.current) return
+
+    const container = tabContainerRef.current
+    const { scrollLeft, scrollWidth, clientWidth } = container
+
+    setShowLeftArrow(scrollLeft > 0)
+    setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1) // -1 for rounding errors
+  }
+
+  // Scroll handlers
+  const scrollTabs = (direction: 'left' | 'right') => {
+    if (!tabContainerRef.current) return
+
+    const container = tabContainerRef.current
+    const scrollAmount = 200 // Adjust scroll amount as needed
+    const newScrollLeft =
+      direction === 'left'
+        ? container.scrollLeft - scrollAmount
+        : container.scrollLeft + scrollAmount
+
+    container.scrollTo({
+      left: newScrollLeft,
+      behavior: 'smooth',
+    })
+  }
+
+  // Check scroll position for client card tabs
+  const checkClientCardTabScrollPosition = () => {
+    if (!clientCardTabContainerRef.current) return
+
+    const container = clientCardTabContainerRef.current
+    const { scrollLeft, scrollWidth, clientWidth } = container
+
+    setShowClientCardLeftArrow(scrollLeft > 0)
+    setShowClientCardRightArrow(scrollLeft < scrollWidth - clientWidth - 1) // -1 for rounding errors
+  }
+
+  // Scroll handlers for client card tabs
+  const scrollClientCardTabs = (direction: 'left' | 'right') => {
+    if (!clientCardTabContainerRef.current) return
+
+    const container = clientCardTabContainerRef.current
+    const scrollAmount = 200 // Adjust scroll amount as needed
+    const newScrollLeft =
+      direction === 'left'
+        ? container.scrollLeft - scrollAmount
+        : container.scrollLeft + scrollAmount
+
+    container.scrollTo({
+      left: newScrollLeft,
+      behavior: 'smooth',
+    })
+  }
+
+  // Check scroll position on mount and resize
+  useEffect(() => {
+    checkScrollPosition()
+    const container = tabContainerRef.current
+    if (container) {
+      container.addEventListener('scroll', checkScrollPosition)
+      window.addEventListener('resize', checkScrollPosition)
+
+      return () => {
+        container.removeEventListener('scroll', checkScrollPosition)
+        window.removeEventListener('resize', checkScrollPosition)
+      }
+    }
+  }, [activeRightCardTab]) // Re-check when tab changes
+
+  // Check scroll position for client card tabs on mount and resize
+  useEffect(() => {
+    checkClientCardTabScrollPosition()
+    const container = clientCardTabContainerRef.current
+    if (container) {
+      container.addEventListener('scroll', checkClientCardTabScrollPosition)
+      window.addEventListener('resize', checkClientCardTabScrollPosition)
+
+      return () => {
+        container.removeEventListener('scroll', checkClientCardTabScrollPosition)
+        window.removeEventListener('resize', checkClientCardTabScrollPosition)
+      }
+    }
+  }, [activeClientCardTab]) // Re-check when tab changes
+
+  // Scroll active tab into view when it changes
+  useEffect(() => {
+    if (!tabContainerRef.current) return
+
+    const container = tabContainerRef.current
+    const activeTab = container.querySelector(`[data-tab="${activeRightCardTab}"]`) as HTMLElement
+
+    if (activeTab) {
+      // Use setTimeout to ensure DOM is updated
+      setTimeout(() => {
+        activeTab.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'center',
+        })
+        // Re-check scroll position after scrolling
+        setTimeout(checkScrollPosition, 300)
+      }, 0)
+    }
+  }, [activeRightCardTab])
+
+  // Scroll active client card tab into view when it changes
+  useEffect(() => {
+    if (!clientCardTabContainerRef.current) return
+
+    const container = clientCardTabContainerRef.current
+    const activeTab = container.querySelector(`[data-tab="${activeClientCardTab}"]`) as HTMLElement
+
+    if (activeTab) {
+      // Use setTimeout to ensure DOM is updated
+      setTimeout(() => {
+        activeTab.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'center',
+        })
+        // Re-check scroll position after scrolling
+        setTimeout(checkClientCardTabScrollPosition, 300)
+      }, 0)
+    }
+  }, [activeClientCardTab])
+
   // Show loading skeleton
   if (isLoading) {
     return <ClientDetailPageSkeleton />
@@ -1414,44 +1552,48 @@ export function ClientDetailPage() {
   return (
     <div className="flex flex-col gap-4">
       {/* Client Header */}
-      <div className="flex items-center justify-between self-stretch">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex h-6 w-6 items-center justify-center"
-          >
-            <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
-          </button>
-          <h1 className="text-dark-500 text-center text-2xl leading-[150%] font-light">
-            {client.fullName}
-          </h1>
-          <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0">
-            {client.score} {t('pages.clients.activity.score')}
-          </span>
-          <PriorityBadge priority={client.priority} />
+      <div className="flex flex-col gap-4 self-stretch 2xl:flex-row 2xl:items-center 2xl:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-row items-center gap-2">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="flex h-6 w-6 items-center justify-center"
+            >
+              <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
+            </button>
+            <h1 className="text-dark-500 text-center text-xl leading-[150%] font-light md:text-2xl">
+              {client.fullName}
+            </h1>
+          </div>
+          <div className="flex flex-row items-center gap-2">
+            <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0 text-sm">
+              {client.score} {t('pages.clients.activity.score')}
+            </span>
+            <PriorityBadge priority={client.priority} />
+          </div>
         </div>
-        <div className="flex items-center gap-5">
+        <div className="flex flex-wrap items-center gap-2 md:gap-5">
           <Button
             size="md"
-            variant="transparent-black"
-            className="flex flex-row rounded-full text-sm font-medium"
+            variant="outline"
+            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
             onClick={() => navigate(`/dashboard/clients/${id}/debt-summary`)}
           >
             {t('pages.clients.debtSummary.title')}
           </Button>
           <Button
             size="md"
-            variant="transparent-black"
+            variant="outline"
             leftIcon={<Icons.PencilEdit size={20} />}
-            className="flex flex-row rounded-full text-sm font-medium"
+            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
             onClick={() => setIsNoteModalOpen(true)}
           >
-            {t('pages.clients.activity.addNoteAboutClient')}
+            {t('pages.clients.activity.addNote')}
           </Button>
           <Button
             size="md"
             leftIcon={<Icons.Headset size={20} />}
-            className="rounded-full"
+            className="w-full flex-1 rounded-full"
             disabled={!user?.asterisk_extension}
             onClick={() => {
               const phoneNumber = client.phones?.[0]?.number
@@ -1479,17 +1621,17 @@ export function ClientDetailPage() {
             size="md"
             variant="secondary"
             leftIcon={<Icons.RemoveMale size={20} />}
-            className="rounded-full"
+            className="w-full flex-1 rounded-full"
           >
             {t('pages.clients.activity.deleteClient')}
           </Button>
         </div>
       </div>
-      <div className="flex items-start gap-5 self-stretch">
+      <div className="flex flex-col items-start gap-4 self-stretch 2xl:flex-row 2xl:gap-5">
         {/* Client Card */}
-        <div className="flex min-h-[44px] w-[30%] flex-col items-start justify-center gap-0 rounded-lg bg-white/50 p-0">
+        <div className="flex min-h-[44px] w-full flex-col items-start justify-center gap-0 rounded-lg bg-white/50 p-0 2xl:w-[30%]">
           {/* Credit Details (top part of card) */}
-          <div className="flex flex-col items-start gap-3 self-stretch px-6 py-5">
+          <div className="flex flex-col items-start gap-3 self-stretch px-4 py-4 md:px-6 md:py-5">
             <div className="flex flex-col gap-2 self-stretch">
               <div className="flex items-center justify-between gap-2 self-stretch">
                 <div className="flex flex-1 flex-wrap items-center gap-2">
@@ -1499,13 +1641,13 @@ export function ClientDetailPage() {
                     ))
                   ) : (
                     <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      No tags assigned
+                      {t('pages.clients.detail.noTagsAssigned')}
                     </span>
                   )}
                 </div>
                 <button
                   onClick={() => setIsTagModalOpen(true)}
-                  className="text-gray-500 transition-colors hover:text-gray-700"
+                  className="shrink-0 text-gray-500 transition-colors hover:text-gray-700"
                   title="Manage tags"
                   type="button"
                 >
@@ -1518,7 +1660,7 @@ export function ClientDetailPage() {
                 <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                   {t('pages.clients.detail.department')}
                 </label>
-                <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                <p className="text-dark-500 ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                   {client.department}
                 </p>
               </div>
@@ -1526,7 +1668,7 @@ export function ClientDetailPage() {
                 <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                   {t('pages.clients.filters.responsibleEmployee')}
                 </label>
-                <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                <p className="text-dark-500 ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                   {client.responsibleEmployee}
                 </p>
               </div>
@@ -1534,174 +1676,218 @@ export function ClientDetailPage() {
                 <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                   {t('pages.clients.filters.responsibleSearcher')}
                 </label>
-                <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                <p className="text-dark-500 ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                   {client.responsibleResearcher}
                 </p>
               </div>
             </div>
-            <div className="flex items-start self-stretch p-0">
-              <div className="flex w-[131px] items-center gap-2.5">
+            <div className="flex flex-row items-center justify-between gap-2 self-stretch p-0">
+              <div className="flex flex-1 shrink-0 items-center gap-2.5">
                 <label className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
                   {t('pages.clients.detail.phones')}
                 </label>
               </div>
-              <div className="flex flex-1 flex-col items-start justify-center gap-2">
+              <div className="flex w-full flex-1 flex-col items-start justify-center gap-2">
                 {client.phones.map((phone, index) => (
-                  <div key={index} className="flex items-center gap-3 self-stretch">
-                    <span className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                  <div key={index} className="flex items-center gap-2 self-stretch md:gap-3">
+                    <span className="text-dark-500 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {phone.number}
                     </span>
-                    <button
-                      onClick={() => {
-                        if (isCallActive()) {
-                          toast.warning(
-                            t('pages.clients.modals.callDialog.callInProgress') ||
-                              'Another call or recording is already in progress. Please finish or close it first.'
-                          )
-                          return
-                        }
-                        setOpenCallModal('call-dialog')
-                        setIsCallModalOpen(true)
-                      }}
-                      className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                    >
-                      <Icons.Headset size={16} className="flex-shrink-0" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedPhoneForSMS(phone.number)
-                        setIsSendSMSModalOpen(true)
-                      }}
-                      className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                    >
-                      <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                    </button>
-                    <button
-                      onClick={() => setIsNoteModalOpen(true)}
-                      className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                    >
-                      <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1 md:gap-2">
+                      <button
+                        onClick={() => {
+                          if (isCallActive()) {
+                            toast.warning(
+                              t('pages.clients.modals.callDialog.callInProgress') ||
+                                'Another call or recording is already in progress. Please finish or close it first.'
+                            )
+                            return
+                          }
+                          setOpenCallModal('call-dialog')
+                          setIsCallModalOpen(true)
+                        }}
+                        className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                      >
+                        <Icons.Headset size={16} className="flex-shrink-0" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedPhoneForSMS(phone.number)
+                          setIsSendSMSModalOpen(true)
+                        }}
+                        className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                      >
+                        <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                      </button>
+                      <button
+                        onClick={() => setIsNoteModalOpen(true)}
+                        className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                      >
+                        <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="flex h-px w-full flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
+          <div className="mx-2 flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
 
           {/* Personal & Contact Details - 4 left tabs inside client card */}
-          <div className="flex items-center gap-6 self-stretch pr-6">
-            {/* Vertical tab icons */}
-            <div className="my-2.5 flex min-h-[44px] flex-col items-start gap-1 self-stretch rounded-bl-lg border-r-1 border-gray-200 px-2.5">
-              <button
-                type="button"
-                onClick={() => setActiveClientCardTab('personal')}
-                className={cn(
-                  'hover:bg-primary-200/10 flex cursor-pointer flex-row items-center justify-start self-stretch rounded-none border-l-2 p-4',
-                  activeClientCardTab === 'personal'
-                    ? 'border-primary-300 bg-primary-200/10'
-                    : 'border-transparent'
-                )}
+          <div className="flex flex-col items-start gap-4 self-stretch pr-0 md:flex-row md:items-center md:gap-6 md:pr-6">
+            {/* Vertical tab icons - horizontal scroll on mobile */}
+            <div className="relative flex min-h-[44px] w-full items-start gap-1 self-stretch rounded-bl-lg border-gray-200 p-4 md:my-2.5 md:w-auto md:flex-col md:border-r-1 md:border-b md:border-b-0 md:px-2.5 md:pb-0">
+              {/* Left Arrow Button - only show on mobile when scrolling */}
+              {showClientCardLeftArrow && (
+                <button
+                  onClick={() => scrollClientCardTabs('left')}
+                  className="absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
+                  aria-label="Scroll tabs left"
+                  type="button"
+                >
+                  <Icons.ArrowLeft size={20} className="text-secondary-800" />
+                </button>
+              )}
+
+              {/* Right Arrow Button - only show on mobile when scrolling */}
+              {showClientCardRightArrow && (
+                <button
+                  onClick={() => scrollClientCardTabs('right')}
+                  className="absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
+                  aria-label="Scroll tabs right"
+                  type="button"
+                >
+                  <Icons.ArrowRight size={20} className="text-secondary-800" />
+                </button>
+              )}
+
+              {/* Tab Container */}
+              <div
+                ref={clientCardTabContainerRef}
+                className="scrollbar-hide flex w-full items-start gap-1 self-stretch overflow-x-auto md:w-auto md:flex-col md:overflow-x-visible"
+                style={{
+                  scrollbarWidth: 'none', // Firefox
+                  msOverflowStyle: 'none', // IE/Edge
+                }}
               >
-                <Icons.UserAccount
-                  size={24}
+                <button
+                  type="button"
+                  data-tab="personal"
+                  onClick={() => setActiveClientCardTab('personal')}
                   className={cn(
-                    'mx-1 my-1',
-                    activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
-                <span
-                  className={cn(
-                    'text-sm font-medium',
-                    activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
+                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-start self-stretch rounded-md p-3 md:rounded-none md:border-b-0 md:border-l-2 md:p-4',
+                    activeClientCardTab === 'personal'
+                      ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                      : 'md:border-transparent'
                   )}
                 >
-                  Personal
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveClientCardTab('work')}
-                className={cn(
-                  'hover:bg-primary-200/10 flex cursor-pointer flex-row items-center justify-start self-stretch rounded-none border-l-2 p-4',
-                  activeClientCardTab === 'work'
-                    ? 'border-primary-300 bg-primary-200/10'
-                    : 'border-transparent'
-                )}
-              >
-                <Icons.Briefcase01
-                  size={24}
+                  <Icons.UserAccount
+                    size={24}
+                    className={cn(
+                      'mx-1 my-1',
+                      activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      'text-sm font-medium whitespace-nowrap',
+                      activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
+                    )}
+                  >
+                    {t('pages.clients.detail.tabs.personal')}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  data-tab="work"
+                  onClick={() => setActiveClientCardTab('work')}
                   className={cn(
-                    'mx-1 my-1',
-                    activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
-                <span
-                  className={cn(
-                    'text-sm font-medium',
-                    activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                >
-                  Work
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveClientCardTab('recommenders')}
-                className={cn(
-                  'hover:bg-primary-200/10 flex cursor-pointer flex-row items-center justify-start self-stretch rounded-none border-l-2 p-4',
-                  activeClientCardTab === 'recommenders'
-                    ? 'border-primary-300 bg-primary-200/10'
-                    : 'border-transparent'
-                )}
-              >
-                <Icons.UserCheck01
-                  size={24}
-                  className={cn(
-                    'mx-1 my-1',
-                    activeClientCardTab === 'recommenders' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
-                <span
-                  className={cn(
-                    'text-sm font-medium',
-                    activeClientCardTab === 'recommenders' ? 'text-secondary-800' : 'text-gray-700'
+                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-start self-stretch rounded-md p-3 md:rounded-none md:border-b-0 md:border-l-2 md:p-4',
+                    activeClientCardTab === 'work'
+                      ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                      : 'md:border-transparent'
                   )}
                 >
-                  Recommenders
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveClientCardTab('addresses')}
-                className={cn(
-                  'hover:bg-primary-200/10 flex cursor-pointer flex-row items-center justify-start self-stretch rounded-none border-l-2 p-4',
-                  activeClientCardTab === 'addresses'
-                    ? 'border-primary-300 bg-primary-200/10'
-                    : 'border-transparent'
-                )}
-              >
-                <Icons.Location01
-                  size={24}
+                  <Icons.Briefcase01
+                    size={24}
+                    className={cn(
+                      'mx-1 my-1',
+                      activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      'text-sm font-medium whitespace-nowrap',
+                      activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
+                    )}
+                  >
+                    {t('pages.clients.detail.tabs.work')}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  data-tab="recommenders"
+                  onClick={() => setActiveClientCardTab('recommenders')}
                   className={cn(
-                    'mx-1 my-1',
-                    activeClientCardTab === 'addresses' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
-                <span
-                  className={cn(
-                    'text-sm font-medium',
-                    activeClientCardTab === 'addresses' ? 'text-secondary-800' : 'text-gray-700'
+                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-start self-stretch rounded-md p-3 md:rounded-none md:border-b-0 md:border-l-2 md:p-4',
+                    activeClientCardTab === 'recommenders'
+                      ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                      : 'md:border-transparent'
                   )}
                 >
-                  Addresses
-                </span>
-              </button>
+                  <Icons.UserCheck01
+                    size={24}
+                    className={cn(
+                      'mx-1 my-1',
+                      activeClientCardTab === 'recommenders'
+                        ? 'text-secondary-800'
+                        : 'text-gray-700'
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      'text-sm font-medium whitespace-nowrap',
+                      activeClientCardTab === 'recommenders'
+                        ? 'text-secondary-800'
+                        : 'text-gray-700'
+                    )}
+                  >
+                    {t('pages.clients.detail.tabs.recommenders')}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  data-tab="addresses"
+                  onClick={() => setActiveClientCardTab('addresses')}
+                  className={cn(
+                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-start self-stretch rounded-md p-3 md:rounded-none md:border-b-0 md:border-l-2 md:p-4',
+                    activeClientCardTab === 'addresses'
+                      ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                      : 'md:border-transparent'
+                  )}
+                >
+                  <Icons.Location01
+                    size={24}
+                    className={cn(
+                      'mx-1 my-1',
+                      activeClientCardTab === 'addresses' ? 'text-secondary-800' : 'text-gray-700'
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      'text-sm font-medium whitespace-nowrap',
+                      activeClientCardTab === 'addresses' ? 'text-secondary-800' : 'text-gray-700'
+                    )}
+                  >
+                    {t('pages.clients.detail.tabs.addresses')}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Right side content for selected client card tab */}
-            <div className="flex w-[324px] flex-col items-center gap-6 self-stretch py-4">
+            <div className="flex w-full flex-col items-center gap-6 self-stretch px-4 py-4 md:px-0">
               {activeClientCardTab === 'personal' && (
                 <>
                   <div className="flex items-center self-stretch p-0">
@@ -1835,7 +2021,7 @@ export function ClientDetailPage() {
                       {client.addresses.registrationAddress}
                     </p>
                   </div>
-                  <div className="flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
+                  <div className="my-2 flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
                   <div className="flex items-start self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
@@ -1920,94 +2106,146 @@ export function ClientDetailPage() {
         </div>
 
         {/* Right Column - Data + Comments Card with 6 horizontal top tabs */}
-        <div className="flex w-[64%] flex-1 flex-col items-start gap-5 self-stretch">
+        <div className="flex w-full flex-1 flex-col items-start gap-5 self-stretch 2xl:w-[64%]">
           <div className="flex flex-1 flex-col items-start gap-0 self-stretch rounded-lg bg-white/50 p-0">
-            {/* Horizontal tab bar - 6 tabs at the top */}
-            <div className="mx-3 flex items-center gap-0 self-stretch border-b border-gray-200">
-              {/* Tab 1: Loans */}
-              <button
-                type="button"
-                onClick={() => setActiveRightCardTab('loans')}
-                className={cn(
-                  'hover:bg-primary-200/10 flex cursor-pointer items-center justify-center gap-2 border-b-2 px-4 py-4 transition-colors',
-                  activeRightCardTab === 'loans'
-                    ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                    : 'hover:text-secondary-800 border-transparent text-gray-600'
-                )}
+            {/* Horizontal tab bar - 6 tabs at the top - scrollable on mobile */}
+            <div className="relative mx-3 flex items-center gap-0 self-stretch border-b border-gray-200">
+              {/* Left Arrow Button */}
+              {showLeftArrow && (
+                <button
+                  onClick={() => scrollTabs('left')}
+                  className="absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100"
+                  aria-label="Scroll tabs left"
+                  type="button"
+                >
+                  <Icons.ArrowLeft size={20} className="text-secondary-800" />
+                </button>
+              )}
+
+              {/* Right Arrow Button */}
+              {showRightArrow && (
+                <button
+                  onClick={() => scrollTabs('right')}
+                  className="absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100"
+                  aria-label="Scroll tabs right"
+                  type="button"
+                >
+                  <Icons.ArrowRight size={20} className="text-secondary-800" />
+                </button>
+              )}
+
+              {/* Tab Container */}
+              <div
+                ref={tabContainerRef}
+                className="scrollbar-hide flex items-center gap-0 self-stretch overflow-x-auto"
+                style={{
+                  scrollbarWidth: 'none', // Firefox
+                  msOverflowStyle: 'none', // IE/Edge
+                }}
               >
-                <Icons.Folder size={20} className="text-current" />
-                <span className="text-sm font-medium">Loans</span>
-              </button>
-              {/* Tab 2: Payments */}
-              <button
-                type="button"
-                onClick={() => setActiveRightCardTab('payments')}
-                className={cn(
-                  'hover:bg-primary-200/10 flex cursor-pointer items-center justify-center gap-2 border-b-2 px-4 py-4 transition-colors',
-                  activeRightCardTab === 'payments'
-                    ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                    : 'hover:text-secondary-800 border-transparent text-gray-600'
-                )}
-              >
-                <Icons.Wallet01 size={20} className="text-current" />
-                <span className="text-sm font-medium">{t('pages.clients.detail.payments')}</span>
-              </button>
-              {/* Tab 3: Operators */}
-              <button
-                type="button"
-                onClick={() => setActiveRightCardTab('operators')}
-                className={cn(
-                  'hover:bg-primary-200/10 flex cursor-pointer items-center justify-center gap-2 border-b-2 px-4 py-4 transition-colors',
-                  activeRightCardTab === 'operators'
-                    ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                    : 'hover:text-secondary-800 border-transparent text-gray-600'
-                )}
-              >
-                <Icons.UserMultiple02 size={20} className="text-current" />
-                <span className="text-sm font-medium">{t('pages.clients.detail.operators')}</span>
-              </button>
-              {/* Tab 4: Call/SMS */}
-              <button
-                type="button"
-                onClick={() => setActiveRightCardTab('call-sms-history')}
-                className={cn(
-                  'hover:bg-primary-200/10 flex cursor-pointer items-center justify-center gap-2 border-b-2 px-4 py-4 transition-colors',
-                  activeRightCardTab === 'call-sms-history'
-                    ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                    : 'hover:text-secondary-800 border-transparent text-gray-600'
-                )}
-              >
-                <Icons.Clock01 size={20} className="text-current" />
-                <span className="text-sm font-medium">Call / SMS</span>
-              </button>
-              {/* Tab 5: Tasks */}
-              <button
-                type="button"
-                onClick={() => setActiveRightCardTab('tasks')}
-                className={cn(
-                  'hover:bg-primary-200/10 flex cursor-pointer items-center justify-center gap-2 border-b-2 px-4 py-4 transition-colors',
-                  activeRightCardTab === 'tasks'
-                    ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                    : 'hover:text-secondary-800 border-transparent text-gray-600'
-                )}
-              >
-                <Icons.CheckmarkSquare03 size={20} className="text-current" />
-                <span className="text-sm font-medium">Tasks</span>
-              </button>
-              {/* Tab 6: Docs */}
-              <button
-                type="button"
-                onClick={() => setActiveRightCardTab('documents')}
-                className={cn(
-                  'hover:bg-primary-200/10 flex cursor-pointer items-center justify-center gap-2 border-b-2 px-4 py-4 transition-colors',
-                  activeRightCardTab === 'documents'
-                    ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                    : 'hover:text-secondary-800 border-transparent text-gray-600'
-                )}
-              >
-                <Icons.File size={20} className="text-current" />
-                <span className="text-sm font-medium">Docs</span>
-              </button>
+                {/* Tab 1: Loans */}
+                <button
+                  type="button"
+                  data-tab="loans"
+                  onClick={() => setActiveRightCardTab('loans')}
+                  className={cn(
+                    'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                    activeRightCardTab === 'loans'
+                      ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                      : 'hover:text-secondary-800 border-transparent text-gray-600'
+                  )}
+                >
+                  <Icons.Folder size={20} className="shrink-0 text-current" />
+                  <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                    {t('pages.clients.detail.tabs.loans')}
+                  </span>
+                </button>
+                {/* Tab 2: Payments */}
+                <button
+                  type="button"
+                  data-tab="payments"
+                  onClick={() => setActiveRightCardTab('payments')}
+                  className={cn(
+                    'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                    activeRightCardTab === 'payments'
+                      ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                      : 'hover:text-secondary-800 border-transparent text-gray-600'
+                  )}
+                >
+                  <Icons.Wallet01 size={20} className="shrink-0 text-current" />
+                  <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                    {t('pages.clients.detail.payments')}
+                  </span>
+                </button>
+                {/* Tab 3: Operators */}
+                <button
+                  type="button"
+                  data-tab="operators"
+                  onClick={() => setActiveRightCardTab('operators')}
+                  className={cn(
+                    'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                    activeRightCardTab === 'operators'
+                      ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                      : 'hover:text-secondary-800 border-transparent text-gray-600'
+                  )}
+                >
+                  <Icons.UserMultiple02 size={20} className="shrink-0 text-current" />
+                  <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                    {t('pages.clients.detail.operators')}
+                  </span>
+                </button>
+                {/* Tab 4: Call/SMS */}
+                <button
+                  type="button"
+                  data-tab="call-sms-history"
+                  onClick={() => setActiveRightCardTab('call-sms-history')}
+                  className={cn(
+                    'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                    activeRightCardTab === 'call-sms-history'
+                      ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                      : 'hover:text-secondary-800 border-transparent text-gray-600'
+                  )}
+                >
+                  <Icons.Clock01 size={20} className="shrink-0 text-current" />
+                  <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                    {t('pages.clients.detail.tabs.callSms')}
+                  </span>
+                </button>
+                {/* Tab 5: Tasks */}
+                <button
+                  type="button"
+                  data-tab="tasks"
+                  onClick={() => setActiveRightCardTab('tasks')}
+                  className={cn(
+                    'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                    activeRightCardTab === 'tasks'
+                      ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                      : 'hover:text-secondary-800 border-transparent text-gray-600'
+                  )}
+                >
+                  <Icons.CheckmarkSquare03 size={20} className="shrink-0 text-current" />
+                  <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                    {t('pages.clients.detail.tabs.tasks')}
+                  </span>
+                </button>
+                {/* Tab 6: Docs */}
+                <button
+                  type="button"
+                  data-tab="documents"
+                  onClick={() => setActiveRightCardTab('documents')}
+                  className={cn(
+                    'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                    activeRightCardTab === 'documents'
+                      ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                      : 'hover:text-secondary-800 border-transparent text-gray-600'
+                  )}
+                >
+                  <Icons.File size={20} className="shrink-0 text-current" />
+                  <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                    {t('pages.clients.detail.tabs.docs')}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Content area for selected tab */}
@@ -2016,11 +2254,11 @@ export function ClientDetailPage() {
               {activeRightCardTab === 'loans' && (
                 <div className="flex w-full flex-col gap-0">
                   {/* Secondary filters below primary tabs */}
-                  <div className="mx-6 flex items-center gap-6 self-stretch pt-6 pb-0">
+                  <div className="mx-3 flex flex-col items-center gap-3 self-stretch overflow-x-auto pt-4 pb-0 sm:flex-row md:mx-6 md:gap-6 md:pt-6">
                     <button
                       onClick={() => setActiveLoanTab('process')}
                       className={cn(
-                        'hover:bg-secondary-800/20 flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs font-medium tracking-[-0.28px]',
+                        'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
                         activeLoanTab === 'process'
                           ? 'bg-secondary-800/10 text-secondary-800'
                           : 'hover:text-secondary-800 text-gray-600'
@@ -2031,7 +2269,7 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setActiveLoanTab('closed')}
                       className={cn(
-                        'hover:bg-secondary-800/20 flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs font-medium tracking-[-0.28px]',
+                        'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
                         activeLoanTab === 'closed'
                           ? 'bg-secondary-800/10 text-secondary-800'
                           : 'hover:text-secondary-800 text-gray-600'
@@ -2042,7 +2280,7 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setActiveLoanTab('rr')}
                       className={cn(
-                        'hover:bg-secondary-800/20 flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs font-medium tracking-[-0.28px]',
+                        'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
                         activeLoanTab === 'rr'
                           ? 'bg-secondary-800/10 text-secondary-800'
                           : 'hover:text-secondary-800 text-gray-600'
@@ -2052,50 +2290,56 @@ export function ClientDetailPage() {
                     </button>
                   </div>
                   {/* Data table */}
-                  <div className="flex flex-col items-start gap-2.5 self-stretch px-6 py-4">
+                  <div className="flex flex-col items-start gap-2.5 self-stretch px-3 py-4 md:px-6">
                     <DataTable columns={loanColumns} data={client.loans} className="w-full" />
                   </div>
                   {/* Action buttons at the bottom */}
-                  <div className="flex flex-wrap items-center gap-3 self-stretch px-6 py-4">
+                  <div className="flex flex-wrap items-center gap-2 self-stretch px-3 py-4 md:gap-3 md:px-6">
                     <Button
                       variant="secondary"
                       leftIcon={<Icons.MoneyRemove01 size={20} />}
-                      className="rounded"
+                      className="rounded text-xs md:text-sm"
+                      size="sm"
                     >
                       {t('pages.clients.detail.writeOff')}
                     </Button>
                     <Button
                       variant="secondary"
                       leftIcon={<Icons.MoneyNotFound04 size={20} />}
-                      className="rounded"
+                      className="rounded text-xs md:text-sm"
+                      size="sm"
                     >
                       {t('pages.clients.detail.reversal')}
                     </Button>
                     <Button
                       variant="secondary"
                       leftIcon={<Icons.CancelCircle size={20} />}
-                      className="rounded"
+                      className="rounded text-xs md:text-sm"
+                      size="sm"
                     >
                       {t('pages.clients.detail.closeLoan')}
                     </Button>
                     <Button
                       variant="secondary"
                       leftIcon={<Icons.MailSend01 size={20} />}
-                      className="rounded"
+                      className="rounded text-xs md:text-sm"
+                      size="sm"
                     >
                       {t('pages.clients.detail.sendToUBCI')}
                     </Button>
                     <Button
                       variant="secondary"
                       leftIcon={<Icons.Calculate size={20} />}
-                      className="rounded"
+                      className="rounded text-xs md:text-sm"
+                      size="sm"
                     >
                       {t('pages.clients.detail.rrCalculator')}
                     </Button>
                     <Button
                       variant="secondary"
                       leftIcon={<Icons.PlusSignCircle size={20} />}
-                      className="rounded"
+                      className="rounded text-xs md:text-sm"
+                      size="sm"
                     >
                       {t('pages.clients.detail.makePayment')}
                     </Button>
@@ -2106,11 +2350,11 @@ export function ClientDetailPage() {
               {/* Tab 2: Payments */}
               {activeRightCardTab === 'payments' && (
                 <div className="flex w-full flex-col gap-4">
-                  <div className="mx-6 flex min-h-[44px] items-center gap-6 self-stretch pt-6 pb-0">
+                  <div className="mx-3 flex min-h-[44px] items-center gap-3 self-stretch overflow-x-auto pt-4 pb-0 md:mx-6 md:gap-6 md:pt-6">
                     <button
                       onClick={() => setActivePaymentTab('payments')}
                       className={cn(
-                        'text-dark-500 flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs leading-[150%] font-medium tracking-[-0.28px]',
+                        'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                         activePaymentTab === 'payments'
                           ? 'bg-secondary-800/10 text-secondary-800'
                           : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
@@ -2121,7 +2365,7 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setActivePaymentTab('writes-off')}
                       className={cn(
-                        'text-dark-500 flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs leading-[150%] font-medium tracking-[-0.28px]',
+                        'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                         activePaymentTab === 'writes-off'
                           ? 'bg-secondary-800/10 text-secondary-800'
                           : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
@@ -2132,7 +2376,7 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setActivePaymentTab('primary-creditor')}
                       className={cn(
-                        'text-dark-500 flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs leading-[150%] font-medium tracking-[-0.28px]',
+                        'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
                         activePaymentTab === 'primary-creditor'
                           ? 'bg-secondary-800/10 text-secondary-800'
                           : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
@@ -2141,7 +2385,7 @@ export function ClientDetailPage() {
                       {t('pages.clients.detail.paymentToPrimaryCreditor')}
                     </button>
                   </div>
-                  <div className="flex flex-col items-start gap-2.5 self-stretch px-6">
+                  <div className="flex flex-col items-start gap-2.5 self-stretch px-3 pb-4 md:px-6">
                     {activePaymentTab === 'payments' && (
                       <DataTable
                         columns={paymentColumns}
@@ -2170,11 +2414,11 @@ export function ClientDetailPage() {
               {/* Tab 3: Operators/Searchers */}
               {activeRightCardTab === 'operators' && (
                 <div className="flex w-full flex-col gap-4">
-                  <div className="mx-6 flex min-h-[44px] items-center gap-6 self-stretch pt-6 pb-0">
+                  <div className="mx-3 flex min-h-[44px] items-center gap-3 self-stretch overflow-x-auto pt-4 pb-0 md:mx-6 md:gap-6 md:pt-6">
                     <button
                       onClick={() => setActiveOperatorTab('operators')}
                       className={cn(
-                        'flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600',
+                        'flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600 md:p-3',
                         activeOperatorTab === 'operators'
                           ? 'bg-secondary-800/10 text-secondary-800'
                           : 'hover:bg-secondary-800/20 hover:text-secondary-800'
@@ -2185,7 +2429,7 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setActiveOperatorTab('searchers')}
                       className={cn(
-                        'flex cursor-pointer items-center justify-center gap-2.5 rounded-md p-3 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600',
+                        'flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600 md:p-3',
                         activeOperatorTab === 'searchers'
                           ? 'bg-secondary-800/10 text-secondary-800'
                           : 'hover:bg-secondary-800/20 hover:text-secondary-800'
@@ -2194,7 +2438,7 @@ export function ClientDetailPage() {
                       {t('pages.clients.detail.searchers')}
                     </button>
                   </div>
-                  <div className="flex flex-col items-start gap-2.5 self-stretch px-6">
+                  <div className="flex flex-col items-start gap-2.5 self-stretch px-3 pb-4 md:px-6">
                     {activeOperatorTab === 'operators' && (
                       <DataTable
                         columns={operatorColumns}
@@ -2215,18 +2459,18 @@ export function ClientDetailPage() {
 
               {/* Tab 4: Call and SMS History */}
               {activeRightCardTab === 'call-sms-history' && (
-                <div className="flex flex-1 flex-col items-start gap-5 self-stretch p-6">
-                  <div className="flex h-[41px] items-center gap-5 self-stretch p-0">
+                <div className="flex flex-1 flex-col items-start gap-4 self-stretch p-3 md:gap-5 md:p-6">
+                  <div className="flex h-auto flex-col items-start gap-3 self-stretch p-0 md:h-[41px] md:flex-row md:items-center md:gap-5">
                     <div className="flex flex-1 items-center gap-2.5">
                       <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                         {t('pages.clients.detail.callAndSMSHistory')}
                       </span>
                     </div>
-                    <div className="flex flex-1 items-center justify-between gap-1 rounded-lg bg-white/50 p-1 shadow-sm">
+                    <div className="flex w-full flex-1 items-center justify-between gap-1 rounded-lg bg-white/50 p-1 shadow-sm md:w-auto">
                       <button
                         onClick={() => setActiveCallSmsTab('all')}
                         className={cn(
-                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm transition-colors',
+                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
                           activeCallSmsTab === 'all'
                             ? 'bg-secondary-800/10 text-secondary-800'
                             : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
@@ -2237,7 +2481,7 @@ export function ClientDetailPage() {
                       <button
                         onClick={() => setActiveCallSmsTab('calls')}
                         className={cn(
-                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm transition-colors',
+                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
                           activeCallSmsTab === 'calls'
                             ? 'bg-secondary-800/10 text-secondary-800'
                             : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
@@ -2248,7 +2492,7 @@ export function ClientDetailPage() {
                       <button
                         onClick={() => setActiveCallSmsTab('sms')}
                         className={cn(
-                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm transition-colors',
+                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
                           activeCallSmsTab === 'sms'
                             ? 'bg-secondary-800/10 text-secondary-800'
                             : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
@@ -2257,10 +2501,11 @@ export function ClientDetailPage() {
                         {t('pages.clients.activity.sms')}
                       </button>
                     </div>
-                    <div className="flex flex-1 flex-col items-end gap-2.5">
+                    <div className="flex w-full flex-1 flex-col items-start gap-2.5 md:w-auto md:flex-col md:items-end">
                       <Button
                         leftIcon={<Icons.Download size={20} />}
-                        className="bg-secondary-800 flex flex-row items-center gap-1 rounded px-4 py-2.5 text-xs leading-[140%] font-medium tracking-[-0.24px] text-white"
+                        className="bg-secondary-800 flex w-full flex-row items-center gap-1 rounded px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] text-white md:w-auto md:px-4 md:py-2.5"
+                        size="sm"
                       >
                         {t('pages.clients.detail.exportCSV')}
                       </Button>
@@ -2318,8 +2563,10 @@ export function ClientDetailPage() {
                           .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
                           .map(([date, items]) => (
                             <div key={date} className="w-full space-y-4">
-                              <h3 className="text-dark-500 text-base font-semibold">{date}</h3>
-                              <div className="grid grid-cols-2 gap-4">
+                              <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                {date}
+                              </h3>
+                              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
                                 {/* Calls for this date */}
                                 {items.calls.map((call) => (
                                   <CallLogCard
@@ -2368,27 +2615,27 @@ export function ClientDetailPage() {
                   {activeCallSmsTab === 'calls' && (
                     <div className="flex flex-col items-start gap-4 self-stretch">
                       {/* Summary Statistics */}
-                      <div className="flex h-14 w-full items-start gap-5 p-0">
-                        <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-2 pl-3">
+                      <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
+                        <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
                           <div className="flex items-center gap-2">
                             <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
                               <Icons.Call02 size={24} className="text-gray-700" />
                             </div>
                             <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                              Total Calls
+                              {t('pages.clients.detail.totalCalls')}
                             </div>
                           </div>
                           <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                             {client.callSmsHistory.calls.length}
                           </div>
                         </div>
-                        <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-2 pl-3">
+                        <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
                           <div className="flex items-center gap-2">
                             <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
                               <Icons.CallDone02 size={24} className="text-gray-700" />
                             </div>
                             <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                              Answered
+                              {t('pages.clients.statuses.answered')}
                             </div>
                           </div>
                           <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
@@ -2403,13 +2650,13 @@ export function ClientDetailPage() {
                             })()}
                           </div>
                         </div>
-                        <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-2 pl-3">
+                        <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
                           <div className="flex items-center gap-2">
                             <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
                               <Icons.Clock01 size={24} className="text-gray-700" />
                             </div>
                             <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                              Avg. Duration
+                              {t('pages.clients.detail.avgDuration')}
                             </div>
                           </div>
                           <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
@@ -2456,8 +2703,10 @@ export function ClientDetailPage() {
                             .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
                             .map(([date, calls]) => (
                               <div key={date} className="space-y-4">
-                                <h3 className="text-dark-500 text-base font-semibold">{date}</h3>
-                                <div className="grid grid-cols-2 gap-4">
+                                <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                  {date}
+                                </h3>
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
                                   {calls.map((call) => (
                                     <CallLogCard
                                       key={call.id}
@@ -2494,8 +2743,8 @@ export function ClientDetailPage() {
                   {activeCallSmsTab === 'sms' && (
                     <div className="flex flex-col items-start gap-4 self-stretch">
                       {/* Summary Statistics */}
-                      <div className="flex h-14 w-full items-start gap-5 p-0">
-                        <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-4 pl-3">
+                      <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
+                        <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
                           <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
                             {t('pages.clients.detail.totalCost')}
                           </div>
@@ -2505,7 +2754,7 @@ export function ClientDetailPage() {
                             {t('pages.clients.modals.viewSMS.smsParts')})
                           </div>
                         </div>
-                        <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-4 pl-3">
+                        <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
                           <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
                             {t('pages.clients.detail.deliveryRate')}
                           </div>
@@ -2550,8 +2799,10 @@ export function ClientDetailPage() {
                             .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
                             .map(([date, smsList]) => (
                               <div key={date} className="space-y-4">
-                                <h3 className="text-dark-500 text-base font-semibold">{date}</h3>
-                                <div className="grid grid-cols-2 gap-4">
+                                <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                  {date}
+                                </h3>
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
                                   {smsList.map((sms) => (
                                     <CallLogCard
                                       key={sms.id}
@@ -2585,14 +2836,14 @@ export function ClientDetailPage() {
 
               {/* Tab 5: Tasks */}
               {activeRightCardTab === 'tasks' && (
-                <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-6">
+                <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-3 md:p-6">
                   <DataTable columns={taskColumns} data={client.tasks} className="w-full" />
                 </div>
               )}
 
               {/* Tab 6: Documents */}
               {activeRightCardTab === 'documents' && (
-                <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-6">
+                <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-3 md:p-6">
                   <DataTable
                     columns={callSmsHistoryColumns}
                     data={client.callSmsHistory.all}
@@ -2606,8 +2857,8 @@ export function ClientDetailPage() {
       </div>
 
       {/* Comments Section */}
-      <div className="flex items-center gap-5 self-stretch rounded-xl border border-white bg-white/50 p-3">
-        <div className="flex w-[416px] flex-col items-start gap-2.5">
+      <div className="flex flex-col items-start gap-3 self-stretch rounded-xl border border-white bg-white/50 p-3 xl:flex-row xl:items-center xl:gap-5">
+        <div className="flex w-full flex-col items-start gap-2.5 xl:w-[416px]">
           <div className="flex items-center rounded-lg border border-white bg-white p-1 shadow-sm">
             <button
               onClick={() => setActiveCommentTab('comments')}
@@ -2633,17 +2884,16 @@ export function ClientDetailPage() {
             </button>
           </div>
         </div>
-        <div className="flex flex-1 items-center gap-2 self-stretch">
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-2 self-stretch md:flex-row md:items-center">
           {client.comments.map((comment) => (
-            <div key={comment.id} className="flex flex-1 items-center gap-2 self-stretch">
-              <span className="truncate text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
+            <div key={comment.id} className="flex min-w-0 flex-1 items-center gap-2 self-stretch">
+              <span className="shrink-0 text-sm leading-[150%] font-light tracking-[-0.28px] whitespace-nowrap text-gray-700">
                 {comment.date}
               </span>
-              <span className="text-dark-500 flex-1 truncate text-sm leading-[150%] font-light tracking-[-0.28px]">
-                {' '}
+              <span className="text-dark-500 min-w-0 flex-1 truncate text-sm leading-[150%] font-light tracking-[-0.28px]">
                 {comment.text}
               </span>
-              <LinkButton variant="regular-secondary" size="xs">
+              <LinkButton variant="regular-secondary" size="xs" className="shrink-0">
                 {t('pages.clients.detail.readMore')}
               </LinkButton>
             </div>
@@ -2652,9 +2902,9 @@ export function ClientDetailPage() {
       </div>
 
       {/* Recent Activity Timeline */}
-      <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-6">
-        <div className="flex items-center justify-between self-stretch">
-          <h2 className="text-dark-500 text-lg font-medium">
+      <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-3 md:p-6">
+        <div className="flex flex-row items-center justify-between gap-2 self-stretch">
+          <h2 className="text-dark-500 text-base font-medium md:text-lg">
             {t('pages.clients.detail.recentActivityTimeline')}
           </h2>
           <LinkButton
@@ -2667,14 +2917,14 @@ export function ClientDetailPage() {
           </LinkButton>
         </div>
         {client.activities.length == 0 ? (
-          <div className="flex flex-col items-center gap-6 self-stretch">
-            <div className="flex items-center justify-center gap-6 self-stretch">
+          <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
+            <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
               <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-              <p className="text-dark-500 text-center text-2xl leading-tight font-light tracking-[-0.48px]">
+              <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
                 {t('pages.clients.detail.noHistoryYet')}
               </p>
             </div>
-            <p className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
+            <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
               {t('pages.clients.detail.startByCallingSendingSMSOrAddingNote')}
             </p>
             <button

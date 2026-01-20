@@ -652,7 +652,7 @@
       },
       "activity": {
         "score": "Оцінка",
-        "addNoteAboutClient": "Додати примітку про клієнта",
+        "addNote": "Додати примітку",
         "call": "Дзвінок",
         "deleteClient": "Видалити клієнта",
         "typeOfCommunication": "Тип комунікації",
@@ -750,7 +750,20 @@
         "deliveryRate": "Рівень доставки",
         "delivered": "доставлено",
         "failed": "не вдалося",
-        "pending": "очікується"
+        "pending": "очікується",
+        "noTagsAssigned": "Теги не призначені",
+        "totalCalls": "Всього дзвінків",
+        "avgDuration": "Серед. тривалість",
+        "tabs": {
+          "personal": "Особисте",
+          "work": "Робота",
+          "recommenders": "Поручителі",
+          "addresses": "Адреси",
+          "loans": "Позики",
+          "tasks": "Завдання",
+          "docs": "Документи",
+          "callSms": "Дзвінок / SMS"
+        }
       },
       "modals": {
         "addNote": {
@@ -961,6 +974,10 @@
             "oct": "Жов",
             "nov": "Лис",
             "dec": "Гру"
+          },
+          "time": {
+            "am": "AM",
+            "pm": "PM"
           }
         },
         "portfolioDropdown": {

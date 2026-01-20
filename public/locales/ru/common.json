@@ -638,7 +638,7 @@
       },
       "activity": {
         "score": "Оценка",
-        "addNoteAboutClient": "Добавить заметку о клиенте",
+        "addNote": "Добавить заметку",
         "call": "Звонок",
         "deleteClient": "Удалить клиента",
         "typeOfCommunication": "Тип коммуникации",
@@ -736,7 +736,20 @@
         "deliveryRate": "Уровень доставки",
         "delivered": "доставлено",
         "failed": "не удалось",
-        "pending": "ожидается"
+        "pending": "ожидается",
+        "noTagsAssigned": "Теги не назначены",
+        "totalCalls": "Всего звонков",
+        "avgDuration": "Сред. длительность",
+        "tabs": {
+          "personal": "Личное",
+          "work": "Работа",
+          "recommenders": "Поручители",
+          "addresses": "Адреса",
+          "loans": "Займы",
+          "tasks": "Задания",
+          "docs": "Документы",
+          "callSms": "Звонок / SMS"
+        }
       },
       "modals": {
         "addNote": {
@@ -943,6 +956,10 @@
             "oct": "Окт",
             "nov": "Ноя",
             "dec": "Дек"
+          },
+          "time": {
+            "am": "AM",
+            "pm": "PM"
           }
         },
         "portfolioDropdown": {

@@ -690,7 +690,7 @@
       },
       "activity": {
         "score": "Score",
-        "addNoteAboutClient": "Add Note about Client",
+        "addNote": "Add Note",
         "call": "Call",
         "deleteClient": "Delete Client",
         "typeOfCommunication": "Type of communication",
@@ -788,7 +788,20 @@
         "deliveryRate": "Delivery Rate",
         "delivered": "delivered",
         "failed": "failed",
-        "pending": "pending"
+        "pending": "pending",
+        "noTagsAssigned": "No tags assigned",
+        "totalCalls": "Total Calls",
+        "avgDuration": "Avg. Duration",
+        "tabs": {
+          "personal": "Personal",
+          "work": "Work",
+          "recommenders": "Recommenders",
+          "addresses": "Addresses",
+          "loans": "Loans",
+          "tasks": "Tasks",
+          "docs": "Docs",
+          "callSms": "Call / SMS"
+        }
       },
       "modals": {
         "addNote": {
@@ -999,6 +1012,10 @@
             "oct": "Oct",
             "nov": "Nov",
             "dec": "Dec"
+          },
+          "time": {
+            "am": "AM",
+            "pm": "PM"
           }
         },
         "portfolioDropdown": {

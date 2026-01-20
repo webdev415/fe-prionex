@@ -197,7 +197,7 @@ export function CallRecordingModal({
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0
 
   return (
-    <Modal open={open} onClose={onClose} maxWidth="xl" className="p-6">
+    <Modal open={open} onClose={onClose} maxWidth="xl" className="p-4 sm:p-6">
       {/* Hidden audio element for playback */}
       {recordingUrl && (
         <audio ref={audioRef} src={recordingUrl} preload="metadata" className="hidden">
@@ -208,54 +208,54 @@ export function CallRecordingModal({
       {/* Minimize Button */}
       <button
         onClick={handleMinimize}
-        className="absolute top-4 right-12 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+        className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100 sm:top-4 sm:right-12"
         aria-label="Minimize modal"
       >
         <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
       </button>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4 sm:gap-6">
         {/* Audio Waveform Icon */}
         <div className="flex justify-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white">
-            <Icons.Voice size={40} className="text-dark-500 p-1" strokeWidth={1} />
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white sm:h-16 sm:w-16">
+            <Icons.Voice size={32} className="text-dark-500 p-1 sm:size-10" strokeWidth={1} />
           </div>
         </div>
 
         {/* Title */}
-        <h2 className="text-dark-500 self-stretch text-center text-2xl leading-tight font-medium">
+        <h2 className="text-dark-500 self-stretch text-center text-xl leading-tight font-medium sm:text-2xl">
           {t('pages.clients.modals.callRecording.title')}
         </h2>
 
         {/* Call Details */}
         <div className="flex flex-col gap-2">
-          <div className="text-dark-500 self-stretch text-center text-[18px] leading-[150%] font-medium tracking-[-0.36px]">
+          <div className="text-dark-500 self-stretch text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
             {callData.type}
           </div>
-          <div className="text-dark-500 self-stretch text-center text-[18px] leading-[150%] font-light tracking-[-0.36px]">
+          <div className="text-dark-500 self-stretch text-center text-sm leading-[150%] font-light tracking-[-0.36px] sm:text-[18px]">
             {callData.clientName} - {formatDate(callData.date, callData.time)}
           </div>
-          <div className="flex items-start gap-2 self-stretch">
-            <div className="flex flex-1 items-start gap-2">
-              <span className="text-base leading-[155%] font-light tracking-[-0.32px] text-gray-700">
+          <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:gap-2">
+            <div className="flex w-full flex-1 items-start gap-2 sm:w-auto">
+              <span className="text-xs leading-[155%] font-light tracking-[-0.32px] text-gray-700 sm:text-base">
                 {t('pages.clients.modals.callRecording.operator')}:{' '}
               </span>
-              <span className="text-dark-500 flex-1 text-base leading-[155%] font-light tracking-[-0.32px]">
+              <span className="text-dark-500 flex-1 text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                 {callData.operator}
               </span>
             </div>
-            <div className="flex flex-1 items-start gap-2">
-              <span className="text-base leading-[155%] font-light tracking-[-0.32px] text-gray-700">
+            <div className="flex w-full flex-1 items-start gap-2 sm:w-auto">
+              <span className="text-xs leading-[155%] font-light tracking-[-0.32px] text-gray-700 sm:text-base">
                 {t('pages.clients.modals.callRecording.duration')}:{' '}
               </span>
-              <span className="text-dark-500 flex-1 text-base leading-[155%] font-light tracking-[-0.32px]">
+              <span className="text-dark-500 flex-1 text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                 {callData.duration}
               </span>
             </div>
-            <div className="flex flex-1 items-start gap-2">
-              <span className="text-base leading-[155%] font-light tracking-[-0.32px] text-gray-700">
+            <div className="flex w-full flex-1 items-start gap-2 sm:w-auto">
+              <span className="text-xs leading-[155%] font-light tracking-[-0.32px] text-gray-700 sm:text-base">
                 {t('pages.clients.modals.callRecording.phone')}:{' '}
               </span>
-              <span className="text-dark-500 flex-1 text-base leading-[155%] font-light tracking-[-0.32px]">
+              <span className="text-dark-500 flex-1 text-xs leading-[155%] font-light tracking-[-0.32px] sm:text-base">
                 {callData.phone}
               </span>
             </div>
@@ -263,20 +263,20 @@ export function CallRecordingModal({
         </div>
 
         {/* Audio Player */}
-        <div className="flex items-center gap-3 self-stretch rounded-full bg-white px-[14px] py-[15px]">
-          <button onClick={handlePlayPause} className="cursor-pointer">
+        <div className="flex items-center gap-2 self-stretch rounded-full bg-white px-2 py-2 sm:gap-3 sm:px-[14px] sm:py-[15px]">
+          <button onClick={handlePlayPause} className="shrink-0 cursor-pointer">
             {isPlaying ? (
-              <Icons.Pause size={20} className="text-dark-500" strokeWidth={1.5} />
+              <Icons.Pause size={18} className="text-dark-500 sm:size-5" strokeWidth={1.5} />
             ) : (
-              <Icons.PlayCircle02 size={20} className="text-dark-500" strokeWidth={1.5} />
+              <Icons.PlayCircle02 size={18} className="text-dark-500 sm:size-5" strokeWidth={1.5} />
             )}
           </button>
-          <div className="flex flex-1 items-center gap-2">
-            <span className="text-dark-500 text-sm font-medium">
+          <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
+            <span className="text-dark-500 shrink-0 text-xs font-medium sm:text-sm">
               {formatTime(Math.floor(currentTime))}
             </span>
             <div
-              className="relative h-1 flex-1 cursor-pointer rounded-full bg-gray-200"
+              className="relative h-1 min-w-0 flex-1 cursor-pointer rounded-full bg-gray-200"
               onClick={handleProgressChange}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -296,38 +296,40 @@ export function CallRecordingModal({
                 style={{ width: `${progressPercentage}%` }}
               />
             </div>
-            <span className="text-dark-500 text-sm font-medium">
+            <span className="text-dark-500 shrink-0 text-xs font-medium sm:text-sm">
               {formatTime(Math.floor(duration))}
             </span>
           </div>
-          <button className="text-dark-500 cursor-pointer hover:text-gray-800">
-            <Icons.VolumeHigh size={20} />
+          <button className="text-dark-500 shrink-0 cursor-pointer hover:text-gray-800">
+            <Icons.VolumeHigh size={18} className="sm:size-5" />
           </button>
         </div>
 
         {/* Control Buttons */}
-        <div className="flex items-start gap-3 self-stretch">
+        <div className="flex flex-wrap items-start gap-2 self-stretch sm:gap-3">
           <Button
             variant="secondary"
             onClick={handleSkipBackward}
-            className="flex h-[45px] flex-1 rounded"
+            className="flex h-[40px] min-w-[calc(50%-4px)] rounded-md text-xs sm:h-[45px] sm:min-w-0 sm:text-sm"
+            size="sm"
           >
-            <Icons.Backward02 size={16} className="mr-1" />
+            <Icons.Backward02 size={14} className="mr-1 sm:size-4" />
             -10s
           </Button>
           <Button
             variant="secondary"
             onClick={handlePlayPause}
-            className="flex h-[45px] flex-1 rounded"
+            className="flex h-[40px] min-w-[calc(50%-4px)] rounded-md text-xs sm:h-[45px] sm:min-w-0 sm:text-sm"
+            size="sm"
           >
             {isPlaying ? (
               <>
-                <Icons.Pause size={16} className="mr-1" />
+                <Icons.Pause size={14} className="mr-1 sm:size-4" />
                 {t('pages.clients.modals.callRecording.pause')}
               </>
             ) : (
               <>
-                <Icons.PlayCircle02 size={16} className="mr-1 ml-0.5" />
+                <Icons.PlayCircle02 size={14} className="mr-1 ml-0.5 sm:size-4" />
                 {t('pages.clients.modals.callRecording.play')}
               </>
             )}
@@ -335,19 +337,21 @@ export function CallRecordingModal({
           <Button
             variant="secondary"
             onClick={handleSkipForward}
-            className="flex h-[45px] flex-1 rounded"
+            className="flex h-[40px] min-w-[calc(50%-4px)] rounded-md text-xs sm:h-[45px] sm:min-w-0 sm:text-sm"
+            size="sm"
           >
-            <Icons.Forward02 size={16} className="mr-1" />
+            <Icons.Forward02 size={14} className="mr-1 sm:size-4" />
             +10s
           </Button>
-          <div className="relative">
+          <div className="relative min-w-[calc(50%-4px)] flex-1 sm:min-w-0">
             <Button
               variant="secondary"
               onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-              className="flex h-[45px] flex-1 rounded"
+              className="flex h-[40px] w-full rounded-md text-xs sm:h-[45px] sm:text-sm"
+              size="sm"
             >
               {t('pages.clients.modals.callRecording.speed')}: {playbackSpeed.toFixed(1)}x
-              <Icons.ArrowDown size={16} className="ml-1" />
+              <Icons.ArrowDown size={14} className="ml-1 sm:size-4" />
             </Button>
             {showSpeedMenu && (
               <div className="absolute top-full right-0 z-10 mt-1 rounded-md border border-gray-300 bg-white shadow-lg">
@@ -356,7 +360,7 @@ export function CallRecordingModal({
                     key={speed}
                     onClick={() => handleSpeedChange(speed)}
                     className={cn(
-                      'text-dark-500 w-full px-4 py-2 text-left text-sm hover:bg-gray-100',
+                      'text-dark-500 w-full px-3 py-2 text-left text-xs hover:bg-gray-100 sm:px-4 sm:text-sm',
                       playbackSpeed === speed && 'bg-primary-100 text-primary-700'
                     )}
                   >
@@ -369,14 +373,14 @@ export function CallRecordingModal({
         </div>
 
         {/* Footer Buttons */}
-        <ModalFooter>
-          <Button variant="cancel" size="md" onClick={onClose} className="flex-1">
+        <ModalFooter className="flex-col gap-2 sm:flex-row sm:gap-3">
+          <Button variant="cancel" size="sm" onClick={onClose} className="w-full rounded-md">
             {t('actions.close')}
           </Button>
           <Button
             variant="primary"
-            size="md"
-            className="flex-1"
+            size="sm"
+            className="w-full rounded-md"
             onClick={() => {
               if (recordingUrl) {
                 const link = document.createElement('a')
@@ -388,8 +392,8 @@ export function CallRecordingModal({
               }
             }}
             disabled={!recordingUrl}
+            leftIcon={<Icons.Mp301 size={18} className="sm:size-5" />}
           >
-            <Icons.Mp301 size={20} className="mr-2" />
             {t('pages.clients.modals.callRecording.download')}
           </Button>
         </ModalFooter>

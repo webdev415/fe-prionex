@@ -193,18 +193,18 @@ export function CallLogCard({
     <button
       onClick={handleCardClick}
       className={cn(
-        'group relative w-full cursor-pointer rounded-lg border border-[#E0E0E0] bg-white p-4 text-left transition-shadow hover:shadow-md',
+        'group relative w-full cursor-pointer rounded-lg border border-[#E0E0E0] bg-white p-3 text-left transition-shadow hover:shadow-md md:p-4',
         className
       )}
     >
-      <div className="flex h-full min-w-0 items-start gap-4">
+      <div className="flex h-full min-w-0 items-start gap-2 md:gap-4">
         {/* Left Section - Icon */}
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#F0F0F0]">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#F0F0F0] md:h-10 md:w-10">
           <div className="text-secondary-800/50 group-hover:text-secondary-800">{icon}</div>
         </div>
 
         {/* Middle Section - Content */}
-        <div className="flex min-w-0 flex-1 flex-col gap-1 overflow-hidden">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5 overflow-hidden md:gap-1">
           {isCall ? (
             /* Call Card Content */
             <>
@@ -289,16 +289,20 @@ export function CallLogCard({
         </div>
 
         {/* Right Section - Metadata */}
-        <div className="flex shrink-0 flex-col items-end gap-1">
+        <div className="flex shrink-0 flex-col items-end gap-0.5 md:gap-1">
           {/* Date */}
-          {date && <div className="text-xs whitespace-nowrap text-[#888888]">{date}</div>}
+          {date && (
+            <div className="text-[10px] whitespace-nowrap text-[#888888] md:text-xs">{date}</div>
+          )}
 
           {/* Time */}
-          {time && <div className="text-xs whitespace-nowrap text-[#888888]">{time}</div>}
+          {time && (
+            <div className="text-[10px] whitespace-nowrap text-[#888888] md:text-xs">{time}</div>
+          )}
 
           {/* Agent/Operator Name */}
           {operator && (
-            <div className="mt-auto text-xs font-medium whitespace-nowrap text-[#333333]">
+            <div className="mt-auto text-[10px] font-medium whitespace-nowrap text-[#333333] md:text-xs">
               {operator}
             </div>
           )}

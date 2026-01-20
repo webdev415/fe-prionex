@@ -67,32 +67,34 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
     <Modal open={open} onClose={handleClose} maxWidth="xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-300 flex h-12 w-12 items-center justify-center rounded-full">
-            <Icons.PencilEdit size={24} className="text-dark-500" strokeWidth={1.5} />
+          <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+            <Icons.PencilEdit size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
           </div>
         }
         title={t('pages.clients.modals.addNote.title')}
       />
       <ModalContent>
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 md:gap-6">
           {/* Phone Field */}
-          <div className="flex items-center gap-3">
-            <span className="text-dark-500 text-sm font-light">
-              {t('pages.clients.modals.addNote.phone')}:
-            </span>
-            <span className="text-dark-500 text-sm font-light">{phoneNumber}</span>
-            <button className="bg-primary-300 flex items-center gap-1 rounded-full px-3 py-1.5">
-              <Icons.Headset size={16} className="text-dark-500" strokeWidth={1.5} />
-              <span className="text-dark-500 text-xs font-medium">
+          <div className="flex flex-row items-center gap-2 gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-dark-500 text-xs font-light sm:text-sm">
+                {t('pages.clients.modals.addNote.phone')}:
+              </span>
+              <span className="text-dark-500 text-xs font-light sm:text-sm">{phoneNumber}</span>
+            </div>
+            <button className="bg-primary-300 flex items-center gap-1 rounded-full px-2 py-1 sm:px-3 sm:py-1.5">
+              <Icons.Headset size={14} className="text-dark-500 sm:size-4" strokeWidth={1.5} />
+              <span className="text-dark-500 text-[10px] font-medium sm:text-xs">
                 {t('pages.clients.activity.call')}
               </span>
             </button>
           </div>
 
-          <div className="flex flex-row items-center gap-6">
+          <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:gap-6">
             {/* Action Dropdown */}
             <div className="flex flex-1 flex-col gap-2">
-              <label className="text-dark-500 text-sm font-light">
+              <label className="text-dark-500 text-xs font-light sm:text-sm">
                 {t('pages.clients.modals.addNote.action')}:
               </label>
               <Select value={action} onValueChange={setAction}>
@@ -111,7 +113,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
 
             {/* Type Dropdown */}
             <div className="flex flex-1 flex-col gap-2">
-              <label className="text-dark-500 text-sm font-light">
+              <label className="text-dark-500 text-xs font-light sm:text-sm">
                 {t('pages.clients.modals.addNote.type')}:
               </label>
               <Select value={type} onValueChange={setType}>
@@ -129,7 +131,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
 
           {/* Note Textarea */}
           <div className="flex flex-col gap-2">
-            <label className="text-dark-500 text-sm font-light">
+            <label className="text-dark-500 text-xs font-light sm:text-sm">
               {t('pages.clients.modals.addNote.note')}:
             </label>
             <div className="relative">
@@ -138,20 +140,20 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                 onChange={(e) => setNote(e.target.value)}
                 placeholder={t('pages.clients.modals.addNote.typeYourNoteHere')}
                 maxLength={MAX_NOTE_LENGTH}
-                className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[120px] w-full resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none"
+                className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[100px] w-full resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none sm:min-h-[120px] sm:text-sm"
               />
-              <div className="absolute right-2 bottom-2 text-xs font-light text-gray-400">
+              <div className="absolute right-2 bottom-2 text-[10px] font-light text-gray-400 sm:text-xs">
                 {note.length}/{MAX_NOTE_LENGTH}
               </div>
             </div>
           </div>
         </div>
       </ModalContent>
-      <ModalFooter>
-        <Button variant="cancel" size="md" onClick={handleClose} className="flex-1">
+      <ModalFooter className="flex-col gap-2 sm:flex-row sm:gap-3">
+        <Button variant="cancel" size="sm" onClick={handleClose} className="w-full rounded-md">
           {t('actions.cancel')}
         </Button>
-        <Button variant="primary" size="md" onClick={handleSave} className="flex-1">
+        <Button variant="primary" size="sm" onClick={handleSave} className="w-full rounded-md">
           {t('actions.save')}
         </Button>
       </ModalFooter>
