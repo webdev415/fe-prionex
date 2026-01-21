@@ -82,9 +82,49 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
   }
 
   // Format value for display
-  const formatValue = (value: string | null | undefined): string => {
+  const formatValue = (value: string | null | undefined, fieldName?: string): string => {
     if (value === null || value === undefined) return '(null)'
     if (value === '') return '(empty)'
+
+    // Special handling for available_variables field
+    if (fieldName === 'available_variables') {
+      try {
+        // Parse JSON array of variable objects
+        const parsed = typeof value === 'string' ? JSON.parse(value) : value
+        if (Array.isArray(parsed)) {
+          // Extract variable names and format as {variable_name}
+          const variableNames = parsed
+            .map((item: unknown) => {
+              if (typeof item === 'object' && item !== null) {
+                const obj = item as Record<string, unknown>
+                return (obj.name as string) || (obj.variable as string) || String(item)
+              }
+              return String(item)
+            })
+            .filter((name: string) => name)
+          if (variableNames.length === 0) return '(empty)'
+          // Format as {variable1}, {variable2}, etc.
+          return variableNames.map((name: string) => `{${name}}`).join(', ')
+        }
+      } catch {
+        // If parsing fails, fall through to default handling
+      }
+    }
+
+    // Check if value is a JSON string (starts with { or [)
+    if (
+      typeof value === 'string' &&
+      (value.trim().startsWith('{') || value.trim().startsWith('['))
+    ) {
+      try {
+        // Try to parse and pretty-print JSON
+        const parsed = JSON.parse(value)
+        return JSON.stringify(parsed, null, 2)
+      } catch {
+        // If not valid JSON, return as-is
+        return value
+      }
+    }
     return value
   }
 
@@ -241,7 +281,7 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
                       <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                         {change.field_name === 'debt_amount' || change.field_name === 'total_debt'
                           ? formatCurrencyValue(change.old_value)
-                          : formatValue(change.old_value)}
+                          : formatValue(change.old_value, change.field_name)}
                       </span>
                     </div>
                     {/* Arrow Icon */}
@@ -270,7 +310,7 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
                       <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                         {change.field_name === 'debt_amount' || change.field_name === 'total_debt'
                           ? formatCurrencyValue(change.new_value)
-                          : formatValue(change.new_value)}
+                          : formatValue(change.new_value, change.field_name)}
                       </span>
                     </div>
                   </div>
