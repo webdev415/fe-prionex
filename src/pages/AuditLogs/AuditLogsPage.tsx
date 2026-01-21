@@ -232,10 +232,50 @@ export function AuditLogsPage() {
           changeType = 'Modified'
         }
 
+        // Properly serialize values - handle objects, arrays, and primitives
+        const serializeValue = (val: unknown, fieldName: string): string | null => {
+          if (val === null || val === undefined) return null
+
+          // Special handling for available_variables field
+          if (fieldName === 'available_variables') {
+            try {
+              const parsed = typeof val === 'string' ? JSON.parse(val) : val
+              if (Array.isArray(parsed)) {
+                // Extract variable names and format as {variable_name}
+                const variableNames = parsed
+                  .map((item: unknown) => {
+                    if (typeof item === 'object' && item !== null) {
+                      const obj = item as Record<string, unknown>
+                      return (obj.name as string) || (obj.variable as string) || String(item)
+                    }
+                    return String(item)
+                  })
+                  .filter((name: string) => name)
+                if (variableNames.length === 0) return '(empty)'
+                // Format as {variable1}, {variable2}, etc.
+                return variableNames.map((name: string) => `{${name}}`).join(', ')
+              }
+            } catch {
+              // If parsing fails, fall through to default handling
+            }
+          }
+
+          // Handle objects and arrays
+          if (typeof val === 'object') {
+            try {
+              return JSON.stringify(val, null, 2)
+            } catch {
+              return String(val)
+            }
+          }
+
+          return String(val)
+        }
+
         changes.push({
           field_name: field,
-          old_value: changeObj.old ? String(changeObj.old) : null,
-          new_value: changeObj.new ? String(changeObj.new) : null,
+          old_value: serializeValue(changeObj.old, field),
+          new_value: serializeValue(changeObj.new, field),
           change_type: changeType,
         })
       })

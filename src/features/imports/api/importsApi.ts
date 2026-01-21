@@ -6,7 +6,6 @@
  */
 
 import api, { getAccessToken } from '@/lib/api'
-import { useAuthStore } from '@/stores/authStore'
 import type {
   UploadImportRequest,
   UploadImportResponse,
@@ -119,10 +118,6 @@ export async function getImportJobs(
   const page = params.page || 1
   const pageSize = params.page_size || 100
 
-  // Get active project ID from auth store
-  const user = useAuthStore.getState().user
-  const activeProjectId = user?.active_project_id ? parseInt(user.active_project_id, 10) : undefined
-
   // Map frontend status to backend status
   let backendStatus: string | undefined
   if (params.status) {
@@ -135,10 +130,9 @@ export async function getImportJobs(
     offset: (page - 1) * pageSize,
   }
 
-  // Add project_id if available
-  if (activeProjectId && !isNaN(activeProjectId)) {
-    backendParams.project_id = activeProjectId
-  }
+  // Don't send project_id filter - let backend show all jobs from projects user has access to
+  // The backend already filters by user_project_ids, so users will see jobs from all their projects
+  // If we send project_id, it will filter to only that project, which may hide jobs from other projects
 
   // Add status filter
   if (backendStatus) {
