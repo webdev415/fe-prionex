@@ -28,7 +28,12 @@
     "phoneNumber": "Phone number",
     "email": "Email",
     "username": "Username",
-    "error": "Could not search clients. Please try again."
+    "error": "Could not search clients. Please try again.",
+    "searching": "Searching...",
+    "noResults": "No clients found for '{{query}}'.",
+    "debt": "Debt",
+    "phone": "Phone",
+    "viewAllResults": "View all results"
   },
   "actions": {
     "save": "Save",

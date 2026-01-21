@@ -4,6 +4,7 @@
  * Displays search results in a dropdown with loading, results, no results, and error states.
  */
 
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 import { PriorityBadge } from '@/pages/ClientManagement/components/PriorityBadge'
@@ -35,8 +36,11 @@ export function SearchResults({
   onViewAll,
   onResultClick,
 }: SearchResultsProps) {
+  const { t, i18n } = useTranslation('common')
+
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uk-UA', {
+    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
+    return new Intl.NumberFormat(locale, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
       useGrouping: true,
@@ -60,7 +64,7 @@ export function SearchResults({
       <div className={cn(dropdownBase, 'p-3 sm:p-4')}>
         <div className="flex items-center gap-3">
           <div className="border-primary-500 h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" />
-          <span className="text-sm text-gray-600">Searching...</span>
+          <span className="text-sm text-gray-600">{t('search.searching')}</span>
         </div>
       </div>
     )
@@ -72,7 +76,7 @@ export function SearchResults({
       <div className={cn(dropdownBase, 'p-3 sm:p-4')}>
         <div className="flex items-center gap-3">
           <Icons.Warning size={20} className="text-error-500 shrink-0" strokeWidth={2} />
-          <span className="text-sm text-gray-600">Could not search clients. Please try again.</span>
+          <span className="text-sm text-gray-600">{t('search.error')}</span>
         </div>
       </div>
     )
@@ -86,7 +90,7 @@ export function SearchResults({
           <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-gray-400">
             <Icons.Close size={12} className="text-gray-400" strokeWidth={2} />
           </div>
-          <span className="text-sm text-gray-600">No clients found for &apos;{query}&apos;.</span>
+          <span className="text-sm text-gray-600">{t('search.noResults', { query })}</span>
         </div>
       </div>
     )
@@ -108,8 +112,12 @@ export function SearchResults({
                   {result.name}
                 </h4>
                 <div className="space-y-0.5 text-xs text-gray-600 sm:space-y-1">
-                  <div className="truncate">Debt: {formatCurrency(result.debt)} ₴</div>
-                  <div className="truncate">Phone: {result.phone}</div>
+                  <div className="truncate">
+                    {t('search.debt')}: {formatCurrency(result.debt)} ₴
+                  </div>
+                  <div className="truncate">
+                    {t('search.phone')}: {result.phone}
+                  </div>
                 </div>
               </div>
               <div className="flex flex-row items-center gap-2 sm:flex-col sm:items-end sm:gap-2">
@@ -126,7 +134,7 @@ export function SearchResults({
             onClick={onViewAll}
             className="bg-primary-300 text-dark-500 hover:bg-primary-400 w-full rounded-lg px-4 py-2 text-sm font-medium transition-colors"
           >
-            View all results
+            {t('search.viewAllResults')}
           </button>
         </div>
       )}
