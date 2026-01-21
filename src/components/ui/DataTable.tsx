@@ -253,7 +253,7 @@ export function DataTable<T extends { id: number | string }>({
         {showHeaderRow && (
           <div
             ref={headerRowRef}
-            className="sticky top-0 z-20 flex min-h-[49px] w-full items-center justify-between border-b border-[#EBECE8] bg-white px-4 shadow-sm"
+            className="top-0 z-20 flex min-h-[49px] w-full items-center justify-between border-b border-[#EBECE8] bg-white px-4 shadow-sm"
           >
             <div className="flex w-full items-center gap-3">
               {/* Show selection info when bulk selection is enabled */}
