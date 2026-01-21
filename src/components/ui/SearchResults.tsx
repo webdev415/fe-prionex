@@ -5,6 +5,7 @@
  */
 
 import { Icons } from '@/lib/icons'
+import { PriorityBadge } from '@/pages/ClientManagement/components/PriorityBadge'
 
 export interface SearchResult {
   id: number
@@ -41,21 +42,6 @@ export function SearchResults({
     })
       .format(amount)
       .replace(/,/g, ' ')
-  }
-
-  const getPriorityColor = (priority: SearchResult['priority']) => {
-    switch (priority) {
-      case 'Critical':
-        return 'bg-error-500'
-      case 'High':
-        return 'bg-warning-500'
-      case 'Medium':
-        return 'bg-success-500'
-      case 'Low':
-        return 'bg-gray-500'
-      default:
-        return 'bg-gray-500'
-    }
   }
 
   // Don't show anything if no query
@@ -120,11 +106,7 @@ export function SearchResults({
                 </div>
               </div>
               <div className="flex flex-col items-end gap-2">
-                <span
-                  className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-white ${getPriorityColor(result.priority)}`}
-                >
-                  {result.priority}
-                </span>
+                <PriorityBadge priority={result.priority} variant="compact" />
                 <span className="text-dark-500 text-sm font-medium">{result.score}</span>
               </div>
             </div>
