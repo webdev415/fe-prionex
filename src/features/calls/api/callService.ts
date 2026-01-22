@@ -7,6 +7,7 @@ import type {
   CallHistoryResponse,
   UpdateCallOutcomeRequest,
   AMIHealthResponse,
+  IncomingCallData,
 } from '../types'
 
 // Use same base URL as other services - all requests go through Kong Gateway
@@ -43,6 +44,11 @@ class CallService {
 
   async getAMIHealth(): Promise<AMIHealthResponse> {
     const response = await axios.get(`${API_BASE_URL}/health/ami`)
+    return response.data
+  }
+
+  async getIncomingCallInfo(callId: string): Promise<IncomingCallData> {
+    const response = await axios.get(`${API_BASE_URL}/api/v1/calls/incoming/${callId}`)
     return response.data
   }
 }

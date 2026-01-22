@@ -100,3 +100,26 @@ export interface ConnectionStatus {
   failedAttempts: number
   usingPollingFallback: boolean
 }
+
+// Incoming call types
+export interface LoanInfo {
+  loan_id: number
+  contract_number: string
+  remaining_debt: number
+  status: string
+}
+
+export interface IncomingCallData {
+  call_id: string
+  customer_phone: string
+  agent_extension: string
+  client_name?: string
+  loan_count: number
+  total_debt: number
+  loans: LoanInfo[]
+}
+
+export interface IncomingCallEvent {
+  event_type: 'call.incoming'
+  data: IncomingCallData
+}
