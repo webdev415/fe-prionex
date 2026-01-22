@@ -29,10 +29,11 @@ export const auditKeys = {
 /**
  * Search audit logs with filters
  */
-export function useAuditLogs(params: AuditLogSearchParams = {}) {
+export function useAuditLogs(params: AuditLogSearchParams = {}, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: auditKeys.search(params),
     queryFn: () => searchAuditLogs(params),
+    enabled: options?.enabled !== false, // Default to true, can be disabled
     staleTime: 0, // Always refetch when params change (no stale time)
     gcTime: 5 * 60 * 1000, // 5 minutes
     // Ensure refetch when query key changes
