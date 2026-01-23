@@ -18,6 +18,8 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useCallStore } from '@/stores/callStore'
 import { useCallDetails } from '@/features/calls/hooks/useCall'
+import { useCallStateUpdates } from '@/features/calls/hooks/useCallStateUpdates'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 
 export type CallState = 'initial' | 'dialing' | 'connected' | 'ended' | 'failed' | 'incoming'
 export type CallType = 'white-line' | 'gray-line' | 'spam-calls'
@@ -79,9 +81,14 @@ export function CallDialogModal({
 }: CallDialogModalProps) {
   const { t } = useTranslation('common')
   const { setMinimizedCall, setOpenCallModal, minimizedCall } = useCallStore()
+  const { user: authUser } = useAuth()
 
   // Fetch call details with polling if callId is provided
   const { data: callDetails } = useCallDetails(callId || null)
+
+  // Listen for real-time call state updates via Socket.IO
+  const agentExtension = authUser?.asterisk_extension || null
+  useCallStateUpdates(agentExtension, callId || null)
 
   // Track modal open state
   useEffect(() => {
@@ -143,15 +150,18 @@ export function CallDialogModal({
     }
 
     // Map backend state to frontend state
+    // Backend returns UPPERCASE values: INITIATED, RINGING, ACTIVE, COMPLETED, FAILED
     switch (callDetails.state) {
-      case 'initiated':
-      case 'ringing':
-        return { state: 'dialing' as CallState, time: callDetails.ring_duration || 0 }
-      case 'active':
-        return { state: 'connected' as CallState, time: callDetails.talk_duration || 0 }
-      case 'completed':
+      case 'INITIATED':
+      case 'RINGING':
+        // During dialing, keep using local timer (ring_duration may not update in real-time)
+        return { state: 'dialing' as CallState, time: -1 } // -1 means "use local timer"
+      case 'ACTIVE':
+        // During active call, keep using local timer (talk_duration is only set when call ends)
+        return { state: 'connected' as CallState, time: -1 } // -1 means "use local timer"
+      case 'COMPLETED':
         return { state: 'ended' as CallState, time: callDetails.total_duration || 0 }
-      case 'failed':
+      case 'FAILED':
         return { state: 'failed' as CallState, time: 0 }
       default:
         return { state: callState, time: elapsedTime }
@@ -165,7 +175,9 @@ export function CallDialogModal({
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCallState(derivedState.state)
     }
-    if (derivedState.time !== elapsedTime) {
+    // Only sync time if backend provides a valid duration (not -1)
+    // During ACTIVE state, we use local timer instead of backend value
+    if (derivedState.time >= 0 && derivedState.time !== elapsedTime) {
       setElapsedTime(derivedState.time)
     }
   }, [derivedState, callState, elapsedTime])
