@@ -17,7 +17,7 @@ import { RadioGroup, RadioItem } from '../../../components/ui/Radio'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useCallStore } from '@/stores/callStore'
-import { useCallDetails } from '@/features/calls/hooks/useCall'
+import { useCallDetails, useHangupCall } from '@/features/calls/hooks/useCall'
 import { useCallStateUpdates } from '@/features/calls/hooks/useCallStateUpdates'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 
@@ -89,6 +89,9 @@ export function CallDialogModal({
   // Listen for real-time call state updates via Socket.IO
   const agentExtension = authUser?.asterisk_extension || null
   useCallStateUpdates(agentExtension, callId || null)
+
+  // Hangup mutation
+  const hangupMutation = useHangupCall()
 
   // Track modal open state
   useEffect(() => {
@@ -259,6 +262,11 @@ export function CallDialogModal({
   }
 
   const handleReject = () => {
+    // Send hangup command to Asterisk to reject the incoming call
+    if (callId) {
+      hangupMutation.mutate(callId)
+    }
+
     if (onReject) {
       onReject()
     }
@@ -270,6 +278,12 @@ export function CallDialogModal({
 
   const handleHangUp = () => {
     const status: CallStatus = callState === 'connected' ? 'answered' : 'missed'
+
+    // Send hangup command to Asterisk if we have a call ID
+    if (callId) {
+      hangupMutation.mutate(callId)
+    }
+
     if (onCallEnd) {
       onCallEnd(elapsedTime, status)
     }

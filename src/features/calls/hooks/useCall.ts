@@ -61,3 +61,19 @@ export function useAMIHealth() {
     refetchInterval: 30000, // Check every 30 seconds
   })
 }
+
+export function useHangupCall() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (callId: string) => callService.hangupCall(callId),
+    onSuccess: () => {
+      toast.success('Call ended')
+      queryClient.invalidateQueries({ queryKey: ['callHistory'] })
+      queryClient.invalidateQueries({ queryKey: ['callDetails'] })
+    },
+    onError: () => {
+      toast.error('Failed to end call')
+    },
+  })
+}

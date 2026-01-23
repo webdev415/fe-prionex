@@ -51,6 +51,11 @@ class CallService {
     const response = await axios.get(`${API_BASE_URL}/api/v1/calls/${callId}/incoming-info`)
     return response.data
   }
+
+  async hangupCall(callId: string): Promise<{ status: string; message: string }> {
+    const response = await axios.post(`${API_BASE_URL}/api/v1/calls/${callId}/hangup`)
+    return response.data
+  }
 }
 
 export const callService = new CallService()
