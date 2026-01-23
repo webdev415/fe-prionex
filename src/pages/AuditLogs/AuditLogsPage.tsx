@@ -27,7 +27,8 @@ import {
 } from '@/features/audit'
 import type { AuditLogResponse } from '@/features/audit/api/types'
 import { toast } from 'sonner'
-import { useUserRole } from '@/hooks/usePermissions'
+import { useHasPermission } from '@/hooks/usePermissions'
+import { PERMISSIONS } from '@/constants/permissions'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -87,8 +88,7 @@ export interface AuditLogFilters {
 
 export function AuditLogsPage() {
   const { t } = useTranslation('common')
-  const userRole = useUserRole()
-  const isAdmin = userRole?.toLowerCase() === 'admin'
+  const canViewAuditLogs = useHasPermission(PERMISSIONS.SYSTEM.VIEW_AUDIT_LOGS)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [filters, setFilters] = useState<AuditLogFilters>({})
@@ -155,51 +155,51 @@ export function AuditLogsPage() {
   // Fetch audit logs from API
   // React Query will automatically refetch when apiParams changes (including page changes)
   // The query key includes all params, so changing currentPage will trigger a new request
-  // Only fetch if user is admin (admin-only endpoint)
+  // Only fetch if user has view_audit_logs permission
   const {
     data: auditData,
     isLoading,
     error,
   } = useAuditLogs(apiParams, {
-    enabled: isAdmin,
+    enabled: canViewAuditLogs,
   })
 
   // Fetch distinct roles from API (separate query, cached)
-  // Only fetch if user is admin (admin-only endpoint)
+  // Only fetch if user has view_audit_logs permission
   const { data: rolesData, isLoading: isLoadingRoles } = useQuery({
     queryKey: ['audit', 'roles'],
     queryFn: getDistinctRoles,
-    enabled: isAdmin, // Only fetch if user is admin
+    enabled: canViewAuditLogs, // Only fetch if user has view_audit_logs permission
     staleTime: 0, // Always fetch fresh data - no cache
     gcTime: 0, // Don't keep in cache
   })
 
   // Fetch distinct users from API (separate query, cached)
-  // Only fetch if user is admin (admin-only endpoint)
+  // Only fetch if user has view_audit_logs permission
   const { data: usersData, isLoading: isLoadingUsers } = useQuery({
     queryKey: ['audit', 'users'],
     queryFn: getDistinctUsers,
-    enabled: isAdmin, // Only fetch if user is admin
+    enabled: canViewAuditLogs, // Only fetch if user has view_audit_logs permission
     staleTime: 0, // Always fetch fresh data - no cache
     gcTime: 0, // Don't keep in cache
   })
 
   // Fetch distinct entity types from API (separate query, cached)
-  // Only fetch if user is admin (admin-only endpoint)
+  // Only fetch if user has view_audit_logs permission
   const { data: entityTypesData, isLoading: isLoadingEntityTypes } = useQuery({
     queryKey: ['audit', 'entity-types'],
     queryFn: getDistinctEntityTypes,
-    enabled: isAdmin, // Only fetch if user is admin
+    enabled: canViewAuditLogs, // Only fetch if user has view_audit_logs permission
     staleTime: 0, // Always fetch fresh data - no cache
     gcTime: 0, // Don't keep in cache
   })
 
   // Fetch distinct actions from API (separate query, cached)
-  // Only fetch if user is admin (admin-only endpoint)
+  // Only fetch if user has view_audit_logs permission
   const { data: actionsData, isLoading: isLoadingActions } = useQuery({
     queryKey: ['audit', 'actions'],
     queryFn: getDistinctActions,
-    enabled: isAdmin, // Only fetch if user is admin
+    enabled: canViewAuditLogs, // Only fetch if user has view_audit_logs permission
     staleTime: 0, // Always fetch fresh data - no cache
     gcTime: 0, // Don't keep in cache
   })
@@ -757,8 +757,8 @@ export function AuditLogsPage() {
     [formatTimestamp, formatEntity, formatDetails, handleViewDetails, t]
   )
 
-  // Show access denied message for non-admin users
-  if (!isAdmin) {
+  // Show access denied message for users without view_audit_logs permission
+  if (!canViewAuditLogs) {
     return (
       <div className="flex h-full flex-col items-center justify-center">
         <div className="rounded-xl bg-white/50 p-8 text-center">
@@ -766,10 +766,10 @@ export function AuditLogsPage() {
           <h2 className="text-dark-500 mb-2 text-xl font-semibold">
             {t('pages.auditLogs.accessDenied.title', 'Access Denied')}
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-dark-500">
             {t(
               'pages.auditLogs.accessDenied.message',
-              'You need Admin role to view audit logs. Please contact your administrator if you need access.'
+              'You need the "View audit logs" permission to access this page. Please contact your administrator if you need access.'
             )}
           </p>
         </div>
