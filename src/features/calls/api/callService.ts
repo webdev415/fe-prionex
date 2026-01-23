@@ -48,7 +48,7 @@ class CallService {
   }
 
   async getIncomingCallInfo(callId: string): Promise<IncomingCallData> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/calls/incoming/${callId}`)
+    const response = await axios.get(`${API_BASE_URL}/api/v1/calls/${callId}/incoming-info`)
     return response.data
   }
 }

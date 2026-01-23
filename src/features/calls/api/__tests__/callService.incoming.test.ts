@@ -48,7 +48,7 @@ describe('CallService - Incoming Call Methods', () => {
 
       const result = await callService.getIncomingCallInfo(callId)
 
-      expect(axios.get).toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/incoming/${callId}`)
+      expect(axios.get).toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/${callId}/incoming-info`)
       expect(result).toEqual(mockIncomingCallData)
       expect(result.call_id).toBe(callId)
       expect(result.customer_phone).toBe('+380501234567')
