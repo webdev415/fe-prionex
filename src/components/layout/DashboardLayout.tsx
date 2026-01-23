@@ -20,6 +20,7 @@ import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
+import { useIncomingCall } from '@/features/calls/hooks/useIncomingCall'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -384,6 +385,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Automatically refresh permissions every 5 minutes
   usePermissionRefresh()
+
+  // Get agent extension from user for incoming call handling
+  const { user: authUser } = useAuth()
+  const agentExtension = authUser?.asterisk_extension || null
+
+  // Handle incoming calls
+  const { incomingCall, dismissIncomingCall } = useIncomingCall(agentExtension)
 
   const handleLogoutClick = useCallback(() => {
     setShowLogoutModal(true)
@@ -811,6 +819,41 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         onCancel={handleLogoutCancel}
         isLoading={isLoggingOut}
       />
+
+      {/* Incoming Call Modal */}
+      {incomingCall && (
+        <CallDialogModal
+          open={true}
+          onClose={dismissIncomingCall}
+          initialState="incoming"
+          clientName={incomingCall.client_name || 'Unknown Caller'}
+          phoneNumber={incomingCall.customer_phone}
+          callId={incomingCall.call_id}
+          loans={incomingCall.loans?.map((loan) => ({
+            id: loan.loan_id.toString(),
+            clientName: incomingCall.client_name || 'Unknown',
+            loanNumber: loan.contract_number,
+            counterparty: '', // Not provided by backend
+            loanPrincipal: loan.remaining_debt,
+            debt: loan.remaining_debt,
+            status: loan.status,
+            saleDate: '', // Not provided by backend
+            lastContact: '', // Not provided by backend
+            priority: 'Medium' as const, // Default priority
+            score: 0, // Not provided by backend
+          }))}
+          onAnswer={() => {
+            // TODO: Handle answer call - send to backend
+            console.log('Answer incoming call:', incomingCall.call_id)
+            dismissIncomingCall()
+          }}
+          onReject={() => {
+            // TODO: Handle reject call - send to backend
+            console.log('Reject incoming call:', incomingCall.call_id)
+            dismissIncomingCall()
+          }}
+        />
+      )}
     </div>
   )
 }
