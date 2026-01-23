@@ -10,12 +10,13 @@ export const CallOutcome = {
 
 export type CallOutcome = (typeof CallOutcome)[keyof typeof CallOutcome]
 
+// Backend returns UPPERCASE values to match database enum
 export const CallState = {
-  INITIATED: 'initiated',
-  RINGING: 'ringing',
-  ACTIVE: 'active',
-  COMPLETED: 'completed',
-  FAILED: 'failed',
+  INITIATED: 'INITIATED',
+  RINGING: 'RINGING',
+  ACTIVE: 'ACTIVE',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
 } as const
 
 export type CallState = (typeof CallState)[keyof typeof CallState]

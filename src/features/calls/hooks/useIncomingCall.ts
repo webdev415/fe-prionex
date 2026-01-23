@@ -45,11 +45,24 @@ export function useIncomingCall(agentExtension: string | null) {
       setIncomingCall(event.data)
     }
 
+    // Listen for call state changes to dismiss popup when call ends/rejected
+    const handleCallStateChanged = (event: { data?: { call_id?: string; state?: string } }) => {
+      console.log('Call state changed:', event)
+      const state = event.data?.state?.toUpperCase()
+      // Dismiss popup when call is completed, failed, or cancelled
+      if (state === 'COMPLETED' || state === 'FAILED' || state === 'CANCELLED') {
+        console.log('Call ended, dismissing incoming call popup')
+        setIncomingCall(null)
+      }
+    }
+
     socket.on('call.incoming', handleIncomingCall)
+    socket.on('call.state_changed', handleCallStateChanged)
 
     // Cleanup on unmount or when agent extension changes
     return () => {
       socket.off('call.incoming', handleIncomingCall)
+      socket.off('call.state_changed', handleCallStateChanged)
     }
   }, [agentExtension])
 

@@ -968,7 +968,7 @@ export function ClientDetailPage() {
       const statusStr =
         call.outcome === 'answered'
           ? 'Answered'
-          : call.state === 'failed' || call.outcome === 'failed'
+          : call.state === 'FAILED' || call.outcome === 'failed'
             ? 'No Answer'
             : 'No Answer'
 

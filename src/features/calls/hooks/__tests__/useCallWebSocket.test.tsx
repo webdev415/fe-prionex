@@ -118,10 +118,10 @@ describe('useCallWebSocket', () => {
     const mockEvent: CallStateEvent = {
       event_type: 'call.state.changed',
       call_id: 'CALL-123',
-      current_state: 'active',
+      current_state: 'ACTIVE',
       data: {
         call_id: 'CALL-123',
-        state: 'active',
+        state: 'ACTIVE',
         duration: 120,
       },
     }
@@ -278,20 +278,20 @@ describe('useCallWebSocket', () => {
       {
         event_type: 'call.state.changed',
         call_id: 'CALL-123',
-        current_state: 'ringing',
-        data: { call_id: 'CALL-123', state: 'ringing' },
+        current_state: 'RINGING',
+        data: { call_id: 'CALL-123', state: 'RINGING' },
       },
       {
         event_type: 'call.state.changed',
         call_id: 'CALL-123',
-        current_state: 'active',
-        data: { call_id: 'CALL-123', state: 'active' },
+        current_state: 'ACTIVE',
+        data: { call_id: 'CALL-123', state: 'ACTIVE' },
       },
       {
         event_type: 'call.state.changed',
         call_id: 'CALL-123',
-        current_state: 'completed',
-        data: { call_id: 'CALL-123', state: 'completed' },
+        current_state: 'COMPLETED',
+        data: { call_id: 'CALL-123', state: 'COMPLETED' },
       },
     ]
 

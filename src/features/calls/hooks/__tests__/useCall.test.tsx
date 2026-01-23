@@ -161,7 +161,7 @@ describe('useCallDetails', () => {
       call_id: 'CALL-123',
       agent_extension: '1003',
       customer_number: '+380971234567',
-      state: 'active' as const,
+      state: 'ACTIVE' as const,
       initiated_at: '2025-01-14T10:00:00Z',
       talk_duration: 120,
     }
@@ -209,7 +209,7 @@ describe('useCallDetails', () => {
       call_id: 'CALL-123',
       agent_extension: '1003',
       customer_number: '+380971234567',
-      state: 'active' as const,
+      state: 'ACTIVE' as const,
       initiated_at: '2025-01-14T10:00:00Z',
       talk_duration: 120,
     }
@@ -244,7 +244,7 @@ describe('useCallHistory', () => {
           call_id: 'CALL-123',
           agent_extension: '1003',
           customer_number: '+380971234567',
-          state: 'completed' as const,
+          state: 'COMPLETED' as const,
           initiated_at: '2025-01-14T10:00:00Z',
           total_duration: 180,
         },
