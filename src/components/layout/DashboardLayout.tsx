@@ -29,6 +29,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/DropdownMenu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
+import { searchClients, mapPriorityLevel, type SearchType } from '@/api/clientSearchApi'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -448,70 +449,42 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       setSearchError(null)
 
       try {
-        // TODO: Replace with actual API call
-        // const response = await searchApi.searchClients(query, type)
-        // setSearchResults(response.data)
+        // Map frontend search type to backend SearchType
+        let backendSearchType: SearchType = 'all'
+        if (type === 'phone') {
+          backendSearchType = 'phone'
+        } else if (type === 'email' || type === 'username') {
+          // Map email/username to name search (backend doesn't have email/username search)
+          backendSearchType = 'name'
+        }
 
-        // Search through mock clients data
-        await new Promise((resolve) => setTimeout(resolve, 300))
+        // Call real API
+        const response = await searchClients({
+          q: query,
+          search_type: backendSearchType,
+          limit: 10,
+        })
 
-        // Import mock clients dynamically to avoid circular dependency
-        const { mockClients } = await import('@/pages/ClientManagement/mockClients')
-
-        const queryLower = query.toLowerCase().trim()
-        const phoneRegex = /[\s\-()]/g
-        const queryNormalized = queryLower.replace(phoneRegex, '')
-
-        const results: SearchResult[] = mockClients
-          .filter((client) => {
-            switch (type) {
-              case 'phone': {
-                // Search by phone number (remove spaces and special chars for comparison)
-                const phoneNormalized = client.phoneNumber.replace(phoneRegex, '').toLowerCase()
-                return phoneNormalized.includes(queryNormalized)
-              }
-              case 'username':
-              case 'email': {
-                // For username/email, search in full name and tax ID (as we don't have email/username fields)
-                return (
-                  client.fullName.toLowerCase().includes(queryLower) ||
-                  client.taxIdNumber.toLowerCase().includes(queryLower)
-                )
-              }
-              default: {
-                // Search in all fields
-                return (
-                  client.fullName.toLowerCase().includes(queryLower) ||
-                  client.phoneNumber
-                    .replace(phoneRegex, '')
-                    .toLowerCase()
-                    .includes(queryNormalized) ||
-                  client.taxIdNumber.toLowerCase().includes(queryLower) ||
-                  client.creditor.toLowerCase().includes(queryLower) ||
-                  client.tags.some((tag: string) => tag.toLowerCase().includes(queryLower))
-                )
-              }
-            }
-          })
-          .slice(0, 10) // Limit to 10 results for dropdown
-          .map((client) => ({
-            id: client.id,
-            name: client.fullName,
-            debt: client.debt,
-            phone: client.phoneNumber,
-            priority: client.priority as 'Critical' | 'High' | 'Medium' | 'Low',
-            score: client.score,
-          }))
+        // Transform backend response to frontend SearchResult format
+        const results: SearchResult[] = response.items.map((item) => ({
+          id: item.id,
+          name: item.full_name,
+          debt: item.total_debt,
+          phone: item.phone_primary,
+          priority: mapPriorityLevel(item.priority_level),
+          score: item.priority_score,
+        }))
 
         setSearchResults(results)
-      } catch {
-        setSearchError('Could not search clients. Please try again.')
+      } catch (error) {
+        console.error('Search error:', error)
+        setSearchError(t('search.error'))
         setSearchResults([])
       } finally {
         setIsSearching(false)
       }
     },
-    [searchQuery, searchType, searchResults.length]
+    [searchQuery, searchType, searchResults.length, t]
   )
 
   const handleSearchChange = useCallback(
