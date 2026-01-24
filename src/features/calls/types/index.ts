@@ -10,12 +10,13 @@ export const CallOutcome = {
 
 export type CallOutcome = (typeof CallOutcome)[keyof typeof CallOutcome]
 
+// Backend returns UPPERCASE values to match database enum
 export const CallState = {
-  INITIATED: 'initiated',
-  RINGING: 'ringing',
-  ACTIVE: 'active',
-  COMPLETED: 'completed',
-  FAILED: 'failed',
+  INITIATED: 'INITIATED',
+  RINGING: 'RINGING',
+  ACTIVE: 'ACTIVE',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
 } as const
 
 export type CallState = (typeof CallState)[keyof typeof CallState]
@@ -99,4 +100,27 @@ export interface ConnectionStatus {
   reconnecting: boolean
   failedAttempts: number
   usingPollingFallback: boolean
+}
+
+// Incoming call types
+export interface LoanInfo {
+  loan_id: number
+  contract_number: string
+  remaining_debt: number
+  status: string
+}
+
+export interface IncomingCallData {
+  call_id: string
+  customer_phone: string
+  agent_extension: string
+  client_name?: string
+  loan_count: number
+  total_debt: number
+  loans: LoanInfo[]
+}
+
+export interface IncomingCallEvent {
+  event_type: 'call.incoming'
+  data: IncomingCallData
 }
