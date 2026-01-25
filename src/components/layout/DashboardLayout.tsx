@@ -14,7 +14,7 @@ import { MinimizedCallBubble } from './MinimizedCallBubble'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
@@ -370,6 +370,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { t, i18n } = useTranslation('common')
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { logout, isImpersonating, impersonatedUser, exitImpersonation } = useAuth()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -393,6 +394,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Handle incoming calls
   const { incomingCall, dismissIncomingCall } = useIncomingCall(agentExtension)
+
+  // Sync URL query parameters with search state on mount
+  useEffect(() => {
+    const search = searchParams.get('search')
+    const type = searchParams.get('type')
+
+    if (search) {
+      setSearchQuery(search)
+      if (type && ['phone', 'email', 'username'].includes(type)) {
+        setSearchType(type)
+      }
+    }
+  }, [searchParams])
 
   const handleLogoutClick = useCallback(() => {
     setShowLogoutModal(true)
@@ -515,8 +529,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [])
 
   const handleResultClick = (result: SearchResult) => {
-    // Navigate to client detail page or filter by this client
-    navigate(`/dashboard?id=${result.id}`)
+    // Navigate to client detail page
+    navigate(`/dashboard/clients/${result.id}`)
     setSearchQuery('')
     setSearchResults([])
   }
@@ -524,8 +538,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const handleViewAllResults = () => {
     // Navigate to client management page with search query
     navigate(`/dashboard?search=${encodeURIComponent(searchQuery)}&type=${searchType}`)
-    setSearchQuery('')
-    setSearchResults([])
+    // Don't clear search - let URL sync handle the state
+    setSearchResults([]) // Only close the dropdown
   }
 
   // Search type options
@@ -738,6 +752,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 onSearch={handleSearch}
                 onSearchChange={handleSearchChange}
                 isLoading={isSearching}
+                value={searchQuery}
+                searchTypeValue={searchType}
               />
               {(isSearching ||
                 searchResults.length > 0 ||
