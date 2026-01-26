@@ -395,18 +395,54 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // Handle incoming calls
   const { incomingCall, dismissIncomingCall } = useIncomingCall(agentExtension)
 
-  // Sync URL query parameters with search state on mount
+  // Sync URL query parameters with search state on mount and trigger search
   useEffect(() => {
     const search = searchParams.get('search')
     const type = searchParams.get('type')
 
     if (search) {
+      const validType = type && ['phone', 'name', 'tin'].includes(type) ? type : 'phone'
       setSearchQuery(search)
-      if (type && ['phone', 'email', 'username'].includes(type)) {
-        setSearchType(type)
+      setSearchType(validType)
+
+      // Trigger search immediately for URL params
+      setIsSearching(true)
+      setSearchError(null)
+
+      // Map frontend type to backend search type
+      let backendSearchType: SearchType = 'all'
+      if (validType === 'phone') {
+        backendSearchType = 'phone'
+      } else if (validType === 'name' || validType === 'tin') {
+        backendSearchType = 'name'
       }
+
+      searchClients({
+        q: search,
+        search_type: backendSearchType,
+        limit: 10,
+      })
+        .then((response) => {
+          const results: SearchResult[] = response.items.map((item) => ({
+            id: item.id,
+            name: item.full_name,
+            debt: item.total_debt,
+            phone: item.phone_primary,
+            priority: mapPriorityLevel(item.priority_level),
+            score: item.priority_score,
+          }))
+          setSearchResults(results)
+        })
+        .catch((error) => {
+          console.error('Search error:', error)
+          setSearchError(t('search.error'))
+          setSearchResults([])
+        })
+        .finally(() => {
+          setIsSearching(false)
+        })
     }
-  }, [searchParams])
+  }, [searchParams, t])
 
   const handleLogoutClick = useCallback(() => {
     setShowLogoutModal(true)
@@ -467,8 +503,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         let backendSearchType: SearchType = 'all'
         if (type === 'phone') {
           backendSearchType = 'phone'
-        } else if (type === 'email' || type === 'username') {
-          // Map email/username to name search (backend doesn't have email/username search)
+        } else if (type === 'name' || type === 'tin') {
+          // Map name/tin to name search (backend name search includes TIN)
           backendSearchType = 'name'
         }
 
@@ -508,14 +544,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     [handleSearch]
   )
 
-  // Handle click outside to close search results
+  // Handle click outside to close search results dropdown (but preserve query in URL)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         searchContainerRef.current &&
         !searchContainerRef.current.contains(event.target as Node)
       ) {
-        setSearchQuery('')
+        // Only close the dropdown, don't clear the search query
+        // The URL params are the source of truth for search state
         setSearchResults([])
         setIsSearching(false)
         setSearchError(null)
@@ -545,8 +582,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // Search type options
   const searchOptions = [
     { value: 'phone', label: t('search.phoneNumber') },
-    { value: 'email', label: t('search.email') },
-    { value: 'username', label: t('search.username') },
+    { value: 'name', label: t('search.fullName') },
+    { value: 'tin', label: t('search.tin') },
   ]
 
   const user = useAuthStore((state) => state.user)

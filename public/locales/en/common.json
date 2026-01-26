@@ -26,8 +26,8 @@
   "search": {
     "placeholder": "Search",
     "phoneNumber": "Phone number",
-    "email": "Email",
-    "username": "Username",
+    "fullName": "Full name",
+    "tin": "TIN",
     "error": "Could not search clients. Please try again.",
     "searching": "Searching...",
     "noResults": "No clients found for '{{query}}'.",
