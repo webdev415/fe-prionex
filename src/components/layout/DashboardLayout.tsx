@@ -380,7 +380,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // Search state - separate local input state from applied store state
   // Local state: for the search input (updates as user types)
   // Store state: for the clients page (updates only on "View All Results")
-  const { setSearchQuery: setAppliedSearchQuery, setSearchType: setAppliedSearchType } = useSearchStore()
+  const { setSearchQuery: setAppliedSearchQuery, setSearchType: setAppliedSearchType } =
+    useSearchStore()
   const [localSearchQuery, setLocalSearchQuery] = useState('')
   const [localSearchType, setLocalSearchType] = useState('phone')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])

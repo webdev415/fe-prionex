@@ -33,7 +33,6 @@ import {
   useAssignClient,
   useBulkAssignClients,
   useClients,
-  usePrioritySummary,
 } from '@/features/clients/hooks/useClients'
 import { useSearchStore } from '@/stores/searchStore'
 import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
@@ -543,16 +542,25 @@ export function ClientManagementPage() {
     }
 
     return params
-  }, [filters, currentPage, rowsPerPage, sortBy, sortOrder, selectedPriorities, searchQuery, searchType])
+  }, [
+    filters,
+    currentPage,
+    rowsPerPage,
+    sortBy,
+    sortOrder,
+    selectedPriorities,
+    searchQuery,
+    searchType,
+  ])
 
   // Fetch clients from API
   const { data: clientsResponse, isLoading, isFetching, isError, error } = useClients(apiParams)
-  const { data: prioritySummaryData } = usePrioritySummary()
 
   // Extract paginated data from response
   const apiClients = useMemo(() => clientsResponse?.items || [], [clientsResponse?.items])
   const totalCount = clientsResponse?.total || 0
   const totalPages = clientsResponse?.total_pages || 1
+  const prioritySummaryData = clientsResponse?.priority_summary
 
   // Fetch priority thresholds configuration
   const { data: thresholds = DEFAULT_THRESHOLDS } = usePriorityThresholds()
