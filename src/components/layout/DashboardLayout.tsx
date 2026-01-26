@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
 import { useAuthStore } from '@/stores/authStore'
 import { useSidebarStore } from '@/stores/sidebarStore'
+import { useSearchStore } from '@/stores/searchStore'
 import { usePermissionRefresh } from '@/hooks'
 import { ImpersonationBanner } from '@/features/auth/components/ImpersonationBanner'
 import { LogoutConfirmationModal } from './LogoutConfirmationModal'
@@ -14,7 +15,7 @@ import { MinimizedCallBubble } from './MinimizedCallBubble'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
@@ -370,19 +371,18 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { t, i18n } = useTranslation('common')
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
   const { logout, isImpersonating, impersonatedUser, exitImpersonation } = useAuth()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isExitingImpersonation, setIsExitingImpersonation] = useState(false)
   const isOpenSideBar = useSidebarStore((state) => state.isOpenSideBar)
 
-  // Search state
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchType, setSearchType] = useState('phone')
+  // Search state (query and type persisted in store across navigation)
+  const { searchQuery, searchType, setSearchQuery, setSearchType } = useSearchStore()
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const searchContainerRef = useRef<HTMLDivElement>(null)
 
   // Automatically refresh permissions every 5 minutes
@@ -394,55 +394,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Handle incoming calls
   const { incomingCall, dismissIncomingCall } = useIncomingCall(agentExtension)
-
-  // Sync URL query parameters with search state on mount and trigger search
-  useEffect(() => {
-    const search = searchParams.get('search')
-    const type = searchParams.get('type')
-
-    if (search) {
-      const validType = type && ['phone', 'name', 'tin'].includes(type) ? type : 'phone'
-      setSearchQuery(search)
-      setSearchType(validType)
-
-      // Trigger search immediately for URL params
-      setIsSearching(true)
-      setSearchError(null)
-
-      // Map frontend type to backend search type
-      let backendSearchType: SearchType = 'all'
-      if (validType === 'phone') {
-        backendSearchType = 'phone'
-      } else if (validType === 'name' || validType === 'tin') {
-        backendSearchType = 'name'
-      }
-
-      searchClients({
-        q: search,
-        search_type: backendSearchType,
-        limit: 10,
-      })
-        .then((response) => {
-          const results: SearchResult[] = response.items.map((item) => ({
-            id: item.id,
-            name: item.full_name,
-            debt: item.total_debt,
-            phone: item.phone_primary,
-            priority: mapPriorityLevel(item.priority_level),
-            score: item.priority_score,
-          }))
-          setSearchResults(results)
-        })
-        .catch((error) => {
-          console.error('Search error:', error)
-          setSearchError(t('search.error'))
-          setSearchResults([])
-        })
-        .finally(() => {
-          setIsSearching(false)
-        })
-    }
-  }, [searchParams, t])
 
   const handleLogoutClick = useCallback(() => {
     setShowLogoutModal(true)
@@ -484,6 +435,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         setSearchResults([])
         setIsSearching(false)
         setSearchError(null)
+        setShowSearchDropdown(false)
         return
       }
 
@@ -497,6 +449,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       setIsSearching(true)
       setSearchError(null)
+      setShowSearchDropdown(true)
 
       try {
         // Map frontend search type to backend SearchType
@@ -534,7 +487,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         setIsSearching(false)
       }
     },
-    [searchQuery, searchType, searchResults.length, t]
+    [searchQuery, searchType, searchResults.length, t, setSearchQuery, setSearchType]
   )
 
   const handleSearchChange = useCallback(
@@ -544,18 +497,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     [handleSearch]
   )
 
-  // Handle click outside to close search results dropdown (but preserve query in URL)
+  // Handle click outside to close search results dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         searchContainerRef.current &&
         !searchContainerRef.current.contains(event.target as Node)
       ) {
-        // Only close the dropdown, don't clear the search query
-        // The URL params are the source of truth for search state
-        setSearchResults([])
-        setIsSearching(false)
-        setSearchError(null)
+        // Only close the dropdown, keep search query in store
+        setShowSearchDropdown(false)
       }
     }
 
@@ -570,13 +520,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     navigate(`/dashboard/clients/${result.id}`)
     setSearchQuery('')
     setSearchResults([])
+    setShowSearchDropdown(false)
   }
 
   const handleViewAllResults = () => {
-    // Navigate to client management page with search query
-    navigate(`/dashboard?search=${encodeURIComponent(searchQuery)}&type=${searchType}`)
-    // Don't clear search - let URL sync handle the state
-    setSearchResults([]) // Only close the dropdown
+    // Navigate to client management page
+    navigate('/dashboard')
+    // Close dropdown but keep search query visible
+    setSearchResults([])
+    setShowSearchDropdown(false)
   }
 
   // Search type options
@@ -792,10 +744,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 value={searchQuery}
                 searchTypeValue={searchType}
               />
-              {(isSearching ||
-                searchResults.length > 0 ||
-                searchError ||
-                (searchQuery.trim() && !isSearching)) && (
+              {showSearchDropdown && (
                 <SearchResults
                   query={searchQuery}
                   searchType={searchType}
