@@ -28,13 +28,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   useAssignClient,
   useBulkAssignClients,
   useClients,
   usePrioritySummary,
 } from '@/features/clients/hooks/useClients'
+import { useSearchStore } from '@/stores/searchStore'
 import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import type { Client as APIClient } from '@/features/clients/api/types'
@@ -135,9 +136,8 @@ export interface ClientFilters {
 
 export function ClientManagementPage() {
   const { t } = useTranslation('common')
-  const [searchParams, setSearchParams] = useSearchParams()
-  const searchQuery = searchParams.get('search') || ''
-  const searchType = searchParams.get('type') || 'phone'
+  // Get search state from global store (synced with header search)
+  const { searchQuery, searchType, setSearchQuery: clearSearchQuery } = useSearchStore()
   const user = useAuthStore((state) => state.user)
 
   // URL state for priority filtering
@@ -975,14 +975,8 @@ export function ClientManagementPage() {
     setSortBy('priority_score')
     setSortOrder('desc')
 
-    // Clear search query and type params (these don't use useURLState)
-    // Let useURLState hooks handle their own params - only clear search/type here
-    setSearchParams((prev) => {
-      const params = new URLSearchParams(prev)
-      params.delete('search')
-      params.delete('type')
-      return params
-    })
+    // Clear search query from global store
+    clearSearchQuery('')
 
     // Clear localStorage saved state
     if (STORAGE_KEY) {
