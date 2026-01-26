@@ -183,7 +183,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       debtRangeFrom: value,
                     })
                   }
-                  placeholder="10,000"
+                  placeholder="Min"
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
                 />
@@ -198,7 +198,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       debtRangeTo: value,
                     })
                   }
-                  placeholder="50,000"
+                  placeholder="Max"
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
                 />
@@ -218,7 +218,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       dpdRangeFrom: value,
                     })
                   }
-                  placeholder="10"
+                  placeholder="Min"
                   className="flex flex-1 flex-col items-start gap-2"
                 />
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -232,7 +232,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       dpdRangeTo: value,
                     })
                   }
-                  placeholder="60"
+                  placeholder="Max"
                   className="flex flex-1 flex-col items-start gap-2"
                 />
                 <span className="text-xs leading-[150%] font-medium tracking-[-0.24px] text-gray-700 sm:text-sm sm:tracking-[-0.28px]">
@@ -261,7 +261,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       amountOfDebtRangeFrom: value,
                     })
                   }
-                  placeholder="10,000"
+                  placeholder="Min"
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
                 />
@@ -276,7 +276,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       amountOfDebtRangeTo: value,
                     })
                   }
-                  placeholder="50,000"
+                  placeholder="Max"
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
                 />
@@ -292,7 +292,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.dateOfSaleFrom || null}
                   onChange={({ value }) => handleDateChange('dateOfSaleFrom', value)}
-                  placeholder={`${new Date().getFullYear()}-01-01`}
+                  placeholder="Min"
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
                 />
@@ -302,7 +302,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.dateOfSaleTo || null}
                   onChange={({ value }) => handleDateChange('dateOfSaleTo', value)}
-                  placeholder={`${new Date().getFullYear()}-12-31`}
+                  placeholder="Max"
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
                 />
@@ -555,9 +555,8 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             </div>
           </div>
 
-          {/* Sixth Row: Unassigned only checkbox */}
-          <div className="flex w-full items-start gap-4 self-stretch lg:gap-10">
-            {/* Unassigned only checkbox */}
+          {/* Sixth Row: Unassigned only checkbox - HIDDEN */}
+          {/* <div className="flex w-full items-start gap-4 self-stretch lg:gap-10">
             <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
               <label className="flex cursor-pointer items-center gap-1.5 sm:gap-2">
                 <Checkbox
@@ -575,7 +574,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               </label>
             </div>
             <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
