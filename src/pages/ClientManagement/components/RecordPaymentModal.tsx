@@ -17,6 +17,15 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
+/**
+ * Get today's date at midnight local time.
+ * Used for date-only fields to avoid timezone issues.
+ */
+const getTodayAtMidnight = (): Date => {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+}
+
 export interface RecordPaymentModalProps {
   open: boolean
   onClose: () => void
@@ -52,34 +61,7 @@ export function RecordPaymentModal({
     })}`
   }
   const [paymentAmount, setPaymentAmount] = useState<string>('10000.00')
-  const [paymentDate, setPaymentDate] = useState<Date | null>(() => {
-    // Set default date to today
-    // CRITICAL: Create a Date at midnight LOCAL time using today's date components
-    // Use Date.now() to get current timestamp, then extract local date components
-    const now = new Date()
-
-    // Get local date components (what user sees)
-    const year = now.getFullYear()
-    const month = now.getMonth()
-    const day = now.getDate()
-
-    // Create Date at midnight LOCAL time (00:00:00 local time)
-    // This ensures the date matches what the user expects (today's date)
-    const today = new Date(year, month, day, 0, 0, 0, 0)
-
-    console.log('📅 RecordPaymentModal: Initializing payment date:', {
-      now: now.toString(),
-      nowISO: now.toISOString(),
-      localYear: year,
-      localMonth: month,
-      localDay: day,
-      today: today.toString(),
-      todayISO: today.toISOString(),
-      todayLocalString: today.toLocaleDateString(),
-    })
-
-    return today
-  })
+  const [paymentDate, setPaymentDate] = useState<Date | null>(getTodayAtMidnight)
   const [paymentMethod, setPaymentMethod] = useState<
     'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
   >('Bank Transfer')
@@ -102,11 +84,9 @@ export function RecordPaymentModal({
   const hasDebt = newDebt > 0
 
   // Calculate date restrictions
-  const today = new Date()
+  const today = getTodayAtMidnight()
   today.setHours(23, 59, 59, 999) // End of today
-  const oneYearAgo = new Date()
-  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
-  oneYearAgo.setHours(0, 0, 0, 0) // Start of day one year ago
+  const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())
 
   // Validate reference number when Bank Transfer is selected
   const handleReferenceNumberChange = (value: string) => {
@@ -244,9 +224,7 @@ export function RecordPaymentModal({
 
     // Reset form
     setPaymentAmount('10000.00')
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    setPaymentDate(today)
+    setPaymentDate(getTodayAtMidnight())
     setPaymentMethod('Bank Transfer')
     setPaymentStatus('Pending Verification')
     setGenerateReceipt(true)
@@ -263,9 +241,7 @@ export function RecordPaymentModal({
   const handleClose = () => {
     // Reset form on close
     setPaymentAmount('10000.00')
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    setPaymentDate(today)
+    setPaymentDate(getTodayAtMidnight())
     setPaymentMethod('Bank Transfer')
     setPaymentStatus('Pending Verification')
     setGenerateReceipt(true)
@@ -348,11 +324,7 @@ export function RecordPaymentModal({
                   </Label>
                   <DateSelect
                     value={paymentDate}
-                    onChange={({ value }) => {
-                      // Date is already normalized in DateSelect component
-                      // Just set it directly
-                      setPaymentDate(value)
-                    }}
+                    onChange={({ value }) => setPaymentDate(value)}
                     placeholder={t('pages.clients.modals.recordPayment.selectDate')}
                     className="rounded-md"
                     min={oneYearAgo}
