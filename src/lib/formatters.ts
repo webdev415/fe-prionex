@@ -22,10 +22,10 @@ export function formatPeriod(startDate?: string, endDate?: string): string {
 /**
  * Format currency value
  */
-export function formatCurrency(amount?: number, currency = 'USD'): string {
+export function formatCurrency(amount?: number, currency = 'UAH'): string {
   if (amount === undefined || amount === null) return '—'
 
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('uk-UA', {
     style: 'currency',
     currency,
     minimumFractionDigits: 0,
