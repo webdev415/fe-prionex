@@ -98,8 +98,9 @@ export function SearchBar({
     }
   }, [searchTypeValue])
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const previousQueryRef = useRef<string>('')
-  const previousTypeRef = useRef<string>(defaultSearchType)
+  // Initialize refs with prop values to prevent triggering onSearchChange on mount
+  const previousQueryRef = useRef<string>(value || '')
+  const previousTypeRef = useRef<string>(searchTypeValue || defaultSearchType)
 
   // Debounce search while typing
   useEffect(() => {

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
 import { useAuthStore } from '@/stores/authStore'
 import { useSidebarStore } from '@/stores/sidebarStore'
+import { useSearchStore } from '@/stores/searchStore'
 import { usePermissionRefresh } from '@/hooks'
 import { ImpersonationBanner } from '@/features/auth/components/ImpersonationBanner'
 import { LogoutConfirmationModal } from './LogoutConfirmationModal'
@@ -29,6 +30,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/DropdownMenu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
+import { searchClients, mapPriorityLevel, type SearchType } from '@/api/clientSearchApi'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -375,12 +377,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isExitingImpersonation, setIsExitingImpersonation] = useState(false)
   const isOpenSideBar = useSidebarStore((state) => state.isOpenSideBar)
 
-  // Search state
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchType, setSearchType] = useState('phone')
+  // Search state (query and type persisted in store across navigation)
+  const { searchQuery, searchType, setSearchQuery, setSearchType } = useSearchStore()
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const searchContainerRef = useRef<HTMLDivElement>(null)
 
   // Automatically refresh permissions every 5 minutes
@@ -433,6 +435,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         setSearchResults([])
         setIsSearching(false)
         setSearchError(null)
+        setShowSearchDropdown(false)
         return
       }
 
@@ -446,72 +449,45 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       setIsSearching(true)
       setSearchError(null)
+      setShowSearchDropdown(true)
 
       try {
-        // TODO: Replace with actual API call
-        // const response = await searchApi.searchClients(query, type)
-        // setSearchResults(response.data)
+        // Map frontend search type to backend SearchType
+        let backendSearchType: SearchType = 'all'
+        if (type === 'phone') {
+          backendSearchType = 'phone'
+        } else if (type === 'name' || type === 'tin') {
+          // Map name/tin to name search (backend name search includes TIN)
+          backendSearchType = 'name'
+        }
 
-        // Search through mock clients data
-        await new Promise((resolve) => setTimeout(resolve, 300))
+        // Call real API
+        const response = await searchClients({
+          q: query,
+          search_type: backendSearchType,
+          limit: 10,
+        })
 
-        // Import mock clients dynamically to avoid circular dependency
-        const { mockClients } = await import('@/pages/ClientManagement/mockClients')
-
-        const queryLower = query.toLowerCase().trim()
-        const phoneRegex = /[\s\-()]/g
-        const queryNormalized = queryLower.replace(phoneRegex, '')
-
-        const results: SearchResult[] = mockClients
-          .filter((client) => {
-            switch (type) {
-              case 'phone': {
-                // Search by phone number (remove spaces and special chars for comparison)
-                const phoneNormalized = client.phoneNumber.replace(phoneRegex, '').toLowerCase()
-                return phoneNormalized.includes(queryNormalized)
-              }
-              case 'username':
-              case 'email': {
-                // For username/email, search in full name and tax ID (as we don't have email/username fields)
-                return (
-                  client.fullName.toLowerCase().includes(queryLower) ||
-                  client.taxIdNumber.toLowerCase().includes(queryLower)
-                )
-              }
-              default: {
-                // Search in all fields
-                return (
-                  client.fullName.toLowerCase().includes(queryLower) ||
-                  client.phoneNumber
-                    .replace(phoneRegex, '')
-                    .toLowerCase()
-                    .includes(queryNormalized) ||
-                  client.taxIdNumber.toLowerCase().includes(queryLower) ||
-                  client.creditor.toLowerCase().includes(queryLower) ||
-                  client.tags.some((tag: string) => tag.toLowerCase().includes(queryLower))
-                )
-              }
-            }
-          })
-          .slice(0, 10) // Limit to 10 results for dropdown
-          .map((client) => ({
-            id: client.id,
-            name: client.fullName,
-            debt: client.debt,
-            phone: client.phoneNumber,
-            priority: client.priority as 'Critical' | 'High' | 'Medium' | 'Low',
-            score: client.score,
-          }))
+        // Transform backend response to frontend SearchResult format
+        const results: SearchResult[] = response.items.map((item) => ({
+          id: item.id,
+          name: item.full_name,
+          debt: item.total_debt,
+          phone: item.phone_primary,
+          priority: mapPriorityLevel(item.priority_level),
+          score: item.priority_score,
+        }))
 
         setSearchResults(results)
-      } catch {
-        setSearchError('Could not search clients. Please try again.')
+      } catch (error) {
+        console.error('Search error:', error)
+        setSearchError(t('search.error'))
         setSearchResults([])
       } finally {
         setIsSearching(false)
       }
     },
-    [searchQuery, searchType, searchResults.length]
+    [searchQuery, searchType, searchResults.length, t, setSearchQuery, setSearchType]
   )
 
   const handleSearchChange = useCallback(
@@ -521,17 +497,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     [handleSearch]
   )
 
-  // Handle click outside to close search results
+  // Handle click outside to close search results dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         searchContainerRef.current &&
         !searchContainerRef.current.contains(event.target as Node)
       ) {
-        setSearchQuery('')
-        setSearchResults([])
-        setIsSearching(false)
-        setSearchError(null)
+        // Only close the dropdown, keep search query in store
+        setShowSearchDropdown(false)
       }
     }
 
@@ -542,24 +516,26 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, [])
 
   const handleResultClick = (result: SearchResult) => {
-    // Navigate to client detail page or filter by this client
-    navigate(`/dashboard?id=${result.id}`)
+    // Navigate to client detail page
+    navigate(`/dashboard/clients/${result.id}`)
     setSearchQuery('')
     setSearchResults([])
+    setShowSearchDropdown(false)
   }
 
   const handleViewAllResults = () => {
-    // Navigate to client management page with search query
-    navigate(`/dashboard?search=${encodeURIComponent(searchQuery)}&type=${searchType}`)
-    setSearchQuery('')
+    // Navigate to client management page
+    navigate('/dashboard')
+    // Close dropdown but keep search query visible
     setSearchResults([])
+    setShowSearchDropdown(false)
   }
 
   // Search type options
   const searchOptions = [
     { value: 'phone', label: t('search.phoneNumber') },
-    { value: 'email', label: t('search.email') },
-    { value: 'username', label: t('search.username') },
+    { value: 'name', label: t('search.fullName') },
+    { value: 'tin', label: t('search.tin') },
   ]
 
   const user = useAuthStore((state) => state.user)
@@ -765,11 +741,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 onSearch={handleSearch}
                 onSearchChange={handleSearchChange}
                 isLoading={isSearching}
+                value={searchQuery}
+                searchTypeValue={searchType}
               />
-              {(isSearching ||
-                searchResults.length > 0 ||
-                searchError ||
-                (searchQuery.trim() && !isSearching)) && (
+              {showSearchDropdown && (
                 <SearchResults
                   query={searchQuery}
                   searchType={searchType}

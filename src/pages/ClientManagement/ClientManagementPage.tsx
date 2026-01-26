@@ -595,16 +595,16 @@ export function ClientManagementPage() {
             const queryNormalized = query.replace(phoneRegex, '')
             return phoneNormalized.includes(queryNormalized)
           }
-          case 'username':
-          case 'email': {
-            // For username/email, search in full name and tax ID (as we don't have email/username fields)
-            return (
-              client.fullName.toLowerCase().includes(query) ||
-              client.taxIdNumber.toLowerCase().includes(query)
-            )
+          case 'name': {
+            // Search by full name (first name, last name, middle name)
+            return client.fullName.toLowerCase().includes(query)
+          }
+          case 'tin': {
+            // Search by tax identification number
+            return client.taxIdNumber.toLowerCase().includes(query)
           }
           default: {
-            // Search in all fields
+            // Search in all fields (phone, name, TIN, creditor, tags)
             const queryNormalized = query.replace(phoneRegex, '')
             return (
               client.fullName.toLowerCase().includes(query) ||

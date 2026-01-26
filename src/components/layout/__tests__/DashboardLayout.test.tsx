@@ -21,6 +21,38 @@ vi.mock('@/hooks', () => ({
   usePermissionRefresh: () => {},
 }))
 
+vi.mock('@/api/clientSearchApi', () => ({
+  searchClients: vi.fn().mockResolvedValue({
+    items: [],
+    total: 0,
+    query: '',
+    search_type: 'all',
+  }),
+  mapPriorityLevel: (level: string) => level.charAt(0).toUpperCase() + level.slice(1),
+}))
+
+vi.mock('@/stores/sidebarStore', () => ({
+  useSidebarStore: () => ({
+    isOpenSideBar: false,
+    toggleSidebar: vi.fn(),
+  }),
+}))
+
+vi.mock('@/stores/callStore', () => ({
+  useCallStore: () => ({
+    minimizedCall: null,
+    clearMinimizedCall: vi.fn(),
+    setOpenCallModal: vi.fn(),
+  }),
+}))
+
+vi.mock('@/features/calls/hooks/useIncomingCall', () => ({
+  useIncomingCall: () => ({
+    incomingCall: null,
+    dismissIncomingCall: vi.fn(),
+  }),
+}))
+
 const renderDashboardLayout = () => {
   return render(
     <MemoryRouter>
