@@ -29,7 +29,10 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { cn } from '@/lib/utils'
 import { PaymentVerificationQueueModal } from './components/PaymentVerificationQueueModal'
-import { ExportPaymentsCSVModal } from './components/ExportPaymentsCSVModal'
+import {
+  ExportPaymentsCSVModal,
+  type ExportPaymentsCSVModalProps,
+} from './components/ExportPaymentsCSVModal'
 import { PaymentDetailsModal } from './components/PaymentDetailsModal'
 import { CancelPaymentModal } from './components/CancelPaymentModal'
 import { EditPaymentModal } from './components/EditPaymentModal'
@@ -39,6 +42,27 @@ import { useCallStore } from '@/stores/callStore'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useOriginateCall } from '@/features/calls/hooks/useCall'
 import { useCallWebSocket } from '@/features/calls/hooks/useCallWebSocket'
+import {
+  useClientPaymentHistory,
+  useVerifyPayment,
+  useCancelPayment,
+  useEditPayment,
+  useExportPaymentsCSV,
+  usePayment,
+  useGenerateReceipt,
+} from '@/features/payments'
+import { useUser } from '@/features/users/hooks/useUser'
+import {
+  backendToFrontendPaymentMethod,
+  backendToFrontendPaymentStatus,
+  formatPaymentDate,
+  isPaymentLessThan7DaysOld,
+  frontendToBackendPaymentMethod,
+  frontendToBackendPaymentStatus,
+  type FrontendPaymentStatus,
+  type FrontendPaymentMethod,
+} from '@/features/payments/utils'
+import type { Payment as BackendPayment } from '@/features/payments/api/types'
 
 // Types
 interface Payment {
@@ -59,281 +83,9 @@ interface Payment {
   reference?: string
 }
 
-interface PaymentHistoryData {
-  customerName: string
-  status: 'Active' | 'Paid' | 'Partially Paid' | 'Dispute' | 'Written off' | 'Sold' | 'Legal'
-  progressPercentage: number
-  totalPaid: number
-  totalDebt: number
-  totalPayments: number
-  totalPaymentsAmount: number
-  verifiedPayments: number
-  verifiedPaymentsAmount: number
-  pendingPayments: number
-  pendingPaymentsAmount: number
-  payments: Payment[]
-}
-
 // Mock client data for fallback
 const mockClientDetail = {
   fullName: 'Savchenko Ivan Petrovich',
-}
-
-// Helper function to normalize payment method values (for backward compatibility)
-const normalizePaymentMethod = (
-  method: Payment['method']
-): 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other' => {
-  // Map old values to new values
-  if (method === 'Bank' || method === 'Bank Transfer') return 'Bank Transfer'
-  if (method === 'Card') return 'Card'
-  if (method === 'Online' || method === 'Online Gateway') return 'Online Gateway'
-  if (method === 'Cash') return 'Cash'
-  if (method === 'Direct Debit' || method === 'Other') return 'Other'
-  return 'Other' // Default fallback
-}
-
-// Helper function to format date as MM/DD/YYYY
-const formatDate = (date: Date): string => {
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const year = date.getFullYear()
-  return `${month}/${day}/${year}`
-}
-
-// Mock payment history data - replace with actual API call
-const getMockPaymentHistory = (): Omit<PaymentHistoryData, 'customerName'> => {
-  const today = new Date()
-
-  // Generate dates for testing:
-  // - Some payments within last 7 days (for Verify button testing)
-  // - Some payments older than 7 days
-  const dates = {
-    today: formatDate(today),
-    yesterday: formatDate(new Date(today.getTime() - 1 * 24 * 60 * 60 * 1000)),
-    twoDaysAgo: formatDate(new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000)),
-    threeDaysAgo: formatDate(new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000)),
-    fourDaysAgo: formatDate(new Date(today.getTime() - 4 * 24 * 60 * 60 * 1000)),
-    fiveDaysAgo: formatDate(new Date(today.getTime() - 5 * 24 * 60 * 60 * 1000)),
-    sixDaysAgo: formatDate(new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000)),
-    sevenDaysAgo: formatDate(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)),
-    eightDaysAgo: formatDate(new Date(today.getTime() - 8 * 24 * 60 * 60 * 1000)),
-    tenDaysAgo: formatDate(new Date(today.getTime() - 10 * 24 * 60 * 60 * 1000)),
-    twoWeeksAgo: formatDate(new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000)),
-    threeWeeksAgo: formatDate(new Date(today.getTime() - 21 * 24 * 60 * 60 * 1000)),
-    oneMonthAgo: formatDate(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)),
-  }
-
-  return {
-    status: 'Active',
-    progressPercentage: 15,
-    totalPaid: 15450.0,
-    totalDebt: 125450.0,
-    totalPayments: 23,
-    totalPaymentsAmount: 125450.0,
-    verifiedPayments: 13,
-    verifiedPaymentsAmount: 11170.0,
-    pendingPayments: 7,
-    pendingPaymentsAmount: 14510.0,
-    payments: [
-      {
-        id: 1,
-        date: dates.today, // Today - Pending, should show Verify button
-        amount: 10080,
-        method: 'Other',
-        status: 'Pending',
-        reference: 'REF-001234',
-      },
-      {
-        id: 2,
-        date: dates.yesterday, // Yesterday - Verified
-        amount: 900,
-        method: 'Bank Transfer',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-        reference: 'TRX98765',
-      },
-      {
-        id: 3,
-        date: dates.twoDaysAgo, // 2 days ago - Pending, should show Verify button
-        amount: 780,
-        method: 'Other',
-        status: 'Pending',
-        reference: 'REF-001235',
-      },
-      {
-        id: 4,
-        date: dates.threeDaysAgo, // 3 days ago - Verified
-        amount: 820,
-        method: 'Bank Transfer',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-        reference: 'TRX98766',
-      },
-      {
-        id: 5,
-        date: dates.fourDaysAgo, // 4 days ago - Verified
-        amount: 870,
-        method: 'Other',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-        reference: 'REF-001236',
-      },
-      {
-        id: 6,
-        date: dates.fiveDaysAgo, // 5 days ago - Pending, should show Verify button
-        amount: 810,
-        method: 'Bank Transfer',
-        status: 'Pending',
-        reference: 'TRX98767',
-      },
-      {
-        id: 7,
-        date: dates.sixDaysAgo, // 6 days ago - Cancelled
-        amount: 830,
-        method: 'Bank Transfer',
-        status: 'Cancelled',
-        reference: 'TRX98768',
-      },
-      {
-        id: 8,
-        date: dates.sevenDaysAgo, // 7 days ago - Verified (exactly 7 days, should NOT show Verify)
-        amount: 850,
-        method: 'Card',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-        reference: '****1234',
-      },
-      {
-        id: 9,
-        date: dates.eightDaysAgo, // 8 days ago - Pending, should NOT show Verify button (too old)
-        amount: 830,
-        method: 'Bank Transfer',
-        status: 'Pending',
-        reference: 'TRX98769',
-      },
-      {
-        id: 10,
-        date: dates.tenDaysAgo, // 10 days ago - Verified
-        amount: 850,
-        method: 'Card',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-        reference: '****5678',
-      },
-      {
-        id: 11,
-        date: dates.twoWeeksAgo, // 14 days ago - Verified
-        amount: 920,
-        method: 'Other',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-        reference: 'REF-001237',
-      },
-      {
-        id: 12,
-        date: dates.threeDaysAgo, // 3 days ago - Pending, should show Verify button
-        amount: 750,
-        method: 'Bank Transfer',
-        status: 'Pending',
-        reference: 'TRX98770',
-      },
-      {
-        id: 13,
-        date: dates.twoWeeksAgo, // 14 days ago - Verified
-        amount: 680,
-        method: 'Card',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-        reference: '****9012',
-      },
-      {
-        id: 14,
-        date: dates.oneMonthAgo, // 30 days ago - Verified
-        amount: 950,
-        method: 'Other',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-        reference: 'REF-001238',
-      },
-      {
-        id: 15,
-        date: dates.oneMonthAgo, // 30 days ago - Pending, should NOT show Verify button (too old)
-        amount: 720,
-        method: 'Bank Transfer',
-        status: 'Pending',
-        reference: 'TRX98771',
-      },
-      {
-        id: 16,
-        date: dates.threeWeeksAgo, // 21 days ago - Verified
-        amount: 880,
-        method: 'Card',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-        reference: '****3456',
-      },
-      {
-        id: 17,
-        date: dates.tenDaysAgo, // 10 days ago - Cancelled
-        amount: 640,
-        method: 'Other',
-        status: 'Cancelled',
-        reference: 'REF-001239',
-      },
-      {
-        id: 18,
-        date: dates.twoWeeksAgo, // 14 days ago - Verified
-        amount: 790,
-        method: 'Bank Transfer',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-        reference: 'TRX98772',
-      },
-      {
-        id: 19,
-        date: dates.threeWeeksAgo, // 21 days ago - Verified
-        amount: 910,
-        method: 'Card',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-        reference: '****7890',
-      },
-      {
-        id: 20,
-        date: dates.oneMonthAgo, // 30 days ago - Pending, should NOT show Verify button (too old)
-        amount: 560,
-        method: 'Other',
-        status: 'Pending',
-        reference: 'REF-001240',
-      },
-      {
-        id: 21,
-        date: dates.threeWeeksAgo, // 21 days ago - Verified
-        amount: 1020,
-        method: 'Bank Transfer',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-        reference: 'TRX98773',
-      },
-      {
-        id: 22,
-        date: dates.oneMonthAgo, // 30 days ago - Verified
-        amount: 730,
-        method: 'Card',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-        reference: '****2345',
-      },
-      {
-        id: 23,
-        date: dates.fourDaysAgo, // 4 days ago - Pending, should show Verify button
-        amount: 890,
-        method: 'Other',
-        status: 'Pending',
-        reference: 'REF-001241',
-      },
-    ],
-  }
 }
 
 export function PaymentHistoryPage() {
@@ -390,7 +142,7 @@ export function PaymentHistoryPage() {
     [setEndDateUrl]
   )
 
-  const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryData | null>(null)
+  // Note: paymentHistory is computed from API data using useMemo (see line 299)
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false)
   const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
@@ -400,6 +152,7 @@ export function PaymentHistoryPage() {
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
   const [openDropdownPaymentId, setOpenDropdownPaymentId] = useState<number | null>(null)
   const dateRangeInitialized = useRef(false)
+  const dateFiltersCleared = useRef(false)
 
   // Sorting state
   const [sortConfig, setSortConfig] = useState<{ key: string; order: 'asc' | 'desc' } | null>(null)
@@ -476,6 +229,32 @@ export function PaymentHistoryPage() {
     error: clientError,
   } = useClient(clientId, !!clientId)
 
+  // Fetch payment history from API
+  const {
+    data: paymentHistoryData,
+    isLoading: isLoadingPayments,
+    isError: isPaymentError,
+    error: paymentError,
+    refetch: refetchPayments,
+  } = useClientPaymentHistory(
+    {
+      client_id: clientId,
+      page: currentPage,
+      limit: pageSize,
+      status:
+        statusFilter !== 'All'
+          ? frontendToBackendPaymentStatus(statusFilter as FrontendPaymentStatus)
+          : undefined,
+      payment_method:
+        methodFilter !== 'All'
+          ? frontendToBackendPaymentMethod(methodFilter as FrontendPaymentMethod)
+          : undefined,
+      from_date: startDate ? startDate.toISOString().split('T')[0] : undefined,
+      to_date: endDate ? endDate.toISOString().split('T')[0] : undefined,
+    },
+    { enabled: !!clientId }
+  )
+
   // Get client name and create client object for call functionality
   const client = useMemo(() => {
     if (!apiClient) return null
@@ -501,30 +280,120 @@ export function PaymentHistoryPage() {
     return client?.fullName || mockClientDetail.fullName
   }, [client])
 
+  // Convert backend payment to frontend format
+  const convertBackendPayment = useCallback((backendPayment: BackendPayment): Payment => {
+    return {
+      id: backendPayment.id,
+      date: formatPaymentDate(backendPayment.payment_date),
+      amount: Number(backendPayment.amount),
+      method: backendToFrontendPaymentMethod(backendPayment.payment_method),
+      status: backendToFrontendPaymentStatus(backendPayment.status),
+      receipt: backendPayment.receipt_url,
+      reference: backendPayment.bank_reference || backendPayment.payment_number,
+    }
+  }, [])
+
+  // Convert payment history data to frontend format
+  const paymentHistory = useMemo(() => {
+    if (!paymentHistoryData || !apiClient) return null
+
+    const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
+      .filter(Boolean)
+      .join(' ')
+
+    const frontendPayments = paymentHistoryData.payments.map(convertBackendPayment)
+
+    // Calculate statistics
+    const verifiedPayments = frontendPayments.filter((p) => p.status === 'Verified')
+    const pendingPayments = frontendPayments.filter((p) => p.status === 'Pending')
+
+    const totalPaymentsAmount = frontendPayments.reduce((sum, p) => sum + p.amount, 0)
+    const verifiedPaymentsAmount = verifiedPayments.reduce((sum, p) => sum + p.amount, 0)
+    const pendingPaymentsAmount = pendingPayments.reduce((sum, p) => sum + p.amount, 0)
+
+    // Total paid and progress:
+    // - Total paid: use backend's total_amount_paid (includes ALL verified payments, not just current page)
+    //   This value should NOT be affected by date filters - it's the total for all verified payments
+    // - Current debt: ALWAYS use apiClient.total_debt as primary source (it's the source of truth)
+    //   Only use paymentHistoryData.current_debt if apiClient is not available
+    // - Progress = 100 * TotalPaid / (TotalPaid + CurrentDebt)
+    let currentDebt = 0
+    if (apiClient?.total_debt !== undefined && apiClient.total_debt !== null) {
+      currentDebt = Number(apiClient.total_debt)
+    } else if (
+      paymentHistoryData?.current_debt !== undefined &&
+      paymentHistoryData.current_debt !== null
+    ) {
+      currentDebt = Number(paymentHistoryData.current_debt)
+    }
+
+    // Use total_amount_paid from backend (all verified payments, regardless of filters)
+    // This should always be present and correct
+    const totalPaid = Number(paymentHistoryData?.total_amount_paid ?? 0)
+
+    const initialTotal = currentDebt + totalPaid
+    const rawProgress = initialTotal > 0 ? (totalPaid / initialTotal) * 100 : 0
+    const progressPercentage = Math.max(0, Math.min(100, rawProgress))
+
+    // Determine client status based on debt
+    let clientStatus:
+      | 'Active'
+      | 'Paid'
+      | 'Partially Paid'
+      | 'Dispute'
+      | 'Written off'
+      | 'Sold'
+      | 'Legal' = 'Active'
+    if (currentDebt === 0) {
+      clientStatus = 'Paid'
+    } else if (initialTotal > 0 && currentDebt < initialTotal) {
+      clientStatus = 'Partially Paid'
+    }
+
+    return {
+      customerName: fullName || mockClientDetail.fullName,
+      status: clientStatus,
+      progressPercentage,
+      totalPaid,
+      totalDebt: currentDebt,
+      totalPayments: paymentHistoryData.total_payments,
+      totalPaymentsAmount,
+      verifiedPayments: verifiedPayments.length,
+      verifiedPaymentsAmount,
+      pendingPayments: pendingPayments.length,
+      pendingPaymentsAmount,
+      payments: frontendPayments,
+    }
+  }, [paymentHistoryData, apiClient, convertBackendPayment])
+
+  // Payment mutations
+  const { mutate: verifyPaymentMutation } = useVerifyPayment()
+  const { mutate: cancelPaymentMutation } = useCancelPayment()
+  const { mutate: editPaymentMutation } = useEditPayment()
+  const { mutate: exportPaymentsMutation } = useExportPaymentsCSV()
+  const { mutate: generateReceiptMutation } = useGenerateReceipt()
+
+  // Fetch payment details when selectedPayment changes
+  const backendPayment = paymentHistoryData?.payments.find((p) => p.id === selectedPayment?.id)
+  const paymentNumber = backendPayment?.payment_number || selectedPayment?.id.toString()
+  const { data: paymentDetails } = usePayment(
+    paymentNumber || null,
+    !!selectedPayment && !!paymentNumber
+  )
+
+  // Load user details for "Cancelled by" using reversed_by_user_id
+  const cancelledByUserId = paymentDetails?.reversed_by_user_id ?? null
+  const { data: cancelledByUser } = useUser(cancelledByUserId)
+
   // Helper function to check if payment date is less than 7 days old
-  const isPaymentLessThan7DaysOld = useCallback((paymentDate: string): boolean => {
+  // Use utility function from payments feature
+  const checkPaymentLessThan7DaysOld = useCallback((paymentDate: string): boolean => {
+    // Convert MM/DD/YYYY to ISO date for utility function
     try {
-      // Parse payment date in format MM/DD/YYYY
       const [month, day, year] = paymentDate.split('/')
-      const paymentDateObj = new Date(Number(year), Number(month) - 1, Number(day))
-
-      // Check if date is valid
-      if (isNaN(paymentDateObj.getTime())) {
-        return false
-      }
-
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      paymentDateObj.setHours(0, 0, 0, 0)
-
-      // Calculate difference in days
-      const diffTime = today.getTime() - paymentDateObj.getTime()
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-
-      // Return true if payment is less than 7 days old
-      return diffDays < 7 && diffDays >= 0
-    } catch (error) {
-      console.error('Error parsing payment date:', paymentDate, error)
+      const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+      return isPaymentLessThan7DaysOld(isoDate)
+    } catch {
       return false
     }
   }, [])
@@ -533,9 +402,9 @@ export function PaymentHistoryPage() {
   const convertPaymentToPendingPayment = useCallback(
     (payment: Payment): import('./components/PaymentVerificationQueueModal').PendingPayment => {
       // Calculate time ago (simple implementation)
-      const paymentDate = new Date(payment.date)
+      const paymentDateObj = new Date(payment.date)
       const now = new Date()
-      const diffMs = now.getTime() - paymentDate.getTime()
+      const diffMs = now.getTime() - paymentDateObj.getTime()
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
       const diffDays = Math.floor(diffHours / 24)
 
@@ -548,10 +417,14 @@ export function PaymentHistoryPage() {
         submittedAt = 'Just now'
       }
 
-      // Calculate current debt and new debt
-      // For now, use paymentHistory.totalDebt as current debt
-      const currentDebt = paymentHistory?.totalDebt || 0
-      const newDebt = Math.max(0, currentDebt - payment.amount)
+      // Use backend debt_before / debt_after when available for accurate debt impact
+      const backendPayment = paymentHistoryData?.payments.find((p) => p.id === payment.id)
+      const currentDebt = backendPayment
+        ? backendPayment.debt_before
+        : paymentHistory?.totalDebt || 0
+      const newDebt = backendPayment
+        ? backendPayment.debt_after
+        : Math.max(0, currentDebt - payment.amount)
 
       return {
         id: payment.id.toString(),
@@ -560,14 +433,14 @@ export function PaymentHistoryPage() {
         client: customerName,
         project: 'PrivatBank Collection', // Default project, can be enhanced later
         amount: payment.amount,
-        method: normalizePaymentMethod(payment.method),
+        method: payment.method,
         date: payment.date,
         reference: payment.reference || `TRX${payment.id.toString().padStart(5, '0')}`,
         currentDebt,
         newDebt,
       }
     },
-    [customerName, paymentHistory]
+    [customerName, paymentHistory, paymentHistoryData]
   )
 
   // Filter pending payments that are less than 7 days old
@@ -576,43 +449,35 @@ export function PaymentHistoryPage() {
 
     return paymentHistory.payments
       .filter((payment) => {
-        return payment.status === 'Pending' && isPaymentLessThan7DaysOld(payment.date)
+        return payment.status === 'Pending' && checkPaymentLessThan7DaysOld(payment.date)
       })
       .map(convertPaymentToPendingPayment)
-  }, [paymentHistory, isPaymentLessThan7DaysOld, convertPaymentToPendingPayment])
-
-  const mockProcessedPayments = [
-    {
-      id: '1',
-      paymentId: 'PMT-2025-12-000',
-      status: 'Verified' as const,
-      amount: 3500.0,
-      action: 'Verified by You',
-      time: '30 mins ago',
-    },
-    {
-      id: '2',
-      paymentId: 'PMT-2025-12-000',
-      status: 'Verified' as const,
-      amount: 6500.0,
-      action: 'Verified by You',
-      time: '2 hours ago',
-    },
-    {
-      id: '3',
-      paymentId: 'PMT-2025-12-000',
-      status: 'Cancelled' as const,
-      amount: 7500.0,
-      action: 'Cancelled by You',
-      time: '3 hours ago',
-    },
-  ]
+  }, [paymentHistory, checkPaymentLessThan7DaysOld, convertPaymentToPendingPayment])
 
   const handleVerifyPayment = (paymentId: string) => {
-    // TODO: Implement API call to verify payment
-    console.log('Verify payment', paymentId)
-    // Close modal after verification
-    setIsVerificationModalOpen(false)
+    // Find payment by ID
+    const payment = paymentHistory?.payments.find((p) => p.id.toString() === paymentId)
+    if (!payment) {
+      toast.error('Payment not found')
+      return
+    }
+
+    // Use payment_number from backend if available, otherwise use ID
+    const backendPayment = paymentHistoryData?.payments.find((p) => p.id.toString() === paymentId)
+    const paymentNumber = backendPayment?.payment_number || paymentId
+
+    verifyPaymentMutation(
+      {
+        paymentId: paymentNumber,
+        request: {},
+      },
+      {
+        onSuccess: () => {
+          setIsVerificationModalOpen(false)
+          refetchPayments()
+        },
+      }
+    )
   }
 
   const handleCancelPaymentFromQueue = (
@@ -641,11 +506,34 @@ export function PaymentHistoryPage() {
     last4Digits?: string
     paymentMethodDetails?: string
   }) => {
-    // TODO: Implement API call to save edit payment
-    console.log('Save edit payment', selectedPayment?.id, data)
-    setIsEditModalOpen(false)
-    setSelectedPayment(null)
-    // Optionally refresh the payment history data
+    if (!selectedPayment) return
+
+    const backendPayment = paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
+    if (!backendPayment) {
+      toast.error('Payment not found')
+      return
+    }
+
+    editPaymentMutation(
+      {
+        paymentId: backendPayment.id,
+        request: {
+          amount: data.amount,
+          payment_method: frontendToBackendPaymentMethod(data.method),
+          payment_method_details: data.paymentMethodDetails,
+          bank_reference:
+            data.referenceNumber ||
+            (data.method === 'Card' ? `****${data.last4Digits}` : undefined),
+        },
+      },
+      {
+        onSuccess: () => {
+          setIsEditModalOpen(false)
+          setSelectedPayment(null)
+          refetchPayments()
+        },
+      }
+    )
   }
 
   const handleExport = (data: {
@@ -656,8 +544,19 @@ export function PaymentHistoryPage() {
     project: string
     columns: string[]
   }) => {
-    // TODO: Implement CSV export
-    console.log('Export CSV with data:', data)
+    exportPaymentsMutation({
+      client_id: clientId,
+      from_date: data.startDate ? data.startDate.toISOString().split('T')[0] : undefined,
+      to_date: data.endDate ? data.endDate.toISOString().split('T')[0] : undefined,
+      status:
+        data.statuses.length === 1 && data.statuses[0] !== 'All'
+          ? frontendToBackendPaymentStatus(data.statuses[0] as FrontendPaymentStatus)
+          : undefined,
+      payment_method:
+        data.method !== 'All'
+          ? frontendToBackendPaymentMethod(data.method as FrontendPaymentMethod)
+          : undefined,
+    })
   }
 
   const handleViewDetails = (payment: Payment) => {
@@ -690,39 +589,66 @@ export function PaymentHistoryPage() {
     }
   }
 
-  // Load payment history data
+  // Clear restrictive date filters immediately if they cause no results
   useEffect(() => {
-    if (customerName) {
-      // TODO: Replace with actual API call to fetch payment history
-      // For now, use mock data but with real customer name from client data
-      const mockData = getMockPaymentHistory()
-      const data: PaymentHistoryData = {
-        ...mockData,
-        customerName,
-      }
-      // Simulate API delay
-      setTimeout(() => {
-        setPaymentHistory(data)
+    if (
+      paymentHistoryData &&
+      paymentHistoryData.total_payments > 0 &&
+      paymentHistoryData.payments.length === 0 &&
+      (startDate || endDate)
+    ) {
+      // Date filter is too restrictive - clear it immediately to show all payments
+      setStartDate(null)
+      setEndDate(null)
+      dateRangeInitialized.current = false
+      dateFiltersCleared.current = true
+    }
+  }, [paymentHistoryData, setStartDate, setEndDate, startDate, endDate])
 
-        // Calculate and set date range to match payment history date range
-        if (data.payments.length > 0 && !dateRangeInitialized.current) {
-          // Parse all payment dates and find min/max
-          const dates = data.payments.map((payment) => {
-            const [month, day, year] = payment.date.split('/')
-            return new Date(Number(year), Number(month) - 1, Number(day))
-          })
+  // Clear date filters on initial load if they're set to a single day (likely wrong/restrictive)
+  useEffect(() => {
+    // Only run once on mount - clear single-day filters that are likely wrong
+    // This prevents restrictive date filters from hiding all payments
+    if (!dateFiltersCleared.current && startDateUrl && endDateUrl && startDateUrl === endDateUrl) {
+      // Single day filter on initial load - clear it immediately to show all payments
+      setStartDateUrl('')
+      setEndDateUrl('')
+      dateFiltersCleared.current = true
+    }
+  }, [startDateUrl, endDateUrl, setStartDateUrl, setEndDateUrl])
 
-          const minDate = new Date(Math.min(...dates.map((d) => d.getTime())))
-          const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())))
+  // Initialize date range from payment history data (only after we have payments)
+  useEffect(() => {
+    // Only initialize if we have payments and haven't initialized yet
+    if (
+      paymentHistoryData &&
+      paymentHistoryData.payments.length > 0 &&
+      !dateRangeInitialized.current
+    ) {
+      const dates = paymentHistoryData.payments
+        .map((payment) => {
+          const dateStr = payment.payment_date
+          if (!dateStr) return null
+          const [year, month, day] = dateStr.split('-').map(Number)
+          if (isNaN(year) || isNaN(month) || isNaN(day)) return null
+          return new Date(year, month - 1, day)
+        })
+        .filter((d): d is Date => d !== null)
 
-          // Set dates only once when payment history first loads
+      if (dates.length > 0) {
+        const minDate = new Date(Math.min(...dates.map((d) => d.getTime())))
+        const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())))
+
+        // Only set date range if it covers multiple days or if it's the actual payment date range
+        // Don't set if it's a single day (that would be too restrictive)
+        if (minDate.getTime() !== maxDate.getTime() || dates.length === 1) {
           setStartDate(minDate)
           setEndDate(maxDate)
           dateRangeInitialized.current = true
         }
-      }, 500)
+      }
     }
-  }, [customerName, setStartDate, setEndDate])
+  }, [paymentHistoryData, setStartDate, setEndDate])
 
   const formatCurrency = (amount: number) => {
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
@@ -794,10 +720,8 @@ export function PaymentHistoryPage() {
     let result = paymentHistory.payments.filter((payment) => {
       if (statusFilter !== 'All' && payment.status !== statusFilter) return false
       if (methodFilter !== 'All') {
-        // Normalize payment method for comparison
-        const normalizedPaymentMethod = normalizePaymentMethod(payment.method)
-        const normalizedFilterMethod = normalizePaymentMethod(methodFilter as Payment['method'])
-        if (normalizedPaymentMethod !== normalizedFilterMethod) return false
+        // Payment method is already in frontend format, compare directly
+        if (payment.method !== methodFilter) return false
       }
 
       // Date range filtering
@@ -840,6 +764,18 @@ export function PaymentHistoryPage() {
           case 'amount':
             aValue = a.amount
             bValue = b.amount
+            break
+          case 'method':
+            aValue = a.method.toLowerCase()
+            bValue = b.method.toLowerCase()
+            break
+          case 'status':
+            aValue = a.status.toLowerCase()
+            bValue = b.status.toLowerCase()
+            break
+          case 'reference':
+            aValue = (a.reference || '').toLowerCase()
+            bValue = (b.reference || '').toLowerCase()
             break
           default:
             return 0
@@ -889,7 +825,7 @@ export function PaymentHistoryPage() {
   }
 
   // Show loading state while fetching client or payment history
-  if (isLoadingClient || !paymentHistory) {
+  if (isLoadingClient || isLoadingPayments || !paymentHistory) {
     return (
       <div className="flex flex-1 flex-col items-start gap-5 self-stretch">
         {/* Header Skeleton */}
@@ -1050,17 +986,19 @@ export function PaymentHistoryPage() {
     )
   }
 
-  // Show error state if client fetch failed
-  if (isClientError) {
+  // Show error state if client or payment fetch failed
+  if (isClientError || isPaymentError) {
+    const errorMessage =
+      clientError?.message || paymentError?.message || t('pages.clients.debtSummary.errorOccurred')
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
         <p className="font-medium text-gray-900">
-          {t('pages.clients.debtSummary.failedToLoadClient')}
+          {isClientError
+            ? t('pages.clients.debtSummary.failedToLoadClient')
+            : t('pages.clients.paymentHistory.failedToLoadPayments')}
         </p>
-        <p className="text-sm text-gray-600">
-          {clientError?.message || t('pages.clients.debtSummary.errorOccurred')}
-        </p>
+        <p className="text-sm text-gray-600">{errorMessage}</p>
         <Button
           variant="outline"
           onClick={() => navigate(`/dashboard/clients/${id}/debt-summary`)}
@@ -1438,14 +1376,32 @@ export function PaymentHistoryPage() {
                           {getSortIcon('amount')}
                         </span>
                       </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
-                        {t('pages.clients.paymentHistory.tableHeaders.method')}
+                      <th
+                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                        onClick={() => handleSort('method')}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {t('pages.clients.paymentHistory.tableHeaders.method')}
+                          {getSortIcon('method')}
+                        </span>
                       </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
-                        {t('pages.clients.paymentHistory.tableHeaders.reference')}
+                      <th
+                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                        onClick={() => handleSort('reference')}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {t('pages.clients.paymentHistory.tableHeaders.reference')}
+                          {getSortIcon('reference')}
+                        </span>
                       </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
-                        {t('pages.clients.paymentHistory.tableHeaders.status')}
+                      <th
+                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                        onClick={() => handleSort('status')}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {t('pages.clients.paymentHistory.tableHeaders.status')}
+                          {getSortIcon('status')}
+                        </span>
                       </th>
                       <th className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
                         {t('pages.clients.paymentHistory.tableHeaders.actions')}
@@ -1463,184 +1419,227 @@ export function PaymentHistoryPage() {
                         </td>
                       </tr>
                     ) : (
-                      paginatedPayments.map((payment, index) => (
-                        <tr
-                          key={payment.id}
-                          className={`transition-colors ${
-                            index % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
-                          }`}
-                        >
-                          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
-                            {payment.date}
-                          </td>
-                          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
-                            {formatCurrency(payment.amount)}
-                          </td>
-                          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
-                            {(() => {
-                              const normalizedMethod = normalizePaymentMethod(payment.method)
-                              const methodTranslations: Record<
-                                'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other',
-                                string
-                              > = {
-                                'Bank Transfer': t(
-                                  'pages.clients.modals.recordPayment.bankTransfer'
-                                ),
-                                'Online Gateway': t(
-                                  'pages.clients.modals.recordPayment.onlineGateway'
-                                ),
-                                Cash: t('pages.clients.modals.recordPayment.cash'),
-                                Card: t('pages.clients.modals.recordPayment.card'),
-                                Other: t('pages.clients.modals.recordPayment.other'),
-                              }
-                              return methodTranslations[normalizedMethod]
-                            })()}
-                          </td>
-                          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
-                            {payment.reference || '-'}
-                          </td>
-                          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
-                            <div className="flex items-center gap-2">
-                              {getStatusDot(payment.status)}
-                              <span
-                                className={cn(
-                                  payment.status === 'Verified'
-                                    ? 'text-success-500'
+                      paginatedPayments.map((payment, index) => {
+                        // Always get backend payment to use the same date source as the modal
+                        // This ensures consistency - the date displayed matches what's stored in the database
+                        // Use both id and payment_number to ensure we find the correct payment
+                        const backendPayment = paymentHistoryData?.payments.find(
+                          (p) => p.id === payment.id || p.payment_number === payment.reference
+                        )
+
+                        // Always format from backend payment_date to ensure consistency
+                        // backendPayment.payment_date is in format "YYYY-MM-DD" (e.g., "2026-01-26")
+                        // This matches exactly what's stored in the database and what's sent to client-service
+                        const displayDate = backendPayment?.payment_date
+                          ? formatPaymentDate(backendPayment.payment_date)
+                          : payment.date // Fallback only if backend payment not found (shouldn't happen)
+
+                        return (
+                          <tr
+                            key={payment.id}
+                            className={`transition-colors ${
+                              index % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
+                            }`}
+                          >
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              {displayDate}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
+                              {formatCurrency(payment.amount)}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              {(() => {
+                                // Payment method is already in frontend format
+                                const methodTranslations: Record<
+                                  'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other',
+                                  string
+                                > = {
+                                  'Bank Transfer': t(
+                                    'pages.clients.modals.recordPayment.bankTransfer'
+                                  ),
+                                  'Online Gateway': t(
+                                    'pages.clients.modals.recordPayment.onlineGateway'
+                                  ),
+                                  Cash: t('pages.clients.modals.recordPayment.cash'),
+                                  Card: t('pages.clients.modals.recordPayment.card'),
+                                  Other: t('pages.clients.modals.recordPayment.other'),
+                                }
+                                return (
+                                  methodTranslations[
+                                    payment.method as keyof typeof methodTranslations
+                                  ] || payment.method
+                                )
+                              })()}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              {payment.reference || '-'}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              <div className="flex items-center gap-2">
+                                {getStatusDot(payment.status)}
+                                <span
+                                  className={cn(
+                                    payment.status === 'Verified'
+                                      ? 'text-success-500'
+                                      : payment.status === 'Pending'
+                                        ? 'text-gray-500'
+                                        : 'text-error-500'
+                                  )}
+                                >
+                                  {payment.status === 'Verified'
+                                    ? t('pages.clients.debtSummary.paymentStatus.verified')
                                     : payment.status === 'Pending'
-                                      ? 'text-gray-500'
-                                      : 'text-error-500'
-                                )}
-                              >
-                                {payment.status === 'Verified'
-                                  ? t('pages.clients.debtSummary.paymentStatus.verified')
-                                  : payment.status === 'Pending'
-                                    ? t('pages.clients.debtSummary.paymentStatus.pending')
-                                    : t('pages.clients.debtSummary.paymentStatus.cancelled')}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
-                            <div className="flex items-center justify-center gap-2 sm:gap-4">
-                              {/* Desktop: Individual buttons */}
-                              <div className="hidden items-center gap-4 lg:flex">
-                                {payment.status === 'Verified' && (
-                                  <LinkButton
-                                    variant="regular-black"
-                                    size="xs"
-                                    leftIcon={
-                                      <Icons.FileDownload
-                                        size={16}
-                                        color="#05040D"
-                                        strokeWidth={1.5}
-                                      />
-                                    }
-                                    onClick={() => {
-                                      // TODO: Handle download PDF
-                                      console.log('Download PDF', payment.id)
-                                    }}
-                                  >
-                                    {t('pages.clients.paymentHistory.actions.pdf')}
-                                  </LinkButton>
-                                )}
-                                {payment.status === 'Pending' &&
-                                  isPaymentLessThan7DaysOld(payment.date) && (
+                                      ? t('pages.clients.debtSummary.paymentStatus.pending')
+                                      : t('pages.clients.debtSummary.paymentStatus.cancelled')}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
+                              <div className="flex items-center justify-center gap-2 sm:gap-4">
+                                {/* Desktop: Individual buttons */}
+                                <div className="hidden items-center gap-4 lg:flex">
+                                  {payment.status === 'Verified' && (
                                     <LinkButton
                                       variant="regular-black"
                                       size="xs"
                                       leftIcon={
-                                        <Icons.Success
+                                        <Icons.FileDownload
                                           size={16}
                                           color="#05040D"
                                           strokeWidth={1.5}
                                         />
                                       }
                                       onClick={() => {
-                                        setSelectedPaymentId(payment.id)
-                                        setIsVerificationModalOpen(true)
+                                        const backendPayment = paymentHistoryData?.payments.find(
+                                          (p) => p.id === payment.id
+                                        )
+                                        if (backendPayment) {
+                                          generateReceiptMutation({
+                                            paymentId: backendPayment.id,
+                                            format: 'pdf',
+                                          })
+                                        } else {
+                                          toast.error('Payment not found')
+                                        }
                                       }}
                                     >
-                                      {t('pages.clients.paymentHistory.actions.verify')}
+                                      {t('pages.clients.paymentHistory.actions.pdf')}
                                     </LinkButton>
                                   )}
-                                <LinkButton
-                                  variant="regular-black"
-                                  size="xs"
-                                  leftIcon={
-                                    <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
-                                  }
-                                  onClick={() => handleViewDetails(payment)}
-                                >
-                                  {t('pages.clients.paymentHistory.actions.view')}
-                                </LinkButton>
-                              </div>
-
-                              {/* Mobile/Tablet: Dropdown button group */}
-                              <div className="lg:hidden">
-                                <DropdownMenu
-                                  modal={false}
-                                  open={openDropdownPaymentId === payment.id}
-                                  onOpenChange={(open) =>
-                                    setOpenDropdownPaymentId(open ? payment.id : null)
-                                  }
-                                >
-                                  <DropdownMenuTrigger asChild>
-                                    <button
-                                      type="button"
-                                      className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
-                                      aria-label={t(
-                                        'pages.clients.paymentHistory.tableHeaders.actions'
-                                      )}
-                                    >
-                                      <Icons.FilterVertical size={16} strokeWidth={1.5} />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="bg-white">
-                                    {payment.status === 'Verified' && (
-                                      <DropdownMenuItem
+                                  {payment.status === 'Pending' &&
+                                    checkPaymentLessThan7DaysOld(payment.date) && (
+                                      <LinkButton
+                                        variant="regular-black"
+                                        size="xs"
+                                        leftIcon={
+                                          <Icons.Success
+                                            size={16}
+                                            color="#05040D"
+                                            strokeWidth={1.5}
+                                          />
+                                        }
                                         onClick={() => {
-                                          // TODO: Handle download PDF
-                                          console.log('Download PDF', payment.id)
-                                          setOpenDropdownPaymentId(null)
+                                          setSelectedPaymentId(payment.id)
+                                          setIsVerificationModalOpen(true)
                                         }}
-                                        className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
                                       >
-                                        <Icons.FileDownload size={16} strokeWidth={1.5} />
-                                        <span>{t('pages.clients.paymentHistory.actions.pdf')}</span>
-                                      </DropdownMenuItem>
+                                        {t('pages.clients.paymentHistory.actions.verify')}
+                                      </LinkButton>
                                     )}
-                                    {payment.status === 'Pending' &&
-                                      isPaymentLessThan7DaysOld(payment.date) && (
+                                  <LinkButton
+                                    variant="regular-black"
+                                    size="xs"
+                                    leftIcon={
+                                      <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
+                                    }
+                                    onClick={() => handleViewDetails(payment)}
+                                  >
+                                    {t('pages.clients.paymentHistory.actions.view')}
+                                  </LinkButton>
+                                </div>
+
+                                {/* Mobile/Tablet: Dropdown button group */}
+                                <div className="lg:hidden">
+                                  <DropdownMenu
+                                    modal={false}
+                                    open={openDropdownPaymentId === payment.id}
+                                    onOpenChange={(open) =>
+                                      setOpenDropdownPaymentId(open ? payment.id : null)
+                                    }
+                                  >
+                                    <DropdownMenuTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
+                                        aria-label={t(
+                                          'pages.clients.paymentHistory.tableHeaders.actions'
+                                        )}
+                                      >
+                                        <Icons.FilterVertical size={16} strokeWidth={1.5} />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="bg-white">
+                                      {payment.status === 'Verified' && (
                                         <DropdownMenuItem
                                           onClick={() => {
-                                            setSelectedPaymentId(payment.id)
-                                            setIsVerificationModalOpen(true)
+                                            const backendPayment =
+                                              paymentHistoryData?.payments.find(
+                                                (p) => p.id === payment.id
+                                              )
+                                            if (backendPayment) {
+                                              generateReceiptMutation({
+                                                paymentId: backendPayment.id,
+                                                format: 'pdf',
+                                              })
+                                            } else {
+                                              toast.error('Payment not found')
+                                            }
                                             setOpenDropdownPaymentId(null)
                                           }}
                                           className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
                                         >
-                                          <Icons.Success size={16} strokeWidth={1.5} />
+                                          <Icons.FileDownload size={16} strokeWidth={1.5} />
                                           <span>
-                                            {t('pages.clients.paymentHistory.actions.verify')}
+                                            {t('pages.clients.paymentHistory.actions.pdf')}
                                           </span>
                                         </DropdownMenuItem>
                                       )}
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        handleViewDetails(payment)
-                                        setOpenDropdownPaymentId(null)
-                                      }}
-                                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
-                                    >
-                                      <Icons.View size={16} strokeWidth={1.5} />
-                                      <span>{t('pages.clients.paymentHistory.actions.view')}</span>
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                      {payment.status === 'Pending' &&
+                                        checkPaymentLessThan7DaysOld(payment.date) && (
+                                          <DropdownMenuItem
+                                            onClick={() => {
+                                              setSelectedPaymentId(payment.id)
+                                              setIsVerificationModalOpen(true)
+                                              setOpenDropdownPaymentId(null)
+                                            }}
+                                            className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                                          >
+                                            <Icons.Success size={16} strokeWidth={1.5} />
+                                            <span>
+                                              {t('pages.clients.paymentHistory.actions.verify')}
+                                            </span>
+                                          </DropdownMenuItem>
+                                        )}
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          handleViewDetails(payment)
+                                          setOpenDropdownPaymentId(null)
+                                        }}
+                                        className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                                      >
+                                        <Icons.View size={16} strokeWidth={1.5} />
+                                        <span>
+                                          {t('pages.clients.paymentHistory.actions.view')}
+                                        </span>
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                            </td>
+                          </tr>
+                        )
+                      })
                     )}
                   </tbody>
                 </table>
@@ -1674,12 +1673,11 @@ export function PaymentHistoryPage() {
           setSelectedPaymentId(null)
         }}
         pendingPayments={pendingPaymentsForVerification}
-        processedPayments={mockProcessedPayments}
+        processedPayments={[]}
         onVerify={handleVerifyPayment}
         onCancel={handleCancelPaymentFromQueue}
         onRefresh={() => {
-          // TODO: Refresh pending payments
-          console.log('Refresh payments')
+          refetchPayments()
         }}
         initialExpandedPaymentId={selectedPaymentId?.toString() || null}
       />
@@ -1691,6 +1689,12 @@ export function PaymentHistoryPage() {
         onExport={handleExport}
         totalPayments={paymentHistory?.totalPayments || 0}
         totalAmount={paymentHistory?.totalPaymentsAmount || 0}
+        {...({
+          verifiedPayments: paymentHistory?.verifiedPayments || 0,
+          verifiedAmount: paymentHistory?.verifiedPaymentsAmount || 0,
+          pendingPayments: paymentHistory?.pendingPayments || 0,
+          pendingAmount: paymentHistory?.pendingPaymentsAmount || 0,
+        } as Partial<ExportPaymentsCSVModalProps>)}
       />
 
       {/* Payment Details Modal */}
@@ -1702,40 +1706,75 @@ export function PaymentHistoryPage() {
             setSelectedPayment(null)
           }}
           payment={{
-            paymentId: `PMT-${selectedPayment.id}`,
-            status: selectedPayment.status,
-            amount: selectedPayment.amount,
-            paymentDate: selectedPayment.date,
-            method: selectedPayment.method,
+            paymentId: paymentDetails?.payment_number || `PMT-${selectedPayment.id}`,
+            status: paymentDetails
+              ? backendToFrontendPaymentStatus(paymentDetails.status)
+              : selectedPayment.status,
+            amount: paymentDetails ? Number(paymentDetails.amount) : selectedPayment.amount,
+            paymentDate: paymentDetails
+              ? formatPaymentDate(paymentDetails.payment_date)
+              : selectedPayment.date,
+            method: paymentDetails
+              ? backendToFrontendPaymentMethod(paymentDetails.payment_method)
+              : selectedPayment.method,
             reference:
-              selectedPayment.reference || `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
+              paymentDetails?.bank_reference ||
+              paymentDetails?.payment_number ||
+              selectedPayment.reference ||
+              `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
             clientId: id || '',
             clientName: paymentHistory.customerName,
-            phone: '+380 50 123 4567',
-            project: 'PrivatBank Collection',
-            currentDebt: paymentHistory.totalDebt,
-            newDebt: paymentHistory.totalDebt - selectedPayment.amount,
-            createdBy: 'Operator Sidorov',
-            createdAt: '2025-12-10 09:15:32',
-            verifiedBy: selectedPayment.status === 'Verified' ? 'Supervisor Petrov' : undefined,
-            verifiedAt: selectedPayment.status === 'Verified' ? '2025-12-10 14:30:18' : undefined,
-            cancelledBy: selectedPayment.status === 'Cancelled' ? 'Supervisor Petrov' : undefined,
-            cancelledAt: selectedPayment.status === 'Cancelled' ? '2025-12-10 16:45:22' : undefined,
-            cancellationReason:
-              selectedPayment.status === 'Cancelled'
-                ? 'Incorrect payment amount entered. Client requested cancellation.'
-                : undefined,
+            phone: apiClient?.phone_primary || '+380 50 123 4567',
+            project: 'PrivatBank Collection', // TODO: Get from project data
+            // Debt Impact: use backend snapshot when available
+            currentDebt: backendPayment
+              ? Number(backendPayment.debt_before)
+              : paymentHistory.totalDebt,
+            newDebt: backendPayment
+              ? Number(backendPayment.debt_after)
+              : Math.max(0, paymentHistory.totalDebt - selectedPayment.amount),
+            // Audit trail from backend, fallback to 'Unknown'
+            // Format dates consistently with payment date (MM/DD/YYYY)
+            createdBy: paymentDetails?.recorded_by_username || 'Unknown',
+            createdAt: paymentDetails?.recorded_at
+              ? formatPaymentDate(paymentDetails.recorded_at.split('T')[0]) // Extract date part only
+              : 'Unknown',
+            verifiedBy: paymentDetails?.verified_by_username,
+            verifiedAt: paymentDetails?.verified_at
+              ? formatPaymentDate(paymentDetails.verified_at.split('T')[0]) // Extract date part only
+              : undefined,
+            cancelledBy:
+              cancelledByUser?.username ||
+              (paymentDetails?.reversed_by_user_id ? 'Unknown' : undefined),
+            cancelledAt: paymentDetails?.reversed_at
+              ? formatPaymentDate(paymentDetails.reversed_at.split('T')[0]) // Extract date part only
+              : undefined,
+            cancellationReason: paymentDetails?.reversal_reason,
           }}
           onCancelPayment={handleCancelPayment}
           onEditPayment={handleEditPayment}
           onViewClientProfile={handleViewClientProfile}
           onPrintReceipt={() => {
-            // TODO: Handle print receipt
-            console.log('Print receipt', selectedPayment.id)
+            if (!backendPayment) {
+              toast.error('Payment not found')
+              return
+            }
+            // Prepare client data if available
+            generateReceiptMutation({
+              paymentId: backendPayment.id,
+              format: 'pdf',
+            })
           }}
           onDownloadReceipt={() => {
-            // TODO: Handle download receipt
-            console.log('Download receipt', selectedPayment.id)
+            if (!backendPayment) {
+              toast.error('Payment not found')
+              return
+            }
+            // Prepare client data if available
+            generateReceiptMutation({
+              paymentId: backendPayment.id,
+              format: 'pdf',
+            })
           }}
         />
       )}
@@ -1761,10 +1800,31 @@ export function PaymentHistoryPage() {
             currentDebt: paymentHistory.totalDebt,
           }}
           onConfirm={(data) => {
-            // TODO: Handle cancel payment
-            console.log('Cancel payment:', data)
-            setIsCancelModalOpen(false)
-            setSelectedPayment(null)
+            if (!selectedPayment) return
+
+            const backendPayment = paymentHistoryData?.payments.find(
+              (p) => p.id === selectedPayment.id
+            )
+            if (!backendPayment) {
+              toast.error('Payment not found')
+              return
+            }
+
+            cancelPaymentMutation(
+              {
+                paymentId: backendPayment.payment_number || backendPayment.id.toString(),
+                request: {
+                  cancellation_reason: data.reason,
+                },
+              },
+              {
+                onSuccess: () => {
+                  setIsCancelModalOpen(false)
+                  setSelectedPayment(null)
+                  refetchPayments()
+                },
+              }
+            )
           }}
         />
       )}

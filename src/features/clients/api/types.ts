@@ -5,6 +5,7 @@
 
 export interface DebtDetail {
   id: number
+  seller_id?: number // Add seller_id for fetching seller details
   seller_company: string
   contract_number: string
   original_debt_amount: number
@@ -13,6 +14,7 @@ export interface DebtDetail {
   purchase_date?: string | null
   debt_start_date?: string | null
   debt_close_date?: string | null
+  days_past_due?: number | null // Add days_past_due (computed column from DB)
   status: string
   total_paid?: number
   last_payment_date?: string | null

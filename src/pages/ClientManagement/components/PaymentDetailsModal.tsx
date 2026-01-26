@@ -117,43 +117,13 @@ export function PaymentDetailsModal({
 
   const handleDownloadReceipt = async () => {
     try {
-      // TODO: Backend API endpoint not ready yet
-      // When backend is ready, implement the following:
-      //
-      // 1. Extract payment ID from paymentId (format: PMT-123 or just 123)
-      //    const paymentId = payment.paymentId.replace(/^PMT-/, '')
-      //
-      // 2. Call backend API endpoint:
-      //    import api from '@/lib/api'
-      //    const response = await api.get(`/api/payments/${paymentId}/receipt`, {
-      //      params: { format: 'pdf' },
-      //      responseType: 'blob',
-      //    })
-      //
-      // 3. Create blob URL and trigger download:
-      //    const blob = new Blob([response.data], { type: 'application/pdf' })
-      //    const url = URL.createObjectURL(blob)
-      //    const a = document.createElement('a')
-      //    a.href = url
-      //
-      // 4. Extract filename from Content-Disposition header or use default:
-      //    const contentDisposition = response.headers['content-disposition']
-      //    const filenameMatch = contentDisposition?.match(/filename="?([^"]+)"?/i)
-      //    const filename = filenameMatch?.[1] || `receipt_${payment.paymentId}.pdf`
-      //
-      // 5. Trigger download:
-      //    a.download = filename
-      //    document.body.appendChild(a)
-      //    a.click()
-      //    document.body.removeChild(a)
-      //    URL.revokeObjectURL(url)
-
-      // Temporary: Show message that backend is not ready
-      toast.info('Receipt download will be available when backend API is ready')
-
-      // Call the optional callback
+      // Delegate the actual download logic to the parent via callback.
+      // Different pages (DebtSummary, PaymentHistory) can implement their
+      // own receipt generation/downloading using the payment ID.
       if (onDownloadReceipt) {
         onDownloadReceipt()
+      } else {
+        toast.info('Receipt download is not configured for this view yet.')
       }
     } catch (error) {
       console.error('Error downloading receipt:', error)

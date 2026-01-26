@@ -82,6 +82,63 @@ export function PaymentVerificationQueueModal({
   const [sortBy, setSortBy] = useState('Oldest First')
   const [filter, setFilter] = useState('All Projects')
 
+  // Helper to parse MM/DD/YYYY date string to Date object
+  // This function is stable and doesn't need to be in dependencies
+  const parseDate = (dateStr: string): number => {
+    if (!dateStr) return 0
+    // Handle MM/DD/YYYY format (e.g., "01/24/2026")
+    const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(dateStr.trim())
+    if (match) {
+      const [, month, day, year] = match
+      const date = new Date(Number(year), Number(month) - 1, Number(day))
+      return date.getTime()
+    }
+    // Fallback: try ISO format or standard Date parsing
+    const fallbackDate = new Date(dateStr)
+    return isNaN(fallbackDate.getTime()) ? 0 : fallbackDate.getTime()
+  }
+
+  // Derived pending list with sort + filter applied
+  const visiblePendingPayments = useMemo(() => {
+    let list = [...pendingPayments]
+
+    // Filter by project
+    if (filter !== 'All Projects') {
+      if (filter === 'PrivatBank Collection') {
+        list = list.filter((p) => p.project === 'PrivatBank Collection')
+      } else if (filter === 'Other Project') {
+        list = list.filter((p) => p.project !== 'PrivatBank Collection')
+      }
+    }
+
+    // Sort
+    list.sort((a, b) => {
+      if (sortBy === 'Oldest First') {
+        const dateDiff = parseDate(a.date) - parseDate(b.date)
+        // If dates are equal, sort by amount (ascending) as secondary sort
+        return dateDiff !== 0 ? dateDiff : a.amount - b.amount
+      }
+      if (sortBy === 'Newest First') {
+        const dateDiff = parseDate(b.date) - parseDate(a.date)
+        // If dates are equal, sort by amount (descending) as secondary sort
+        return dateDiff !== 0 ? dateDiff : b.amount - a.amount
+      }
+      if (sortBy === 'Amount (High to Low)') {
+        const amountDiff = b.amount - a.amount
+        // If amounts are equal, sort by date (newest first) as secondary sort
+        return amountDiff !== 0 ? amountDiff : parseDate(b.date) - parseDate(a.date)
+      }
+      if (sortBy === 'Amount (Low to High)') {
+        const amountDiff = a.amount - b.amount
+        // If amounts are equal, sort by date (oldest first) as secondary sort
+        return amountDiff !== 0 ? amountDiff : parseDate(a.date) - parseDate(b.date)
+      }
+      return 0
+    })
+
+    return list
+  }, [pendingPayments, sortBy, filter])
+
   // Compute initial expanded payments based on props
   // Using key prop on Modal to reset state when initialExpandedPaymentId changes
   const initialExpandedPayments = useMemo<Set<string>>(() => {
@@ -129,7 +186,7 @@ export function PaymentVerificationQueueModal({
         <div className="mb-4 flex flex-col items-start gap-3 self-stretch sm:flex-row sm:items-start sm:justify-between">
           <span className="text-dark-500 text-lg leading-[132%] font-light tracking-[-0.4px] sm:text-xl">
             {t('pages.clients.modals.paymentVerificationQueue.pendingVerification')}{' '}
-            <span className="text-gray-700">({pendingPayments.length})</span>
+            <span className="text-gray-700">({visiblePendingPayments.length})</span>
           </span>
           <div className="flex items-center gap-3">
             <div className="flex h-6 items-center gap-3">
@@ -197,7 +254,7 @@ export function PaymentVerificationQueueModal({
 
         {/* Pending Payment Cards */}
         <div className="space-y-4">
-          {pendingPayments.map((payment) => {
+          {visiblePendingPayments.map((payment) => {
             const isExpanded = expandedPayments.has(payment.id)
             return (
               <div key={payment.id} className="mb-4 flex flex-col items-start gap-2 self-stretch">
