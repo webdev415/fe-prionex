@@ -56,7 +56,45 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     const helperId = `${inputId}-helper`
 
     const handleChange = (date: Date | null) => {
-      onChange?.({ value: date })
+      console.log('🔍 DateSelect handleChange CALLED with:', date)
+
+      // CRITICAL FIX: react-datepicker creates dates at midnight UTC
+      // When user selects Jan 26, it creates "2026-01-26T00:00:00Z"
+      // In GMT-0600, this appears as "Jan 25 2026 18:00:00" (6 PM previous day)
+      // We MUST use UTC methods to extract the date the user actually selected
+      if (date) {
+        // Use UTC methods to get the date that was actually selected
+        // react-datepicker stores dates in UTC, so we need UTC methods
+        const selectedYear = date.getUTCFullYear()
+        const selectedMonth = date.getUTCMonth()
+        const selectedDay = date.getUTCDate()
+
+        // Create a new Date at midnight LOCAL time with the UTC components
+        // This ensures the date represents exactly what the user selected
+        const normalizedDate = new Date(selectedYear, selectedMonth, selectedDay)
+
+        console.log('📅 DateSelect handleChange (FIXED):', {
+          originalDate: date,
+          originalISO: date.toISOString(),
+          originalLocalString: date.toString(),
+          utcYear: date.getUTCFullYear(),
+          utcMonth: date.getUTCMonth(),
+          utcDay: date.getUTCDate(),
+          localYear: date.getFullYear(),
+          localMonth: date.getMonth(),
+          localDay: date.getDate(),
+          selectedYear,
+          selectedMonth,
+          selectedDay,
+          normalizedDate: normalizedDate,
+          normalizedISO: normalizedDate.toISOString(),
+          normalizedLocalString: normalizedDate.toString(),
+        })
+
+        onChange?.({ value: normalizedDate })
+      } else {
+        onChange?.({ value: null })
+      }
     }
 
     return (
@@ -166,6 +204,59 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               id={inputId}
               selected={parseDate(value)}
               onChange={handleChange}
+              onSelect={(date) => {
+                // CRITICAL FIX: react-datepicker may create dates incorrectly
+                // We need to read the input field value to get what user actually selected
+                // The input shows MM/dd/yyyy format which is what the user sees
+                if (date) {
+                  // Wait for input to be updated, then read it
+                  setTimeout(() => {
+                    const input = document.getElementById(inputId) as HTMLInputElement
+                    const inputValue = input?.value || ''
+
+                    // Parse MM/dd/yyyy format from input (what user sees)
+                    const match = inputValue.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
+                    if (match) {
+                      const [, monthStr, dayStr, yearStr] = match
+                      const year = parseInt(yearStr, 10)
+                      const month = parseInt(monthStr, 10) - 1 // 0-11
+                      const day = parseInt(dayStr, 10)
+
+                      // Create Date at midnight LOCAL time
+                      const correctDate = new Date(year, month, day)
+
+                      console.log('🔧 DateSelect onSelect (FIXED from input):', {
+                        inputValue,
+                        parsed: { year, month: month + 1, day },
+                        correctDate: correctDate.toString(),
+                        correctISO: correctDate.toISOString(),
+                      })
+
+                      handleChange(correctDate)
+                    } else {
+                      // Fallback: Use date parameter's UTC representation
+                      // Extract UTC components to get what user actually selected
+                      const utcDay = date.getUTCDate()
+                      const finalYear = date.getUTCFullYear()
+                      const finalMonth = date.getUTCMonth()
+
+                      const correctDate = new Date(finalYear, finalMonth, utcDay)
+
+                      console.log('🔧 DateSelect onSelect (FALLBACK):', {
+                        originalDate: date,
+                        originalISO: date.toISOString(),
+                        utcDay,
+                        finalYear,
+                        finalMonth,
+                        correctDate: correctDate.toString(),
+                        correctISO: correctDate.toISOString(),
+                      })
+
+                      handleChange(correctDate)
+                    }
+                  }, 10) // Small delay to ensure input is updated
+                }
+              }}
               dateFormat={format}
               placeholderText={placeholder}
               disabled={disabled}
@@ -174,6 +265,8 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               aria-describedby={error ? errorId : helperText ? helperId : undefined}
               showPopperArrow={false}
               popperPlacement="bottom-start"
+              strictParsing={false}
+              shouldCloseOnSelect={true}
             />
           </div>
         </div>

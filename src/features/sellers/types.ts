@@ -57,6 +57,17 @@ export interface SellerStatistics {
  */
 export interface SellerDetail extends Seller {
   statistics?: SellerStatistics
+  // Backend fields that may be present in API response
+  legal_address?: string
+  primary_contact_name?: string
+  primary_contact_email?: string
+  primary_contact_phone?: string
+  secondary_contact_name?: string
+  secondary_contact_email?: string
+  secondary_contact_phone?: string
+  registration_number?: string
+  contract_start_date?: string
+  contract_end_date?: string
 }
 
 /**

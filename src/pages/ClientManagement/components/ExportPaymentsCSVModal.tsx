@@ -27,6 +27,10 @@ export interface ExportPaymentsCSVModalProps {
   }) => void
   totalPayments?: number
   totalAmount?: number
+  verifiedPayments?: number
+  verifiedAmount?: number
+  pendingPayments?: number
+  pendingAmount?: number
 }
 
 const CSV_COLUMNS = [
@@ -51,6 +55,10 @@ export function ExportPaymentsCSVModal({
   onExport,
   totalPayments = 498,
   totalAmount = 125450.0,
+  verifiedPayments = 0,
+  verifiedAmount = 0,
+  pendingPayments = 0,
+  pendingAmount = 0,
 }: ExportPaymentsCSVModalProps) {
   const { t, i18n } = useTranslation('common')
 
@@ -61,8 +69,9 @@ export function ExportPaymentsCSVModal({
       maximumFractionDigits: 2,
     })}`
   }
-  const [startDate, setStartDate] = useState<Date | null>(new Date('2024-11-20'))
-  const [endDate, setEndDate] = useState<Date | null>(new Date('2024-11-20'))
+  // Default to no date filter so all payments are exported unless user chooses a range
+  const [startDate, setStartDate] = useState<Date | null>(null)
+  const [endDate, setEndDate] = useState<Date | null>(null)
   const [statuses, setStatuses] = useState<string[]>(['Verified'])
   const [method, setMethod] = useState<string>('All')
   const [project, setProject] = useState<string>('All Projects')
@@ -72,26 +81,62 @@ export function ExportPaymentsCSVModal({
 
   // Calculate preview data based on filters
   const previewData = useMemo(() => {
-    const verifiedCount = statuses.includes('Verified') ? 340 : 0
-    const pendingCount = statuses.includes('Pending') ? 1 : 0
-    const verifiedAmount = statuses.includes('Verified') ? 105450.0 : 0
-    const pendingAmount = statuses.includes('Pending') ? 5450.0 : 0
-    const total = verifiedCount + pendingCount
-    const verifiedPercentage = total > 0 ? Math.round((verifiedCount / total) * 100) : 0
-    const pendingPercentage = total > 0 ? Math.round((pendingCount / total) * 100) : 0
+    // Base stats from parent (real data, not mock)
+    const baseVerifiedCount = verifiedPayments
+    const basePendingCount = pendingPayments
+    const baseCancelledCount = Math.max(0, totalPayments - baseVerifiedCount - basePendingCount)
+
+    const baseVerifiedAmount = verifiedAmount
+    const basePendingAmount = pendingAmount
+    const baseCancelledAmount = Math.max(0, totalAmount - baseVerifiedAmount - basePendingAmount)
+
+    const includeVerified = statuses.includes('Verified')
+    const includePending = statuses.includes('Pending')
+    const includeCancelled = statuses.includes('Cancelled')
+
+    const verifiedCount = includeVerified ? baseVerifiedCount : 0
+    const pendingCount = includePending ? basePendingCount : 0
+    const cancelledCount = includeCancelled ? baseCancelledCount : 0
+
+    const verifiedAmountFiltered = includeVerified ? baseVerifiedAmount : 0
+    const pendingAmountFiltered = includePending ? basePendingAmount : 0
+    const cancelledAmountFiltered = includeCancelled ? baseCancelledAmount : 0
+
+    const matchingPayments = verifiedCount + pendingCount + cancelledCount
+
+    const totalAmountFiltered =
+      verifiedAmountFiltered + pendingAmountFiltered + cancelledAmountFiltered
+
+    const totalForPercentage = verifiedCount + pendingCount
+    const verifiedPercentage =
+      totalForPercentage > 0 ? Math.round((verifiedCount / totalForPercentage) * 100) : 0
+    const pendingPercentage =
+      totalForPercentage > 0 ? Math.round((pendingCount / totalForPercentage) * 100) : 0
+
+    // Rough estimate: assume ~150 bytes per row (CSV) + header
+    const estimatedBytes = Math.max(1, matchingPayments) * 150 + 200
+    const estimatedFileSize = `~${Math.max(1, Math.round(estimatedBytes / 1024))} KB`
 
     return {
-      matchingPayments: totalPayments,
-      totalAmount,
+      matchingPayments,
+      totalAmount: totalAmountFiltered,
       verifiedCount,
-      verifiedAmount,
+      verifiedAmount: verifiedAmountFiltered,
       verifiedPercentage,
       pendingCount,
-      pendingAmount,
+      pendingAmount: pendingAmountFiltered,
       pendingPercentage,
-      estimatedFileSize: '~25 KB',
+      estimatedFileSize,
     }
-  }, [statuses, totalPayments, totalAmount])
+  }, [
+    statuses,
+    totalPayments,
+    totalAmount,
+    verifiedPayments,
+    verifiedAmount,
+    pendingPayments,
+    pendingAmount,
+  ])
 
   const handleQuickRange = (range: 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'thisYear') => {
     const now = new Date()
@@ -141,9 +186,9 @@ export function ExportPaymentsCSVModal({
   }
 
   const handleClose = () => {
-    // Reset to defaults
-    setStartDate(new Date('2024-11-20'))
-    setEndDate(new Date('2024-11-20'))
+    // Reset to defaults (no date filter, verified only)
+    setStartDate(null)
+    setEndDate(null)
     setStatuses(['Verified'])
     setMethod('All')
     setProject('All Projects')
@@ -304,7 +349,8 @@ export function ExportPaymentsCSVModal({
                   </Label>
                 </div>
                 <div className="flex flex-1 items-center gap-1">
-                  <RadioItem value="Bank Only" id="method-bank" />
+                  {/* Value matches frontend payment method label so we can map to backend */}
+                  <RadioItem value="Bank Transfer" id="method-bank" />
                   <Label
                     htmlFor="method-bank"
                     className="cursor-pointer text-xs font-light text-gray-950 sm:text-sm"
@@ -313,7 +359,8 @@ export function ExportPaymentsCSVModal({
                   </Label>
                 </div>
                 <div className="flex flex-1 items-center gap-1">
-                  <RadioItem value="Other Only" id="method-other" />
+                  {/* Value matches frontend payment method label so we can map to backend */}
+                  <RadioItem value="Other" id="method-other" />
                   <Label
                     htmlFor="method-other"
                     className="cursor-pointer text-xs font-light text-gray-950 sm:text-sm"

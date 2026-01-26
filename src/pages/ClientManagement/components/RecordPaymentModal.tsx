@@ -54,8 +54,30 @@ export function RecordPaymentModal({
   const [paymentAmount, setPaymentAmount] = useState<string>('10000.00')
   const [paymentDate, setPaymentDate] = useState<Date | null>(() => {
     // Set default date to today
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    // CRITICAL: Create a Date at midnight LOCAL time using today's date components
+    // Use Date.now() to get current timestamp, then extract local date components
+    const now = new Date()
+
+    // Get local date components (what user sees)
+    const year = now.getFullYear()
+    const month = now.getMonth()
+    const day = now.getDate()
+
+    // Create Date at midnight LOCAL time (00:00:00 local time)
+    // This ensures the date matches what the user expects (today's date)
+    const today = new Date(year, month, day, 0, 0, 0, 0)
+
+    console.log('📅 RecordPaymentModal: Initializing payment date:', {
+      now: now.toString(),
+      nowISO: now.toISOString(),
+      localYear: year,
+      localMonth: month,
+      localDay: day,
+      today: today.toString(),
+      todayISO: today.toISOString(),
+      todayLocalString: today.toLocaleDateString(),
+    })
+
     return today
   })
   const [paymentMethod, setPaymentMethod] = useState<
@@ -326,7 +348,11 @@ export function RecordPaymentModal({
                   </Label>
                   <DateSelect
                     value={paymentDate}
-                    onChange={({ value }) => setPaymentDate(value)}
+                    onChange={({ value }) => {
+                      // Date is already normalized in DateSelect component
+                      // Just set it directly
+                      setPaymentDate(value)
+                    }}
                     placeholder={t('pages.clients.modals.recordPayment.selectDate')}
                     className="rounded-md"
                     min={oneYearAgo}

@@ -1,0 +1,62 @@
+/**
+ * Payment Query Hooks
+ * React Query hooks for fetching payment data
+ */
+
+import { useQuery } from '@tanstack/react-query'
+import {
+  getPayment,
+  getPayments,
+  getClientPaymentHistory,
+  getPaymentStats,
+} from '../api/paymentApi'
+import type {
+  PaymentListParams,
+  ClientPaymentHistoryParams,
+  PaymentStatsParams,
+} from '../api/types'
+
+/**
+ * Get payment by ID
+ */
+export function usePayment(paymentId: string | number | null, enabled = true) {
+  return useQuery({
+    queryKey: ['payment', paymentId],
+    queryFn: () => getPayment(paymentId!),
+    enabled: enabled && paymentId !== null,
+  })
+}
+
+/**
+ * Get list of payments with filters
+ */
+export function usePayments(params: PaymentListParams = {}) {
+  return useQuery({
+    queryKey: ['payments', params],
+    queryFn: () => getPayments(params),
+  })
+}
+
+/**
+ * Get client payment history
+ */
+export function useClientPaymentHistory(
+  params: ClientPaymentHistoryParams,
+  options?: { enabled?: boolean }
+) {
+  return useQuery({
+    queryKey: ['client-payment-history', params],
+    queryFn: () => getClientPaymentHistory(params),
+    enabled: options?.enabled !== false && !!params.client_id,
+  })
+}
+
+/**
+ * Get payment statistics
+ */
+export function usePaymentStats(params: PaymentStatsParams = {}) {
+  return useQuery({
+    queryKey: ['payment-stats', params],
+    queryFn: () => getPaymentStats(params),
+  })
+}
