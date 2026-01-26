@@ -1,3 +1,5 @@
+import i18n from './i18n'
+
 /**
  * Formatting utilities for display
  */
@@ -20,17 +22,26 @@ export function formatPeriod(startDate?: string, endDate?: string): string {
 }
 
 /**
- * Format currency value
+ * Format currency value with ₴ symbol
+ * Uses locale-aware formatting and replaces commas with spaces (for Ukrainian/Russian locales)
+ * Example: "₴ 10 080" or "₴ 1,234" (depending on locale)
  */
-export function formatCurrency(amount?: number, currency = 'UAH'): string {
+export function formatCurrency(amount?: number): string {
   if (amount === undefined || amount === null) return '—'
 
-  return new Intl.NumberFormat('uk-UA', {
-    style: 'currency',
-    currency,
+  // Get current language from i18n, default to 'uk'
+  const currentLanguage = i18n.language || 'uk'
+  const locale = currentLanguage === 'uk' ? 'uk-UA' : currentLanguage === 'ru' ? 'ru-RU' : 'en-US'
+
+  // Format with locale-aware number formatting
+  const formatted = new Intl.NumberFormat(locale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount)
+  })
+    .format(amount)
+    .replace(/,/g, ' ') // Replace commas with spaces (for Ukrainian/Russian locales)
+
+  return `₴ ${formatted}`
 }
 
 /**

@@ -16,7 +16,7 @@ import { ProjectDetailModal } from './components/ProjectDetailModal'
 import { DeleteProjectConfirmationModal } from './components/DeleteProjectConfirmationModal'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import type { ApiProject, ApiProjectDetail, ProjectFilters } from '@/features/projects/types'
-import { formatPeriod, formatCurrency } from '@/lib/formatters'
+import { formatPeriod, formatCurrency, formatNumber } from '@/lib/formatters'
 import { DataTable, type Column, type SortConfig, type SortOrder } from '@/components/ui/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ErrorState } from '@/components/ErrorState'
@@ -299,6 +299,17 @@ export function ProjectManagementPage() {
       render: (project) => (
         <span className="text-dark-500 text-xs font-medium">
           {formatPeriod(project.start_date, project.end_date)}
+        </span>
+      ),
+    },
+    {
+      key: 'total_clients',
+      header: t('pages.projects.tableHeaders.clients'),
+      align: 'center',
+      sortable: true,
+      render: (project) => (
+        <span className="text-dark-500 text-xs font-medium">
+          {formatNumber(project.total_clients)}
         </span>
       ),
     },
