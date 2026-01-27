@@ -24,16 +24,49 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
 
   if (!log) return null
 
-  // Format timestamp with UTC
+  // Format timestamp directly from database (no conversion)
+  // Parses ISO string and extracts date/time components directly without timezone conversion
   const formatTimestamp = (timestamp: string): string => {
-    const date = new Date(timestamp)
-    const year = date.getUTCFullYear()
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
-    const day = String(date.getUTCDate()).padStart(2, '0')
-    const hours = String(date.getUTCHours()).padStart(2, '0')
-    const minutes = String(date.getUTCMinutes()).padStart(2, '0')
-    const seconds = String(date.getUTCSeconds()).padStart(2, '0')
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} UTC`
+    try {
+      // Parse ISO string directly to extract date/time components
+      // Format: "2025-01-20T11:11:00+02:00" or "2025-01-20T11:11:00Z"
+      const isoMatch = timestamp.match(
+        /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})([+-]\d{2}:\d{2}|Z)?/
+      )
+      if (isoMatch) {
+        const [, year, month, day, hours, minutes, seconds, tzOffset] = isoMatch
+        // Extract timezone label from offset
+        let tzLabel = 'UTC'
+        if (tzOffset) {
+          if (tzOffset === 'Z') {
+            tzLabel = 'UTC'
+          } else {
+            // Format offset as GMT±HH:MM
+            const sign = tzOffset[0]
+            const [offsetHours, offsetMinutes] = tzOffset.slice(1).split(':')
+            const offsetNum = parseInt(offsetHours, 10) + parseInt(offsetMinutes, 10) / 60
+            if (offsetNum === 0) {
+              tzLabel = 'UTC'
+            } else {
+              tzLabel = `GMT${sign}${Math.abs(offsetNum)}`
+            }
+          }
+        }
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} ${tzLabel}`
+      }
+
+      // Fallback to Date parsing if ISO format doesn't match
+      const date = new Date(timestamp)
+      const year = date.getUTCFullYear()
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+      const day = String(date.getUTCDate()).padStart(2, '0')
+      const hours = String(date.getUTCHours()).padStart(2, '0')
+      const minutes = String(date.getUTCMinutes()).padStart(2, '0')
+      const seconds = String(date.getUTCSeconds()).padStart(2, '0')
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} UTC`
+    } catch {
+      return timestamp
+    }
   }
 
   // Calculate change for a field
