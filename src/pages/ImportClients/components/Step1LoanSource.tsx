@@ -129,6 +129,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
             <DateSelect
               id="purchase-date"
               label={t('pages.imports.step1.purchaseDate')}
+              required
               value={
                 data.purchaseDate
                   ? (() => {
