@@ -70,6 +70,41 @@ export function formatDateTime(dateStr?: string): string {
 }
 
 /**
+ * Convert UTC datetime string to user's timezone for display
+ * @param utcDateTimeStr UTC datetime string (ISO format)
+ * @param userTimezone User's timezone (e.g., 'Europe/Kyiv')
+ * @returns Formatted datetime string in user's timezone
+ */
+export function convertUTCToUserTimezone(utcDateTimeStr: string, userTimezone?: string): string {
+  if (!utcDateTimeStr) return '—'
+
+  const utcDate = new Date(utcDateTimeStr)
+
+  if (userTimezone) {
+    // Format in user's timezone
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: userTimezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).format(utcDate)
+  }
+
+  // Fallback to browser's local timezone
+  return utcDate.toLocaleString('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+}
+
+/**
  * Truncate text with ellipsis
  */
 export function truncateText(text: string, maxLength: number): string {

@@ -17,10 +17,13 @@ import { Icons } from '@/lib/icons'
 import { ImportHistoryModal, type ImportHistoryData } from './components/ImportHistoryModal'
 import { useNavigate } from 'react-router-dom'
 import { useImportJobs, useImportJob, useCancelImport } from '@/features/imports'
+import { useAuthStore } from '@/stores/authStore'
+import { convertUTCToUserTimezone } from '@/lib/formatters'
 
 export function ImportClientsPage() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
+  const user = useAuthStore((state) => state.user)
   const [currentStep, setCurrentStep] = useState(1)
   const [showImportHistory, setShowImportHistory] = useState(false) // Change from true to false
   const [currentJobId, setCurrentJobId] = useState<number | string | null>(null)
@@ -156,10 +159,7 @@ export function ImportClientsPage() {
   const importProgress = jobDetail
     ? {
         fileName: jobDetail.file_name,
-        startedAt: new Date(jobDetail.uploaded_at).toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
+        startedAt: convertUTCToUserTimezone(jobDetail.uploaded_at, user?.timezone),
         progressPercentage: jobDetail.progress_percentage || 0,
         jobId: jobDetail.id,
         status: jobDetail.status,
@@ -167,10 +167,7 @@ export function ImportClientsPage() {
     : latestInProgressJob
       ? {
           fileName: latestInProgressJob.file_name,
-          startedAt: new Date(latestInProgressJob.uploaded_at).toLocaleTimeString('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
+          startedAt: convertUTCToUserTimezone(latestInProgressJob.uploaded_at, user?.timezone),
           progressPercentage: 0, // Will update when jobDetail loads
           jobId: latestInProgressJob.id,
           status: latestInProgressJob.status,
@@ -213,10 +210,7 @@ export function ImportClientsPage() {
     ? {
         file: jobDetailForModal.file_name,
         uploadedBy: jobDetailForModal.uploaded_by,
-        uploadedAt: new Date(jobDetailForModal.uploaded_at).toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
+        uploadedAt: convertUTCToUserTimezone(jobDetailForModal.uploaded_at, user?.timezone),
         status:
           jobDetailForModal.status === 'completed'
             ? jobDetailForModal.errors_count > 0
@@ -234,13 +228,23 @@ export function ImportClientsPage() {
       }
     : null
 
+  // Initialize purchase date: get current date/time, store as UTC
+  // The date will be displayed in user's timezone, but stored as UTC
+  const getInitialPurchaseDate = () => {
+    const now = new Date()
+    // Store current time as UTC (backend expects UTC)
+    // Display conversion happens in Step1LoanSource component
+    return now.toISOString()
+  }
+
   const [step1Data, setStep1Data] = useState<Step1Data>({
     sellerId: '',
     projectCode: '',
-    purchaseDate: new Date().toISOString().split('T')[0], // Today's date
+    purchaseDate: getInitialPurchaseDate(), // UTC datetime (backend will store as UTC)
     comment: '',
     importType: 'simple',
   })
+
   const [step2Data, setStep2Data] = useState<Step2Data>({
     csvFile: null,
     invalidFile: null,

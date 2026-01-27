@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { useNavigate } from 'react-router-dom'
 import { useExportImportErrors } from '@/features/imports'
+import { useAuthStore } from '@/stores/authStore'
+import { convertUTCToUserTimezone } from '@/lib/formatters'
 
 export type ImportStatus = 'completed' | 'completed_with_errors' | 'failed'
 
@@ -77,6 +79,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
   const { t } = useTranslation('common')
   const navigate = useNavigate()
   const exportErrorsMutation = useExportImportErrors()
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
 
   if (!data) return null
 
@@ -125,7 +128,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
                 {t('pages.imports.modal.uploadedBy')}:{' '}
               </span>
               <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] break-words sm:text-base">
-                {data.uploadedBy} at {data.uploadedAt}
+                {data.uploadedBy} at {convertUTCToUserTimezone(data.uploadedAt, userTimezone)}
               </span>
             </div>
 

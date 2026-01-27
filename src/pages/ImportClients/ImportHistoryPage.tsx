@@ -22,6 +22,8 @@ import {
 import { useImportJobs, useExportImportErrors } from '@/features/imports'
 import type { ImportJob, ImportJobsListParams } from '@/features/imports'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { useAuthStore } from '@/stores/authStore'
+import { convertUTCToUserTimezone } from '@/lib/formatters'
 
 // Types for import history data - map from API types
 export interface ImportHistoryItem {
@@ -112,6 +114,7 @@ function ImportStatusBadge({
 export function ImportHistoryPage() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
 
   // URL state for pagination
   const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
@@ -468,7 +471,11 @@ export function ImportHistoryPage() {
       key: 'dateTime',
       header: t('pages.imports.history.tableHeaders.dateTime'),
       sortable: true,
-      render: (item) => <span>{item.dateTime}</span>,
+      render: (item) => {
+        // Convert UTC datetime to user's timezone for display
+        const formattedDateTime = convertUTCToUserTimezone(item.dateTime, userTimezone)
+        return <span>{formattedDateTime}</span>
+      },
     },
     {
       key: 'fileName',

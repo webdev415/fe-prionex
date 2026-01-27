@@ -89,6 +89,7 @@ export interface User {
   asterisk_extension?: string
   is_agent?: boolean
   agent_status?: string
+  timezone?: string
 }
 
 export interface LoginRequest {
