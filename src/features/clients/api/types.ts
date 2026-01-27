@@ -169,12 +169,25 @@ export interface SearchByTinParams {
   project_id?: number
 }
 
+export interface PriorityStat {
+  count: number
+  total_debt: number
+}
+
+export interface PrioritySummary {
+  critical: PriorityStat
+  high: PriorityStat
+  medium: PriorityStat
+  low: PriorityStat
+}
+
 export interface PaginatedClientResponse {
   items: Client[]
   total: number
   page: number
   page_size: number
   total_pages: number
+  priority_summary?: PrioritySummary
 }
 
 // Assignment request/response types
