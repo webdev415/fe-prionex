@@ -96,6 +96,7 @@ export function ProjectSelector() {
           permissions: backendUser.permissions || [],
           createdAt: backendUser.created_at,
           updatedAt: backendUser.created_at,
+          timezone: backendUser.timezone,
         }
 
         // Update store state directly

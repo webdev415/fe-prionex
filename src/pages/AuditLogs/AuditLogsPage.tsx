@@ -365,29 +365,58 @@ export function AuditLogsPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
 
-  // Format timestamp for display (Nov 18\n10:30:45)
+  // Format timestamp for display (Nov 18\n10:30:45) - display directly from database
+  // Parses ISO string and extracts time components directly without timezone conversion
   const formatTimestamp = useCallback((timestamp: string): string => {
-    const date = new Date(timestamp)
-    const monthNames = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ]
-    const month = monthNames[date.getMonth()]
-    const day = date.getDate()
-    const hours = date.getHours().toString().padStart(2, '0')
-    const minutes = date.getMinutes().toString().padStart(2, '0')
-    const seconds = date.getSeconds().toString().padStart(2, '0')
-    return `${month} ${day}\n${hours}:${minutes}:${seconds}`
+    try {
+      // Parse ISO string directly to extract date/time components
+      // Format: "2025-01-20T11:11:00+02:00" or "2025-01-20T11:11:00Z"
+      const isoMatch = timestamp.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/)
+      if (isoMatch) {
+        const [, , month, day, hours, minutes, seconds] = isoMatch
+        const monthNames = [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
+        ]
+        const monthIndex = parseInt(month, 10) - 1
+        return `${monthNames[monthIndex]} ${parseInt(day, 10)}\n${hours}:${minutes}:${seconds}`
+      }
+
+      // Fallback to Date parsing if ISO format doesn't match
+      const date = new Date(timestamp)
+      const monthNames = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ]
+      const month = monthNames[date.getUTCMonth()]
+      const day = date.getUTCDate()
+      const hours = date.getUTCHours().toString().padStart(2, '0')
+      const minutes = date.getUTCMinutes().toString().padStart(2, '0')
+      const seconds = date.getUTCSeconds().toString().padStart(2, '0')
+      return `${month} ${day}\n${hours}:${minutes}:${seconds}`
+    } catch {
+      return timestamp
+    }
   }, [])
 
   // Format currency helper
