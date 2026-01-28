@@ -214,7 +214,8 @@
         "projectCode": "Project / Code",
         "client": "Client",
         "period": "Period",
-        "debt": "Debt",
+        "clients": "Total Clients",
+        "debt": "Total Debt",
         "status": "Status"
       },
       "searchFilters": {

@@ -69,6 +69,7 @@ export function usePermissionRefresh() {
             permissions: response.data.permissions || [],
             createdAt: response.data.created_at,
             updatedAt: response.data.created_at,
+            timezone: response.data.timezone,
           }
 
           // Update user in auth store using Zustand's set method

@@ -101,6 +101,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           asterisk_extension: backendUser.asterisk_extension,
           is_agent: backendUser.is_agent,
           agent_status: backendUser.agent_status,
+          timezone: backendUser.timezone,
         }
 
         set({
@@ -270,6 +271,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           asterisk_extension: backendUser.asterisk_extension,
           is_agent: backendUser.is_agent,
           agent_status: backendUser.agent_status,
+          timezone: backendUser.timezone,
         }
 
         set({
@@ -741,6 +743,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         asterisk_extension: admin_user.asterisk_extension,
         is_agent: admin_user.is_agent,
         agent_status: admin_user.agent_status,
+        timezone: admin_user.timezone,
       }
 
       // Clear stored admin from sessionStorage

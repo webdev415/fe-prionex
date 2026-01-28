@@ -28,13 +28,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   useAssignClient,
   useBulkAssignClients,
   useClients,
-  usePrioritySummary,
 } from '@/features/clients/hooks/useClients'
+import { useSearchStore } from '@/stores/searchStore'
 import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import type { Client as APIClient } from '@/features/clients/api/types'
@@ -135,9 +135,8 @@ export interface ClientFilters {
 
 export function ClientManagementPage() {
   const { t } = useTranslation('common')
-  const [searchParams, setSearchParams] = useSearchParams()
-  const searchQuery = searchParams.get('search') || ''
-  const searchType = searchParams.get('type') || 'phone'
+  // Get search state from global store (synced with header search)
+  const { searchQuery, searchType, setSearchQuery: clearSearchQuery } = useSearchStore()
   const user = useAuthStore((state) => state.user)
 
   // URL state for priority filtering
@@ -536,17 +535,32 @@ export function ClientManagementPage() {
       params.priorities = priorityValues
     }
 
+    // FILTER 11: Search (from global header search)
+    if (searchQuery.trim()) {
+      params.q = searchQuery.trim()
+      params.search_type = searchType
+    }
+
     return params
-  }, [filters, currentPage, rowsPerPage, sortBy, sortOrder, selectedPriorities])
+  }, [
+    filters,
+    currentPage,
+    rowsPerPage,
+    sortBy,
+    sortOrder,
+    selectedPriorities,
+    searchQuery,
+    searchType,
+  ])
 
   // Fetch clients from API
   const { data: clientsResponse, isLoading, isFetching, isError, error } = useClients(apiParams)
-  const { data: prioritySummaryData } = usePrioritySummary()
 
   // Extract paginated data from response
   const apiClients = useMemo(() => clientsResponse?.items || [], [clientsResponse?.items])
   const totalCount = clientsResponse?.total || 0
   const totalPages = clientsResponse?.total_pages || 1
+  const prioritySummaryData = clientsResponse?.priority_summary
 
   // Fetch priority thresholds configuration
   const { data: thresholds = DEFAULT_THRESHOLDS } = usePriorityThresholds()
@@ -579,48 +593,8 @@ export function ClientManagementPage() {
     return count
   }, [filters, selectedPriorities])
 
-  // Filter clients (search only - sorting and pagination handled server-side)
-  const filteredClients = useMemo(() => {
-    let result = [...displayClients]
-
-    // Apply search filter (client-side)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim()
-      const phoneRegex = /[\s\-()]/g
-      result = result.filter((client) => {
-        switch (searchType) {
-          case 'phone': {
-            // Search by phone number (remove spaces and special chars for comparison)
-            const phoneNormalized = client.phoneNumber.replace(phoneRegex, '').toLowerCase()
-            const queryNormalized = query.replace(phoneRegex, '')
-            return phoneNormalized.includes(queryNormalized)
-          }
-          case 'name': {
-            // Search by full name (first name, last name, middle name)
-            return client.fullName.toLowerCase().includes(query)
-          }
-          case 'tin': {
-            // Search by tax identification number
-            return client.taxIdNumber.toLowerCase().includes(query)
-          }
-          default: {
-            // Search in all fields (phone, name, TIN, creditor, tags)
-            const queryNormalized = query.replace(phoneRegex, '')
-            return (
-              client.fullName.toLowerCase().includes(query) ||
-              client.phoneNumber.replace(phoneRegex, '').toLowerCase().includes(queryNormalized) ||
-              client.taxIdNumber.toLowerCase().includes(query) ||
-              client.creditor.toLowerCase().includes(query) ||
-              client.tags.some((tag) => tag.name.toLowerCase().includes(query))
-            )
-          }
-        }
-      })
-    }
-
-    // Note: Sorting, pagination, and filters are handled server-side
-    return result
-  }, [displayClients, searchQuery, searchType])
+  // All filtering (including search) is now handled server-side
+  const filteredClients = displayClients
 
   // Map API priority summary to component format
   const priorityStats = useMemo(() => {
@@ -975,14 +949,8 @@ export function ClientManagementPage() {
     setSortBy('priority_score')
     setSortOrder('desc')
 
-    // Clear search query and type params (these don't use useURLState)
-    // Let useURLState hooks handle their own params - only clear search/type here
-    setSearchParams((prev) => {
-      const params = new URLSearchParams(prev)
-      params.delete('search')
-      params.delete('type')
-      return params
-    })
+    // Clear search query from global store
+    clearSearchQuery('')
 
     // Clear localStorage saved state
     if (STORAGE_KEY) {

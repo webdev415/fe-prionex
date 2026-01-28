@@ -377,8 +377,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isExitingImpersonation, setIsExitingImpersonation] = useState(false)
   const isOpenSideBar = useSidebarStore((state) => state.isOpenSideBar)
 
-  // Search state (query and type persisted in store across navigation)
-  const { searchQuery, searchType, setSearchQuery, setSearchType } = useSearchStore()
+  // Search state - separate local input state from applied store state
+  // Local state: for the search input (updates as user types)
+  // Store state: for the clients page (updates only on "View All Results")
+  const { setSearchQuery: setAppliedSearchQuery, setSearchType: setAppliedSearchType } =
+    useSearchStore()
+  const [localSearchQuery, setLocalSearchQuery] = useState('')
+  const [localSearchType, setLocalSearchType] = useState('phone')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
@@ -431,7 +436,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     async (query: string, type: string) => {
       // Clear results immediately when query is empty
       if (!query.trim()) {
-        setSearchQuery('')
+        setLocalSearchQuery('')
         setSearchResults([])
         setIsSearching(false)
         setSearchError(null)
@@ -440,12 +445,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       }
 
       // Only search if query or type actually changed
-      if (query === searchQuery && type === searchType && searchResults.length > 0) {
+      if (query === localSearchQuery && type === localSearchType && searchResults.length > 0) {
         return
       }
 
-      setSearchQuery(query)
-      setSearchType(type)
+      // Update local state only (not the store - that happens on "View All Results")
+      setLocalSearchQuery(query)
+      setLocalSearchType(type)
 
       setIsSearching(true)
       setSearchError(null)
@@ -487,7 +493,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         setIsSearching(false)
       }
     },
-    [searchQuery, searchType, searchResults.length, t, setSearchQuery, setSearchType]
+    [localSearchQuery, localSearchType, searchResults.length, t]
   )
 
   const handleSearchChange = useCallback(
@@ -518,15 +524,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const handleResultClick = (result: SearchResult) => {
     // Navigate to client detail page
     navigate(`/dashboard/clients/${result.id}`)
-    setSearchQuery('')
+    setLocalSearchQuery('')
     setSearchResults([])
     setShowSearchDropdown(false)
   }
 
   const handleViewAllResults = () => {
+    // Apply the search to the store (this triggers the clients page to filter)
+    setAppliedSearchQuery(localSearchQuery)
+    setAppliedSearchType(localSearchType)
     // Navigate to client management page
     navigate('/dashboard')
-    // Close dropdown but keep search query visible
+    // Close dropdown but keep search query visible in input
     setSearchResults([])
     setShowSearchDropdown(false)
   }
@@ -741,13 +750,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 onSearch={handleSearch}
                 onSearchChange={handleSearchChange}
                 isLoading={isSearching}
-                value={searchQuery}
-                searchTypeValue={searchType}
+                value={localSearchQuery}
+                searchTypeValue={localSearchType}
               />
               {showSearchDropdown && (
                 <SearchResults
-                  query={searchQuery}
-                  searchType={searchType}
+                  query={localSearchQuery}
+                  searchType={localSearchType}
                   results={searchResults}
                   isLoading={isSearching}
                   error={searchError}
