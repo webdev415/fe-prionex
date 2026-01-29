@@ -218,3 +218,33 @@ export function formatAuditLogDetailTimestamp(timestamp: string, timezone?: stri
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} UTC`
   }
 }
+
+/**
+ * Convert UTC datetime to user's timezone
+ * Returns formatted string: "MM/DD/YYYY, HH:MM:SS AM/PM"
+ */
+export function convertUTCToUserTimezone(utcDateTimeStr: string, timezone?: string): string {
+  if (!utcDateTimeStr) return '—'
+
+  try {
+    const date = new Date(utcDateTimeStr)
+
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    }
+
+    if (timezone) {
+      options.timeZone = timezone
+    }
+
+    return new Intl.DateTimeFormat('en-US', options).format(date)
+  } catch {
+    return '—'
+  }
+}

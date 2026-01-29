@@ -9,24 +9,59 @@ import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/M
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/authStore'
 
 export interface ViewSMSModalProps {
   open: boolean
   onClose: () => void
   smsData: {
-    date: string
-    time: string
+    date: string // UTC datetime string (ISO format) or date string
+    time?: string // Optional time string (for backward compatibility)
     template: string
     operator: string
     status: string
     message: string
     phone: string
+    sent_at?: string // UTC datetime string from API
+    delivered_at?: string // UTC datetime string from API
   }
 }
 
-const formatDateTime = (dateStr: string, timeStr: string, t: (key: string) => string) => {
+const formatDateTime = (
+  utcDateTimeStr: string,
+  userTimezone?: string,
+  t?: (key: string) => string
+): string => {
+  if (!utcDateTimeStr || !t) return '—'
+
   try {
-    const date = new Date(dateStr)
+    const date = new Date(utcDateTimeStr)
+    if (isNaN(date.getTime())) return utcDateTimeStr
+
+    // Use Intl.DateTimeFormat with user's timezone
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+      timeZone: userTimezone || undefined, // Use user's timezone or browser default
+    }
+
+    const formatter = new Intl.DateTimeFormat('en-US', options)
+    const parts = formatter.formatToParts(date)
+
+    // Extract parts
+    const month = parts.find((p) => p.type === 'month')?.value || ''
+    const day = parts.find((p) => p.type === 'day')?.value || ''
+    const year = parts.find((p) => p.type === 'year')?.value || ''
+    const hour = parts.find((p) => p.type === 'hour')?.value || ''
+    const minute = parts.find((p) => p.type === 'minute')?.value || ''
+    const dayPeriod = parts.find((p) => p.type === 'dayPeriod')?.value || 'AM'
+
+    // Translate month names
     const monthNames = [
       t('pages.clients.modals.viewSMS.months.jan'),
       t('pages.clients.modals.viewSMS.months.feb'),
@@ -41,22 +76,17 @@ const formatDateTime = (dateStr: string, timeStr: string, t: (key: string) => st
       t('pages.clients.modals.viewSMS.months.nov'),
       t('pages.clients.modals.viewSMS.months.dec'),
     ]
-    const month = monthNames[date.getMonth()]
-    const day = date.getDate()
-    const year = date.getFullYear()
 
-    // Format time (assuming timeStr is in HH:MM format)
-    const [hours, minutes] = timeStr.split(':')
-    const hour12 = parseInt(hours, 10) % 12 || 12
-    const ampm =
-      parseInt(hours, 10) >= 12
-        ? t('pages.clients.modals.viewSMS.time.pm')
-        : t('pages.clients.modals.viewSMS.time.am')
-    const formattedTime = `${hour12}:${minutes}:00 ${ampm}`
+    const monthName = monthNames[parseInt(month, 10) - 1]
+    const ampmText =
+      dayPeriod.toUpperCase() === 'AM'
+        ? t('pages.clients.modals.viewSMS.time.am')
+        : t('pages.clients.modals.viewSMS.time.pm')
 
-    return `${month} ${day}, ${year} ${formattedTime}`
-  } catch {
-    return `${dateStr} ${timeStr}`
+    return `${monthName} ${day}, ${year} ${hour}:${minute}:00 ${ampmText}`
+  } catch (error) {
+    console.error('Error formatting datetime:', error, utcDateTimeStr)
+    return utcDateTimeStr
   }
 }
 
@@ -83,7 +113,15 @@ const getStatusColor = (status: string) => {
 
 export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
   const { t } = useTranslation('common')
-  const dateTime = formatDateTime(smsData.date, smsData.time, t)
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
+
+  // Use sent_at if available (UTC datetime), otherwise fallback to date+time
+  const sentDateTimeStr =
+    smsData.sent_at || (smsData.time ? `${smsData.date}T${smsData.time}` : smsData.date)
+  const deliveredDateTimeStr = smsData.delivered_at || sentDateTimeStr
+
+  const dateTime = formatDateTime(sentDateTimeStr, userTimezone, t)
+  const deliveredDateTime = formatDateTime(deliveredDateTimeStr, userTimezone, t)
   const smsParts = calculateSMSParts(smsData.message)
   const hasCyrillic = /[\u0400-\u04FF]/.test(smsData.message)
   const maxChars = hasCyrillic ? 70 : 120
@@ -238,7 +276,7 @@ export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
                   {t('pages.clients.modals.viewSMS.delivered')}:
                 </span>
                 <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
-                  {dateTime}
+                  {deliveredDateTime}
                 </span>
               </div>
             </div>

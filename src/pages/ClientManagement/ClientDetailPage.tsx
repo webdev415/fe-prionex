@@ -30,6 +30,36 @@ import { TagSelectorModal } from './components/TagSelectorModal'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useOriginateCall, useCallHistory } from '@/features/calls/hooks/useCall'
 import { useCallWebSocket } from '@/features/calls/hooks/useCallWebSocket'
+import { useAuthStore } from '@/stores/authStore'
+
+// Extended types for SMS and Call items with API-specific properties
+type ExtendedSMSItem = {
+  id: number
+  date: string
+  time: string
+  message: string
+  template: string
+  operator: string
+  status: string
+  phone?: string
+  sent_at?: string
+  delivered_at?: string
+}
+
+type ExtendedCallItem = {
+  id: number
+  date: string
+  time: string
+  type: 'Incoming' | 'Outgoing'
+  duration: string
+  status: string
+  operator: string
+  phone: string
+  phoneLabel: string
+  line: string
+  call_id?: string
+  initiated_at?: string
+}
 
 // Helper function to create mock client detail
 const createMockClientDetail = (
@@ -848,6 +878,7 @@ export function ClientDetailPage() {
 
   // Get current user for call integration
   const { user } = useAuth()
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
   const { mutate: originateCall, isPending: isOriginatingCall } = useOriginateCall()
 
   // Track call error state for displaying in modal
@@ -949,14 +980,39 @@ export function ClientDetailPage() {
             ? 'Failed'
             : 'Pending'
 
+      // Format date and time using user's timezone
+      const dateFormatter = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        timeZone: userTimezone || undefined,
+      })
+      const timeFormatter = new Intl.DateTimeFormat('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: userTimezone || undefined,
+      })
+
+      const dateParts = dateFormatter.formatToParts(sentAt)
+      const year = dateParts.find((p) => p.type === 'year')?.value || ''
+      const month = dateParts.find((p) => p.type === 'month')?.value || ''
+      const day = dateParts.find((p) => p.type === 'day')?.value || ''
+      const dateStr = `${year}-${month}-${day}`
+
+      const timeStr = timeFormatter.format(sentAt)
+
       return {
         id: index + 1,
-        date: sentAt.toISOString().split('T')[0],
-        time: sentAt.toTimeString().slice(0, 5), // HH:MM format
+        date: dateStr,
+        time: timeStr,
         message: sms.message_text || '',
         template: sms.template_name || '',
         operator: sms.operator_name || '',
         status: statusStr as 'Delivered' | 'Pending' | 'Failed',
+        sent_at: sms.sent_at, // Keep original UTC timestamp for modal
+        delivered_at: sms.delivered_at, // Keep original UTC timestamp for modal
+        phone: apiClient?.phone_primary || '', // Use client's phone number
       }
     })
 
@@ -981,10 +1037,32 @@ export function ClientDetailPage() {
       // Determine call type (Incoming vs Outgoing)
       const callType = call.agent_extension ? 'Outgoing' : 'Incoming'
 
+      // Format date and time using user's timezone
+      const dateFormatter = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        timeZone: userTimezone || undefined,
+      })
+      const timeFormatter = new Intl.DateTimeFormat('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: userTimezone || undefined,
+      })
+
+      const dateParts = dateFormatter.formatToParts(initiatedAt)
+      const year = dateParts.find((p) => p.type === 'year')?.value || ''
+      const month = dateParts.find((p) => p.type === 'month')?.value || ''
+      const day = dateParts.find((p) => p.type === 'day')?.value || ''
+      const dateStr = `${year}-${month}-${day}`
+
+      const timeStr = timeFormatter.format(initiatedAt)
+
       return {
         id: index + 1,
-        date: initiatedAt.toISOString().split('T')[0],
-        time: initiatedAt.toTimeString().slice(0, 5), // HH:MM format
+        date: dateStr,
+        time: timeStr,
         duration: durationStr,
         status: statusStr as 'Answered' | 'No Answer',
         type: callType as 'Incoming' | 'Outgoing',
@@ -993,6 +1071,7 @@ export function ClientDetailPage() {
         line: 'White Line', // TODO: Get from backend if available
         operator: 'Agent', // TODO: Get operator name from backend
         call_id: call.call_id, // Include call_id for recording playback
+        initiated_at: call.initiated_at, // Keep original UTC timestamp for grouping
       }
     })
 
@@ -1030,12 +1109,12 @@ export function ClientDetailPage() {
         registrationAddress: apiClient.address || mockClient.addresses.registrationAddress,
       },
       callSmsHistory: {
-        ...mockClient.callSmsHistory,
-        calls: mappedCallHistory as typeof mockClient.callSmsHistory.calls, // Use real API data instead of mock
-        sms: mappedSmsHistory as typeof mockClient.callSmsHistory.sms, // Use real API data instead of mock
+        all: mockClient.callSmsHistory.all, // Keep mock 'all' property
+        calls: mappedCallHistory, // Use real API data instead of mock
+        sms: mappedSmsHistory, // Use real API data instead of mock
       },
     }
-  }, [apiClient, smsHistoryData, callHistoryData])
+  }, [apiClient, smsHistoryData, callHistoryData, userTimezone])
 
   // Tags are now fetched from useClientTags hook instead of local state
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
@@ -1062,6 +1141,8 @@ export function ClientDetailPage() {
     status: string
     message: string
     phone: string
+    sent_at?: string // UTC timestamp from API
+    delivered_at?: string // UTC timestamp from API
   } | null>(null)
   const [isSendSMSModalOpen, setIsSendSMSModalOpen] = useState(false)
   const [selectedPhoneForSMS, setSelectedPhoneForSMS] = useState<string>('')
@@ -2529,32 +2610,32 @@ export function ClientDetailPage() {
 
                         const grouped = allItems.reduce(
                           (acc, item) => {
-                            const date = new Date(item.date).toLocaleDateString('en-US', {
+                            // Use original UTC timestamp (sent_at for SMS, initiated_at for calls) instead of date string
+                            const timestamp =
+                              item.itemType === 'sms'
+                                ? (item as ExtendedSMSItem & { itemType: 'sms' }).sent_at ||
+                                  item.date
+                                : (item as ExtendedCallItem & { itemType: 'call' }).initiated_at ||
+                                  item.date
+                            const date = new Date(timestamp).toLocaleDateString('en-US', {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric',
+                              timeZone: userTimezone || undefined,
                             })
                             if (!acc[date]) acc[date] = { calls: [], sms: [] }
                             if (item.itemType === 'call') {
-                              acc[date].calls.push(
-                                item as (typeof client.callSmsHistory.calls)[0] & {
-                                  itemType: 'call'
-                                }
-                              )
+                              acc[date].calls.push(item as ExtendedCallItem & { itemType: 'call' })
                             } else {
-                              acc[date].sms.push(
-                                item as (typeof client.callSmsHistory.sms)[0] & { itemType: 'sms' }
-                              )
+                              acc[date].sms.push(item as ExtendedSMSItem & { itemType: 'sms' })
                             }
                             return acc
                           },
                           {} as Record<
                             string,
                             {
-                              calls: ((typeof client.callSmsHistory.calls)[0] & {
-                                itemType: 'call'
-                              })[]
-                              sms: ((typeof client.callSmsHistory.sms)[0] & { itemType: 'sms' })[]
+                              calls: (ExtendedCallItem & { itemType: 'call' })[]
+                              sms: (ExtendedSMSItem & { itemType: 'sms' })[]
                             }
                           >
                         )
@@ -2601,6 +2682,9 @@ export function ClientDetailPage() {
                                     template={sms.template}
                                     message={sms.message}
                                     operator={sms.operator}
+                                    phone={sms.phone}
+                                    sent_at={sms.sent_at}
+                                    delivered_at={sms.delivered_at}
                                     icon={<Icons.Chat size={24} className="text-secondary-800" />}
                                     setSelectedSMSData={setSelectedSMSData}
                                     setIsViewSMSModalOpen={setIsViewSMSModalOpen}
@@ -2687,16 +2771,22 @@ export function ClientDetailPage() {
                         {(() => {
                           const groupedCalls = client.callSmsHistory.calls.reduce(
                             (acc, call) => {
-                              const date = new Date(call.date).toLocaleDateString('en-US', {
+                              // Use initiated_at (full UTC timestamp) instead of date string for correct timezone conversion
+                              const timestamp =
+                                'initiated_at' in call && call.initiated_at
+                                  ? call.initiated_at
+                                  : call.date
+                              const date = new Date(timestamp).toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'long',
                                 day: 'numeric',
+                                timeZone: userTimezone || undefined,
                               })
                               if (!acc[date]) acc[date] = []
-                              acc[date].push(call)
+                              acc[date].push(call as ExtendedCallItem)
                               return acc
                             },
-                            {} as Record<string, typeof client.callSmsHistory.calls>
+                            {} as Record<string, ExtendedCallItem[]>
                           )
 
                           return Object.entries(groupedCalls)
@@ -2783,16 +2873,20 @@ export function ClientDetailPage() {
                         {(() => {
                           const groupedSms = client.callSmsHistory.sms.reduce(
                             (acc, sms) => {
-                              const date = new Date(sms.date).toLocaleDateString('en-US', {
+                              // Use sent_at (full UTC timestamp) instead of date string for correct timezone conversion
+                              const timestamp =
+                                'sent_at' in sms && sms.sent_at ? sms.sent_at : sms.date
+                              const date = new Date(timestamp).toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'long',
                                 day: 'numeric',
+                                timeZone: userTimezone || undefined,
                               })
                               if (!acc[date]) acc[date] = []
-                              acc[date].push(sms)
+                              acc[date].push(sms as ExtendedSMSItem)
                               return acc
                             },
-                            {} as Record<string, typeof client.callSmsHistory.sms>
+                            {} as Record<string, ExtendedSMSItem[]>
                           )
 
                           return Object.entries(groupedSms)
@@ -2814,6 +2908,9 @@ export function ClientDetailPage() {
                                       template={sms.template}
                                       message={sms.message}
                                       operator={sms.operator}
+                                      phone={sms.phone}
+                                      sent_at={sms.sent_at}
+                                      delivered_at={sms.delivered_at}
                                       icon={
                                         <Icons.ChatFeedback01
                                           size={20}
