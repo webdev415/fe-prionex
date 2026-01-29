@@ -7,6 +7,7 @@ import { useAuth } from '@/features/auth'
 import { authApi } from '@/features/auth/api/authApi'
 import { useUpdateUser } from '@/features/users/hooks/useUpdateUser'
 import { timezoneOptions } from '@/features/users/schemas/userSchemas'
+import { useAuthStore } from '@/stores/authStore'
 import { Input } from '@/components/ui/Input'
 import { ProjectSelector } from '@/components/layout/ProjectSelector'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
@@ -22,7 +23,8 @@ import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ChangePasswordModal } from '@/features/auth'
 export function ProfileSettingsPage() {
-  const { user, isLoading: authLoading, updateCurrentUser } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
+  const refreshUser = useAuthStore((state) => state.refreshUser)
   const { t, i18n } = useTranslation('common')
   const { mutateAsync: updateUserMutateAsync } = useUpdateUser()
   const [isUpdatingLocal, setIsUpdatingLocal] = useState(false)
@@ -41,7 +43,7 @@ export function ProfileSettingsPage() {
       middle_name: '',
       phone: '',
       language: currentLanguage,
-      timezone: 'Europe/Kyiv',
+      timezone: user?.timezone || 'Europe/Kyiv',
       agent_status: user?.agent_status || 'offline',
       currentPassword: '',
       newPassword: '',
@@ -105,13 +107,10 @@ export function ProfileSettingsPage() {
     try {
       setIsUpdatingLocal(true)
       await updateUserMutateAsync({ userId: Number(user.id), data: updatePayload })
-      // Update auth store directly with new values to sync left sidebar
-      updateCurrentUser({
-        email: form.email,
-        firstName: form.first_name,
-        lastName: form.last_name,
-        agent_status: form.agent_status,
-      })
+
+      // Refresh user data from backend to get updated timezone
+      await refreshUser()
+
       setForm((f) => ({ ...f, currentPassword: '', newPassword: '' }))
     } finally {
       setIsUpdatingLocal(false)

@@ -79,42 +79,6 @@ export function formatDateTime(dateStr?: string): string {
     minute: '2-digit',
   })
 }
-
-/**
- * Convert UTC datetime string to user's timezone for display
- * @param utcDateTimeStr UTC datetime string (ISO format)
- * @param userTimezone User's timezone (e.g., 'Europe/Kyiv')
- * @returns Formatted datetime string in user's timezone
- */
-export function convertUTCToUserTimezone(utcDateTimeStr: string, userTimezone?: string): string {
-  if (!utcDateTimeStr) return '—'
-
-  const utcDate = new Date(utcDateTimeStr)
-
-  if (userTimezone) {
-    // Format in user's timezone
-    return new Intl.DateTimeFormat('en-US', {
-      timeZone: userTimezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    }).format(utcDate)
-  }
-
-  // Fallback to browser's local timezone
-  return utcDate.toLocaleString('en-US', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
-}
-
 /**
  * Truncate text with ellipsis
  */
@@ -251,5 +215,35 @@ export function formatAuditLogDetailTimestamp(timestamp: string, timezone?: stri
     const minutes = String(date.getUTCMinutes()).padStart(2, '0')
     const seconds = String(date.getUTCSeconds()).padStart(2, '0')
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} UTC`
+  }
+}
+
+/**
+ * Convert UTC datetime to user's timezone
+ * Returns formatted string: "MM/DD/YYYY, HH:MM:SS AM/PM"
+ */
+export function convertUTCToUserTimezone(utcDateTimeStr: string, timezone?: string): string {
+  if (!utcDateTimeStr) return '—'
+
+  try {
+    const date = new Date(utcDateTimeStr)
+
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    }
+
+    if (timezone) {
+      options.timeZone = timezone
+    }
+
+    return new Intl.DateTimeFormat('en-US', options).format(date)
+  } catch {
+    return '—'
   }
 }

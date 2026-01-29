@@ -27,6 +27,8 @@ type SMSData = {
   status: string
   message: string
   phone: string
+  sent_at?: string
+  delivered_at?: string
 }
 
 type CallLogCardProps = {
@@ -45,6 +47,8 @@ type CallLogCardProps = {
   clientName?: string
   icon?: React.ReactNode
   call_id?: string
+  sent_at?: string
+  delivered_at?: string
   setSelectedCallData?: React.Dispatch<React.SetStateAction<CallData | null>>
   setIsCallRecordingModalOpen?: (open: boolean) => void
   setSelectedSMSData?: React.Dispatch<React.SetStateAction<SMSData | null>>
@@ -79,6 +83,8 @@ export function CallLogCard({
   clientName,
   className,
   call_id,
+  sent_at,
+  delivered_at,
   setSelectedCallData,
   setIsCallRecordingModalOpen,
   setSelectedSMSData,
@@ -182,6 +188,8 @@ export function CallLogCard({
         status: status || '',
         message: message || '',
         phone: phone || '',
+        sent_at: sent_at,
+        delivered_at: delivered_at,
       })
       setIsViewSMSModalOpen?.(true)
     }
