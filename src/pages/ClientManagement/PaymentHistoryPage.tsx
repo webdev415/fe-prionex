@@ -6,6 +6,8 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { useAuthStore } from '@/stores/authStore'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useURLState, useAutoPersistedState } from '@/hooks'
@@ -55,7 +57,6 @@ import { useUser } from '@/features/users/hooks/useUser'
 import {
   backendToFrontendPaymentMethod,
   backendToFrontendPaymentStatus,
-  formatPaymentDate,
   isPaymentLessThan7DaysOld,
   frontendToBackendPaymentMethod,
   frontendToBackendPaymentStatus,
@@ -90,6 +91,7 @@ const mockClientDetail = {
 
 export function PaymentHistoryPage() {
   const { t, i18n } = useTranslation('common')
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
 
@@ -284,7 +286,16 @@ export function PaymentHistoryPage() {
   const convertBackendPayment = useCallback((backendPayment: BackendPayment): Payment => {
     return {
       id: backendPayment.id,
-      date: formatPaymentDate(backendPayment.payment_date),
+      // Use appropriate datetime based on status:
+      // - verified: verified_at (when verified)
+      // - cancelled: reversed_at (when cancelled)
+      // - pending: recorded_at (when recorded)
+      date:
+        backendPayment.status === 'verified' && backendPayment.verified_at
+          ? backendPayment.verified_at
+          : backendPayment.status === 'cancelled' && backendPayment.reversed_at
+            ? backendPayment.reversed_at
+            : backendPayment.recorded_at,
       amount: Number(backendPayment.amount),
       method: backendToFrontendPaymentMethod(backendPayment.payment_method),
       status: backendToFrontendPaymentStatus(backendPayment.status),
@@ -1427,11 +1438,13 @@ export function PaymentHistoryPage() {
                           (p) => p.id === payment.id || p.payment_number === payment.reference
                         )
 
-                        // Always format from backend payment_date to ensure consistency
-                        // backendPayment.payment_date is in format "YYYY-MM-DD" (e.g., "2026-01-26")
-                        // This matches exactly what's stored in the database and what's sent to client-service
-                        const displayDate = backendPayment?.payment_date
-                          ? formatPaymentDate(backendPayment.payment_date)
+                        // Use appropriate datetime based on status
+                        const displayDate = backendPayment
+                          ? backendPayment.status === 'verified' && backendPayment.verified_at
+                            ? backendPayment.verified_at
+                            : backendPayment.status === 'cancelled' && backendPayment.reversed_at
+                              ? backendPayment.reversed_at
+                              : backendPayment.recorded_at
                           : payment.date // Fallback only if backend payment not found (shouldn't happen)
 
                         return (
@@ -1442,7 +1455,7 @@ export function PaymentHistoryPage() {
                             }`}
                           >
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
-                              {displayDate}
+                              {convertUTCToUserTimezone(displayDate, userTimezone)}
                             </td>
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
                               {formatCurrency(payment.amount)}
@@ -1711,8 +1724,11 @@ export function PaymentHistoryPage() {
               ? backendToFrontendPaymentStatus(paymentDetails.status)
               : selectedPayment.status,
             amount: paymentDetails ? Number(paymentDetails.amount) : selectedPayment.amount,
+            // Use verified_at for verified payments, recorded_at for others
             paymentDate: paymentDetails
-              ? formatPaymentDate(paymentDetails.payment_date)
+              ? paymentDetails.status === 'verified' && paymentDetails.verified_at
+                ? paymentDetails.verified_at
+                : paymentDetails.recorded_at
               : selectedPayment.date,
             method: paymentDetails
               ? backendToFrontendPaymentMethod(paymentDetails.payment_method)
@@ -1736,19 +1752,13 @@ export function PaymentHistoryPage() {
             // Audit trail from backend, fallback to 'Unknown'
             // Format dates consistently with payment date (MM/DD/YYYY)
             createdBy: paymentDetails?.recorded_by_username || 'Unknown',
-            createdAt: paymentDetails?.recorded_at
-              ? formatPaymentDate(paymentDetails.recorded_at.split('T')[0]) // Extract date part only
-              : 'Unknown',
+            createdAt: paymentDetails?.recorded_at || 'Unknown',
             verifiedBy: paymentDetails?.verified_by_username,
-            verifiedAt: paymentDetails?.verified_at
-              ? formatPaymentDate(paymentDetails.verified_at.split('T')[0]) // Extract date part only
-              : undefined,
+            verifiedAt: paymentDetails?.verified_at || undefined,
             cancelledBy:
               cancelledByUser?.username ||
               (paymentDetails?.reversed_by_user_id ? 'Unknown' : undefined),
-            cancelledAt: paymentDetails?.reversed_at
-              ? formatPaymentDate(paymentDetails.reversed_at.split('T')[0]) // Extract date part only
-              : undefined,
+            cancelledAt: paymentDetails?.reversed_at || undefined,
             cancellationReason: paymentDetails?.reversal_reason,
           }}
           onCancelPayment={handleCancelPayment}

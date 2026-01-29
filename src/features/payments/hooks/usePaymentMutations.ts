@@ -5,6 +5,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useAuthStore } from '@/stores/authStore'
 import {
   recordPayment,
   verifyPayment,
@@ -177,6 +178,8 @@ export function useEditPayment() {
  * Generate payment receipt using frontend PDF generator
  */
 export function useGenerateReceipt() {
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
+
   return useMutation<
     { success: boolean } | Payment,
     unknown,
@@ -364,7 +367,7 @@ export function useGenerateReceipt() {
 
       // For PDF format, generate using frontend generator
       if (format === 'pdf') {
-        generateReceiptPDF(paymentData, finalClientData, companyData)
+        generateReceiptPDF(paymentData, finalClientData, companyData, userTimezone)
         return { success: true }
       }
 

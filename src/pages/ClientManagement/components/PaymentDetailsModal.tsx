@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { useAuthStore } from '@/stores/authStore'
 // TODO: When backend API is ready, import: import api from '@/lib/api'
 
 export interface PaymentDetails {
@@ -57,6 +59,7 @@ export function PaymentDetailsModal({
   onDownloadReceipt,
 }: PaymentDetailsModalProps) {
   const { t, i18n } = useTranslation('common')
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
 
   const formatCurrency = (amount: number) => {
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
@@ -239,7 +242,9 @@ export function PaymentDetailsModal({
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.paymentDetails.paymentDate')}{' '}
-                      <span className="font-medium">{payment.paymentDate}</span>
+                      <span className="font-medium">
+                        {convertUTCToUserTimezone(payment.paymentDate, userTimezone)}
+                      </span>
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
@@ -413,7 +418,9 @@ export function PaymentDetailsModal({
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.paymentDetails.createdAt')}{' '}
-                      <span className="font-medium">{payment.createdAt}</span>
+                      <span className="font-medium">
+                        {convertUTCToUserTimezone(payment.createdAt, userTimezone)}
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -431,7 +438,9 @@ export function PaymentDetailsModal({
                       <div className="flex items-start gap-6 self-stretch">
                         <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                           {t('pages.clients.modals.paymentDetails.verifiedAt')}{' '}
-                          <span className="font-medium">{payment.verifiedAt}</span>
+                          <span className="font-medium">
+                            {convertUTCToUserTimezone(payment.verifiedAt, userTimezone)}
+                          </span>
                         </span>
                       </div>
                     </div>
@@ -451,7 +460,9 @@ export function PaymentDetailsModal({
                       <div className="flex items-start gap-6 self-stretch">
                         <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                           {t('pages.clients.modals.paymentDetails.cancelledAt')}{' '}
-                          <span className="font-medium">{payment.cancelledAt}</span>
+                          <span className="font-medium">
+                            {convertUTCToUserTimezone(payment.cancelledAt, userTimezone)}
+                          </span>
                         </span>
                       </div>
                     </div>
