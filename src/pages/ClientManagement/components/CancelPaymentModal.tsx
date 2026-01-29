@@ -6,6 +6,8 @@
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { useAuthStore } from '@/stores/authStore'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import {
@@ -43,6 +45,7 @@ export interface CancelPaymentModalProps {
 
 export function CancelPaymentModal({ open, onClose, payment, onConfirm }: CancelPaymentModalProps) {
   const { t, i18n } = useTranslation('common')
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
 
   const formatCurrency = (amount: number) => {
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
@@ -136,7 +139,9 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.paymentDate')}{' '}
-                      <span className="font-medium">{payment.paymentDate}</span>
+                      <span className="font-medium">
+                        {convertUTCToUserTimezone(payment.paymentDate, userTimezone)}
+                      </span>
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
@@ -214,7 +219,9 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.created')}{' '}
-                      <span className="font-medium">{payment.createdAt}</span>
+                      <span className="font-medium">
+                        {convertUTCToUserTimezone(payment.createdAt, userTimezone)}
+                      </span>
                     </span>
                   </div>
                 </div>

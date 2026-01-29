@@ -6,6 +6,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { useAuthStore } from '@/stores/authStore'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
@@ -35,7 +37,6 @@ import {
   frontendToBackendPaymentMethod,
   backendToFrontendPaymentMethod,
   backendToFrontendPaymentStatus,
-  formatPaymentDate,
 } from '@/features/payments/utils'
 
 // Import the same mock client data structure from ClientDetailPage
@@ -392,6 +393,7 @@ const calculateDaysPastDue = (
 
 export function DebtSummaryPage() {
   const { t, i18n } = useTranslation('common')
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [debtSummary, setDebtSummary] = useState<DebtSummaryData | null>(null)
@@ -550,9 +552,23 @@ export function DebtSummaryPage() {
   // Helper function to check if payment date is less than 7 days old
   const isPaymentLessThan7DaysOld = useCallback((paymentDate: string): boolean => {
     try {
-      // Parse payment date in format MM/DD/YYYY
-      const [month, day, year] = paymentDate.split('/')
-      const paymentDateObj = new Date(Number(year), Number(month) - 1, Number(day))
+      // Payment date can be either datetime string (ISO format) or date string (MM/DD/YYYY)
+      // Handle both formats
+      let paymentDateObj: Date
+
+      if (paymentDate.includes('T') || paymentDate.includes('-')) {
+        // ISO datetime format: "2026-01-29T05:31:36" or "2026-01-29T05:31:36Z"
+        // Add Z if not present to ensure UTC parsing
+        let dateStr = paymentDate
+        if (!dateStr.endsWith('Z') && !dateStr.includes('+')) {
+          dateStr = dateStr + 'Z'
+        }
+        paymentDateObj = new Date(dateStr)
+      } else {
+        // Legacy MM/DD/YYYY format
+        const [month, day, year] = paymentDate.split('/')
+        paymentDateObj = new Date(Number(year), Number(month) - 1, Number(day))
+      }
 
       // Check if date is valid
       if (isNaN(paymentDateObj.getTime())) {
@@ -582,7 +598,16 @@ export function DebtSummaryPage() {
     // Map backend payments (may be empty) to frontend payments
     const payments: Payment[] = (paymentHistoryData?.payments || []).map((p) => ({
       id: p.id,
-      date: formatPaymentDate(p.payment_date),
+      // Use appropriate datetime based on status:
+      // - verified: verified_at (when verified)
+      // - cancelled: reversed_at (when cancelled)
+      // - pending: recorded_at (when recorded)
+      date:
+        p.status === 'verified' && p.verified_at
+          ? p.verified_at
+          : p.status === 'cancelled' && p.reversed_at
+            ? p.reversed_at
+            : p.recorded_at,
       amount: Number(p.amount),
       method: backendToFrontendPaymentMethod(p.payment_method),
       status: backendToFrontendPaymentStatus(p.status),
@@ -631,7 +656,8 @@ export function DebtSummaryPage() {
         })
         const mostRecent = sorted[0] // First = most recent
         lastPaymentAmount = mostRecent.amount
-        lastPaymentDate = formatPaymentDate(mostRecent.payment_date)
+        // Use verified_at timestamp (has actual time when verified)
+        lastPaymentDate = mostRecent.verified_at || mostRecent.recorded_at
       }
     }
 
@@ -1371,7 +1397,7 @@ export function DebtSummaryPage() {
                 {formatCurrency(debtSummary.lastPayment.amount)}
               </span>
               <span className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
-                {debtSummary.lastPayment.date}
+                {convertUTCToUserTimezone(debtSummary.lastPayment.date, userTimezone)}
               </span>
             </div>
           </div>
@@ -1465,7 +1491,7 @@ export function DebtSummaryPage() {
                             }`}
                           >
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
-                              {payment.date}
+                              {convertUTCToUserTimezone(payment.date, userTimezone)}
                             </td>
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
                               {formatCurrency(payment.amount)}
@@ -1722,12 +1748,12 @@ export function DebtSummaryPage() {
             amount:
               paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.amount ??
               selectedPayment.amount,
-            paymentDate: paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
-              ?.payment_date
-              ? formatPaymentDate(
-                  paymentHistoryData.payments.find((p) => p.id === selectedPayment.id)!.payment_date
-                )
-              : selectedPayment.date,
+            // Use verified_at for verified payments, recorded_at for others
+            paymentDate: (() => {
+              const bp = paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
+              if (!bp) return selectedPayment.date
+              return bp.status === 'verified' && bp.verified_at ? bp.verified_at : bp.recorded_at
+            })(),
             method: normalizePaymentMethod(selectedPayment.method),
             reference:
               paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
@@ -1750,39 +1776,24 @@ export function DebtSummaryPage() {
             createdBy:
               paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
                 ?.recorded_by_username || 'Unknown',
-            createdAt: paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
-              ?.recorded_at
-              ? formatPaymentDate(
-                  paymentHistoryData.payments
-                    .find((p) => p.id === selectedPayment.id)!
-                    .recorded_at.split('T')[0]
-                )
-              : 'Unknown',
+            createdAt:
+              paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.recorded_at ||
+              'Unknown',
             verifiedBy:
               paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
                 ?.verified_by_username || undefined,
-            verifiedAt: paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
-              ?.verified_at
-              ? formatPaymentDate(
-                  paymentHistoryData.payments
-                    .find((p) => p.id === selectedPayment.id)!
-                    .verified_at!.split('T')[0]
-                )
-              : undefined,
+            verifiedAt:
+              paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.verified_at ||
+              undefined,
             cancelledBy:
               cancelledByUser?.username ||
               (paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
                 ?.reversed_by_user_id
                 ? 'Unknown'
                 : undefined),
-            cancelledAt: paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
-              ?.reversed_at
-              ? formatPaymentDate(
-                  paymentHistoryData.payments
-                    .find((p) => p.id === selectedPayment.id)!
-                    .reversed_at!.split('T')[0]
-                )
-              : undefined,
+            cancelledAt:
+              paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.reversed_at ||
+              undefined,
             cancellationReason:
               paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
                 ?.reversal_reason || undefined,

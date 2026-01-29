@@ -379,6 +379,7 @@ export interface PaymentReceiptData {
   companyAddress?: string
   companyPhone?: string
   companyEmail?: string
+  userTimezone?: string // User's timezone for date formatting
 }
 
 const formatCurrency = (amount: number): string => {
@@ -450,18 +451,77 @@ const renderCurrency = (
   }
 }
 
-const formatDate = (dateString: string): string => {
+const formatDate = (dateString: string, timezone?: string): string => {
   try {
-    const d = new Date(dateString)
+    // Append Z if missing to ensure UTC parsing
+    let dateStr = dateString
+    if (
+      (dateStr.includes('T') || dateStr.includes(' ')) &&
+      !dateStr.endsWith('Z') &&
+      !dateStr.includes('+')
+    ) {
+      dateStr = dateStr.replace(' ', 'T') + 'Z'
+    }
+
+    const d = new Date(dateStr)
+
+    // Format date using timezone if provided
+    if (timezone) {
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        timeZone: timezone,
+      })
+      const parts = formatter.formatToParts(d)
+      const year = parts.find((p) => p.type === 'year')?.value || ''
+      const month = parts.find((p) => p.type === 'month')?.value || ''
+      const day = parts.find((p) => p.type === 'day')?.value || ''
+      return `${year}-${month}-${day}`
+    }
+
     return d.toISOString().split('T')[0]
   } catch {
     return dateString
   }
 }
 
-const formatDateTime = (dateString: string): string => {
+const formatDateTime = (dateString: string, timezone?: string): string => {
   try {
-    const d = new Date(dateString)
+    // Append Z if missing to ensure UTC parsing
+    let dateStr = dateString
+    if (
+      (dateStr.includes('T') || dateStr.includes(' ')) &&
+      !dateStr.endsWith('Z') &&
+      !dateStr.includes('+')
+    ) {
+      dateStr = dateStr.replace(' ', 'T') + 'Z'
+    }
+
+    const d = new Date(dateStr)
+
+    // Format datetime using timezone if provided
+    if (timezone) {
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZone: timezone,
+      })
+      const parts = formatter.formatToParts(d)
+      const year = parts.find((p) => p.type === 'year')?.value || ''
+      const month = parts.find((p) => p.type === 'month')?.value || ''
+      const day = parts.find((p) => p.type === 'day')?.value || ''
+      const hour = parts.find((p) => p.type === 'hour')?.value || ''
+      const minute = parts.find((p) => p.type === 'minute')?.value || ''
+      const second = parts.find((p) => p.type === 'second')?.value || ''
+      return `${year}-${month}-${day} ${hour}:${minute}:${second}`
+    }
+
     const yyyy = d.getFullYear()
     const mm = String(d.getMonth() + 1).padStart(2, '0')
     const dd = String(d.getDate()).padStart(2, '0')
@@ -629,7 +689,7 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
   y += 6
   kv('Payment ID:', data.paymentId, y)
   y += 6
-  kv('Date Issued:', formatDate(data.dateIssued), y)
+  kv('Date Issued:', formatDate(data.dateIssued, data.userTimezone), y)
   y += 12
 
   // ===== Client Information =====
@@ -647,7 +707,7 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
   // ===== Payment Details =====
   section('Payment Details', y)
   y += 8
-  kv('Payment Date:', formatDate(data.paymentDate), y)
+  kv('Payment Date:', formatDate(data.paymentDate, data.userTimezone), y)
   y += 6
   kv('Payment Method:', data.paymentMethod, y)
   y += 6
@@ -752,7 +812,7 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
   }
 
   if (data.verifiedOn) {
-    kv('Verified on:', formatDateTime(data.verifiedOn), y)
+    kv('Verified on:', formatDateTime(data.verifiedOn, data.userTimezone), y)
     y += 6
   }
 
@@ -795,9 +855,14 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
   doc.setFontSize(fsFooter)
   doc.setFont('NotoSans', 'normal')
   setText(FOOTER)
-  doc.text(`Generated: ${formatDateTime(new Date().toISOString())}`, xRight, pageH - marginX, {
-    align: 'right',
-  })
+  doc.text(
+    `Generated: ${formatDateTime(new Date().toISOString(), data.userTimezone)}`,
+    xRight,
+    pageH - marginX,
+    {
+      align: 'right',
+    }
+  )
   setText(TEXT)
 
   doc.save(`Payment_Receipt_${data.receiptNumber}.pdf`)

@@ -221,12 +221,24 @@ export function formatAuditLogDetailTimestamp(timestamp: string, timezone?: stri
 /**
  * Convert UTC datetime to user's timezone
  * Returns formatted string: "MM/DD/YYYY, HH:MM:SS AM/PM"
+ * If no timezone provided, defaults to UTC to ensure consistent behavior
  */
 export function convertUTCToUserTimezone(utcDateTimeStr: string, timezone?: string): string {
   if (!utcDateTimeStr) return '—'
 
   try {
-    const date = new Date(utcDateTimeStr)
+    // IMPORTANT: Backend sends datetime in UTC but without "Z" suffix
+    // JavaScript's Date constructor treats strings without "Z" as LOCAL time
+    // So we need to append "Z" to force it to be interpreted as UTC
+    let dateStr = utcDateTimeStr
+    if (!dateStr.endsWith('Z') && !dateStr.includes('+') && !dateStr.includes('T00:00:00')) {
+      // Only append Z if it's a datetime string (has time component) and doesn't already have timezone info
+      if (dateStr.includes('T') || dateStr.includes(' ')) {
+        dateStr = dateStr.replace(' ', 'T') + 'Z'
+      }
+    }
+
+    const date = new Date(dateStr)
 
     const options: Intl.DateTimeFormatOptions = {
       year: 'numeric',
@@ -236,10 +248,8 @@ export function convertUTCToUserTimezone(utcDateTimeStr: string, timezone?: stri
       minute: '2-digit',
       second: '2-digit',
       hour12: true,
-    }
-
-    if (timezone) {
-      options.timeZone = timezone
+      // Always set timezone - use provided timezone or default to UTC
+      timeZone: timezone || 'UTC',
     }
 
     return new Intl.DateTimeFormat('en-US', options).format(date)
