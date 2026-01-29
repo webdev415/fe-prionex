@@ -19,7 +19,81 @@ import { DateSelect } from '@/components/ui/DateSelect'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { Icons } from '@/lib/icons'
 import type { Period } from '../types'
-import { exportToCSV, calculateAverageDuration, getDateRange } from '../mockReportsData'
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+/**
+ * Export data to CSV and trigger download
+ */
+function exportToCSV(data: Record<string, unknown>[], filename: string): void {
+  if (data.length === 0) return
+
+  const headers = Object.keys(data[0])
+  const csvContent = [
+    headers.join(','),
+    ...data.map((row) =>
+      headers
+        .map((header) => {
+          const value = row[header]
+          // Escape values containing commas or quotes
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+            return `"${value.replace(/"/g, '""')}"`
+          }
+          return String(value ?? '')
+        })
+        .join(',')
+    ),
+  ].join('\n')
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  link.setAttribute('href', url)
+  link.setAttribute('download', filename)
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+/**
+ * Calculate average duration from array of durations in seconds
+ */
+function calculateAverageDuration(durations: number[]): string {
+  if (durations.length === 0) return '0:00'
+  const avgSeconds = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+  const minutes = Math.floor(avgSeconds / 60)
+  const seconds = avgSeconds % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
+/**
+ * Get date range based on period
+ */
+function getDateRange(period: Period): { from: Date; to: Date } {
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+  switch (period) {
+    case 'today':
+      return { from: today, to: today }
+    case 'thisWeek': {
+      const dayOfWeek = today.getDay()
+      const monday = new Date(today)
+      monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
+      return { from: monday, to: today }
+    }
+    case 'thisMonth': {
+      const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+      return { from: firstOfMonth, to: today }
+    }
+    default:
+      return { from: today, to: today }
+  }
+}
 
 export interface AgentPerformance {
   id: string

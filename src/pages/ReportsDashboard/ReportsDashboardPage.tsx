@@ -2,10 +2,10 @@
  * ReportsDashboardPage Component
  *
  * Main page for viewing reports dashboard with KPIs and agent performance metrics.
- * Uses mock data matching the Report Service API specification.
+ * Integrates with Report Service backend API.
  */
 
-import { useState, useMemo, useEffect, startTransition } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   KPICard,
@@ -13,75 +13,130 @@ import {
   AgentPerformanceTable,
   PaymentsCollectedModal,
   ReportsDashboardPageSkeleton,
+  CallsMadeDetailModal,
+  ContactRateDetailModal,
+  SMSSentDetailModal,
 } from './components'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
+import { useAuthStore } from '@/stores/authStore'
 import {
-  getMockDashboard,
-  getMockOperatorPerformance,
-  formatDuration,
-  calculateKPIChange,
-  getPreviousPeriodKPIs,
-  exportToCSV,
-} from './mockReportsData'
-import type { Period } from './types'
+  useDashboard,
+  useAgentPerformanceTable,
+  useExportDashboard,
+  useCallsMadeModal,
+  useContactRateModal,
+  useSMSSentModal,
+  type Period,
+} from '@/features/report'
+
+// ============================================================================
+// Error State Component
+// ============================================================================
+
+function ErrorState({ message }: { message: string }) {
+  const { t } = useTranslation('common')
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
+      <Icons.Warning size={48} className="text-error-500" />
+      <h2 className="text-xl font-medium text-dark-500">
+        {t('pages.reports.error.title', 'Failed to load reports')}
+      </h2>
+      <p className="text-dark-300">{message}</p>
+      <Button variant="secondary" onClick={() => window.location.reload()}>
+        {t('pages.reports.error.retry', 'Retry')}
+      </Button>
+    </div>
+  )
+}
+
+// ============================================================================
+// Main Component
+// ============================================================================
 
 export function ReportsDashboardPage() {
   const { t } = useTranslation('common')
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('today')
+
+  // Modal visibility states
+  const [showCallsModal, setShowCallsModal] = useState(false)
+  const [showContactRateModal, setShowContactRateModal] = useState(false)
+  const [showSMSModal, setShowSMSModal] = useState(false)
   const [showPaymentsModal, setShowPaymentsModal] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
 
-  // Simulate loading state
-  useEffect(() => {
-    startTransition(() => {
-      setIsLoading(true)
+  // Get current project from auth store
+  const activeProjectId = useAuthStore((state) => state.user?.active_project_id)
+  const projectId = activeProjectId ? Number(activeProjectId) : 1
+
+  // Fetch dashboard data from API
+  const {
+    data: dashboardData,
+    isLoading: isDashboardLoading,
+    error: dashboardError,
+  } = useDashboard({
+    projectId,
+    period: selectedPeriod,
+  })
+
+  // Fetch operator performance data for table
+  const {
+    data: agentPerformance,
+    isLoading: isOperatorLoading,
+  } = useAgentPerformanceTable({
+    projectId,
+  })
+
+  // Export mutation
+  const { mutate: exportDashboard, isPending: isExporting } = useExportDashboard()
+
+  // Modal data hooks - only fetch when modals are open
+  const callsModalQuery = useCallsMadeModal({
+    projectId,
+    period: selectedPeriod,
+    enabled: showCallsModal,
+  })
+
+  const contactRateModalQuery = useContactRateModal({
+    projectId,
+    period: selectedPeriod,
+    enabled: showContactRateModal,
+  })
+
+  const smsModalQuery = useSMSSentModal({
+    projectId,
+    period: selectedPeriod,
+    enabled: showSMSModal,
+  })
+
+  // Combined loading state
+  const isLoading = isDashboardLoading || isOperatorLoading
+
+  // Handle export
+  const handleExport = () => {
+    exportDashboard({
+      projectId,
+      format: 'csv',
+      period: selectedPeriod,
     })
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [selectedPeriod])
-
-  // Get mock dashboard data (matches API structure)
-  const dashboardData = useMemo(() => getMockDashboard(selectedPeriod), [selectedPeriod])
-  const operatorPerformanceData = useMemo(
-    () => getMockOperatorPerformance(selectedPeriod),
-    [selectedPeriod]
-  )
-
-  // Calculate KPI changes vs previous period
-  const previousPeriodKPIs = useMemo(() => getPreviousPeriodKPIs(selectedPeriod), [selectedPeriod])
-
-  const callsMadeChange = useMemo(
-    () => calculateKPIChange(dashboardData.kpis.calls_today, previousPeriodKPIs.calls_today),
-    [dashboardData.kpis.calls_today, previousPeriodKPIs.calls_today]
-  )
-  const contactRateChange = useMemo(
-    () => calculateKPIChange(dashboardData.kpis.contact_rate, previousPeriodKPIs.contact_rate),
-    [dashboardData.kpis.contact_rate, previousPeriodKPIs.contact_rate]
-  )
-  const smsSentChange = useMemo(
-    () => calculateKPIChange(dashboardData.kpis.sms_sent_today, previousPeriodKPIs.sms_sent_today),
-    [dashboardData.kpis.sms_sent_today, previousPeriodKPIs.sms_sent_today]
-  )
-
-  // Transform operator performance data for table
-  const agentPerformance = useMemo(() => {
-    return operatorPerformanceData.operators.map((op) => ({
-      id: op.operator_id.toString(),
-      operator: op.operator_name,
-      calls: op.summary.total_calls,
-      contactRate: op.summary.contact_rate,
-      avgDuration: formatDuration(op.summary.avg_call_duration),
-      sms: op.summary.sms_sent,
-      payments: op.summary.payments_collected || 0,
-    }))
-  }, [operatorPerformanceData])
+  }
 
   // Show loading skeleton
   if (isLoading) {
     return <ReportsDashboardPageSkeleton />
+  }
+
+  // Show error state
+  if (dashboardError) {
+    const errorMessage =
+      (dashboardError as Error)?.message ||
+      t('pages.reports.error.generic', 'An error occurred while loading the dashboard')
+    return <ErrorState message={errorMessage} />
+  }
+
+  // Safety check for data
+  if (!dashboardData) {
+    return <ErrorState message={t('pages.reports.error.noData', 'No data available')} />
   }
 
   return (
@@ -100,27 +155,14 @@ export function ReportsDashboardPage() {
           <Button
             variant="primary"
             size="md"
-            onClick={() => {
-              // Export dashboard data
-              const exportData = [
-                {
-                  Period: selectedPeriod,
-                  Date: dashboardData.date,
-                  'Total Clients': dashboardData.kpis.total_clients,
-                  'Calls Today': dashboardData.kpis.calls_today,
-                  'Contact Rate (%)': dashboardData.kpis.contact_rate.toFixed(1),
-                  'SMS Sent': dashboardData.kpis.sms_sent_today,
-                  'Payments Collected': dashboardData.kpis.payments_collected_today,
-                  'Payments Count': dashboardData.kpis.payments_count_today,
-                },
-              ]
-              const filename = `dashboard_${selectedPeriod}_${dashboardData.date}.csv`
-              exportToCSV(exportData, filename)
-            }}
+            onClick={handleExport}
+            disabled={isExporting}
             leftIcon={<Icons.Csv02 size={20} />}
             className="rounded-full"
           >
-            {t('pages.reports.exportCsv')}
+            {isExporting
+              ? t('pages.reports.exporting', 'Exporting...')
+              : t('pages.reports.exportCsv')}
           </Button>
         </div>
       </div>
@@ -131,30 +173,39 @@ export function ReportsDashboardPage() {
         <div className="flex w-[35%] flex-col items-start gap-5 self-stretch">
           <KPICard
             title={t('pages.reports.kpi.callsMade')}
-            value={dashboardData.kpis.calls_today.toString()}
-            change={callsMadeChange.change}
-            changeType={callsMadeChange.changeType}
+            value={dashboardData.kpis.callsMade.toString()}
+            change={dashboardData.kpis.callsTrend.change}
+            changeType={dashboardData.kpis.callsTrend.changeType}
             icon="phone"
             period={selectedPeriod}
-            onViewDetails={() => setShowPaymentsModal(true)}
+            onViewDetails={() => setShowCallsModal(true)}
           />
           <KPICard
             title={t('pages.reports.kpi.contactRate')}
-            value={`${dashboardData.kpis.contact_rate.toFixed(1)}%`}
-            change={contactRateChange.change}
-            changeType={contactRateChange.changeType}
+            value={`${dashboardData.kpis.contactRate.toFixed(1)}%`}
+            change={dashboardData.kpis.contactRateTrend.change}
+            changeType={dashboardData.kpis.contactRateTrend.changeType}
             icon="chart"
             isPercentage
-            percentage={dashboardData.kpis.contact_rate}
+            percentage={dashboardData.kpis.contactRate}
             period={selectedPeriod}
-            onViewDetails={() => setShowPaymentsModal(true)}
+            onViewDetails={() => setShowContactRateModal(true)}
           />
           <KPICard
             title={t('pages.reports.kpi.smsSent')}
-            value={dashboardData.kpis.sms_sent_today.toString()}
-            change={smsSentChange.change}
-            changeType={smsSentChange.changeType}
+            value={dashboardData.kpis.smsSent.toString()}
+            change={dashboardData.kpis.smsTrend.change}
+            changeType={dashboardData.kpis.smsTrend.changeType}
             icon="mail"
+            period={selectedPeriod}
+            onViewDetails={() => setShowSMSModal(true)}
+          />
+          <KPICard
+            title={t('pages.reports.kpi.paymentsCollected')}
+            value={dashboardData.kpis.paymentsCollected.toString()}
+            change={dashboardData.kpis.paymentsTrend.change}
+            changeType={dashboardData.kpis.paymentsTrend.changeType}
+            icon="payments"
             period={selectedPeriod}
             onViewDetails={() => setShowPaymentsModal(true)}
           />
@@ -162,9 +213,48 @@ export function ReportsDashboardPage() {
 
         {/* Right Column - Agent Performance Table */}
         <div className="flex flex-1 self-stretch">
-          <AgentPerformanceTable data={agentPerformance} selectedPeriod={selectedPeriod} />
+          <AgentPerformanceTable
+            data={agentPerformance || []}
+            selectedPeriod={selectedPeriod}
+          />
         </div>
       </div>
+
+      {/* Calls Made Detail Modal */}
+      {showCallsModal && (
+        <CallsMadeDetailModal
+          open={showCallsModal}
+          onClose={() => setShowCallsModal(false)}
+          period={selectedPeriod}
+          data={callsModalQuery.data}
+          isLoading={callsModalQuery.isLoading}
+          error={callsModalQuery.error as Error | null}
+        />
+      )}
+
+      {/* Contact Rate Detail Modal */}
+      {showContactRateModal && (
+        <ContactRateDetailModal
+          open={showContactRateModal}
+          onClose={() => setShowContactRateModal(false)}
+          period={selectedPeriod}
+          data={contactRateModalQuery.data}
+          isLoading={contactRateModalQuery.isLoading}
+          error={contactRateModalQuery.error as Error | null}
+        />
+      )}
+
+      {/* SMS Sent Detail Modal */}
+      {showSMSModal && (
+        <SMSSentDetailModal
+          open={showSMSModal}
+          onClose={() => setShowSMSModal(false)}
+          period={selectedPeriod}
+          data={smsModalQuery.data}
+          isLoading={smsModalQuery.isLoading}
+          error={smsModalQuery.error as Error | null}
+        />
+      )}
 
       {/* Payments Collected Modal */}
       {showPaymentsModal && (
@@ -172,6 +262,18 @@ export function ReportsDashboardPage() {
           open={showPaymentsModal}
           onClose={() => setShowPaymentsModal(false)}
           period={selectedPeriod}
+          data={{
+            totalAmount: dashboardData.kpis.paymentsCollected,
+            paymentCount: dashboardData.kpis.paymentsCount,
+            verifiedAmount: dashboardData.kpis.paymentsVerified,
+            pendingAmount: dashboardData.kpis.paymentsPending,
+            trend: {
+              change: dashboardData.kpis.paymentsTrend.change,
+              direction: dashboardData.kpis.paymentsTrend.changeType === 'increase' ? 'up' : 'down',
+            },
+            topCollectorName: dashboardData.topOperators[0]?.operatorName,
+            topCollectorAmount: agentPerformance?.[0]?.payments,
+          }}
         />
       )}
     </div>
