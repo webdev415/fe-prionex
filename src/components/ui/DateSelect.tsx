@@ -13,6 +13,7 @@ import { Icons } from '@/lib/icons'
 export interface DateSelectProps {
   label?: string
   error?: string
+  required?: boolean
   helperText?: string
   className?: string
   placeholder?: string
@@ -37,6 +38,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     {
       label,
       error,
+      required,
       helperText,
       className,
       id,
@@ -64,6 +66,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
         {label && (
           <label htmlFor={inputId} className="text-dark-500 mb-1.5 block text-sm font-light">
             {label}
+            {required && <span className="text-error-500 ml-1">*</span>}
           </label>
         )}
         <div className="relative">

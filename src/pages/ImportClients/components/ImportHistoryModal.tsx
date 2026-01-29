@@ -113,7 +113,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
           <div className="space-y-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
               <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
-                {t('pages.imports.modal.file')}:{' '}
+                {t('pages.imports.modal.file')}{' '}
               </span>
               <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] break-words sm:text-base">
                 {data.file}
@@ -122,7 +122,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
 
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
               <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
-                {t('pages.imports.modal.uploadedBy')}:{' '}
+                {t('pages.imports.modal.uploadedBy')}{' '}
               </span>
               <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] break-words sm:text-base">
                 {data.uploadedBy} at {data.uploadedAt}
@@ -131,7 +131,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
 
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
               <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
-                {t('pages.imports.modal.status')}:{' '}
+                {t('pages.imports.modal.status')}{' '}
               </span>
               <StatusBadge status={status} />
             </div>
@@ -142,7 +142,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
             <div className="space-y-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
                 <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
-                  {t('pages.imports.modal.totalRows')}:
+                  {t('pages.imports.modal.totalRows')}
                 </span>
                 <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {data.totalRows.toLocaleString()}
@@ -151,7 +151,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
 
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
                 <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
-                  {t('pages.imports.modal.newClients')}:
+                  {t('pages.imports.modal.newClients')}
                 </span>
                 <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {data.newClients?.toLocaleString() || 0}
@@ -160,7 +160,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
 
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
                 <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
-                  {t('pages.imports.modal.updatedClients')}:
+                  {t('pages.imports.modal.updatedClients')}
                 </span>
                 <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {data.updatedClients?.toLocaleString() || 0}
@@ -169,7 +169,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
 
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
                 <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
-                  {t('pages.imports.modal.error')}:
+                  {t('pages.imports.modal.error')}
                 </span>
                 <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {data.errors || 0}
@@ -178,7 +178,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
 
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
                 <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-40 sm:text-base">
-                  {t('pages.imports.modal.processingTime')}:
+                  {t('pages.imports.modal.processingTime')}
                 </span>
                 <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {data.processingTime || 'N/A'}

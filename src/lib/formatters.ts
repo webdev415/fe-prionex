@@ -79,7 +79,6 @@ export function formatDateTime(dateStr?: string): string {
     minute: '2-digit',
   })
 }
-
 /**
  * Truncate text with ellipsis
  */

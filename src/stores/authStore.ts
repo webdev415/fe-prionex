@@ -576,7 +576,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         asterisk_extension: backendUser.asterisk_extension,
         is_agent: backendUser.is_agent,
         agent_status: backendUser.agent_status,
-        timezone: backendUser.timezone, // ✅ Add timezone!
+        timezone: backendUser.timezone,
         createdAt: backendUser.created_at,
         updatedAt: backendUser.created_at,
       }

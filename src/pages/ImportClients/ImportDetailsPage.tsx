@@ -16,6 +16,8 @@ import { Icons } from '@/lib/icons'
 import { SemiCircularProgress } from './components'
 import { useImportJob, useImportJobErrors, useExportImportErrors } from '@/features/imports'
 import { ImportDetailsPageSkeleton } from './components/ImportDetailsPageSkeleton'
+import { useAuthStore } from '@/stores/authStore'
+import { convertUTCToUserTimezone } from '@/lib/formatters'
 
 // Status Badge Component
 function ImportDetailStatusBadge({
@@ -94,6 +96,7 @@ export function ImportDetailsPage() {
   const { t } = useTranslation('common')
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
 
   // URL state for pagination
   const [errorPage, setErrorPage] = useURLState<number>('page', 1)
@@ -136,10 +139,7 @@ export function ImportDetailsPage() {
         id: jobDetail.id,
         file: jobDetail.file_name,
         uploadedBy: jobDetail.uploaded_by,
-        uploadedAt: new Date(jobDetail.uploaded_at).toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
+        uploadedAt: convertUTCToUserTimezone(jobDetail.uploaded_at, userTimezone),
         status:
           jobDetail.status === 'completed'
             ? jobDetail.errors_count > 0
