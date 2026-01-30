@@ -15,8 +15,7 @@ import type { CommunicationStatisticsUI } from '../types'
  */
 export const communicationStatisticsKeys = {
   all: ['reports', 'communication-statistics'] as const,
-  byProject: (projectId: number) =>
-    [...communicationStatisticsKeys.all, projectId] as const,
+  byProject: (projectId: number) => [...communicationStatisticsKeys.all, projectId] as const,
   byParams: (params: CommunicationStatisticsParams) =>
     [...communicationStatisticsKeys.all, params] as const,
 }
@@ -99,9 +98,7 @@ export function useSMSStatistics(params: UseCommunicationStatisticsParams) {
 /**
  * Hook for getting daily communication trends
  */
-export function useCommunicationTrends(
-  params: UseCommunicationStatisticsParams
-) {
+export function useCommunicationTrends(params: UseCommunicationStatisticsParams) {
   const query = useCommunicationStatistics(params)
 
   return {

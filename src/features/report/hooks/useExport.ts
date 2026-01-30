@@ -127,8 +127,7 @@ export function useExportOperatorPerformance() {
       toast.success(`Downloaded ${filename}`)
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message =
-        error?.response?.data?.detail || 'Failed to export operator performance'
+      const message = error?.response?.data?.detail || 'Failed to export operator performance'
       toast.error(message)
     },
   })
@@ -149,10 +148,7 @@ export interface ExportClientStatisticsParams {
  */
 export function useExportClientStatistics() {
   return useMutation({
-    mutationFn: async ({
-      projectId,
-      groupBy = 'status',
-    }: ExportClientStatisticsParams) => {
+    mutationFn: async ({ projectId, groupBy = 'status' }: ExportClientStatisticsParams) => {
       const params: ExportParams = {
         project_id: projectId,
         format: 'csv', // Only CSV supported
@@ -169,8 +165,7 @@ export function useExportClientStatistics() {
       toast.success(`Downloaded ${filename}`)
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message =
-        error?.response?.data?.detail || 'Failed to export client statistics'
+      const message = error?.response?.data?.detail || 'Failed to export client statistics'
       toast.error(message)
     },
   })
@@ -215,8 +210,7 @@ export function useExportCommunicationStatistics() {
       toast.success(`Downloaded ${filename}`)
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message =
-        error?.response?.data?.detail || 'Failed to export communication statistics'
+      const message = error?.response?.data?.detail || 'Failed to export communication statistics'
       toast.error(message)
     },
   })

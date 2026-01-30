@@ -48,7 +48,10 @@ export interface ContactRateDetailModalProps {
   error?: Error | null
 }
 
-const outcomeIcons: Record<string, React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>> = {
+const outcomeIcons: Record<
+  string,
+  React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>
+> = {
   answered: Icons.Success,
   noAnswer: Icons.Cancel01,
   busy: Icons.HeadphoneMute,
@@ -103,7 +106,7 @@ export function ContactRateDetailModal({
   // Loading state
   const renderLoading = () => (
     <div className="flex flex-col items-center justify-center gap-4 py-16">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-400 border-t-transparent" />
+      <div className="border-primary-400 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
       <span className="text-dark-500 text-sm font-medium">{t('common.loading', 'Loading...')}</span>
     </div>
   )
@@ -115,7 +118,9 @@ export function ContactRateDetailModal({
       <h3 className="text-dark-500 text-lg font-medium">
         {t('pages.reports.error.title', 'Failed to load data')}
       </h3>
-      <p className="text-gray-500">{error?.message || t('pages.reports.error.generic', 'An error occurred')}</p>
+      <p className="text-gray-500">
+        {error?.message || t('pages.reports.error.generic', 'An error occurred')}
+      </p>
     </div>
   )
 
@@ -123,7 +128,9 @@ export function ContactRateDetailModal({
   const renderEmpty = () => (
     <div className="flex flex-col items-center justify-center gap-4 py-16">
       <Icons.Folder size={48} className="text-gray-400" />
-      <p className="text-gray-500">{t('pages.reports.contactRateModal.noData', 'No data available')}</p>
+      <p className="text-gray-500">
+        {t('pages.reports.contactRateModal.noData', 'No data available')}
+      </p>
     </div>
   )
 
@@ -157,8 +164,8 @@ export function ContactRateDetailModal({
             {/* Summary */}
             <div className="mb-4 flex flex-col items-center gap-4 self-stretch">
               <div className="text-dark-500 text-2xl leading-tight font-medium tracking-[-0.48px]">
-                {data.rate.toFixed(1)}% ({data.contacted} {t('pages.reports.contactRateModal.of')} {data.total}{' '}
-                {t('pages.reports.callsMadeModal.calls')})
+                {data.rate.toFixed(1)}% ({data.contacted} {t('pages.reports.contactRateModal.of')}{' '}
+                {data.total} {t('pages.reports.callsMadeModal.calls')})
               </div>
               <div className="flex items-center justify-center gap-4">
                 <span className="flex items-center justify-center gap-2">
@@ -189,7 +196,10 @@ export function ContactRateDetailModal({
                   {data.outcomes.map((o) => {
                     const IconComponent = outcomeIcons[o.key]
                     return (
-                      <div key={o.key} className="flex w-full items-center justify-between self-stretch">
+                      <div
+                        key={o.key}
+                        className="flex w-full items-center justify-between self-stretch"
+                      >
                         <span className="text-dark-500 flex items-center gap-2 text-sm leading-[140%] font-medium tracking-[-0.24px]">
                           {IconComponent && (
                             <IconComponent size={18} className="text-dark-500" strokeWidth={1.5} />
@@ -218,14 +228,15 @@ export function ContactRateDetailModal({
                       {data.bestPerformer.name} ({data.bestPerformer.rate}%)
                     </span>
                   )}
-                  {data.needsImprovement && data.needsImprovement.name !== data.bestPerformer?.name && (
-                    <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                      <span className="font-medium text-gray-700">
-                        {t('pages.reports.contactRateModal.needsImprovement')}:{' '}
+                  {data.needsImprovement &&
+                    data.needsImprovement.name !== data.bestPerformer?.name && (
+                      <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                        <span className="font-medium text-gray-700">
+                          {t('pages.reports.contactRateModal.needsImprovement')}:{' '}
+                        </span>
+                        {data.needsImprovement.name} ({data.needsImprovement.rate}%)
                       </span>
-                      {data.needsImprovement.name} ({data.needsImprovement.rate}%)
-                    </span>
-                  )}
+                    )}
                 </div>
               </div>
             )}

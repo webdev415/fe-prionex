@@ -18,8 +18,7 @@ import type { OperatorPerformanceResponseUI } from '../types'
  */
 export const operatorPerformanceKeys = {
   all: ['reports', 'operator-performance'] as const,
-  byProject: (projectId: number) =>
-    [...operatorPerformanceKeys.all, projectId] as const,
+  byProject: (projectId: number) => [...operatorPerformanceKeys.all, projectId] as const,
   byParams: (params: OperatorPerformanceParams) =>
     [...operatorPerformanceKeys.all, params] as const,
 }
@@ -95,9 +94,7 @@ export function useAgentPerformanceTable(params: UseOperatorPerformanceParams) {
 
   return {
     ...query,
-    data: query.data
-      ? transformToAgentPerformanceRows(query.data.operators)
-      : undefined,
+    data: query.data ? transformToAgentPerformanceRows(query.data.operators) : undefined,
   }
 }
 
@@ -110,8 +107,7 @@ export function useSingleOperatorPerformance({
   fromDate,
   toDate,
   enabled = true,
-}: Required<Pick<UseOperatorPerformanceParams, 'operatorId'>> &
-  UseOperatorPerformanceParams) {
+}: Required<Pick<UseOperatorPerformanceParams, 'operatorId'>> & UseOperatorPerformanceParams) {
   const query = useOperatorPerformance({
     projectId,
     operatorId,

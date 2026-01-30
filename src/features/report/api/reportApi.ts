@@ -28,13 +28,10 @@ const EXPORT_BASE_URL = '/api/v1/export'
 /**
  * Get dashboard with KPIs and top operators
  */
-export async function getDashboard(
-  params: DashboardParams
-): Promise<BackendDashboardResponse> {
-  const response = await api.get<BackendDashboardResponse>(
-    `${REPORTS_BASE_URL}/dashboard`,
-    { params }
-  )
+export async function getDashboard(params: DashboardParams): Promise<BackendDashboardResponse> {
+  const response = await api.get<BackendDashboardResponse>(`${REPORTS_BASE_URL}/dashboard`, {
+    params,
+  })
   return response.data
 }
 
@@ -107,9 +104,7 @@ export async function exportDashboard(params: ExportParams): Promise<Blob> {
 /**
  * Export operator performance to CSV or PDF
  */
-export async function exportOperatorPerformance(
-  params: ExportParams
-): Promise<Blob> {
+export async function exportOperatorPerformance(params: ExportParams): Promise<Blob> {
   const response = await api.get(`${EXPORT_BASE_URL}/operator-performance`, {
     params,
     responseType: 'blob',
@@ -120,9 +115,7 @@ export async function exportOperatorPerformance(
 /**
  * Export client statistics to CSV
  */
-export async function exportClientStatistics(
-  params: ExportParams
-): Promise<Blob> {
+export async function exportClientStatistics(params: ExportParams): Promise<Blob> {
   const response = await api.get(`${EXPORT_BASE_URL}/client-statistics`, {
     params,
     responseType: 'blob',
@@ -133,9 +126,7 @@ export async function exportClientStatistics(
 /**
  * Export communication statistics to CSV or PDF
  */
-export async function exportCommunicationStatistics(
-  params: ExportParams
-): Promise<Blob> {
+export async function exportCommunicationStatistics(params: ExportParams): Promise<Blob> {
   const response = await api.get(`${EXPORT_BASE_URL}/communication-statistics`, {
     params,
     responseType: 'blob',
@@ -151,9 +142,7 @@ export async function exportCommunicationStatistics(
  * Check report service health
  */
 export async function checkHealth(): Promise<{ status: string; service: string }> {
-  const response = await api.get<{ status: string; service: string }>(
-    `${REPORTS_BASE_URL}/health`
-  )
+  const response = await api.get<{ status: string; service: string }>(`${REPORTS_BASE_URL}/health`)
   return response.data
 }
 

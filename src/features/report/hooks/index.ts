@@ -5,11 +5,7 @@
  */
 
 // Dashboard
-export {
-  useDashboard,
-  dashboardKeys,
-  type UseDashboardParams,
-} from './useDashboard'
+export { useDashboard, dashboardKeys, type UseDashboardParams } from './useDashboard'
 
 // Operator Performance
 export {

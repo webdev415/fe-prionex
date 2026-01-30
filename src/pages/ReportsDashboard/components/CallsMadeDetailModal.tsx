@@ -97,7 +97,7 @@ export function CallsMadeDetailModal({
   // Loading state
   const renderLoading = () => (
     <div className="flex flex-col items-center justify-center gap-4 py-16">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-400 border-t-transparent" />
+      <div className="border-primary-400 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
       <span className="text-dark-500 text-sm font-medium">{t('common.loading', 'Loading...')}</span>
     </div>
   )
@@ -109,7 +109,9 @@ export function CallsMadeDetailModal({
       <h3 className="text-dark-500 text-lg font-medium">
         {t('pages.reports.error.title', 'Failed to load data')}
       </h3>
-      <p className="text-gray-500">{error?.message || t('pages.reports.error.generic', 'An error occurred')}</p>
+      <p className="text-gray-500">
+        {error?.message || t('pages.reports.error.generic', 'An error occurred')}
+      </p>
     </div>
   )
 
@@ -117,127 +119,140 @@ export function CallsMadeDetailModal({
   const renderEmpty = () => (
     <div className="flex flex-col items-center justify-center gap-4 py-16">
       <Icons.Folder size={48} className="text-gray-400" />
-      <p className="text-gray-500">{t('pages.reports.callsMadeModal.noData', 'No data available')}</p>
+      <p className="text-gray-500">
+        {t('pages.reports.callsMadeModal.noData', 'No data available')}
+      </p>
     </div>
   )
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="2xl" className="">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div className="bg-primary-400 flex flex-col items-start gap-2.5 rounded-full p-[10px]">
-              <Icons.Call02 size={20} className="text-dark-500" strokeWidth={1.5} />
-            </div>
-            <span className="text-dark-500 text-2xl leading-tight font-light tracking-[-0.48px]">
-              {t('pages.reports.callsMadeModal.title')} – {getPeriodLabel()}
-            </span>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-6">
+          <div className="bg-primary-400 flex flex-col items-start gap-2.5 rounded-full p-[10px]">
+            <Icons.Call02 size={20} className="text-dark-500" strokeWidth={1.5} />
           </div>
-          <span className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
-            {formatDate()}
+          <span className="text-dark-500 text-2xl leading-tight font-light tracking-[-0.48px]">
+            {t('pages.reports.callsMadeModal.title')} – {getPeriodLabel()}
           </span>
         </div>
-        <div className="mt-4 h-px w-full bg-gray-200" />
+        <span className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
+          {formatDate()}
+        </span>
+      </div>
+      <div className="mt-4 h-px w-full bg-gray-200" />
 
-        <ModalContent className="max-h-[calc(90vh-140px)]">
-          {isLoading ? (
-            renderLoading()
-          ) : error ? (
-            renderError()
-          ) : !data ? (
-            renderEmpty()
-          ) : (
-            <>
-              {/* Summary */}
-              <div className="mb-4 flex flex-col items-center gap-4 self-stretch">
-                <div className="text-dark-500 text-2xl leading-tight font-medium tracking-[-0.48px]">
-                  {t('pages.reports.callsMadeModal.total')}: {data.total}
-                </div>
-                <div className="flex items-center justify-center gap-4">
-                  <span className="flex items-center justify-center gap-2">
-                    {data.changeType === 'increase' ? (
-                      <Icons.ArrowUp02 size={20} className="text-success-500" />
-                    ) : (
-                      <Icons.ArrowDown02 size={20} className="text-error-500" />
-                    )}
-                    <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                      {data.change}%
-                    </span>
-                  </span>
-                  <span className="text-dark-500 text-sm leading-[150%] tracking-[-0.28px]">
-                    <span className="font-light">{t('pages.reports.kpi.vs')} </span>
-                    <span className="font-medium">{getComparisonText()}</span>
-                    <span className="font-light"> ({data.previousTotal})</span>
-                  </span>
-                </div>
+      <ModalContent className="max-h-[calc(90vh-140px)]">
+        {isLoading ? (
+          renderLoading()
+        ) : error ? (
+          renderError()
+        ) : !data ? (
+          renderEmpty()
+        ) : (
+          <>
+            {/* Summary */}
+            <div className="mb-4 flex flex-col items-center gap-4 self-stretch">
+              <div className="text-dark-500 text-2xl leading-tight font-medium tracking-[-0.48px]">
+                {t('pages.reports.callsMadeModal.total')}: {data.total}
               </div>
+              <div className="flex items-center justify-center gap-4">
+                <span className="flex items-center justify-center gap-2">
+                  {data.changeType === 'increase' ? (
+                    <Icons.ArrowUp02 size={20} className="text-success-500" />
+                  ) : (
+                    <Icons.ArrowDown02 size={20} className="text-error-500" />
+                  )}
+                  <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                    {data.change}%
+                  </span>
+                </span>
+                <span className="text-dark-500 text-sm leading-[150%] tracking-[-0.28px]">
+                  <span className="font-light">{t('pages.reports.kpi.vs')} </span>
+                  <span className="font-medium">{getComparisonText()}</span>
+                  <span className="font-light"> ({data.previousTotal})</span>
+                </span>
+              </div>
+            </div>
 
-              {/* By Hour */}
-              {data.byHour.length > 0 && (
-                <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
+            {/* By Hour */}
+            {data.byHour.length > 0 && (
+              <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
+                <div className="flex items-center gap-2">
                   <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                     {t('pages.reports.callsMadeModal.byHour')}:
                   </span>
-                  <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
-                    {data.byHour.map((row) => (
-                      <div key={row.label} className="flex w-full flex-col items-start gap-1">
-                        <div className="flex items-center gap-5 self-stretch">
-                          <span className="text-dark-500 w-24 shrink-0 text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                            {row.label}
-                          </span>
-                          <ProgressBar
-                            percentage={maxByHour > 0 ? (row.calls / maxByHour) * 100 : 0}
-                            height="lg"
-                            barClassName="bg-primary-400"
-                            className="flex-1"
-                          />
-                          <span className="text-dark-500 w-20 shrink-0 text-right text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                            {row.calls} {t('pages.reports.callsMadeModal.calls')}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* By Operator */}
-              {data.byOperator.length > 0 && (
-                <div className="flex flex-col items-start gap-2 self-stretch">
-                  <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                    {t('pages.reports.callsMadeModal.byOperator')}:
+                  <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                    {t('pages.reports.estimated', 'Estimated')}
                   </span>
-                  <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
-                    {data.byOperator.map((row) => (
-                      <div key={row.name} className="flex w-full flex-col items-start gap-1">
-                        <div className="flex items-center gap-5 self-stretch">
-                          <span className="text-dark-500 w-24 shrink-0 text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                            {row.name}
-                          </span>
-                          <ProgressBar
-                            percentage={maxByOperator > 0 ? (row.calls / maxByOperator) * 100 : 0}
-                            height="lg"
-                            barClassName="bg-primary-400"
-                            className="flex-1"
-                          />
-                          <span className="text-dark-500 w-20 shrink-0 text-right text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                            {row.calls} {t('pages.reports.callsMadeModal.calls')}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
-              )}
-            </>
-          )}
-        </ModalContent>
+                <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
+                  <p className="-mt-2 mb-1 text-xs text-gray-500">
+                    {t(
+                      'pages.reports.callsMadeModal.estimatedNote',
+                      'Hourly distribution based on typical call patterns. Real hourly data will be available soon.'
+                    )}
+                  </p>
+                  {data.byHour.map((row) => (
+                    <div key={row.label} className="flex w-full flex-col items-start gap-1">
+                      <div className="flex items-center gap-5 self-stretch">
+                        <span className="text-dark-500 w-24 shrink-0 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                          {row.label}
+                        </span>
+                        <ProgressBar
+                          percentage={maxByHour > 0 ? (row.calls / maxByHour) * 100 : 0}
+                          height="lg"
+                          barClassName="bg-primary-400"
+                          className="flex-1"
+                        />
+                        <span className="text-dark-500 w-20 shrink-0 text-right text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                          {row.calls} {t('pages.reports.callsMadeModal.calls')}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-        <ModalFooter>
-          <Button variant="cancel" onClick={onClose} className="w-full">
-            {t('actions.close')}
-          </Button>
-        </ModalFooter>
+            {/* By Operator */}
+            {data.byOperator.length > 0 && (
+              <div className="flex flex-col items-start gap-2 self-stretch">
+                <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                  {t('pages.reports.callsMadeModal.byOperator')}:
+                </span>
+                <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
+                  {data.byOperator.map((row) => (
+                    <div key={row.name} className="flex w-full flex-col items-start gap-1">
+                      <div className="flex items-center gap-5 self-stretch">
+                        <span className="text-dark-500 w-24 shrink-0 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                          {row.name}
+                        </span>
+                        <ProgressBar
+                          percentage={maxByOperator > 0 ? (row.calls / maxByOperator) * 100 : 0}
+                          height="lg"
+                          barClassName="bg-primary-400"
+                          className="flex-1"
+                        />
+                        <span className="text-dark-500 w-20 shrink-0 text-right text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                          {row.calls} {t('pages.reports.callsMadeModal.calls')}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </ModalContent>
+
+      <ModalFooter>
+        <Button variant="cancel" onClick={onClose} className="w-full">
+          {t('actions.close')}
+        </Button>
+      </ModalFooter>
     </Modal>
   )
 }

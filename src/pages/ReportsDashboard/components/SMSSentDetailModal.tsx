@@ -83,12 +83,8 @@ function StatCard({ icon, value, label, color }: StatCardProps) {
 
   return (
     <div className={`flex flex-1 flex-col items-center gap-2 rounded-xl p-4 ${bgColors[color]}`}>
-      <div className={`flex items-center justify-center ${iconColors[color]}`}>
-        {icon}
-      </div>
-      <div className="text-dark-500 text-xl font-bold tracking-[-0.4px]">
-        {value}
-      </div>
+      <div className={`flex items-center justify-center ${iconColors[color]}`}>{icon}</div>
+      <div className="text-dark-500 text-xl font-bold tracking-[-0.4px]">{value}</div>
       <div className="text-dark-500 text-center text-xs font-medium tracking-[-0.24px]">
         {label}
       </div>
@@ -150,7 +146,7 @@ export function SMSSentDetailModal({
   // Loading state
   const renderLoading = () => (
     <div className="flex flex-col items-center justify-center gap-4 py-16">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-400 border-t-transparent" />
+      <div className="border-primary-400 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
       <span className="text-dark-500 text-sm font-medium">{t('common.loading', 'Loading...')}</span>
     </div>
   )
@@ -162,7 +158,9 @@ export function SMSSentDetailModal({
       <h3 className="text-dark-500 text-lg font-medium">
         {t('pages.reports.error.title', 'Failed to load data')}
       </h3>
-      <p className="text-gray-500">{error?.message || t('pages.reports.error.generic', 'An error occurred')}</p>
+      <p className="text-gray-500">
+        {error?.message || t('pages.reports.error.generic', 'An error occurred')}
+      </p>
     </div>
   )
 

@@ -49,12 +49,25 @@ function getDateRangeForPeriod(period: Period): { fromDate: string; toDate: stri
  * Generate hourly breakdown from daily trends
  * Note: This is synthetic data as the backend doesn't provide hourly breakdown
  */
-function generateHourlyBreakdown(totalCalls: number, _dailyTrends: DailyTrendUI[] = []): { label: string; calls: number }[] {
+function generateHourlyBreakdown(
+  totalCalls: number,
+  _dailyTrends: DailyTrendUI[] = []
+): { label: string; calls: number }[] {
   // If we have daily trends, distribute calls across working hours (9AM-6PM)
-  const workingHours = ['09:00-10:00', '10:00-11:00', '11:00-12:00', '12:00-13:00', '13:00-14:00', '14:00-15:00', '15:00-16:00', '16:00-17:00', '17:00-18:00']
+  const workingHours = [
+    '09:00-10:00',
+    '10:00-11:00',
+    '11:00-12:00',
+    '12:00-13:00',
+    '13:00-14:00',
+    '14:00-15:00',
+    '15:00-16:00',
+    '16:00-17:00',
+    '17:00-18:00',
+  ]
 
   // Distribute calls with a realistic pattern (peak around lunch time)
-  const distribution = [0.08, 0.10, 0.12, 0.14, 0.13, 0.12, 0.11, 0.11, 0.09]
+  const distribution = [0.08, 0.1, 0.12, 0.14, 0.13, 0.12, 0.11, 0.11, 0.09]
 
   // reference _dailyTrends to satisfy TS about unused parameter when linters/typecheck run
   void _dailyTrends
@@ -90,11 +103,7 @@ export interface UseCallsMadeModalParams {
  * Combines dashboard KPIs, operator performance, and communication statistics
  * to provide the data needed by CallsMadeDetailModal.
  */
-export function useCallsMadeModal({
-  projectId,
-  period,
-  enabled = true,
-}: UseCallsMadeModalParams) {
+export function useCallsMadeModal({ projectId, period, enabled = true }: UseCallsMadeModalParams) {
   const { fromDate, toDate } = getDateRangeForPeriod(period)
 
   const dashboardQuery = useDashboard({
@@ -117,7 +126,8 @@ export function useCallsMadeModal({
     enabled,
   })
 
-  const isLoading = dashboardQuery.isLoading || operatorQuery.isLoading || communicationQuery.isLoading
+  const isLoading =
+    dashboardQuery.isLoading || operatorQuery.isLoading || communicationQuery.isLoading
   const error = dashboardQuery.error || operatorQuery.error || communicationQuery.error
 
   const data = useMemo<CallsMadeModalData | undefined>(() => {
@@ -216,7 +226,8 @@ export function useContactRateModal({
     enabled,
   })
 
-  const isLoading = dashboardQuery.isLoading || operatorQuery.isLoading || communicationQuery.isLoading
+  const isLoading =
+    dashboardQuery.isLoading || operatorQuery.isLoading || communicationQuery.isLoading
   const error = dashboardQuery.error || operatorQuery.error || communicationQuery.error
 
   const data = useMemo<ContactRateModalData | undefined>(() => {
@@ -262,9 +273,21 @@ export function useContactRateModal({
       const remaining = totalCalls - answered
       outcomes = [
         { key: 'answered' as const, count: answered, percentage: Math.round(contactRate) },
-        { key: 'noAnswer' as const, count: Math.round(remaining * 0.6), percentage: Math.round((100 - contactRate) * 0.6) },
-        { key: 'busy' as const, count: Math.round(remaining * 0.25), percentage: Math.round((100 - contactRate) * 0.25) },
-        { key: 'failed' as const, count: Math.round(remaining * 0.15), percentage: Math.round((100 - contactRate) * 0.15) },
+        {
+          key: 'noAnswer' as const,
+          count: Math.round(remaining * 0.6),
+          percentage: Math.round((100 - contactRate) * 0.6),
+        },
+        {
+          key: 'busy' as const,
+          count: Math.round(remaining * 0.25),
+          percentage: Math.round((100 - contactRate) * 0.25),
+        },
+        {
+          key: 'failed' as const,
+          count: Math.round(remaining * 0.15),
+          percentage: Math.round((100 - contactRate) * 0.15),
+        },
       ]
     }
 
@@ -273,7 +296,9 @@ export function useContactRateModal({
     let needsImprovement: { name: string; rate: number } | null = null
 
     if (operators.length > 0) {
-      const sortedByRate = [...operators].sort((a, b) => b.summary.contactRate - a.summary.contactRate)
+      const sortedByRate = [...operators].sort(
+        (a, b) => b.summary.contactRate - a.summary.contactRate
+      )
       const best = sortedByRate[0]
       const worst = sortedByRate[sortedByRate.length - 1]
 
@@ -336,11 +361,7 @@ export interface UseSMSSentModalParams {
  * Combines dashboard KPIs, operator performance, and communication statistics
  * to provide the data needed by SMSSentDetailModal.
  */
-export function useSMSSentModal({
-  projectId,
-  period,
-  enabled = true,
-}: UseSMSSentModalParams) {
+export function useSMSSentModal({ projectId, period, enabled = true }: UseSMSSentModalParams) {
   const { fromDate, toDate } = getDateRangeForPeriod(period)
 
   const dashboardQuery = useDashboard({
@@ -363,7 +384,8 @@ export function useSMSSentModal({
     enabled,
   })
 
-  const isLoading = dashboardQuery.isLoading || operatorQuery.isLoading || communicationQuery.isLoading
+  const isLoading =
+    dashboardQuery.isLoading || operatorQuery.isLoading || communicationQuery.isLoading
   const error = dashboardQuery.error || operatorQuery.error || communicationQuery.error
 
   const data = useMemo<SMSSentModalData | undefined>(() => {

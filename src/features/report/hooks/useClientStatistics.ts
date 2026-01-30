@@ -15,10 +15,8 @@ import type { ClientStatisticsUI } from '../types'
  */
 export const clientStatisticsKeys = {
   all: ['reports', 'client-statistics'] as const,
-  byProject: (projectId: number) =>
-    [...clientStatisticsKeys.all, projectId] as const,
-  byParams: (params: ClientStatisticsParams) =>
-    [...clientStatisticsKeys.all, params] as const,
+  byProject: (projectId: number) => [...clientStatisticsKeys.all, projectId] as const,
+  byParams: (params: ClientStatisticsParams) => [...clientStatisticsKeys.all, params] as const,
 }
 
 /**
@@ -71,20 +69,14 @@ export function useClientStatistics({
 /**
  * Hook for fetching client statistics by status
  */
-export function useClientStatisticsByStatus(
-  projectId: number,
-  enabled = true
-) {
+export function useClientStatisticsByStatus(projectId: number, enabled = true) {
   return useClientStatistics({ projectId, groupBy: 'status', enabled })
 }
 
 /**
  * Hook for fetching client statistics by priority
  */
-export function useClientStatisticsByPriority(
-  projectId: number,
-  enabled = true
-) {
+export function useClientStatisticsByPriority(projectId: number, enabled = true) {
   return useClientStatistics({ projectId, groupBy: 'priority', enabled })
 }
 
@@ -98,9 +90,6 @@ export function useClientStatisticsByCity(projectId: number, enabled = true) {
 /**
  * Hook for fetching client statistics by debt range
  */
-export function useClientStatisticsByDebtRange(
-  projectId: number,
-  enabled = true
-) {
+export function useClientStatisticsByDebtRange(projectId: number, enabled = true) {
   return useClientStatistics({ projectId, groupBy: 'debt_range', enabled })
 }

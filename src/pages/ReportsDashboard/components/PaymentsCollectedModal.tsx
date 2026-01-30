@@ -52,14 +52,13 @@ export function PaymentsCollectedModal({
   const verifiedAmount = data?.verifiedAmount || 0
   const pendingAmount = data?.pendingAmount || 0
 
-  const verifiedCount = totalPayments > 0 && totalAmount > 0
-    ? Math.round((verifiedAmount / totalAmount) * totalPayments)
-    : 0
+  const verifiedCount =
+    totalPayments > 0 && totalAmount > 0
+      ? Math.round((verifiedAmount / totalAmount) * totalPayments)
+      : 0
   const pendingCount = totalPayments - verifiedCount
 
-  const verifiedPercentage = totalAmount > 0
-    ? Math.round((verifiedAmount / totalAmount) * 100)
-    : 0
+  const verifiedPercentage = totalAmount > 0 ? Math.round((verifiedAmount / totalAmount) * 100) : 0
   const pendingPercentage = 100 - verifiedPercentage
 
   // Payment methods breakdown (estimated from verified/pending)
@@ -106,7 +105,7 @@ export function PaymentsCollectedModal({
   // Loading state
   const renderLoading = () => (
     <div className="flex flex-col items-center justify-center gap-4 py-16">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-400 border-t-transparent" />
+      <div className="border-primary-400 h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
       <span className="text-dark-500 text-sm font-medium">{t('common.loading', 'Loading...')}</span>
     </div>
   )
@@ -118,7 +117,9 @@ export function PaymentsCollectedModal({
       <h3 className="text-dark-500 text-lg font-medium">
         {t('pages.reports.error.title', 'Failed to load data')}
       </h3>
-      <p className="text-gray-500">{error?.message || t('pages.reports.error.generic', 'An error occurred')}</p>
+      <p className="text-gray-500">
+        {error?.message || t('pages.reports.error.generic', 'An error occurred')}
+      </p>
     </div>
   )
 
@@ -126,7 +127,9 @@ export function PaymentsCollectedModal({
   const renderEmpty = () => (
     <div className="flex flex-col items-center justify-center gap-4 py-16">
       <Icons.Folder size={48} className="text-gray-400" />
-      <p className="text-gray-500">{t('pages.reports.paymentsModal.noData', 'No data available')}</p>
+      <p className="text-gray-500">
+        {t('pages.reports.paymentsModal.noData', 'No data available')}
+      </p>
     </div>
   )
 
@@ -146,7 +149,7 @@ export function PaymentsCollectedModal({
           {formatDate()}
         </span>
       </div>
-      <div className="h-px w-full bg-gray-200 mt-4" />
+      <div className="mt-4 h-px w-full bg-gray-200" />
 
       <ModalContent className="max-h-[calc(90vh-140px)]">
         {isLoading ? (
@@ -202,8 +205,7 @@ export function PaymentsCollectedModal({
                   </span>
                 </div>
                 <span className="self-stretch text-center text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
-                  {verifiedCount} {t('pages.reports.paymentsModal.payments')},{' '}
-                  {verifiedPercentage}%
+                  {verifiedCount} {t('pages.reports.paymentsModal.payments')}, {verifiedPercentage}%
                 </span>
               </div>
               <div className="flex flex-col items-start justify-center gap-2 self-stretch">
@@ -222,8 +224,7 @@ export function PaymentsCollectedModal({
                   </span>
                 </div>
                 <span className="self-stretch text-center text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
-                  {pendingCount} {t('pages.reports.paymentsModal.payments')},{' '}
-                  {pendingPercentage}%
+                  {pendingCount} {t('pages.reports.paymentsModal.payments')}, {pendingPercentage}%
                 </span>
               </div>
             </div>
@@ -264,13 +265,15 @@ export function PaymentsCollectedModal({
                 })}
               </div>
             </div>
-            <div className="h-px w-full bg-gray-200 my-4" />
+            <div className="my-4 h-px w-full bg-gray-200" />
 
             {/* Key Metrics Cards */}
             <div className="mb-4 flex items-start gap-4 self-stretch">
               <MetricCard
                 icon={<Icons.Money04 size={24} className="text-primary-500" strokeWidth={1.5} />}
-                value={formatCurrency(data.averageAmount || Math.round(totalAmount / Math.max(totalPayments, 1)))}
+                value={formatCurrency(
+                  data.averageAmount || Math.round(totalAmount / Math.max(totalPayments, 1))
+                )}
                 label={t('pages.reports.paymentsModal.averagePayment')}
               />
               {data.topCollectorName && (

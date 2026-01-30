@@ -40,7 +40,7 @@ function ErrorState({ message }: { message: string }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
       <Icons.Warning size={48} className="text-error-500" />
-      <h2 className="text-xl font-medium text-dark-500">
+      <h2 className="text-dark-500 text-xl font-medium">
         {t('pages.reports.error.title', 'Failed to load reports')}
       </h2>
       <p className="text-dark-300">{message}</p>
@@ -80,10 +80,7 @@ export function ReportsDashboardPage() {
   })
 
   // Fetch operator performance data for table
-  const {
-    data: agentPerformance,
-    isLoading: isOperatorLoading,
-  } = useAgentPerformanceTable({
+  const { data: agentPerformance, isLoading: isOperatorLoading } = useAgentPerformanceTable({
     projectId,
   })
 
@@ -213,10 +210,7 @@ export function ReportsDashboardPage() {
 
         {/* Right Column - Agent Performance Table */}
         <div className="flex flex-1 self-stretch">
-          <AgentPerformanceTable
-            data={agentPerformance || []}
-            selectedPeriod={selectedPeriod}
-          />
+          <AgentPerformanceTable data={agentPerformance || []} selectedPeriod={selectedPeriod} />
         </div>
       </div>
 
