@@ -102,6 +102,7 @@ export interface UpdateUserInput {
   phone?: string
   language?: 'uk' | 'ru' | 'en'
   timezone?: string
+  status?: 'active' | 'inactive' | 'suspended'
   project_assignments?: ProjectRoleAssignment[]
   asterisk_extension?: string
   is_agent?: boolean

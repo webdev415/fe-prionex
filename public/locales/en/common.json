@@ -103,8 +103,9 @@
         "edit": "Edit",
         "impersonate": "Impersonate",
         "impersonating": "Impersonating...",
-        "unlock": "Unlock",
-        "lock": "Lock"
+        "status": "Status",
+        "activate": "Activate",
+        "deactivate": "Deactivate"
       },
       "messages": {
         "nowViewingAs": "Now viewing as {{username}}",
@@ -113,6 +114,11 @@
         "exitedImpersonation": "Exited impersonation mode",
         "projectSwitched": "Switched to {{projectName}}",
         "failedToSwitchProject": "Failed to switch project"
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "suspended": "Suspended"
       },
       "activeProject": "Active Project",
       "noAssignment": "No assignment",
@@ -135,22 +141,26 @@
           "loadingUserData": "Loading user data...",
           "userNotFound": "User not found"
         },
-        "unlock": {
-          "title": "Account Status:",
-          "locked": "Locked",
-          "unlockAccount": "Unlock Account:",
-          "failedAttempts": "Failed Attempts:",
-          "lockedAt": "Locked At:",
-          "autoUnlockAt": "Auto-Unlock At:",
-          "minRemaining": "min remaining",
-          "confirmTitle": "Are you sure you want to unlock this account?",
-          "thisWill": "This will:",
-          "restoreAccess": "Immediately restore login access",
-          "resetCounter": "Reset failed attempt counter",
+        "changeStatus": {
+          "activateTitle": "Activate User",
+          "deactivateTitle": "Deactivate User",
+          "username": "Username:",
+          "email": "Email:",
+          "currentStatus": "Current Status:",
+          "newStatus": "New Status:",
+          "activateConfirmTitle": "Are you sure you want to activate this user?",
+          "deactivateConfirmTitle": "Are you sure you want to deactivate this user?",
+          "activateWillAllow": "Activating this user will:",
+          "deactivateWillPrevent": "Deactivating this user will:",
+          "allowLogin": "Allow user to log in to the system",
+          "accessSystem": "Grant access to all assigned resources",
+          "preventLogin": "Prevent user from logging in",
+          "terminateSessions": "Terminate all active sessions",
           "recordAudit": "Be recorded in the audit log",
-          "failedToUnlock": "Failed to unlock account",
-          "unlocking": "Unlocking...",
-          "unlockAccountButton": "Unlock Account"
+          "failedToChange": "Failed to change user status",
+          "changing": "Changing status...",
+          "activateButton": "Activate User",
+          "deactivateButton": "Deactivate User"
         }
       },
       "forms": {

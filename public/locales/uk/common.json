@@ -103,8 +103,9 @@
         "edit": "Редагувати",
         "impersonate": "Переглянути як",
         "impersonating": "Перегляд...",
-        "unlock": "Розблокувати",
-        "lock": "Заблокувати"
+        "status": "Статус",
+        "activate": "Активувати",
+        "deactivate": "Деактивувати"
       },
       "messages": {
         "nowViewingAs": "Тепер перегляд як {{username}}",
@@ -113,6 +114,11 @@
         "exitedImpersonation": "Вийдено з режиму перегляду",
         "projectSwitched": "Переключено на {{projectName}}",
         "failedToSwitchProject": "Не вдалося переключити проєкт"
+      },
+      "status": {
+        "active": "Активний",
+        "inactive": "Неактивний",
+        "suspended": "Призупинений"
       },
       "activeProject": "Активний проєкт",
       "noAssignment": "Немає призначення",
@@ -135,22 +141,26 @@
           "loadingUserData": "Завантаження даних користувача...",
           "userNotFound": "Користувача не знайдено"
         },
-        "unlock": {
-          "title": "Статус облікового запису:",
-          "locked": "Заблоковано",
-          "unlockAccount": "Розблокувати обліковий запис:",
-          "failedAttempts": "Невдалі спроби:",
-          "lockedAt": "Заблоковано о:",
-          "autoUnlockAt": "Автоматичне розблокування о:",
-          "minRemaining": "хв залишилось",
-          "confirmTitle": "Ви впевнені, що хочете розблокувати цей обліковий запис?",
-          "thisWill": "Це:",
-          "restoreAccess": "Негайно відновить доступ для входу",
-          "resetCounter": "Скине лічильник невдалих спроб",
+        "changeStatus": {
+          "activateTitle": "Активувати користувача",
+          "deactivateTitle": "Деактивувати користувача",
+          "username": "Ім'я користувача:",
+          "email": "Електронна пошта:",
+          "currentStatus": "Поточний статус:",
+          "newStatus": "Новий статус:",
+          "activateConfirmTitle": "Ви впевнені, що хочете активувати цього користувача?",
+          "deactivateConfirmTitle": "Ви впевнені, що хочете деактивувати цього користувача?",
+          "activateWillAllow": "Активація цього користувача дозволить:",
+          "deactivateWillPrevent": "Деактивація цього користувача:",
+          "allowLogin": "Дозволить користувачу входити в систему",
+          "accessSystem": "Надасть доступ до всіх призначених ресурсів",
+          "preventLogin": "Заборонить користувачу входити в систему",
+          "terminateSessions": "Завершить усі активні сесії",
           "recordAudit": "Буде записано в журнал аудиту",
-          "failedToUnlock": "Не вдалося розблокувати обліковий запис",
-          "unlocking": "Розблокування...",
-          "unlockAccountButton": "Розблокувати обліковий запис"
+          "failedToChange": "Не вдалося змінити статус користувача",
+          "changing": "Зміна статусу...",
+          "activateButton": "Активувати користувача",
+          "deactivateButton": "Деактивувати користувача"
         }
       },
       "forms": {
