@@ -615,10 +615,10 @@
         "taxIdNumber": "ІПН",
         "tags": "Теги",
         "phoneNumber": "Номер телефону",
-        "dateOfSale": "Дата продажу",
+        "createdDate": "Додано",
         "creditor": "Кредитор",
         "debt": "Борг",
-        "amountOfDebt": "Сума боргу",
+        "totalDebt": "Загальний борг",
         "priority": "Пріоритет",
         "score": "Оцінка",
         "actions": "Дії"
@@ -638,11 +638,11 @@
         "client": "Клієнт:"
       },
       "filters": {
-        "debtRange": "Діапазон боргу",
+        "debtRange": "Загальний борг клієнта",
         "dpdRange": "Діапазон DPD",
-        "amountOfDebtRange": "Діапазон суми боргу",
-        "dateOfSale": "Дата продажу",
-        "portfolio": "Портфель",
+        "amountOfDebtRange": "Сума окремого боргу",
+        "dateOfSale": "Дата продажу боргу",
+        "portfolio": "Кредитор/Продавець",
         "status": "Статус",
         "responsibleEmployee": "Відповідальний співробітник",
         "responsibleSearcher": "Відповідальний пошуковик",

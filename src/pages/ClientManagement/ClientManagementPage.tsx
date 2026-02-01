@@ -50,10 +50,9 @@ interface DisplayClient {
   taxIdNumber: string
   tags: Array<{ id: number; name: string; color: string }>
   phoneNumber: string
-  dateOfSale: string
+  createdDate: string
   creditor: string
   debt: number
-  amountOfDebt: number
   priority: 'Critical' | 'High' | 'Medium' | 'Low'
   score: number
 }
@@ -81,10 +80,9 @@ const mapAPIClientToDisplay = (
     taxIdNumber: client.tax_id,
     tags: client.tags || [], // Tags from API
     phoneNumber: client.phone_primary,
-    dateOfSale: client.created_at ? new Date(client.created_at).toLocaleDateString('uk-UA') : '-',
+    createdDate: client.created_at ? new Date(client.created_at).toLocaleDateString('uk-UA') : '-',
     creditor: client.primary_creditor || '-',
     debt: client.total_debt || 0,
-    amountOfDebt: client.total_debt || 0,
     priority:
       (client.manual_priority as 'Critical' | 'High' | 'Medium' | 'Low') ||
       mapScoreToPriority(client.priority_score, thresholds),
@@ -115,8 +113,8 @@ export interface ClientFilters {
   dateOfSaleFrom?: string
   dateOfSaleTo?: string
 
-  // Portfolio/Sellers Filter
-  portfolio?: string[]
+  // Portfolio/Sellers Filter (now stores IDs only)
+  portfolio?: number[]
 
   // Status Filter
   status?: string[]
@@ -151,7 +149,7 @@ export function ClientManagementPage() {
   const [sortOrder, setSortOrder] = useURLState<'asc' | 'desc'>('sort_order', 'desc')
 
   // URL state for filters
-  const [portfolioFilter, setPortfolioFilter] = useURLState<string[]>('portfolio', [])
+  const [portfolioFilter, setPortfolioFilter] = useURLState<number[]>('sellers', [])
   const [statusFilter, setStatusFilter] = useURLState<string[]>('status', [])
   const [tagIdsFilter, setTagIdsFilter] = useURLState<number[]>('tags', [])
   const [responsibleEmployeeFilter, setResponsibleEmployeeFilter] = useURLState<string>(
@@ -447,21 +445,9 @@ export function ClientManagementPage() {
       sort_order: sortOrder,
     }
 
-    // FILTER 1: Portfolio/Sellers
-    // Extract seller IDs from "Seller Name (ID)" format
+    // FILTER 1: Portfolio/Sellers (now using IDs directly)
     if (filters.portfolio && filters.portfolio.length > 0) {
-      const sellerIds = filters.portfolio
-        .map((portfolio) => {
-          // Extract ID from "Seller Name (ID)" format
-          const match = portfolio.match(/\((\d+)\)$/)
-          return match ? match[1] : null
-        })
-        .filter((id): id is string => id !== null)
-        .join(',')
-
-      if (sellerIds) {
-        params.seller_ids = sellerIds
-      }
+      params.seller_ids = filters.portfolio.join(',')
     }
 
     // FILTER 2: Sale Date Range (FIXED - correct parameter names)
@@ -842,10 +828,10 @@ export function ClientManagementPage() {
   ) => {
     // Handle toggle actions with functional updates to avoid stale state
     if (newFilters._action === 'togglePortfolio') {
-      const portfolio = newFilters._value as string
+      const sellerId = newFilters._value as number
       const checked = newFilters._checked as boolean
       setPortfolioFilter((prev) =>
-        checked ? [...prev, portfolio] : prev.filter((p) => p !== portfolio)
+        checked ? [...prev, sellerId] : prev.filter((id) => id !== sellerId)
       )
       setCurrentPage(1)
       return
@@ -1025,11 +1011,7 @@ export function ClientManagementPage() {
       key: 'phoneNumber',
       header: t('pages.clients.tableHeaders.phoneNumber'),
       align: 'left',
-    },
-    {
-      key: 'dateOfSale',
-      header: t('pages.clients.tableHeaders.dateOfSale'),
-      align: 'left',
+      render: (client) => (client.phoneNumber === '000000000000' ? '-' : client.phoneNumber),
     },
     {
       key: 'creditor',
@@ -1038,17 +1020,10 @@ export function ClientManagementPage() {
     },
     {
       key: 'debt',
-      header: t('pages.clients.tableHeaders.debt'),
+      header: t('pages.clients.tableHeaders.totalDebt'),
       align: 'right',
       sortable: false, // total_debt computed post-query, not sortable
       render: (client) => `${formatCurrency(client.debt)} ₴`,
-    },
-    {
-      key: 'amountOfDebt',
-      header: t('pages.clients.tableHeaders.amountOfDebt'),
-      align: 'right',
-      sortable: false, // total_debt computed post-query, not sortable
-      render: (client) => `${formatCurrency(client.amountOfDebt)} ₴`,
     },
     {
       key: 'priority',
@@ -1064,6 +1039,11 @@ export function ClientManagementPage() {
       align: 'right',
       sortable: true,
       sortKey: 'score',
+    },
+    {
+      key: 'createdDate',
+      header: t('pages.clients.tableHeaders.createdDate'),
+      align: 'left',
     },
     {
       key: 'actions',

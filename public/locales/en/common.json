@@ -620,10 +620,10 @@
         "taxIdNumber": "Tax id number",
         "tags": "Tags",
         "phoneNumber": "Phone number",
-        "dateOfSale": "Date of sale",
+        "createdDate": "Added On",
         "creditor": "Creditor",
         "debt": "Debt",
-        "amountOfDebt": "Amount of debt",
+        "totalDebt": "Total Debt",
         "priority": "Priority",
         "score": "Score",
         "actions": "Actions"
@@ -643,11 +643,11 @@
         "client": "Client:"
       },
       "filters": {
-        "debtRange": "Debt Range",
+        "debtRange": "Total Client Debt",
         "dpdRange": "DPD Range",
-        "amountOfDebtRange": "Amount of debt range",
-        "dateOfSale": "Date of sale",
-        "portfolio": "Portfolio",
+        "amountOfDebtRange": "Individual Debt Amount",
+        "dateOfSale": "Debt Sale Date",
+        "portfolio": "Creditor/Seller",
         "status": "Status",
         "tags": "Tags",
         "responsibleEmployee": "Responsible employee",

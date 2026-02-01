@@ -14,31 +14,37 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 
+interface PortfolioOption {
+  id: number
+  name: string
+  displayName: string
+}
+
 interface PortfolioDropdownProps {
-  portfolios: string[]
-  selectedPortfolios: string[]
-  onSelectionChange: (portfolios: string[]) => void
+  portfolios: PortfolioOption[]
+  selectedSellerIds: number[]
+  onSelectionChange: (sellerIds: number[]) => void
   onOpenChange?: (open: boolean) => void
   trigger: React.ReactNode
 }
 
 export function PortfolioDropdown({
   portfolios,
-  selectedPortfolios,
+  selectedSellerIds,
   onSelectionChange,
   onOpenChange,
   trigger,
 }: PortfolioDropdownProps) {
   const { t } = useTranslation('common')
   const [searchQuery, setSearchQuery] = useState('')
-  const [tempSelection, setTempSelection] = useState<string[]>(selectedPortfolios)
+  const [tempSelection, setTempSelection] = useState<number[]>(selectedSellerIds)
   const [isOpen, setIsOpen] = useState(false)
 
   // Filter portfolios based on search
   const filteredPortfolios = useMemo(() => {
     if (!searchQuery.trim()) return portfolios
     return portfolios.filter((portfolio) =>
-      portfolio.toLowerCase().includes(searchQuery.toLowerCase())
+      portfolio.displayName.toLowerCase().includes(searchQuery.toLowerCase())
     )
   }, [portfolios, searchQuery])
 
@@ -47,22 +53,22 @@ export function PortfolioDropdown({
     setIsOpen(open)
     onOpenChange?.(open)
     if (open) {
-      setTempSelection([...selectedPortfolios])
+      setTempSelection([...selectedSellerIds])
       setSearchQuery('')
     }
   }
 
-  // Sync temp selection when selectedPortfolios changes externally
+  // Sync temp selection when selectedSellerIds changes externally
   useEffect(() => {
     if (!isOpen) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTempSelection([...selectedPortfolios])
+      setTempSelection([...selectedSellerIds])
     }
-  }, [selectedPortfolios, isOpen])
+  }, [selectedSellerIds, isOpen])
 
-  const handleTogglePortfolio = (portfolio: string) => {
+  const handleTogglePortfolio = (sellerId: number) => {
     setTempSelection((prev) =>
-      prev.includes(portfolio) ? prev.filter((p) => p !== portfolio) : [...prev, portfolio]
+      prev.includes(sellerId) ? prev.filter((id) => id !== sellerId) : [...prev, sellerId]
     )
   }
 
@@ -106,14 +112,14 @@ export function PortfolioDropdown({
             <div className="space-y-1">
               {filteredPortfolios.map((portfolio) => (
                 <label
-                  key={portfolio}
+                  key={portfolio.id}
                   className="text-dark-500 flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-gray-50"
                 >
                   <Checkbox
-                    checked={tempSelection.includes(portfolio)}
-                    onCheckedChange={() => handleTogglePortfolio(portfolio)}
+                    checked={tempSelection.includes(portfolio.id)}
+                    onCheckedChange={() => handleTogglePortfolio(portfolio.id)}
                   />
-                  <span className="text-sm">{portfolio}</span>
+                  <span className="text-sm">{portfolio.displayName}</span>
                 </label>
               ))}
             </div>

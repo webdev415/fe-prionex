@@ -106,12 +106,14 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   const projectId = 1 // TODO: Get from auth context
   const { data: tagsData } = useTags(projectId)
 
-  // Map sellers to portfolio options
-  // For now, using "Seller Name (ID)" format for clarity
-  // The portfolio filter stores these values, which are parsed to extract IDs for the API
+  // Map sellers to portfolio options (store seller objects for easy ID access)
   const portfolioOptions = useMemo(() => {
     if (!sellersResponse?.sellers) return []
-    return sellersResponse.sellers.map((seller) => `${seller.seller_name} (${seller.id})`)
+    return sellersResponse.sellers.map((seller) => ({
+      id: seller.id,
+      name: seller.seller_name,
+      displayName: `${seller.seller_name} (${seller.id})`,
+    }))
   }, [sellersResponse])
 
   // Fetch active users for employee and searcher dropdowns
@@ -136,10 +138,10 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     })
   }
 
-  const handlePortfolioChange = (portfolios: string[]) => {
+  const handlePortfolioChange = (sellerIds: number[]) => {
     onFilterChange({
       ...filters,
-      portfolio: portfolios,
+      portfolio: sellerIds,
     })
   }
 
@@ -152,7 +154,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
 
   const displayedPortfolios = portfolioOptions.slice(0, 3)
   const hiddenPortfoliosCount = portfolioOptions.length - 3
-  const selectedPortfolios = filters.portfolio || []
+  const selectedSellerIds = filters.portfolio || []
 
   // Tag display logic (similar to portfolio)
   const tags = tagsData || []
@@ -244,7 +246,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
 
           {/* Second Row: Amount of debt range & Date of sale */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
-            {/* Amount of debt range */}
+            {/* Individual Debt Amount (total_debt_min/max) */}
             <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
               <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
                 {t('pages.clients.filters.amountOfDebtRange')}
@@ -254,11 +256,11 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   ₴
                 </span>
                 <DebouncedNumberInput
-                  value={filters.amountOfDebtRangeFrom}
+                  value={filters.totalDebtRangeFrom}
                   onChange={(value) =>
                     onFilterChange({
                       ...filters,
-                      amountOfDebtRangeFrom: value,
+                      totalDebtRangeFrom: value,
                     })
                   }
                   placeholder="Min"
@@ -269,11 +271,11 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   -
                 </span>
                 <DebouncedNumberInput
-                  value={filters.amountOfDebtRangeTo}
+                  value={filters.totalDebtRangeTo}
                   onChange={(value) =>
                     onFilterChange({
                       ...filters,
-                      amountOfDebtRangeTo: value,
+                      totalDebtRangeTo: value,
                     })
                   }
                   placeholder="Max"
@@ -320,21 +322,23 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               <div className="flex w-full flex-1 flex-wrap items-start gap-2 sm:gap-3">
                 {displayedPortfolios.map((portfolio) => (
                   <label
-                    key={portfolio}
+                    key={portfolio.id}
                     className="flex cursor-pointer items-center gap-1.5 sm:gap-2"
                   >
                     <Checkbox
-                      checked={selectedPortfolios.includes(portfolio)}
+                      checked={selectedSellerIds.includes(portfolio.id)}
                       onCheckedChange={(checked) => {
                         // Pass toggle action - parent will use functional update to avoid stale state
                         onFilterChange({
                           _action: 'togglePortfolio',
-                          _value: portfolio,
+                          _value: portfolio.id,
                           _checked: checked,
                         } as unknown as ClientFilters)
                       }}
                     />
-                    <span className="text-dark-500 text-xs sm:text-sm">{portfolio}</span>
+                    <span className="text-dark-500 text-xs sm:text-sm">
+                      {portfolio.displayName}
+                    </span>
                   </label>
                 ))}
                 {hiddenPortfoliosCount > 0 && (
@@ -344,7 +348,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     </span>
                     <PortfolioDropdown
                       portfolios={portfolioOptions}
-                      selectedPortfolios={selectedPortfolios}
+                      selectedSellerIds={selectedSellerIds}
                       onSelectionChange={handlePortfolioChange}
                       onOpenChange={setPortfolioDropdownOpen}
                       trigger={

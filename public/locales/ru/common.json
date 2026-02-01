@@ -619,10 +619,10 @@
         "taxIdNumber": "ИНН",
         "tags": "Теги",
         "phoneNumber": "Номер телефона",
-        "dateOfSale": "Дата продажи",
+        "createdDate": "Добавлено",
         "creditor": "Кредитор",
         "debt": "Долг",
-        "amountOfDebt": "Сумма долга",
+        "totalDebt": "Общий долг",
         "priority": "Приоритет",
         "score": "Оценка",
         "actions": "Действия"
@@ -642,11 +642,11 @@
         "client": "Клиент:"
       },
       "filters": {
-        "debtRange": "Диапазон долга",
+        "debtRange": "Общий долг клиента",
         "dpdRange": "Диапазон DPD",
-        "amountOfDebtRange": "Диапазон суммы долга",
-        "dateOfSale": "Дата продажи",
-        "portfolio": "Портфель",
+        "amountOfDebtRange": "Сумма отдельного долга",
+        "dateOfSale": "Дата продажи долга",
+        "portfolio": "Кредитор/Продавец",
         "status": "Статус",
         "responsibleEmployee": "Ответственный сотрудник",
         "responsibleSearcher": "Ответственный поисковик",
