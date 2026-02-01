@@ -102,8 +102,9 @@
         "edit": "Редактировать",
         "impersonate": "Просмотреть как",
         "impersonating": "Просмотр...",
-        "unlock": "Разблокировать",
-        "lock": "Заблокировать"
+        "status": "Статус",
+        "activate": "Активировать",
+        "deactivate": "Деактивировать"
       },
       "messages": {
         "nowViewingAs": "Теперь просмотр как {{username}}",
@@ -112,6 +113,11 @@
         "exitedImpersonation": "Выход из режима просмотра",
         "projectSwitched": "Переключено на {{projectName}}",
         "failedToSwitchProject": "Не удалось переключить проект"
+      },
+      "status": {
+        "active": "Активный",
+        "inactive": "Неактивный",
+        "suspended": "Приостановлен"
       },
       "activeProject": "Активный проект",
       "noAssignment": "Нет назначения",
@@ -150,6 +156,27 @@
           "failedToUnlock": "Не удалось разблокировать учетную запись",
           "unlocking": "Разблокировка...",
           "unlockAccountButton": "Разблокировать учетную запись"
+        },
+        "changeStatus": {
+          "activateTitle": "Активировать пользователя",
+          "deactivateTitle": "Деактивировать пользователя",
+          "username": "Имя пользователя:",
+          "email": "Электронная почта:",
+          "currentStatus": "Текущий статус:",
+          "newStatus": "Новый статус:",
+          "activateConfirmTitle": "Вы уверены, что хотите активировать этого пользователя?",
+          "deactivateConfirmTitle": "Вы уверены, что хотите деактивировать этого пользователя?",
+          "activateWillAllow": "Активация этого пользователя позволит:",
+          "deactivateWillPrevent": "Деактивация этого пользователя приведет к:",
+          "allowLogin": "Разрешить пользователю входить в систему",
+          "accessSystem": "Предоставить доступ ко всем назначенным ресурсам",
+          "preventLogin": "Запретить пользователю входить в систему",
+          "terminateSessions": "Завершить все активные сеансы",
+          "recordAudit": "Будет записано в журнал аудита",
+          "failedToChange": "Не удалось изменить статус пользователя",
+          "changing": "Изменение статуса...",
+          "activateButton": "Активировать пользователя",
+          "deactivateButton": "Деактивировать пользователя"
         }
       },
       "forms": {
@@ -592,10 +619,10 @@
         "taxIdNumber": "ИНН",
         "tags": "Теги",
         "phoneNumber": "Номер телефона",
-        "dateOfSale": "Дата продажи",
+        "createdDate": "Добавлено",
         "creditor": "Кредитор",
         "debt": "Долг",
-        "amountOfDebt": "Сумма долга",
+        "totalDebt": "Общий долг",
         "priority": "Приоритет",
         "score": "Оценка",
         "actions": "Действия"
@@ -615,11 +642,11 @@
         "client": "Клиент:"
       },
       "filters": {
-        "debtRange": "Диапазон долга",
+        "debtRange": "Общий долг клиента",
         "dpdRange": "Диапазон DPD",
-        "amountOfDebtRange": "Диапазон суммы долга",
-        "dateOfSale": "Дата продажи",
-        "portfolio": "Портфель",
+        "amountOfDebtRange": "Сумма отдельного долга",
+        "dateOfSale": "Дата продажи долга",
+        "portfolio": "Кредитор/Продавец",
         "status": "Статус",
         "responsibleEmployee": "Ответственный сотрудник",
         "responsibleSearcher": "Ответственный поисковик",

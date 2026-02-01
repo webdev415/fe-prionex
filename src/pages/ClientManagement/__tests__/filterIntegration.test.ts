@@ -25,19 +25,9 @@ function mapFiltersToAPIParams(
     sort_order: 'desc',
   }
 
-  // FILTER 1: Portfolio/Sellers - extract IDs from "Seller Name (ID)" format
+  // FILTER 1: Portfolio/Sellers - use numeric IDs directly
   if (filters.portfolio && filters.portfolio.length > 0) {
-    const sellerIds = filters.portfolio
-      .map((portfolio) => {
-        const match = portfolio.match(/\((\d+)\)$/)
-        return match ? match[1] : null
-      })
-      .filter((id): id is string => id !== null)
-      .join(',')
-
-    if (sellerIds) {
-      params.seller_ids = sellerIds
-    }
+    params.seller_ids = filters.portfolio.join(',')
   }
 
   // FILTER 2: Sale Date Range
@@ -104,9 +94,9 @@ function mapFiltersToAPIParams(
 
 describe('Client Management Filter Integration', () => {
   describe('FILTER 1: Portfolio/Sellers', () => {
-    it('should extract seller IDs from "Seller Name (ID)" format', () => {
+    it('should map seller IDs to seller_ids parameter', () => {
       const filters: ClientFilters = {
-        portfolio: ['ABC Corp (123)', 'XYZ Ltd (456)', 'Test Inc (789)'],
+        portfolio: [123, 456, 789],
       }
 
       const params = mapFiltersToAPIParams(filters)
@@ -116,7 +106,7 @@ describe('Client Management Filter Integration', () => {
 
     it('should handle single portfolio selection', () => {
       const filters: ClientFilters = {
-        portfolio: ['Single Seller (999)'],
+        portfolio: [999],
       }
 
       const params = mapFiltersToAPIParams(filters)
@@ -124,14 +114,13 @@ describe('Client Management Filter Integration', () => {
       expect(params.seller_ids).toBe('999')
     })
 
-    it('should ignore invalid portfolio formats', () => {
+    it('should handle multiple seller IDs', () => {
       const filters: ClientFilters = {
-        portfolio: ['Valid Seller (123)', 'Invalid Format', 'Another Valid (456)'],
+        portfolio: [123, 456],
       }
 
       const params = mapFiltersToAPIParams(filters)
 
-      // Should only include valid IDs
       expect(params.seller_ids).toBe('123,456')
     })
 
@@ -352,7 +341,7 @@ describe('Client Management Filter Integration', () => {
   describe('Combined Filters', () => {
     it('should map all 8 filters simultaneously', () => {
       const filters: ClientFilters = {
-        portfolio: ['Seller A (1)', 'Seller B (2)'],
+        portfolio: [1, 2],
         dateOfSaleFrom: '2024-01-01',
         dateOfSaleTo: '2024-12-31',
         responsibleEmployee: '10',

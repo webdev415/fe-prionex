@@ -17,7 +17,7 @@ import { PERMISSIONS } from '@/constants/permissions'
 import { CreateUserModal } from './components/CreateUserModal'
 import { UserDetailModal } from './components/UserDetailModal'
 import { EditUserModal } from './components/EditUserModal'
-import UnlockAccountModal from './components/UnlockAccountModal'
+import ChangeStatusModal from './components/ChangeStatusModal'
 import type { ApiUser } from '@/features/users/types'
 import { Icons } from '@/lib/icons'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -62,7 +62,8 @@ export function UserManagementPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [viewUserId, setViewUserId] = useState<number | null>(null)
   const [editUserId, setEditUserId] = useState<number | null>(null)
-  const [unlockUser, setUnlockUser] = useState<ApiUser | null>(null)
+  const [changeStatusUser, setChangeStatusUser] = useState<ApiUser | null>(null)
+  const [newStatus, setNewStatus] = useState<'active' | 'inactive'>('active')
   const [impersonatingUserId, setImpersonatingUserId] = useState<number | null>(null)
   const [openDropdownUserId, setOpenDropdownUserId] = useState<number | null>(null)
 
@@ -137,11 +138,13 @@ export function UserManagementPage() {
     }
   }
 
-  const handleUnlockToggle = (user: ApiUser, checked: boolean) => {
-    // Only support unlocking via confirmation modal; no manual locking from UI.
-    if (checked && !isUnlocked(user)) {
-      setUnlockUser(user)
-    }
+  const handleStatusToggle = (user: ApiUser, checked: boolean) => {
+    // Toggle between active/inactive status
+    const targetStatus = checked ? 'active' : 'inactive'
+
+    // Open confirmation modal
+    setChangeStatusUser(user)
+    setNewStatus(targetStatus)
   }
 
   // Map status for StatusBadge component
@@ -154,10 +157,9 @@ export function UserManagementPage() {
     return 'disabled'
   }
 
-  // Check if user is unlocked (for toggle state)
-  const isUnlocked = (user: ApiUser) => {
-    if (!user.locked_until) return true
-    return new Date(user.locked_until) <= new Date()
+  // Check if user is active (for toggle state)
+  const isActive = (user: ApiUser) => {
+    return user.status === 'active'
   }
 
   // Table columns definition
@@ -337,17 +339,19 @@ export function UserManagementPage() {
             </DropdownMenu>
           </div>
 
-          {/* Unlock toggle - always visible, responsive */}
-          <div className="flex items-center gap-1 sm:gap-2">
-            <label className="text-dark-500 hidden text-xs font-medium sm:inline">
-              {t('pages.users.actions.unlock')}
-            </label>
-            <ToggleSwitch
-              checked={isUnlocked(user)}
-              onChange={(checked) => handleUnlockToggle(user, checked)}
-              ariaLabel={`${isUnlocked(user) ? t('pages.users.actions.lock') : t('pages.users.actions.unlock')} user ${user.username}`}
-            />
-          </div>
+          {/* Status toggle - hide for current user */}
+          {currentUser?.id !== String(user.id) && (
+            <div className="flex items-center gap-1 sm:gap-2">
+              <label className="text-dark-500 hidden text-xs font-medium sm:inline">
+                {t('pages.users.actions.status')}
+              </label>
+              <ToggleSwitch
+                checked={isActive(user)}
+                onChange={(checked) => handleStatusToggle(user, checked)}
+                ariaLabel={`${isActive(user) ? t('pages.users.actions.deactivate') : t('pages.users.actions.activate')} user ${user.username}`}
+              />
+            </div>
+          )}
         </div>
       ),
     },
@@ -438,11 +442,12 @@ export function UserManagementPage() {
         />
       )}
 
-      {unlockUser && (
-        <UnlockAccountModal
-          open={unlockUser !== null}
-          user={unlockUser}
-          onClose={() => setUnlockUser(null)}
+      {changeStatusUser && (
+        <ChangeStatusModal
+          open={changeStatusUser !== null}
+          user={changeStatusUser}
+          newStatus={newStatus}
+          onClose={() => setChangeStatusUser(null)}
         />
       )}
     </div>
