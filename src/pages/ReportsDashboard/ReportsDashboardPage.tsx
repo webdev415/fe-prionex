@@ -5,7 +5,7 @@
  * Integrates with Report Service backend API.
  */
 
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   KPICard,
@@ -65,9 +65,46 @@ export function ReportsDashboardPage() {
   const [showSMSModal, setShowSMSModal] = useState(false)
   const [showPaymentsModal, setShowPaymentsModal] = useState(false)
 
-  // Get current project from auth store
+  // Get current project and auth status from auth store
   const activeProjectId = useAuthStore((state) => state.user?.active_project_id)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const user = useAuthStore((state) => state.user)
   const projectId = activeProjectId ? Number(activeProjectId) : 1
+
+  // Calculate date range from selected period for operator performance
+  const dateRange = useMemo(() => {
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+    switch (selectedPeriod) {
+      case 'today':
+        return {
+          from: today.toISOString().split('T')[0],
+          to: today.toISOString().split('T')[0],
+        }
+      case 'thisWeek': {
+        const dayOfWeek = today.getDay()
+        const monday = new Date(today)
+        monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
+        return {
+          from: monday.toISOString().split('T')[0],
+          to: today.toISOString().split('T')[0],
+        }
+      }
+      case 'thisMonth': {
+        const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+        return {
+          from: firstOfMonth.toISOString().split('T')[0],
+          to: today.toISOString().split('T')[0],
+        }
+      }
+      default:
+        return {
+          from: today.toISOString().split('T')[0],
+          to: today.toISOString().split('T')[0],
+        }
+    }
+  }, [selectedPeriod])
 
   // Fetch dashboard data from API
   const {
@@ -79,12 +116,13 @@ export function ReportsDashboardPage() {
     period: selectedPeriod,
   })
 
-  // Fetch operator performance data for table
+  // Fetch operator performance data for table with date range
   const { data: agentPerformance, isLoading: isOperatorLoading } = useAgentPerformanceTable({
     projectId,
+    fromDate: dateRange.from,
+    toDate: dateRange.to,
   })
 
-  // Export mutation
   const { mutate: exportDashboard, isPending: isExporting } = useExportDashboard()
 
   // Modal data hooks - only fetch when modals are open
@@ -118,6 +156,75 @@ export function ReportsDashboardPage() {
     })
   }
 
+  // Check token expiry in useEffect to avoid impure operations during render
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      const token = sessionStorage.getItem('prionex_token')
+      console.log('[ReportsDashboard] Auth Status:', {
+        isAuthenticated,
+        hasUser: !!user,
+        projectId,
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+        userPermissions: user?.permissions?.length || 0,
+      })
+
+      // Decode and check token expiry
+      if (token) {
+        try {
+          const base64Url = token.split('.')[1]
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+          const payload = JSON.parse(atob(base64))
+          const now = Math.floor(Date.now() / 1000)
+          const isExpired = payload.exp && payload.exp < now
+
+          console.log('[ReportsDashboard] Token Details:', {
+            exp: payload.exp,
+            expDate: payload.exp ? new Date(payload.exp * 1000).toISOString() : 'N/A',
+            now,
+            nowDate: new Date(now * 1000).toISOString(),
+            isExpired,
+            timeLeft: payload.exp ? `${Math.floor((payload.exp - now) / 60)} minutes` : 'N/A',
+            sub: payload.sub,
+            roles: payload.roles,
+          })
+
+          if (isExpired) {
+            console.error('[ReportsDashboard] ⚠️ TOKEN IS EXPIRED! Redirecting to login...')
+            // Clear expired token
+            sessionStorage.removeItem('prionex_token')
+            // Force logout
+            setTimeout(() => {
+              window.location.href = '/login'
+            }, 1000)
+          }
+        } catch (e) {
+          console.error('[ReportsDashboard] Failed to decode token:', e)
+        }
+      } else {
+        console.error('[ReportsDashboard] NO TOKEN FOUND IN SESSION STORAGE!')
+      }
+    }
+  }, [isAuthenticated, user, projectId])
+
+  // Check if user is authenticated
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
+        <Icons.Warning size={48} className="text-warning-500" />
+        <h2 className="text-dark-500 text-xl font-medium">
+          {t('pages.reports.error.notAuthenticated', 'Authentication Required')}
+        </h2>
+        <p className="text-dark-300">
+          {t('pages.reports.error.pleaseLogin', 'Please log in to view reports')}
+        </p>
+        <Button variant="primary" onClick={() => (window.location.href = '/login')}>
+          {t('pages.reports.error.goToLogin', 'Go to Login')}
+        </Button>
+      </div>
+    )
+  }
+
   // Show loading skeleton
   if (isLoading) {
     return <ReportsDashboardPageSkeleton />
@@ -125,10 +232,24 @@ export function ReportsDashboardPage() {
 
   // Show error state
   if (dashboardError) {
+    const error = dashboardError as unknown as {
+      response?: { data?: { detail?: string }; status?: number }
+      message?: string
+    }
     const errorMessage =
-      (dashboardError as Error)?.message ||
+      error?.response?.data?.detail ||
+      error?.message ||
       t('pages.reports.error.generic', 'An error occurred while loading the dashboard')
-    return <ErrorState message={errorMessage} />
+    const statusCode = error?.response?.status
+
+    // Log error details for debugging
+    console.error('[ReportsDashboard] Error loading dashboard:', {
+      message: errorMessage,
+      status: statusCode,
+      fullError: error,
+    })
+
+    return <ErrorState message={`${errorMessage}${statusCode ? ` (${statusCode})` : ''}`} />
   }
 
   // Safety check for data

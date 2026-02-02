@@ -71,7 +71,8 @@ export function useOperatorPerformance({
       return transformOperatorPerformance(data)
     },
     enabled: enabled && !!projectId,
-    staleTime: 60000,
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: 'always', // Always refetch when component mounts
     refetchInterval: 300000,
     retry: 2,
   })

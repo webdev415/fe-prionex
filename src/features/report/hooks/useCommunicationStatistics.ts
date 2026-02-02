@@ -65,7 +65,8 @@ export function useCommunicationStatistics({
       return transformCommunicationStatistics(data)
     },
     enabled: enabled && !!projectId,
-    staleTime: 60000, // 1 minute
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: 'always', // Always refetch when component mounts
     refetchInterval: 300000, // 5 minutes
     retry: 2,
   })

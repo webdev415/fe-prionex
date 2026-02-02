@@ -1558,6 +1558,7 @@
     },
     "reports": {
       "title": "Панель звітів",
+      "exporting": "Експортується...",
       "periods": {
         "today": "Сьогодні",
         "thisWeek": "Цей тиждень",
@@ -1567,12 +1568,22 @@
         "callsMade": "Зроблено дзвінків",
         "contactRate": "Контактність",
         "smsSent": "Відправлено SMS",
+        "paymentsCollected": "Зібрано платежів",
         "vs": "порівняно з",
         "yesterday": "вчора",
         "lastWeek": "минулого тижня",
         "lastMonth": "минулого місяця",
         "vsYesterday": "порівняно з вчора",
         "viewDetails": "Переглянути деталі"
+      },
+      "error": {
+        "title": "Не вдалося завантажити звіти",
+        "retry": "Повторити",
+        "notAuthenticated": "Потрібна автентифікація",
+        "pleaseLogin": "Будь ласка, увійдіть для перегляду звітів",
+        "goToLogin": "Перейти до входу",
+        "generic": "Сталася помилка при завантаженні панелі",
+        "noData": "Дані недоступні"
       },
       "agentPerformance": {
         "title": "Продуктивність операторів ({{count}} операторів)",
@@ -1596,6 +1607,34 @@
       },
       "exportCsv": "Експортувати CSV",
       "currencySymbol": "₴",
+      "estimated": "Приблизно",
+      "callsMadeModal": {
+        "title": "Зроблено дзвінків",
+        "noData": "Дані недоступні",
+        "total": "Всього",
+        "byHour": "По годинах",
+        "calls": "дзвінків",
+        "byOperator": "За операторами"
+      },
+      "contactRateModal": {
+        "title": "Контактність",
+        "noData": "Дані недоступні",
+        "of": "з",
+        "outcomes": "Результати дзвінків",
+        "bestPerformer": "Найкращий результат",
+        "needsImprovement": "Потрібне покращення"
+      },
+      "smsModal": {
+        "title": "Відправлено SMS",
+        "noData": "Дані недоступні",
+        "totalSent": "Всього відправлено",
+        "deliveryStats": "Статистика доставки",
+        "delivered": "Доставлено",
+        "failed": "Не доставлено",
+        "pending": "В очікуванні",
+        "deliveryRate": "Процент доставки",
+        "byOperator": "За операторами"
+      },
       "paymentsModal": {
         "title": "Зібрані платежі",
         "payments": "платежів",

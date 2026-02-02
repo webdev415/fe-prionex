@@ -16,11 +16,17 @@ import type { Period, ChangeType, DailyTrendUI } from '../types'
 // ============================================================================
 
 /**
- * Get date range for period
+ * Get date range for period using user's timezone
+ * Backend stores dates in UTC, but we need to send dates based on user's local timezone
  */
 function getDateRangeForPeriod(period: Period): { fromDate: string; toDate: string } {
-  const today = new Date()
-  const toDate = today.toISOString().split('T')[0]
+  // Get current date in user's local timezone
+  // Using local date methods to avoid UTC conversion issues
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  const toDate = `${year}-${month}-${day}`
 
   let fromDate: string
   switch (period) {
@@ -28,14 +34,18 @@ function getDateRangeForPeriod(period: Period): { fromDate: string; toDate: stri
       fromDate = toDate
       break
     case 'thisWeek': {
-      const weekStart = new Date(today)
-      weekStart.setDate(today.getDate() - today.getDay())
-      fromDate = weekStart.toISOString().split('T')[0]
+      const weekStart = new Date(now)
+      const dayOfWeek = weekStart.getDay()
+      // Start from Monday (dayOfWeek 1)
+      weekStart.setDate(weekStart.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
+      const wYear = weekStart.getFullYear()
+      const wMonth = String(weekStart.getMonth() + 1).padStart(2, '0')
+      const wDay = String(weekStart.getDate()).padStart(2, '0')
+      fromDate = `${wYear}-${wMonth}-${wDay}`
       break
     }
     case 'thisMonth': {
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-      fromDate = monthStart.toISOString().split('T')[0]
+      fromDate = `${year}-${month}-01`
       break
     }
     default:

@@ -63,9 +63,10 @@ export function useDashboard({
       return transformDashboard(data)
     },
     enabled: enabled && !!projectId,
-    staleTime: 60000, // 1 minute (backend caches for 5 min)
-    refetchInterval: 300000, // Refetch every 5 minutes
+    staleTime: 0, // Always fetch fresh data
+    refetchOnMount: 'always', // Always refetch when component mounts
     refetchOnWindowFocus: true,
+    refetchInterval: 300000, // Refetch every 5 minutes
     retry: 2,
   })
 }
