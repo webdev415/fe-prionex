@@ -55,6 +55,7 @@ export interface DashboardKPIsUI {
   paymentsVerified: number
   paymentsPending: number
   paymentsAverage: number
+  paymentsLargest: number
 
   // Trends
   callsTrend: KPITrendUI
@@ -82,6 +83,12 @@ export interface DashboardUI {
   generatedAt: string
   kpis: DashboardKPIsUI
   topOperators: TopOperatorUI[]
+  paymentMethods?: Array<{
+    method: string
+    count: number
+    amount: number
+    percentage: number
+  }>
 }
 
 // ============================================================================

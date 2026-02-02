@@ -33,6 +33,7 @@ export interface PaymentKPIValue {
   total_amount: number | string
   payment_count?: number
   average_amount?: number | string
+  largest_amount?: number | string
   verified_amount?: number | string
   pending_amount?: number | string
   trend: KPITrend
@@ -80,6 +81,12 @@ export interface BackendDashboardResponse {
   generated_at: string
   kpis: BackendDashboardKPIs
   top_operators: BackendTopOperator[]
+  payment_method_breakdown?: Array<{
+    method: string
+    count: number
+    amount: number | string
+    percentage: number
+  }>
 }
 
 /**

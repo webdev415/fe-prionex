@@ -66,7 +66,7 @@ export function useDashboard({
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: 'always', // Always refetch when component mounts
     refetchOnWindowFocus: true,
-    refetchInterval: 300000, // Refetch every 5 minutes
+    refetchInterval: 3000, // Refetch every 3 seconds for real-time updates
     retry: 2,
   })
 }

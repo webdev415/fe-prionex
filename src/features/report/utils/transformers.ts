@@ -228,6 +228,7 @@ export function transformDashboard(data: BackendDashboardResponse): DashboardUI 
       paymentsVerified: parseNumber(payments.verified_amount || 0),
       paymentsPending: parseNumber(payments.pending_amount || 0),
       paymentsAverage: parseNumber(payments.average_amount || 0),
+      paymentsLargest: parseNumber(payments.largest_amount || 0),
 
       callsTrend: transformTrend(data.kpis.calls_made.trend),
       contactRateTrend: transformTrend(data.kpis.contact_rate.trend),
@@ -235,6 +236,12 @@ export function transformDashboard(data: BackendDashboardResponse): DashboardUI 
       paymentsTrend: transformTrend(payments.trend),
     },
     topOperators: data.top_operators.map(transformTopOperator),
+    paymentMethods: (data.payment_method_breakdown || []).map((method) => ({
+      method: method.method,
+      count: method.count,
+      amount: parseNumber(method.amount),
+      percentage: method.percentage,
+    })),
   }
 }
 

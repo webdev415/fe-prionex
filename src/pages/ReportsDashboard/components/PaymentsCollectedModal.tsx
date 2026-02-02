@@ -19,6 +19,13 @@ export interface PaymentData {
   verifiedAmount: number
   pendingAmount: number
   averageAmount?: number
+  largestAmount?: number
+  paymentMethods?: Array<{
+    method: string
+    count: number
+    amount: number
+    percentage: number
+  }>
   trend: {
     change: number
     direction: 'up' | 'down'
@@ -61,12 +68,8 @@ export function PaymentsCollectedModal({
   const verifiedPercentage = totalAmount > 0 ? Math.round((verifiedAmount / totalAmount) * 100) : 0
   const pendingPercentage = 100 - verifiedPercentage
 
-  // Payment methods breakdown (estimated from verified/pending)
-  const methodsData = {
-    bankTransfer: { amount: Math.round(verifiedAmount * 0.7), percentage: 67 },
-    card: { amount: Math.round(verifiedAmount * 0.23), percentage: 23 },
-    other: { amount: Math.round(verifiedAmount * 0.07), percentage: 10 },
-  }
+  // Payment methods breakdown - use real data from backend
+  const paymentMethods = data?.paymentMethods || []
 
   const formatCurrency = (amount: number) => {
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
@@ -235,17 +238,15 @@ export function PaymentsCollectedModal({
                 {t('pages.reports.paymentsModal.paymentMethods')}:
               </span>
               <div className="flex flex-col items-start justify-center gap-6 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
-                {[
-                  { key: 'bankTransfer', label: t('pages.reports.paymentsModal.bankTransfer') },
-                  { key: 'card', label: t('pages.reports.paymentsModal.card') },
-                  { key: 'other', label: t('pages.reports.paymentsModal.other') },
-                ].map((method) => {
-                  const methodData = methodsData[method.key as keyof typeof methodsData]
-                  return (
-                    <div key={method.key} className="flex flex-col items-start gap-1 self-stretch">
+                {paymentMethods.length > 0 ? (
+                  paymentMethods.map((methodData) => (
+                    <div
+                      key={methodData.method}
+                      className="flex flex-col items-start gap-1 self-stretch"
+                    >
                       <div className="flex items-center gap-5 self-stretch">
-                        <span className="text-dark-500 w-20 text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                          {method.label}
+                        <span className="text-dark-500 w-20 text-xs leading-[140%] font-medium tracking-[-0.24px] capitalize">
+                          {methodData.method}
                         </span>
                         <div className="flex-1">
                           <ProgressBar
@@ -260,9 +261,15 @@ export function PaymentsCollectedModal({
                           <span className="font-light">({methodData.percentage}%)</span>
                         </span>
                       </div>
+                      <span className="text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
+                        {methodData.count} {t('pages.reports.paymentsModal.payments')},{' '}
+                        {methodData.percentage}%
+                      </span>
                     </div>
-                  )
-                })}
+                  ))
+                ) : (
+                  <span className="text-sm text-gray-500">No payment methods data</span>
+                )}
               </div>
             </div>
             <div className="my-4 h-px w-full bg-gray-200" />
@@ -285,7 +292,7 @@ export function PaymentsCollectedModal({
               )}
               <MetricCard
                 icon={<Icons.Shield size={24} className="text-primary-500" strokeWidth={1.5} />}
-                value={formatCurrency(Math.round(totalAmount * 0.15))}
+                value={formatCurrency(data.largestAmount || 0)}
                 label={t('pages.reports.paymentsModal.largestPmt')}
               />
             </div>

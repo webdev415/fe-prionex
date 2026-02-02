@@ -380,8 +380,11 @@ export function ReportsDashboardPage() {
           data={{
             totalAmount: dashboardData.kpis.paymentsCollected,
             paymentCount: dashboardData.kpis.paymentsCount,
+            averageAmount: dashboardData.kpis.paymentsAverage,
+            largestAmount: dashboardData.kpis.paymentsLargest,
             verifiedAmount: dashboardData.kpis.paymentsVerified,
             pendingAmount: dashboardData.kpis.paymentsPending,
+            paymentMethods: dashboardData.paymentMethods,
             trend: {
               change: dashboardData.kpis.paymentsTrend.change,
               direction: dashboardData.kpis.paymentsTrend.changeType === 'increase' ? 'up' : 'down',
