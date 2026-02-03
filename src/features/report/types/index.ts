@@ -12,7 +12,7 @@
 /**
  * Period type for date filtering
  */
-export type Period = 'today' | 'thisWeek' | 'thisMonth'
+export type Period = 'today' | 'thisWeek' | 'thisMonth' | 'custom'
 
 /**
  * Backend period format

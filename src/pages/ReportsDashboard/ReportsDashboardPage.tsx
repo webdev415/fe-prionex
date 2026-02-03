@@ -5,7 +5,7 @@
  * Integrates with Report Service backend API.
  */
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   KPICard,
@@ -65,6 +65,11 @@ export function ReportsDashboardPage() {
   const [showSMSModal, setShowSMSModal] = useState(false)
   const [showPaymentsModal, setShowPaymentsModal] = useState(false)
 
+  // Filter states - lifted up to trigger API refetch
+  const [selectedOperator, setSelectedOperator] = useState<number | null>(null)
+  const [customFromDate, setCustomFromDate] = useState<string | null>(null)
+  const [customToDate, setCustomToDate] = useState<string | null>(null)
+
   // Get current project and auth status from auth store
   const activeProjectId = useAuthStore((state) => state.user?.active_project_id)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -86,16 +91,19 @@ export function ReportsDashboardPage() {
         const dayOfWeek = today.getDay()
         const monday = new Date(today)
         monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
+        const sunday = new Date(monday)
+        sunday.setDate(monday.getDate() + 6)
         return {
           from: monday.toISOString().split('T')[0],
-          to: today.toISOString().split('T')[0],
+          to: sunday.toISOString().split('T')[0],
         }
       }
       case 'thisMonth': {
         const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+        const lastOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
         return {
           from: firstOfMonth.toISOString().split('T')[0],
-          to: today.toISOString().split('T')[0],
+          to: lastOfMonth.toISOString().split('T')[0],
         }
       }
       default:
@@ -106,21 +114,43 @@ export function ReportsDashboardPage() {
     }
   }, [selectedPeriod])
 
+  // Handler to change period and reset custom dates
+  const handlePeriodChange = useCallback((newPeriod: Period) => {
+    setSelectedPeriod(newPeriod)
+    setCustomFromDate(null)
+    setCustomToDate(null)
+  }, [])
+
+  // Use custom dates if set, otherwise use period-based dates
+  const actualDateRange = useMemo(() => {
+    if (customFromDate || customToDate) {
+      return {
+        from: customFromDate || dateRange.from,
+        to: customToDate || dateRange.to,
+      }
+    }
+    return dateRange
+  }, [dateRange, customFromDate, customToDate])
+
   // Fetch dashboard data from API
+  // Use 'custom' period when custom dates are set, and convert dates to ISO strings
   const {
     data: dashboardData,
     isLoading: isDashboardLoading,
     error: dashboardError,
   } = useDashboard({
     projectId,
-    period: selectedPeriod,
+    period: customFromDate || customToDate ? 'custom' : selectedPeriod,
+    startDate: customFromDate || actualDateRange.from,
+    endDate: customToDate || actualDateRange.to,
   })
 
-  // Fetch operator performance data for table with date range
+  // Fetch operator performance data for table with date range and filters
   const { data: agentPerformance, isLoading: isOperatorLoading } = useAgentPerformanceTable({
     projectId,
-    fromDate: dateRange.from,
-    toDate: dateRange.to,
+    operatorId: selectedOperator ?? undefined,
+    fromDate: actualDateRange.from,
+    toDate: actualDateRange.to,
   })
 
   const { mutate: exportDashboard, isPending: isExporting } = useExportDashboard()
@@ -267,7 +297,7 @@ export function ReportsDashboardPage() {
           </span>
         </div>
         <div className="flex items-center gap-1 rounded-lg bg-white p-1 shadow-sm">
-          <PeriodTabs selectedPeriod={selectedPeriod} onPeriodChange={setSelectedPeriod} />
+          <PeriodTabs selectedPeriod={selectedPeriod} onPeriodChange={handlePeriodChange} />
         </div>
         <div className="flex h-12 flex-1 flex-col items-end gap-2.5">
           <Button
@@ -331,7 +361,16 @@ export function ReportsDashboardPage() {
 
         {/* Right Column - Agent Performance Table */}
         <div className="flex flex-1 self-stretch">
-          <AgentPerformanceTable data={agentPerformance || []} selectedPeriod={selectedPeriod} />
+          <AgentPerformanceTable
+            data={agentPerformance || []}
+            selectedPeriod={selectedPeriod}
+            selectedOperator={selectedOperator}
+            onOperatorChange={setSelectedOperator}
+            customFromDate={customFromDate}
+            customToDate={customToDate}
+            onFromDateChange={setCustomFromDate}
+            onToDateChange={setCustomToDate}
+          />
         </div>
       </div>
 

@@ -54,6 +54,7 @@ export function mapPeriodToBackend(period: Period): BackendPeriod {
     today: 'today',
     thisWeek: 'this_week',
     thisMonth: 'this_month',
+    custom: 'custom',
   }
   return periodMap[period]
 }
