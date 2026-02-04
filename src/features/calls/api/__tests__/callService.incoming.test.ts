@@ -4,7 +4,7 @@ import { callService } from '../callService'
 import type { IncomingCallData } from '../../types'
 
 // Match the API_BASE_URL from callService.ts (uses environment variable or default)
-const API_BASE_URL = 'https://api.dev.crm-prionex.com'
+const API_BASE_URL = 'https://api.dev.crm-prionex.online'
 
 vi.mock('axios')
 

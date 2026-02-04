@@ -12,7 +12,7 @@ services:
     #   context: .
     #   dockerfile: Dockerfile.prod
     #   args:
-    #     - VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://api.crm-prionex.com}
+    #     - VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://api.crm-prionex.online}
     container_name: fe-prionex-prod
     ports:
       # Use port 8080 to avoid conflict with backend Kong on port 80

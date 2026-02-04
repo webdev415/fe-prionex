@@ -12,7 +12,7 @@ services:
     #   context: .
     #   dockerfile: Dockerfile.prod
     #   args:
-    #     - VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://api.dev.crm-prionex.com}
+    #     - VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://api.dev.crm-prionex.online}
     container_name: fe-prionex-dev-env
     ports:
       # Dev frontend on host port 8280
