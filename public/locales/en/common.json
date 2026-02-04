@@ -1729,7 +1729,7 @@
         "other": "Other",
         "averagePayment": "Average Payment",
         "topCollector": "Top Collector",
-        "largestPmt": "Largest Pmt"
+        "largestPayment": "Largest Payment"
       }
     },
     "scoringConfiguration": {

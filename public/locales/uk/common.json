@@ -1647,7 +1647,7 @@
         "other": "Інше",
         "averagePayment": "Середній платіж",
         "topCollector": "Найкращий збирач",
-        "largestPmt": "Найбільший платіж"
+        "largestPayment": "Найбільший платіж"
       }
     },
     "scoringConfiguration": {

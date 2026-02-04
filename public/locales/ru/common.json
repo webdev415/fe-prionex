@@ -1621,7 +1621,7 @@
         "other": "Другое",
         "averagePayment": "Средний платеж",
         "topCollector": "Лучший сборщик",
-        "largestPmt": "Самый большой платеж"
+        "largestPayment": "Самый большой платеж"
       }
     },
     "scoringConfiguration": {

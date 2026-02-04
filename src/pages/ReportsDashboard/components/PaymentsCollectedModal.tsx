@@ -72,15 +72,15 @@ export function PaymentsCollectedModal({
   const paymentMethods = data?.paymentMethods || []
 
   const formatCurrency = (amount: number) => {
-    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    const currency = i18n.language === 'uk' || i18n.language === 'ru' ? 'UAH' : 'INR'
-
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: currency,
+    // Format number with spaces as thousands separator
+    const formatted = new Intl.NumberFormat('uk-UA', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
+      useGrouping: true,
     }).format(amount)
+
+    // Add ₴ symbol manually
+    return `₴${formatted}`
   }
 
   const formatDate = () => {
@@ -293,7 +293,7 @@ export function PaymentsCollectedModal({
               <MetricCard
                 icon={<Icons.Shield size={24} className="text-primary-500" strokeWidth={1.5} />}
                 value={formatCurrency(data.largestAmount || 0)}
-                label={t('pages.reports.paymentsModal.largestPmt')}
+                label={t('pages.reports.paymentsModal.largestPayment')}
               />
             </div>
           </>

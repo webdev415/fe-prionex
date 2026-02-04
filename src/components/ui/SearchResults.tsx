@@ -41,12 +41,11 @@ export function SearchResults({
   const formatCurrency = (amount: number) => {
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
     return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: 'UAH',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-      useGrouping: true,
-    })
-      .format(amount)
-      .replace(/,/g, ' ')
+    }).format(amount)
   }
 
   // Don't show anything if no query
