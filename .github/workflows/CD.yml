@@ -44,31 +44,31 @@ jobs:
               API_URL="${{ secrets.VITE_API_BASE_URL }}"
             fi
             if [ -z "$API_URL" ]; then
-              API_URL="https://api.crm-prionex.com"
+              API_URL="https://api.crm-prionex.online"
             fi
             WS_URL="${{ secrets.VITE_WS_URL_PROD }}"
             if [ -z "$WS_URL" ]; then
-              WS_URL="wss://api.crm-prionex.com"
+              WS_URL="wss://api.crm-prionex.online"
             fi
           elif [ "${{ github.ref }}" == "refs/heads/staging" ]; then
             # Staging environment
             API_URL="${{ secrets.VITE_API_BASE_URL_STAGING }}"
             if [ -z "$API_URL" ]; then
-              API_URL="https://api.staging.crm-prionex.com"
+              API_URL="https://api.staging.crm-prionex.online"
             fi
             WS_URL="${{ secrets.VITE_WS_URL_STAGING }}"
             if [ -z "$WS_URL" ]; then
-              WS_URL="wss://api.staging.crm-prionex.com"
+              WS_URL="wss://api.staging.crm-prionex.online"
             fi
           elif [ "${{ github.ref }}" == "refs/heads/development" ]; then
             # Development environment
             API_URL="${{ secrets.VITE_API_BASE_URL_DEV }}"
             if [ -z "$API_URL" ]; then
-              API_URL="https://api.dev.crm-prionex.com"
+              API_URL="https://api.dev.crm-prionex.online"
             fi
             WS_URL="${{ secrets.VITE_WS_URL_DEV }}"
             if [ -z "$WS_URL" ]; then
-              WS_URL="wss://api.dev.crm-prionex.com"
+              WS_URL="wss://api.dev.crm-prionex.online"
             fi
           else
             # Default to production for tags or other branches
@@ -77,11 +77,11 @@ jobs:
               API_URL="${{ secrets.VITE_API_BASE_URL }}"
             fi
             if [ -z "$API_URL" ]; then
-              API_URL="https://api.crm-prionex.com"
+              API_URL="https://api.crm-prionex.online"
             fi
             WS_URL="${{ secrets.VITE_WS_URL_PROD }}"
             if [ -z "$WS_URL" ]; then
-              WS_URL="wss://api.crm-prionex.com"
+              WS_URL="wss://api.crm-prionex.online"
             fi
           fi
           echo "API_URL=$API_URL" >> $GITHUB_OUTPUT

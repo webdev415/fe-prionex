@@ -4,7 +4,7 @@ import { vi, beforeAll, afterAll } from 'vitest'
 // Set default API base URL for tests (deployed backend) if not already set
 // This ensures tests use the deployed backend URL
 // Note: import.meta.env is read-only, so we use vi.stubEnv which works at test runtime
-vi.stubEnv('VITE_API_BASE_URL', 'https://api.dev.crm-prionex.com')
+vi.stubEnv('VITE_API_BASE_URL', 'https://api.dev.crm-prionex.online')
 
 // Suppress console warnings in tests
 const originalError = console.error

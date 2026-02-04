@@ -14,7 +14,7 @@ import type {
 } from '../../types'
 
 // Base URL for deployed backend (matches VITE_API_BASE_URL in dev environment)
-const API_BASE_URL = 'https://api.dev.crm-prionex.com'
+const API_BASE_URL = 'https://api.dev.crm-prionex.online'
 
 vi.mock('axios')
 
