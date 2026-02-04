@@ -7,6 +7,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
 import { clientApi } from '../api/clientApi'
+import {
+  getMockClientActivities,
+  getMockClientCallSmsHistory,
+  getMockClientDocuments,
+  getMockClientLoans,
+  getMockClientOperatorsSection,
+  getMockClientPaymentsSection,
+  getMockClientProfile,
+  getMockClientTasks,
+} from '../api/mockClientDetailApi'
 import type {
   AssignClientRequest,
   BulkAssignClientRequest,
@@ -24,6 +34,14 @@ export const clientKeys = {
   list: (params: GetClientsParams) => [...clientKeys.lists(), params] as const,
   details: () => [...clientKeys.all, 'detail'] as const,
   detail: (id: number) => [...clientKeys.details(), id] as const,
+  profile: (id: number) => [...clientKeys.details(), id, 'profile'] as const,
+  loans: (id: number) => [...clientKeys.details(), id, 'loans'] as const,
+  paymentsSection: (id: number) => [...clientKeys.details(), id, 'payments'] as const,
+  callSmsHistory: (id: number) => [...clientKeys.details(), id, 'callSmsHistory'] as const,
+  tasks: (id: number) => [...clientKeys.details(), id, 'tasks'] as const,
+  operatorsSection: (id: number) => [...clientKeys.details(), id, 'operators'] as const,
+  documents: (id: number) => [...clientKeys.details(), id, 'documents'] as const,
+  activities: (id: number) => [...clientKeys.details(), id, 'activities'] as const,
   search: (params: SearchByTinParams) => [...clientKeys.all, 'search', params] as const,
   count: () => [...clientKeys.all, 'count'] as const,
   prioritySummary: () => [...clientKeys.all, 'priority-summary'] as const,
@@ -234,5 +252,103 @@ export function useBulkAssignClients() {
       const message = error?.response?.data?.detail || 'Failed to bulk assign clients'
       toast.error(message)
     },
+  })
+}
+
+// --- Client detail (mock): one profile + section endpoints ---
+
+/**
+ * Get client profile (header + left card). Mock only.
+ */
+export function useClientProfile(clientId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.profile(clientId),
+    queryFn: () => getMockClientProfile(clientId),
+    enabled: enabled && clientId > 0,
+    staleTime: 60000,
+  })
+}
+
+/**
+ * Get client loans. Mock only.
+ */
+export function useClientLoans(clientId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.loans(clientId),
+    queryFn: () => getMockClientLoans(clientId),
+    enabled: enabled && clientId > 0,
+    staleTime: 60000,
+  })
+}
+
+/**
+ * Get client payments section (payments, writesOffs, paymentsToPrimaryCreditor). Mock only.
+ */
+export function useClientPaymentsSection(clientId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.paymentsSection(clientId),
+    queryFn: () => getMockClientPaymentsSection(clientId),
+    enabled: enabled && clientId > 0,
+    staleTime: 60000,
+  })
+}
+
+/**
+ * Get client call/SMS history. Mock only.
+ */
+export function useClientCallSmsHistory(clientId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.callSmsHistory(clientId),
+    queryFn: () => getMockClientCallSmsHistory(clientId),
+    enabled: enabled && clientId > 0,
+    staleTime: 60000,
+  })
+}
+
+/**
+ * Get client tasks. Mock only.
+ */
+export function useClientTasks(clientId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.tasks(clientId),
+    queryFn: () => getMockClientTasks(clientId),
+    enabled: enabled && clientId > 0,
+    staleTime: 60000,
+  })
+}
+
+/**
+ * Get client operators section (operators, searchers). Mock only.
+ */
+export function useClientOperatorsSection(clientId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.operatorsSection(clientId),
+    queryFn: () => getMockClientOperatorsSection(clientId),
+    enabled: enabled && clientId > 0,
+    staleTime: 60000,
+  })
+}
+
+/**
+ * Get client documents. Mock only.
+ */
+export function useClientDocuments(clientId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.documents(clientId),
+    queryFn: () => getMockClientDocuments(clientId),
+    enabled: enabled && clientId > 0,
+    staleTime: 60000,
+  })
+}
+
+/**
+ * Get client activities (timeline). Mock only.
+ */
+export function useClientActivities(clientId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.activities(clientId),
+    queryFn: () => getMockClientActivities(clientId),
+    enabled: enabled && clientId > 0,
+    staleTime: 60000,
   })
 }

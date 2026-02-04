@@ -18,7 +18,7 @@ import { Pagination } from '@/components/ui/Pagination'
 import { AddNoteModal } from '@/pages/ClientManagement/components/AddNoteModal'
 import { PriorityBadge } from './components/PriorityBadge'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
-import { mockClientsDetail } from './mockClientDetails'
+import { mockClientDetail } from './mockClientDetails'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
 import { useCallStore } from '@/stores/callStore'
@@ -36,8 +36,7 @@ export function ActivityTimelinePage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { isCallActive, setOpenCallModal } = useCallStore()
-  const clientId = id ? Number(id) : 1
-  const client = mockClientsDetail.find((c) => c.id === clientId) || mockClientsDetail[0]
+  const client = mockClientDetail
 
   // URL state for pagination
   const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
