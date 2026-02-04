@@ -6,6 +6,8 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { useAuthStore } from '@/stores/authStore'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
@@ -61,6 +63,7 @@ export function ExportPaymentsCSVModal({
   pendingAmount = 0,
 }: ExportPaymentsCSVModalProps) {
   const { t, i18n } = useTranslation('common')
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
 
   const formatCurrency = (amount: number) => {
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
@@ -455,9 +458,19 @@ export function ExportPaymentsCSVModal({
                   <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.modals.exportPaymentsCSV.dates')}{' '}
                     <span className="font-medium">
-                      {startDate?.toISOString().split('T')[0]}{' '}
+                      {startDate
+                        ? convertUTCToUserTimezone(
+                            startDate.toISOString().split('T')[0],
+                            userTimezone
+                          )
+                        : ''}{' '}
                       {t('pages.clients.modals.exportPaymentsCSV.to')}{' '}
-                      {endDate?.toISOString().split('T')[0]}
+                      {endDate
+                        ? convertUTCToUserTimezone(
+                            endDate.toISOString().split('T')[0],
+                            userTimezone
+                          )
+                        : ''}
                     </span>
                   </span>
                 </div>

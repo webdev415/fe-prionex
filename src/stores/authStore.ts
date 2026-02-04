@@ -395,6 +395,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             asterisk_extension: backendUser.asterisk_extension,
             is_agent: backendUser.is_agent,
             agent_status: backendUser.agent_status,
+            timezone: backendUser.timezone,
           }
 
           if (isImpersonating) {
@@ -462,6 +463,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 ? String(tokenPayload.active_role_name)
                 : null,
               permissions: [], // No permissions available from token
+              timezone: tokenPayload.timezone ? String(tokenPayload.timezone) : undefined,
               createdAt: undefined,
               updatedAt: undefined,
             }

@@ -6,6 +6,8 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { useAuthStore } from '@/stores/authStore'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -43,6 +45,7 @@ export interface EditPaymentModalProps {
 
 export function EditPaymentModal({ open, onClose, payment, onSave }: EditPaymentModalProps) {
   const { t, i18n } = useTranslation('common')
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
 
   const formatCurrency = (amount: number) => {
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
@@ -324,7 +327,9 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                 <div className="flex items-start gap-6 self-stretch">
                   <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.modals.editPayment.date')}{' '}
-                    <span className="font-medium">{payment.paymentDate}</span>
+                    <span className="font-medium">
+                      {convertUTCToUserTimezone(payment.paymentDate, userTimezone)}
+                    </span>
                   </span>
                 </div>
               </div>
@@ -355,21 +360,7 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                 {t('pages.clients.modals.editPayment.createdBy')}{' '}
                 <span className="font-medium">
                   {payment.createdBy} {t('pages.clients.modals.editPayment.on')}{' '}
-                  {new Date(payment.createdAt).toLocaleDateString(
-                    i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US',
-                    {
-                      year: 'numeric',
-                      month: '2-digit',
-                      day: '2-digit',
-                    }
-                  )}{' '}
-                  {new Date(payment.createdAt).toLocaleTimeString(
-                    i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US',
-                    {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    }
-                  )}
+                  {convertUTCToUserTimezone(payment.createdAt, userTimezone)}
                 </span>
               </span>
             </div>

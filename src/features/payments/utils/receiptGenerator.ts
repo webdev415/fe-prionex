@@ -28,7 +28,8 @@ export function convertPaymentToReceiptData(
     address?: string
     phone?: string
     email?: string
-  }
+  },
+  userTimezone?: string
 ): PaymentReceiptData {
   // Format payment method for display
   const paymentMethod = backendToFrontendPaymentMethod(payment.payment_method)
@@ -81,6 +82,7 @@ export function convertPaymentToReceiptData(
     companyAddress: companyData?.address || 'Kyiv, Ukraine, 01001',
     companyPhone: companyData?.phone || '+380 44 123 4567',
     companyEmail: companyData?.email || 'collections@privatbank.ua',
+    userTimezone,
   }
 }
 
@@ -100,8 +102,9 @@ export function generateReceiptPDF(
     address?: string
     phone?: string
     email?: string
-  }
+  },
+  userTimezone?: string
 ): void {
-  const receiptData = convertPaymentToReceiptData(payment, clientData, companyData)
+  const receiptData = convertPaymentToReceiptData(payment, clientData, companyData, userTimezone)
   generatePaymentReceiptPDF(receiptData)
 }

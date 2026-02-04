@@ -119,7 +119,18 @@ export function formatPaymentDate(dateString: string): string {
  */
 export function isPaymentLessThan7DaysOld(dateString: string): boolean {
   try {
-    const paymentDate = new Date(dateString)
+    // Backend sends datetime in UTC but without "Z" suffix
+    // Append "Z" if it's a datetime string to ensure UTC parsing
+    let dateStr = dateString
+    if (
+      (dateStr.includes('T') || dateStr.includes(' ')) &&
+      !dateStr.endsWith('Z') &&
+      !dateStr.includes('+')
+    ) {
+      dateStr = dateStr.replace(' ', 'T') + 'Z'
+    }
+
+    const paymentDate = new Date(dateStr)
     if (isNaN(paymentDate.getTime())) {
       return false
     }

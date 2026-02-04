@@ -6,6 +6,8 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { useAuthStore } from '@/stores/authStore'
 import { Modal, ModalHeader, ModalContent } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
@@ -65,6 +67,7 @@ export function PaymentVerificationQueueModal({
   initialExpandedPaymentId,
 }: PaymentVerificationQueueModalProps) {
   const { t, i18n } = useTranslation('common')
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
 
   const formatCurrency = (amount: number) => {
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
@@ -75,8 +78,8 @@ export function PaymentVerificationQueueModal({
   }
 
   const formatTimeAgo = (timeString: string) => {
-    // Simple implementation - in real app, use a library like date-fns
-    return timeString
+    // Convert UTC datetime to user's timezone
+    return convertUTCToUserTimezone(timeString, userTimezone)
   }
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [sortBy, setSortBy] = useState('Oldest First')
@@ -269,7 +272,7 @@ export function PaymentVerificationQueueModal({
                   </div>
                   <span className="text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-700 sm:text-sm">
                     {t('pages.clients.modals.paymentVerificationQueue.submitted')}{' '}
-                    {formatTimeAgo(payment.submittedAt)}
+                    {convertUTCToUserTimezone(payment.submittedAt, userTimezone)}
                   </span>
                 </div>
 
@@ -314,7 +317,7 @@ export function PaymentVerificationQueueModal({
                           {t('pages.clients.modals.paymentVerificationQueue.date')}
                         </span>
                         <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
-                          {payment.date}
+                          {convertUTCToUserTimezone(payment.date, userTimezone)}
                         </span>
                       </div>
                       <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">

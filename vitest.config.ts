@@ -15,6 +15,15 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       exclude: ['node_modules/', 'src/test/'],
     },
+    // Pool options to prevent worker crashes
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true, // Use single worker to prevent memory issues
+      },
+    },
+    // Reduce test timeout if needed
+    testTimeout: 10000,
   },
   resolve: {
     alias: {
