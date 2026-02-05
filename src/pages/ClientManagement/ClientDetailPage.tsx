@@ -196,7 +196,9 @@ export function ClientDetailPage() {
       // Header fields
       fullName: profile.full_name,
       score: profile.priority_score ?? 0,
-      priority: profile.priority_level ?? 'low',
+      priority: profile.priority_level
+        ? profile.priority_level.charAt(0).toUpperCase() + profile.priority_level.slice(1)
+        : 'Low',
       phoneNumber: profile.phone_primary,
       taxIdNumber: profile.tax_id,
       // Card fields
