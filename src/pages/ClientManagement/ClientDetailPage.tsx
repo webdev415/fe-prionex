@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { AddNoteModal } from './components/AddNoteModal'
 import { PriorityBadge } from './components/PriorityBadge'
+import type { Priority } from './types'
 import { TagBadge } from '@/components/ui/TagBadge'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { CallRecordingModal } from './components/CallRecordingModal'
@@ -28,6 +29,7 @@ import {
   useClientOperatorsSection,
   useClientDocuments,
   useClientActivities,
+  useCreateClientNote,
 } from '@/features/clients/hooks/useClients'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
@@ -167,23 +169,181 @@ export function ClientDetailPage() {
   // Fetch client tags from API (real)
   const { data: clientTags } = useClientTags(clientId)
 
+  // Note creation mutation
+  const { mutate: createNote } = useCreateClientNote()
+
   // Compose single client object from profile + sections for the rest of the page
+  // Maps backend response fields to UI-expected shape for backward compatibility
   const client = useMemo(() => {
     if (!profile) return null
+
+    // Build phones array from profile fields
+    const phones: Array<{ number: string; type: string }> = []
+    if (profile.phone_primary) phones.push({ number: profile.phone_primary, type: 'primary' })
+    if (profile.phone_secondary) phones.push({ number: profile.phone_secondary, type: 'secondary' })
+    if (profile.additional_phones) {
+      profile.additional_phones.forEach((p) => phones.push({ number: p.number, type: p.type }))
+    }
+
+    // Build addresses object from array
+    const registrationAddr = profile.addresses?.find((a) => a.address_type === 'registration')
+    const personalAddr = profile.addresses?.find(
+      (a) => a.address_type === 'personal' || a.address_type === 'residential'
+    )
+
     return {
       ...profile,
+      // Header fields
+      fullName: profile.full_name,
+      score: profile.priority_score ?? 0,
+      priority: profile.priority_level ?? 'low',
+      phoneNumber: profile.phone_primary,
+      taxIdNumber: profile.tax_id,
+      // Card fields
+      department: '',
+      responsibleEmployee: profile.responsible_employee_name ?? '-',
+      responsibleResearcher: profile.responsible_searcher_name ?? '-',
+      phones,
+      // Personal details (nested for compatibility)
+      personalDetails: {
+        tin: profile.tax_id,
+        dateOfBirth: profile.date_of_birth ?? '-',
+        age: profile.age ?? '-',
+        passport: profile.passport?.number ?? '-',
+        maritalStatus: profile.marital_status ?? '-',
+        familyMembers: profile.family_members_count ?? '-',
+        incomeLevel: profile.income_level ?? '-',
+        employmentType: profile.employment?.company_type ?? '-',
+      },
+      // Work
+      work: profile.employment
+        ? {
+            organizationName: profile.employment.company_name ?? '-',
+            position: profile.employment.position ?? '-',
+            experience: profile.employment.employment_date ?? '-',
+            managerFullName: profile.employment.manager_name ?? '-',
+          }
+        : null,
+      // Recommenders mapped to UI shape
+      recommenders: (profile.recommenders ?? []).map((r) => ({
+        id: r.id,
+        fullName: r.full_name,
+        relationship: r.relationship ?? '-',
+        phoneNumber: r.phone ?? '-',
+        comment: r.notes ?? '-',
+      })),
+      // Addresses as object
+      addresses: {
+        registrationAddress: registrationAddr?.full_address ?? '-',
+        personalAddress: personalAddr?.full_address ?? '-',
+      },
+      // Comments mapped
+      comments: (profile.comments ?? []).map((c) => ({
+        id: c.id,
+        date: c.created_at ? new Date(c.created_at).toLocaleDateString() : '-',
+        text: c.content,
+        author: c.created_by_name ?? `User #${c.created_by}`,
+      })),
       tags: profile.tags,
-      loans,
-      payments: paymentsSection?.payments ?? [],
-      writesOffs: paymentsSection?.writesOffs ?? [],
-      paymentsToPrimaryCreditor: paymentsSection?.paymentsToPrimaryCreditor ?? [],
+      // Loans mapped from DebtDetail to UI shape
+      loans: (loans ?? []).map((d) => ({
+        id: d.id,
+        loanNumber: d.contract_number,
+        counterparty: d.seller_company,
+        saleDate: d.purchase_date ?? '-',
+        loanAmount: Number(d.original_debt_amount ?? 0),
+        principalDebt: Number(d.remaining_debt_amount ?? 0),
+        totalToRepay: Number(d.remaining_debt_amount ?? 0),
+      })),
+      // Payments mapped from PaymentResponse to UI shape
+      payments: (paymentsSection?.payments ?? []).map((p) => ({
+        id: p.id,
+        loanNumber: p.debt_contract_number ?? p.payment_number,
+        counterparty: p.seller_name ?? '-',
+        saleDate: '-',
+        paymentDate: p.payment_date,
+        amount: Number(p.amount),
+        paymentMethod: p.payment_method,
+        status: p.status,
+        paymentDistribution: `${p.principal_paid} principal, ${p.interest_paid} interest`,
+        employee: p.recorded_by_username ?? '-',
+      })),
+      // Write-offs mapped
+      writesOffs: (paymentsSection?.writesOffs ?? []).map((w) => ({
+        id: w.id,
+        loanNumber: w.contract_number ?? '-',
+        counterparty: w.seller_name ?? '-',
+        saleDate: '-',
+        writeOffDate: w.writeoff_date ?? '-',
+        amount: Number(w.amount),
+        writeOffMethod: w.writeoff_type,
+        employee: w.submitted_by_name ?? '-',
+      })),
+      // TODO: Phase 8 - Replace with real Primary Creditor payment data from dedicated API endpoint.
+      // Currently uses mock/placeholder data until the primary creditor payments service is implemented.
+      paymentsToPrimaryCreditor: (paymentsSection?.paymentsToPrimaryCreditor ?? []).map(
+        (p, idx) => ({
+          id: idx,
+          loanNumber: '-',
+          counterparty: '-',
+          saleDate: '-',
+          paymentDate: '-',
+          amount: 0,
+          distributionMethod: '-',
+          ...(p as Record<string, unknown>),
+        })
+      ),
       callSmsHistory: callSmsHistory ?? { all: [], calls: [], sms: [] },
-      tasks,
-      operators: operatorsSection?.operators ?? [],
-      searchers: operatorsSection?.searchers ?? [],
+      // Tasks mapped from TaskResponse to UI shape
+      tasks: (tasks ?? []).map((t) => ({
+        id: t.id,
+        loanNumber: '-',
+        creationDate: t.created_at ? new Date(t.created_at).toLocaleDateString() : '-',
+        whoCreated: t.created_by_name ?? '-',
+        description: t.title + (t.description ? `: ${t.description}` : ''),
+        reminderDate: t.due_date ? new Date(t.due_date).toLocaleDateString() : '-',
+        reminderRecipient: t.assigned_to_username ?? '-',
+      })),
+      // Operators/searchers from assignment history
+      operators: (operatorsSection?.operators ?? []).map((o) => ({
+        id: o.id,
+        creationDate: o.created_at ? new Date(o.created_at).toLocaleDateString() : '-',
+        whoCreated: o.assigned_by_name ?? '-',
+        description: `${o.old_employee_name ?? '-'} → ${o.new_employee_name ?? '-'}`,
+        reminderDate: '-',
+        reminderRecipient: o.new_employee_name ?? '-',
+      })),
+      searchers: (operatorsSection?.searchers ?? []).map((s) => ({
+        id: s.id,
+        creationDate: s.created_at ? new Date(s.created_at).toLocaleDateString() : '-',
+        whoCreated: s.assigned_by_name ?? '-',
+        description: `${s.old_searcher_name ?? '-'} → ${s.new_searcher_name ?? '-'}`,
+        reminderDate: '-',
+        reminderRecipient: s.new_searcher_name ?? '-',
+      })),
       documents,
-      activities,
-      primaryCreditorPayments: paymentsSection?.paymentsToPrimaryCreditor ?? [],
+      // Activities mapped from InteractionResponse to UI shape
+      activities: (activities ?? []).map((a) => ({
+        id: a.id,
+        date: a.interaction_date ? new Date(a.interaction_date).toLocaleDateString() : '-',
+        number: a.phone_used ?? '-',
+        contactType: a.direction === 'outbound' ? 'Outgoing' : 'Incoming',
+        result: a.result_name ?? a.status,
+        promisedAmount: a.promise_to_pay_amount ? Number(a.promise_to_pay_amount) : 0,
+        promisedDate: a.promise_to_pay_date ?? '-',
+        comment: a.summary ?? a.notes ?? '-',
+        employee: a.user_name ?? '-',
+      })),
+      primaryCreditorPayments: (paymentsSection?.paymentsToPrimaryCreditor ?? []).map((p, idx) => ({
+        id: idx,
+        loanNumber: '-',
+        counterparty: '-',
+        saleDate: '-',
+        paymentDate: '-',
+        amount: 0,
+        distributionMethod: '-',
+        ...(p as Record<string, unknown>),
+      })),
     }
   }, [
     profile,
@@ -673,41 +833,11 @@ export function ClientDetailPage() {
     },
   ]
 
-  // const documentColumns: Column<(typeof client.documents)[0]>[] = [
-  //   { key: 'name', header: 'Name', align: 'left' },
-  //   { key: 'type', header: 'Type', align: 'left' },
-  //   { key: 'uploadDate', header: 'Upload Date', align: 'left' },
-  //   { key: 'size', header: 'Size', align: 'left' },
-  // ]
-
-  const callSmsHistoryColumns: Column<(typeof client.callSmsHistory.all)[0]>[] = [
-    {
-      key: 'number',
-      header: t('pages.clients.activity.tableHeaders.number'),
-      align: 'left',
-      render: (item) => (
-        <div className="flex items-center gap-2">
-          <span>{(item as { number?: string }).number ?? item.phone}</span>
-          <div className="flex items-center gap-1">
-            <button className="text-primary-500 flex h-[20px] w-[20px] items-center justify-center hover:opacity-80">
-              <Icons.Headset size={16} className="flex-shrink-0" />
-            </button>
-            <button className="text-primary-500 flex h-[20px] w-[20px] items-center justify-center hover:opacity-80">
-              <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-            </button>
-            <button className="text-primary-500 flex h-[20px] w-[20px] items-center justify-center hover:opacity-80">
-              <Icons.PencilEdit size={16} className="flex-shrink-0" />
-            </button>
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'contactType',
-      header: t('pages.clients.activity.tableHeaders.contactType'),
-      align: 'left',
-    },
-    { key: 'comment', header: t('pages.clients.activity.tableHeaders.comment'), align: 'left' },
+  const documentColumns: Column<(typeof client.documents)[0]>[] = [
+    { key: 'name', header: 'Name', align: 'left' },
+    { key: 'type', header: 'Type', align: 'left' },
+    { key: 'uploadDate', header: 'Upload Date', align: 'left' },
+    { key: 'size', header: 'Size', align: 'left' },
   ]
 
   return (
@@ -730,7 +860,7 @@ export function ClientDetailPage() {
             <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0 text-sm">
               {client.score} {t('pages.clients.activity.score')}
             </span>
-            <PriorityBadge priority={client.priority} />
+            <PriorityBadge priority={client.priority as Priority} />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 md:gap-5">
@@ -2026,14 +2156,10 @@ export function ClientDetailPage() {
                 </div>
               )}
 
-              {/* Tab 6: Documents */}
+              {/* Tab 6: Documents (mock data - no backend infrastructure yet) */}
               {activeRightCardTab === 'documents' && (
                 <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-3 md:p-6">
-                  <DataTable
-                    columns={callSmsHistoryColumns}
-                    data={client.callSmsHistory.all}
-                    className="w-full"
-                  />
+                  <DataTable columns={documentColumns} data={client.documents} className="w-full" />
                 </div>
               )}
             </div>
@@ -2135,8 +2261,11 @@ export function ClientDetailPage() {
         onClose={() => setIsNoteModalOpen(false)}
         phoneNumber={client.phones?.[0]?.number || ''}
         onSave={(data) => {
-          // TODO: Save note to API
-          console.log('Note saved:', data)
+          createNote({
+            clientId,
+            data: { content: data.note, note_type: data.action },
+          })
+          setIsNoteModalOpen(false)
         }}
       />
 

@@ -7,16 +7,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
 import { clientApi } from '../api/clientApi'
-import {
-  getMockClientActivities,
-  getMockClientCallSmsHistory,
-  getMockClientDocuments,
-  getMockClientLoans,
-  getMockClientOperatorsSection,
-  getMockClientPaymentsSection,
-  getMockClientProfile,
-  getMockClientTasks,
-} from '../api/mockClientDetailApi'
+import { paymentApi } from '../api/paymentApi'
+import { taskApi } from '../api/taskApi'
+import { interactionApi } from '../api/interactionApi'
+import { callSmsApi } from '../api/callSmsApi'
+import { getMockClientDocuments } from '../api/mockClientDetailApi'
 import type {
   AssignClientRequest,
   BulkAssignClientRequest,
@@ -255,82 +250,176 @@ export function useBulkAssignClients() {
   })
 }
 
-// --- Client detail (mock): one profile + section endpoints ---
+// --- Client detail: real API hooks ---
 
 /**
- * Get client profile (header + left card). Mock only.
+ * Get client profile (header + left card). Calls GET /clients/{id}/profile
  */
 export function useClientProfile(clientId: number, enabled = true) {
   return useQuery({
     queryKey: clientKeys.profile(clientId),
-    queryFn: () => getMockClientProfile(clientId),
+    queryFn: () => clientApi.getClientProfile(clientId),
     enabled: enabled && clientId > 0,
-    staleTime: 60000,
+    staleTime: 30000,
   })
 }
 
 /**
- * Get client loans. Mock only.
+ * Get client loans/debts. Uses existing GET /clients/{id} which returns debts array.
  */
 export function useClientLoans(clientId: number, enabled = true) {
   return useQuery({
     queryKey: clientKeys.loans(clientId),
-    queryFn: () => getMockClientLoans(clientId),
+    queryFn: () => clientApi.getClientById(clientId),
     enabled: enabled && clientId > 0,
-    staleTime: 60000,
+    staleTime: 30000,
+    select: (data) => data.debts ?? [],
   })
 }
 
 /**
- * Get client payments section (payments, writesOffs, paymentsToPrimaryCreditor). Mock only.
+ * Get client payments section (payments + write-offs).
+ * Fetches payment history and write-offs in parallel.
  */
 export function useClientPaymentsSection(clientId: number, enabled = true) {
   return useQuery({
     queryKey: clientKeys.paymentsSection(clientId),
-    queryFn: () => getMockClientPaymentsSection(clientId),
+    queryFn: async () => {
+      const [paymentsData, writeoffsData] = await Promise.all([
+        paymentApi.getClientPayments(clientId),
+        clientApi
+          .getClientWriteoffs(clientId)
+          .catch(() => ({ writeoffs: [], total: 0, skip: 0, limit: 50 })),
+      ])
+      return {
+        payments: paymentsData.payments,
+        writesOffs: writeoffsData.writeoffs,
+        // Phase 8: Payments to Primary Creditor kept as empty (no backend support yet)
+        paymentsToPrimaryCreditor: [] as Array<Record<string, unknown>>,
+      }
+    },
     enabled: enabled && clientId > 0,
-    staleTime: 60000,
+    staleTime: 30000,
   })
 }
 
 /**
- * Get client call/SMS history. Mock only.
+ * Get client call/SMS history. Calls existing call and SMS service endpoints in parallel.
+ * Maps backend responses to UI-expected shape for backward compatibility.
  */
 export function useClientCallSmsHistory(clientId: number, enabled = true) {
   return useQuery({
     queryKey: clientKeys.callSmsHistory(clientId),
-    queryFn: () => getMockClientCallSmsHistory(clientId),
+    queryFn: async () => {
+      const [callsData, smsData] = await Promise.all([
+        callSmsApi.getClientCalls(clientId).catch(() => ({ calls: [] as never[], total: 0 })),
+        callSmsApi.getClientSms(clientId).catch(() => ({ messages: [] as never[], total: 0 })),
+      ])
+
+      // Map calls to UI shape
+      const mappedCalls = callsData.calls.map((c) => {
+        const dt = new Date(c.started_at)
+        const durationMin = c.duration_seconds ? Math.floor(c.duration_seconds / 60) : 0
+        const durationSec = c.duration_seconds ? c.duration_seconds % 60 : 0
+        return {
+          id: c.id,
+          date: dt.toISOString().split('T')[0],
+          time: dt.toTimeString().slice(0, 5),
+          phone: c.phone_number,
+          phoneLabel: 'Primary',
+          status: c.status,
+          duration: c.duration_seconds ? `${durationMin}m ${durationSec}s` : '-',
+          operator: c.operator_username ?? '-',
+          cost: 0,
+          type: (c.direction === 'outbound' ? 'Outgoing' : 'Incoming') as 'Outgoing' | 'Incoming',
+          line: '',
+          initiated_at: c.started_at,
+        }
+      })
+
+      // Map SMS to UI shape
+      const mappedSms = smsData.messages.map((s) => {
+        const dt = new Date(s.sent_at ?? s.created_at)
+        return {
+          id: s.id,
+          date: dt.toISOString().split('T')[0],
+          time: dt.toTimeString().slice(0, 5),
+          phone: s.phone_number,
+          phoneLabel: 'Primary',
+          status: s.status,
+          template: s.template_name ?? '-',
+          message: s.content ?? '',
+          operator: '-',
+          cost: 0,
+          sent_at: s.sent_at ?? s.created_at,
+        }
+      })
+
+      // Merge and sort by date descending
+      const all = [
+        ...mappedCalls.map((c) => ({
+          ...c,
+          type: 'Call' as const,
+          number: c.phone,
+          itemType: 'call' as const,
+        })),
+        ...mappedSms.map((s) => ({
+          ...s,
+          type: 'SMS' as const,
+          number: s.phone,
+          itemType: 'sms' as const,
+        })),
+      ].sort((a, b) => {
+        const dateA = new Date(`${a.date}T${a.time}`)
+        const dateB = new Date(`${b.date}T${b.time}`)
+        return dateB.getTime() - dateA.getTime()
+      })
+
+      return { calls: mappedCalls, sms: mappedSms, all }
+    },
     enabled: enabled && clientId > 0,
-    staleTime: 60000,
+    staleTime: 30000,
   })
 }
 
 /**
- * Get client tasks. Mock only.
+ * Get client tasks. Calls GET /tasks/client/{id}
  */
 export function useClientTasks(clientId: number, enabled = true) {
   return useQuery({
     queryKey: clientKeys.tasks(clientId),
-    queryFn: () => getMockClientTasks(clientId),
+    queryFn: () => taskApi.getClientTasks(clientId),
     enabled: enabled && clientId > 0,
-    staleTime: 60000,
+    staleTime: 30000,
+    select: (data) => data.tasks ?? [],
   })
 }
 
 /**
- * Get client operators section (operators, searchers). Mock only.
+ * Get client assignment history (operators + searchers). Calls GET /clients/{id}/assignment-history
  */
 export function useClientOperatorsSection(clientId: number, enabled = true) {
   return useQuery({
     queryKey: clientKeys.operatorsSection(clientId),
-    queryFn: () => getMockClientOperatorsSection(clientId),
+    queryFn: async () => {
+      const [employeeHistory, searcherHistory] = await Promise.all([
+        clientApi.getClientAssignmentHistory(clientId, { assignment_type: 'employee' }),
+        clientApi.getClientAssignmentHistory(clientId, { assignment_type: 'searcher' }),
+      ])
+      return {
+        operators: employeeHistory.history,
+        searchers: searcherHistory.history,
+        current_employee: employeeHistory.current_employee,
+        current_searcher: searcherHistory.current_searcher,
+      }
+    },
     enabled: enabled && clientId > 0,
-    staleTime: 60000,
+    staleTime: 30000,
   })
 }
 
 /**
- * Get client documents. Mock only.
+ * Get client documents. KEPT AS MOCK (no backend infrastructure exists).
  */
 export function useClientDocuments(clientId: number, enabled = true) {
   return useQuery({
@@ -342,13 +431,80 @@ export function useClientDocuments(clientId: number, enabled = true) {
 }
 
 /**
- * Get client activities (timeline). Mock only.
+ * Get client activities (interaction timeline). Calls GET /interactions/client/{id}
  */
 export function useClientActivities(clientId: number, enabled = true) {
   return useQuery({
     queryKey: clientKeys.activities(clientId),
-    queryFn: () => getMockClientActivities(clientId),
+    queryFn: () => interactionApi.getClientInteractions(clientId),
     enabled: enabled && clientId > 0,
-    staleTime: 60000,
+    staleTime: 30000,
+    select: (data) => data.interactions ?? [],
+  })
+}
+
+// --- Task mutations ---
+
+/**
+ * Create a new task for a client
+ */
+export function useCreateTask() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: Parameters<typeof taskApi.createTask>[0]) => taskApi.createTask(data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.tasks(variables.client_id) })
+      toast.success('Task created successfully')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to create task'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Create a note for a client
+ */
+export function useCreateClientNote() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      data,
+    }: {
+      clientId: number
+      data: { content: string; note_type?: string }
+    }) => clientApi.createClientNote(clientId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
+      toast.success('Note added successfully')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to add note'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Create a new interaction
+ */
+export function useCreateInteraction() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: Parameters<typeof interactionApi.createInteraction>[0]) =>
+      interactionApi.createInteraction(data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.activities(variables.client_id) })
+      toast.success('Interaction recorded successfully')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to record interaction'
+      toast.error(message)
+    },
   })
 }

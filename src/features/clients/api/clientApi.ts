@@ -8,16 +8,19 @@
 import api from '@/lib/api'
 import type {
   AssignClientRequest,
+  AssignmentHistoryResponse,
   BulkAssignClientRequest,
   BulkAssignmentResponse,
   Client,
   ClientDetail,
+  ClientProfileResponse,
   CreateClientRequest,
   GetClientsParams,
   ManualPriorityRequest,
   PaginatedClientResponse,
   SearchByTinParams,
   UpdateClientRequest,
+  WriteoffsResponse,
 } from './types'
 
 const BASE_URL = '/api/v1/clients'
@@ -143,6 +146,50 @@ export async function bulkAssignClients(
 }
 
 /**
+ * Get client profile (header + left card data)
+ */
+export async function getClientProfile(clientId: number): Promise<ClientProfileResponse> {
+  const response = await api.get<ClientProfileResponse>(`${BASE_URL}/${clientId}/profile`)
+  return response.data
+}
+
+/**
+ * Get client write-offs
+ */
+export async function getClientWriteoffs(
+  clientId: number,
+  params: { skip?: number; limit?: number } = {}
+): Promise<WriteoffsResponse> {
+  const response = await api.get<WriteoffsResponse>(`${BASE_URL}/${clientId}/writeoffs`, { params })
+  return response.data
+}
+
+/**
+ * Get client assignment history
+ */
+export async function getClientAssignmentHistory(
+  clientId: number,
+  params: { assignment_type?: string; skip?: number; limit?: number } = {}
+): Promise<AssignmentHistoryResponse> {
+  const response = await api.get<AssignmentHistoryResponse>(
+    `${BASE_URL}/${clientId}/assignment-history`,
+    { params }
+  )
+  return response.data
+}
+
+/**
+ * Create a note for a client
+ */
+export async function createClientNote(
+  clientId: number,
+  noteData: { content: string; note_type?: string }
+): Promise<{ id: number; content: string; note_type: string; created_at: string }> {
+  const response = await api.post(`${BASE_URL}/${clientId}/notes`, noteData)
+  return response.data
+}
+
+/**
  * Exported API object for easier importing
  * Consistent with other service APIs (usersApi, rolesApi, projectsApi, etc.)
  */
@@ -158,4 +205,8 @@ export const clientApi = {
   getPrioritySummary,
   assignClient,
   bulkAssignClients,
+  getClientProfile,
+  getClientWriteoffs,
+  getClientAssignmentHistory,
+  createClientNote,
 }
