@@ -23,13 +23,15 @@ import { PriorityBadge } from './PriorityBadge'
 import { useUsers } from '@/features/users/hooks/useUsers'
 
 // Format currency for Ukrainian Hryvnia
-const formatUAH = (amount: number) => {
+const formatUAH = (amount: string | number) => {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount
+  if (isNaN(num)) return '0'
   return new Intl.NumberFormat('uk-UA', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
     useGrouping: true,
   })
-    .format(amount)
+    .format(num)
     .replace(/,/g, ' ')
 }
 
@@ -41,7 +43,7 @@ interface BulkAssignClientModalProps {
     fullName: string
     priority: 'Critical' | 'High' | 'Medium' | 'Low'
     score: number
-    debt: number
+    debt: string
   }>
   totalSelectedCount?: number // Total count when all clients are selected
   onClose: () => void
@@ -97,7 +99,7 @@ export function BulkAssignClientModal({
 
   // Calculate summary statistics
   const summary = useMemo(() => {
-    const totalDebt = selectedClients.reduce((sum, client) => sum + client.debt, 0)
+    const totalDebt = selectedClients.reduce((sum, client) => sum + (Number(client.debt) || 0), 0)
     const avgScore =
       selectedClients.length > 0
         ? selectedClients.reduce((sum, client) => sum + client.score, 0) / selectedClients.length

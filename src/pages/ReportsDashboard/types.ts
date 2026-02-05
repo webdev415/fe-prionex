@@ -34,7 +34,7 @@ export interface DashboardKPIs {
   payments_count_today: number
   payments_verified: number
   payments_pending: number
-  avg_payment_amount: number
+  avg_payment_amount: string
   total_talk_time: number
   avg_call_duration: number
 }
@@ -42,8 +42,8 @@ export interface DashboardKPIs {
 export interface ClientStatistics {
   by_status: Record<string, number>
   by_priority: Record<string, number>
-  total_debt: number
-  avg_debt?: number
+  total_debt: string
+  avg_debt?: string
 }
 
 export interface TopOperator {

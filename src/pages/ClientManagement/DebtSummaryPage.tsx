@@ -366,12 +366,12 @@ export function DebtSummaryPage() {
     // This ensures progress calculation matches the displayed "Total Debt" value
     let currentDebt = 0
     if (apiClient?.total_debt !== undefined && apiClient.total_debt !== null) {
-      currentDebt = apiClient.total_debt
+      currentDebt = Number(apiClient.total_debt)
     } else if (
       paymentHistoryData?.current_debt !== undefined &&
       paymentHistoryData.current_debt !== null
     ) {
-      currentDebt = paymentHistoryData.current_debt
+      currentDebt = Number(paymentHistoryData.current_debt)
     }
 
     // Progress = 100 * TotalPaid / (TotalPaid + TotalDebt)
@@ -398,7 +398,7 @@ export function DebtSummaryPage() {
           return b.payment_date.localeCompare(a.payment_date)
         })
         const mostRecent = sorted[0] // First = most recent
-        lastPaymentAmount = mostRecent.amount
+        lastPaymentAmount = Number(mostRecent.amount) || 0
         // Use verified_at timestamp (has actual time when verified)
         lastPaymentDate = mostRecent.verified_at || mostRecent.recorded_at
       }
@@ -789,10 +789,12 @@ export function DebtSummaryPage() {
     )
   }
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '₴ 0'
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
     // Format with spaces as thousands separator, no decimals (e.g., "₴ 10 080")
-    return `₴ ${amount
+    return `₴ ${num
       .toLocaleString(locale, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
@@ -1489,8 +1491,9 @@ export function DebtSummaryPage() {
                 ?.payment_number || `PMT-${selectedPayment.id}`,
             status: selectedPayment.status,
             amount:
-              paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.amount ??
-              selectedPayment.amount,
+              Number(
+                paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.amount
+              ) || selectedPayment.amount,
             // Use verified_at for verified payments, recorded_at for others
             paymentDate: (() => {
               const bp = paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
@@ -1510,11 +1513,13 @@ export function DebtSummaryPage() {
             project: 'PrivatBank Collection',
             // Use backend snapshot for Debt Impact when available
             currentDebt:
-              paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.debt_before ??
-              debtSummary.totalDebt,
+              Number(
+                paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.debt_before
+              ) || debtSummary.totalDebt,
             newDebt:
-              paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.debt_after ??
-              Math.max(0, debtSummary.totalDebt - selectedPayment.amount),
+              Number(
+                paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.debt_after
+              ) || Math.max(0, debtSummary.totalDebt - selectedPayment.amount),
             // Audit trail (real data when present, fallback to 'Unknown')
             createdBy:
               paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)

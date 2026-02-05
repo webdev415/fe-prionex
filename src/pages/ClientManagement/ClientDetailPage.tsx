@@ -568,23 +568,27 @@ export function ClientDetailPage() {
     )
   }
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '0'
     return new Intl.NumberFormat('uk-UA', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
       useGrouping: true,
     })
-      .format(amount)
+      .format(num)
       .replace(/,/g, ' ')
   }
 
-  const formatCurrencyWithDecimals = (amount: number) => {
+  const formatCurrencyWithDecimals = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '0'
     return new Intl.NumberFormat('uk-UA', {
-      minimumFractionDigits: amount % 1 !== 0 ? 1 : 0,
+      minimumFractionDigits: num % 1 !== 0 ? 1 : 0,
       maximumFractionDigits: 1,
       useGrouping: true,
     })
-      .format(amount)
+      .format(num)
       .replace(/,/g, ' ')
   }
 

@@ -15,18 +15,18 @@ describe('IncomingCallPopup', () => {
     agent_extension: '1004',
     client_name: 'Коваленко Іван Петрович',
     loan_count: 2,
-    total_debt: 8000.0,
+    total_debt: '8000.0',
     loans: [
       {
         loan_id: 456,
         contract_number: 'LOAN-2024-001',
-        remaining_debt: 5000.0,
+        remaining_debt: '5000.0',
         status: 'active',
       },
       {
         loan_id: 457,
         contract_number: 'LOAN-2024-002',
-        remaining_debt: 3000.0,
+        remaining_debt: '3000.0',
         status: 'active',
       },
     ],
@@ -37,7 +37,7 @@ describe('IncomingCallPopup', () => {
     customer_phone: '+380501234567',
     agent_extension: '1004',
     loan_count: 0,
-    total_debt: 0,
+    total_debt: '0',
     loans: [],
   }
 

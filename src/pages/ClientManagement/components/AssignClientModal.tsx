@@ -136,7 +136,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
       ? mapScoreToPriority(client.priority_score, thresholds)
       : ('High' as 'Critical' | 'High' | 'Medium' | 'Low'))
   const score = client?.priority_score || 0
-  const totalDebt = client?.total_debt || 0
+  const totalDebt = Number(client?.total_debt) || 0
   const debtCount = client?.debt_count || 0
 
   const canSubmit = (employeeId || searcherId) && reason

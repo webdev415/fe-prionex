@@ -154,7 +154,7 @@ export function getMockDashboard(period: Period = 'today'): DashboardResponse {
     payments_count_today: 45,
     payments_verified: 120000.0,
     payments_pending: 30000.0,
-    avg_payment_amount: 3333.33,
+    avg_payment_amount: '3333.33',
     total_talk_time: 18240,
     avg_call_duration: 78,
   }
@@ -199,8 +199,8 @@ export function getMockDashboard(period: Period = 'today'): DashboardResponse {
         medium: 5000,
         low: 2500,
       },
-      total_debt: 125000000.0,
-      avg_debt: 12500.0,
+      total_debt: '125000000.0',
+      avg_debt: '12500.0',
     },
     top_operators: [
       {

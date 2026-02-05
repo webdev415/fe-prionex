@@ -75,7 +75,7 @@ export interface Client {
 
   // Debt summary
   debt_count: number
-  total_debt: number
+  total_debt: string
   primary_creditor?: string | null
 
   // Assignment (Sprint 2 - Phase A)
@@ -184,7 +184,7 @@ export interface SearchByTinParams {
 
 export interface PriorityStat {
   count: number
-  total_debt: number
+  total_debt: string
 }
 
 export interface PrioritySummary {

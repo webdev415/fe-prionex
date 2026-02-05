@@ -65,9 +65,11 @@ export function ExportPaymentsCSVModal({
   const { t, i18n } = useTranslation('common')
   const userTimezone = useAuthStore((state) => state.user?.timezone)
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '₴ 0.00'
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    return `₴ ${amount.toLocaleString(locale, {
+    return `₴ ${num.toLocaleString(locale, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`

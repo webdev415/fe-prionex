@@ -107,11 +107,11 @@ export async function getClientCount(): Promise<number> {
  * Priority summary response type
  */
 export interface PrioritySummary {
-  critical: { count: number; total_debt: number }
-  high: { count: number; total_debt: number }
-  medium: { count: number; total_debt: number }
-  low: { count: number; total_debt: number }
-  total: { count: number; total_debt: number }
+  critical: { count: number; total_debt: string }
+  high: { count: number; total_debt: string }
+  medium: { count: number; total_debt: string }
+  low: { count: number; total_debt: string }
+  total: { count: number; total_debt: string }
 }
 
 /**

@@ -52,7 +52,7 @@ interface DisplayClient {
   phoneNumber: string
   createdDate: string
   creditor: string
-  debt: number
+  debt: string
   priority: 'Critical' | 'High' | 'Medium' | 'Low'
   score: number
 }
@@ -82,7 +82,7 @@ const mapAPIClientToDisplay = (
     phoneNumber: client.phone_primary,
     createdDate: client.created_at ? new Date(client.created_at).toLocaleDateString('uk-UA') : '-',
     creditor: client.primary_creditor || '-',
-    debt: client.total_debt || 0,
+    debt: client.total_debt || '0',
     priority:
       (client.manual_priority as 'Critical' | 'High' | 'Medium' | 'Low') ||
       mapScoreToPriority(client.priority_score, thresholds),
@@ -948,13 +948,15 @@ export function ClientManagementPage() {
     }
   }
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '0'
     return new Intl.NumberFormat('uk-UA', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
       useGrouping: true,
     })
-      .format(amount)
+      .format(num)
       .replace(/,/g, ' ')
   }
 

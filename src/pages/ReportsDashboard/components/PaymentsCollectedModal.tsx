@@ -57,7 +57,7 @@ export function PaymentsCollectedModal({ open, onClose, period }: PaymentsCollec
       card: { amount: kpis.payments_pending, percentage: 23 },
       other: { amount: 15000, percentage: 10 },
     },
-    averagePayment: kpis.avg_payment_amount,
+    averagePayment: Number(kpis.avg_payment_amount) || 0,
     topCollector: {
       name: dashboardData.top_operators[0]?.operator_name || 'Maria S.',
       amount: 45000,
