@@ -79,7 +79,8 @@ const mapAPIClientToDisplay = (
     fullName,
     taxIdNumber: client.tax_id,
     tags: client.tags || [], // Tags from API
-    phoneNumber: client.phone_primary,
+    // Filter placeholder "000000000000" phones from legacy data migration
+    phoneNumber: /^0+$/.test(client.phone_primary) ? '-' : client.phone_primary,
     createdDate: client.created_at ? new Date(client.created_at).toLocaleDateString('uk-UA') : '-',
     creditor: client.primary_creditor || '-',
     debt: client.total_debt || '0',
@@ -1013,7 +1014,7 @@ export function ClientManagementPage() {
       key: 'phoneNumber',
       header: t('pages.clients.tableHeaders.phoneNumber'),
       align: 'left',
-      render: (client) => (client.phoneNumber === '000000000000' ? '-' : client.phoneNumber),
+      render: (client) => client.phoneNumber,
     },
     {
       key: 'creditor',

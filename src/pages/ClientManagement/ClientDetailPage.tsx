@@ -70,6 +70,41 @@ type ExtendedCallItem = {
   initiated_at?: string
 }
 
+// Legacy numeric code mappings (from old CRM database)
+const MARITAL_STATUS_MAP: Record<string, string> = {
+  '1': 'Неодружений/Незаміжня',
+  '2': 'Одружений/Заміжня',
+  '3': 'Розлучений/Розлучена',
+  '4': 'Вдівець/Вдова',
+  '5': 'Цивільний шлюб',
+}
+
+const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
+  full_time: 'Повна зайнятість',
+  part_time: 'Часткова зайнятість',
+  contract: 'Контракт',
+  student: 'Студент',
+  self_employed: 'ФОП',
+  unemployed: 'Безробітний',
+  retired: 'Пенсіонер',
+  other: 'Інше',
+}
+
+const CONTACT_TYPE_MAP: Record<string, string> = {
+  phone_mobile_third_party: 'Третя особа (моб.)',
+  phone_home_third_party: 'Третя особа (дом.)',
+  phone_work_third_party: 'Третя особа (роб.)',
+  phone_mobile_guarantor: 'Поручитель (моб.)',
+  phone_work_guarantor: 'Поручитель (роб.)',
+  phone_home_guarantor: 'Поручитель (дом.)',
+  phone_other: 'Інший телефон',
+  phone_mobile_other: 'Інший (моб.)',
+  phone_work_other: 'Інший (роб.)',
+  phone_home_other: 'Інший (дом.)',
+  phone_home_client: 'Клієнт (дом.)',
+  phone_fax: 'Факс',
+}
+
 // Mock data from mockClientDetails.ts; profile + sections loaded via useClientProfile + section hooks.
 
 export function ClientDetailPage() {
@@ -178,18 +213,22 @@ export function ClientDetailPage() {
     if (!profile) return null
 
     // Build phones array from profile fields
+    // Filter out placeholder "000000000000" phones from legacy data migration
+    const isValidPhone = (p: string | null | undefined): p is string => !!p && !/^0+$/.test(p)
     const phones: Array<{ number: string; type: string }> = []
-    if (profile.phone_primary) phones.push({ number: profile.phone_primary, type: 'primary' })
-    if (profile.phone_secondary) phones.push({ number: profile.phone_secondary, type: 'secondary' })
+    if (isValidPhone(profile.phone_primary))
+      phones.push({ number: profile.phone_primary, type: 'primary' })
+    if (isValidPhone(profile.phone_secondary))
+      phones.push({ number: profile.phone_secondary, type: 'secondary' })
     if (profile.additional_phones) {
-      profile.additional_phones.forEach((p) => phones.push({ number: p.number, type: p.type }))
+      profile.additional_phones
+        .filter((p) => isValidPhone(p.number))
+        .forEach((p) => phones.push({ number: p.number, type: p.type }))
     }
 
     // Build addresses object from array
     const registrationAddr = profile.addresses?.find((a) => a.address_type === 'registration')
-    const personalAddr = profile.addresses?.find(
-      (a) => a.address_type === 'personal' || a.address_type === 'residential'
-    )
+    const actualAddr = profile.addresses?.find((a) => a.address_type === 'actual')
 
     return {
       ...profile,
@@ -199,7 +238,7 @@ export function ClientDetailPage() {
       priority: profile.priority_level
         ? profile.priority_level.charAt(0).toUpperCase() + profile.priority_level.slice(1)
         : 'Low',
-      phoneNumber: profile.phone_primary,
+      phoneNumber: isValidPhone(profile.phone_primary) ? profile.phone_primary : '-',
       taxIdNumber: profile.tax_id,
       // Card fields
       department: '',
@@ -212,32 +251,44 @@ export function ClientDetailPage() {
         dateOfBirth: profile.date_of_birth ?? '-',
         age: profile.age ?? '-',
         passport: profile.passport?.number ?? '-',
-        maritalStatus: profile.marital_status ?? '-',
+        maritalStatus: profile.marital_status
+          ? (MARITAL_STATUS_MAP[profile.marital_status] ?? profile.marital_status)
+          : '-',
         familyMembers: profile.family_members_count ?? '-',
         incomeLevel: profile.income_level ?? '-',
-        employmentType: profile.employment?.company_type ?? '-',
+        employmentType: profile.employment?.employment_type
+          ? (EMPLOYMENT_TYPE_MAP[profile.employment.employment_type] ??
+            profile.employment.employment_type)
+          : '-',
       },
       // Work
       work: profile.employment
         ? {
             organizationName: profile.employment.company_name ?? '-',
             position: profile.employment.position ?? '-',
-            experience: profile.employment.employment_date ?? '-',
-            managerFullName: profile.employment.manager_name ?? '-',
+            experience:
+              profile.employment.work_experience_years != null
+                ? `${profile.employment.work_experience_years} р.`
+                : (profile.employment.employment_date ?? '-'),
+            managerFullName:
+              profile.employment.manager_full_name ?? profile.employment.manager_name ?? '-',
           }
         : null,
       // Recommenders mapped to UI shape
+      // TODO: Legacy contacts often have no name data (first_name/last_name/middle_name empty).
+      //       full_name will be empty for these records until data is enriched.
       recommenders: (profile.recommenders ?? []).map((r) => ({
         id: r.id,
-        fullName: r.full_name,
-        relationship: r.relationship ?? '-',
+        fullName: r.full_name || null,
+        relationship:
+          r.relationship || CONTACT_TYPE_MAP[r.contact_type ?? ''] || r.contact_type || '-',
         phoneNumber: r.phone ?? '-',
         comment: r.notes ?? '-',
       })),
       // Addresses as object
       addresses: {
         registrationAddress: registrationAddr?.full_address ?? '-',
-        personalAddress: personalAddr?.full_address ?? '-',
+        personalAddress: actualAddr?.full_address ?? '-',
       },
       // Comments mapped
       comments: (profile.comments ?? []).map((c) => ({
@@ -1274,16 +1325,19 @@ export function ClientDetailPage() {
                   {client.recommenders.map((friend) => (
                     <>
                       {/* <div key={friend.id} className="flex flex-col gap-3 self-stretch"> */}
-                      <div className="flex items-center self-stretch p-0">
-                        <div className="flex flex-1 items-center gap-2.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.fullName')}
-                          </label>
+                      {/* TODO: Legacy contacts have no name data — row hidden until data enriched */}
+                      {friend.fullName && (
+                        <div className="flex items-center self-stretch p-0">
+                          <div className="flex flex-1 items-center gap-2.5">
+                            <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                              {t('pages.clients.detail.fullName')}
+                            </label>
+                          </div>
+                          <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                            {friend.fullName}
+                          </p>
                         </div>
-                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                          {friend.fullName}
-                        </p>
-                      </div>
+                      )}
                       <div className="flex items-center self-stretch p-0">
                         <div className="flex flex-1 items-center gap-2.5">
                           <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
@@ -1310,7 +1364,7 @@ export function ClientDetailPage() {
                             {t('pages.clients.detail.comment')}
                           </label>
                         </div>
-                        <p className="text-dark-500 flex-1 text-right text-sm leading-[140%] font-medium tracking-[-0.24px]">
+                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                           {friend.comment}
                         </p>
                       </div>
@@ -1331,7 +1385,7 @@ export function ClientDetailPage() {
                         {t('pages.clients.detail.registrationAddress')}
                       </label>
                     </div>
-                    <p className="text-dark-500 flex-1 text-right text-sm leading-[140%] font-medium tracking-[-0.24px]">
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {client.addresses.registrationAddress}
                     </p>
                   </div>
@@ -1342,7 +1396,7 @@ export function ClientDetailPage() {
                         {t('pages.clients.detail.personalAddress')}
                       </label>
                     </div>
-                    <p className="text-dark-500 flex-1 text-right text-sm leading-[140%] font-medium tracking-[-0.24px]">
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {client.addresses.personalAddress}
                     </p>
                   </div>

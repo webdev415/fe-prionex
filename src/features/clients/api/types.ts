@@ -262,10 +262,13 @@ export interface ClientProfileResponse {
   employment?: {
     company_name?: string | null
     company_type?: string | null
+    employment_type?: string | null
     position?: string | null
     department?: string | null
     manager_name?: string | null
+    manager_full_name?: string | null
     employment_date?: string | null
+    work_experience_years?: number | null
   } | null
   recommenders: Array<{
     id: number
