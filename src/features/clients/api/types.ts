@@ -343,9 +343,7 @@ export interface WriteoffsResponse {
 
 export interface AssignmentHistoryEntry {
   id: number
-  client_id: number
   assignment_type: string
-  assigned_by?: number | null
   assigned_by_name?: string | null
   old_employee_id?: number | null
   old_employee_name?: string | null
@@ -355,17 +353,15 @@ export interface AssignmentHistoryEntry {
   old_searcher_name?: string | null
   new_searcher_id?: number | null
   new_searcher_name?: string | null
-  reason?: string | null
-  created_at: string
+  assignment_reason?: string | null
+  assigned_at: string
 }
 
 export interface AssignmentHistoryResponse {
   history: AssignmentHistoryEntry[]
   total: number
-  skip: number
-  limit: number
-  current_employee?: string | null
-  current_searcher?: string | null
+  current_employee?: { id: number; name: string } | null
+  current_searcher?: { id: number; name: string } | null
 }
 
 // --- Payment Response Types ---

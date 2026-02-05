@@ -305,8 +305,9 @@ export function ClientDetailPage() {
         counterparty: d.seller_company,
         saleDate: d.purchase_date ?? '-',
         loanAmount: Number(d.original_debt_amount ?? 0),
-        principalDebt: Number(d.remaining_debt_amount ?? 0),
+        principalDebt: Number(d.principal_amount ?? d.original_debt_amount ?? 0),
         totalToRepay: Number(d.remaining_debt_amount ?? 0),
+        status: d.status,
       })),
       // Payments mapped from PaymentResponse to UI shape
       payments: (paymentsSection?.payments ?? []).map((p) => ({
@@ -360,7 +361,7 @@ export function ClientDetailPage() {
       // Operators/searchers from assignment history
       operators: (operatorsSection?.operators ?? []).map((o) => ({
         id: o.id,
-        creationDate: o.created_at ? new Date(o.created_at).toLocaleDateString() : '-',
+        creationDate: o.assigned_at ? new Date(o.assigned_at).toLocaleDateString() : '-',
         whoCreated: o.assigned_by_name ?? '-',
         description: `${o.old_employee_name ?? '-'} → ${o.new_employee_name ?? '-'}`,
         reminderDate: '-',
@@ -368,7 +369,7 @@ export function ClientDetailPage() {
       })),
       searchers: (operatorsSection?.searchers ?? []).map((s) => ({
         id: s.id,
-        creationDate: s.created_at ? new Date(s.created_at).toLocaleDateString() : '-',
+        creationDate: s.assigned_at ? new Date(s.assigned_at).toLocaleDateString() : '-',
         whoCreated: s.assigned_by_name ?? '-',
         description: `${s.old_searcher_name ?? '-'} → ${s.new_searcher_name ?? '-'}`,
         reminderDate: '-',
@@ -1635,9 +1636,18 @@ export function ClientDetailPage() {
                       {t('pages.clients.detail.loansOnRR')}
                     </button>
                   </div>
-                  {/* Data table */}
+                  {/* Data table filtered by sub-tab */}
                   <div className="flex flex-col items-start gap-2.5 self-stretch px-3 py-4 md:px-6">
-                    <DataTable columns={loanColumns} data={client.loans} className="w-full" />
+                    <DataTable
+                      columns={loanColumns}
+                      data={client.loans.filter((loan) => {
+                        if (activeLoanTab === 'process') return loan.status === 'active'
+                        if (activeLoanTab === 'closed') return loan.status === 'closed'
+                        if (activeLoanTab === 'rr') return loan.status === 'restructuring'
+                        return true
+                      })}
+                      className="w-full"
+                    />
                   </div>
                   {/* Action buttons at the bottom */}
                   <div className="flex flex-wrap items-center gap-2 self-stretch px-3 py-4 md:gap-3 md:px-6">
