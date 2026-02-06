@@ -12,23 +12,32 @@ import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { AddNoteModal } from './components/AddNoteModal'
 import { PriorityBadge } from './components/PriorityBadge'
-import { TagBadge } from '@/components/ui/TagBadge'
 import type { Priority } from './types'
+import { TagBadge } from '@/components/ui/TagBadge'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { CallRecordingModal } from './components/CallRecordingModal'
 import { ViewSMSModal } from './components/ViewSMSModal'
 import { SendSMSModal } from './components/SendSMSModal'
 import { CallLogCard } from './components/CallLogCard'
 import { cn } from '@/lib/utils'
-import { useClient } from '@/features/clients/hooks/useClients'
+import {
+  useClientProfile,
+  useClientLoans,
+  useClientPaymentsSection,
+  useClientCallSmsHistory,
+  useClientTasks,
+  useClientOperatorsSection,
+  useClientDocuments,
+  useClientActivities,
+  useCreateClientNote,
+} from '@/features/clients/hooks/useClients'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
-import { useSMSHistory } from '@/features/sms'
 import { useCallStore } from '@/stores/callStore'
 import { useClientTags } from '@/features/tags/hooks/useTags'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { useAuth } from '@/features/auth/hooks/useAuth'
-import { useOriginateCall, useCallHistory } from '@/features/calls/hooks/useCall'
+import { useOriginateCall } from '@/features/calls/hooks/useCall'
 import { useCallWebSocket } from '@/features/calls/hooks/useCallWebSocket'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -61,812 +70,42 @@ type ExtendedCallItem = {
   initiated_at?: string
 }
 
-// Helper function to create mock client detail
-const createMockClientDetail = (
-  id: number,
-  fullName: string,
-  taxIdNumber: string,
-  phoneNumber: string,
-  tags: string[],
-  priority: 'Critical' | 'High' | 'Medium' | 'Low',
-  score: number
-) => ({
-  id,
-  fullName,
-  taxIdNumber,
-  dateOfBirth:
-    id === 1
-      ? '09/05/1904'
-      : id === 2
-        ? '15/08/1985'
-        : id === 3
-          ? '22/11/1990'
-          : id === 4
-            ? '03/02/1988'
-            : id === 5
-              ? '18/07/1992'
-              : id === 6
-                ? '25/09/1987'
-                : '12/04/1991',
-  region:
-    id === 1
-      ? 'Lviv'
-      : id === 2
-        ? 'Kyiv'
-        : id === 3
-          ? 'Kharkiv'
-          : id === 4
-            ? 'Odesa'
-            : id === 5
-              ? 'Dnipro'
-              : id === 6
-                ? 'Zaporizhzhia'
-                : 'Lviv',
-  age:
-    id === 1
-      ? 41
-      : id === 2
-        ? 39
-        : id === 3
-          ? 34
-          : id === 4
-            ? 36
-            : id === 5
-              ? 32
-              : id === 6
-                ? 37
-                : 33,
-  userNumber: taxIdNumber.slice(0, 9),
-  contactStatus: 'Contactable',
-  incomeLevel:
-    id === 1
-      ? 9000.0
-      : id === 2
-        ? 12000.0
-        : id === 3
-          ? 7500.0
-          : id === 4
-            ? 11000.0
-            : id === 5
-              ? 8500.0
-              : id === 6
-                ? 13000.0
-                : 9500.0,
-  score,
-  priority,
-  department: 'Credit',
-  credit: 'Credit',
-  responsibleEmployee:
-    id === 1
-      ? 'Sofia Andreevna Belova'
-      : id === 2
-        ? 'Maria Ivanovna Petrova'
-        : id === 3
-          ? 'Anna Sergeevna Sidorova'
-          : id === 4
-            ? 'Elena Dmitrievna Kozlova'
-            : id === 5
-              ? 'Olga Nikolaevna Morozova'
-              : id === 6
-                ? 'Tatiana Vladimirovna Volkova'
-                : 'Natalia Alexandrovna Sokolova',
-  responsibleResearcher:
-    id === 1
-      ? 'Eva Pavlovna Smirnova'
-      : id === 2
-        ? 'Irina Mikhailovna Fedorova'
-        : id === 3
-          ? 'Yulia Andreevna Popova'
-          : id === 4
-            ? 'Ekaterina Viktorovna Lebedeva'
-            : id === 5
-              ? 'Svetlana Olegovna Novikova'
-              : id === 6
-                ? 'Marina Borisovna Frolova'
-                : 'Daria Romanovna Orlova',
-  phones: [
-    { number: phoneNumber, type: 'primary' as const },
-    {
-      number: phoneNumber.replace(/(\d{2})(\d{3})(\d{4})/, '$1$2$3' + (id + 10)),
-      type: 'secondary' as const,
-    },
-  ],
-  tags,
-  callCount:
-    id === 1
-      ? 69
-      : id === 2
-        ? 45
-        : id === 3
-          ? 32
-          : id === 4
-            ? 58
-            : id === 5
-              ? 41
-              : id === 6
-                ? 67
-                : 52,
-  personalDetails: {
-    tin: taxIdNumber,
-    dateOfBirth:
-      id === 1
-        ? '09/05/1904'
-        : id === 2
-          ? '15/08/1985'
-          : id === 3
-            ? '22/11/1990'
-            : id === 4
-              ? '03/02/1988'
-              : id === 5
-                ? '18/07/1992'
-                : id === 6
-                  ? '25/09/1987'
-                  : '12/04/1991',
-    age:
-      id === 1
-        ? 41
-        : id === 2
-          ? 39
-          : id === 3
-            ? 34
-            : id === 4
-              ? 36
-              : id === 5
-                ? 32
-                : id === 6
-                  ? 37
-                  : 33,
-    passport: taxIdNumber.slice(0, 10),
-    maritalStatus: 'Contactable',
-    familyMembers:
-      id === 1 ? 5 : id === 2 ? 3 : id === 3 ? 4 : id === 4 ? 2 : id === 5 ? 6 : id === 6 ? 3 : 4,
-  },
-  recommenders: [
-    {
-      id: 1,
-      fullName:
-        id === 1
-          ? 'Elena Petrovna Ivanova'
-          : id === 2
-            ? 'Nina Vasilievna Smirnova'
-            : id === 3
-              ? 'Galina Ivanovna Petrova'
-              : id === 4
-                ? 'Larisa Nikolaevna Kozlova'
-                : id === 5
-                  ? 'Raisa Sergeevna Morozova'
-                  : id === 6
-                    ? 'Valentina Dmitrievna Volkova'
-                    : 'Lyudmila Alexandrovna Sokolova',
-      relationship: 'Friend',
-      phoneNumber: phoneNumber.replace(/(\d{2})(\d{3})/, '$1$2' + (id + 20)),
-      comment:
-        id === 1
-          ? 'give their best on and off the field'
-          : id === 2
-            ? 'very reliable and trustworthy person'
-            : id === 3
-              ? 'excellent communication skills'
-              : id === 4
-                ? 'highly recommended contact'
-                : id === 5
-                  ? 'professional and courteous'
-                  : id === 6
-                    ? 'responsive and helpful'
-                    : 'good business relationship',
-    },
-    {
-      id: 2,
-      fullName:
-        id === 1
-          ? 'Oksana Mykolaivna Kovalenko'
-          : id === 2
-            ? 'Tatiana Vladimirovna Romanova'
-            : id === 3
-              ? 'Marina Borisovna Frolova'
-              : id === 4
-                ? 'Daria Romanovna Orlova'
-                : id === 5
-                  ? 'Anastasia Olegovna Novikova'
-                  : id === 6
-                    ? 'Kristina Viktorovna Lebedeva'
-                    : 'Victoria Mikhailovna Fedorova',
-      relationship: 'Friend',
-      phoneNumber: phoneNumber.replace(/(\d{2})(\d{3})/, '$1$2' + (id + 30)),
-      comment:
-        id === 1
-          ? 'always inspiring the team to give their best and fostering a spirit of collaboration.'
-          : id === 2
-            ? 'maintains strong professional connections'
-            : id === 3
-              ? 'known for integrity and honesty'
-              : id === 4
-                ? 'well-respected in the community'
-                : id === 5
-                  ? 'excellent problem-solving abilities'
-                  : id === 6
-                    ? 'very organized and detail-oriented'
-                    : 'great networking skills',
-    },
-  ],
-  addresses: {
-    registrationAddress:
-      id === 1
-        ? '15 Garden Street, Kyiv, Ukraine, 01001'
-        : id === 2
-          ? '42 Main Avenue, Lviv, Ukraine, 79000'
-          : id === 3
-            ? '78 Central Boulevard, Kharkiv, Ukraine, 61000'
-            : id === 4
-              ? '23 Seaside Road, Odesa, Ukraine, 65000'
-              : id === 5
-                ? '56 River Street, Dnipro, Ukraine, 49000'
-                : id === 6
-                  ? '89 Park Lane, Zaporizhzhia, Ukraine, 69000'
-                  : '34 Market Square, Lviv, Ukraine, 79000',
-    personalAddress:
-      id === 1
-        ? '27 Maple Avenue, Lviv, Ukraine, 79000'
-        : id === 2
-          ? '91 Oak Drive, Kyiv, Ukraine, 01001'
-          : id === 3
-            ? '12 Pine Street, Kharkiv, Ukraine, 61000'
-            : id === 4
-              ? '45 Elm Road, Odesa, Ukraine, 65000'
-              : id === 5
-                ? '67 Birch Way, Dnipro, Ukraine, 49000'
-                : id === 6
-                  ? '89 Cedar Court, Zaporizhzhia, Ukraine, 69000'
-                  : '23 Willow Path, Lviv, Ukraine, 79000',
-  },
-  loans: [
-    {
-      id: 1,
-      loanNumber: String(30 + id),
-      counterparty:
-        id === 1
-          ? 'Gamma'
-          : id === 2
-            ? 'Alpha Corp'
-            : id === 3
-              ? 'Beta Solutions'
-              : id === 4
-                ? 'Delta Inc'
-                : id === 5
-                  ? 'Epsilon Ltd'
-                  : id === 6
-                    ? 'Zeta Group'
-                    : 'Theta Partners',
-      saleDate: `0${id}.23.2023`,
-      loanAmount: 20000 + id * 1000,
-      principalDebt: 10000 + id * 500,
-      totalToRepay: 60000 + id * 5000,
-    },
-    {
-      id: 2,
-      loanNumber: String(10 + id),
-      counterparty:
-        id === 1
-          ? 'Acme Corp.'
-          : id === 2
-            ? 'Tech Innovations'
-            : id === 3
-              ? 'Global Finance'
-              : id === 4
-                ? 'Capital Ventures'
-                : id === 5
-                  ? 'Prime Lending'
-                  : id === 6
-                    ? 'Elite Banking'
-                    : 'Premium Credit',
-      saleDate: `0${id + 1}.20.2023`,
-      loanAmount: 22000 + id * 800,
-      principalDebt: 12000 + id * 600,
-      totalToRepay: 65000 + id * 3000,
-    },
-  ],
-  comments: [
-    {
-      id: 1,
-      date: `0${id}/12/2023`,
-      text:
-        id === 1
-          ? "In a conversation about loans, a friend said it's important not to hesitate to ask the bank questions to ensure e..."
-          : id === 2
-            ? 'During our discussion, the client expressed interest in refinancing options and asked about flexible payment terms.'
-            : id === 3
-              ? 'The client mentioned they are considering consolidating multiple debts into a single loan for better management.'
-              : id === 4
-                ? 'Client inquired about early payment options and potential discounts for prompt repayment.'
-                : id === 5
-                  ? 'Discussion focused on loan eligibility criteria and required documentation for the application process.'
-                  : id === 6
-                    ? 'Client asked about interest rates and how they compare to other financial institutions in the market.'
-                    : 'The conversation covered loan terms, repayment schedules, and available grace periods for payments.',
-      author:
-        id === 1
-          ? 'Sofia Andreevna Belova'
-          : id === 2
-            ? 'Maria Ivanovna Petrova'
-            : id === 3
-              ? 'Anna Sergeevna Sidorova'
-              : id === 4
-                ? 'Elena Dmitrievna Kozlova'
-                : id === 5
-                  ? 'Olga Nikolaevna Morozova'
-                  : id === 6
-                    ? 'Tatiana Vladimirovna Volkova'
-                    : 'Natalia Alexandrovna Sokolova',
-    },
-  ],
-  activities: [
-    {
-      id: 1,
-      date: `0${id}/12/2023`,
-      number: phoneNumber,
-      contactType: 'Outgoing' as const,
-      // Use simplified status labels for the result column
-      result:
-        id === 1
-          ? 'Refusal to pay'
-          : id === 2
-            ? 'Agreement for full payment'
-            : id === 3
-              ? 'Refusal to pay'
-              : id === 4
-                ? 'Agreement for partial payment'
-                : id === 5
-                  ? 'Call back later'
-                  : id === 6
-                    ? 'Agreement for full payment'
-                    : 'Agreement for full payment',
-      promisedAmount: 600 + id * 10,
-      promisedDate: `0${id}/12/2023`,
-      comment:
-        id === 1
-          ? 'I received a loan of 678 hryvnias, everything went q...'
-          : id === 2
-            ? `Client committed to payment of ${600 + id * 10} hryvnias by the agreed date.`
-            : id === 3
-              ? `Promised amount of ${600 + id * 10} hryvnias discussed during call.`
-              : id === 4
-                ? `Agreed payment schedule includes ${600 + id * 10} hryvnias installment.`
-                : id === 5
-                  ? `Client will process payment of ${600 + id * 10} hryvnias as discussed.`
-                  : id === 6
-                    ? `Payment commitment of ${600 + id * 10} hryvnias confirmed.`
-                    : `Agreed amount of ${600 + id * 10} hryvnias to be paid.`,
-      employee:
-        id === 1
-          ? 'Sidorov'
-          : id === 2
-            ? 'Petrov'
-            : id === 3
-              ? 'Ivanov'
-              : id === 4
-                ? 'Kozlov'
-                : id === 5
-                  ? 'Morozov'
-                  : id === 6
-                    ? 'Volkov'
-                    : 'Sokolov',
-    },
-  ],
-  payments: [
-    {
-      id: 1,
-      loanNumber: String(30 + id),
-      counterparty:
-        id === 1
-          ? 'Gamma'
-          : id === 2
-            ? 'Alpha Corp'
-            : id === 3
-              ? 'Beta Solutions'
-              : id === 4
-                ? 'Delta Inc'
-                : id === 5
-                  ? 'Epsilon Ltd'
-                  : id === 6
-                    ? 'Zeta Group'
-                    : 'Theta Partners',
-      saleDate: `0${id}.23.2023`,
-      paymentDate: `0${id}.23.2023`,
-      amount: 20000 + id * 1000,
-      paymentMethod: id % 2 === 0 ? 'Bank Transfer' : 'Card',
-      status: id === 1 ? 'Failed' : id === 2 ? 'Pending' : 'Done',
-      paymentDistribution: `₴ ${2000 + id * 100} loan body ₴ ${300 + id * 50} commisss`,
-      employee:
-        id === 1
-          ? 'Sidorov'
-          : id === 2
-            ? 'Shevchenko'
-            : id === 3
-              ? 'Petrov'
-              : id === 4
-                ? 'Melnik'
-                : id === 5
-                  ? 'Savchenko'
-                  : id === 6
-                    ? 'Kovalenko'
-                    : 'Ivanov',
-    },
-  ],
-  writesOffs: [
-    {
-      id: 1,
-      loanNumber: String(30 + id),
-      counterparty:
-        id === 1
-          ? 'Gamma'
-          : id === 2
-            ? 'Alpha Corp'
-            : id === 3
-              ? 'Beta Solutions'
-              : id === 4
-                ? 'Delta Inc'
-                : id === 5
-                  ? 'Epsilon Ltd'
-                  : id === 6
-                    ? 'Zeta Group'
-                    : 'Theta Partners',
-      saleDate: `0${id}.23.2023`,
-      writeOffDate: `0${id}.23.2023`,
-      amount: 20000 + id * 1000,
-      writeOffMethod: id % 2 === 0 ? 'Bank Transfer' : 'Card',
-      employee:
-        id === 1
-          ? 'Sidorov'
-          : id === 2
-            ? 'Shevchenko'
-            : id === 3
-              ? 'Petrov'
-              : id === 4
-                ? 'Melnik'
-                : id === 5
-                  ? 'Savchenko'
-                  : id === 6
-                    ? 'Kovalenko'
-                    : 'Ivanov',
-    },
-  ],
-  primaryCreditorPayments: [
-    {
-      id: 1,
-      loanNumber: String(30 + id),
-      counterparty:
-        id === 1
-          ? 'Gamma'
-          : id === 2
-            ? 'Alpha Corp'
-            : id === 3
-              ? 'Beta Solutions'
-              : id === 4
-                ? 'Delta Inc'
-                : id === 5
-                  ? 'Epsilon Ltd'
-                  : id === 6
-                    ? 'Zeta Group'
-                    : 'Theta Partners',
-      saleDate: `0${id}.23.2023`,
-      paymentDate: `0${id}.23.2023`,
-      amount: 20000 + id * 1000,
-      distributionMethod:
-        id === 1
-          ? 'Commission-based'
-          : id === 2
-            ? 'Escrow-based distribution'
-            : id === 3
-              ? 'Fixed amount distribution'
-              : id === 4
-                ? 'Multi-party / Chain distribution'
-                : id === 5
-                  ? 'Commission-based'
-                  : id === 6
-                    ? 'Escrow-based distribution'
-                    : 'Fixed amount distribution',
-    },
-  ],
-  operators: [
-    {
-      id: 1,
-      creationDate: `0${id}.23.2023`,
-      whoCreated:
-        id === 1
-          ? 'Sidorov'
-          : id === 2
-            ? 'Petrov'
-            : id === 3
-              ? 'Ivanov'
-              : id === 4
-                ? 'Kozlov'
-                : id === 5
-                  ? 'Morozov'
-                  : id === 6
-                    ? 'Volkov'
-                    : 'Sokolov',
-      description:
-        id === 1
-          ? 'Meet Alex, who got a loan to open a café and is excited to start.'
-          : id === 2
-            ? 'Client interested in business expansion loan for retail operations.'
-            : id === 3
-              ? 'New client seeking personal loan for home renovation project.'
-              : id === 4
-                ? 'Established client requesting additional credit line increase.'
-                : id === 5
-                  ? 'Client needs loan for vehicle purchase and financing options.'
-                  : id === 6
-                    ? 'Business client exploring working capital loan solutions.'
-                    : 'Individual client interested in debt consolidation services.',
-      reminderDate: `0${id}.23.2023`,
-      reminderRecipient:
-        id === 1
-          ? 'Shevchenko'
-          : id === 2
-            ? 'Petrov'
-            : id === 3
-              ? 'Ivanov'
-              : id === 4
-                ? 'Kozlov'
-                : id === 5
-                  ? 'Morozov'
-                  : id === 6
-                    ? 'Volkov'
-                    : 'Sokolov',
-    },
-  ],
-  searchers: [
-    {
-      id: 1,
-      creationDate: `0${id + 10}.23.2023`,
-      whoCreated:
-        id === 1
-          ? 'Shevchenko'
-          : id === 2
-            ? 'Petrov'
-            : id === 3
-              ? 'Ivanov'
-              : id === 4
-                ? 'Kozlov'
-                : id === 5
-                  ? 'Morozov'
-                  : id === 6
-                    ? 'Volkov'
-                    : 'Sokolov',
-      description:
-        id === 1
-          ? 'Say hello to Taylor, who took a loan to redesign their home.'
-          : id === 2
-            ? 'Client research completed for property investment loan application.'
-            : id === 3
-              ? 'Background verification in progress for new client onboarding.'
-              : id === 4
-                ? 'Credit history review completed for existing client renewal.'
-                : id === 5
-                  ? 'Financial assessment underway for business loan qualification.'
-                  : id === 6
-                    ? 'Documentation review process initiated for loan approval.'
-                    : 'Client eligibility check performed for loan program participation.',
-      reminderDate: `0${id}.23.2023`,
-      reminderRecipient:
-        id === 1
-          ? 'Shevchenko'
-          : id === 2
-            ? 'Petrov'
-            : id === 3
-              ? 'Ivanov'
-              : id === 4
-                ? 'Kozlov'
-                : id === 5
-                  ? 'Morozov'
-                  : id === 6
-                    ? 'Volkov'
-                    : 'Sokolov',
-    },
-  ],
-  callSmsHistory: {
-    all: [
-      {
-        id: 1,
-        number: phoneNumber,
-        contactType: 'Outgoing' as const,
-        comment:
-          id === 1
-            ? 'I received a loan of 678 hryvnias, everything went quickly and smoothly.'
-            : id === 2
-              ? 'Client confirmed receipt of loan documents and will proceed with signing.'
-              : id === 3
-                ? 'Discussion about loan terms and conditions went very well.'
-                : id === 4
-                  ? 'Client expressed satisfaction with the loan application process.'
-                  : id === 5
-                    ? 'Follow-up call regarding loan approval status was productive.'
-                    : id === 6
-                      ? 'Client requested additional information about repayment options.'
-                      : 'Initial consultation call completed successfully with positive feedback.',
-      },
-    ],
-    calls: [
-      {
-        id: 1,
-        date: '2025-12-03',
-        time: `${14 + id}:30`,
-        type: 'Incoming' as const,
-        duration: '2m 35s',
-        status: 'Answered' as const,
-        operator: 'maria_s',
-        phone: phoneNumber,
-        phoneLabel: 'Primary',
-        line: 'White',
-      },
-    ],
-    sms: [
-      {
-        id: 1,
-        date: '2025-12-03',
-        time: `${14 + id}:30`,
-        message:
-          id === 1
-            ? 'Dear Ivan, this is a reminder about your loan payment.'
-            : id === 2
-              ? 'Thank you for your recent loan application. We will review it shortly.'
-              : id === 3
-                ? 'Your loan payment is due soon. Please ensure sufficient funds.'
-                : id === 4
-                  ? 'Loan approval notification: Your application has been processed.'
-                  : id === 5
-                    ? 'Reminder: Loan installment payment scheduled for this week.'
-                    : id === 6
-                      ? 'Update: Your loan status has been updated in our system.'
-                      : 'Notification: Important information regarding your loan account.',
-        template: 'Payment Reminder',
-        operator: 'Svitlana',
-        status: 'Delivered' as const,
-      },
-    ],
-  },
-  tasks: [
-    {
-      id: 1,
-      creationDate: `0${id}.23.2023`,
-      whoCreated:
-        id === 1
-          ? 'Sidorov'
-          : id === 2
-            ? 'Petrov'
-            : id === 3
-              ? 'Ivanov'
-              : id === 4
-                ? 'Kozlov'
-                : id === 5
-                  ? 'Morozov'
-                  : id === 6
-                    ? 'Volkov'
-                    : 'Sokolov',
-      description:
-        id === 1
-          ? 'Meet Alex, who got a loan to open a café and is excited to start.'
-          : id === 2
-            ? 'Follow up with client regarding loan application submission.'
-            : id === 3
-              ? 'Schedule meeting to discuss loan terms and conditions.'
-              : id === 4
-                ? 'Review client documentation for loan approval process.'
-                : id === 5
-                  ? 'Contact client about payment schedule and options.'
-                  : id === 6
-                    ? 'Prepare loan agreement documents for client signature.'
-                    : 'Coordinate with client for loan disbursement procedures.',
-      reminderDate: `0${id}.23.2023`,
-      reminderRecipient:
-        id === 1
-          ? 'Shevchenko'
-          : id === 2
-            ? 'Petrov'
-            : id === 3
-              ? 'Ivanov'
-              : id === 4
-                ? 'Kozlov'
-                : id === 5
-                  ? 'Morozov'
-                  : id === 6
-                    ? 'Volkov'
-                    : 'Sokolov',
-    },
-  ],
-  documents: [
-    {
-      id: 1,
-      name:
-        id === 1
-          ? 'Loan Agreement.pdf'
-          : id === 2
-            ? 'Credit Application Form.pdf'
-            : id === 3
-              ? 'Financial Statement.pdf'
-              : id === 4
-                ? 'Identity Verification.pdf'
-                : id === 5
-                  ? 'Income Certificate.pdf'
-                  : id === 6
-                    ? 'Property Documents.pdf'
-                    : 'Bank Statement.pdf',
-      type: 'PDF',
-      uploadDate: `0${id}.23.2023`,
-      size: `${2 + id * 0.3} MB`,
-    },
-  ],
-})
+// Legacy numeric code mappings (from old CRM database)
+const MARITAL_STATUS_MAP: Record<string, string> = {
+  '1': 'Неодружений/Незаміжня',
+  '2': 'Одружений/Заміжня',
+  '3': 'Розлучений/Розлучена',
+  '4': 'Вдівець/Вдова',
+  '5': 'Цивільний шлюб',
+}
 
-// Mock data array - replace with actual API call
-const mockClientsDetail = [
-  createMockClientDetail(
-    1,
-    'Veronika Denisovna Lapina',
-    '12145878778',
-    '+380931234567',
-    ['Bankrupt', 'Did not answer the phone'],
-    'High',
-    88
-  ),
-  createMockClientDetail(
-    2,
-    'Alexandra Petrovna Ilyina',
-    '7896541230',
-    '+380669876543',
-    ['Insolvent', 'Deceiver'],
-    'Medium',
-    10
-  ),
-  createMockClientDetail(
-    3,
-    'Sofia Andreevna Belova',
-    '1236547890',
-    '+380735551212',
-    ['Financially insolvent'],
-    'Low',
-    12
-  ),
-  createMockClientDetail(
-    4,
-    'Polina Antonovna Volkova',
-    '9874563215',
-    '+380502223434',
-    ['Creditor', 'Con artist'],
-    'Low',
-    78
-  ),
-  createMockClientDetail(
-    5,
-    'Valeria Maksimovna Kuznetsova',
-    '3692581470',
-    '+380991115656',
-    ['Insolvent', 'Fraudulent'],
-    'Medium',
-    34
-  ),
-  createMockClientDetail(
-    6,
-    'Ksenia Ilyinichna Sokolova',
-    '1470369258',
-    '+380634447878',
-    ['Financially insolvent'],
-    'High',
-    56
-  ),
-  createMockClientDetail(
-    7,
-    'Victoria Egorovna Zhukova',
-    '2589631470',
-    '+380507778989',
-    ['Employee', 'Con artist'],
-    'Critical',
-    45
-  ),
-]
+const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
+  full_time: 'Повна зайнятість',
+  part_time: 'Часткова зайнятість',
+  contract: 'Контракт',
+  student: 'Студент',
+  self_employed: 'ФОП',
+  unemployed: 'Безробітний',
+  retired: 'Пенсіонер',
+  other: 'Інше',
+}
 
-// Legacy mock data removed - use mockClientsDetail array instead
+const CONTACT_TYPE_MAP: Record<string, string> = {
+  phone_mobile_third_party: 'Третя особа (моб.)',
+  phone_home_third_party: 'Третя особа (дом.)',
+  phone_work_third_party: 'Третя особа (роб.)',
+  phone_mobile_guarantor: 'Поручитель (моб.)',
+  phone_work_guarantor: 'Поручитель (роб.)',
+  phone_home_guarantor: 'Поручитель (дом.)',
+  phone_other: 'Інший телефон',
+  phone_mobile_other: 'Інший (моб.)',
+  phone_work_other: 'Інший (роб.)',
+  phone_home_other: 'Інший (дом.)',
+  phone_home_client: 'Клієнт (дом.)',
+  phone_fax: 'Факс',
+}
+
+// Mock data from mockClientDetails.ts; profile + sections loaded via useClientProfile + section hooks.
 
 export function ClientDetailPage() {
   const { t } = useTranslation('common')
@@ -944,177 +183,232 @@ export function ClientDetailPage() {
     )
   }
 
-  // Fetch client data from API
+  // Client detail: one profile + section endpoints (mock only for now)
   const clientId = id ? Number(id) : 0
-
-  // Ensure clientId is valid before making API call
   const isValidClientId = clientId > 0 && !isNaN(clientId)
-  const { data: apiClient, isLoading, isError, error } = useClient(clientId, isValidClientId)
 
-  // Fetch SMS history from API
-  const { data: smsHistoryData } = useSMSHistory(clientId, undefined)
+  const {
+    data: profile,
+    isLoading: isProfileLoading,
+    isError: isProfileError,
+    error: profileError,
+  } = useClientProfile(clientId, isValidClientId)
+  const { data: loans = [] } = useClientLoans(clientId, isValidClientId)
+  const { data: paymentsSection } = useClientPaymentsSection(clientId, isValidClientId)
+  const { data: callSmsHistory } = useClientCallSmsHistory(clientId, isValidClientId)
+  const { data: tasks = [] } = useClientTasks(clientId, isValidClientId)
+  const { data: operatorsSection } = useClientOperatorsSection(clientId, isValidClientId)
+  const { data: documents = [] } = useClientDocuments(clientId, isValidClientId)
+  const { data: activities = [] } = useClientActivities(clientId, isValidClientId)
 
-  // Fetch client tags from API
+  // Fetch client tags from API (real)
   const { data: clientTags } = useClientTags(clientId)
 
-  // Fetch call history from API
-  const { data: callHistoryData } = useCallHistory(clientId, { limit: 100 })
+  // Note creation mutation
+  const { mutate: createNote } = useCreateClientNote()
 
-  // Use mock data as fallback for missing fields until backend is fully integrated
+  // Compose single client object from profile + sections for the rest of the page
+  // Maps backend response fields to UI-expected shape for backward compatibility
   const client = useMemo(() => {
-    if (!apiClient) return mockClientsDetail[0]
+    if (!profile) return null
 
-    const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
-      .filter(Boolean)
-      .join(' ')
-
-    // Map API SMS history to expected format - use real data from API
-    const apiSmsHistory = smsHistoryData?.items || []
-    const mappedSmsHistory = apiSmsHistory.map((sms, index) => {
-      const sentAt = sms.sent_at ? new Date(sms.sent_at) : new Date()
-      // Map backend status to frontend status: 'sent' and 'delivered' -> 'Delivered', 'failed' -> 'Failed', otherwise -> 'Pending'
-      const statusStr =
-        sms.status === 'delivered' || sms.status === 'sent'
-          ? 'Delivered'
-          : sms.status === 'failed'
-            ? 'Failed'
-            : 'Pending'
-
-      // Format date and time using user's timezone
-      const dateFormatter = new Intl.DateTimeFormat('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        timeZone: userTimezone || undefined,
-      })
-      const timeFormatter = new Intl.DateTimeFormat('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: userTimezone || undefined,
-      })
-
-      const dateParts = dateFormatter.formatToParts(sentAt)
-      const year = dateParts.find((p) => p.type === 'year')?.value || ''
-      const month = dateParts.find((p) => p.type === 'month')?.value || ''
-      const day = dateParts.find((p) => p.type === 'day')?.value || ''
-      const dateStr = `${year}-${month}-${day}`
-
-      const timeStr = timeFormatter.format(sentAt)
-
-      return {
-        id: index + 1,
-        date: dateStr,
-        time: timeStr,
-        message: sms.message_text || '',
-        template: sms.template_name || '',
-        operator: sms.operator_name || '',
-        status: statusStr as 'Delivered' | 'Pending' | 'Failed',
-        sent_at: sms.sent_at, // Keep original UTC timestamp for modal
-        delivered_at: sms.delivered_at, // Keep original UTC timestamp for modal
-        phone: apiClient?.phone_primary || '', // Use client's phone number
-      }
-    })
-
-    // Map API call history to expected format - use real data from API
-    const apiCallHistory = callHistoryData?.calls || []
-    const mappedCallHistory = apiCallHistory.map((call, index) => {
-      const initiatedAt = call.initiated_at ? new Date(call.initiated_at) : new Date()
-      // Map backend state/outcome to frontend status
-      const statusStr =
-        call.outcome === 'answered'
-          ? 'Answered'
-          : call.state === 'FAILED' || call.outcome === 'failed'
-            ? 'No Answer'
-            : 'No Answer'
-
-      // Format duration
-      const durationSeconds = call.talk_duration || 0
-      const minutes = Math.floor(durationSeconds / 60)
-      const seconds = durationSeconds % 60
-      const durationStr = `${minutes}m ${seconds}s`
-
-      // Determine call type (Incoming vs Outgoing)
-      const callType = call.agent_extension ? 'Outgoing' : 'Incoming'
-
-      // Format date and time using user's timezone
-      const dateFormatter = new Intl.DateTimeFormat('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        timeZone: userTimezone || undefined,
-      })
-      const timeFormatter = new Intl.DateTimeFormat('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: userTimezone || undefined,
-      })
-
-      const dateParts = dateFormatter.formatToParts(initiatedAt)
-      const year = dateParts.find((p) => p.type === 'year')?.value || ''
-      const month = dateParts.find((p) => p.type === 'month')?.value || ''
-      const day = dateParts.find((p) => p.type === 'day')?.value || ''
-      const dateStr = `${year}-${month}-${day}`
-
-      const timeStr = timeFormatter.format(initiatedAt)
-
-      return {
-        id: index + 1,
-        date: dateStr,
-        time: timeStr,
-        duration: durationStr,
-        status: statusStr as 'Answered' | 'No Answer',
-        type: callType as 'Incoming' | 'Outgoing',
-        phone: call.customer_number,
-        phoneLabel: 'Primary', // TODO: Get from backend if available
-        line: 'White Line', // TODO: Get from backend if available
-        operator: 'Agent', // TODO: Get operator name from backend
-        call_id: call.call_id, // Include call_id for recording playback
-        initiated_at: call.initiated_at, // Keep original UTC timestamp for grouping
-      }
-    })
-
-    // Map API client to expected shape, using mock data for fields not yet in API
-    const mockClient = mockClientsDetail[0]
-    return {
-      ...mockClient, // Fallback for fields not yet in backend
-      id: apiClient.id,
-      fullName,
-      taxIdNumber: apiClient.tax_id,
-      phoneNumber: apiClient.phone_primary,
-      tags: [], // TODO: Add tags support in backend
-      score: apiClient.priority_score,
-      priority: (apiClient.manual_priority ||
-        (apiClient.priority_score >= 75
-          ? 'Critical'
-          : apiClient.priority_score >= 50
-            ? 'High'
-            : apiClient.priority_score >= 25
-              ? 'Medium'
-              : 'Low')) as Priority,
-      phones: [
-        { number: apiClient.phone_primary, type: 'primary' as const },
-        ...(apiClient.phone_secondary
-          ? [{ number: apiClient.phone_secondary, type: 'secondary' as const }]
-          : []),
-      ],
-      personalDetails: {
-        ...mockClient.personalDetails,
-        tin: apiClient.tax_id,
-        dateOfBirth: apiClient.date_of_birth || mockClient.personalDetails.dateOfBirth,
-      },
-      addresses: {
-        ...mockClient.addresses,
-        registrationAddress: apiClient.address || mockClient.addresses.registrationAddress,
-      },
-      callSmsHistory: {
-        all: mockClient.callSmsHistory.all, // Keep mock 'all' property
-        calls: mappedCallHistory, // Use real API data instead of mock
-        sms: mappedSmsHistory, // Use real API data instead of mock
-      },
+    // Build phones array from profile fields
+    // Filter out placeholder "000000000000" phones from legacy data migration
+    const isValidPhone = (p: string | null | undefined): p is string => !!p && !/^0+$/.test(p)
+    const phones: Array<{ number: string; type: string }> = []
+    if (isValidPhone(profile.phone_primary))
+      phones.push({ number: profile.phone_primary, type: 'primary' })
+    if (isValidPhone(profile.phone_secondary))
+      phones.push({ number: profile.phone_secondary, type: 'secondary' })
+    if (profile.additional_phones) {
+      profile.additional_phones
+        .filter((p) => isValidPhone(p.number))
+        .forEach((p) => phones.push({ number: p.number, type: p.type }))
     }
-  }, [apiClient, smsHistoryData, callHistoryData, userTimezone])
+
+    // Build addresses object from array
+    const registrationAddr = profile.addresses?.find((a) => a.address_type === 'registration')
+    const actualAddr = profile.addresses?.find((a) => a.address_type === 'actual')
+
+    return {
+      ...profile,
+      // Header fields
+      fullName: profile.full_name,
+      score: profile.priority_score ?? 0,
+      priority: profile.priority_level
+        ? profile.priority_level.charAt(0).toUpperCase() + profile.priority_level.slice(1)
+        : 'Low',
+      phoneNumber: isValidPhone(profile.phone_primary) ? profile.phone_primary : '-',
+      taxIdNumber: profile.tax_id,
+      // Card fields
+      department: '',
+      responsibleEmployee: profile.responsible_employee_name ?? '-',
+      responsibleResearcher: profile.responsible_searcher_name ?? '-',
+      phones,
+      // Personal details (nested for compatibility)
+      personalDetails: {
+        tin: profile.tax_id,
+        dateOfBirth: profile.date_of_birth ?? '-',
+        age: profile.age ?? '-',
+        passport: profile.passport?.number ?? '-',
+        maritalStatus: profile.marital_status
+          ? (MARITAL_STATUS_MAP[profile.marital_status] ?? profile.marital_status)
+          : '-',
+        familyMembers: profile.family_members_count ?? '-',
+        incomeLevel: profile.income_level ?? '-',
+        employmentType: profile.employment?.employment_type
+          ? (EMPLOYMENT_TYPE_MAP[profile.employment.employment_type] ??
+            profile.employment.employment_type)
+          : '-',
+      },
+      // Work
+      work: profile.employment
+        ? {
+            organizationName: profile.employment.company_name ?? '-',
+            position: profile.employment.position ?? '-',
+            experience:
+              profile.employment.work_experience_years != null
+                ? `${profile.employment.work_experience_years} р.`
+                : (profile.employment.employment_date ?? '-'),
+            managerFullName:
+              profile.employment.manager_full_name ?? profile.employment.manager_name ?? '-',
+          }
+        : null,
+      // Recommenders mapped to UI shape
+      // TODO: Legacy contacts often have no name data (first_name/last_name/middle_name empty).
+      //       full_name will be empty for these records until data is enriched.
+      recommenders: (profile.recommenders ?? []).map((r) => ({
+        id: r.id,
+        fullName: r.full_name || null,
+        relationship:
+          r.relationship || CONTACT_TYPE_MAP[r.contact_type ?? ''] || r.contact_type || '-',
+        phoneNumber: r.phone ?? '-',
+        comment: r.notes ?? '-',
+      })),
+      // Addresses as object
+      addresses: {
+        registrationAddress: registrationAddr?.full_address ?? '-',
+        personalAddress: actualAddr?.full_address ?? '-',
+      },
+      // Comments mapped
+      comments: (profile.comments ?? []).map((c) => ({
+        id: c.id,
+        date: c.created_at ? new Date(c.created_at).toLocaleDateString() : '-',
+        text: c.content,
+        author: c.created_by_name ?? `User #${c.created_by}`,
+      })),
+      tags: profile.tags,
+      // Loans mapped from DebtDetail to UI shape
+      loans: (loans ?? []).map((d) => ({
+        id: d.id,
+        loanNumber: d.contract_number,
+        counterparty: d.seller_company,
+        saleDate: d.purchase_date ?? '-',
+        loanAmount: Number(d.original_debt_amount ?? 0),
+        principalDebt: Number(d.principal_amount ?? d.original_debt_amount ?? 0),
+        totalToRepay: Number(d.remaining_debt_amount ?? 0),
+        status: d.status,
+      })),
+      // Payments mapped from PaymentResponse to UI shape
+      payments: (paymentsSection?.payments ?? []).map((p) => ({
+        id: p.id,
+        loanNumber: p.debt_contract_number ?? p.payment_number,
+        counterparty: p.seller_name ?? '-',
+        saleDate: '-',
+        paymentDate: p.payment_date,
+        amount: Number(p.amount),
+        paymentMethod: p.payment_method,
+        status: p.status,
+        paymentDistribution: `${p.principal_paid} principal, ${p.interest_paid} interest`,
+        employee: p.recorded_by_username ?? '-',
+      })),
+      // Write-offs mapped
+      writesOffs: (paymentsSection?.writesOffs ?? []).map((w) => ({
+        id: w.id,
+        loanNumber: w.contract_number ?? '-',
+        counterparty: w.seller_name ?? '-',
+        saleDate: '-',
+        writeOffDate: w.writeoff_date ?? '-',
+        amount: Number(w.amount),
+        writeOffMethod: w.writeoff_type,
+        employee: w.submitted_by_name ?? '-',
+      })),
+      // TODO: Phase 8 - Replace with real Primary Creditor payment data from dedicated API endpoint.
+      // Currently uses mock/placeholder data until the primary creditor payments service is implemented.
+      paymentsToPrimaryCreditor: (paymentsSection?.paymentsToPrimaryCreditor ?? []).map(
+        (p, idx) => ({
+          id: idx,
+          loanNumber: '-',
+          counterparty: '-',
+          saleDate: '-',
+          paymentDate: '-',
+          amount: 0,
+          distributionMethod: '-',
+          ...(p as Record<string, unknown>),
+        })
+      ),
+      callSmsHistory: callSmsHistory ?? { all: [], calls: [], sms: [] },
+      // Tasks mapped from TaskResponse to UI shape
+      tasks: (tasks ?? []).map((t) => ({
+        id: t.id,
+        loanNumber: '-',
+        creationDate: t.created_at ? new Date(t.created_at).toLocaleDateString() : '-',
+        whoCreated: t.created_by_name ?? '-',
+        description: t.title + (t.description ? `: ${t.description}` : ''),
+        reminderDate: t.due_date ? new Date(t.due_date).toLocaleDateString() : '-',
+        reminderRecipient: t.assigned_to_username ?? '-',
+      })),
+      // Operators/searchers from assignment history
+      operators: (operatorsSection?.operators ?? []).map((o) => ({
+        id: o.id,
+        creationDate: o.assigned_at ? new Date(o.assigned_at).toLocaleDateString() : '-',
+        whoCreated: o.assigned_by_name ?? '-',
+        description: `${o.old_employee_name ?? '-'} → ${o.new_employee_name ?? '-'}`,
+        reminderDate: '-',
+        reminderRecipient: o.new_employee_name ?? '-',
+      })),
+      searchers: (operatorsSection?.searchers ?? []).map((s) => ({
+        id: s.id,
+        creationDate: s.assigned_at ? new Date(s.assigned_at).toLocaleDateString() : '-',
+        whoCreated: s.assigned_by_name ?? '-',
+        description: `${s.old_searcher_name ?? '-'} → ${s.new_searcher_name ?? '-'}`,
+        reminderDate: '-',
+        reminderRecipient: s.new_searcher_name ?? '-',
+      })),
+      documents,
+      // Activities mapped from InteractionResponse to UI shape
+      activities: (activities ?? []).map((a) => ({
+        id: a.id,
+        date: a.interaction_date ? new Date(a.interaction_date).toLocaleDateString() : '-',
+        number: a.phone_used ?? '-',
+        contactType: a.direction === 'outbound' ? 'Outgoing' : 'Incoming',
+        result: a.result_name ?? a.status,
+        promisedAmount: a.promise_to_pay_amount ? Number(a.promise_to_pay_amount) : 0,
+        promisedDate: a.promise_to_pay_date ?? '-',
+        comment: a.summary ?? a.notes ?? '-',
+        employee: a.user_name ?? '-',
+      })),
+      primaryCreditorPayments: (paymentsSection?.paymentsToPrimaryCreditor ?? []).map((p, idx) => ({
+        id: idx,
+        loanNumber: '-',
+        counterparty: '-',
+        saleDate: '-',
+        paymentDate: '-',
+        amount: 0,
+        distributionMethod: '-',
+        ...(p as Record<string, unknown>),
+      })),
+    }
+  }, [
+    profile,
+    loans,
+    paymentsSection,
+    callSmsHistory,
+    tasks,
+    operatorsSection,
+    documents,
+    activities,
+  ])
 
   // Tags are now fetched from useClientTags hook instead of local state
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
@@ -1297,17 +591,17 @@ export function ClientDetailPage() {
   }, [activeClientCardTab])
 
   // Show loading skeleton
-  if (isLoading) {
+  if (isProfileLoading) {
     return <ClientDetailPageSkeleton />
   }
 
   // Show error state
-  if (isError) {
+  if (isProfileError) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-16">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
         <p className="font-medium text-gray-900">Failed to load client</p>
-        <p className="text-sm text-gray-600">{error?.message || 'An error occurred'}</p>
+        <p className="text-sm text-gray-600">{profileError?.message || 'An error occurred'}</p>
         <Button variant="outline" onClick={() => navigate('/dashboard/client')} className="mt-4">
           Back to Clients
         </Button>
@@ -1326,23 +620,27 @@ export function ClientDetailPage() {
     )
   }
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '0'
     return new Intl.NumberFormat('uk-UA', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
       useGrouping: true,
     })
-      .format(amount)
+      .format(num)
       .replace(/,/g, ' ')
   }
 
-  const formatCurrencyWithDecimals = (amount: number) => {
+  const formatCurrencyWithDecimals = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '0'
     return new Intl.NumberFormat('uk-UA', {
-      minimumFractionDigits: amount % 1 !== 0 ? 1 : 0,
+      minimumFractionDigits: num % 1 !== 0 ? 1 : 0,
       maximumFractionDigits: 1,
       useGrouping: true,
     })
-      .format(amount)
+      .format(num)
       .replace(/,/g, ' ')
   }
 
@@ -1495,7 +793,7 @@ export function ClientDetailPage() {
     },
   ]
 
-  const primaryCreditorPaymentColumns: Column<(typeof client.primaryCreditorPayments)[0]>[] = [
+  const primaryCreditorPaymentColumns: Column<(typeof client.paymentsToPrimaryCreditor)[0]>[] = [
     { key: 'loanNumber', header: t('pages.clients.detail.tableHeaders.loanNumber'), align: 'left' },
     {
       key: 'counterparty',
@@ -1593,41 +891,11 @@ export function ClientDetailPage() {
     },
   ]
 
-  // const documentColumns: Column<(typeof client.documents)[0]>[] = [
-  //   { key: 'name', header: 'Name', align: 'left' },
-  //   { key: 'type', header: 'Type', align: 'left' },
-  //   { key: 'uploadDate', header: 'Upload Date', align: 'left' },
-  //   { key: 'size', header: 'Size', align: 'left' },
-  // ]
-
-  const callSmsHistoryColumns: Column<(typeof client.callSmsHistory.all)[0]>[] = [
-    {
-      key: 'number',
-      header: t('pages.clients.activity.tableHeaders.number'),
-      align: 'left',
-      render: (item) => (
-        <div className="flex items-center gap-2">
-          <span>{item.number}</span>
-          <div className="flex items-center gap-1">
-            <button className="text-primary-500 flex h-[20px] w-[20px] items-center justify-center hover:opacity-80">
-              <Icons.Headset size={16} className="flex-shrink-0" />
-            </button>
-            <button className="text-primary-500 flex h-[20px] w-[20px] items-center justify-center hover:opacity-80">
-              <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-            </button>
-            <button className="text-primary-500 flex h-[20px] w-[20px] items-center justify-center hover:opacity-80">
-              <Icons.PencilEdit size={16} className="flex-shrink-0" />
-            </button>
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'contactType',
-      header: t('pages.clients.activity.tableHeaders.contactType'),
-      align: 'left',
-    },
-    { key: 'comment', header: t('pages.clients.activity.tableHeaders.comment'), align: 'left' },
+  const documentColumns: Column<(typeof client.documents)[0]>[] = [
+    { key: 'name', header: 'Name', align: 'left' },
+    { key: 'type', header: 'Type', align: 'left' },
+    { key: 'uploadDate', header: 'Upload Date', align: 'left' },
+    { key: 'size', header: 'Size', align: 'left' },
   ]
 
   return (
@@ -1650,7 +918,7 @@ export function ClientDetailPage() {
             <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0 text-sm">
               {client.score} {t('pages.clients.activity.score')}
             </span>
-            <PriorityBadge priority={client.priority} />
+            <PriorityBadge priority={client.priority as Priority} />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 md:gap-5">
@@ -1764,7 +1032,7 @@ export function ClientDetailPage() {
             </div>
             <div className="flex flex-row items-center justify-between gap-2 self-stretch p-0">
               <div className="flex flex-1 shrink-0 items-center gap-2.5">
-                <label className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
+                <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                   {t('pages.clients.detail.phones')}
                 </label>
               </div>
@@ -1982,33 +1250,30 @@ export function ClientDetailPage() {
                     </p>
                   </div>
                   <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2">
+                    <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                         {t('pages.clients.detail.dateOfBirth')}
                       </label>
-                      <Icons.Info size={14} className="text-gray-800" />
                     </div>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {client.personalDetails.dateOfBirth}
                     </p>
                   </div>
                   <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2">
+                    <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                         {t('pages.clients.detail.age')}
                       </label>
-                      <Icons.Info size={14} className="text-gray-800" />
                     </div>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {client.personalDetails.age}
                     </p>
                   </div>
                   <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2">
+                    <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                         {t('pages.clients.detail.passport')}
                       </label>
-                      <Icons.Info size={14} className="text-gray-800" />
                     </div>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {client.personalDetails.passport}
@@ -2033,6 +1298,26 @@ export function ClientDetailPage() {
                       {client.personalDetails.familyMembers}
                     </p>
                   </div>
+                  <div className="flex items-center self-stretch p-0">
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.incomeLevel')}
+                      </label>
+                    </div>
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.personalDetails.incomeLevel || '-'}
+                    </p>
+                  </div>
+                  <div className="flex items-center self-stretch p-0">
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.employmentType')}
+                      </label>
+                    </div>
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.personalDetails.employmentType || '-'}
+                    </p>
+                  </div>
                 </>
               )}
 
@@ -2041,16 +1326,19 @@ export function ClientDetailPage() {
                   {client.recommenders.map((friend) => (
                     <>
                       {/* <div key={friend.id} className="flex flex-col gap-3 self-stretch"> */}
-                      <div className="flex items-center self-stretch p-0">
-                        <div className="flex flex-1 items-center gap-2.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.fullName')}
-                          </label>
+                      {/* TODO: Legacy contacts have no name data — row hidden until data enriched */}
+                      {friend.fullName && (
+                        <div className="flex items-center self-stretch p-0">
+                          <div className="flex flex-1 items-center gap-2.5">
+                            <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                              {t('pages.clients.detail.fullName')}
+                            </label>
+                          </div>
+                          <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                            {friend.fullName}
+                          </p>
                         </div>
-                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                          {friend.fullName}
-                        </p>
-                      </div>
+                      )}
                       <div className="flex items-center self-stretch p-0">
                         <div className="flex flex-1 items-center gap-2.5">
                           <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
@@ -2077,7 +1365,7 @@ export function ClientDetailPage() {
                             {t('pages.clients.detail.comment')}
                           </label>
                         </div>
-                        <p className="text-dark-500 flex-1 text-right text-sm leading-[140%] font-medium tracking-[-0.24px]">
+                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                           {friend.comment}
                         </p>
                       </div>
@@ -2098,7 +1386,7 @@ export function ClientDetailPage() {
                         {t('pages.clients.detail.registrationAddress')}
                       </label>
                     </div>
-                    <p className="text-dark-500 flex-1 text-right text-sm leading-[140%] font-medium tracking-[-0.24px]">
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {client.addresses.registrationAddress}
                     </p>
                   </div>
@@ -2109,7 +1397,7 @@ export function ClientDetailPage() {
                         {t('pages.clients.detail.personalAddress')}
                       </label>
                     </div>
-                    <p className="text-dark-500 flex-1 text-right text-sm leading-[140%] font-medium tracking-[-0.24px]">
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {client.addresses.personalAddress}
                     </p>
                   </div>
@@ -2121,63 +1409,41 @@ export function ClientDetailPage() {
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.tin')}
+                        {t('pages.clients.detail.organizationName')}
                       </label>
                     </div>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.tin}
+                      {client.work?.organizationName || '-'}
                     </p>
                   </div>
                   <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2">
+                    <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.dateOfBirth')}
+                        {t('pages.clients.detail.position')}
                       </label>
-                      <Icons.Info size={14} className="text-gray-800" />
                     </div>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.dateOfBirth}
+                      {client.work?.position || '-'}
                     </p>
                   </div>
                   <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2">
+                    <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.age')}
+                        {t('pages.clients.detail.experience')}
                       </label>
-                      <Icons.Info size={14} className="text-gray-800" />
                     </div>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.age}
+                      {client.work?.experience || '-'}
                     </p>
                   </div>
                   <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2">
+                    <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.passport')}
+                        {t('pages.clients.detail.managerFullName')}
                       </label>
-                      <Icons.Info size={14} className="text-gray-800" />
                     </div>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.passport}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between self-stretch p-0">
-                    <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      {t('pages.clients.detail.maritalStatus')}
-                    </label>
-                    <div className="flex flex-1 items-center justify-end gap-2">
-                      <p className="text-dark-500 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.maritalStatus}
-                      </p>
-                      <Icons.Tick01 size={18} className="text-gray-800" />
-                    </div>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      {t('pages.clients.detail.numberOfFamilyMembers')}
-                    </label>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.familyMembers}
+                      {client.work?.managerFullName || '-'}
                     </p>
                   </div>
                 </>
@@ -2370,9 +1636,18 @@ export function ClientDetailPage() {
                       {t('pages.clients.detail.loansOnRR')}
                     </button>
                   </div>
-                  {/* Data table */}
+                  {/* Data table filtered by sub-tab */}
                   <div className="flex flex-col items-start gap-2.5 self-stretch px-3 py-4 md:px-6">
-                    <DataTable columns={loanColumns} data={client.loans} className="w-full" />
+                    <DataTable
+                      columns={loanColumns}
+                      data={client.loans.filter((loan) => {
+                        if (activeLoanTab === 'process') return loan.status === 'active'
+                        if (activeLoanTab === 'closed') return loan.status === 'closed'
+                        if (activeLoanTab === 'rr') return loan.status === 'restructuring'
+                        return true
+                      })}
+                      className="w-full"
+                    />
                   </div>
                   {/* Action buttons at the bottom */}
                   <div className="flex flex-wrap items-center gap-2 self-stretch px-3 py-4 md:gap-3 md:px-6">
@@ -2484,7 +1759,7 @@ export function ClientDetailPage() {
                     {activePaymentTab === 'primary-creditor' && (
                       <DataTable
                         columns={primaryCreditorPaymentColumns}
-                        data={client.primaryCreditorPayments}
+                        data={client.paymentsToPrimaryCreditor}
                         className="w-full"
                       />
                     )}
@@ -2613,11 +1888,11 @@ export function ClientDetailPage() {
                             // Use original UTC timestamp (sent_at for SMS, initiated_at for calls) instead of date string
                             const timestamp =
                               item.itemType === 'sms'
-                                ? (item as ExtendedSMSItem & { itemType: 'sms' }).sent_at ||
-                                  item.date
-                                : (item as ExtendedCallItem & { itemType: 'call' }).initiated_at ||
-                                  item.date
-                            const date = new Date(timestamp).toLocaleDateString('en-US', {
+                                ? (item as unknown as ExtendedSMSItem & { itemType: 'sms' })
+                                    .sent_at || item.date
+                                : (item as unknown as ExtendedCallItem & { itemType: 'call' })
+                                    .initiated_at || item.date
+                            const date = new Date(String(timestamp)).toLocaleDateString('en-US', {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric',
@@ -2625,9 +1900,13 @@ export function ClientDetailPage() {
                             })
                             if (!acc[date]) acc[date] = { calls: [], sms: [] }
                             if (item.itemType === 'call') {
-                              acc[date].calls.push(item as ExtendedCallItem & { itemType: 'call' })
+                              acc[date].calls.push(
+                                item as unknown as ExtendedCallItem & { itemType: 'call' }
+                              )
                             } else {
-                              acc[date].sms.push(item as ExtendedSMSItem & { itemType: 'sms' })
+                              acc[date].sms.push(
+                                item as unknown as ExtendedSMSItem & { itemType: 'sms' }
+                              )
                             }
                             return acc
                           },
@@ -2641,7 +1920,10 @@ export function ClientDetailPage() {
                         )
 
                         return Object.entries(grouped)
-                          .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
+                          .sort(
+                            ([a], [b]) =>
+                              new Date(b as string).getTime() - new Date(a as string).getTime()
+                          )
                           .map(([date, items]) => (
                             <div key={date} className="w-full space-y-4">
                               <h3 className="text-dark-500 text-sm font-semibold md:text-base">
@@ -2776,21 +2058,24 @@ export function ClientDetailPage() {
                                 'initiated_at' in call && call.initiated_at
                                   ? call.initiated_at
                                   : call.date
-                              const date = new Date(timestamp).toLocaleDateString('en-US', {
+                              const date = new Date(String(timestamp)).toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'long',
                                 day: 'numeric',
                                 timeZone: userTimezone || undefined,
                               })
                               if (!acc[date]) acc[date] = []
-                              acc[date].push(call as ExtendedCallItem)
+                              acc[date].push(call as unknown as ExtendedCallItem)
                               return acc
                             },
                             {} as Record<string, ExtendedCallItem[]>
                           )
 
                           return Object.entries(groupedCalls)
-                            .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
+                            .sort(
+                              ([a], [b]) =>
+                                new Date(b as string).getTime() - new Date(a as string).getTime()
+                            )
                             .map(([date, calls]) => (
                               <div key={date} className="space-y-4">
                                 <h3 className="text-dark-500 text-sm font-semibold md:text-base">
@@ -2876,21 +2161,24 @@ export function ClientDetailPage() {
                               // Use sent_at (full UTC timestamp) instead of date string for correct timezone conversion
                               const timestamp =
                                 'sent_at' in sms && sms.sent_at ? sms.sent_at : sms.date
-                              const date = new Date(timestamp).toLocaleDateString('en-US', {
+                              const date = new Date(String(timestamp)).toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'long',
                                 day: 'numeric',
                                 timeZone: userTimezone || undefined,
                               })
                               if (!acc[date]) acc[date] = []
-                              acc[date].push(sms as ExtendedSMSItem)
+                              acc[date].push(sms as unknown as ExtendedSMSItem)
                               return acc
                             },
                             {} as Record<string, ExtendedSMSItem[]>
                           )
 
                           return Object.entries(groupedSms)
-                            .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
+                            .sort(
+                              ([a], [b]) =>
+                                new Date(b as string).getTime() - new Date(a as string).getTime()
+                            )
                             .map(([date, smsList]) => (
                               <div key={date} className="space-y-4">
                                 <h3 className="text-dark-500 text-sm font-semibold md:text-base">
@@ -2938,14 +2226,10 @@ export function ClientDetailPage() {
                 </div>
               )}
 
-              {/* Tab 6: Documents */}
+              {/* Tab 6: Documents (mock data - no backend infrastructure yet) */}
               {activeRightCardTab === 'documents' && (
                 <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-3 md:p-6">
-                  <DataTable
-                    columns={callSmsHistoryColumns}
-                    data={client.callSmsHistory.all}
-                    className="w-full"
-                  />
+                  <DataTable columns={documentColumns} data={client.documents} className="w-full" />
                 </div>
               )}
             </div>
@@ -3047,8 +2331,11 @@ export function ClientDetailPage() {
         onClose={() => setIsNoteModalOpen(false)}
         phoneNumber={client.phones?.[0]?.number || ''}
         onSave={(data) => {
-          // TODO: Save note to API
-          console.log('Note saved:', data)
+          createNote({
+            clientId,
+            data: { content: data.note, note_type: data.action },
+          })
+          setIsNoteModalOpen(false)
         }}
       />
 

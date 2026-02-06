@@ -106,7 +106,7 @@ export interface ConnectionStatus {
 export interface LoanInfo {
   loan_id: number
   contract_number: string
-  remaining_debt: number
+  remaining_debt: string
   status: string
 }
 
@@ -116,7 +116,7 @@ export interface IncomingCallData {
   agent_extension: string
   client_name?: string
   loan_count: number
-  total_debt: number
+  total_debt: string
   loans: LoanInfo[]
 }
 

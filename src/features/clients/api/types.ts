@@ -5,21 +5,34 @@
 
 export interface DebtDetail {
   id: number
-  seller_id?: number // Add seller_id for fetching seller details
+  seller_id?: number
   seller_company: string
   contract_number: string
-  original_debt_amount: number
-  remaining_debt_amount: number
+  original_debt_amount: string
+  remaining_debt_amount: string
   debt_currency?: string
   purchase_date?: string | null
   debt_start_date?: string | null
   debt_close_date?: string | null
-  days_past_due?: number | null // Add days_past_due (computed column from DB)
+  days_past_due?: number | null
   status: string
-  total_paid?: number
+  total_paid?: string | null
   last_payment_date?: string | null
-  last_payment_amount?: number | null
+  last_payment_amount?: string | null
   debt_notes?: string | null
+  // 12 fields added for client detail page
+  principal_amount?: string | null
+  interest_amount?: string | null
+  penalties_amount?: string | null
+  fines_amount?: string | null
+  fees_amount?: string | null
+  interest_rate?: string | null
+  penalty_rate?: string | null
+  fine_rate?: string | null
+  credit_issued_date?: string | null
+  credit_term_days?: number | null
+  credit_closed_date?: string | null
+  portfolio_name?: string | null
 }
 
 export interface Client {
@@ -62,7 +75,7 @@ export interface Client {
 
   // Debt summary
   debt_count: number
-  total_debt: number
+  total_debt: string
   primary_creditor?: string | null
 
   // Assignment (Sprint 2 - Phase A)
@@ -171,7 +184,7 @@ export interface SearchByTinParams {
 
 export interface PriorityStat {
   count: number
-  total_debt: number
+  total_debt: string
 }
 
 export interface PrioritySummary {
@@ -211,4 +224,371 @@ export interface BulkAssignmentResponse {
     client_id: number
     reason: string
   }>
+}
+
+// --- Client Detail Response Types ---
+
+export interface ClientProfileResponse {
+  id: number
+  full_name: string
+  tax_id: string
+  phone_primary: string
+  phone_secondary?: string | null
+  date_of_birth?: string | null
+  age?: number | null
+  priority_score: number
+  priority_level: string
+  manual_priority?: string | null
+  status: string
+  marital_status?: string | null
+  family_members_count?: number | null
+  income_level?: string | null
+  is_bankrupt: boolean
+  is_deceased: boolean
+  is_fraudster: boolean
+  is_military: boolean
+  has_nbu_complaint: boolean
+  responsible_employee_id?: number | null
+  responsible_employee_name?: string | null
+  responsible_searcher_id?: number | null
+  responsible_searcher_name?: string | null
+  tags: Array<{ id: number; name: string; color?: string | null }>
+  passport?: {
+    series?: string | null
+    number: string
+    issued_by?: string | null
+    issued_date?: string | null
+  } | null
+  employment?: {
+    company_name?: string | null
+    company_type?: string | null
+    employment_type?: string | null
+    position?: string | null
+    department?: string | null
+    manager_name?: string | null
+    manager_full_name?: string | null
+    employment_date?: string | null
+    work_experience_years?: number | null
+  } | null
+  recommenders: Array<{
+    id: number
+    full_name: string
+    relationship?: string | null
+    phone?: string | null
+    notes?: string | null
+    contact_type: string
+  }>
+  addresses: Array<{
+    id: number
+    address_type: string
+    full_address?: string | null
+    country?: string | null
+    region?: string | null
+    city?: string | null
+    street?: string | null
+    building?: string | null
+    apartment?: string | null
+    postal_code?: string | null
+    is_primary: boolean
+  }>
+  additional_phones: Array<{
+    number: string
+    type: string
+    label?: string | null
+  }>
+  comments: Array<{
+    id: number
+    content: string
+    note_type: string
+    created_at: string
+    created_by: number
+    created_by_name?: string | null
+  }>
+}
+
+export interface WriteoffResponse {
+  id: number
+  debt_id: number
+  contract_number?: string | null
+  seller_name?: string | null
+  writeoff_type: string
+  amount: string
+  currency: string
+  writeoff_date?: string | null
+  reason?: string | null
+  notes?: string | null
+  status: string
+  submitted_by: number
+  submitted_by_name?: string | null
+  submitted_at?: string | null
+  approved_by?: number | null
+  approved_by_name?: string | null
+  approved_at?: string | null
+  payment_schedules: Array<{
+    id: number
+    scheduled_date: string
+    amount: string
+    status: string
+    paid_at?: string | null
+  }>
+  created_at: string
+}
+
+export interface WriteoffsResponse {
+  writeoffs: WriteoffResponse[]
+  total: number
+  skip: number
+  limit: number
+}
+
+export interface AssignmentHistoryEntry {
+  id: number
+  assignment_type: string
+  assigned_by_name?: string | null
+  old_employee_id?: number | null
+  old_employee_name?: string | null
+  new_employee_id?: number | null
+  new_employee_name?: string | null
+  old_searcher_id?: number | null
+  old_searcher_name?: string | null
+  new_searcher_id?: number | null
+  new_searcher_name?: string | null
+  assignment_reason?: string | null
+  assigned_at: string
+}
+
+export interface AssignmentHistoryResponse {
+  history: AssignmentHistoryEntry[]
+  total: number
+  current_employee?: { id: number; name: string } | null
+  current_searcher?: { id: number; name: string } | null
+}
+
+// --- Payment Response Types ---
+
+export interface PaymentResponse {
+  id: number
+  payment_number: string
+  project_id: number
+  client_id: number
+  amount: string
+  currency: string
+  debt_before: string
+  debt_after: string
+  principal_paid: string
+  interest_paid: string
+  fees_paid: string
+  penalty_paid: string
+  fines_paid: string
+  payment_method: string
+  payment_method_details?: string | null
+  status: string
+  payment_date: string
+  recorded_at: string
+  verified_at?: string | null
+  bank_reference?: string | null
+  notes?: string | null
+  internal_notes?: string | null
+  recorded_by_user_id: number
+  recorded_by_username?: string | null
+  verified_by_user_id?: number | null
+  verified_by_username?: string | null
+  debt_contract_number?: string | null
+  seller_name?: string | null
+  is_deleted: boolean
+}
+
+export interface ClientPaymentHistoryResponse {
+  client_id: number
+  total_payments: number
+  total_amount_paid: string
+  current_debt: string
+  payments: PaymentResponse[]
+  page: number
+  limit: number
+}
+
+// --- Task Response Types ---
+
+export interface TaskResponse {
+  id: number
+  project_id: number
+  client_id?: number | null
+  debt_id?: number | null
+  related_call_id?: number | null
+  subject_id?: number | null
+  subject_name?: string | null
+  subject_code?: string | null
+  title: string
+  description?: string | null
+  priority: string
+  status: string
+  due_date?: string | null
+  reminder_date?: string | null
+  is_overdue: boolean
+  assigned_to_user_id?: number | null
+  assigned_to_username?: string | null
+  created_by: number
+  created_by_name?: string | null
+  created_at: string
+  updated_at?: string | null
+  completed_at?: string | null
+  comment_count?: number
+  internal_notes?: string | null
+}
+
+export interface TaskCommentResponse {
+  id: number
+  task_id: number
+  content: string
+  user_id: number
+  user_name?: string | null
+  created_at: string
+}
+
+export interface TaskDetailResponse extends TaskResponse {
+  comments: TaskCommentResponse[]
+}
+
+export interface TaskListResponse {
+  tasks: TaskResponse[]
+  total: number
+  skip: number
+  limit: number
+}
+
+export interface TaskSubjectResponse {
+  id: number
+  code: string
+  name: string
+  name_uk?: string | null
+  name_en?: string | null
+  name_ru?: string | null
+  is_active: boolean
+}
+
+// --- Interaction Response Types ---
+
+export interface InteractionResponse {
+  id: number
+  project_id: number
+  client_id: number
+  debt_id?: number | null
+  type_id?: number | null
+  subtype_id?: number | null
+  result_id?: number | null
+  direction: string
+  channel: string
+  status: string
+  interaction_date: string
+  duration_seconds?: number | null
+  phone_used?: string | null
+  phone_label?: string | null
+  contact_person?: string | null
+  contact_relationship?: string | null
+  summary?: string | null
+  notes?: string | null
+  promise_to_pay_date?: string | null
+  promise_to_pay_amount?: string | null
+  promise_fulfilled?: boolean | null
+  promise_fulfilled_date?: string | null
+  promise_partial_amount?: string | null
+  follow_up_required?: boolean
+  follow_up_date?: string | null
+  follow_up_notes?: string | null
+  region?: string | null
+  wants_principal_only?: boolean | null
+  delay_reason_id?: number | null
+  refusal_reason_id?: number | null
+  next_action_date?: string | null
+  next_action_type?: string | null
+  related_call_id?: number | null
+  related_sms_id?: number | null
+  user_id: number
+  user_name?: string | null
+  legacy_id?: string | null
+  created_at: string
+  updated_at?: string | null
+  is_deleted?: boolean
+  // Resolved reference names
+  type_name?: string | null
+  type_code?: string | null
+  subtype_name?: string | null
+  subtype_code?: string | null
+  result_name?: string | null
+  result_code?: string | null
+  result_is_positive?: boolean | null
+  delay_reason_name?: string | null
+  refusal_reason_name?: string | null
+}
+
+export interface InteractionListResponse {
+  interactions: InteractionResponse[]
+  total: number
+  skip: number
+  limit: number
+}
+
+export interface InteractionTypeResponse {
+  id: number
+  code: string
+  name: string
+  is_active: boolean
+  sort_order: number
+  direction?: string | null
+  category?: string | null
+  icon?: string | null
+  color?: string | null
+}
+
+export interface InteractionSubtypeResponse {
+  id: number
+  type_id: number
+  code: string
+  name: string
+  is_active: boolean
+}
+
+export interface InteractionResultResponse {
+  id: number
+  code: string
+  name: string
+  category?: string | null
+  is_positive: boolean
+  requires_promise_date: boolean
+  requires_promise_amount: boolean
+  requires_refusal_reason: boolean
+  requires_delay_reason: boolean
+  is_active: boolean
+}
+
+// --- Call/SMS Response Types ---
+
+export interface CallRecord {
+  id: number
+  client_id: number
+  direction: string
+  phone_number: string
+  status: string
+  duration_seconds?: number | null
+  started_at: string
+  answered_at?: string | null
+  ended_at?: string | null
+  operator_user_id?: number | null
+  operator_username?: string | null
+  outcome?: string | null
+  notes?: string | null
+}
+
+export interface SmsRecord {
+  id: number
+  client_id: number
+  direction: string
+  phone_number: string
+  status: string
+  content?: string | null
+  template_name?: string | null
+  sent_at?: string | null
+  delivered_at?: string | null
+  created_at: string
 }

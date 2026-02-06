@@ -38,263 +38,7 @@ import {
   backendToFrontendPaymentMethod,
   backendToFrontendPaymentStatus,
 } from '@/features/payments/utils'
-
-// Import the same mock client data structure from ClientDetailPage
-// Helper function to create mock client detail (same as ClientDetailPage)
-const createMockClientDetail = (
-  id: number,
-  fullName: string,
-  taxIdNumber: string,
-  phoneNumber: string,
-  tags: string[],
-  priority: 'Critical' | 'High' | 'Medium' | 'Low',
-  score: number
-) => ({
-  id,
-  fullName,
-  taxIdNumber,
-  dateOfBirth:
-    id === 1
-      ? '09/05/1904'
-      : id === 2
-        ? '15/08/1985'
-        : id === 3
-          ? '22/11/1990'
-          : id === 4
-            ? '03/02/1988'
-            : id === 5
-              ? '18/07/1992'
-              : id === 6
-                ? '25/09/1987'
-                : '12/04/1991',
-  region:
-    id === 1
-      ? 'Lviv'
-      : id === 2
-        ? 'Kyiv'
-        : id === 3
-          ? 'Kharkiv'
-          : id === 4
-            ? 'Odesa'
-            : id === 5
-              ? 'Dnipro'
-              : id === 6
-                ? 'Zaporizhzhia'
-                : 'Lviv',
-  age:
-    id === 1
-      ? 41
-      : id === 2
-        ? 39
-        : id === 3
-          ? 34
-          : id === 4
-            ? 36
-            : id === 5
-              ? 32
-              : id === 6
-                ? 37
-                : 33,
-  userNumber: taxIdNumber.slice(0, 9),
-  contactStatus: 'Contactable',
-  incomeLevel:
-    id === 1
-      ? 9000.0
-      : id === 2
-        ? 12000.0
-        : id === 3
-          ? 7500.0
-          : id === 4
-            ? 11000.0
-            : id === 5
-              ? 8500.0
-              : id === 6
-                ? 13000.0
-                : 9500.0,
-  score,
-  priority,
-  department: 'Credit',
-  credit: 'Credit',
-  responsibleEmployee:
-    id === 1
-      ? 'Sofia Andreevna Belova'
-      : id === 2
-        ? 'Maria Ivanovna Petrova'
-        : id === 3
-          ? 'Anna Sergeevna Sidorova'
-          : id === 4
-            ? 'Elena Dmitrievna Kozlova'
-            : id === 5
-              ? 'Olga Nikolaevna Morozova'
-              : id === 6
-                ? 'Tatiana Vladimirovna Volkova'
-                : 'Natalia Alexandrovna Sokolova',
-  phones: [
-    { number: phoneNumber, type: 'primary' as const },
-    {
-      number: phoneNumber.replace(/(\d{2})(\d{3})(\d{4})/, '$1$2$3' + (id + 10)),
-      type: 'secondary' as const,
-    },
-  ],
-  tags,
-  loans: [
-    {
-      id: 1,
-      loanNumber: String(30 + id),
-      counterparty: id === 1 ? 'Gamma' : id === 2 ? 'Alpha Corp' : 'Beta Solutions',
-      saleDate: `0${id}.23.2023`,
-      loanAmount: 20000 + id * 1000,
-      principalDebt: 10000 + id * 500,
-      totalToRepay: 60000 + id * 5000,
-    },
-  ],
-  payments: [
-    {
-      id: 1,
-      loanNumber: String(30 + id),
-      counterparty: id === 1 ? 'Gamma' : id === 2 ? 'Alpha Corp' : 'Beta Solutions',
-      saleDate: `0${id}.23.2023`,
-      paymentDate: `0${id}.23.2023`,
-      amount: 20000 + id * 1000,
-      paymentMethod: id % 2 === 0 ? 'Bank Transfer' : 'Card',
-      status: id === 1 ? 'Failed' : id === 2 ? 'Pending' : 'Done',
-      paymentDistribution: `₴ ${2000 + id * 100} loan body ₴ ${300 + id * 50} commisss`,
-      employee: id === 1 ? 'Sidorov' : id === 2 ? 'Shevchenko' : 'Petrov',
-    },
-  ],
-  personalDetails: {
-    tin: taxIdNumber,
-    dateOfBirth:
-      id === 1
-        ? '09/05/1904'
-        : id === 2
-          ? '15/08/1985'
-          : id === 3
-            ? '22/11/1990'
-            : id === 4
-              ? '03/02/1988'
-              : id === 5
-                ? '18/07/1992'
-                : id === 6
-                  ? '25/09/1987'
-                  : '12/04/1991',
-    age:
-      id === 1
-        ? 41
-        : id === 2
-          ? 39
-          : id === 3
-            ? 34
-            : id === 4
-              ? 36
-              : id === 5
-                ? 32
-                : id === 6
-                  ? 37
-                  : 33,
-    passport: taxIdNumber.slice(0, 10),
-    maritalStatus: 'Contactable',
-    familyMembers:
-      id === 1 ? 5 : id === 2 ? 3 : id === 3 ? 4 : id === 4 ? 2 : id === 5 ? 6 : id === 6 ? 3 : 4,
-  },
-  addresses: {
-    registrationAddress:
-      id === 1
-        ? '15 Garden Street, Kyiv, Ukraine, 01001'
-        : id === 2
-          ? '42 Main Avenue, Lviv, Ukraine, 79000'
-          : id === 3
-            ? '78 Central Boulevard, Kharkiv, Ukraine, 61000'
-            : id === 4
-              ? '23 Seaside Road, Odesa, Ukraine, 65000'
-              : id === 5
-                ? '56 River Street, Dnipro, Ukraine, 49000'
-                : id === 6
-                  ? '89 Park Lane, Zaporizhzhia, Ukraine, 69000'
-                  : '34 Market Square, Lviv, Ukraine, 79000',
-    personalAddress:
-      id === 1
-        ? '27 Maple Avenue, Lviv, Ukraine, 79000'
-        : id === 2
-          ? '91 Oak Drive, Kyiv, Ukraine, 01001'
-          : id === 3
-            ? '12 Pine Street, Kharkiv, Ukraine, 61000'
-            : id === 4
-              ? '45 Elm Road, Odesa, Ukraine, 65000'
-              : id === 5
-                ? '67 Birch Way, Dnipro, Ukraine, 49000'
-                : id === 6
-                  ? '89 Cedar Court, Zaporizhzhia, Ukraine, 69000'
-                  : '23 Willow Path, Lviv, Ukraine, 79000',
-  },
-})
-
-// Mock data array - same as ClientDetailPage
-const mockClientsDetail = [
-  createMockClientDetail(
-    1,
-    'Veronika Denisovna Lapina',
-    '12145878778',
-    '+380931234567',
-    ['Bankrupt', 'Did not answer the phone'],
-    'High',
-    88
-  ),
-  createMockClientDetail(
-    2,
-    'Alexandra Petrovna Ilyina',
-    '7896541230',
-    '+380669876543',
-    ['Insolvent', 'Deceiver'],
-    'Medium',
-    10
-  ),
-  createMockClientDetail(
-    3,
-    'Sofia Andreevna Belova',
-    '1236547890',
-    '+380735551212',
-    ['Financially insolvent'],
-    'Low',
-    12
-  ),
-  createMockClientDetail(
-    4,
-    'Polina Antonovna Volkova',
-    '9874563215',
-    '+380502223434',
-    ['Creditor', 'Con artist'],
-    'Low',
-    78
-  ),
-  createMockClientDetail(
-    5,
-    'Valeria Maksimovna Kuznetsova',
-    '3692581470',
-    '+380991115656',
-    ['Insolvent', 'Fraudulent'],
-    'Medium',
-    34
-  ),
-  createMockClientDetail(
-    6,
-    'Ksenia Ilyinichna Sokolova',
-    '1470369258',
-    '+380634447878',
-    ['Financially insolvent'],
-    'High',
-    56
-  ),
-  createMockClientDetail(
-    7,
-    'Victoria Egorovna Zhukova',
-    '2589631470',
-    '+380507778989',
-    ['Employee', 'Con artist'],
-    'Critical',
-    45
-  ),
-]
+import { mockClientDetail } from './mockClientDetails'
 
 // Types
 interface Payment {
@@ -503,7 +247,7 @@ export function DebtSummaryPage() {
 
   // Use mock data as fallback for missing fields until backend is fully integrated (same as ClientDetailPage)
   const client = useMemo(() => {
-    if (!apiClient) return mockClientsDetail[0]
+    if (!apiClient) return mockClientDetail
 
     const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
       .filter(Boolean)
@@ -511,7 +255,7 @@ export function DebtSummaryPage() {
 
     // Map API client to expected shape, using mock data for fields not yet in API (same as ClientDetailPage)
     return {
-      ...mockClientsDetail[0], // Fallback for fields not yet in backend
+      ...mockClientDetail, // Fallback for fields not yet in backend
       id: apiClient.id,
       fullName,
       taxIdNumber: apiClient.tax_id,
@@ -534,14 +278,13 @@ export function DebtSummaryPage() {
           : []),
       ],
       personalDetails: {
-        ...mockClientsDetail[0].personalDetails,
+        ...mockClientDetail.personalDetails,
         tin: apiClient.tax_id,
-        dateOfBirth: apiClient.date_of_birth || mockClientsDetail[0].personalDetails.dateOfBirth,
+        dateOfBirth: apiClient.date_of_birth || mockClientDetail.personalDetails.dateOfBirth,
       },
       addresses: {
-        ...mockClientsDetail[0].addresses,
-        registrationAddress:
-          apiClient.address || mockClientsDetail[0].addresses.registrationAddress,
+        ...mockClientDetail.addresses,
+        registrationAddress: apiClient.address || mockClientDetail.addresses.registrationAddress,
       },
     }
   }, [apiClient])
@@ -623,12 +366,12 @@ export function DebtSummaryPage() {
     // This ensures progress calculation matches the displayed "Total Debt" value
     let currentDebt = 0
     if (apiClient?.total_debt !== undefined && apiClient.total_debt !== null) {
-      currentDebt = apiClient.total_debt
+      currentDebt = Number(apiClient.total_debt)
     } else if (
       paymentHistoryData?.current_debt !== undefined &&
       paymentHistoryData.current_debt !== null
     ) {
-      currentDebt = paymentHistoryData.current_debt
+      currentDebt = Number(paymentHistoryData.current_debt)
     }
 
     // Progress = 100 * TotalPaid / (TotalPaid + TotalDebt)
@@ -655,7 +398,7 @@ export function DebtSummaryPage() {
           return b.payment_date.localeCompare(a.payment_date)
         })
         const mostRecent = sorted[0] // First = most recent
-        lastPaymentAmount = mostRecent.amount
+        lastPaymentAmount = Number(mostRecent.amount) || 0
         // Use verified_at timestamp (has actual time when verified)
         lastPaymentDate = mostRecent.verified_at || mostRecent.recorded_at
       }
@@ -1046,10 +789,12 @@ export function DebtSummaryPage() {
     )
   }
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '₴ 0'
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
     // Format with spaces as thousands separator, no decimals (e.g., "₴ 10 080")
-    return `₴ ${amount
+    return `₴ ${num
       .toLocaleString(locale, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
@@ -1746,8 +1491,9 @@ export function DebtSummaryPage() {
                 ?.payment_number || `PMT-${selectedPayment.id}`,
             status: selectedPayment.status,
             amount:
-              paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.amount ??
-              selectedPayment.amount,
+              Number(
+                paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.amount
+              ) || selectedPayment.amount,
             // Use verified_at for verified payments, recorded_at for others
             paymentDate: (() => {
               const bp = paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
@@ -1767,11 +1513,13 @@ export function DebtSummaryPage() {
             project: 'PrivatBank Collection',
             // Use backend snapshot for Debt Impact when available
             currentDebt:
-              paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.debt_before ??
-              debtSummary.totalDebt,
+              Number(
+                paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.debt_before
+              ) || debtSummary.totalDebt,
             newDebt:
-              paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.debt_after ??
-              Math.max(0, debtSummary.totalDebt - selectedPayment.amount),
+              Number(
+                paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.debt_after
+              ) || Math.max(0, debtSummary.totalDebt - selectedPayment.amount),
             // Audit trail (real data when present, fallback to 'Unknown')
             createdBy:
               paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)

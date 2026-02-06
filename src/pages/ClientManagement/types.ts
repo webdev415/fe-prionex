@@ -12,8 +12,8 @@ export interface Client {
   phoneNumber: string
   dateOfSale: string
   creditor: string
-  debt: number
-  amountOfDebt: number
+  debt: string
+  amountOfDebt: string
   priority: Priority
   score: number
 }

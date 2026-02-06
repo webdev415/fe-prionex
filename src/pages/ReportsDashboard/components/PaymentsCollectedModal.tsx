@@ -68,7 +68,7 @@ export function PaymentsCollectedModal({
   const verifiedPercentage = totalAmount > 0 ? Math.round((verifiedAmount / totalAmount) * 100) : 0
   const pendingPercentage = 100 - verifiedPercentage
 
-  // Payment methods breakdown - use real data from backend
+  // Get payment methods from data prop
   const paymentMethods = data?.paymentMethods || []
 
   const formatCurrency = (amount: number) => {
@@ -239,34 +239,41 @@ export function PaymentsCollectedModal({
               </span>
               <div className="flex flex-col items-start justify-center gap-6 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
                 {paymentMethods.length > 0 ? (
-                  paymentMethods.map((methodData) => (
-                    <div
-                      key={methodData.method}
-                      className="flex flex-col items-start gap-1 self-stretch"
-                    >
-                      <div className="flex items-center gap-5 self-stretch">
-                        <span className="text-dark-500 w-20 text-xs leading-[140%] font-medium tracking-[-0.24px] capitalize">
-                          {methodData.method}
-                        </span>
-                        <div className="flex-1">
-                          <ProgressBar
-                            percentage={methodData.percentage}
-                            height="lg"
-                            barClassName="bg-primary-400"
-                            showBackground={false}
-                          />
+                  paymentMethods.map(
+                    (methodData: {
+                      method: string
+                      count: number
+                      amount: number
+                      percentage: number
+                    }) => (
+                      <div
+                        key={methodData.method}
+                        className="flex flex-col items-start gap-1 self-stretch"
+                      >
+                        <div className="flex items-center gap-5 self-stretch">
+                          <span className="text-dark-500 w-20 text-xs leading-[140%] font-medium tracking-[-0.24px] capitalize">
+                            {methodData.method}
+                          </span>
+                          <div className="flex-1">
+                            <ProgressBar
+                              percentage={methodData.percentage}
+                              height="lg"
+                              barClassName="bg-primary-400"
+                              showBackground={false}
+                            />
+                          </div>
+                          <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                            {formatCurrency(methodData.amount)}{' '}
+                            <span className="font-light">({methodData.percentage}%)</span>
+                          </span>
                         </div>
-                        <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                          {formatCurrency(methodData.amount)}{' '}
-                          <span className="font-light">({methodData.percentage}%)</span>
+                        <span className="text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
+                          {methodData.count} {t('pages.reports.paymentsModal.payments')},{' '}
+                          {methodData.percentage}%
                         </span>
                       </div>
-                      <span className="text-xs leading-[140%] font-medium tracking-[-0.24px] text-gray-700">
-                        {methodData.count} {t('pages.reports.paymentsModal.payments')},{' '}
-                        {methodData.percentage}%
-                      </span>
-                    </div>
-                  ))
+                    )
+                  )
                 ) : (
                   <span className="text-sm text-gray-500">No payment methods data</span>
                 )}

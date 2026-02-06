@@ -431,10 +431,10 @@ export function PaymentHistoryPage() {
       // Use backend debt_before / debt_after when available for accurate debt impact
       const backendPayment = paymentHistoryData?.payments.find((p) => p.id === payment.id)
       const currentDebt = backendPayment
-        ? backendPayment.debt_before
+        ? Number(backendPayment.debt_before) || 0
         : paymentHistory?.totalDebt || 0
       const newDebt = backendPayment
-        ? backendPayment.debt_after
+        ? Number(backendPayment.debt_after) || 0
         : Math.max(0, currentDebt - payment.amount)
 
       return {
@@ -661,9 +661,11 @@ export function PaymentHistoryPage() {
     }
   }, [paymentHistoryData, setStartDate, setEndDate])
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '₴ 0'
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    return `₴ ${amount
+    return `₴ ${num
       .toLocaleString(locale, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,

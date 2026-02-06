@@ -12,15 +12,15 @@ export interface Payment {
   payment_number: string
   project_id: number
   client_id: number
-  amount: number
+  amount: string
   currency: string
-  debt_before: number
-  debt_after: number
-  principal_paid: number
-  interest_paid: number
-  fees_paid: number
-  penalty_paid: number
-  fines_paid: number
+  debt_before: string
+  debt_after: string
+  principal_paid: string
+  interest_paid: string
+  fees_paid: string
+  penalty_paid: string
+  fines_paid: string
   payment_method: PaymentMethod
   payment_method_details?: string
   status: PaymentStatus
@@ -131,8 +131,8 @@ export interface ClientPaymentHistoryParams {
 export interface ClientPaymentHistoryResponse {
   client_id: number
   total_payments: number
-  total_amount_paid: number
-  current_debt: number
+  total_amount_paid: string
+  current_debt: string
   payments: Payment[]
   page: number
   limit: number
@@ -148,12 +148,12 @@ export interface PaymentStatsParams {
 
 export interface PaymentStatsResponse {
   total_payments: number
-  total_amount: number
-  average_payment: number
-  largest_payment: number
-  smallest_payment: number
-  by_status: Record<string, { count: number; total: number }>
-  by_method: Record<string, { count: number; total: number }>
+  total_amount: string
+  average_payment: string
+  largest_payment: string
+  smallest_payment: string
+  by_status: Record<string, { count: number; total: string }>
+  by_method: Record<string, { count: number; total: string }>
   date_from?: string
   date_to?: string
 }

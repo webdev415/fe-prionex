@@ -47,17 +47,21 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
   const { t, i18n } = useTranslation('common')
   const userTimezone = useAuthStore((state) => state.user?.timezone)
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '₴ 0.00'
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    return `₴ ${amount.toLocaleString(locale, {
+    return `₴ ${num.toLocaleString(locale, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`
   }
 
-  const formatCurrencySimple = (amount: number) => {
+  const formatCurrencySimple = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '₴ 0'
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    return `₴ ${amount.toLocaleString(locale, {
+    return `₴ ${num.toLocaleString(locale, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     })}`
@@ -106,8 +110,8 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
   const [amountError, setAmountError] = useState<string | null>(null)
 
   const amountValue = parseFloat(paymentAmount) || 0
-  const originalAmount = payment.amount
-  const originalDebt = payment.currentDebt + originalAmount // Debt before original payment
+  const originalAmount = Number(payment.amount) || 0
+  const originalDebt = (Number(payment.currentDebt) || 0) + originalAmount // Debt before original payment
   const newDebt = originalDebt - amountValue
   const debtChange = amountValue - originalAmount
 

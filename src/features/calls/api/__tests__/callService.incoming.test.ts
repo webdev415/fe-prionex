@@ -25,18 +25,18 @@ describe('CallService - Incoming Call Methods', () => {
       agent_extension: '1004',
       client_name: 'Коваленко Іван Петрович',
       loan_count: 2,
-      total_debt: 8000.0,
+      total_debt: '8000.0',
       loans: [
         {
           loan_id: 456,
           contract_number: 'LOAN-2024-001',
-          remaining_debt: 5000.0,
+          remaining_debt: '5000.0',
           status: 'active',
         },
         {
           loan_id: 457,
           contract_number: 'LOAN-2024-002',
-          remaining_debt: 3000.0,
+          remaining_debt: '3000.0',
           status: 'active',
         },
       ],
@@ -59,7 +59,7 @@ describe('CallService - Incoming Call Methods', () => {
       const noLoansData: IncomingCallData = {
         ...mockIncomingCallData,
         loan_count: 0,
-        total_debt: 0,
+        total_debt: '0',
         loans: [],
         client_name: undefined,
       }
@@ -70,7 +70,7 @@ describe('CallService - Incoming Call Methods', () => {
       const result = await callService.getIncomingCallInfo(callId)
 
       expect(result.loan_count).toBe(0)
-      expect(result.total_debt).toBe(0)
+      expect(result.total_debt).toBe('0')
       expect(result.loans).toEqual([])
     })
 

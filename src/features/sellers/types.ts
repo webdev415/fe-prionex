@@ -45,7 +45,7 @@ export interface Seller {
  */
 export interface SellerStatistics {
   total_debts: number
-  total_debt_amount: number
+  total_debt_amount: string
   unique_clients: number
   active_debts: number
   paid_debts: number
