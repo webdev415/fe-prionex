@@ -757,7 +757,8 @@
         "paymentStatuses": {
           "done": "Done",
           "pending": "Pending",
-          "failed": "Failed"
+          "failed": "Failed",
+          "verified": "Verified"
         },
         "tableHeaders": {
           "loanNumber": "Loan Number",
@@ -778,7 +779,11 @@
           "whoCreated": "Who created",
           "description": "Description",
           "dateOfReminder": "Date of reminder",
-          "whoWillReceiveReminder": "Who will receive the reminder"
+          "whoWillReceiveReminder": "Who will receive the reminder",
+          "date": "Date",
+          "whoAppointed": "Who appointed",
+          "whoIsResponsible": "Who is responsible",
+          "note": "Note"
         },
         "loansInProcess": "Loans in Process",
         "closedLoans": "Closed Loans",
@@ -814,6 +819,9 @@
         "noTagsAssigned": "No tags assigned",
         "totalCalls": "Total Calls",
         "avgDuration": "Avg. Duration",
+        "latestCalls": "Latest Calls",
+        "latestSms": "Latest SMS",
+        "latestCallsAndSms": "Latest Calls and SMS",
         "tabs": {
           "personal": "Personal",
           "work": "Work",

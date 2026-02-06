@@ -722,7 +722,8 @@
         "paymentStatuses": {
           "done": "Выполнено",
           "pending": "В ожидании",
-          "failed": "Не удалось"
+          "failed": "Не удалось",
+          "verified": "Подтверждено"
         },
         "tableHeaders": {
           "loanNumber": "Номер займа",
@@ -743,7 +744,11 @@
           "whoCreated": "Кто создал",
           "description": "Описание",
           "dateOfReminder": "Дата напоминания",
-          "whoWillReceiveReminder": "Кто получит напоминание"
+          "whoWillReceiveReminder": "Кто получит напоминание",
+          "date": "Дата",
+          "whoAppointed": "Кто назначил",
+          "whoIsResponsible": "Кто ответственный",
+          "note": "Примечание"
         },
         "loansInProcess": "Займы в процессе",
         "closedLoans": "Закрытые займы",
@@ -779,6 +784,9 @@
         "noTagsAssigned": "Теги не назначены",
         "totalCalls": "Всего звонков",
         "avgDuration": "Сред. длительность",
+        "latestCalls": "Последние звонки",
+        "latestSms": "Последние SMS",
+        "latestCallsAndSms": "Последние звонки и SMS",
         "tabs": {
           "personal": "Личное",
           "work": "Работа",

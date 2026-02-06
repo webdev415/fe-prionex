@@ -361,19 +361,17 @@ export function ClientDetailPage() {
       // Operators/searchers from assignment history
       operators: (operatorsSection?.operators ?? []).map((o) => ({
         id: o.id,
-        creationDate: o.assigned_at ? new Date(o.assigned_at).toLocaleDateString() : '-',
-        whoCreated: o.assigned_by_name ?? '-',
-        description: `${o.old_employee_name ?? '-'} → ${o.new_employee_name ?? '-'}`,
-        reminderDate: '-',
-        reminderRecipient: o.new_employee_name ?? '-',
+        date: o.assigned_at ? new Date(o.assigned_at).toLocaleDateString() : '-',
+        whoAppointed: o.assigned_by_name ?? '-',
+        whoIsResponsible: o.new_employee_name ?? '-',
+        note: o.assignment_reason ?? '-',
       })),
       searchers: (operatorsSection?.searchers ?? []).map((s) => ({
         id: s.id,
-        creationDate: s.assigned_at ? new Date(s.assigned_at).toLocaleDateString() : '-',
-        whoCreated: s.assigned_by_name ?? '-',
-        description: `${s.old_searcher_name ?? '-'} → ${s.new_searcher_name ?? '-'}`,
-        reminderDate: '-',
-        reminderRecipient: s.new_searcher_name ?? '-',
+        date: s.assigned_at ? new Date(s.assigned_at).toLocaleDateString() : '-',
+        whoAppointed: s.assigned_by_name ?? '-',
+        whoIsResponsible: s.new_searcher_name ?? '-',
+        note: s.assignment_reason ?? '-',
       })),
       documents,
       // Activities mapped from InteractionResponse to UI shape
@@ -821,48 +819,46 @@ export function ClientDetailPage() {
 
   const operatorColumns: Column<(typeof client.operators)[0]>[] = [
     {
-      key: 'creationDate',
-      header: t('pages.clients.detail.tableHeaders.creationDate'),
-      align: 'left',
-    },
-    { key: 'whoCreated', header: t('pages.clients.detail.tableHeaders.whoCreated'), align: 'left' },
-    {
-      key: 'description',
-      header: t('pages.clients.detail.tableHeaders.description'),
+      key: 'date',
+      header: t('pages.clients.detail.tableHeaders.date'),
       align: 'left',
     },
     {
-      key: 'reminderDate',
-      header: t('pages.clients.detail.tableHeaders.dateOfReminder'),
+      key: 'whoAppointed',
+      header: t('pages.clients.detail.tableHeaders.whoAppointed'),
       align: 'left',
     },
     {
-      key: 'reminderRecipient',
-      header: t('pages.clients.detail.tableHeaders.whoWillReceiveReminder'),
+      key: 'whoIsResponsible',
+      header: t('pages.clients.detail.tableHeaders.whoIsResponsible'),
+      align: 'left',
+    },
+    {
+      key: 'note',
+      header: t('pages.clients.detail.tableHeaders.note'),
       align: 'left',
     },
   ]
 
   const searcherColumns: Column<(typeof client.searchers)[0]>[] = [
     {
-      key: 'creationDate',
-      header: t('pages.clients.detail.tableHeaders.creationDate'),
-      align: 'left',
-    },
-    { key: 'whoCreated', header: t('pages.clients.detail.tableHeaders.whoCreated'), align: 'left' },
-    {
-      key: 'description',
-      header: t('pages.clients.detail.tableHeaders.description'),
+      key: 'date',
+      header: t('pages.clients.detail.tableHeaders.date'),
       align: 'left',
     },
     {
-      key: 'reminderDate',
-      header: t('pages.clients.detail.tableHeaders.dateOfReminder'),
+      key: 'whoAppointed',
+      header: t('pages.clients.detail.tableHeaders.whoAppointed'),
       align: 'left',
     },
     {
-      key: 'reminderRecipient',
-      header: t('pages.clients.detail.tableHeaders.whoWillReceiveReminder'),
+      key: 'whoIsResponsible',
+      header: t('pages.clients.detail.tableHeaders.whoIsResponsible'),
+      align: 'left',
+    },
+    {
+      key: 'note',
+      header: t('pages.clients.detail.tableHeaders.note'),
       align: 'left',
     },
   ]
@@ -1819,7 +1815,11 @@ export function ClientDetailPage() {
                   <div className="flex h-auto flex-col items-start gap-3 self-stretch p-0 md:h-[41px] md:flex-row md:items-center md:gap-5">
                     <div className="flex flex-1 items-center gap-2.5">
                       <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                        {t('pages.clients.detail.callAndSMSHistory')}
+                        {activeCallSmsTab === 'calls'
+                          ? t('pages.clients.detail.latestCalls')
+                          : activeCallSmsTab === 'sms'
+                            ? t('pages.clients.detail.latestSms')
+                            : t('pages.clients.detail.latestCallsAndSms')}
                       </span>
                     </div>
                     <div className="flex w-full flex-1 items-center justify-between gap-1 rounded-lg bg-white/50 p-1 shadow-sm md:w-auto">
@@ -2007,7 +2007,7 @@ export function ClientDetailPage() {
                           <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                             {(() => {
                               const answered = client.callSmsHistory.calls.filter(
-                                (c) => c.status === 'Answered'
+                                (c) => c.status === 'COMPLETED'
                               ).length
                               const total = client.callSmsHistory.calls.length
                               const percentage =
@@ -2028,7 +2028,7 @@ export function ClientDetailPage() {
                           <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                             {(() => {
                               const durations = client.callSmsHistory.calls
-                                .filter((c) => c.duration)
+                                .filter((c) => c.duration && c.duration !== '-')
                                 .map((c) => {
                                   const match = c.duration?.match(/(\d+)m (\d+)s/)
                                   if (match) {
@@ -2036,7 +2036,7 @@ export function ClientDetailPage() {
                                   }
                                   return 0
                                 })
-                              if (durations.length === 0) return '0m 0s'
+                              if (durations.length === 0) return '-'
                               const avg = Math.round(
                                 durations.reduce((a, b) => a + b, 0) / durations.length
                               )
@@ -2125,8 +2125,13 @@ export function ClientDetailPage() {
                           </div>
 
                           <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                            ₹15.00 ({client.callSmsHistory.sms.length}{' '}
-                            {t('pages.clients.modals.viewSMS.smsParts')})
+                            {(() => {
+                              const totalCost = client.callSmsHistory.sms.reduce(
+                                (sum, s) => sum + (s.cost || 0),
+                                0
+                              )
+                              return `₴${totalCost.toFixed(2)} (${client.callSmsHistory.sms.length} ${t('pages.clients.modals.viewSMS.smsParts')})`
+                            })()}
                           </div>
                         </div>
                         <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">

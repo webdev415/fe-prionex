@@ -719,7 +719,8 @@
         "paymentStatuses": {
           "done": "Виконано",
           "pending": "В очікуванні",
-          "failed": "Не вдалося"
+          "failed": "Не вдалося",
+          "verified": "Підтверджено"
         },
         "tableHeaders": {
           "loanNumber": "Номер позики",
@@ -740,7 +741,11 @@
           "whoCreated": "Хто створив",
           "description": "Опис",
           "dateOfReminder": "Дата нагадування",
-          "whoWillReceiveReminder": "Хто отримає нагадування"
+          "whoWillReceiveReminder": "Хто отримає нагадування",
+          "date": "Дата",
+          "whoAppointed": "Хто призначив",
+          "whoIsResponsible": "Хто відповідальний",
+          "note": "Примітка"
         },
         "loansInProcess": "Позики в процесі",
         "closedLoans": "Закриті позики",
@@ -776,6 +781,9 @@
         "noTagsAssigned": "Теги не призначені",
         "totalCalls": "Всього дзвінків",
         "avgDuration": "Серед. тривалість",
+        "latestCalls": "Останні дзвінки",
+        "latestSms": "Останні SMS",
+        "latestCallsAndSms": "Останні дзвінки та SMS",
         "tabs": {
           "personal": "Особисте",
           "work": "Робота",
