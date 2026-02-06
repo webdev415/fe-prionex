@@ -48,7 +48,16 @@ export function PriorityBadge({ priority, className, variant = 'default' }: Prio
     },
   }
 
-  const config = priorityConfig[priority]
+  // Normalize priority to handle different cases (lowercase, unknown values)
+  const normalizedPriority = (() => {
+    const p = priority?.toString().toLowerCase()
+    if (p === 'critical') return 'Critical'
+    if (p === 'high') return 'High'
+    if (p === 'medium') return 'Medium'
+    return 'Low' // Default fallback
+  })()
+
+  const config = priorityConfig[normalizedPriority]
 
   const renderDots = () => {
     return Array.from({ length: config.dots }, (_, index) => (
@@ -76,11 +85,11 @@ export function PriorityBadge({ priority, className, variant = 'default' }: Prio
           className
         )}
       >
-        {priority !== 'Low' && (
+        {normalizedPriority !== 'Low' && (
           <span className="flex items-center justify-center gap-0.5">{renderDots()}</span>
         )}
         <span className="text-dark-500 leading-[200%] tracking-[-0.24px]">
-          {t(`pages.clients.priorities.${priority.toLowerCase()}`)}
+          {t(`pages.clients.priorities.${normalizedPriority.toLowerCase()}`)}
         </span>
       </span>
     )
@@ -95,9 +104,11 @@ export function PriorityBadge({ priority, className, variant = 'default' }: Prio
         className
       )}
     >
-      {priority !== 'Low' && <span className="flex items-center gap-0.5">{renderDots()}</span>}
+      {normalizedPriority !== 'Low' && (
+        <span className="flex items-center gap-0.5">{renderDots()}</span>
+      )}
       <span className="text-dark-500 leading-[200%] tracking-[-0.24px]">
-        {t(`pages.clients.priorities.${priority.toLowerCase()}`)}
+        {t(`pages.clients.priorities.${normalizedPriority.toLowerCase()}`)}
       </span>
     </span>
   )

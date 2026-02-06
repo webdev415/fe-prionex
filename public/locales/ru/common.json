@@ -776,6 +776,8 @@
         "noHistoryYet": "Истории еще нет",
         "startByCallingSendingSMSOrAddingNote": "Начните с звонка, отправки SMS или добавления заметки.",
         "addFirstNote": "Добавить первую заметку",
+        "noPrimaryCreditorComments": "Нет комментариев от первичного кредитора",
+        "primaryCreditorCommentsDescription": "Исторические данные о взаимодействии от продавца долга появятся здесь, когда будут доступны.",
         "totalCost": "Общая стоимость",
         "deliveryRate": "Уровень доставки",
         "delivered": "доставлено",

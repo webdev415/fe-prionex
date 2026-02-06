@@ -811,6 +811,8 @@
         "noHistoryYet": "No history yet",
         "startByCallingSendingSMSOrAddingNote": "Start by calling, sending SMS, or adding a note.",
         "addFirstNote": "Add first note",
+        "noPrimaryCreditorComments": "No comments from primary creditor",
+        "primaryCreditorCommentsDescription": "Historical interaction data from the debt seller will appear here when available.",
         "totalCost": "Total Cost",
         "deliveryRate": "Delivery Rate",
         "delivered": "delivered",

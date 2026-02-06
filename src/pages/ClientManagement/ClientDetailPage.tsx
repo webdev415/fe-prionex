@@ -692,7 +692,16 @@ export function ClientDetailPage() {
       align: 'left',
       render: (activity) => activity.promisedDate || '-',
     },
-    { key: 'comment', header: t('pages.clients.activity.tableHeaders.comment'), align: 'left' },
+    {
+      key: 'comment',
+      header: t('pages.clients.activity.tableHeaders.comment'),
+      align: 'left',
+      render: (activity) => (
+        <div className="max-w-[200px] py-2 text-sm leading-tight break-words whitespace-normal">
+          {activity.comment || '-'}
+        </div>
+      ),
+    },
     { key: 'employee', header: t('pages.clients.activity.tableHeaders.employee'), align: 'left' },
   ]
 
@@ -2242,9 +2251,11 @@ export function ClientDetailPage() {
         </div>
       </div>
 
-      {/* Comments Section */}
-      <div className="flex flex-col items-start gap-3 self-stretch rounded-xl border border-white bg-white/50 p-3 xl:flex-row xl:items-center xl:gap-5">
-        <div className="flex w-full flex-col items-start gap-2.5 xl:w-[416px]">
+      {/* Comments / Activity Section - Merged per Marina's request */}
+      <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-3 md:p-6">
+        {/* Header with tabs and View All */}
+        <div className="flex w-full flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+          {/* Tabs */}
           <div className="flex items-center rounded-lg border border-white bg-white p-1 shadow-sm">
             <button
               onClick={() => setActiveCommentTab('comments')}
@@ -2269,30 +2280,7 @@ export function ClientDetailPage() {
               {t('pages.clients.detail.commentsFromPrimaryCreditor')}
             </button>
           </div>
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col items-start gap-2 self-stretch md:flex-row md:items-center">
-          {client.comments.map((comment) => (
-            <div key={comment.id} className="flex min-w-0 flex-1 items-center gap-2 self-stretch">
-              <span className="shrink-0 text-sm leading-[150%] font-light tracking-[-0.28px] whitespace-nowrap text-gray-700">
-                {comment.date}
-              </span>
-              <span className="text-dark-500 min-w-0 flex-1 truncate text-sm leading-[150%] font-light tracking-[-0.28px]">
-                {comment.text}
-              </span>
-              <LinkButton variant="regular-secondary" size="xs" className="shrink-0">
-                {t('pages.clients.detail.readMore')}
-              </LinkButton>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Recent Activity Timeline */}
-      <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-3 md:p-6">
-        <div className="flex flex-row items-center justify-between gap-2 self-stretch">
-          <h2 className="text-dark-500 text-base font-medium md:text-lg">
-            {t('pages.clients.detail.recentActivityTimeline')}
-          </h2>
+          {/* View All link */}
           <LinkButton
             variant="regular-secondary"
             size="xs"
@@ -2302,31 +2290,54 @@ export function ClientDetailPage() {
             {t('pages.clients.detail.viewAll')}
           </LinkButton>
         </div>
-        {client.activities.length == 0 ? (
-          <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
+
+        {/* Content based on active tab */}
+        {activeCommentTab === 'comments' ? (
+          /* Comments tab - Agent interactions/activities */
+          client.activities.length === 0 ? (
+            <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
+              <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
+                <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
+                <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                  {t('pages.clients.detail.noHistoryYet')}
+                </p>
+              </div>
+              <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
+                {t('pages.clients.detail.startByCallingSendingSMSOrAddingNote')}
+              </p>
+              <button
+                onClick={() => setIsNoteModalOpen(true)}
+                className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+                aria-label={t('pages.clients.detail.addFirstNote')}
+              >
+                <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
+                  <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+                </div>
+                <span className="px-4 py-3 text-sm font-medium text-white">
+                  {t('pages.clients.detail.addFirstNote')}
+                </span>
+              </button>
+            </div>
+          ) : (
+            <DataTable
+              columns={activityColumns}
+              data={client.activities.slice(0, 10)}
+              className="w-full"
+            />
+          )
+        ) : (
+          /* Primary Creditor tab - Historical data from debt seller */
+          <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
             <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
               <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
               <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
-                {t('pages.clients.detail.noHistoryYet')}
+                {t('pages.clients.detail.noPrimaryCreditorComments')}
               </p>
             </div>
             <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
-              {t('pages.clients.detail.startByCallingSendingSMSOrAddingNote')}
+              {t('pages.clients.detail.primaryCreditorCommentsDescription')}
             </p>
-            <button
-              className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-              aria-label={t('pages.clients.detail.addFirstNote')}
-            >
-              <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-                <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
-              </div>
-              <span className="px-4 py-3 text-sm font-medium text-white">
-                {t('pages.clients.detail.addFirstNote')}
-              </span>
-            </button>
           </div>
-        ) : (
-          <DataTable columns={activityColumns} data={client.activities} className="w-full" />
         )}
       </div>
 
