@@ -1559,6 +1559,7 @@
     },
     "reports": {
       "title": "Панель отчетов",
+      "exporting": "Экспортируется...",
       "periods": {
         "today": "Сегодня",
         "thisWeek": "Эта неделя",
@@ -1568,12 +1569,22 @@
         "callsMade": "Сделано звонков",
         "contactRate": "Контактность",
         "smsSent": "Отправлено SMS",
+        "paymentsCollected": "Собрано платежей",
         "vs": "по сравнению с",
         "yesterday": "вчера",
         "lastWeek": "прошлой недели",
         "lastMonth": "прошлого месяца",
         "vsYesterday": "по сравнению с вчера",
         "viewDetails": "Просмотреть детали"
+      },
+      "error": {
+        "title": "Не удалось загрузить отчеты",
+        "retry": "Повторить",
+        "notAuthenticated": "Требуется аутентификация",
+        "pleaseLogin": "Пожалуйста, войдите для просмотра отчетов",
+        "goToLogin": "Перейти к входу",
+        "generic": "Произошла ошибка при загрузке панели",
+        "noData": "Данные недоступны"
       },
       "agentPerformance": {
         "title": "Производительность операторов ({{count}} операторов)",
@@ -1597,6 +1608,34 @@
       },
       "exportCsv": "Экспортировать CSV",
       "currencySymbol": "₴",
+      "estimated": "Приблизительно",
+      "callsMadeModal": {
+        "title": "Сделано звонков",
+        "noData": "Данные недоступны",
+        "total": "Всего",
+        "byHour": "По часам",
+        "calls": "звонков",
+        "byOperator": "По операторам"
+      },
+      "contactRateModal": {
+        "title": "Контактность",
+        "noData": "Данные недоступны",
+        "of": "из",
+        "outcomes": "Результаты звонков",
+        "bestPerformer": "Лучший результат",
+        "needsImprovement": "Требуется улучшение"
+      },
+      "smsModal": {
+        "title": "Отправлено SMS",
+        "noData": "Данные недоступны",
+        "totalSent": "Всего отправлено",
+        "deliveryStats": "Статистика доставки",
+        "delivered": "Доставлено",
+        "failed": "Не доставлено",
+        "pending": "В ожидании",
+        "deliveryRate": "Процент доставки",
+        "byOperator": "По операторам"
+      },
       "paymentsModal": {
         "title": "Собранные платежи",
         "payments": "платежей",
@@ -1609,7 +1648,7 @@
         "other": "Другое",
         "averagePayment": "Средний платеж",
         "topCollector": "Лучший сборщик",
-        "largestPmt": "Самый большой платеж"
+        "largestPayment": "Самый большой платеж"
       }
     },
     "scoringConfiguration": {
