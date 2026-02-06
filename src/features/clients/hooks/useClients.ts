@@ -312,45 +312,53 @@ export function useClientCallSmsHistory(clientId: number, enabled = true) {
     queryKey: clientKeys.callSmsHistory(clientId),
     queryFn: async () => {
       const [callsData, smsData] = await Promise.all([
-        callSmsApi.getClientCalls(clientId).catch(() => ({ calls: [] as never[], total: 0 })),
-        callSmsApi.getClientSms(clientId).catch(() => ({ messages: [] as never[], total: 0 })),
+        callSmsApi
+          .getClientCalls(clientId, { limit: 10 })
+          .catch(() => ({ calls: [] as never[], total: 0 })),
+        callSmsApi
+          .getClientSms(clientId, { limit: 10 })
+          .catch(() => ({ messages: [] as never[], total: 0 })),
       ])
 
       // Map calls to UI shape
-      const mappedCalls = callsData.calls.map((c) => {
-        const dt = new Date(c.started_at)
-        const durationMin = c.duration_seconds ? Math.floor(c.duration_seconds / 60) : 0
-        const durationSec = c.duration_seconds ? c.duration_seconds % 60 : 0
+      const mappedCalls = (callsData.calls ?? []).map((c) => {
+        const dt = c.initiated_at ? new Date(c.initiated_at) : new Date()
+        const durationSecs = c.talk_duration ?? 0
+        const durationMin = Math.floor(durationSecs / 60)
+        const durationSec = durationSecs % 60
         return {
-          id: c.id,
+          id: c.call_id,
+          call_id: c.call_id,
           date: dt.toISOString().split('T')[0],
           time: dt.toTimeString().slice(0, 5),
-          phone: c.phone_number,
+          phone: c.customer_number && c.customer_number !== 'unknown' ? c.customer_number : '-',
           phoneLabel: 'Primary',
-          status: c.status,
-          duration: c.duration_seconds ? `${durationMin}m ${durationSec}s` : '-',
-          operator: c.operator_username ?? '-',
+          status: c.state ?? 'unknown',
+          duration: durationSecs > 0 ? `${durationMin}m ${durationSec}s` : '-',
+          operator: c.agent_extension && c.agent_extension !== '000' ? c.agent_extension : '-',
           cost: 0,
-          type: (c.direction === 'outbound' ? 'Outgoing' : 'Incoming') as 'Outgoing' | 'Incoming',
+          type: 'Outgoing' as 'Outgoing' | 'Incoming',
           line: '',
-          initiated_at: c.started_at,
+          initiated_at: c.initiated_at ?? new Date().toISOString(),
         }
       })
 
       // Map SMS to UI shape
-      const mappedSms = smsData.messages.map((s) => {
+      const mappedSms = (smsData.messages ?? []).map((s) => {
         const dt = new Date(s.sent_at ?? s.created_at)
+        // Access extended fields from API response
+        const extendedSms = s as typeof s & { cost?: number; operator_name?: string | null }
         return {
           id: s.id,
           date: dt.toISOString().split('T')[0],
           time: dt.toTimeString().slice(0, 5),
-          phone: s.phone_number,
+          phone: s.phone_number ?? '',
           phoneLabel: 'Primary',
-          status: s.status,
+          status: s.status ?? 'unknown',
           template: s.template_name ?? '-',
           message: s.content ?? '',
-          operator: '-',
-          cost: 0,
+          operator: extendedSms.operator_name ?? '-',
+          cost: extendedSms.cost ?? 0,
           sent_at: s.sent_at ?? s.created_at,
         }
       })

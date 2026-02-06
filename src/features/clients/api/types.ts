@@ -565,19 +565,28 @@ export interface InteractionResultResponse {
 // --- Call/SMS Response Types ---
 
 export interface CallRecord {
-  id: number
-  client_id: number
-  direction: string
-  phone_number: string
-  status: string
-  duration_seconds?: number | null
-  started_at: string
+  call_id: string
+  client_id: number | null
+  agent_extension: string
+  customer_number: string
+  caller_id_name?: string | null
+  caller_id_number?: string | null
+  campaign_id?: string | null
+  state: string
+  uniqueid?: string | null
+  initiated_at: string
+  ringing_at?: string | null
   answered_at?: string | null
   ended_at?: string | null
-  operator_user_id?: number | null
-  operator_username?: string | null
+  ring_duration?: number | null
+  talk_duration?: number | null
+  total_duration?: number | null
+  recording_path?: string | null
   outcome?: string | null
+  disposition?: string | null
   notes?: string | null
+  call_metadata?: Record<string, unknown> | null
+  hangup_cause?: number | null
 }
 
 export interface SmsRecord {

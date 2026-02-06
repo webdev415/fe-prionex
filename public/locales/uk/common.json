@@ -719,7 +719,8 @@
         "paymentStatuses": {
           "done": "Виконано",
           "pending": "В очікуванні",
-          "failed": "Не вдалося"
+          "failed": "Не вдалося",
+          "verified": "Підтверджено"
         },
         "tableHeaders": {
           "loanNumber": "Номер позики",
@@ -740,7 +741,11 @@
           "whoCreated": "Хто створив",
           "description": "Опис",
           "dateOfReminder": "Дата нагадування",
-          "whoWillReceiveReminder": "Хто отримає нагадування"
+          "whoWillReceiveReminder": "Хто отримає нагадування",
+          "date": "Дата",
+          "whoAppointed": "Хто призначив",
+          "whoIsResponsible": "Хто відповідальний",
+          "note": "Примітка"
         },
         "loansInProcess": "Позики в процесі",
         "closedLoans": "Закриті позики",
@@ -768,6 +773,8 @@
         "noHistoryYet": "Історії ще немає",
         "startByCallingSendingSMSOrAddingNote": "Почніть з дзвінка, надсилання SMS або додавання примітки.",
         "addFirstNote": "Додати першу примітку",
+        "noPrimaryCreditorComments": "Немає коментарів від первинного кредитора",
+        "primaryCreditorCommentsDescription": "Історичні дані про взаємодію від продавця боргу з'являться тут, коли будуть доступні.",
         "totalCost": "Загальна вартість",
         "deliveryRate": "Рівень доставки",
         "delivered": "доставлено",
@@ -776,6 +783,9 @@
         "noTagsAssigned": "Теги не призначені",
         "totalCalls": "Всього дзвінків",
         "avgDuration": "Серед. тривалість",
+        "latestCalls": "Останні дзвінки",
+        "latestSms": "Останні SMS",
+        "latestCallsAndSms": "Останні дзвінки та SMS",
         "tabs": {
           "personal": "Особисте",
           "work": "Робота",

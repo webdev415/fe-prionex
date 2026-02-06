@@ -24,6 +24,30 @@ export async function getClientCalls(
   return response.data
 }
 
+// Backend SMS response type (differs from frontend SmsRecord)
+interface BackendSmsItem {
+  message_id: string
+  operator_name?: string | null
+  message_text?: string | null
+  status: string
+  sent_at?: string | null
+  delivered_at?: string | null
+  failed_at?: string | null
+  script?: string | null
+  sms_segments?: number | null
+  cost?: number | null
+  template_name?: string | null
+}
+
+interface BackendSmsResponse {
+  client_id: number
+  client_name?: string | null
+  total: number
+  page: number
+  limit: number
+  items: BackendSmsItem[]
+}
+
 /**
  * Get SMS history for a client
  */
@@ -37,8 +61,27 @@ export async function getClientSms(
     limit?: number
   } = {}
 ): Promise<{ messages: SmsRecord[]; total: number }> {
-  const response = await api.get(`/api/v1/sms/client/${clientId}`, { params })
-  return response.data
+  const response = await api.get<BackendSmsResponse>(`/api/v1/sms/client/${clientId}`, { params })
+  const data = response.data
+
+  // Map backend response to frontend expected format
+  const messages = (data.items ?? []).map((item, index) => ({
+    id: index + 1, // Backend doesn't return numeric ID, use index
+    client_id: data.client_id,
+    direction: 'outbound' as const, // SMS service only handles outbound
+    phone_number: '', // Not provided by backend
+    status: item.status,
+    content: item.message_text ?? null,
+    template_name: item.template_name ?? null,
+    sent_at: item.sent_at ?? null,
+    delivered_at: item.delivered_at ?? null,
+    created_at: item.sent_at ?? new Date().toISOString(),
+    cost: item.cost ?? 0,
+    segments: item.sms_segments ?? 1,
+    operator_name: item.operator_name ?? null,
+  }))
+
+  return { messages, total: data.total }
 }
 
 export const callSmsApi = {

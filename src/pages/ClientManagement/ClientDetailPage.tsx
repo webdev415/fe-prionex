@@ -361,19 +361,17 @@ export function ClientDetailPage() {
       // Operators/searchers from assignment history
       operators: (operatorsSection?.operators ?? []).map((o) => ({
         id: o.id,
-        creationDate: o.assigned_at ? new Date(o.assigned_at).toLocaleDateString() : '-',
-        whoCreated: o.assigned_by_name ?? '-',
-        description: `${o.old_employee_name ?? '-'} → ${o.new_employee_name ?? '-'}`,
-        reminderDate: '-',
-        reminderRecipient: o.new_employee_name ?? '-',
+        date: o.assigned_at ? new Date(o.assigned_at).toLocaleDateString() : '-',
+        whoAppointed: o.assigned_by_name ?? '-',
+        whoIsResponsible: o.new_employee_name ?? '-',
+        note: o.assignment_reason ?? '-',
       })),
       searchers: (operatorsSection?.searchers ?? []).map((s) => ({
         id: s.id,
-        creationDate: s.assigned_at ? new Date(s.assigned_at).toLocaleDateString() : '-',
-        whoCreated: s.assigned_by_name ?? '-',
-        description: `${s.old_searcher_name ?? '-'} → ${s.new_searcher_name ?? '-'}`,
-        reminderDate: '-',
-        reminderRecipient: s.new_searcher_name ?? '-',
+        date: s.assigned_at ? new Date(s.assigned_at).toLocaleDateString() : '-',
+        whoAppointed: s.assigned_by_name ?? '-',
+        whoIsResponsible: s.new_searcher_name ?? '-',
+        note: s.assignment_reason ?? '-',
       })),
       documents,
       // Activities mapped from InteractionResponse to UI shape
@@ -694,7 +692,16 @@ export function ClientDetailPage() {
       align: 'left',
       render: (activity) => activity.promisedDate || '-',
     },
-    { key: 'comment', header: t('pages.clients.activity.tableHeaders.comment'), align: 'left' },
+    {
+      key: 'comment',
+      header: t('pages.clients.activity.tableHeaders.comment'),
+      align: 'left',
+      render: (activity) => (
+        <div className="max-w-[200px] py-2 text-sm leading-tight break-words whitespace-normal">
+          {activity.comment || '-'}
+        </div>
+      ),
+    },
     { key: 'employee', header: t('pages.clients.activity.tableHeaders.employee'), align: 'left' },
   ]
 
@@ -821,48 +828,46 @@ export function ClientDetailPage() {
 
   const operatorColumns: Column<(typeof client.operators)[0]>[] = [
     {
-      key: 'creationDate',
-      header: t('pages.clients.detail.tableHeaders.creationDate'),
-      align: 'left',
-    },
-    { key: 'whoCreated', header: t('pages.clients.detail.tableHeaders.whoCreated'), align: 'left' },
-    {
-      key: 'description',
-      header: t('pages.clients.detail.tableHeaders.description'),
+      key: 'date',
+      header: t('pages.clients.detail.tableHeaders.date'),
       align: 'left',
     },
     {
-      key: 'reminderDate',
-      header: t('pages.clients.detail.tableHeaders.dateOfReminder'),
+      key: 'whoAppointed',
+      header: t('pages.clients.detail.tableHeaders.whoAppointed'),
       align: 'left',
     },
     {
-      key: 'reminderRecipient',
-      header: t('pages.clients.detail.tableHeaders.whoWillReceiveReminder'),
+      key: 'whoIsResponsible',
+      header: t('pages.clients.detail.tableHeaders.whoIsResponsible'),
+      align: 'left',
+    },
+    {
+      key: 'note',
+      header: t('pages.clients.detail.tableHeaders.note'),
       align: 'left',
     },
   ]
 
   const searcherColumns: Column<(typeof client.searchers)[0]>[] = [
     {
-      key: 'creationDate',
-      header: t('pages.clients.detail.tableHeaders.creationDate'),
-      align: 'left',
-    },
-    { key: 'whoCreated', header: t('pages.clients.detail.tableHeaders.whoCreated'), align: 'left' },
-    {
-      key: 'description',
-      header: t('pages.clients.detail.tableHeaders.description'),
+      key: 'date',
+      header: t('pages.clients.detail.tableHeaders.date'),
       align: 'left',
     },
     {
-      key: 'reminderDate',
-      header: t('pages.clients.detail.tableHeaders.dateOfReminder'),
+      key: 'whoAppointed',
+      header: t('pages.clients.detail.tableHeaders.whoAppointed'),
       align: 'left',
     },
     {
-      key: 'reminderRecipient',
-      header: t('pages.clients.detail.tableHeaders.whoWillReceiveReminder'),
+      key: 'whoIsResponsible',
+      header: t('pages.clients.detail.tableHeaders.whoIsResponsible'),
+      align: 'left',
+    },
+    {
+      key: 'note',
+      header: t('pages.clients.detail.tableHeaders.note'),
       align: 'left',
     },
   ]
@@ -1819,7 +1824,11 @@ export function ClientDetailPage() {
                   <div className="flex h-auto flex-col items-start gap-3 self-stretch p-0 md:h-[41px] md:flex-row md:items-center md:gap-5">
                     <div className="flex flex-1 items-center gap-2.5">
                       <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                        {t('pages.clients.detail.callAndSMSHistory')}
+                        {activeCallSmsTab === 'calls'
+                          ? t('pages.clients.detail.latestCalls')
+                          : activeCallSmsTab === 'sms'
+                            ? t('pages.clients.detail.latestSms')
+                            : t('pages.clients.detail.latestCallsAndSms')}
                       </span>
                     </div>
                     <div className="flex w-full flex-1 items-center justify-between gap-1 rounded-lg bg-white/50 p-1 shadow-sm md:w-auto">
@@ -2007,7 +2016,7 @@ export function ClientDetailPage() {
                           <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                             {(() => {
                               const answered = client.callSmsHistory.calls.filter(
-                                (c) => c.status === 'Answered'
+                                (c) => c.status === 'COMPLETED'
                               ).length
                               const total = client.callSmsHistory.calls.length
                               const percentage =
@@ -2028,7 +2037,7 @@ export function ClientDetailPage() {
                           <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                             {(() => {
                               const durations = client.callSmsHistory.calls
-                                .filter((c) => c.duration)
+                                .filter((c) => c.duration && c.duration !== '-')
                                 .map((c) => {
                                   const match = c.duration?.match(/(\d+)m (\d+)s/)
                                   if (match) {
@@ -2036,7 +2045,7 @@ export function ClientDetailPage() {
                                   }
                                   return 0
                                 })
-                              if (durations.length === 0) return '0m 0s'
+                              if (durations.length === 0) return '-'
                               const avg = Math.round(
                                 durations.reduce((a, b) => a + b, 0) / durations.length
                               )
@@ -2125,8 +2134,13 @@ export function ClientDetailPage() {
                           </div>
 
                           <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                            ₹15.00 ({client.callSmsHistory.sms.length}{' '}
-                            {t('pages.clients.modals.viewSMS.smsParts')})
+                            {(() => {
+                              const totalCost = client.callSmsHistory.sms.reduce(
+                                (sum, s) => sum + (s.cost || 0),
+                                0
+                              )
+                              return `₴${totalCost.toFixed(2)} (${client.callSmsHistory.sms.length} ${t('pages.clients.modals.viewSMS.smsParts')})`
+                            })()}
                           </div>
                         </div>
                         <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
@@ -2237,9 +2251,11 @@ export function ClientDetailPage() {
         </div>
       </div>
 
-      {/* Comments Section */}
-      <div className="flex flex-col items-start gap-3 self-stretch rounded-xl border border-white bg-white/50 p-3 xl:flex-row xl:items-center xl:gap-5">
-        <div className="flex w-full flex-col items-start gap-2.5 xl:w-[416px]">
+      {/* Comments / Activity Section - Merged per Marina's request */}
+      <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-3 md:p-6">
+        {/* Header with tabs and View All */}
+        <div className="flex w-full flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+          {/* Tabs */}
           <div className="flex items-center rounded-lg border border-white bg-white p-1 shadow-sm">
             <button
               onClick={() => setActiveCommentTab('comments')}
@@ -2264,30 +2280,7 @@ export function ClientDetailPage() {
               {t('pages.clients.detail.commentsFromPrimaryCreditor')}
             </button>
           </div>
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col items-start gap-2 self-stretch md:flex-row md:items-center">
-          {client.comments.map((comment) => (
-            <div key={comment.id} className="flex min-w-0 flex-1 items-center gap-2 self-stretch">
-              <span className="shrink-0 text-sm leading-[150%] font-light tracking-[-0.28px] whitespace-nowrap text-gray-700">
-                {comment.date}
-              </span>
-              <span className="text-dark-500 min-w-0 flex-1 truncate text-sm leading-[150%] font-light tracking-[-0.28px]">
-                {comment.text}
-              </span>
-              <LinkButton variant="regular-secondary" size="xs" className="shrink-0">
-                {t('pages.clients.detail.readMore')}
-              </LinkButton>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Recent Activity Timeline */}
-      <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-3 md:p-6">
-        <div className="flex flex-row items-center justify-between gap-2 self-stretch">
-          <h2 className="text-dark-500 text-base font-medium md:text-lg">
-            {t('pages.clients.detail.recentActivityTimeline')}
-          </h2>
+          {/* View All link */}
           <LinkButton
             variant="regular-secondary"
             size="xs"
@@ -2297,31 +2290,54 @@ export function ClientDetailPage() {
             {t('pages.clients.detail.viewAll')}
           </LinkButton>
         </div>
-        {client.activities.length == 0 ? (
-          <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
+
+        {/* Content based on active tab */}
+        {activeCommentTab === 'comments' ? (
+          /* Comments tab - Agent interactions/activities */
+          client.activities.length === 0 ? (
+            <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
+              <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
+                <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
+                <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                  {t('pages.clients.detail.noHistoryYet')}
+                </p>
+              </div>
+              <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
+                {t('pages.clients.detail.startByCallingSendingSMSOrAddingNote')}
+              </p>
+              <button
+                onClick={() => setIsNoteModalOpen(true)}
+                className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+                aria-label={t('pages.clients.detail.addFirstNote')}
+              >
+                <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
+                  <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+                </div>
+                <span className="px-4 py-3 text-sm font-medium text-white">
+                  {t('pages.clients.detail.addFirstNote')}
+                </span>
+              </button>
+            </div>
+          ) : (
+            <DataTable
+              columns={activityColumns}
+              data={client.activities.slice(0, 10)}
+              className="w-full"
+            />
+          )
+        ) : (
+          /* Primary Creditor tab - Historical data from debt seller */
+          <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
             <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
               <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
               <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
-                {t('pages.clients.detail.noHistoryYet')}
+                {t('pages.clients.detail.noPrimaryCreditorComments')}
               </p>
             </div>
             <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
-              {t('pages.clients.detail.startByCallingSendingSMSOrAddingNote')}
+              {t('pages.clients.detail.primaryCreditorCommentsDescription')}
             </p>
-            <button
-              className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-              aria-label={t('pages.clients.detail.addFirstNote')}
-            >
-              <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-                <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
-              </div>
-              <span className="px-4 py-3 text-sm font-medium text-white">
-                {t('pages.clients.detail.addFirstNote')}
-              </span>
-            </button>
           </div>
-        ) : (
-          <DataTable columns={activityColumns} data={client.activities} className="w-full" />
         )}
       </div>
 
