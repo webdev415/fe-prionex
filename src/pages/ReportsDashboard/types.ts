@@ -1,5 +1,5 @@
 /**
- * Report Service API Types
+ * Report Dashboard Page Types
  *
  * Type definitions matching the Report Service API specification.
  * These types will be used when the actual API is implemented.
@@ -137,7 +137,7 @@ export interface CommunicationTrend {
 /**
  * Period type for date filtering
  */
-export type Period = 'today' | 'thisWeek' | 'thisMonth'
+export type Period = 'today' | 'thisWeek' | 'thisMonth' | 'custom'
 
 /**
  * Helper type for KPI change calculation

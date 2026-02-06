@@ -1652,6 +1652,7 @@
     },
     "reports": {
       "title": "Reports Dashboard",
+      "exporting": "Exporting...",
       "periods": {
         "today": "Today",
         "thisWeek": "This Week",
@@ -1661,12 +1662,22 @@
         "callsMade": "Calls Made",
         "contactRate": "Contact Rate",
         "smsSent": "SMS Sent",
+        "paymentsCollected": "Payments Collected",
         "vs": "vs",
         "yesterday": "yesterday",
         "lastWeek": "last week",
         "lastMonth": "last month",
         "vsYesterday": "vs yesterday",
         "viewDetails": "View Details"
+      },
+      "error": {
+        "title": "Failed to load reports",
+        "retry": "Retry",
+        "notAuthenticated": "Authentication Required",
+        "pleaseLogin": "Please log in to view reports",
+        "goToLogin": "Go to Login",
+        "generic": "An error occurred while loading the dashboard",
+        "noData": "No data available"
       },
       "agentPerformance": {
         "title": "Agent Performance ({{count}} operators)",
@@ -1690,6 +1701,38 @@
       },
       "exportCsv": "Export CSV",
       "currencySymbol": "₴",
+      "estimated": "Estimated",
+      "callsMadeModal": {
+        "title": "Calls Made",
+        "noData": "No data available",
+        "total": "Total",
+        "byHour": "By Hour",
+        "calls": "calls",
+        "byOperator": "By Operator"
+      },
+      "contactRateModal": {
+        "title": "Contact Rate",
+        "noData": "No data available",
+        "of": "of",
+        "outcomes": "Call Outcomes",
+        "bestPerformer": "Best Performer",
+        "needsImprovement": "Needs Improvement",
+        "answered": "Answered",
+        "noAnswer": "No Answer",
+        "busy": "Busy",
+        "failed": "Failed"
+      },
+      "smsModal": {
+        "title": "SMS Sent",
+        "noData": "No data available",
+        "totalSent": "Total Sent",
+        "deliveryStats": "Delivery Statistics",
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "pending": "Pending",
+        "deliveryRate": "Delivery Rate",
+        "byOperator": "By Operator"
+      },
       "paymentsModal": {
         "title": "Payments Collected",
         "payments": "payments",
@@ -1702,7 +1745,7 @@
         "other": "Other",
         "averagePayment": "Average Payment",
         "topCollector": "Top Collector",
-        "largestPmt": "Largest Pmt"
+        "largestPayment": "Largest Payment"
       }
     },
     "scoringConfiguration": {

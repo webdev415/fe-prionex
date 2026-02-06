@@ -32,6 +32,9 @@ export function getDateRange(period: Period): { from: string; to: string } {
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
       return { from: monthStart.toISOString().split('T')[0], to }
     }
+    case 'custom':
+    default:
+      return { from: to, to }
   }
 }
 

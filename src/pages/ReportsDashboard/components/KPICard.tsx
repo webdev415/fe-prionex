@@ -8,14 +8,14 @@ import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { cn } from '@/lib/utils'
-import type { Period } from '../types'
+import type { Period } from '@/features/report'
 
 export interface KPICardProps {
   title: string
   value: string
   change: number
   changeType: 'increase' | 'decrease'
-  icon: 'phone' | 'chart' | 'mail'
+  icon: 'phone' | 'chart' | 'mail' | 'payments'
   isPercentage?: boolean
   percentage?: number
   onViewDetails?: () => void
@@ -60,6 +60,8 @@ export function KPICard({
         return <Icons.Chart01 size={24} className="text-primary-500" strokeWidth={1.5} />
       case 'mail':
         return <Icons.MailSend01 size={24} className="text-primary-500" strokeWidth={1.5} />
+      case 'payments':
+        return <Icons.MoneyReceive01 size={24} className="text-primary-500" strokeWidth={1.5} />
       default:
         return null
     }

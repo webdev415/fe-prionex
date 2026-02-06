@@ -43,6 +43,8 @@ export function SearchResults({
     if (isNaN(num)) return '0'
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
     return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: 'UAH',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
       useGrouping: true,

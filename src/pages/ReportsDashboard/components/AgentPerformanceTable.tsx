@@ -19,7 +19,84 @@ import { DateSelect } from '@/components/ui/DateSelect'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { Icons } from '@/lib/icons'
 import type { Period } from '../types'
-import { exportToCSV, calculateAverageDuration, getDateRange } from '../mockReportsData'
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+/**
+ * Export data to CSV and trigger download
+ */
+function exportToCSV(data: Record<string, unknown>[], filename: string): void {
+  if (data.length === 0) return
+
+  const headers = Object.keys(data[0])
+  const csvContent = [
+    headers.join(','),
+    ...data.map((row) =>
+      headers
+        .map((header) => {
+          const value = row[header]
+          // Escape values containing commas or quotes
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+            return `"${value.replace(/"/g, '""')}"`
+          }
+          return String(value ?? '')
+        })
+        .join(',')
+    ),
+  ].join('\n')
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  link.setAttribute('href', url)
+  link.setAttribute('download', filename)
+  link.style.visibility = 'hidden'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+/**
+ * Calculate average duration from array of durations in seconds
+ */
+function calculateAverageDuration(durations: number[]): string {
+  if (durations.length === 0) return '0:00'
+  const avgSeconds = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+  const minutes = Math.floor(avgSeconds / 60)
+  const seconds = avgSeconds % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
+/**
+ * Get date range based on period
+ */
+function getDateRange(period: Period): { from: Date; to: Date } {
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+  switch (period) {
+    case 'today':
+      return { from: today, to: today }
+    case 'thisWeek': {
+      const dayOfWeek = today.getDay()
+      const monday = new Date(today)
+      monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
+      const sunday = new Date(monday)
+      sunday.setDate(monday.getDate() + 6)
+      return { from: monday, to: sunday }
+    }
+    case 'thisMonth': {
+      const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+      const lastOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+      return { from: firstOfMonth, to: lastOfMonth }
+    }
+    default:
+      return { from: today, to: today }
+  }
+}
 
 export interface AgentPerformance {
   id: string
@@ -34,6 +111,12 @@ export interface AgentPerformance {
 export interface AgentPerformanceTableProps {
   data: AgentPerformance[]
   selectedPeriod: Period
+  selectedOperator: number | null
+  onOperatorChange: (operatorId: number | null) => void
+  customFromDate: string | null
+  customToDate: string | null
+  onFromDateChange: (date: string | null) => void
+  onToDateChange: (date: string | null) => void
 }
 
 export interface Column<T> {
@@ -46,40 +129,54 @@ export interface Column<T> {
   sortKey?: string // Optional different key for sorting (e.g., 'name' column might sort by 'name' field)
 }
 
-export function AgentPerformanceTable({ data, selectedPeriod }: AgentPerformanceTableProps) {
+export function AgentPerformanceTable({
+  data,
+  selectedPeriod,
+  selectedOperator,
+  onOperatorChange,
+  customFromDate,
+  customToDate,
+  onFromDateChange,
+  onToDateChange,
+}: AgentPerformanceTableProps) {
   const { t, i18n } = useTranslation('common')
-  const [selectedOperator, setSelectedOperator] = useState<string>('')
   const [clientPhone, setClientPhone] = useState<string>('')
 
-  // Initialize date range based on selected period
-  // Dates are derived from period - when period changes, key prop resets DateSelect
-  const dateRange = useMemo(() => getDateRange(selectedPeriod), [selectedPeriod])
+  // Calculate default date range from period
+  const defaultDateRange = useMemo(() => getDateRange(selectedPeriod), [selectedPeriod])
 
-  // Get unique operators for filter
+  // Parse ISO date strings as local dates to avoid timezone issues
+  const parseLocalDate = (isoString: string): Date => {
+    const [year, month, day] = isoString.split('-').map(Number)
+    return new Date(year, month - 1, day) // month is 0-indexed
+  }
+
+  // Use custom dates if set, otherwise use period-based dates
+  const dateRange = useMemo(() => {
+    const from = customFromDate ? parseLocalDate(customFromDate) : defaultDateRange.from
+    const to = customToDate ? parseLocalDate(customToDate) : defaultDateRange.to
+    return { from, to }
+  }, [customFromDate, customToDate, defaultDateRange])
+
+  // Get unique operators for filter (map to their IDs)
   const operators = useMemo(
-    () => Array.from(new Set(data.map((item) => item.operator))).sort(),
+    () =>
+      Array.from(new Set(data.map((item) => ({ id: item.id, name: item.operator })))).sort((a, b) =>
+        a.name.localeCompare(b.name)
+      ),
     [data]
   )
 
-  // Filter data based on filters
+  // Client-side filter for phone only (operator and date filters handled by API)
   const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      // Filter by operator
-      if (selectedOperator && item.operator !== selectedOperator) {
-        return false
-      }
+    if (!clientPhone || clientPhone.trim() === '') {
+      return data
+    }
 
-      // Filter by client phone (mock - in real app this would filter by actual client data)
-      // For now, we'll just return all data if phone filter is empty
-      if (clientPhone && clientPhone.trim() !== '') {
-        // In real implementation, this would check if operator has calls to this phone
-        // For mock, we'll just show all data
-      }
-
-      // Date filter would be handled by the API, so we'll show all data here
-      return true
-    })
-  }, [data, selectedOperator, clientPhone])
+    // In real implementation, this would filter by actual client phone data
+    // For now, just return all data
+    return data
+  }, [data, clientPhone])
 
   const formatCurrency = (amount: number) => {
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
@@ -223,14 +320,20 @@ export function AgentPerformanceTable({ data, selectedPeriod }: AgentPerformance
             >
               {t('pages.reports.filters.responsibleOperator')}
             </Label>
-            <Select value={selectedOperator} onValueChange={setSelectedOperator}>
+            <Select
+              value={selectedOperator?.toString() || 'all'}
+              onValueChange={(value) => onOperatorChange(value === 'all' ? null : Number(value))}
+            >
               <SelectTrigger className="w-full" id="responsible-operator">
                 <SelectValue placeholder={t('pages.reports.filters.selectEmployee')} />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">
+                  {t('pages.reports.filters.allOperators', 'All Operators')}
+                </SelectItem>
                 {operators.map((operator) => (
-                  <SelectItem key={operator} value={operator}>
-                    {operator}
+                  <SelectItem key={operator.id} value={operator.id}>
+                    {operator.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -260,9 +363,8 @@ export function AgentPerformanceTable({ data, selectedPeriod }: AgentPerformance
               <DateSelect
                 key={`date-from-${selectedPeriod}`}
                 value={dateRange.from}
-                onChange={() => {
-                  // Date changes are handled by the period selection
-                  // In real implementation, this would filter the data
+                onChange={({ value }) => {
+                  onFromDateChange(value ? value.toISOString().split('T')[0] : null)
                 }}
               />
               <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
@@ -271,9 +373,8 @@ export function AgentPerformanceTable({ data, selectedPeriod }: AgentPerformance
               <DateSelect
                 key={`date-to-${selectedPeriod}`}
                 value={dateRange.to}
-                onChange={() => {
-                  // Date changes are handled by the period selection
-                  // In real implementation, this would filter the data
+                onChange={({ value }) => {
+                  onToDateChange(value ? value.toISOString().split('T')[0] : null)
                 }}
               />
             </div>
