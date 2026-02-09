@@ -916,6 +916,7 @@
           "type": "Тип",
           "phone": "Телефон",
           "line": "Линия",
+          "noRecording": "Запись звонка недоступна",
           "callTypes": {
             "incoming": "Входящий",
             "outgoing": "Исходящий",

@@ -47,6 +47,7 @@ type CallLogCardProps = {
   clientName?: string
   icon?: React.ReactNode
   call_id?: string
+  recording_path?: string | null
   sent_at?: string
   delivered_at?: string
   setSelectedCallData?: React.Dispatch<React.SetStateAction<CallData | null>>
@@ -83,6 +84,7 @@ export function CallLogCard({
   clientName,
   className,
   call_id,
+  recording_path,
   sent_at,
   delivered_at,
   setSelectedCallData,
@@ -180,6 +182,16 @@ export function CallLogCard({
         )
         return
       }
+
+      // Check if recording exists
+      if (!recording_path) {
+        toast.info(
+          t('pages.clients.modals.callLogCard.noRecording') ||
+            'No recording available for this call'
+        )
+        return
+      }
+
       setSelectedCallData?.({
         type:
           type === 'Incoming'
