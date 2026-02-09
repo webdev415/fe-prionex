@@ -28,7 +28,7 @@ export interface EnhancedSearchResult {
   priority_score: number
   priority_level: PriorityLevel
   status: string
-  total_debt: number
+  total_debt: string
   debt_count: number
   primary_creditor: string | null
 }

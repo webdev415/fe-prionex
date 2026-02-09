@@ -39,7 +39,7 @@ describe('useProject', () => {
       status: 'active' as const,
       is_active: true,
       total_clients: 0,
-      total_debt_amount: 0,
+      total_debt_amount: '0',
       user_count: 0,
       role_count: 0,
       created_at: '2025-01-01T00:00:00Z',

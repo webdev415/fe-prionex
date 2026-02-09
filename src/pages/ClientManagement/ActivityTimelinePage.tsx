@@ -4,7 +4,7 @@
  * Full page view for displaying all client activities with filters.
  */
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useURLState, useAutoPersistedState } from '@/hooks'
@@ -18,16 +18,10 @@ import { Pagination } from '@/components/ui/Pagination'
 import { AddNoteModal } from '@/pages/ClientManagement/components/AddNoteModal'
 import { PriorityBadge } from './components/PriorityBadge'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
-import { mockClientsDetail } from './mockClientDetails'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
 import { useCallStore } from '@/stores/callStore'
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/DropdownMenu'
+import { useClientProfile, useClientActivities } from '@/features/clients/hooks/useClients'
 
 type CommunicationType = 'calls' | 'sms' | 'notes' | 'all'
 
@@ -36,17 +30,40 @@ export function ActivityTimelinePage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { isCallActive, setOpenCallModal } = useCallStore()
-  const clientId = id ? Number(id) : 1
-  const client = mockClientsDetail.find((c) => c.id === clientId) || mockClientsDetail[0]
+  const clientId = Number(id) || 0
+
+  // Fetch real data from API
+  const { data: profile, isLoading: isProfileLoading } = useClientProfile(clientId, clientId > 0)
+  const { data: activities = [], isLoading: isActivitiesLoading } = useClientActivities(
+    clientId,
+    clientId > 0
+  )
+
+  // Build client object from profile
+  const client = useMemo(() => {
+    if (!profile) return null
+    // Build phones array from primary + additional phones
+    const phones = [
+      { number: profile.phone_primary, type: 'primary', label: 'Primary' },
+      ...(profile.additional_phones ?? []),
+    ]
+    return {
+      id: profile.id,
+      fullName: profile.full_name,
+      priorityScore: profile.priority_score ?? 0,
+      priorityLevel: profile.priority_level ?? 'Low',
+      phones,
+    }
+  }, [profile])
 
   // URL state for pagination
   const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
   const [rowsPerPage, setRowsPerPage] = useURLState<number>('pageSize', 10)
 
   // URL state for filters
-  const [communicationTypeUrl, setCommunicationTypeUrl] = useURLState<string>('type', 'calls')
-  const [dateFromUrl, setDateFromUrl] = useURLState<string>('date_from', '2024-11-20')
-  const [dateToUrl, setDateToUrl] = useURLState<string>('date_to', '2024-11-27')
+  const [communicationTypeUrl, setCommunicationTypeUrl] = useURLState<string>('type', 'all')
+  const [dateFromUrl, setDateFromUrl] = useURLState<string>('date_from', '')
+  const [dateToUrl, setDateToUrl] = useURLState<string>('date_to', '')
 
   // Add persistence for state
   useAutoPersistedState(
@@ -81,34 +98,26 @@ export function ActivityTimelinePage() {
 
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
 
-  // Local editable activities state so UI can update result statuses
-  const [activitiesState, setActivitiesState] = useState(() => client.activities || [])
+  // Combined loading state
+  const isLoading = isProfileLoading || isActivitiesLoading
 
-  // Reset activities when client changes (only update when different to avoid cascading renders)
-  useEffect(() => {
-    const newIds = (client.activities || []).map((a) => a.id).join(',')
-    const currentIds = (activitiesState || []).map((a) => a.id).join(',')
-    if (newIds !== currentIds) {
-      const timer = setTimeout(() => setActivitiesState(client.activities || []), 0)
-      return () => clearTimeout(timer)
-    }
-  }, [client, activitiesState])
-
-  const updateActivityResult = (activityId: number, newResult: string) => {
-    setActivitiesState((prev) =>
-      prev.map((a) => (a.id === activityId ? { ...a, result: newResult } : a))
-    )
-  }
-
-  // Simulate loading state
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [id])
+  // Map activities from API to display format
+  const activitiesState = useMemo(() => {
+    return activities.map((a) => ({
+      id: a.id,
+      date: a.interaction_date ? new Date(a.interaction_date).toLocaleDateString() : '-',
+      dateISO: a.interaction_date ?? '', // Keep ISO date for filtering
+      number: a.phone_used ?? '-',
+      contactType: a.direction === 'outbound' ? 'Outgoing' : 'Incoming',
+      result: a.result_name ?? a.status ?? '-',
+      promisedAmount: a.promise_to_pay_amount ? parseFloat(a.promise_to_pay_amount) : 0,
+      promisedDate: a.promise_to_pay_date ?? '-',
+      comment: a.summary ?? a.notes ?? '-',
+      employee: a.user_name ?? '-',
+      channel: a.channel,
+    }))
+  }, [activities])
 
   const formatCurrencyWithDecimals = (amount: number) => {
     return new Intl.NumberFormat('uk-UA', {
@@ -121,50 +130,6 @@ export function ActivityTimelinePage() {
   }
 
   // Filter activities based on communication type and date range
-  const RESULT_OPTIONS = [
-    {
-      value: 'refusal',
-      label: 'Refusal to pay',
-      textClass: 'text-error-500',
-      outerClass: 'bg-error-200',
-      innerClass: 'bg-error-500',
-    },
-    {
-      value: 'agreement_full',
-      label: 'Agreement for full payment',
-      textClass: 'text-success-500',
-      outerClass: 'bg-success-200',
-      innerClass: 'bg-success-500',
-    },
-    {
-      value: 'agreement_partial',
-      label: 'Agreement for partial payment',
-      textClass: 'text-success-500',
-      outerClass: 'bg-success-200',
-      innerClass: 'bg-success-500',
-    },
-    {
-      value: 'callback',
-      label: 'Call back later',
-      textClass: 'text-dark-500',
-      outerClass: 'bg-black/20',
-      innerClass: 'bg-dark-500',
-    },
-  ]
-
-  const getResultClasses = (label?: string) => {
-    if (!label) return { text: 'text-dark-500', outer: 'bg-black/20', inner: 'bg-dark-500' }
-    if (label === 'Refusal to pay')
-      return { text: 'text-error-500', outer: 'bg-error-200', inner: 'bg-error-500' }
-    if (label === 'Agreement for full payment')
-      return { text: 'text-success-500', outer: 'bg-success-200', inner: 'bg-success-500' }
-    if (label === 'Agreement for partial payment')
-      return { text: 'text-success-500', outer: 'bg-success-200', inner: 'bg-success-500' }
-    if (label === 'Call back later')
-      return { text: 'text-dark-500', outer: 'bg-black/20', inner: 'bg-dark-500' }
-    return { text: 'text-dark-500', outer: 'bg-black/20', inner: 'bg-dark-500' }
-  }
-
   const filteredActivities = useMemo(() => {
     let result = [...(activitiesState || [])]
 
@@ -185,12 +150,12 @@ export function ActivityTimelinePage() {
       })
     }
 
-    // Filter by date range
+    // Filter by date range using ISO date
     if (dateFrom || dateTo) {
       result = result.filter((activity) => {
-        // Parse date in format MM/DD/YYYY
-        const [month, day, year] = activity.date.split('/')
-        const activityDate = new Date(Number(year), Number(month) - 1, Number(day))
+        if (!activity.dateISO) return true // Include activities without date
+        const activityDate = new Date(activity.dateISO)
+        activityDate.setHours(0, 0, 0, 0)
 
         if (dateFrom) {
           const fromDate = new Date(dateFrom)
@@ -209,14 +174,17 @@ export function ActivityTimelinePage() {
     return result
   }, [activitiesState, communicationType, dateFrom, dateTo])
 
+  // Calculate total pages (minimum 1 to avoid division issues)
+  const totalPages = Math.max(1, Math.ceil(filteredActivities.length / rowsPerPage))
+
   // Paginate activities
   const paginatedActivities = useMemo(() => {
-    const start = (currentPage - 1) * rowsPerPage
+    // Ensure current page doesn't exceed total pages
+    const safePage = Math.min(currentPage, totalPages)
+    const start = (safePage - 1) * rowsPerPage
     const end = start + rowsPerPage
     return filteredActivities.slice(start, end)
-  }, [filteredActivities, currentPage, rowsPerPage])
-
-  const totalPages = Math.ceil(filteredActivities.length / rowsPerPage)
+  }, [filteredActivities, currentPage, totalPages, rowsPerPage])
 
   const handleClearFilters = () => {
     setCommunicationType('all')
@@ -225,7 +193,7 @@ export function ActivityTimelinePage() {
     setCurrentPage(1)
   }
 
-  const activityColumns: Column<(typeof client.activities)[0]>[] = [
+  const activityColumns: Column<(typeof activitiesState)[0]>[] = [
     { key: 'date', header: t('pages.clients.activity.tableHeaders.date'), align: 'left' },
     { key: 'number', header: t('pages.clients.activity.tableHeaders.number'), align: 'left' },
     {
@@ -233,64 +201,13 @@ export function ActivityTimelinePage() {
       header: t('pages.clients.activity.tableHeaders.contactType'),
       align: 'left',
     },
-    {
-      key: 'result',
-      header: t('pages.clients.activity.tableHeaders.result'),
-      align: 'left',
-      render: (activity) => {
-        const {
-          text: textClass,
-          outer: outerClass,
-          inner: innerClass,
-        } = getResultClasses(activity.result as string)
-        return (
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className={`flex w-full cursor-pointer items-center justify-between rounded px-3 py-2 text-sm font-medium ${textClass}`}
-                aria-label={`Result for activity ${activity.id}`}
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <span
-                    className={`flex h-3 w-3 items-center justify-center rounded-full ${outerClass}`}
-                  >
-                    <span className={`h-1.5 w-1.5 rounded-full ${innerClass}`} />
-                  </span>
-                  <span className="min-w-0 truncate">{activity.result || '-'}</span>
-                </div>
-                <Icons.ArrowDown size={14} className="text-dark-500 ml-2" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent sideOffset={8} align="start" className="min-w-[220px]">
-              {RESULT_OPTIONS.map((opt) => (
-                <DropdownMenuItem
-                  key={opt.value}
-                  onSelect={() => updateActivityResult(activity.id as number, opt.label)}
-                >
-                  <div
-                    className={`flex cursor-pointer items-center gap-3 px-3 py-2 ${opt.textClass}`}
-                  >
-                    <span
-                      className={`flex h-3 w-3 items-center justify-center rounded-full ${opt.outerClass}`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${opt.innerClass}`} />
-                    </span>
-                    <span className="text-sm">{opt.label}</span>
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      },
-    },
+    { key: 'result', header: t('pages.clients.activity.tableHeaders.result'), align: 'left' },
     {
       key: 'promisedAmount',
       header: t('pages.clients.activity.tableHeaders.promisedAmount'),
       align: 'right',
       render: (activity) =>
-        activity.promisedAmount ? `${formatCurrencyWithDecimals(activity.promisedAmount)} ₴` : '-',
+        activity.promisedAmount ? `${formatCurrencyWithDecimals(activity.promisedAmount)}₴` : '-',
     },
     {
       key: 'promisedDate',
@@ -298,14 +215,23 @@ export function ActivityTimelinePage() {
       align: 'left',
       render: (activity) => activity.promisedDate || '-',
     },
-    { key: 'comment', header: t('pages.clients.activity.tableHeaders.comment'), align: 'left' },
+    {
+      key: 'comment',
+      header: t('pages.clients.activity.tableHeaders.comment'),
+      align: 'left',
+      render: (activity) => (
+        <div className="max-w-[200px] py-2 text-sm leading-tight break-words whitespace-normal">
+          {activity.comment || '-'}
+        </div>
+      ),
+    },
     { key: 'employee', header: t('pages.clients.activity.tableHeaders.employee'), align: 'left' },
   ]
 
   const hasFilters = communicationType !== 'all' || dateFrom || dateTo
 
-  // Show loading skeleton
-  if (isLoading) {
+  // Show loading skeleton while loading or if client data not available
+  if (isLoading || !client) {
     return <ActivityTimelinePageSkeleton />
   }
 
@@ -316,20 +242,22 @@ export function ActivityTimelinePage() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-row items-center gap-2">
             <button
-              onClick={() => navigate(`/dashboard/clients/${client.id}`)}
+              onClick={() => navigate(`/dashboard/clients/${client?.id ?? clientId}`)}
               className="flex h-6 w-6 items-center justify-center"
             >
               <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
             </button>
             <h1 className="text-dark-500 text-center text-xl leading-[150%] font-light md:text-2xl">
-              {client.fullName}
+              {client?.fullName ?? '-'}
             </h1>
           </div>
           <div className="flex flex-row items-center gap-2">
             <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0 text-sm">
-              {client.score} {t('pages.clients.activity.score')}
+              {client?.priorityScore ?? 0} {t('pages.clients.activity.score')}
             </span>
-            <PriorityBadge priority={client.priority} />
+            <PriorityBadge
+              priority={(client?.priorityLevel ?? 'Low') as 'Critical' | 'High' | 'Medium' | 'Low'}
+            />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 md:gap-5">
@@ -482,7 +410,8 @@ export function ActivityTimelinePage() {
       <AddNoteModal
         open={isNoteModalOpen}
         onClose={() => setIsNoteModalOpen(false)}
-        phoneNumber={client.phones?.[0]?.number || ''}
+        phoneNumber={client?.phones?.[0]?.number || ''}
+        clientId={clientId}
         onSave={(data) => {
           // TODO: Save note to API
           console.log('Note saved:', data)
@@ -496,8 +425,8 @@ export function ActivityTimelinePage() {
           setOpenCallModal(null)
           setIsCallModalOpen(false)
         }}
-        clientName={client.fullName}
-        phoneNumber={client.phones?.[0]?.number || ''}
+        clientName={client?.fullName ?? ''}
+        phoneNumber={client?.phones?.[0]?.number || ''}
         initialState="initial"
         onCallStart={(callType: CallType) => {
           console.log('Call started with type:', callType)

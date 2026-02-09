@@ -824,8 +824,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             clientName: incomingCall.client_name || 'Unknown',
             loanNumber: loan.contract_number,
             counterparty: '', // Not provided by backend
-            loanPrincipal: loan.remaining_debt,
-            debt: loan.remaining_debt,
+            loanPrincipal: Number(loan.remaining_debt) || 0,
+            debt: Number(loan.remaining_debt) || 0,
             status: loan.status,
             saleDate: '', // Not provided by backend
             lastContact: '', // Not provided by backend

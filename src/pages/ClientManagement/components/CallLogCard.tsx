@@ -47,6 +47,7 @@ type CallLogCardProps = {
   clientName?: string
   icon?: React.ReactNode
   call_id?: string
+  recording_path?: string | null
   sent_at?: string
   delivered_at?: string
   setSelectedCallData?: React.Dispatch<React.SetStateAction<CallData | null>>
@@ -83,6 +84,7 @@ export function CallLogCard({
   clientName,
   className,
   call_id,
+  recording_path,
   sent_at,
   delivered_at,
   setSelectedCallData,
@@ -94,16 +96,21 @@ export function CallLogCard({
   const { isCallActive, setOpenCallModal } = useCallStore()
 
   const getTranslatedStatus = (status: string) => {
-    switch (status) {
-      case 'Answered':
+    const s = status?.toUpperCase()
+    switch (s) {
+      case 'COMPLETED':
+      case 'ANSWERED':
         return t('pages.clients.statuses.answered')
-      case 'No Answer':
+      case 'NO_ANSWER':
+      case 'NO ANSWER':
         return t('pages.clients.statuses.noAnswer')
-      case 'Delivered':
+      case 'DELIVERED':
         return t('pages.clients.statuses.delivered')
-      case 'Failed':
+      case 'FAILED':
         return t('pages.clients.statuses.failed')
-      case 'Pending':
+      case 'PENDING':
+      case 'INITIATED':
+      case 'RINGING':
         return t('pages.clients.statuses.pending')
       default:
         return status
@@ -123,31 +130,43 @@ export function CallLogCard({
 
   // Determine status dot color
   const getStatusDotColor = () => {
-    if (status === 'Answered' || status === 'Delivered') {
+    const s = status?.toUpperCase()
+    if (s === 'COMPLETED' || s === 'ANSWERED' || s === 'DELIVERED') {
       return 'bg-success-500'
     }
-    if (status === 'No Answer' || status === 'Failed') {
+    if (s === 'FAILED' || s === 'NO_ANSWER' || s === 'NO ANSWER') {
       return 'bg-error-500'
+    }
+    if (s === 'INITIATED' || s === 'RINGING' || s === 'PENDING') {
+      return 'bg-warning-500'
     }
     return 'bg-gray-500'
   }
   const getStatusBorderColor = () => {
-    if (status === 'Answered' || status === 'Delivered') {
+    const s = status?.toUpperCase()
+    if (s === 'COMPLETED' || s === 'ANSWERED' || s === 'DELIVERED') {
       return 'bg-success-200'
     }
-    if (status === 'No Answer' || status === 'Failed') {
+    if (s === 'FAILED' || s === 'NO_ANSWER' || s === 'NO ANSWER') {
       return 'bg-error-200'
+    }
+    if (s === 'INITIATED' || s === 'RINGING' || s === 'PENDING') {
+      return 'bg-warning-200'
     }
     return 'bg-gray-200'
   }
 
   // Get status text color
   const getStatusTextColor = () => {
-    if (status === 'Answered' || status === 'Delivered') {
+    const s = status?.toUpperCase()
+    if (s === 'COMPLETED' || s === 'ANSWERED' || s === 'DELIVERED') {
       return 'text-success-500'
     }
-    if (status === 'No Answer' || status === 'Failed') {
+    if (s === 'FAILED' || s === 'NO_ANSWER' || s === 'NO ANSWER') {
       return 'text-error-500'
+    }
+    if (s === 'INITIATED' || s === 'RINGING' || s === 'PENDING') {
+      return 'text-warning-500'
     }
     return 'text-gray-500'
   }
@@ -163,6 +182,16 @@ export function CallLogCard({
         )
         return
       }
+
+      // Check if recording exists
+      if (!recording_path) {
+        toast.info(
+          t('pages.clients.modals.callLogCard.noRecording') ||
+            'No recording available for this call'
+        )
+        return
+      }
+
       setSelectedCallData?.({
         type:
           type === 'Incoming'

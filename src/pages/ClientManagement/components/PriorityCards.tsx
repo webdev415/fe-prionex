@@ -10,10 +10,10 @@ import { PriorityBadge } from './PriorityBadge'
 import type { Priority } from '../types'
 
 interface PriorityStats {
-  Critical: { totalDebt: number; count: number }
-  High: { totalDebt: number; count: number }
-  Medium: { totalDebt: number; count: number }
-  Low: { totalDebt: number; count: number }
+  Critical: { totalDebt: string | number; count: number }
+  High: { totalDebt: string | number; count: number }
+  Medium: { totalDebt: string | number; count: number }
+  Low: { totalDebt: string | number; count: number }
 }
 
 interface PriorityCardsProps {
@@ -27,18 +27,20 @@ interface PriorityCardsProps {
 export function PriorityCards({ priorityStats, selected = [], onToggle }: PriorityCardsProps) {
   const { t } = useTranslation('common')
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '0'
     const formatted = new Intl.NumberFormat('uk-UA', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
       useGrouping: true,
     })
-      .format(amount)
+      .format(num)
       .replace(/,/g, ' ')
 
     // Format as "540K" if >= 1000
-    if (amount >= 1000) {
-      const kValue = Math.round(amount / 1000)
+    if (num >= 1000) {
+      const kValue = Math.round(num / 1000)
       return `${kValue}K`
     }
     return formatted
@@ -47,7 +49,7 @@ export function PriorityCards({ priorityStats, selected = [], onToggle }: Priori
   const priorityCards: Array<{
     label: string
     priority: Priority
-    totalDebt: number
+    totalDebt: string | number
     clientCount: number
     color: 'error' | 'warning' | 'success' | 'gray'
   }> = [

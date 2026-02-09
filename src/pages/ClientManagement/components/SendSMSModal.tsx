@@ -117,7 +117,7 @@ export function SendSMSModal({
   const [messageEdited, setMessageEdited] = useState<boolean>(false)
   const [clientNameField, setClientNameField] = useState<string>(clientName)
   const [debtAmountField, setDebtAmountField] = useState<string>(
-    debtAmount > 0 ? debtAmount.toFixed(2) : ''
+    Number(debtAmount) > 0 ? Number(debtAmount).toFixed(2) : ''
   )
 
   // Reset form when modal opens/closes
@@ -130,7 +130,7 @@ export function SendSMSModal({
       setCustomMessage('')
       setMessageEdited(false)
       setClientNameField(clientName)
-      setDebtAmountField(debtAmount > 0 ? debtAmount.toFixed(2) : '')
+      setDebtAmountField(Number(debtAmount) > 0 ? Number(debtAmount).toFixed(2) : '')
 
       // Set default template if available
       if (templates.length > 0) {

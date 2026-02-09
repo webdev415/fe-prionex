@@ -12,7 +12,7 @@ import { PriorityBadge } from '@/pages/ClientManagement/components/PriorityBadge
 export interface SearchResult {
   id: number
   name: string
-  debt: number
+  debt: string
   phone: string
   priority: 'Critical' | 'High' | 'Medium' | 'Low'
   score: number
@@ -38,14 +38,18 @@ export function SearchResults({
 }: SearchResultsProps) {
   const { t, i18n } = useTranslation('common')
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '0'
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
     return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: 'UAH',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
       useGrouping: true,
     })
-      .format(amount)
+      .format(num)
       .replace(/,/g, ' ')
   }
 

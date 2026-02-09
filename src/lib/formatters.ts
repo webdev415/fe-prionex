@@ -22,12 +22,26 @@ export function formatPeriod(startDate?: string, endDate?: string): string {
 }
 
 /**
+ * Parse a financial amount from string or number to a numeric value.
+ * Backend sends Decimal fields as strings for precision; this safely converts them.
+ */
+export function parseAmount(value: string | number | null | undefined): number {
+  if (value == null) return 0
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  return isNaN(num) ? 0 : num
+}
+
+/**
  * Format currency value with ₴ symbol
  * Uses locale-aware formatting and replaces commas with spaces (for Ukrainian/Russian locales)
+ * Accepts both string and number inputs (backend sends financial fields as strings).
  * Example: "₴ 10 080" or "₴ 1,234" (depending on locale)
  */
-export function formatCurrency(amount?: number): string {
+export function formatCurrency(amount?: string | number | null): string {
   if (amount === undefined || amount === null) return '—'
+
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount
+  if (isNaN(num)) return '—'
 
   // Get current language from i18n, default to 'uk'
   const currentLanguage = i18n.language || 'uk'
@@ -38,7 +52,7 @@ export function formatCurrency(amount?: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   })
-    .format(amount)
+    .format(num)
     .replace(/,/g, ' ') // Replace commas with spaces (for Ukrainian/Russian locales)
 
   return `₴ ${formatted}`

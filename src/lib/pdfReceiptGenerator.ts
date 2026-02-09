@@ -382,12 +382,14 @@ export interface PaymentReceiptData {
   userTimezone?: string // User's timezone for date formatting
 }
 
-const formatCurrency = (amount: number): string => {
+const formatCurrency = (amount: string | number): string => {
   // Format with space as thousands separator and comma as decimal separator (Ukrainian format)
   // Example: ₴ 125 450,00 (matches UI format)
   // Handle negative numbers correctly: - ₴ 10 000,00
-  const isNegative = amount < 0
-  const absAmount = Math.abs(amount)
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount
+  if (isNaN(num)) return '₴ 0,00'
+  const isNegative = num < 0
+  const absAmount = Math.abs(num)
   const formatted = absAmount.toLocaleString('uk-UA', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

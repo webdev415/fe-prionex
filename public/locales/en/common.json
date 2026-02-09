@@ -813,16 +813,23 @@
         "passport": "Passport",
         "maritalStatus": "Marital status",
         "numberOfFamilyMembers": "Number of family members",
+        "incomeLevel": "Income level",
+        "employmentType": "Employment type",
         "fullName": "Full name",
         "relationshipTo": "Relationship to",
         "phoneNumber": "Phone number",
         "comment": "Comment",
         "registrationAddress": "Registration address",
         "personalAddress": "Personal address",
+        "organizationName": "Organization name",
+        "position": "Position",
+        "experience": "Experience",
+        "managerFullName": "Manager full name",
         "paymentStatuses": {
           "done": "Done",
           "pending": "Pending",
-          "failed": "Failed"
+          "failed": "Failed",
+          "verified": "Verified"
         },
         "tableHeaders": {
           "loanNumber": "Loan Number",
@@ -843,7 +850,11 @@
           "whoCreated": "Who created",
           "description": "Description",
           "dateOfReminder": "Date of reminder",
-          "whoWillReceiveReminder": "Who will receive the reminder"
+          "whoWillReceiveReminder": "Who will receive the reminder",
+          "date": "Date",
+          "whoAppointed": "Who appointed",
+          "whoIsResponsible": "Who is responsible",
+          "note": "Note"
         },
         "loansInProcess": "Loans in Process",
         "closedLoans": "Closed Loans",
@@ -871,6 +882,8 @@
         "noHistoryYet": "No history yet",
         "startByCallingSendingSMSOrAddingNote": "Start by calling, sending SMS, or adding a note.",
         "addFirstNote": "Add first note",
+        "noPrimaryCreditorComments": "No comments from primary creditor",
+        "primaryCreditorCommentsDescription": "Historical interaction data from the debt seller will appear here when available.",
         "totalCost": "Total Cost",
         "deliveryRate": "Delivery Rate",
         "delivered": "delivered",
@@ -879,6 +892,9 @@
         "noTagsAssigned": "No tags assigned",
         "totalCalls": "Total Calls",
         "avgDuration": "Avg. Duration",
+        "latestCalls": "Latest Calls",
+        "latestSms": "Latest SMS",
+        "latestCallsAndSms": "Latest Calls and SMS",
         "tabs": {
           "personal": "Personal",
           "work": "Work",
@@ -1010,6 +1026,7 @@
           "type": "Type",
           "phone": "Phone",
           "line": "Line",
+          "noRecording": "No recording available for this call",
           "callTypes": {
             "incoming": "Incoming",
             "outgoing": "Outgoing",
@@ -1717,6 +1734,7 @@
     },
     "reports": {
       "title": "Reports Dashboard",
+      "exporting": "Exporting...",
       "periods": {
         "today": "Today",
         "thisWeek": "This Week",
@@ -1726,12 +1744,22 @@
         "callsMade": "Calls Made",
         "contactRate": "Contact Rate",
         "smsSent": "SMS Sent",
+        "paymentsCollected": "Payments Collected",
         "vs": "vs",
         "yesterday": "yesterday",
         "lastWeek": "last week",
         "lastMonth": "last month",
         "vsYesterday": "vs yesterday",
         "viewDetails": "View Details"
+      },
+      "error": {
+        "title": "Failed to load reports",
+        "retry": "Retry",
+        "notAuthenticated": "Authentication Required",
+        "pleaseLogin": "Please log in to view reports",
+        "goToLogin": "Go to Login",
+        "generic": "An error occurred while loading the dashboard",
+        "noData": "No data available"
       },
       "agentPerformance": {
         "title": "Agent Performance ({{count}} operators)",
@@ -1755,6 +1783,38 @@
       },
       "exportCsv": "Export CSV",
       "currencySymbol": "₴",
+      "estimated": "Estimated",
+      "callsMadeModal": {
+        "title": "Calls Made",
+        "noData": "No data available",
+        "total": "Total",
+        "byHour": "By Hour",
+        "calls": "calls",
+        "byOperator": "By Operator"
+      },
+      "contactRateModal": {
+        "title": "Contact Rate",
+        "noData": "No data available",
+        "of": "of",
+        "outcomes": "Call Outcomes",
+        "bestPerformer": "Best Performer",
+        "needsImprovement": "Needs Improvement",
+        "answered": "Answered",
+        "noAnswer": "No Answer",
+        "busy": "Busy",
+        "failed": "Failed"
+      },
+      "smsModal": {
+        "title": "SMS Sent",
+        "noData": "No data available",
+        "totalSent": "Total Sent",
+        "deliveryStats": "Delivery Statistics",
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "pending": "Pending",
+        "deliveryRate": "Delivery Rate",
+        "byOperator": "By Operator"
+      },
       "paymentsModal": {
         "title": "Payments Collected",
         "payments": "payments",
@@ -1767,7 +1827,7 @@
         "other": "Other",
         "averagePayment": "Average Payment",
         "topCollector": "Top Collector",
-        "largestPmt": "Largest Pmt"
+        "largestPayment": "Largest Payment"
       }
     },
     "scoringConfiguration": {
