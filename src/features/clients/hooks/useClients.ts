@@ -484,7 +484,13 @@ export function useCreateClientNote() {
       data,
     }: {
       clientId: number
-      data: { content: string; note_type?: string }
+      data: {
+        content: string
+        note_type?: string
+        related_call_id?: number
+        related_payment_id?: number
+        related_debt_id?: number
+      }
     }) => clientApi.createClientNote(clientId, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })

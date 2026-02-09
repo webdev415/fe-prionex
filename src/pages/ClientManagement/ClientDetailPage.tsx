@@ -11,6 +11,7 @@ import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { AddNoteModal } from './components/AddNoteModal'
+import { DeleteClientModal } from './components/DeleteClientModal'
 import { PriorityBadge } from './components/PriorityBadge'
 import type { Priority } from './types'
 import { TagBadge } from '@/components/ui/TagBadge'
@@ -414,6 +415,7 @@ export function ClientDetailPage() {
   const [currentCallId, setCurrentCallId] = useState<string | null>(null)
   const [isCallRecordingModalOpen, setIsCallRecordingModalOpen] = useState(false)
   const [isTagModalOpen, setIsTagModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [selectedCallData, setSelectedCallData] = useState<{
     type: string
     clientName: string
@@ -973,9 +975,10 @@ export function ClientDetailPage() {
           </Button>
           <Button
             size="md"
-            variant="secondary"
-            leftIcon={<Icons.RemoveMale size={20} />}
+            variant="danger"
+            leftIcon={<Icons.Delete size={20} />}
             className="w-full flex-1 rounded-full"
+            onClick={() => setIsDeleteModalOpen(true)}
           >
             {t('pages.clients.activity.deleteClient')}
           </Button>
@@ -2346,10 +2349,11 @@ export function ClientDetailPage() {
         open={isNoteModalOpen}
         onClose={() => setIsNoteModalOpen(false)}
         phoneNumber={client.phones?.[0]?.number || ''}
+        clientId={clientId}
         onSave={(data) => {
           createNote({
             clientId,
-            data: { content: data.note, note_type: data.action },
+            data,
           })
           setIsNoteModalOpen(false)
         }}
@@ -2439,6 +2443,24 @@ export function ClientDetailPage() {
         clientName={client.fullName}
         projectId={1}
         onClose={() => setIsTagModalOpen(false)}
+      />
+
+      {/* Delete Client Modal */}
+      <DeleteClientModal
+        open={isDeleteModalOpen}
+        client={{
+          id: client.id,
+          full_name: client.fullName,
+          tax_id: client.taxIdNumber,
+          phone_primary: client.phoneNumber,
+          total_debt: client.loans?.reduce((sum, loan) => sum + (loan.totalToRepay || 0), 0) || 0,
+          debt_count: client.loans?.length || 0,
+        }}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onSuccess={() => {
+          // Success callback - navigation happens in the modal
+          setIsDeleteModalOpen(false)
+        }}
       />
     </div>
   )
