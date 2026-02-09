@@ -31,6 +31,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useOriginateCall, useCallHistory } from '@/features/calls/hooks/useCall'
 import { useCallWebSocket } from '@/features/calls/hooks/useCallWebSocket'
 import { useAuthStore } from '@/stores/authStore'
+import { useUserDepartment } from '@/features/users'
 
 // Extended types for SMS and Call items with API-specific properties
 type ExtendedSMSItem = {
@@ -960,6 +961,14 @@ export function ClientDetailPage() {
   // Fetch call history from API
   const { data: callHistoryData } = useCallHistory(clientId, { limit: 100 })
 
+  // Fetch department of responsible employee
+  const { data: responsibleEmployeeDepartment } = useUserDepartment(
+    apiClient?.responsible_employee_id || 0
+  )
+
+  // DEBUG: Log the values
+  console.log('DEBUG - responsible_employee_id:', apiClient?.responsible_employee_id)
+  console.log('DEBUG - responsibleEmployeeDepartment:', responsibleEmployeeDepartment)
   // Use mock data as fallback for missing fields until backend is fully integrated
   const client = useMemo(() => {
     if (!apiClient) return mockClientsDetail[0]
@@ -1093,6 +1102,7 @@ export function ClientDetailPage() {
             : apiClient.priority_score >= 25
               ? 'Medium'
               : 'Low')) as Priority,
+      department: responsibleEmployeeDepartment || 'Unknown', // Show 'Unknown' if department is not found
       phones: [
         { number: apiClient.phone_primary, type: 'primary' as const },
         ...(apiClient.phone_secondary
@@ -1114,7 +1124,7 @@ export function ClientDetailPage() {
         sms: mappedSmsHistory, // Use real API data instead of mock
       },
     }
-  }, [apiClient, smsHistoryData, callHistoryData, userTimezone])
+  }, [apiClient, smsHistoryData, callHistoryData, userTimezone, responsibleEmployeeDepartment])
 
   // Tags are now fetched from useClientTags hook instead of local state
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
