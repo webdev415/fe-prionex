@@ -2,12 +2,13 @@
  * useUserDepartment Hook
  *
  * Fetches the department name for a user based on their role assignment in the current project.
- * Returns the department name or null if not found.
+ * Returns the department name, 'Archived' if department is archived, 'Unknown' if not found, or null if still loading.
  */
 
 import { useQuery } from '@tanstack/react-query'
 import { usersApi } from '../api/usersApi'
 import { useRole } from '@/features/roles/hooks/useRole'
+import { useDepartment } from '@/features/departments/hooks/useDepartments'
 import { useAuthStore } from '@/stores/authStore'
 
 export function useUserDepartment(userId: number) {
@@ -24,12 +25,31 @@ export function useUserDepartment(userId: number) {
   // Find the role_id for the current project from user.projects
   const roleId = user?.projects?.find((p) => p.project_id === currentProjectId)?.role_id
 
-  // Fetch the role details which includes department_name
+  // Fetch the role details which includes department_id
   const { data: role } = useRole(roleId || 0)
 
-  // Return the department name from the role
+  // Fetch the department details if department_id exists
+  const { data: department } = useDepartment(role?.department_id || 0)
+
+  // Determine what to show
+  let departmentDisplay: string | null = null
+
+  if (role?.department_id && department) {
+    // If department exists and is not active (archived), show "Archived"
+    if (department.is_active === false) {
+      departmentDisplay = 'Archived'
+    } else {
+      // Otherwise show the department name
+      departmentDisplay = department.name
+    }
+  } else if (role?.department_id && !department) {
+    // Department ID exists but couldn't fetch department (might be loading)
+    departmentDisplay = null
+  }
+
+  // Return the department display value
   return {
-    data: role?.department_name || null,
-    isLoading: !user || (!!roleId && !role),
+    data: departmentDisplay,
+    isLoading: !user || (!!roleId && !role) || (!!role?.department_id && !department),
   }
 }
