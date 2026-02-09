@@ -64,6 +64,7 @@ const iconMap: Record<
   'user-search-01': (props) => <Icons.UserSearch01 {...props} />,
   'user-circle-02': (props) => <Icons.UserCircle02Icon {...props} />,
   'user-multiple': (props) => <Icons.UserMultiple {...props} />,
+  'briefcase-01': (props) => <Icons.Briefcase01 {...props} />,
   'transaction-history': (props) => <Icons.TransactionHistory {...props} />,
   'setting-07': (props) => <Icons.Setting07 {...props} />,
   'logout-square-01': (props) => <Icons.LogoutSquare01 {...props} />,

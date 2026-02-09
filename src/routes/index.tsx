@@ -4,6 +4,7 @@ import { UserManagementPage } from '@/pages/UserManagement'
 import { ImportClientsPage } from '@/pages/ImportClients/ImportClientsPage'
 import { ProjectManagementPage } from '@/pages/ProjectManagement/ProjectManagementPage'
 import { RoleManagementPage } from '@/pages/RoleManagement/RoleManagementPage'
+import { DepartmentManagementPage } from '@/pages/DepartmentManagement'
 import { ForbiddenPage } from '@/pages/errors'
 import { ProtectedRoute } from './ProtectedRoute'
 import { PermissionRoute } from './PermissionRoute'
@@ -126,6 +127,18 @@ export const router = createBrowserRouter([
         <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
           <DashboardLayout>
             <RoleManagementPage />
+          </DashboardLayout>
+        </PermissionRoute>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/departments',
+    element: (
+      <ProtectedRoute>
+        <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
+          <DashboardLayout>
+            <DepartmentManagementPage />
           </DashboardLayout>
         </PermissionRoute>
       </ProtectedRoute>

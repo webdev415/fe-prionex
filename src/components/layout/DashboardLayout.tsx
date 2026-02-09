@@ -592,6 +592,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
       },
       {
+        path: '/dashboard/departments',
+        icon: 'briefcase-01',
+        label: t('navigation.departments'),
+        requiredPermission: PERMISSIONS.SYSTEM.MANAGE_ROLES,
+      },
+      {
         path: '/dashboard/audit-logs',
         icon: 'transaction-history',
         label: t('navigation.auditLogs'),
