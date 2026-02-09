@@ -955,6 +955,7 @@
           "type": "Type",
           "phone": "Phone",
           "line": "Line",
+          "noRecording": "No recording available for this call",
           "callTypes": {
             "incoming": "Incoming",
             "outgoing": "Outgoing",

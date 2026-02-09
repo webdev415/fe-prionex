@@ -917,6 +917,7 @@
           "type": "Тип",
           "phone": "Телефон",
           "line": "Лінія",
+          "noRecording": "Запис дзвінка недоступний",
           "callTypes": {
             "incoming": "Вхідний",
             "outgoing": "Вихідний",

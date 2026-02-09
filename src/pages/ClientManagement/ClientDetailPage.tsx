@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { AddNoteModal } from './components/AddNoteModal'
 import { DeleteClientModal } from './components/DeleteClientModal'
 import { PriorityBadge } from './components/PriorityBadge'
@@ -106,7 +107,7 @@ const CONTACT_TYPE_MAP: Record<string, string> = {
   phone_fax: 'Факс',
 }
 
-// Mock data from mockClientDetails.ts; profile + sections loaded via useClientProfile + section hooks.
+// Client data loaded via useClientProfile + section-specific hooks (real API endpoints)
 
 export function ClientDetailPage() {
   const { t } = useTranslation('common')
@@ -184,7 +185,7 @@ export function ClientDetailPage() {
     )
   }
 
-  // Client detail: one profile + section endpoints (mock only for now)
+  // Client detail: one profile + section endpoints
   const clientId = id ? Number(id) : 0
   const isValidClientId = clientId > 0 && !isNaN(clientId)
 
@@ -194,13 +195,28 @@ export function ClientDetailPage() {
     isError: isProfileError,
     error: profileError,
   } = useClientProfile(clientId, isValidClientId)
-  const { data: loans = [] } = useClientLoans(clientId, isValidClientId)
-  const { data: paymentsSection } = useClientPaymentsSection(clientId, isValidClientId)
-  const { data: callSmsHistory } = useClientCallSmsHistory(clientId, isValidClientId)
-  const { data: tasks = [] } = useClientTasks(clientId, isValidClientId)
-  const { data: operatorsSection } = useClientOperatorsSection(clientId, isValidClientId)
-  const { data: documents = [] } = useClientDocuments(clientId, isValidClientId)
-  const { data: activities = [] } = useClientActivities(clientId, isValidClientId)
+  const { data: loans = [], isLoading: isLoansLoading } = useClientLoans(clientId, isValidClientId)
+  const { data: paymentsSection, isLoading: isPaymentsLoading } = useClientPaymentsSection(
+    clientId,
+    isValidClientId
+  )
+  const { data: callSmsHistory, isLoading: isCallSmsLoading } = useClientCallSmsHistory(
+    clientId,
+    isValidClientId
+  )
+  const { data: tasks = [], isLoading: isTasksLoading } = useClientTasks(clientId, isValidClientId)
+  const { data: operatorsSection, isLoading: isOperatorsLoading } = useClientOperatorsSection(
+    clientId,
+    isValidClientId
+  )
+  const { data: documents = [], isLoading: isDocumentsLoading } = useClientDocuments(
+    clientId,
+    isValidClientId
+  )
+  const { data: activities = [], isLoading: isActivitiesLoading } = useClientActivities(
+    clientId,
+    isValidClientId
+  )
 
   // Fetch client tags from API (real)
   const { data: clientTags } = useClientTags(clientId)
@@ -334,20 +350,17 @@ export function ClientDetailPage() {
         writeOffMethod: w.writeoff_type,
         employee: w.submitted_by_name ?? '-',
       })),
-      // TODO: Phase 8 - Replace with real Primary Creditor payment data from dedicated API endpoint.
-      // Currently uses mock/placeholder data until the primary creditor payments service is implemented.
-      paymentsToPrimaryCreditor: (paymentsSection?.paymentsToPrimaryCreditor ?? []).map(
-        (p, idx) => ({
-          id: idx,
-          loanNumber: '-',
-          counterparty: '-',
-          saleDate: '-',
-          paymentDate: '-',
-          amount: 0,
-          distributionMethod: '-',
-          ...(p as Record<string, unknown>),
-        })
-      ),
+      // Primary Creditor Payments - Not yet implemented (Phase 8)
+      // Backend API endpoint pending - will be added when primary creditor payment service is implemented
+      paymentsToPrimaryCreditor: [] as Array<{
+        id: number
+        loanNumber: string
+        counterparty: string
+        saleDate: string
+        paymentDate: string
+        amount: number
+        distributionMethod: string
+      }>,
       callSmsHistory: callSmsHistory ?? { all: [], calls: [], sms: [] },
       // Tasks mapped from TaskResponse to UI shape
       tasks: (tasks ?? []).map((t) => ({
@@ -387,16 +400,16 @@ export function ClientDetailPage() {
         comment: a.summary ?? a.notes ?? '-',
         employee: a.user_name ?? '-',
       })),
-      primaryCreditorPayments: (paymentsSection?.paymentsToPrimaryCreditor ?? []).map((p, idx) => ({
-        id: idx,
-        loanNumber: '-',
-        counterparty: '-',
-        saleDate: '-',
-        paymentDate: '-',
-        amount: 0,
-        distributionMethod: '-',
-        ...(p as Record<string, unknown>),
-      })),
+      // Primary Creditor Payments - Not yet implemented (Phase 8)
+      primaryCreditorPayments: [] as Array<{
+        id: number
+        loanNumber: string
+        counterparty: string
+        saleDate: string
+        paymentDate: string
+        amount: number
+        distributionMethod: string
+      }>,
     }
   }, [
     profile,
@@ -1646,16 +1659,20 @@ export function ClientDetailPage() {
                   </div>
                   {/* Data table filtered by sub-tab */}
                   <div className="flex flex-col items-start gap-2.5 self-stretch px-3 py-4 md:px-6">
-                    <DataTable
-                      columns={loanColumns}
-                      data={client.loans.filter((loan) => {
-                        if (activeLoanTab === 'process') return loan.status === 'active'
-                        if (activeLoanTab === 'closed') return loan.status === 'closed'
-                        if (activeLoanTab === 'rr') return loan.status === 'restructuring'
-                        return true
-                      })}
-                      className="w-full"
-                    />
+                    {isLoansLoading ? (
+                      <TableSkeleton columns={6} rows={3} />
+                    ) : (
+                      <DataTable
+                        columns={loanColumns}
+                        data={client.loans.filter((loan) => {
+                          if (activeLoanTab === 'process') return loan.status === 'active'
+                          if (activeLoanTab === 'closed') return loan.status === 'closed'
+                          if (activeLoanTab === 'rr') return loan.status === 'restructuring'
+                          return true
+                        })}
+                        className="w-full"
+                      />
+                    )}
                   </div>
                   {/* Action buttons at the bottom */}
                   <div className="flex flex-wrap items-center gap-2 self-stretch px-3 py-4 md:gap-3 md:px-6">
@@ -1750,26 +1767,32 @@ export function ClientDetailPage() {
                     </button>
                   </div>
                   <div className="flex flex-col items-start gap-2.5 self-stretch px-3 pb-4 md:px-6">
-                    {activePaymentTab === 'payments' && (
-                      <DataTable
-                        columns={paymentColumns}
-                        data={client.payments}
-                        className="w-full"
-                      />
-                    )}
-                    {activePaymentTab === 'writes-off' && (
-                      <DataTable
-                        columns={writeOffColumns}
-                        data={client.writesOffs}
-                        className="w-full"
-                      />
-                    )}
-                    {activePaymentTab === 'primary-creditor' && (
-                      <DataTable
-                        columns={primaryCreditorPaymentColumns}
-                        data={client.paymentsToPrimaryCreditor}
-                        className="w-full"
-                      />
+                    {isPaymentsLoading ? (
+                      <TableSkeleton columns={7} rows={3} />
+                    ) : (
+                      <>
+                        {activePaymentTab === 'payments' && (
+                          <DataTable
+                            columns={paymentColumns}
+                            data={client.payments}
+                            className="w-full"
+                          />
+                        )}
+                        {activePaymentTab === 'writes-off' && (
+                          <DataTable
+                            columns={writeOffColumns}
+                            data={client.writesOffs}
+                            className="w-full"
+                          />
+                        )}
+                        {activePaymentTab === 'primary-creditor' && (
+                          <DataTable
+                            columns={primaryCreditorPaymentColumns}
+                            data={client.paymentsToPrimaryCreditor}
+                            className="w-full"
+                          />
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -1803,19 +1826,25 @@ export function ClientDetailPage() {
                     </button>
                   </div>
                   <div className="flex flex-col items-start gap-2.5 self-stretch px-3 pb-4 md:px-6">
-                    {activeOperatorTab === 'operators' && (
-                      <DataTable
-                        columns={operatorColumns}
-                        data={client.operators}
-                        className="w-full"
-                      />
-                    )}
-                    {activeOperatorTab === 'searchers' && (
-                      <DataTable
-                        columns={searcherColumns}
-                        data={client.searchers}
-                        className="w-full"
-                      />
+                    {isOperatorsLoading ? (
+                      <TableSkeleton columns={5} rows={3} />
+                    ) : (
+                      <>
+                        {activeOperatorTab === 'operators' && (
+                          <DataTable
+                            columns={operatorColumns}
+                            data={client.operators}
+                            className="w-full"
+                          />
+                        )}
+                        {activeOperatorTab === 'searchers' && (
+                          <DataTable
+                            columns={searcherColumns}
+                            data={client.searchers}
+                            className="w-full"
+                          />
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -1879,359 +1908,396 @@ export function ClientDetailPage() {
                       </Button>
                     </div>
                   </div>
-                  {activeCallSmsTab === 'all' && (
-                    <div className="flex flex-col items-start gap-6 self-stretch">
-                      {/* Date-grouped Calls and SMS */}
-                      {(() => {
-                        // Combine calls and SMS, group by date
-                        const allItems = [
-                          ...client.callSmsHistory.calls.map((item) => ({
-                            ...item,
-                            itemType: 'call' as const,
-                          })),
-                          ...client.callSmsHistory.sms.map((item) => ({
-                            ...item,
-                            itemType: 'sms' as const,
-                          })),
-                        ]
-
-                        const grouped = allItems.reduce(
-                          (acc, item) => {
-                            // Use original UTC timestamp (sent_at for SMS, initiated_at for calls) instead of date string
-                            const timestamp =
-                              item.itemType === 'sms'
-                                ? (item as unknown as ExtendedSMSItem & { itemType: 'sms' })
-                                    .sent_at || item.date
-                                : (item as unknown as ExtendedCallItem & { itemType: 'call' })
-                                    .initiated_at || item.date
-                            const date = new Date(String(timestamp)).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              timeZone: userTimezone || undefined,
-                            })
-                            if (!acc[date]) acc[date] = { calls: [], sms: [] }
-                            if (item.itemType === 'call') {
-                              acc[date].calls.push(
-                                item as unknown as ExtendedCallItem & { itemType: 'call' }
-                              )
-                            } else {
-                              acc[date].sms.push(
-                                item as unknown as ExtendedSMSItem & { itemType: 'sms' }
-                              )
-                            }
-                            return acc
-                          },
-                          {} as Record<
-                            string,
-                            {
-                              calls: (ExtendedCallItem & { itemType: 'call' })[]
-                              sms: (ExtendedSMSItem & { itemType: 'sms' })[]
-                            }
-                          >
-                        )
-
-                        return Object.entries(grouped)
-                          .sort(
-                            ([a], [b]) =>
-                              new Date(b as string).getTime() - new Date(a as string).getTime()
-                          )
-                          .map(([date, items]) => (
-                            <div key={date} className="w-full space-y-4">
-                              <h3 className="text-dark-500 text-sm font-semibold md:text-base">
-                                {date}
-                              </h3>
-                              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-                                {/* Calls for this date */}
-                                {items.calls.map((call) => (
-                                  <CallLogCard
-                                    key={`call-${call.id}`}
-                                    clientName={client.fullName}
-                                    title={`${t('pages.clients.detail.play')} (${call.duration})`}
-                                    time={call.time}
-                                    date={call.date}
-                                    duration={call.duration}
-                                    status={call.status}
-                                    type={call.type}
-                                    phone={call.phone}
-                                    line={call.line}
-                                    operator={call.operator}
-                                    call_id={
-                                      'call_id' in call ? (call.call_id as string) : undefined
-                                    }
-                                    icon={<Icons.Play size={24} className="text-secondary-800" />}
-                                    setSelectedCallData={setSelectedCallData}
-                                    setIsCallRecordingModalOpen={setIsCallRecordingModalOpen}
-                                  />
-                                ))}
-                                {/* SMS for this date */}
-                                {items.sms.map((sms) => (
-                                  <CallLogCard
-                                    key={`sms-${sms.id}`}
-                                    clientName={client.fullName}
-                                    title={t('pages.clients.detail.viewSms')}
-                                    time={sms.time}
-                                    date={sms.date}
-                                    status={sms.status}
-                                    template={sms.template}
-                                    message={sms.message}
-                                    operator={sms.operator}
-                                    phone={sms.phone}
-                                    sent_at={sms.sent_at}
-                                    delivered_at={sms.delivered_at}
-                                    icon={<Icons.Chat size={24} className="text-secondary-800" />}
-                                    setSelectedSMSData={setSelectedSMSData}
-                                    setIsViewSMSModalOpen={setIsViewSMSModalOpen}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          ))
-                      })()}
+                  {isCallSmsLoading ? (
+                    <div className="flex w-full flex-col gap-4">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                          <div key={i} className="h-24 animate-pulse rounded-lg bg-gray-200" />
+                        ))}
+                      </div>
                     </div>
-                  )}
-                  {activeCallSmsTab === 'calls' && (
-                    <div className="flex flex-col items-start gap-4 self-stretch">
-                      {/* Summary Statistics */}
-                      <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
-                        <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                              <Icons.Call02 size={24} className="text-gray-700" />
-                            </div>
-                            <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                              {t('pages.clients.detail.totalCalls')}
-                            </div>
-                          </div>
-                          <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                            {client.callSmsHistory.calls.length}
-                          </div>
-                        </div>
-                        <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                              <Icons.CallDone02 size={24} className="text-gray-700" />
-                            </div>
-                            <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                              {t('pages.clients.statuses.answered')}
-                            </div>
-                          </div>
-                          <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                            {(() => {
-                              const answered = client.callSmsHistory.calls.filter(
-                                (c) => c.status === 'COMPLETED'
-                              ).length
-                              const total = client.callSmsHistory.calls.length
-                              const percentage =
-                                total > 0 ? Math.round((answered / total) * 100) : 0
-                              return `${answered} (${percentage}%)`
-                            })()}
-                          </div>
-                        </div>
-                        <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                              <Icons.Clock01 size={24} className="text-gray-700" />
-                            </div>
-                            <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                              {t('pages.clients.detail.avgDuration')}
-                            </div>
-                          </div>
-                          <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                            {(() => {
-                              const durations = client.callSmsHistory.calls
-                                .filter((c) => c.duration && c.duration !== '-')
-                                .map((c) => {
-                                  const match = c.duration?.match(/(\d+)m (\d+)s/)
-                                  if (match) {
-                                    return parseInt(match[1]) * 60 + parseInt(match[2])
+                  ) : (
+                    <>
+                      {activeCallSmsTab === 'all' && (
+                        <div className="flex flex-col items-start gap-6 self-stretch">
+                          {/* Date-grouped Calls and SMS */}
+                          {(() => {
+                            // Combine calls and SMS, group by date
+                            const allItems = [
+                              ...client.callSmsHistory.calls.map((item) => ({
+                                ...item,
+                                itemType: 'call' as const,
+                              })),
+                              ...client.callSmsHistory.sms.map((item) => ({
+                                ...item,
+                                itemType: 'sms' as const,
+                              })),
+                            ]
+
+                            const grouped = allItems.reduce(
+                              (acc, item) => {
+                                // Use original UTC timestamp (sent_at for SMS, initiated_at for calls) instead of date string
+                                const timestamp =
+                                  item.itemType === 'sms'
+                                    ? (item as unknown as ExtendedSMSItem & { itemType: 'sms' })
+                                        .sent_at || item.date
+                                    : (item as unknown as ExtendedCallItem & { itemType: 'call' })
+                                        .initiated_at || item.date
+                                const date = new Date(String(timestamp)).toLocaleDateString(
+                                  'en-US',
+                                  {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                    timeZone: userTimezone || undefined,
                                   }
-                                  return 0
-                                })
-                              if (durations.length === 0) return '-'
-                              const avg = Math.round(
-                                durations.reduce((a, b) => a + b, 0) / durations.length
-                              )
-                              const minutes = Math.floor(avg / 60)
-                              const seconds = avg % 60
-                              return `${minutes}m ${seconds}s`
-                            })()}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Date-grouped Calls */}
-                      <div className="w-full space-y-6">
-                        {(() => {
-                          const groupedCalls = client.callSmsHistory.calls.reduce(
-                            (acc, call) => {
-                              // Use initiated_at (full UTC timestamp) instead of date string for correct timezone conversion
-                              const timestamp =
-                                'initiated_at' in call && call.initiated_at
-                                  ? call.initiated_at
-                                  : call.date
-                              const date = new Date(String(timestamp)).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                timeZone: userTimezone || undefined,
-                              })
-                              if (!acc[date]) acc[date] = []
-                              acc[date].push(call as unknown as ExtendedCallItem)
-                              return acc
-                            },
-                            {} as Record<string, ExtendedCallItem[]>
-                          )
-
-                          return Object.entries(groupedCalls)
-                            .sort(
-                              ([a], [b]) =>
-                                new Date(b as string).getTime() - new Date(a as string).getTime()
+                                )
+                                if (!acc[date]) acc[date] = { calls: [], sms: [] }
+                                if (item.itemType === 'call') {
+                                  acc[date].calls.push(
+                                    item as unknown as ExtendedCallItem & { itemType: 'call' }
+                                  )
+                                } else {
+                                  acc[date].sms.push(
+                                    item as unknown as ExtendedSMSItem & { itemType: 'sms' }
+                                  )
+                                }
+                                return acc
+                              },
+                              {} as Record<
+                                string,
+                                {
+                                  calls: (ExtendedCallItem & { itemType: 'call' })[]
+                                  sms: (ExtendedSMSItem & { itemType: 'sms' })[]
+                                }
+                              >
                             )
-                            .map(([date, calls]) => (
-                              <div key={date} className="space-y-4">
-                                <h3 className="text-dark-500 text-sm font-semibold md:text-base">
-                                  {date}
-                                </h3>
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-                                  {calls.map((call) => (
-                                    <CallLogCard
-                                      key={call.id}
-                                      clientName={client.fullName}
-                                      title={`${t('pages.clients.detail.play')} (${call.duration})`}
-                                      time={call.time}
-                                      date={call.date}
-                                      duration={call.duration}
-                                      status={call.status}
-                                      type={call.type}
-                                      phone={call.phone}
-                                      line={call.line}
-                                      operator={call.operator}
-                                      call_id={
-                                        'call_id' in call ? (call.call_id as string) : undefined
-                                      }
-                                      icon={
-                                        <Icons.PlayCircle02
-                                          size={20}
-                                          className="text-secondary-800"
-                                        />
-                                      }
-                                      setSelectedCallData={setSelectedCallData}
-                                      setIsCallRecordingModalOpen={setIsCallRecordingModalOpen}
-                                    />
-                                  ))}
+
+                            return Object.entries(grouped)
+                              .sort(
+                                ([a], [b]) =>
+                                  new Date(b as string).getTime() - new Date(a as string).getTime()
+                              )
+                              .map(([date, items]) => (
+                                <div key={date} className="w-full space-y-4">
+                                  <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                    {date}
+                                  </h3>
+                                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+                                    {/* Calls for this date */}
+                                    {items.calls.map((call) => (
+                                      <CallLogCard
+                                        key={`call-${call.id}`}
+                                        clientName={client.fullName}
+                                        title={`${t('pages.clients.detail.play')} (${call.duration})`}
+                                        time={call.time}
+                                        date={call.date}
+                                        duration={call.duration}
+                                        status={call.status}
+                                        type={call.type}
+                                        phone={call.phone}
+                                        line={call.line}
+                                        operator={call.operator}
+                                        call_id={
+                                          'call_id' in call ? (call.call_id as string) : undefined
+                                        }
+                                        recording_path={
+                                          'recording_path' in call
+                                            ? (call.recording_path as string | null)
+                                            : null
+                                        }
+                                        icon={
+                                          <Icons.Play size={24} className="text-secondary-800" />
+                                        }
+                                        setSelectedCallData={setSelectedCallData}
+                                        setIsCallRecordingModalOpen={setIsCallRecordingModalOpen}
+                                      />
+                                    ))}
+                                    {/* SMS for this date */}
+                                    {items.sms.map((sms) => (
+                                      <CallLogCard
+                                        key={`sms-${sms.id}`}
+                                        clientName={client.fullName}
+                                        title={t('pages.clients.detail.viewSms')}
+                                        time={sms.time}
+                                        date={sms.date}
+                                        status={sms.status}
+                                        template={sms.template}
+                                        message={sms.message}
+                                        operator={sms.operator}
+                                        phone={sms.phone}
+                                        sent_at={sms.sent_at}
+                                        delivered_at={sms.delivered_at}
+                                        icon={
+                                          <Icons.Chat size={24} className="text-secondary-800" />
+                                        }
+                                        setSelectedSMSData={setSelectedSMSData}
+                                        setIsViewSMSModalOpen={setIsViewSMSModalOpen}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              ))
+                          })()}
+                        </div>
+                      )}
+                      {activeCallSmsTab === 'calls' && (
+                        <div className="flex flex-col items-start gap-4 self-stretch">
+                          {/* Summary Statistics */}
+                          <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
+                            <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
+                                  <Icons.Call02 size={24} className="text-gray-700" />
+                                </div>
+                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                  {t('pages.clients.detail.totalCalls')}
                                 </div>
                               </div>
-                            ))
-                        })()}
-                      </div>
-                    </div>
-                  )}
-                  {activeCallSmsTab === 'sms' && (
-                    <div className="flex flex-col items-start gap-4 self-stretch">
-                      {/* Summary Statistics */}
-                      <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
-                        <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
-                          <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                            {t('pages.clients.detail.totalCost')}
-                          </div>
-
-                          <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                            {(() => {
-                              const totalCost = client.callSmsHistory.sms.reduce(
-                                (sum, s) => sum + (s.cost || 0),
-                                0
-                              )
-                              return `₴${totalCost.toFixed(2)} (${client.callSmsHistory.sms.length} ${t('pages.clients.modals.viewSMS.smsParts')})`
-                            })()}
-                          </div>
-                        </div>
-                        <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
-                          <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                            {t('pages.clients.detail.deliveryRate')}
-                          </div>
-
-                          <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                            {(() => {
-                              const delivered = client.callSmsHistory.sms.filter(
-                                (s) => s.status === 'Delivered'
-                              ).length
-                              const failed = client.callSmsHistory.sms.filter(
-                                (s) => (s.status as string) === 'Failed'
-                              ).length
-                              const pending = client.callSmsHistory.sms.filter(
-                                (s) => (s.status as string) === 'Pending'
-                              ).length
-                              const total = client.callSmsHistory.sms.length
-                              const rate = total > 0 ? Math.round((delivered / total) * 100) : 0
-                              return `${rate}% (${delivered} ${t('pages.clients.detail.delivered')}, ${failed} ${t('pages.clients.detail.failed')}, ${pending} ${t('pages.clients.detail.pending')})`
-                            })()}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Date-grouped SMS */}
-                      <div className="w-full space-y-6">
-                        {(() => {
-                          const groupedSms = client.callSmsHistory.sms.reduce(
-                            (acc, sms) => {
-                              // Use sent_at (full UTC timestamp) instead of date string for correct timezone conversion
-                              const timestamp =
-                                'sent_at' in sms && sms.sent_at ? sms.sent_at : sms.date
-                              const date = new Date(String(timestamp)).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                timeZone: userTimezone || undefined,
-                              })
-                              if (!acc[date]) acc[date] = []
-                              acc[date].push(sms as unknown as ExtendedSMSItem)
-                              return acc
-                            },
-                            {} as Record<string, ExtendedSMSItem[]>
-                          )
-
-                          return Object.entries(groupedSms)
-                            .sort(
-                              ([a], [b]) =>
-                                new Date(b as string).getTime() - new Date(a as string).getTime()
-                            )
-                            .map(([date, smsList]) => (
-                              <div key={date} className="space-y-4">
-                                <h3 className="text-dark-500 text-sm font-semibold md:text-base">
-                                  {date}
-                                </h3>
-                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-                                  {smsList.map((sms) => (
-                                    <CallLogCard
-                                      key={sms.id}
-                                      clientName={client.fullName}
-                                      title={t('pages.clients.detail.viewSms')}
-                                      time={sms.time}
-                                      date={sms.date}
-                                      status={sms.status}
-                                      template={sms.template}
-                                      message={sms.message}
-                                      operator={sms.operator}
-                                      phone={sms.phone}
-                                      sent_at={sms.sent_at}
-                                      delivered_at={sms.delivered_at}
-                                      icon={
-                                        <Icons.ChatFeedback01
-                                          size={20}
-                                          className="text-secondary-800"
-                                        />
-                                      }
-                                      setSelectedSMSData={setSelectedSMSData}
-                                      setIsViewSMSModalOpen={setIsViewSMSModalOpen}
-                                    />
-                                  ))}
+                              <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                {client.callSmsHistory.calls.length}
+                              </div>
+                            </div>
+                            <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
+                                  <Icons.CallDone02 size={24} className="text-gray-700" />
+                                </div>
+                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                  {t('pages.clients.statuses.answered')}
                                 </div>
                               </div>
-                            ))
-                        })()}
-                      </div>
-                    </div>
+                              <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                {(() => {
+                                  const answered = client.callSmsHistory.calls.filter(
+                                    (c) => c.status === 'COMPLETED'
+                                  ).length
+                                  const total = client.callSmsHistory.calls.length
+                                  const percentage =
+                                    total > 0 ? Math.round((answered / total) * 100) : 0
+                                  return `${answered} (${percentage}%)`
+                                })()}
+                              </div>
+                            </div>
+                            <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
+                                  <Icons.Clock01 size={24} className="text-gray-700" />
+                                </div>
+                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                  {t('pages.clients.detail.avgDuration')}
+                                </div>
+                              </div>
+                              <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                {(() => {
+                                  const durations = client.callSmsHistory.calls
+                                    .filter((c) => c.duration && c.duration !== '-')
+                                    .map((c) => {
+                                      const match = c.duration?.match(/(\d+)m (\d+)s/)
+                                      if (match) {
+                                        return parseInt(match[1]) * 60 + parseInt(match[2])
+                                      }
+                                      return 0
+                                    })
+                                  if (durations.length === 0) return '-'
+                                  const avg = Math.round(
+                                    durations.reduce((a, b) => a + b, 0) / durations.length
+                                  )
+                                  const minutes = Math.floor(avg / 60)
+                                  const seconds = avg % 60
+                                  return `${minutes}m ${seconds}s`
+                                })()}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Date-grouped Calls */}
+                          <div className="w-full space-y-6">
+                            {(() => {
+                              const groupedCalls = client.callSmsHistory.calls.reduce(
+                                (acc, call) => {
+                                  // Use initiated_at (full UTC timestamp) instead of date string for correct timezone conversion
+                                  const timestamp =
+                                    'initiated_at' in call && call.initiated_at
+                                      ? call.initiated_at
+                                      : call.date
+                                  const date = new Date(String(timestamp)).toLocaleDateString(
+                                    'en-US',
+                                    {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric',
+                                      timeZone: userTimezone || undefined,
+                                    }
+                                  )
+                                  if (!acc[date]) acc[date] = []
+                                  acc[date].push(call as unknown as ExtendedCallItem)
+                                  return acc
+                                },
+                                {} as Record<string, ExtendedCallItem[]>
+                              )
+
+                              return Object.entries(groupedCalls)
+                                .sort(
+                                  ([a], [b]) =>
+                                    new Date(b as string).getTime() -
+                                    new Date(a as string).getTime()
+                                )
+                                .map(([date, calls]) => (
+                                  <div key={date} className="space-y-4">
+                                    <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                      {date}
+                                    </h3>
+                                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+                                      {calls.map((call) => (
+                                        <CallLogCard
+                                          key={call.id}
+                                          clientName={client.fullName}
+                                          title={`${t('pages.clients.detail.play')} (${call.duration})`}
+                                          time={call.time}
+                                          date={call.date}
+                                          duration={call.duration}
+                                          status={call.status}
+                                          type={call.type}
+                                          phone={call.phone}
+                                          line={call.line}
+                                          operator={call.operator}
+                                          call_id={
+                                            'call_id' in call ? (call.call_id as string) : undefined
+                                          }
+                                          recording_path={
+                                            'recording_path' in call
+                                              ? (call.recording_path as string | null)
+                                              : null
+                                          }
+                                          icon={
+                                            <Icons.PlayCircle02
+                                              size={20}
+                                              className="text-secondary-800"
+                                            />
+                                          }
+                                          setSelectedCallData={setSelectedCallData}
+                                          setIsCallRecordingModalOpen={setIsCallRecordingModalOpen}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))
+                            })()}
+                          </div>
+                        </div>
+                      )}
+                      {activeCallSmsTab === 'sms' && (
+                        <div className="flex flex-col items-start gap-4 self-stretch">
+                          {/* Summary Statistics */}
+                          <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
+                            <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
+                              <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                {t('pages.clients.detail.totalCost')}
+                              </div>
+
+                              <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                {(() => {
+                                  const totalCost = client.callSmsHistory.sms.reduce(
+                                    (sum, s) => sum + (s.cost || 0),
+                                    0
+                                  )
+                                  return `₴${totalCost.toFixed(2)} (${client.callSmsHistory.sms.length} ${t('pages.clients.modals.viewSMS.smsParts')})`
+                                })()}
+                              </div>
+                            </div>
+                            <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
+                              <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                {t('pages.clients.detail.deliveryRate')}
+                              </div>
+
+                              <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                {(() => {
+                                  const delivered = client.callSmsHistory.sms.filter(
+                                    (s) => s.status === 'Delivered'
+                                  ).length
+                                  const failed = client.callSmsHistory.sms.filter(
+                                    (s) => (s.status as string) === 'Failed'
+                                  ).length
+                                  const pending = client.callSmsHistory.sms.filter(
+                                    (s) => (s.status as string) === 'Pending'
+                                  ).length
+                                  const total = client.callSmsHistory.sms.length
+                                  const rate = total > 0 ? Math.round((delivered / total) * 100) : 0
+                                  return `${rate}% (${delivered} ${t('pages.clients.detail.delivered')}, ${failed} ${t('pages.clients.detail.failed')}, ${pending} ${t('pages.clients.detail.pending')})`
+                                })()}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Date-grouped SMS */}
+                          <div className="w-full space-y-6">
+                            {(() => {
+                              const groupedSms = client.callSmsHistory.sms.reduce(
+                                (acc, sms) => {
+                                  // Use sent_at (full UTC timestamp) instead of date string for correct timezone conversion
+                                  const timestamp =
+                                    'sent_at' in sms && sms.sent_at ? sms.sent_at : sms.date
+                                  const date = new Date(String(timestamp)).toLocaleDateString(
+                                    'en-US',
+                                    {
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric',
+                                      timeZone: userTimezone || undefined,
+                                    }
+                                  )
+                                  if (!acc[date]) acc[date] = []
+                                  acc[date].push(sms as unknown as ExtendedSMSItem)
+                                  return acc
+                                },
+                                {} as Record<string, ExtendedSMSItem[]>
+                              )
+
+                              return Object.entries(groupedSms)
+                                .sort(
+                                  ([a], [b]) =>
+                                    new Date(b as string).getTime() -
+                                    new Date(a as string).getTime()
+                                )
+                                .map(([date, smsList]) => (
+                                  <div key={date} className="space-y-4">
+                                    <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                      {date}
+                                    </h3>
+                                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+                                      {smsList.map((sms) => (
+                                        <CallLogCard
+                                          key={sms.id}
+                                          clientName={client.fullName}
+                                          title={t('pages.clients.detail.viewSms')}
+                                          time={sms.time}
+                                          date={sms.date}
+                                          status={sms.status}
+                                          template={sms.template}
+                                          message={sms.message}
+                                          operator={sms.operator}
+                                          phone={sms.phone}
+                                          sent_at={sms.sent_at}
+                                          delivered_at={sms.delivered_at}
+                                          icon={
+                                            <Icons.ChatFeedback01
+                                              size={20}
+                                              className="text-secondary-800"
+                                            />
+                                          }
+                                          setSelectedSMSData={setSelectedSMSData}
+                                          setIsViewSMSModalOpen={setIsViewSMSModalOpen}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))
+                            })()}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -2239,14 +2305,26 @@ export function ClientDetailPage() {
               {/* Tab 5: Tasks */}
               {activeRightCardTab === 'tasks' && (
                 <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-3 md:p-6">
-                  <DataTable columns={taskColumns} data={client.tasks} className="w-full" />
+                  {isTasksLoading ? (
+                    <TableSkeleton columns={5} rows={3} />
+                  ) : (
+                    <DataTable columns={taskColumns} data={client.tasks} className="w-full" />
+                  )}
                 </div>
               )}
 
-              {/* Tab 6: Documents (mock data - no backend infrastructure yet) */}
+              {/* Tab 6: Documents (no backend infrastructure yet - shows empty) */}
               {activeRightCardTab === 'documents' && (
                 <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-3 md:p-6">
-                  <DataTable columns={documentColumns} data={client.documents} className="w-full" />
+                  {isDocumentsLoading ? (
+                    <TableSkeleton columns={4} rows={3} />
+                  ) : (
+                    <DataTable
+                      columns={documentColumns}
+                      data={client.documents}
+                      className="w-full"
+                    />
+                  )}
                 </div>
               )}
             </div>
@@ -2295,7 +2373,9 @@ export function ClientDetailPage() {
         </div>
 
         {/* Content based on active tab */}
-        {activeCommentTab === 'comments' ? (
+        {isActivitiesLoading ? (
+          <TableSkeleton columns={7} rows={3} />
+        ) : activeCommentTab === 'comments' ? (
           /* Comments tab - Agent interactions/activities */
           client.activities.length === 0 ? (
             <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
