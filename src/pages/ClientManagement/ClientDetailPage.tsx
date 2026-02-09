@@ -42,6 +42,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useOriginateCall } from '@/features/calls/hooks/useCall'
 import { useCallWebSocket } from '@/features/calls/hooks/useCallWebSocket'
 import { useAuthStore } from '@/stores/authStore'
+import { useUserDepartment } from '@/features/users'
 
 // Extended types for SMS and Call items with API-specific properties
 type ExtendedSMSItem = {
@@ -221,6 +222,11 @@ export function ClientDetailPage() {
   // Fetch client tags from API (real)
   const { data: clientTags } = useClientTags(clientId)
 
+  // Fetch department of responsible employee
+  const { data: responsibleEmployeeDepartment } = useUserDepartment(
+    profile?.responsible_employee_id || 0
+  )
+
   // Note creation mutation
   const { mutate: createNote } = useCreateClientNote()
 
@@ -258,7 +264,7 @@ export function ClientDetailPage() {
       phoneNumber: isValidPhone(profile.phone_primary) ? profile.phone_primary : '-',
       taxIdNumber: profile.tax_id,
       // Card fields
-      department: '',
+      department: responsibleEmployeeDepartment || 'Unknown',
       responsibleEmployee: profile.responsible_employee_name ?? '-',
       responsibleResearcher: profile.responsible_searcher_name ?? '-',
       phones,
@@ -420,6 +426,7 @@ export function ClientDetailPage() {
     operatorsSection,
     documents,
     activities,
+    responsibleEmployeeDepartment,
   ])
 
   // Tags are now fetched from useClientTags hook instead of local state

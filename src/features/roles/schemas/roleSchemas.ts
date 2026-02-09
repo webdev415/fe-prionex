@@ -29,11 +29,17 @@ const roleDescriptionSchema = z
 const permissionIdsSchema = z.array(z.number()).min(1, 'At least one permission must be selected')
 
 /**
+ * Department ID validation (optional)
+ */
+const departmentIdSchema = z.number().nullable().optional()
+
+/**
  * Create Role Form Schema
  */
 export const createRoleSchema = z.object({
   name: roleNameSchema,
   description: roleDescriptionSchema,
+  department_id: departmentIdSchema,
   permission_ids: permissionIdsSchema,
 })
 
@@ -43,6 +49,7 @@ export const createRoleSchema = z.object({
 export const updateRoleSchema = z.object({
   name: roleNameSchema,
   description: roleDescriptionSchema,
+  department_id: departmentIdSchema,
   permission_ids: permissionIdsSchema,
 })
 

@@ -32,6 +32,8 @@ export function useCreateRole() {
     onSuccess: () => {
       toast.success('Role created successfully')
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
+      // Invalidate departments cache to update assigned_roles_count
+      queryClient.invalidateQueries({ queryKey: ['departments'] })
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))
@@ -52,6 +54,8 @@ export function useUpdateRole() {
       toast.success('Role updated successfully')
       queryClient.invalidateQueries({ queryKey: rolesKeys.detail(variables.roleId) })
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
+      // Invalidate departments cache to update assigned_roles_count
+      queryClient.invalidateQueries({ queryKey: ['departments'] })
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))
@@ -70,6 +74,8 @@ export function useDeleteRole() {
     onSuccess: () => {
       toast.success('Role deleted successfully')
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
+      // Invalidate departments cache to update assigned_roles_count
+      queryClient.invalidateQueries({ queryKey: ['departments'] })
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))
@@ -106,6 +112,8 @@ export function useArchiveRole() {
       toast.success('Role archived successfully')
       queryClient.invalidateQueries({ queryKey: rolesKeys.detail(variables.roleId) })
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
+      // Invalidate departments cache to update assigned_roles_count
+      queryClient.invalidateQueries({ queryKey: ['departments'] })
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))

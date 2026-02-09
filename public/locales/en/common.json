@@ -15,6 +15,7 @@
       "users": "Users",
       "sellers": "Sellers",
       "roles": "Roles",
+      "departments": "Departments",
       "smsTemplates": "SMS Templates",
       "transactions": "Transactions",
       "auditLogs": "Audit Logs",
@@ -37,10 +38,12 @@
   },
   "actions": {
     "save": "Save",
+    "saving": "Saving...",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
     "create": "Create",
+    "creating": "Creating...",
     "submit": "Submit",
     "confirm": "Confirm",
     "back": "Back",
@@ -405,15 +408,83 @@
       "forms": {
         "roleName": "Role Name",
         "description": "Description",
+        "department": "Department",
+        "departmentHint": "Assign this role to a specific department (optional for custom roles only)",
+        "departmentNotAvailableForDefault": "Default roles cannot be assigned to departments",
         "permissions": "Permissions",
         "loadingPermissions": "Loading permissions...",
         "placeholders": {
           "roleName": "Enter Role Name",
-          "description": "Describe this role"
+          "description": "Describe this role",
+          "noDepartment": "No Department"
         },
         "errors": {
           "failedToCreate": "Failed to create role. Please try again."
         }
+      }
+    },
+    "departments": {
+      "title": "Department Management",
+      "newDepartment": "New Department",
+      "selectProject": "Select project",
+      "project": "Project:",
+      "noActiveProjects": "No active projects found. Please create a project first.",
+      "errorLoading": "Error loading departments",
+      "allDepartments": "All Departments",
+      "noDepartments": "No departments found",
+      "tableHeaders": {
+        "name": "Name",
+        "description": "Description",
+        "assignedRoles": "Assigned Roles",
+        "actions": "Actions"
+      },
+      "actions": {
+        "view": "View",
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "modals": {
+        "create": {
+          "title": "Create Department"
+        },
+        "edit": {
+          "title": "Edit Department",
+          "failedToLoad": "Failed to load department data. Please try again."
+        },
+        "view": {
+          "title": "View Department",
+          "failedToLoad": "Failed to load department data. Please try again."
+        },
+        "archive": {
+          "title": "Archive Department: {{departmentName}}",
+          "defaultTitle": "Archive Department",
+          "confirmMessage": "Are you sure you want to archive the department \"{{departmentName}}\"?",
+          "hasAssignedRoles": "This department has {{count}} assigned role(s). Archiving will unassign them.",
+          "archiving": "Archiving...",
+          "archiveDepartment": "Archive Department",
+          "failedToArchive": "Failed to archive department. Please try again.",
+          "failedToLoad": "Failed to load department data. Please try again.",
+          "departmentNotFound": "Department not found"
+        }
+      },
+      "forms": {
+        "name": "Name",
+        "description": "Description",
+        "project": "Project",
+        "assignedRoles": "Assigned Roles",
+        "status": "Status",
+        "placeholders": {
+          "name": "Enter Department Name",
+          "description": "Describe this department"
+        },
+        "errors": {
+          "failedToCreate": "Failed to create department. Please try again.",
+          "failedToUpdate": "Failed to update department. Please try again."
+        }
+      },
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
       }
     },
     "imports": {

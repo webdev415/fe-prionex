@@ -15,6 +15,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useUpdateRole } from '../hooks/useRoleMutations'
 import { usePermissions } from '../hooks/useRoleMutations'
+import { useDepartments } from '@/features/departments'
 import { Label } from '@/components/ui/Label'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
@@ -29,31 +30,28 @@ interface EditRoleFormProps {
   onCancel?: () => void
 }
 
-// Schema for default roles: only permissions
-const defaultRoleSchema = z.object({
-  permission_ids: z.array(z.number()).min(1, 'Please select at least one permission'),
-})
-
-// Schema for custom roles: name, description, and permissions
-const customRoleSchema = z.object({
+// Schema for editing roles - always use full schema, disable fields for default roles
+const editRoleSchema = z.object({
   name: z.string().min(1, 'Role name is required'),
   description: z.string().optional(),
+  department_id: z.number().nullable().optional(),
   permission_ids: z.array(z.number()).min(1, 'Please select at least one permission'),
 })
 
-type CustomRoleFormData = z.infer<typeof customRoleSchema>
+// Combined type for form data
+type EditRoleFormData = z.infer<typeof editRoleSchema>
 
 export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps) {
   const { t } = useTranslation('common')
   const updateMutation = useUpdateRole()
   const { data: permissionsData, isLoading: loadingPermissions } = usePermissions()
+  const { data: departmentsData, isLoading: loadingDepartments } = useDepartments({
+    project_id: role.project_id,
+    is_active: true,
+  })
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
 
   const isDefaultRole = role.is_default
-  const editRoleSchema = useMemo(
-    () => (isDefaultRole ? defaultRoleSchema : customRoleSchema),
-    [isDefaultRole]
-  )
 
   // Initialize selected permissions from role
   const initialPermissions = useMemo(
@@ -70,6 +68,11 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
   const permissions = useMemo(
     () => permissionsData?.permissions || [],
     [permissionsData?.permissions]
+  )
+
+  const departments = useMemo(
+    () => departmentsData?.departments || [],
+    [departmentsData?.departments]
   )
 
   const permissionsByCategory = useMemo(() => {
@@ -90,17 +93,14 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
     handleSubmit,
     setValue,
     formState: { errors },
-  } = useForm({
+  } = useForm<EditRoleFormData>({
     resolver: zodResolver(editRoleSchema),
-    defaultValues: isDefaultRole
-      ? {
-          permission_ids: role.permissions?.map((p) => p.id) || [],
-        }
-      : {
-          name: role.name,
-          description: role.description || '',
-          permission_ids: role.permissions?.map((p) => p.id) || [],
-        },
+    defaultValues: {
+      name: role.name,
+      description: role.description || '',
+      department_id: role.department_id,
+      permission_ids: role.permissions?.map((p) => p.id) || [],
+    },
   })
 
   const handlePermissionToggle = (permissionId: number) => {
@@ -117,15 +117,17 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
       permission_ids: number[]
       name?: string
       description?: string
+      department_id?: number | null
     } = {
       permission_ids: selectedPermissions,
     }
 
-    // Only include name/description for custom roles (backend allows this)
+    // Only include name/description/department for custom roles (backend allows this)
     if (!isDefaultRole) {
-      const customData = data as CustomRoleFormData
+      const customData = data as EditRoleFormData
       updateData.name = customData.name
       updateData.description = customData.description || undefined
+      updateData.department_id = customData.department_id
     }
 
     updateMutation.mutate(
@@ -195,6 +197,42 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
           />
         )}
       </div>
+
+      {/* Department Selection - Only for Custom Roles */}
+      {!isDefaultRole && (
+        <div>
+          <Label htmlFor="department_id">
+            {t('pages.roles.forms.department')}
+            <span className="ml-1 text-sm font-light text-gray-500">(Optional)</span>
+          </Label>
+          <select
+            id="department_id"
+            {...register('department_id' as const, {
+              setValueAs: (v) => (v === '' || v === 'null' ? null : Number(v)),
+            })}
+            disabled={updateMutation.isPending || loadingDepartments}
+            className="text-dark-500 flex h-[45px] w-full items-center rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light shadow-none focus:ring-0 focus:outline-none disabled:opacity-50"
+          >
+            <option value="">{t('pages.roles.forms.placeholders.noDepartment')}</option>
+            {departments.map((dept) => (
+              <option key={dept.id} value={dept.id}>
+                {dept.name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-sm text-gray-500">{t('pages.roles.forms.departmentHint')}</p>
+        </div>
+      )}
+
+      {/* Department Display - For Default Roles */}
+      {isDefaultRole && (
+        <div>
+          <Label>{t('pages.roles.forms.department')}</Label>
+          <div className="border-light-50 flex h-[45px] items-center rounded-lg border bg-white px-4 py-2 text-sm font-light text-gray-500">
+            {t('pages.roles.forms.departmentNotAvailableForDefault')}
+          </div>
+        </div>
+      )}
 
       {/* Permissions Section (Always Editable - No Backend Restriction) */}
       <div>

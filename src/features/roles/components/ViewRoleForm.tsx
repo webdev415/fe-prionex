@@ -64,6 +64,17 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
         <span className="text-sm font-semibold text-gray-950">{role.description || '—'}</span>
       </div>
 
+      {/* Department */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-light text-gray-500">
+          {t('pages.roles.forms.department')}:
+        </span>
+        <span className="text-sm font-semibold text-gray-950">
+          {role.department_name ||
+            (role.is_default ? 'Not available for default roles' : 'Not assigned')}
+        </span>
+      </div>
+
       {/* Type */}
       <div className="flex items-center gap-2">
         <span className="text-sm font-light text-gray-500">Type:</span>
