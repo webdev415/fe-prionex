@@ -411,6 +411,7 @@ export function ActivityTimelinePage() {
         open={isNoteModalOpen}
         onClose={() => setIsNoteModalOpen(false)}
         phoneNumber={client?.phones?.[0]?.number || ''}
+        clientId={clientId}
         onSave={(data) => {
           // TODO: Save note to API
           console.log('Note saved:', data)
