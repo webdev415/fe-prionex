@@ -57,6 +57,9 @@ export async function createInteraction(data: {
   follow_up_date?: string
   delay_reason_id?: number
   refusal_reason_id?: number
+  related_call_id?: number
+  related_sms_id?: number
+  related_payment_id?: number
 }): Promise<InteractionResponse> {
   const response = await api.post<InteractionResponse>(BASE_URL + '/', data)
   return response.data

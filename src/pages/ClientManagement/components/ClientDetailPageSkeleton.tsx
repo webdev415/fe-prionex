@@ -9,7 +9,7 @@ export function ClientDetailPageSkeleton() {
   return (
     <div className="flex flex-col gap-4">
       {/* Client Header Skeleton */}
-      <div className="flex flex-col gap-4 self-stretch 2xl:flex-row 2xl:items-center 2xl:justify-between">
+      <div className="flex flex-col gap-4 self-stretch xl:flex-row xl:items-center xl:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-row items-center gap-2">
             <div className="h-6 w-6 animate-pulse rounded bg-gray-200" />
@@ -29,9 +29,9 @@ export function ClientDetailPageSkeleton() {
       </div>
 
       {/* Main Content Skeleton */}
-      <div className="flex flex-col items-start gap-4 self-stretch 2xl:flex-row 2xl:gap-5">
+      <div className="flex flex-col items-start gap-4 self-stretch xl:flex-row xl:gap-5">
         {/* Client Card Skeleton */}
-        <div className="flex min-h-[44px] w-full flex-col items-start justify-center gap-0 rounded-lg bg-white/50 p-0 2xl:w-[30%]">
+        <div className="flex min-h-[44px] w-full flex-col items-start justify-center gap-0 rounded-lg bg-white/50 p-0 xl:w-[30%]">
           <div className="flex flex-col items-start gap-3 self-stretch px-4 py-4 md:px-6 md:py-5">
             {/* Tags Skeleton */}
             <div className="flex items-center gap-2 self-stretch">
@@ -106,7 +106,7 @@ export function ClientDetailPageSkeleton() {
         </div>
 
         {/* Right Column - Data + Comments Card with 6 horizontal top tabs */}
-        <div className="flex w-full flex-1 flex-col items-start gap-5 self-stretch 2xl:w-[64%]">
+        <div className="flex w-full flex-1 flex-col items-start gap-5 self-stretch xl:w-[64%]">
           <div className="flex flex-1 flex-col items-start gap-0 self-stretch rounded-lg bg-white/50 p-0">
             {/* Horizontal tab bar - 6 tabs at the top - scrollable on mobile */}
             <div className="relative mx-3 flex items-center gap-0 self-stretch border-b border-gray-200">

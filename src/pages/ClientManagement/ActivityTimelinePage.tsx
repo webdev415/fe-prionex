@@ -22,6 +22,7 @@ import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
 import { useCallStore } from '@/stores/callStore'
 import { useClientProfile, useClientActivities } from '@/features/clients/hooks/useClients'
+import { useCreateNoteInteraction } from '@/features/clients/hooks/useNoteInteraction'
 
 type CommunicationType = 'calls' | 'sms' | 'notes' | 'all'
 
@@ -96,6 +97,8 @@ export function ActivityTimelinePage() {
   const setDateTo = (value: Date | null) =>
     setDateToUrl(value ? value.toISOString().split('T')[0] : '')
 
+  const { mutate: createNote } = useCreateNoteInteraction()
+
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
 
@@ -109,7 +112,14 @@ export function ActivityTimelinePage() {
       date: a.interaction_date ? new Date(a.interaction_date).toLocaleDateString() : '-',
       dateISO: a.interaction_date ?? '', // Keep ISO date for filtering
       number: a.phone_used ?? '-',
-      contactType: a.direction === 'outbound' ? 'Outgoing' : 'Incoming',
+      contactType:
+        a.channel === 'note'
+          ? 'Note'
+          : a.channel === 'sms'
+            ? 'SMS'
+            : a.direction === 'outbound'
+              ? 'Outgoing'
+              : 'Incoming',
       result: a.result_name ?? a.status ?? '-',
       promisedAmount: a.promise_to_pay_amount ? parseFloat(a.promise_to_pay_amount) : 0,
       promisedDate: a.promise_to_pay_date ?? '-',
@@ -133,18 +143,17 @@ export function ActivityTimelinePage() {
   const filteredActivities = useMemo(() => {
     let result = [...(activitiesState || [])]
 
-    // Filter by communication type
+    // Filter by communication type using channel field
     if (communicationType !== 'all') {
       result = result.filter((activity) => {
-        const contactType = activity.contactType as string
         if (communicationType === 'calls') {
-          return contactType === 'Outgoing' || contactType === 'Incoming'
+          return activity.channel === 'call'
         }
         if (communicationType === 'sms') {
-          return contactType === 'SMS'
+          return activity.channel === 'sms'
         }
         if (communicationType === 'notes') {
-          return contactType === 'Note'
+          return activity.channel === 'note'
         }
         return true
       })
@@ -413,8 +422,7 @@ export function ActivityTimelinePage() {
         phoneNumber={client?.phones?.[0]?.number || ''}
         clientId={clientId}
         onSave={(data) => {
-          // TODO: Save note to API
-          console.log('Note saved:', data)
+          createNote({ clientId, data })
         }}
       />
 

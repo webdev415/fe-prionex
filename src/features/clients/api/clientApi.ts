@@ -179,17 +179,6 @@ export async function getClientAssignmentHistory(
 }
 
 /**
- * Create a note for a client
- */
-export async function createClientNote(
-  clientId: number,
-  noteData: { content: string; note_type?: string }
-): Promise<{ id: number; content: string; note_type: string; created_at: string }> {
-  const response = await api.post(`${BASE_URL}/${clientId}/notes`, noteData)
-  return response.data
-}
-
-/**
  * Exported API object for easier importing
  * Consistent with other service APIs (usersApi, rolesApi, projectsApi, etc.)
  */
@@ -208,5 +197,4 @@ export const clientApi = {
   getClientProfile,
   getClientWriteoffs,
   getClientAssignmentHistory,
-  createClientNote,
 }

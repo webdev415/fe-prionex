@@ -504,6 +504,7 @@ export interface InteractionResponse {
   next_action_type?: string | null
   related_call_id?: number | null
   related_sms_id?: number | null
+  related_payment_id?: number | null
   user_id: number
   user_name?: string | null
   legacy_id?: string | null
