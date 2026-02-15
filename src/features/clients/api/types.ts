@@ -508,6 +508,7 @@ export interface InteractionResponse {
   user_id: number
   user_name?: string | null
   legacy_id?: string | null
+  number_k?: string | null
   created_at: string
   updated_at?: string | null
   is_deleted?: boolean
@@ -530,16 +531,39 @@ export interface InteractionListResponse {
   limit: number
 }
 
+export interface DialHistoryRecord {
+  id: number
+  legacy_interaction_id: string
+  client_id: number
+  project_id: number
+  phone?: string | null
+  should_dial?: number | null
+  number_k?: string | null
+  interaction_date?: string | null
+  created_at: string
+}
+
+export interface DialHistoryListResponse {
+  records: DialHistoryRecord[]
+  total: number
+  skip: number
+  limit: number
+}
+
 export interface InteractionTypeResponse {
   id: number
   code: string
   name: string
+  description?: string | null
   is_active: boolean
   sort_order: number
   direction?: string | null
   category?: string | null
   icon?: string | null
   color?: string | null
+  name_uk?: string | null
+  name_en?: string | null
+  name_ru?: string | null
 }
 
 export interface InteractionSubtypeResponse {
@@ -547,7 +571,12 @@ export interface InteractionSubtypeResponse {
   type_id: number
   code: string
   name: string
+  description?: string | null
   is_active: boolean
+  sort_order: number
+  name_uk?: string | null
+  name_en?: string | null
+  name_ru?: string | null
 }
 
 export interface InteractionResultResponse {
@@ -555,12 +584,17 @@ export interface InteractionResultResponse {
   code: string
   name: string
   category?: string | null
+  result_category?: string | null
   is_positive: boolean
+  requires_followup: boolean
   requires_promise_date: boolean
   requires_promise_amount: boolean
-  requires_refusal_reason: boolean
-  requires_delay_reason: boolean
+  creates_task: boolean
   is_active: boolean
+  sort_order: number
+  name_uk?: string | null
+  name_en?: string | null
+  name_ru?: string | null
 }
 
 // --- Call/SMS Response Types ---

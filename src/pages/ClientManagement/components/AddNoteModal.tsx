@@ -1,12 +1,12 @@
 /**
- * Add Note Modal Component (Enhanced)
+ * Add Interaction Modal Component
  *
- * Reusable modal for adding notes about clients.
- * Supports 8 note types with conditional related fields (call/payment/debt).
- * Implements lazy-loading data fetching for related records.
+ * Modal for creating interaction records from the client detail page.
+ * Fetches types, subtypes, and results from the interaction service.
+ * Shows conditional promise fields based on the selected result.
  */
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
@@ -20,105 +20,92 @@ import {
 import { Icons } from '@/lib/icons'
 import { toast } from 'sonner'
 import {
-  useClientCallSmsHistory,
-  useClientPaymentsSection,
-  useClientLoans,
-} from '@/features/clients/hooks/useClients'
+  useInteractionTypes,
+  useInteractionSubtypes,
+  useInteractionResults,
+} from '@/features/clients/hooks/useNoteInteraction'
 
 export interface AddNoteModalProps {
   open: boolean
   onClose: () => void
   phoneNumber: string
   clientId: number
-  onSave: (data: NoteCreateData) => void
+  onSave: (data: InteractionCreateData) => void
 }
 
-export interface NoteCreateData {
-  content: string
-  note_type?: string
-  related_call_id?: number
-  related_payment_id?: number
-  related_debt_id?: number
+export interface InteractionCreateData {
+  type_id: number
+  subtype_id: number
+  result_id?: number
+  summary: string
+  promise_to_pay_date?: string
+  promise_to_pay_amount?: number
 }
 
-// 8 semantic note types matching backend schema
-const NOTE_TYPE_OPTIONS = [
-  'general',
-  'call',
-  'payment',
-  'debt',
-  'follow_up',
-  'reminder',
-  'legal',
-  'other',
-] as const
+// Keep old name as alias for backwards compatibility
+export type NoteCreateData = InteractionCreateData
 
 const MAX_NOTE_LENGTH = 2000
 
-export function AddNoteModal({ open, onClose, phoneNumber, clientId, onSave }: AddNoteModalProps) {
+export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModalProps) {
   const { t } = useTranslation('common')
-  const [noteType, setNoteType] = useState<string>('general')
+
+  const [typeId, setTypeId] = useState<number | undefined>(undefined)
+  const [subtypeId, setSubtypeId] = useState<number | undefined>(undefined)
+  const [resultId, setResultId] = useState<number | undefined>(undefined)
   const [note, setNote] = useState<string>('')
-  const [relatedCallId, setRelatedCallId] = useState<number | undefined>(undefined)
-  const [relatedPaymentId, setRelatedPaymentId] = useState<number | undefined>(undefined)
-  const [relatedDebtId, setRelatedDebtId] = useState<number | undefined>(undefined)
+  const [promiseDate, setPromiseDate] = useState<string>('')
+  const [promiseAmount, setPromiseAmount] = useState<string>('')
 
-  // Lazy-loading data fetching - only fetch when needed
-  const shouldFetchCalls = noteType === 'call'
-  const shouldFetchPayments = noteType === 'payment'
-  const shouldFetchDebts = noteType === 'debt'
+  const { data: types, isLoading: isLoadingTypes } = useInteractionTypes()
+  const { data: subtypes, isLoading: isLoadingSubtypes } = useInteractionSubtypes()
+  const { data: results, isLoading: isLoadingResults } = useInteractionResults()
 
-  const {
-    data: callData,
-    isLoading: isLoadingCalls,
-    isError: isCallsError,
-  } = useClientCallSmsHistory(clientId, shouldFetchCalls)
-  const {
-    data: paymentData,
-    isLoading: isLoadingPayments,
-    isError: isPaymentsError,
-  } = useClientPaymentsSection(clientId, shouldFetchPayments)
-  const {
-    data: debtData,
-    isLoading: isLoadingDebts,
-    isError: isDebtsError,
-  } = useClientLoans(clientId, shouldFetchDebts)
+  const selectedResult = useMemo(() => results?.find((r) => r.id === resultId), [results, resultId])
+
+  const showPromiseDate = selectedResult?.requires_promise_date === true
+  const showPromiseAmount = selectedResult?.requires_promise_amount === true
 
   const handleSave = () => {
-    if (!note.trim()) {
-      toast.error('Please enter a note before saving')
+    if (!typeId) {
+      toast.error(t('pages.clients.modals.addNote.selectType', 'Please select a type'))
+      return
+    }
+    if (!subtypeId) {
+      toast.error(t('pages.clients.modals.addNote.selectSubtype', 'Please select a subtype'))
       return
     }
 
-    // Only include related fields that match the current note type
-    const data: NoteCreateData = {
-      content: note,
-      note_type: noteType,
-      related_call_id: noteType === 'call' ? relatedCallId : undefined,
-      related_payment_id: noteType === 'payment' ? relatedPaymentId : undefined,
-      related_debt_id: noteType === 'debt' ? relatedDebtId : undefined,
+    const data: InteractionCreateData = {
+      type_id: typeId,
+      subtype_id: subtypeId,
+      result_id: resultId,
+      summary: note,
+      promise_to_pay_date: showPromiseDate && promiseDate ? promiseDate : undefined,
+      promise_to_pay_amount:
+        showPromiseAmount && promiseAmount ? parseFloat(promiseAmount) : undefined,
     }
 
     onSave(data)
-
-    // Reset form
-    setNoteType('general')
-    setNote('')
-    setRelatedCallId(undefined)
-    setRelatedPaymentId(undefined)
-    setRelatedDebtId(undefined)
+    resetForm()
     onClose()
+  }
+
+  const resetForm = () => {
+    setTypeId(undefined)
+    setSubtypeId(undefined)
+    setResultId(undefined)
+    setNote('')
+    setPromiseDate('')
+    setPromiseAmount('')
   }
 
   const handleClose = () => {
-    // Reset form on close
-    setNoteType('general')
-    setNote('')
-    setRelatedCallId(undefined)
-    setRelatedPaymentId(undefined)
-    setRelatedDebtId(undefined)
+    resetForm()
     onClose()
   }
+
+  const isLoading = isLoadingTypes || isLoadingSubtypes || isLoadingResults
 
   return (
     <Modal open={open} onClose={handleClose} maxWidth="xl">
@@ -148,135 +135,140 @@ export function AddNoteModal({ open, onClose, phoneNumber, clientId, onSave }: A
             </button>
           </div>
 
-          {/* Note Type Dropdown (8 options) */}
+          {/* Type Dropdown */}
           <div className="flex flex-col gap-2">
-            <label className="text-dark-500 text-xs font-light sm:text-sm" htmlFor="note-type">
-              Note Type:
+            <label
+              className="text-dark-500 text-xs font-light sm:text-sm"
+              htmlFor="interaction-type"
+            >
+              {t('pages.clients.modals.addNote.type', 'Type')}:
             </label>
-            <Select value={noteType} onValueChange={setNoteType}>
-              <SelectTrigger className="w-full" id="note-type" aria-label="Note Type">
-                <SelectValue placeholder="Select note type" />
-              </SelectTrigger>
-              <SelectContent>
-                {NOTE_TYPE_OPTIONS.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isLoadingTypes ? (
+              <div className="text-xs text-gray-500">Loading...</div>
+            ) : (
+              <Select
+                value={typeId?.toString()}
+                onValueChange={(value) => setTypeId(Number(value))}
+              >
+                <SelectTrigger className="w-full" id="interaction-type" aria-label="Type">
+                  <SelectValue
+                    placeholder={t(
+                      'pages.clients.modals.addNote.selectTypeOfAction',
+                      'Select type'
+                    )}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {types?.map((type) => (
+                    <SelectItem key={type.id} value={type.id.toString()}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
-          {/* Conditional Related Call Field */}
-          {noteType === 'call' && (
+          {/* Subtype Dropdown */}
+          <div className="flex flex-col gap-2">
+            <label
+              className="text-dark-500 text-xs font-light sm:text-sm"
+              htmlFor="interaction-subtype"
+            >
+              {t('pages.clients.modals.addNote.subtype', 'Subtype')}:
+            </label>
+            {isLoadingSubtypes ? (
+              <div className="text-xs text-gray-500">Loading...</div>
+            ) : (
+              <Select
+                value={subtypeId?.toString()}
+                onValueChange={(value) => setSubtypeId(Number(value))}
+              >
+                <SelectTrigger className="w-full" id="interaction-subtype" aria-label="Subtype">
+                  <SelectValue
+                    placeholder={t('pages.clients.modals.addNote.selectSubtype', 'Select subtype')}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {subtypes?.map((subtype) => (
+                    <SelectItem key={subtype.id} value={subtype.id.toString()}>
+                      {subtype.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          {/* Result Dropdown (optional) */}
+          <div className="flex flex-col gap-2">
+            <label
+              className="text-dark-500 text-xs font-light sm:text-sm"
+              htmlFor="interaction-result"
+            >
+              {t('pages.clients.modals.addNote.result', 'Result')}:
+            </label>
+            {isLoadingResults ? (
+              <div className="text-xs text-gray-500">Loading...</div>
+            ) : (
+              <Select
+                value={resultId?.toString()}
+                onValueChange={(value) => setResultId(Number(value))}
+              >
+                <SelectTrigger className="w-full" id="interaction-result" aria-label="Result">
+                  <SelectValue
+                    placeholder={t(
+                      'pages.clients.modals.addNote.selectResult',
+                      'Select result (optional)'
+                    )}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {results?.map((result) => (
+                    <SelectItem key={result.id} value={result.id.toString()}>
+                      {result.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          {/* Promise to Pay Date (conditional) */}
+          {showPromiseDate && (
             <div className="flex flex-col gap-2">
-              <label className="text-dark-500 text-xs font-light sm:text-sm" htmlFor="related-call">
-                Related Call:
+              <label className="text-dark-500 text-xs font-light sm:text-sm" htmlFor="promise-date">
+                {t('pages.clients.modals.addNote.promiseDate', 'Promise date')}:
               </label>
-              {isLoadingCalls ? (
-                <div className="text-xs text-gray-500">Loading...</div>
-              ) : isCallsError ? (
-                <Select disabled>
-                  <SelectTrigger className="w-full" id="related-call" aria-label="Related Call">
-                    <SelectValue placeholder="Error loading calls" />
-                  </SelectTrigger>
-                </Select>
-              ) : (
-                <Select
-                  value={relatedCallId?.toString()}
-                  onValueChange={(value) => setRelatedCallId(Number(value))}
-                >
-                  <SelectTrigger className="w-full" id="related-call" aria-label="Related Call">
-                    <SelectValue placeholder="Select related call (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {callData?.calls?.map((call) => (
-                      <SelectItem key={call.id} value={call.id.toString()}>
-                        Call #{call.id} - {call.phone} ({call.duration}s)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <input
+                type="date"
+                id="promise-date"
+                value={promiseDate}
+                onChange={(e) => setPromiseDate(e.target.value)}
+                className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none sm:text-sm"
+              />
             </div>
           )}
 
-          {/* Conditional Related Payment Field */}
-          {noteType === 'payment' && (
+          {/* Promise to Pay Amount (conditional) */}
+          {showPromiseAmount && (
             <div className="flex flex-col gap-2">
               <label
                 className="text-dark-500 text-xs font-light sm:text-sm"
-                htmlFor="related-payment"
+                htmlFor="promise-amount"
               >
-                Related Payment:
+                {t('pages.clients.modals.addNote.promiseAmount', 'Promise amount')}:
               </label>
-              {isLoadingPayments ? (
-                <div className="text-xs text-gray-500">Loading...</div>
-              ) : isPaymentsError ? (
-                <Select disabled>
-                  <SelectTrigger
-                    className="w-full"
-                    id="related-payment"
-                    aria-label="Related Payment"
-                  >
-                    <SelectValue placeholder="Error loading payments" />
-                  </SelectTrigger>
-                </Select>
-              ) : (
-                <Select
-                  value={relatedPaymentId?.toString()}
-                  onValueChange={(value) => setRelatedPaymentId(Number(value))}
-                >
-                  <SelectTrigger
-                    className="w-full"
-                    id="related-payment"
-                    aria-label="Related Payment"
-                  >
-                    <SelectValue placeholder="Select related payment (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {paymentData?.payments?.map((payment) => (
-                      <SelectItem key={payment.id} value={payment.id.toString()}>
-                        Payment #{payment.id} - ₴{payment.amount} ({payment.payment_date})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-          )}
-
-          {/* Conditional Related Debt Field */}
-          {noteType === 'debt' && (
-            <div className="flex flex-col gap-2">
-              <label className="text-dark-500 text-xs font-light sm:text-sm" htmlFor="related-debt">
-                Related Debt:
-              </label>
-              {isLoadingDebts ? (
-                <div className="text-xs text-gray-500">Loading...</div>
-              ) : isDebtsError ? (
-                <Select disabled>
-                  <SelectTrigger className="w-full" id="related-debt" aria-label="Related Debt">
-                    <SelectValue placeholder="Error loading debts" />
-                  </SelectTrigger>
-                </Select>
-              ) : (
-                <Select
-                  value={relatedDebtId?.toString()}
-                  onValueChange={(value) => setRelatedDebtId(Number(value))}
-                >
-                  <SelectTrigger className="w-full" id="related-debt" aria-label="Related Debt">
-                    <SelectValue placeholder="Select related debt (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {debtData?.map((debt) => (
-                      <SelectItem key={debt.id} value={debt.id.toString()}>
-                        {debt.contract_number} - ₴{debt.remaining_debt_amount}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <input
+                type="number"
+                id="promise-amount"
+                value={promiseAmount}
+                onChange={(e) => setPromiseAmount(e.target.value)}
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none sm:text-sm"
+              />
             </div>
           )}
 
@@ -304,7 +296,13 @@ export function AddNoteModal({ open, onClose, phoneNumber, clientId, onSave }: A
         <Button variant="cancel" size="sm" onClick={handleClose} className="w-full rounded-md">
           {t('actions.cancel')}
         </Button>
-        <Button variant="primary" size="sm" onClick={handleSave} className="w-full rounded-md">
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleSave}
+          disabled={isLoading}
+          className="w-full rounded-md"
+        >
           {t('actions.save')}
         </Button>
       </ModalFooter>

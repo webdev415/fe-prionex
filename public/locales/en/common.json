@@ -794,12 +794,17 @@
         "tableHeaders": {
           "date": "Date",
           "number": "Number",
+          "loanNumber": "Loan Number",
+          "phone": "Phone",
+          "type": "Type",
+          "subtype": "Subtype",
           "contactType": "Contact Type",
           "result": "Result",
           "promisedAmount": "Promised Amount",
           "promisedDate": "Promised Date",
           "comment": "Comment",
-          "employee": "Employee"
+          "employee": "Employee",
+          "shouldDial": "Should Dial"
         }
       },
       "detail": {
@@ -854,7 +859,11 @@
           "date": "Date",
           "whoAppointed": "Who appointed",
           "whoIsResponsible": "Who is responsible",
-          "note": "Note"
+          "note": "Note",
+          "documentName": "Name",
+          "documentType": "Type",
+          "uploadDate": "Upload Date",
+          "documentSize": "Size"
         },
         "loansInProcess": "Loans in Process",
         "closedLoans": "Closed Loans",
@@ -884,6 +893,8 @@
         "addFirstNote": "Add first note",
         "noPrimaryCreditorComments": "No comments from primary creditor",
         "primaryCreditorCommentsDescription": "Historical interaction data from the debt seller will appear here when available.",
+        "dialHistory": "Dial History",
+        "noDialHistory": "No dial history",
         "totalCost": "Total Cost",
         "deliveryRate": "Delivery Rate",
         "delivered": "delivered",

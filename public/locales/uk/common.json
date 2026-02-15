@@ -685,12 +685,17 @@
         "tableHeaders": {
           "date": "Дата",
           "number": "Номер",
+          "loanNumber": "Номер позики",
+          "phone": "Телефон",
+          "type": "Тип",
+          "subtype": "Підтип",
           "contactType": "Тип контакту",
           "result": "Результат",
           "promisedAmount": "Обіцяна сума",
           "promisedDate": "Обіцяна дата",
           "comment": "Коментар",
-          "employee": "Співробітник"
+          "employee": "Співробітник",
+          "shouldDial": "Дзвонити"
         }
       },
       "detail": {
@@ -745,7 +750,11 @@
           "date": "Дата",
           "whoAppointed": "Хто призначив",
           "whoIsResponsible": "Хто відповідальний",
-          "note": "Примітка"
+          "note": "Примітка",
+          "documentName": "Назва",
+          "documentType": "Тип",
+          "uploadDate": "Дата завантаження",
+          "documentSize": "Розмір"
         },
         "loansInProcess": "Позики в процесі",
         "closedLoans": "Закриті позики",
@@ -775,6 +784,8 @@
         "addFirstNote": "Додати першу примітку",
         "noPrimaryCreditorComments": "Немає коментарів від первинного кредитора",
         "primaryCreditorCommentsDescription": "Історичні дані про взаємодію від продавця боргу з'являться тут, коли будуть доступні.",
+        "dialHistory": "Історія набору",
+        "noDialHistory": "Історія набору відсутня",
         "totalCost": "Загальна вартість",
         "deliveryRate": "Рівень доставки",
         "delivered": "доставлено",
