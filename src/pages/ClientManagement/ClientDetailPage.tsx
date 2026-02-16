@@ -31,8 +31,9 @@ import {
   useClientOperatorsSection,
   useClientDocuments,
   useClientActivities,
-  useCreateClientNote,
+  useClientDialHistory,
 } from '@/features/clients/hooks/useClients'
+import { useCreateNoteInteraction } from '@/features/clients/hooks/useNoteInteraction'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
 import { useCallStore } from '@/stores/callStore'
@@ -116,7 +117,9 @@ export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [activeLoanTab, setActiveLoanTab] = useState<'process' | 'closed' | 'rr'>('process')
-  const [activeCommentTab, setActiveCommentTab] = useState<'comments' | 'primary'>('comments')
+  const [activeCommentTab, setActiveCommentTab] = useState<'comments' | 'primary' | 'dial-history'>(
+    'comments'
+  )
 
   // Get current user for call integration
   const { user } = useAuth()
@@ -218,6 +221,23 @@ export function ClientDetailPage() {
     clientId,
     isValidClientId
   )
+  const { data: dialHistory = [], isLoading: isDialHistoryLoading } = useClientDialHistory(
+    clientId,
+    isValidClientId
+  )
+  // Creditor notes derived from debts that have debt_notes
+  const creditorNotes = useMemo(
+    () =>
+      (loans ?? [])
+        .filter((d) => d.debt_notes && d.debt_notes.trim() !== '')
+        .map((d) => ({
+          id: d.id,
+          contract_number: d.contract_number,
+          seller_company: d.seller_company,
+          debt_notes: d.debt_notes!,
+        })),
+    [loans]
+  )
 
   // Fetch client tags from API (real)
   const { data: clientTags } = useClientTags(clientId)
@@ -227,8 +247,8 @@ export function ClientDetailPage() {
     profile?.responsible_employee_id || 0
   )
 
-  // Note creation mutation
-  const { mutate: createNote } = useCreateClientNote()
+  // Note creation mutation (via interaction API)
+  const { mutate: createNote } = useCreateNoteInteraction()
 
   // Compose single client object from profile + sections for the rest of the page
   // Maps backend response fields to UI-expected shape for backward compatibility
@@ -264,7 +284,7 @@ export function ClientDetailPage() {
       phoneNumber: isValidPhone(profile.phone_primary) ? profile.phone_primary : '-',
       taxIdNumber: profile.tax_id,
       // Card fields
-      department: responsibleEmployeeDepartment || 'Unknown',
+      department: responsibleEmployeeDepartment || '-',
       responsibleEmployee: profile.responsible_employee_name ?? '-',
       responsibleResearcher: profile.responsible_searcher_name ?? '-',
       phones,
@@ -398,8 +418,9 @@ export function ClientDetailPage() {
       activities: (activities ?? []).map((a) => ({
         id: a.id,
         date: a.interaction_date ? new Date(a.interaction_date).toLocaleDateString() : '-',
-        number: a.phone_used ?? '-',
-        contactType: a.direction === 'outbound' ? 'Outgoing' : 'Incoming',
+        number: a.number_k ?? '-',
+        type: a.type_name ?? '-',
+        subtype: a.subtype_name ?? '-',
         result: a.result_name ?? a.status,
         promisedAmount: a.promise_to_pay_amount ? Number(a.promise_to_pay_amount) : 0,
         promisedDate: a.promise_to_pay_date ?? '-',
@@ -693,18 +714,45 @@ export function ClientDetailPage() {
   ]
 
   const activityColumns: Column<(typeof client.activities)[0]>[] = [
-    { key: 'date', header: t('pages.clients.activity.tableHeaders.date'), align: 'left' },
-    { key: 'number', header: t('pages.clients.activity.tableHeaders.number'), align: 'left' },
     {
-      key: 'contactType',
-      header: t('pages.clients.activity.tableHeaders.contactType'),
+      key: 'date',
+      header: t('pages.clients.activity.tableHeaders.date'),
       align: 'left',
+      className: 'w-[80px]',
     },
-    { key: 'result', header: t('pages.clients.activity.tableHeaders.result'), align: 'left' },
+    {
+      key: 'number',
+      header: t('pages.clients.activity.tableHeaders.loanNumber'),
+      align: 'left',
+      className: 'w-[100px]',
+    },
+    {
+      key: 'type',
+      header: t('pages.clients.activity.tableHeaders.type'),
+      align: 'left',
+      render: (activity) => (
+        <div className="max-w-[120px] break-words whitespace-normal">{activity.type}</div>
+      ),
+    },
+    {
+      key: 'subtype',
+      header: t('pages.clients.activity.tableHeaders.subtype'),
+      align: 'left',
+      render: (activity) => (
+        <div className="max-w-[120px] break-words whitespace-normal">{activity.subtype}</div>
+      ),
+    },
+    {
+      key: 'result',
+      header: t('pages.clients.activity.tableHeaders.result'),
+      align: 'left',
+      className: 'w-[110px]',
+    },
     {
       key: 'promisedAmount',
       header: t('pages.clients.activity.tableHeaders.promisedAmount'),
       align: 'right',
+      className: 'w-[90px]',
       render: (activity) =>
         activity.promisedAmount ? `${formatCurrencyWithDecimals(activity.promisedAmount)}₴` : '-',
     },
@@ -712,19 +760,79 @@ export function ClientDetailPage() {
       key: 'promisedDate',
       header: t('pages.clients.activity.tableHeaders.promisedDate'),
       align: 'left',
+      className: 'w-[90px]',
       render: (activity) => activity.promisedDate || '-',
     },
     {
       key: 'comment',
       header: t('pages.clients.activity.tableHeaders.comment'),
       align: 'left',
+      className: 'min-w-[250px]',
       render: (activity) => (
-        <div className="max-w-[200px] py-2 text-sm leading-tight break-words whitespace-normal">
+        <div className="py-2 text-sm leading-tight break-words whitespace-normal">
           {activity.comment || '-'}
         </div>
       ),
     },
-    { key: 'employee', header: t('pages.clients.activity.tableHeaders.employee'), align: 'left' },
+    {
+      key: 'employee',
+      header: t('pages.clients.activity.tableHeaders.employee'),
+      align: 'left',
+      className: 'w-[90px]',
+    },
+  ]
+
+  const creditorNoteColumns: Column<(typeof creditorNotes)[0]>[] = [
+    {
+      key: 'contract_number',
+      header: t('pages.clients.detail.tableHeaders.loanNumber'),
+      align: 'left',
+    },
+    {
+      key: 'seller_company',
+      header: t('pages.clients.detail.tableHeaders.counterparty'),
+      align: 'left',
+    },
+    {
+      key: 'debt_notes',
+      header: t('pages.clients.activity.tableHeaders.comment'),
+      align: 'left',
+      render: (row) => (
+        <div className="min-w-[300px] py-2 text-sm leading-tight break-words whitespace-normal">
+          {row.debt_notes || '-'}
+        </div>
+      ),
+    },
+  ]
+
+  const dialHistoryColumns: Column<(typeof dialHistory)[0]>[] = [
+    {
+      key: 'interaction_date',
+      header: t('pages.clients.activity.tableHeaders.date'),
+      align: 'left',
+      className: 'w-[100px]',
+      render: (row) =>
+        row.interaction_date ? new Date(row.interaction_date).toLocaleDateString() : '-',
+    },
+    {
+      key: 'phone',
+      header: t('pages.clients.activity.tableHeaders.phone'),
+      align: 'left',
+      className: 'w-[120px]',
+    },
+    {
+      key: 'number_k',
+      header: t('pages.clients.activity.tableHeaders.loanNumber'),
+      align: 'left',
+      className: 'w-[140px]',
+    },
+    {
+      key: 'should_dial',
+      header: t('pages.clients.activity.tableHeaders.shouldDial'),
+      align: 'center',
+      className: 'w-[90px]',
+      render: (row) => (row.should_dial === 1 ? 'Yes' : row.should_dial === 2 ? 'No' : '-'),
+    },
   ]
 
   const paymentColumns: Column<(typeof client.payments)[0]>[] = [
@@ -919,25 +1027,25 @@ export function ClientDetailPage() {
   ]
 
   const documentColumns: Column<(typeof client.documents)[0]>[] = [
-    { key: 'name', header: 'Name', align: 'left' },
-    { key: 'type', header: 'Type', align: 'left' },
-    { key: 'uploadDate', header: 'Upload Date', align: 'left' },
-    { key: 'size', header: 'Size', align: 'left' },
+    { key: 'name', header: t('pages.clients.detail.tableHeaders.documentName'), align: 'left' },
+    { key: 'type', header: t('pages.clients.detail.tableHeaders.documentType'), align: 'left' },
+    { key: 'uploadDate', header: t('pages.clients.detail.tableHeaders.uploadDate'), align: 'left' },
+    { key: 'size', header: t('pages.clients.detail.tableHeaders.documentSize'), align: 'left' },
   ]
 
   return (
     <div className="flex flex-col gap-4">
       {/* Client Header */}
-      <div className="flex flex-col gap-4 self-stretch 2xl:flex-row 2xl:items-center 2xl:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex flex-row items-center gap-2">
+      <div className="flex flex-col gap-4 self-stretch xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-row items-center gap-2">
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex h-6 w-6 items-center justify-center"
+              className="flex h-6 w-6 shrink-0 items-center justify-center"
             >
               <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
             </button>
-            <h1 className="text-dark-500 text-center text-xl leading-[150%] font-light md:text-2xl">
+            <h1 className="text-dark-500 truncate text-xl leading-[150%] font-light md:text-2xl">
               {client.fullName}
             </h1>
           </div>
@@ -948,11 +1056,11 @@ export function ClientDetailPage() {
             <PriorityBadge priority={client.priority as Priority} />
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2 md:gap-5">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 md:gap-3 xl:flex-nowrap">
           <Button
             size="md"
             variant="outline"
-            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
+            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
             onClick={() => navigate(`/dashboard/clients/${id}/debt-summary`)}
           >
             {t('pages.clients.debtSummary.title')}
@@ -961,7 +1069,7 @@ export function ClientDetailPage() {
             size="md"
             variant="outline"
             leftIcon={<Icons.PencilEdit size={20} />}
-            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
+            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
             onClick={() => setIsNoteModalOpen(true)}
           >
             {t('pages.clients.activity.addNote')}
@@ -969,7 +1077,7 @@ export function ClientDetailPage() {
           <Button
             size="md"
             leftIcon={<Icons.Headset size={20} />}
-            className="w-full flex-1 rounded-full"
+            className="w-full flex-1 rounded-full xl:w-auto xl:flex-none"
             disabled={!user?.asterisk_extension}
             onClick={() => {
               const phoneNumber = client.phones?.[0]?.number
@@ -997,16 +1105,16 @@ export function ClientDetailPage() {
             size="md"
             variant="danger"
             leftIcon={<Icons.Delete size={20} />}
-            className="w-full flex-1 rounded-full"
+            className="w-full flex-1 rounded-full xl:w-auto xl:flex-none"
             onClick={() => setIsDeleteModalOpen(true)}
           >
             {t('pages.clients.activity.deleteClient')}
           </Button>
         </div>
       </div>
-      <div className="flex flex-col items-start gap-4 self-stretch 2xl:flex-row 2xl:gap-5">
+      <div className="flex flex-col items-start gap-4 self-stretch xl:flex-row xl:gap-5">
         {/* Client Card */}
-        <div className="flex min-h-[44px] w-full flex-col items-start justify-center gap-0 rounded-lg bg-white/50 p-0 2xl:w-[30%]">
+        <div className="flex min-h-[44px] w-full flex-col items-start justify-center gap-0 rounded-lg bg-white/50 p-0 xl:w-[30%]">
           {/* Credit Details (top part of card) */}
           <div className="flex flex-col items-start gap-3 self-stretch px-4 py-4 md:px-6 md:py-5">
             <div className="flex flex-col gap-2 self-stretch">
@@ -1038,7 +1146,7 @@ export function ClientDetailPage() {
                   {t('pages.clients.detail.department')}
                 </label>
                 <p className="text-dark-500 ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                  {client.department}
+                  {client.department || '-'}
                 </p>
               </div>
               <div className="flex min-h-8 items-center self-stretch p-0">
@@ -1046,7 +1154,7 @@ export function ClientDetailPage() {
                   {t('pages.clients.filters.responsibleEmployee')}
                 </label>
                 <p className="text-dark-500 ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                  {client.responsibleEmployee}
+                  {client.responsibleEmployee || '-'}
                 </p>
               </div>
               <div className="flex min-h-8 items-center self-stretch p-0">
@@ -1152,8 +1260,9 @@ export function ClientDetailPage() {
                   type="button"
                   data-tab="personal"
                   onClick={() => setActiveClientCardTab('personal')}
+                  title={t('pages.clients.detail.tabs.personal')}
                   className={cn(
-                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-start self-stretch rounded-md p-3 md:rounded-none md:border-b-0 md:border-l-2 md:p-4',
+                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-3 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-4 xl:p-3 2xl:p-4',
                     activeClientCardTab === 'personal'
                       ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
                       : 'md:border-transparent'
@@ -1162,13 +1271,13 @@ export function ClientDetailPage() {
                   <Icons.UserAccount
                     size={24}
                     className={cn(
-                      'mx-1 my-1',
+                      'mx-1 my-1 shrink-0',
                       activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
                     )}
                   />
                   <span
                     className={cn(
-                      'text-sm font-medium whitespace-nowrap',
+                      'text-sm font-medium whitespace-nowrap xl:hidden 2xl:inline',
                       activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
                     )}
                   >
@@ -1179,8 +1288,9 @@ export function ClientDetailPage() {
                   type="button"
                   data-tab="work"
                   onClick={() => setActiveClientCardTab('work')}
+                  title={t('pages.clients.detail.tabs.work')}
                   className={cn(
-                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-start self-stretch rounded-md p-3 md:rounded-none md:border-b-0 md:border-l-2 md:p-4',
+                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-3 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-4 xl:p-3 2xl:p-4',
                     activeClientCardTab === 'work'
                       ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
                       : 'md:border-transparent'
@@ -1189,13 +1299,13 @@ export function ClientDetailPage() {
                   <Icons.Briefcase01
                     size={24}
                     className={cn(
-                      'mx-1 my-1',
+                      'mx-1 my-1 shrink-0',
                       activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
                     )}
                   />
                   <span
                     className={cn(
-                      'text-sm font-medium whitespace-nowrap',
+                      'text-sm font-medium whitespace-nowrap xl:hidden 2xl:inline',
                       activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
                     )}
                   >
@@ -1206,8 +1316,9 @@ export function ClientDetailPage() {
                   type="button"
                   data-tab="recommenders"
                   onClick={() => setActiveClientCardTab('recommenders')}
+                  title={t('pages.clients.detail.tabs.recommenders')}
                   className={cn(
-                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-start self-stretch rounded-md p-3 md:rounded-none md:border-b-0 md:border-l-2 md:p-4',
+                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-3 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-4 xl:p-3 2xl:p-4',
                     activeClientCardTab === 'recommenders'
                       ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
                       : 'md:border-transparent'
@@ -1216,7 +1327,7 @@ export function ClientDetailPage() {
                   <Icons.UserCheck01
                     size={24}
                     className={cn(
-                      'mx-1 my-1',
+                      'mx-1 my-1 shrink-0',
                       activeClientCardTab === 'recommenders'
                         ? 'text-secondary-800'
                         : 'text-gray-700'
@@ -1224,7 +1335,7 @@ export function ClientDetailPage() {
                   />
                   <span
                     className={cn(
-                      'text-sm font-medium whitespace-nowrap',
+                      'text-sm font-medium whitespace-nowrap xl:hidden 2xl:inline',
                       activeClientCardTab === 'recommenders'
                         ? 'text-secondary-800'
                         : 'text-gray-700'
@@ -1237,8 +1348,9 @@ export function ClientDetailPage() {
                   type="button"
                   data-tab="addresses"
                   onClick={() => setActiveClientCardTab('addresses')}
+                  title={t('pages.clients.detail.tabs.addresses')}
                   className={cn(
-                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-start self-stretch rounded-md p-3 md:rounded-none md:border-b-0 md:border-l-2 md:p-4',
+                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-3 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-4 xl:p-3 2xl:p-4',
                     activeClientCardTab === 'addresses'
                       ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
                       : 'md:border-transparent'
@@ -1247,13 +1359,13 @@ export function ClientDetailPage() {
                   <Icons.Location01
                     size={24}
                     className={cn(
-                      'mx-1 my-1',
+                      'mx-1 my-1 shrink-0',
                       activeClientCardTab === 'addresses' ? 'text-secondary-800' : 'text-gray-700'
                     )}
                   />
                   <span
                     className={cn(
-                      'text-sm font-medium whitespace-nowrap',
+                      'text-sm font-medium whitespace-nowrap xl:hidden 2xl:inline',
                       activeClientCardTab === 'addresses' ? 'text-secondary-800' : 'text-gray-700'
                     )}
                   >
@@ -1481,7 +1593,7 @@ export function ClientDetailPage() {
         </div>
 
         {/* Right Column - Data + Comments Card with 6 horizontal top tabs */}
-        <div className="flex w-full flex-1 flex-col items-start gap-5 self-stretch 2xl:w-[64%]">
+        <div className="flex w-full flex-1 flex-col items-start gap-5 self-stretch xl:w-[64%]">
           <div className="flex flex-1 flex-col items-start gap-0 self-stretch rounded-lg bg-white/50 p-0">
             {/* Horizontal tab bar - 6 tabs at the top - scrollable on mobile */}
             <div className="relative mx-3 flex items-center gap-0 self-stretch border-b border-gray-200">
@@ -2367,6 +2479,17 @@ export function ClientDetailPage() {
             >
               {t('pages.clients.detail.commentsFromPrimaryCreditor')}
             </button>
+            <button
+              onClick={() => setActiveCommentTab('dial-history')}
+              className={cn(
+                'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                activeCommentTab === 'dial-history'
+                  ? 'bg-secondary-800 text-white'
+                  : 'hover:bg-primary-200/10 hover:text-secondary-800'
+              )}
+            >
+              {t('pages.clients.detail.dialHistory')}
+            </button>
           </div>
           {/* View All link */}
           <LinkButton
@@ -2380,11 +2503,10 @@ export function ClientDetailPage() {
         </div>
 
         {/* Content based on active tab */}
-        {isActivitiesLoading ? (
-          <TableSkeleton columns={7} rows={3} />
-        ) : activeCommentTab === 'comments' ? (
-          /* Comments tab - Agent interactions/activities */
-          client.activities.length === 0 ? (
+        {activeCommentTab === 'comments' &&
+          (isActivitiesLoading ? (
+            <TableSkeleton columns={9} rows={3} className="w-full" />
+          ) : client.activities.length === 0 ? (
             <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
               <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
                 <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
@@ -2414,21 +2536,46 @@ export function ClientDetailPage() {
               data={client.activities.slice(0, 10)}
               className="w-full"
             />
-          )
-        ) : (
-          /* Primary Creditor tab - Historical data from debt seller */
-          <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
-            <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
-              <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-              <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
-                {t('pages.clients.detail.noPrimaryCreditorComments')}
+          ))}
+
+        {activeCommentTab === 'primary' &&
+          (isLoansLoading ? (
+            <TableSkeleton columns={3} rows={3} className="w-full" />
+          ) : creditorNotes.length === 0 ? (
+            <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
+              <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
+                <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
+                <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                  {t('pages.clients.detail.noPrimaryCreditorComments')}
+                </p>
+              </div>
+              <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
+                {t('pages.clients.detail.primaryCreditorCommentsDescription')}
               </p>
             </div>
-            <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
-              {t('pages.clients.detail.primaryCreditorCommentsDescription')}
-            </p>
-          </div>
-        )}
+          ) : (
+            <DataTable columns={creditorNoteColumns} data={creditorNotes} className="w-full" />
+          ))}
+
+        {activeCommentTab === 'dial-history' &&
+          (isDialHistoryLoading ? (
+            <TableSkeleton columns={4} rows={3} className="w-full" />
+          ) : dialHistory.length === 0 ? (
+            <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
+              <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
+                <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
+                <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                  {t('pages.clients.detail.noDialHistory')}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <DataTable
+              columns={dialHistoryColumns}
+              data={dialHistory.slice(0, 20)}
+              className="w-full"
+            />
+          ))}
       </div>
 
       {/* Add Note Modal */}

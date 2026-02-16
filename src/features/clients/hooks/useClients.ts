@@ -36,6 +36,7 @@ export const clientKeys = {
   operatorsSection: (id: number) => [...clientKeys.details(), id, 'operators'] as const,
   documents: (id: number) => [...clientKeys.details(), id, 'documents'] as const,
   activities: (id: number) => [...clientKeys.details(), id, 'activities'] as const,
+  dialHistory: (id: number) => [...clientKeys.details(), id, 'dialHistory'] as const,
   search: (params: SearchByTinParams) => [...clientKeys.all, 'search', params] as const,
   count: () => [...clientKeys.all, 'count'] as const,
   prioritySummary: () => [...clientKeys.all, 'priority-summary'] as const,
@@ -450,6 +451,19 @@ export function useClientActivities(clientId: number, enabled = true) {
   })
 }
 
+/**
+ * Get dial history for a client.
+ */
+export function useClientDialHistory(clientId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.dialHistory(clientId),
+    queryFn: () => interactionApi.getClientDialHistory(clientId, { limit: 500 }),
+    enabled: enabled && clientId > 0,
+    staleTime: 30000,
+    select: (data) => data.records ?? [],
+  })
+}
+
 // --- Task mutations ---
 
 /**
@@ -466,37 +480,6 @@ export function useCreateTask() {
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       const message = error?.response?.data?.detail || 'Failed to create task'
-      toast.error(message)
-    },
-  })
-}
-
-/**
- * Create a note for a client
- */
-export function useCreateClientNote() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: ({
-      clientId,
-      data,
-    }: {
-      clientId: number
-      data: {
-        content: string
-        note_type?: string
-        related_call_id?: number
-        related_payment_id?: number
-        related_debt_id?: number
-      }
-    }) => clientApi.createClientNote(clientId, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
-      toast.success('Note added successfully')
-    },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to add note'
       toast.error(message)
     },
   })

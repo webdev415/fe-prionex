@@ -688,12 +688,17 @@
         "tableHeaders": {
           "date": "Дата",
           "number": "Номер",
+          "loanNumber": "Номер займа",
+          "phone": "Телефон",
+          "type": "Тип",
+          "subtype": "Подтип",
           "contactType": "Тип контакта",
           "result": "Результат",
           "promisedAmount": "Обещанная сумма",
           "promisedDate": "Обещанная дата",
           "comment": "Комментарий",
-          "employee": "Сотрудник"
+          "employee": "Сотрудник",
+          "shouldDial": "Набирать"
         }
       },
       "detail": {
@@ -748,7 +753,11 @@
           "date": "Дата",
           "whoAppointed": "Кто назначил",
           "whoIsResponsible": "Кто ответственный",
-          "note": "Примечание"
+          "note": "Примечание",
+          "documentName": "Название",
+          "documentType": "Тип",
+          "uploadDate": "Дата загрузки",
+          "documentSize": "Размер"
         },
         "loansInProcess": "Займы в процессе",
         "closedLoans": "Закрытые займы",
@@ -778,6 +787,8 @@
         "addFirstNote": "Добавить первую заметку",
         "noPrimaryCreditorComments": "Нет комментариев от первичного кредитора",
         "primaryCreditorCommentsDescription": "Исторические данные о взаимодействии от продавца долга появятся здесь, когда будут доступны.",
+        "dialHistory": "История набора",
+        "noDialHistory": "История набора отсутствует",
         "totalCost": "Общая стоимость",
         "deliveryRate": "Уровень доставки",
         "delivered": "доставлено",

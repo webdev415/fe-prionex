@@ -10,6 +10,7 @@ import type {
   InteractionTypeResponse,
   InteractionSubtypeResponse,
   InteractionResultResponse,
+  DialHistoryListResponse,
 } from './types'
 
 const BASE_URL = '/api/v1/interactions'
@@ -55,8 +56,9 @@ export async function createInteraction(data: {
   promise_to_pay_amount?: number
   follow_up_required?: boolean
   follow_up_date?: string
-  delay_reason_id?: number
-  refusal_reason_id?: number
+  related_call_id?: number
+  related_sms_id?: number
+  related_payment_id?: number
 }): Promise<InteractionResponse> {
   const response = await api.post<InteractionResponse>(BASE_URL + '/', data)
   return response.data
@@ -101,26 +103,16 @@ export async function getInteractionResults(
 }
 
 /**
- * List delay reasons for dropdowns
+ * List dial history for a client
  */
-export async function getDelayReasons(
-  activeOnly = true
-): Promise<{ delay_reasons: Array<{ id: number; code: string; name: string }> }> {
-  const response = await api.get(`${BASE_URL}/delay-reasons`, {
-    params: { active_only: activeOnly },
-  })
-  return response.data
-}
-
-/**
- * List refusal reasons for dropdowns
- */
-export async function getRefusalReasons(
-  activeOnly = true
-): Promise<{ refusal_reasons: Array<{ id: number; code: string; name: string }> }> {
-  const response = await api.get(`${BASE_URL}/refusal-reasons`, {
-    params: { active_only: activeOnly },
-  })
+export async function getClientDialHistory(
+  clientId: number,
+  params: { skip?: number; limit?: number } = {}
+): Promise<DialHistoryListResponse> {
+  const response = await api.get<DialHistoryListResponse>(
+    `${BASE_URL}/dial-history/client/${clientId}`,
+    { params }
+  )
   return response.data
 }
 
@@ -130,6 +122,5 @@ export const interactionApi = {
   getInteractionTypes,
   getInteractionSubtypes,
   getInteractionResults,
-  getDelayReasons,
-  getRefusalReasons,
+  getClientDialHistory,
 }

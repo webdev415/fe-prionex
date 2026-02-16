@@ -312,7 +312,7 @@ export function DataTable<T extends { id: number | string }>({
                         : 'text-left'
                   } ${column.sortable ? 'cursor-pointer transition-colors select-none hover:bg-gray-50' : ''} ${
                     index < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''
-                  }`}
+                  } ${column.className || ''}`}
                   onClick={() => handleSort(column)}
                 >
                   <span className="inline-flex items-center gap-1">

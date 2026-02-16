@@ -7,13 +7,18 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useURLState, useAutoPersistedState } from '@/hooks'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { DateSelect } from '@/components/ui/DateSelect'
-import { RadioGroup, RadioItem } from '@/components/ui/Radio'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { Pagination } from '@/components/ui/Pagination'
 import { AddNoteModal } from '@/pages/ClientManagement/components/AddNoteModal'
 import { PriorityBadge } from './components/PriorityBadge'
@@ -22,8 +27,8 @@ import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
 import { useCallStore } from '@/stores/callStore'
 import { useClientProfile, useClientActivities } from '@/features/clients/hooks/useClients'
-
-type CommunicationType = 'calls' | 'sms' | 'notes' | 'all'
+import { useCreateNoteInteraction } from '@/features/clients/hooks/useNoteInteraction'
+import { useInteractionTypes } from '@/features/clients/hooks/useNoteInteraction'
 
 export function ActivityTimelinePage() {
   const { t } = useTranslation('common')
@@ -56,45 +61,19 @@ export function ActivityTimelinePage() {
     }
   }, [profile])
 
-  // URL state for pagination
-  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
-  const [rowsPerPage, setRowsPerPage] = useURLState<number>('pageSize', 10)
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
 
-  // URL state for filters
-  const [communicationTypeUrl, setCommunicationTypeUrl] = useURLState<string>('type', 'all')
-  const [dateFromUrl, setDateFromUrl] = useURLState<string>('date_from', '')
-  const [dateToUrl, setDateToUrl] = useURLState<string>('date_to', '')
+  // Filter state
+  const [selectedTypeId, setSelectedTypeId] = useState<string>('all')
+  const [dateFrom, setDateFrom] = useState<Date | null>(null)
+  const [dateTo, setDateTo] = useState<Date | null>(null)
 
-  // Add persistence for state
-  useAutoPersistedState(
-    'activity-timeline-state',
-    {
-      currentPage,
-      rowsPerPage,
-      communicationTypeUrl,
-      dateFromUrl,
-      dateToUrl,
-    },
-    {
-      currentPage: setCurrentPage,
-      rowsPerPage: setRowsPerPage,
-      communicationTypeUrl: setCommunicationTypeUrl,
-      dateFromUrl: setDateFromUrl,
-      dateToUrl: setDateToUrl,
-    }
-  )
+  // Fetch interaction types for the filter dropdown
+  const { data: interactionTypes } = useInteractionTypes()
 
-  // Convert URL state to component state
-  const communicationType = communicationTypeUrl as CommunicationType
-  const dateFrom = useMemo(() => (dateFromUrl ? new Date(dateFromUrl) : null), [dateFromUrl])
-  const dateTo = useMemo(() => (dateToUrl ? new Date(dateToUrl) : null), [dateToUrl])
-
-  // Create setters that update URL state
-  const setCommunicationType = (value: CommunicationType) => setCommunicationTypeUrl(value)
-  const setDateFrom = (value: Date | null) =>
-    setDateFromUrl(value ? value.toISOString().split('T')[0] : '')
-  const setDateTo = (value: Date | null) =>
-    setDateToUrl(value ? value.toISOString().split('T')[0] : '')
+  const { mutate: createNote } = useCreateNoteInteraction()
 
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
@@ -108,14 +87,15 @@ export function ActivityTimelinePage() {
       id: a.id,
       date: a.interaction_date ? new Date(a.interaction_date).toLocaleDateString() : '-',
       dateISO: a.interaction_date ?? '', // Keep ISO date for filtering
-      number: a.phone_used ?? '-',
-      contactType: a.direction === 'outbound' ? 'Outgoing' : 'Incoming',
+      number: a.number_k ?? '-',
+      type_id: a.type_id,
+      type: a.type_name ?? '-',
+      subtype: a.subtype_name ?? '-',
       result: a.result_name ?? a.status ?? '-',
       promisedAmount: a.promise_to_pay_amount ? parseFloat(a.promise_to_pay_amount) : 0,
       promisedDate: a.promise_to_pay_date ?? '-',
       comment: a.summary ?? a.notes ?? '-',
       employee: a.user_name ?? '-',
-      channel: a.channel,
     }))
   }, [activities])
 
@@ -129,31 +109,20 @@ export function ActivityTimelinePage() {
       .replace(/,/g, ' ')
   }
 
-  // Filter activities based on communication type and date range
+  // Filter activities based on type and date range
   const filteredActivities = useMemo(() => {
     let result = [...(activitiesState || [])]
 
-    // Filter by communication type
-    if (communicationType !== 'all') {
-      result = result.filter((activity) => {
-        const contactType = activity.contactType as string
-        if (communicationType === 'calls') {
-          return contactType === 'Outgoing' || contactType === 'Incoming'
-        }
-        if (communicationType === 'sms') {
-          return contactType === 'SMS'
-        }
-        if (communicationType === 'notes') {
-          return contactType === 'Note'
-        }
-        return true
-      })
+    // Filter by interaction type
+    if (selectedTypeId !== 'all') {
+      const typeId = Number(selectedTypeId)
+      result = result.filter((activity) => activity.type_id === typeId)
     }
 
     // Filter by date range using ISO date
     if (dateFrom || dateTo) {
       result = result.filter((activity) => {
-        if (!activity.dateISO) return true // Include activities without date
+        if (!activity.dateISO) return true
         const activityDate = new Date(activity.dateISO)
         activityDate.setHours(0, 0, 0, 0)
 
@@ -164,7 +133,7 @@ export function ActivityTimelinePage() {
         }
         if (dateTo) {
           const toDate = new Date(dateTo)
-          toDate.setHours(23, 59, 59, 999) // Include the entire end date
+          toDate.setHours(23, 59, 59, 999)
           if (activityDate > toDate) return false
         }
         return true
@@ -172,7 +141,7 @@ export function ActivityTimelinePage() {
     }
 
     return result
-  }, [activitiesState, communicationType, dateFrom, dateTo])
+  }, [activitiesState, selectedTypeId, dateFrom, dateTo])
 
   // Calculate total pages (minimum 1 to avoid division issues)
   const totalPages = Math.max(1, Math.ceil(filteredActivities.length / rowsPerPage))
@@ -187,25 +156,52 @@ export function ActivityTimelinePage() {
   }, [filteredActivities, currentPage, totalPages, rowsPerPage])
 
   const handleClearFilters = () => {
-    setCommunicationType('all')
+    setSelectedTypeId('all')
     setDateFrom(null)
     setDateTo(null)
     setCurrentPage(1)
   }
 
   const activityColumns: Column<(typeof activitiesState)[0]>[] = [
-    { key: 'date', header: t('pages.clients.activity.tableHeaders.date'), align: 'left' },
-    { key: 'number', header: t('pages.clients.activity.tableHeaders.number'), align: 'left' },
     {
-      key: 'contactType',
-      header: t('pages.clients.activity.tableHeaders.contactType'),
+      key: 'date',
+      header: t('pages.clients.activity.tableHeaders.date'),
       align: 'left',
+      className: 'w-[80px]',
     },
-    { key: 'result', header: t('pages.clients.activity.tableHeaders.result'), align: 'left' },
+    {
+      key: 'number',
+      header: t('pages.clients.activity.tableHeaders.loanNumber', 'Loan Number'),
+      align: 'left',
+      className: 'w-[100px]',
+    },
+    {
+      key: 'type',
+      header: t('pages.clients.activity.tableHeaders.type', 'Type'),
+      align: 'left',
+      render: (activity) => (
+        <div className="max-w-[120px] break-words whitespace-normal">{activity.type}</div>
+      ),
+    },
+    {
+      key: 'subtype',
+      header: t('pages.clients.activity.tableHeaders.subtype', 'Subtype'),
+      align: 'left',
+      render: (activity) => (
+        <div className="max-w-[120px] break-words whitespace-normal">{activity.subtype}</div>
+      ),
+    },
+    {
+      key: 'result',
+      header: t('pages.clients.activity.tableHeaders.result'),
+      align: 'left',
+      className: 'w-[110px]',
+    },
     {
       key: 'promisedAmount',
       header: t('pages.clients.activity.tableHeaders.promisedAmount'),
       align: 'right',
+      className: 'w-[90px]',
       render: (activity) =>
         activity.promisedAmount ? `${formatCurrencyWithDecimals(activity.promisedAmount)}₴` : '-',
     },
@@ -213,22 +209,29 @@ export function ActivityTimelinePage() {
       key: 'promisedDate',
       header: t('pages.clients.activity.tableHeaders.promisedDate'),
       align: 'left',
+      className: 'w-[90px]',
       render: (activity) => activity.promisedDate || '-',
     },
     {
       key: 'comment',
       header: t('pages.clients.activity.tableHeaders.comment'),
       align: 'left',
+      className: 'min-w-[250px]',
       render: (activity) => (
-        <div className="max-w-[200px] py-2 text-sm leading-tight break-words whitespace-normal">
+        <div className="py-2 text-sm leading-tight break-words whitespace-normal">
           {activity.comment || '-'}
         </div>
       ),
     },
-    { key: 'employee', header: t('pages.clients.activity.tableHeaders.employee'), align: 'left' },
+    {
+      key: 'employee',
+      header: t('pages.clients.activity.tableHeaders.employee'),
+      align: 'left',
+      className: 'w-[90px]',
+    },
   ]
 
-  const hasFilters = communicationType !== 'all' || dateFrom || dateTo
+  const hasFilters = selectedTypeId !== 'all' || dateFrom || dateTo
 
   // Show loading skeleton while loading or if client data not available
   if (isLoading || !client) {
@@ -301,41 +304,30 @@ export function ActivityTimelinePage() {
 
       <div className="flex flex-col items-start gap-5 self-stretch rounded-xl bg-white/50 p-3 md:p-6">
         <div className="flex flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:justify-between">
-          {/* Type of communication */}
+          {/* Type filter */}
           <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center lg:flex-1">
             <label className="text-dark-500 shrink-0 text-xs leading-[140%] font-medium tracking-[-0.24px]">
-              {t('pages.clients.activity.typeOfCommunication')}:
+              {t('pages.clients.activity.tableHeaders.type', 'Type')}:
             </label>
-            <RadioGroup
-              value={communicationType}
-              onValueChange={(value) => setCommunicationType(value as CommunicationType)}
-              className="flex flex-1 flex-wrap items-center gap-2 sm:gap-4"
+            <Select
+              value={selectedTypeId}
+              onValueChange={(value) => {
+                setSelectedTypeId(value)
+                setCurrentPage(1)
+              }}
             >
-              <div className="flex items-center gap-2">
-                <RadioItem value="calls" id="calls" />
-                <label htmlFor="calls" className="text-dark-500 cursor-pointer text-sm font-light">
-                  {t('pages.clients.activity.calls')}
-                </label>
-              </div>
-              <div className="flex items-center gap-2">
-                <RadioItem value="sms" id="sms" />
-                <label htmlFor="sms" className="text-dark-500 cursor-pointer text-sm font-light">
-                  {t('pages.clients.activity.sms')}
-                </label>
-              </div>
-              <div className="flex items-center gap-2">
-                <RadioItem value="notes" id="notes" />
-                <label htmlFor="notes" className="text-dark-500 cursor-pointer text-sm font-light">
-                  {t('pages.clients.activity.notes')}
-                </label>
-              </div>
-              <div className="flex items-center gap-2">
-                <RadioItem value="all" id="all" />
-                <label htmlFor="all" className="text-dark-500 cursor-pointer text-sm font-light">
-                  {t('pages.clients.activity.all')}
-                </label>
-              </div>
-            </RadioGroup>
+              <SelectTrigger className="w-full sm:w-[200px]" aria-label="Type">
+                <SelectValue placeholder={t('pages.clients.activity.all')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('pages.clients.activity.all')}</SelectItem>
+                {interactionTypes?.map((type) => (
+                  <SelectItem key={type.id} value={type.id.toString()}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Date range */}
@@ -413,8 +405,7 @@ export function ActivityTimelinePage() {
         phoneNumber={client?.phones?.[0]?.number || ''}
         clientId={clientId}
         onSave={(data) => {
-          // TODO: Save note to API
-          console.log('Note saved:', data)
+          createNote({ clientId, data })
         }}
       />
 
