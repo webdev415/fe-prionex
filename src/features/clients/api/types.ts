@@ -19,7 +19,6 @@ export interface DebtDetail {
   total_paid?: string | null
   last_payment_date?: string | null
   last_payment_amount?: string | null
-  debt_notes?: string | null
   // 12 fields added for client detail page
   principal_amount?: string | null
   interest_amount?: string | null
@@ -248,6 +247,7 @@ export interface ClientProfileResponse {
   is_fraudster: boolean
   is_military: boolean
   has_nbu_complaint: boolean
+  sale_notes?: string | null
   responsible_employee_id?: number | null
   responsible_employee_name?: string | null
   responsible_searcher_id?: number | null

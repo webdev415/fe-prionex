@@ -225,20 +225,6 @@ export function ClientDetailPage() {
     clientId,
     isValidClientId
   )
-  // Creditor notes derived from debts that have debt_notes
-  const creditorNotes = useMemo(
-    () =>
-      (loans ?? [])
-        .filter((d) => d.debt_notes && d.debt_notes.trim() !== '')
-        .map((d) => ({
-          id: d.id,
-          contract_number: d.contract_number,
-          seller_company: d.seller_company,
-          debt_notes: d.debt_notes!,
-        })),
-    [loans]
-  )
-
   // Fetch client tags from API (real)
   const { data: clientTags } = useClientTags(clientId)
 
@@ -779,29 +765,6 @@ export function ClientDetailPage() {
       header: t('pages.clients.activity.tableHeaders.employee'),
       align: 'left',
       className: 'w-[90px]',
-    },
-  ]
-
-  const creditorNoteColumns: Column<(typeof creditorNotes)[0]>[] = [
-    {
-      key: 'contract_number',
-      header: t('pages.clients.detail.tableHeaders.loanNumber'),
-      align: 'left',
-    },
-    {
-      key: 'seller_company',
-      header: t('pages.clients.detail.tableHeaders.counterparty'),
-      align: 'left',
-    },
-    {
-      key: 'debt_notes',
-      header: t('pages.clients.activity.tableHeaders.comment'),
-      align: 'left',
-      render: (row) => (
-        <div className="min-w-[300px] py-2 text-sm leading-tight break-words whitespace-normal">
-          {row.debt_notes || '-'}
-        </div>
-      ),
     },
   ]
 
@@ -2539,9 +2502,9 @@ export function ClientDetailPage() {
           ))}
 
         {activeCommentTab === 'primary' &&
-          (isLoansLoading ? (
-            <TableSkeleton columns={3} rows={3} className="w-full" />
-          ) : creditorNotes.length === 0 ? (
+          (isProfileLoading ? (
+            <TableSkeleton columns={1} rows={3} className="w-full" />
+          ) : !profile?.sale_notes?.trim() ? (
             <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
               <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
                 <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
@@ -2554,7 +2517,11 @@ export function ClientDetailPage() {
               </p>
             </div>
           ) : (
-            <DataTable columns={creditorNoteColumns} data={creditorNotes} className="w-full" />
+            <div className="w-full p-4">
+              <p className="text-dark-500 text-sm leading-relaxed break-words whitespace-pre-wrap">
+                {profile.sale_notes}
+              </p>
+            </div>
           ))}
 
         {activeCommentTab === 'dial-history' &&
@@ -2570,11 +2537,7 @@ export function ClientDetailPage() {
               </div>
             </div>
           ) : (
-            <DataTable
-              columns={dialHistoryColumns}
-              data={dialHistory.slice(0, 20)}
-              className="w-full"
-            />
+            <DataTable columns={dialHistoryColumns} data={dialHistory} className="w-full" />
           ))}
       </div>
 
