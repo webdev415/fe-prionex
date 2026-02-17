@@ -2537,11 +2537,7 @@ export function ClientDetailPage() {
               </div>
             </div>
           ) : (
-            <DataTable
-              columns={dialHistoryColumns}
-              data={dialHistory.slice(0, 20)}
-              className="w-full"
-            />
+            <DataTable columns={dialHistoryColumns} data={dialHistory} className="w-full" />
           ))}
       </div>
 

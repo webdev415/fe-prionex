@@ -6,6 +6,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { Modal, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -57,6 +58,8 @@ export function CallRecordingModal({
     }
   }, [open, setOpenCallModal, minimizedCall])
   const [isPlaying, setIsPlaying] = useState(false)
+  const [isAudioLoading, setIsAudioLoading] = useState(true)
+  const [isDownloading, setIsDownloading] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0)
@@ -93,41 +96,16 @@ export function CallRecordingModal({
     }
   }
 
-  // Setup audio element event listeners
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration)
-    }
-
-    const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime)
-    }
-
-    const handleEnded = () => {
-      setIsPlaying(false)
-    }
-
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata)
-    audio.addEventListener('timeupdate', handleTimeUpdate)
-    audio.addEventListener('ended', handleEnded)
-
-    return () => {
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata)
-      audio.removeEventListener('timeupdate', handleTimeUpdate)
-      audio.removeEventListener('ended', handleEnded)
-    }
-  }, [open])
+  // Audio event handlers (inline on <audio> element to avoid race conditions)
 
   // Reset when modal closes
   useEffect(() => {
     if (!open) {
-      // Reset state when modal closes
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsPlaying(false)
+      setIsAudioLoading(true)
+      setIsDownloading(false)
       setCurrentTime(0)
+      setDuration(0)
       setPlaybackSpeed(1.0)
       setShowSpeedMenu(false)
     }
@@ -200,7 +178,18 @@ export function CallRecordingModal({
     <Modal open={open} onClose={onClose} maxWidth="xl" className="p-4 sm:p-6">
       {/* Hidden audio element for playback */}
       {recordingUrl && (
-        <audio ref={audioRef} src={recordingUrl} preload="metadata" className="hidden">
+        <audio
+          ref={audioRef}
+          src={recordingUrl}
+          preload="metadata"
+          className="hidden"
+          onLoadedMetadata={(e) => {
+            setDuration(e.currentTarget.duration)
+            setIsAudioLoading(false)
+          }}
+          onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+          onEnded={() => setIsPlaying(false)}
+        >
           <track kind="captions" />
         </audio>
       )}
@@ -222,9 +211,9 @@ export function CallRecordingModal({
         </div>
 
         {/* Title */}
-        <h2 className="text-dark-500 self-stretch text-center text-xl leading-tight font-medium sm:text-2xl">
+        <DialogPrimitive.Title className="text-dark-500 self-stretch text-center text-xl leading-tight font-medium sm:text-2xl">
           {t('pages.clients.modals.callRecording.title')}
-        </h2>
+        </DialogPrimitive.Title>
 
         {/* Call Details */}
         <div className="flex flex-col gap-2">
@@ -263,46 +252,61 @@ export function CallRecordingModal({
         </div>
 
         {/* Audio Player */}
-        <div className="flex items-center gap-2 self-stretch rounded-full bg-white px-2 py-2 sm:gap-3 sm:px-[14px] sm:py-[15px]">
-          <button onClick={handlePlayPause} className="shrink-0 cursor-pointer">
-            {isPlaying ? (
-              <Icons.Pause size={18} className="text-dark-500 sm:size-5" strokeWidth={1.5} />
-            ) : (
-              <Icons.PlayCircle02 size={18} className="text-dark-500 sm:size-5" strokeWidth={1.5} />
-            )}
-          </button>
-          <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
-            <span className="text-dark-500 shrink-0 text-xs font-medium sm:text-sm">
-              {formatTime(Math.floor(currentTime))}
-            </span>
-            <div
-              className="relative h-1 min-w-0 flex-1 cursor-pointer rounded-full bg-gray-200"
-              onClick={handleProgressChange}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  handleProgressChange(e as unknown as React.MouseEvent<HTMLDivElement>)
-                }
-              }}
-              role="slider"
-              tabIndex={0}
-              aria-label={t('pages.clients.modals.callRecording.audioProgress')}
-              aria-valuemin={0}
-              aria-valuemax={duration}
-              aria-valuenow={currentTime}
-            >
-              <div
-                className="h-full rounded-full bg-gray-700 transition-all"
-                style={{ width: `${progressPercentage}%` }}
-              />
+        <div className="relative">
+          {isAudioLoading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-full bg-white/80">
+              <Icons.Spinner className="h-6 w-6" />
             </div>
-            <span className="text-dark-500 shrink-0 text-xs font-medium sm:text-sm">
-              {formatTime(Math.floor(duration))}
-            </span>
+          )}
+          <div className="flex items-center gap-2 self-stretch rounded-full bg-white px-2 py-2 sm:gap-3 sm:px-[14px] sm:py-[15px]">
+            <button
+              onClick={handlePlayPause}
+              disabled={isAudioLoading}
+              className="shrink-0 cursor-pointer disabled:opacity-40"
+            >
+              {isPlaying ? (
+                <Icons.Pause size={18} className="text-dark-500 sm:size-5" strokeWidth={1.5} />
+              ) : (
+                <Icons.PlayCircle02
+                  size={18}
+                  className="text-dark-500 sm:size-5"
+                  strokeWidth={1.5}
+                />
+              )}
+            </button>
+            <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
+              <span className="text-dark-500 shrink-0 text-xs font-medium sm:text-sm">
+                {formatTime(Math.floor(currentTime))}
+              </span>
+              <div
+                className="relative h-1 min-w-0 flex-1 cursor-pointer rounded-full bg-gray-200"
+                onClick={handleProgressChange}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    handleProgressChange(e as unknown as React.MouseEvent<HTMLDivElement>)
+                  }
+                }}
+                role="slider"
+                tabIndex={0}
+                aria-label={t('pages.clients.modals.callRecording.audioProgress')}
+                aria-valuemin={0}
+                aria-valuemax={duration}
+                aria-valuenow={currentTime}
+              >
+                <div
+                  className="h-full rounded-full bg-gray-700 transition-all"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+              <span className="text-dark-500 shrink-0 text-xs font-medium sm:text-sm">
+                {formatTime(Math.floor(duration))}
+              </span>
+            </div>
+            <button className="text-dark-500 shrink-0 cursor-pointer hover:text-gray-800">
+              <Icons.VolumeHigh size={18} className="sm:size-5" />
+            </button>
           </div>
-          <button className="text-dark-500 shrink-0 cursor-pointer hover:text-gray-800">
-            <Icons.VolumeHigh size={18} className="sm:size-5" />
-          </button>
         </div>
 
         {/* Control Buttons */}
@@ -381,18 +385,34 @@ export function CallRecordingModal({
             variant="primary"
             size="sm"
             className="w-full rounded-md"
-            onClick={() => {
-              if (recordingUrl) {
+            onClick={async () => {
+              if (!recordingUrl || isDownloading) return
+              setIsDownloading(true)
+              try {
+                const resp = await fetch(recordingUrl)
+                const blob = await resp.blob()
+                const url = URL.createObjectURL(blob)
                 const link = document.createElement('a')
-                link.href = recordingUrl
+                link.href = url
                 link.download = `call-${callData.call_id || 'recording'}.wav`
                 document.body.appendChild(link)
                 link.click()
                 document.body.removeChild(link)
+                URL.revokeObjectURL(url)
+              } catch {
+                // silent fail
+              } finally {
+                setIsDownloading(false)
               }
             }}
-            disabled={!recordingUrl}
-            leftIcon={<Icons.Mp301 size={18} className="sm:size-5" />}
+            disabled={!recordingUrl || isDownloading}
+            leftIcon={
+              isDownloading ? (
+                <Icons.Spinner className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
+              ) : (
+                <Icons.Mp301 size={18} className="sm:size-5" />
+              )
+            }
           >
             {t('pages.clients.modals.callRecording.download')}
           </Button>

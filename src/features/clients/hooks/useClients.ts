@@ -340,6 +340,7 @@ export function useClientCallSmsHistory(clientId: number, enabled = true) {
           type: 'Outgoing' as 'Outgoing' | 'Incoming',
           line: '',
           initiated_at: c.initiated_at ?? new Date().toISOString(),
+          recording_path: c.recording_path ?? null,
         }
       })
 
@@ -457,7 +458,7 @@ export function useClientActivities(clientId: number, enabled = true) {
 export function useClientDialHistory(clientId: number, enabled = true) {
   return useQuery({
     queryKey: clientKeys.dialHistory(clientId),
-    queryFn: () => interactionApi.getClientDialHistory(clientId, { limit: 500 }),
+    queryFn: () => interactionApi.getClientDialHistory(clientId, { limit: 10 }),
     enabled: enabled && clientId > 0,
     staleTime: 30000,
     select: (data) => data.records ?? [],
