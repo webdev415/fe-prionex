@@ -206,8 +206,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } finally {
       setAccessToken(null)
 
-      // Clear impersonation sessionStorage
-      sessionStorage.removeItem('impersonation_original_admin')
+      // Clear impersonation localStorage
+      localStorage.removeItem('impersonation_original_admin')
 
       set({
         user: null,
@@ -399,10 +399,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           }
 
           if (isImpersonating) {
-            // In impersonation mode - restore original admin from sessionStorage
+            // In impersonation mode - restore original admin from localStorage
             let originalAdmin: User | null = null
             try {
-              const storedAdmin = sessionStorage.getItem('impersonation_original_admin')
+              const storedAdmin = localStorage.getItem('impersonation_original_admin')
               if (storedAdmin) {
                 originalAdmin = JSON.parse(storedAdmin) as User
               }
@@ -415,7 +415,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               isAuthenticated: true,
               isImpersonating: true,
               impersonatedUser: user,
-              originalAdminUser: originalAdmin, // Restored from sessionStorage
+              originalAdminUser: originalAdmin, // Restored from localStorage
               isLoading: false,
               hasCheckedAuth: true,
             })
@@ -469,10 +469,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             }
 
             if (isImpersonating) {
-              // In impersonation mode - restore original admin from sessionStorage
+              // In impersonation mode - restore original admin from localStorage
               let originalAdmin: User | null = null
               try {
-                const storedAdmin = sessionStorage.getItem('impersonation_original_admin')
+                const storedAdmin = localStorage.getItem('impersonation_original_admin')
                 if (storedAdmin) {
                   originalAdmin = JSON.parse(storedAdmin) as User
                 }
@@ -504,7 +504,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           } else {
             // Cannot extract user info from token - clear all state
             console.error('Failed to extract user info from JWT token')
-            sessionStorage.removeItem('impersonation_original_admin')
+            localStorage.removeItem('impersonation_original_admin')
 
             set({
               user: null,
@@ -627,9 +627,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Preserve original admin user
       const originalAdmin = get().user
 
-      // Store original admin in sessionStorage to survive page refresh
+      // Store original admin in localStorage to survive page refresh and work across tabs
       if (originalAdmin) {
-        sessionStorage.setItem('impersonation_original_admin', JSON.stringify(originalAdmin))
+        localStorage.setItem('impersonation_original_admin', JSON.stringify(originalAdmin))
       }
 
       // Map backend impersonated user data to frontend User type
@@ -748,8 +748,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         timezone: admin_user.timezone,
       }
 
-      // Clear stored admin from sessionStorage
-      sessionStorage.removeItem('impersonation_original_admin')
+      // Clear stored admin from localStorage
+      localStorage.removeItem('impersonation_original_admin')
 
       set({
         isImpersonating: false,
