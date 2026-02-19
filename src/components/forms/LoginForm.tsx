@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Button, Input, PasswordInput } from '@/components/ui'
 
 const loginSchema = z.object({
-  username: z.string().min(1, 'validation.usernameRequired').min(3, 'validation.usernameMinLength'),
+  username: z.string().min(1, 'validation.usernameRequired'),
   password: z.string().min(1, 'validation.passwordRequired').min(8, 'validation.passwordMinLength'),
 })
 

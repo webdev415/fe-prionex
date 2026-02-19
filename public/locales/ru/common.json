@@ -89,11 +89,14 @@
       "addNewUser": "Новый пользователь",
       "noUsersFound": "Пользователи не найдены",
       "errorLoading": "Ошибка загрузки пользователей",
+      "searchPlaceholder": "Поиск по имени, логину или email...",
+      "searchButton": "Поиск",
       "tableHeaders": {
         "username": "Имя пользователя",
         "fullName": "Полное имя",
         "email": "Электронная почта",
         "projectRole": "Проект и роль",
+        "extension": "Расширение / Агент",
         "status": "Статус",
         "actions": "Действия"
       },

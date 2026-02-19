@@ -89,6 +89,8 @@
       "addNewUser": "Новий користувач",
       "noUsersFound": "Користувачів не знайдено",
       "errorLoading": "Помилка завантаження користувачів",
+      "searchPlaceholder": "Пошук за ім'ям, логіном або email...",
+      "searchButton": "Пошук",
       "tableHeaders": {
         "username": "Ім'я користувача",
         "fullName": "Повне ім'я",
