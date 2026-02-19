@@ -5,7 +5,7 @@
  * Integrated with real API using React Query.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -42,9 +42,10 @@ export function UserManagementPage() {
   const navigate = useNavigate()
   const { startImpersonation, user: currentUser, isLoading: authLoading } = useAuth()
 
-  // URL state for pagination
+  // URL state for pagination and search
   const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
   const [pageSize, setPageSize] = useURLState<number>('pageSize', DEFAULT_PAGE_SIZE)
+  const [searchQuery, setSearchQuery] = useURLState<string>('search', '')
 
   // Add persistence for state
   useAutoPersistedState(
@@ -52,10 +53,12 @@ export function UserManagementPage() {
     {
       currentPage,
       pageSize,
+      searchQuery,
     },
     {
       currentPage: setCurrentPage,
       pageSize: setPageSize,
+      searchQuery: setSearchQuery,
     }
   )
 
@@ -86,10 +89,11 @@ export function UserManagementPage() {
     return () => window.removeEventListener('resize', handleResize)
   }, [openDropdownUserId])
 
-  // Fetch users with pagination
+  // Fetch users with pagination and search
   const { data, isLoading, isError, error } = useUsers({
     page: currentPage,
     page_size: pageSize,
+    search: searchQuery || undefined,
   })
 
   const users = data?.users || []
@@ -156,6 +160,10 @@ export function UserManagementPage() {
     if (status === 'inactive') return 'disabled' // Map inactive to disabled for UI
     return 'disabled'
   }
+
+  const handleSearch = useCallback(() => {
+    setCurrentPage(1)
+  }, [setCurrentPage])
 
   // Check if user is active (for toggle state)
   const isActive = (user: ApiUser) => {
@@ -387,6 +395,47 @@ export function UserManagementPage() {
             <Icons.Add size={20} strokeWidth={2} />
           </button>
         </PermissionGuard>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mb-6 flex w-full items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex w-[280px] items-center gap-3 rounded-full border border-gray-200 bg-white pr-2 pl-4 shadow-sm sm:w-[400px] md:w-[500px] lg:w-[600px]">
+            <div className="flex flex-1 items-center gap-2 py-1">
+              <input
+                type="text"
+                placeholder={t('pages.users.searchPlaceholder')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch()
+                  }
+                }}
+                className="text-dark-500 h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+                  type="button"
+                  aria-label="Clear search"
+                >
+                  <Icons.Close size={14} className="text-gray-500" />
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleSearch}
+              disabled={isLoading}
+              className="bg-primary-300 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
+              aria-label={t('pages.users.searchButton')}
+            >
+              <Icons.Search size={18} className="text-dark-500" strokeWidth={1.5} />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Loading State */}
