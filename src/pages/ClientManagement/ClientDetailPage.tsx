@@ -279,7 +279,13 @@ export function ClientDetailPage() {
         tin: profile.tax_id,
         dateOfBirth: profile.date_of_birth ?? '-',
         age: profile.age ?? '-',
-        passport: profile.passport?.number ?? '-',
+        passport: profile.passport
+          ? profile.passport.document_type === 'id_card'
+            ? profile.passport.record_number || '-'
+            : profile.passport.series
+              ? `${profile.passport.series} ${profile.passport.number}`
+              : profile.passport.number || '-'
+          : '-',
         maritalStatus: profile.marital_status
           ? (MARITAL_STATUS_MAP[profile.marital_status] ?? profile.marital_status)
           : '-',

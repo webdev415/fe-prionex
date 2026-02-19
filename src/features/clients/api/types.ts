@@ -254,10 +254,13 @@ export interface ClientProfileResponse {
   responsible_searcher_name?: string | null
   tags: Array<{ id: number; name: string; color?: string | null }>
   passport?: {
+    document_type?: string | null
     series?: string | null
     number: string
     issued_by?: string | null
     issued_date?: string | null
+    record_number?: string | null
+    expires_date?: string | null
   } | null
   employment?: {
     company_name?: string | null
