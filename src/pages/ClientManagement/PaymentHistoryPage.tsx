@@ -191,6 +191,7 @@ export function PaymentHistoryPage() {
         agent_extension: user.asterisk_extension,
         customer_number: phoneNumber,
         caller_id_name: 'CRM Call',
+        campaign_id: user.active_project_id ?? undefined,
         metadata: {
           client_id: clientId,
           client_name: clientName,

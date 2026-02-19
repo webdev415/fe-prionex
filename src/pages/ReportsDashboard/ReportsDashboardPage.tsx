@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
+import { getDateRangeForPeriod } from '@/lib/dateUtils'
 import {
   useDashboard,
   useAgentPerformanceTable,
@@ -75,44 +76,13 @@ export function ReportsDashboardPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const user = useAuthStore((state) => state.user)
   const projectId = activeProjectId ? Number(activeProjectId) : 1
+  const userTimezone = user?.timezone
 
-  // Calculate date range from selected period for operator performance
-  const dateRange = useMemo(() => {
-    const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-
-    switch (selectedPeriod) {
-      case 'today':
-        return {
-          from: today.toISOString().split('T')[0],
-          to: today.toISOString().split('T')[0],
-        }
-      case 'thisWeek': {
-        const dayOfWeek = today.getDay()
-        const monday = new Date(today)
-        monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
-        const sunday = new Date(monday)
-        sunday.setDate(monday.getDate() + 6)
-        return {
-          from: monday.toISOString().split('T')[0],
-          to: sunday.toISOString().split('T')[0],
-        }
-      }
-      case 'thisMonth': {
-        const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-        const lastOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-        return {
-          from: firstOfMonth.toISOString().split('T')[0],
-          to: lastOfMonth.toISOString().split('T')[0],
-        }
-      }
-      default:
-        return {
-          from: today.toISOString().split('T')[0],
-          to: today.toISOString().split('T')[0],
-        }
-    }
-  }, [selectedPeriod])
+  // Calculate date range from selected period in the user's profile timezone
+  const dateRange = useMemo(
+    () => getDateRangeForPeriod(selectedPeriod, userTimezone),
+    [selectedPeriod, userTimezone]
+  )
 
   // Handler to change period and reset custom dates
   const handlePeriodChange = useCallback((newPeriod: Period) => {
@@ -143,6 +113,7 @@ export function ReportsDashboardPage() {
     period: customFromDate || customToDate ? 'custom' : selectedPeriod,
     startDate: customFromDate || actualDateRange.from,
     endDate: customToDate || actualDateRange.to,
+    timezone: userTimezone,
   })
 
   // Fetch operator performance data for table with date range and filters
@@ -151,6 +122,7 @@ export function ReportsDashboardPage() {
     operatorId: selectedOperator ?? undefined,
     fromDate: actualDateRange.from,
     toDate: actualDateRange.to,
+    timezone: userTimezone,
   })
 
   const { mutate: exportDashboard, isPending: isExporting } = useExportDashboard()
@@ -160,18 +132,21 @@ export function ReportsDashboardPage() {
     projectId,
     period: selectedPeriod,
     enabled: showCallsModal,
+    userTimezone,
   })
 
   const contactRateModalQuery = useContactRateModal({
     projectId,
     period: selectedPeriod,
     enabled: showContactRateModal,
+    userTimezone,
   })
 
   const smsModalQuery = useSMSSentModal({
     projectId,
     period: selectedPeriod,
     enabled: showSMSModal,
+    userTimezone,
   })
 
   // Combined loading state
@@ -370,6 +345,7 @@ export function ReportsDashboardPage() {
             customToDate={customToDate}
             onFromDateChange={setCustomFromDate}
             onToDateChange={setCustomToDate}
+            userTimezone={userTimezone}
           />
         </div>
       </div>

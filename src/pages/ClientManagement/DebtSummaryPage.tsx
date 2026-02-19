@@ -187,6 +187,7 @@ export function DebtSummaryPage() {
         agent_extension: user.asterisk_extension,
         customer_number: phoneNumber,
         caller_id_name: 'CRM Call',
+        campaign_id: user.active_project_id ?? undefined,
         metadata: {
           client_id: clientId,
           client_name: clientName,
@@ -380,9 +381,8 @@ export function DebtSummaryPage() {
     const rawProgress = initialTotal > 0 ? (totalPaid / initialTotal) * 100 : 0
     const progressPercentage = Math.max(0, Math.min(100, rawProgress))
 
-    // Last payment: most recently VERIFIED payment (by verified_at timestamp, not payment_date)
-    // Note: This uses paginated data, so if newest verified payment is on another page, it won't show.
-    // For MVP, we assume most recent verified payment is on first page.
+    // Last payment: most recently recorded payment from payment history
+    // Uses the same date field logic as the payment table rows for consistency.
     let lastPaymentAmount = 0
     let lastPaymentDate = ''
     if (paymentHistoryData) {
@@ -390,19 +390,19 @@ export function DebtSummaryPage() {
         (p) => p.status === 'verified'
       )
       if (verifiedBackendPayments.length > 0) {
-        // Sort by verified_at descending (most recent first), then by payment_date descending as fallback
-        const sorted = [...verifiedBackendPayments].sort((a, b) => {
-          if (a.verified_at && b.verified_at) {
-            return b.verified_at.localeCompare(a.verified_at) // Descending (newest first)
-          }
-          // Fallback to payment_date if verified_at missing
-          return b.payment_date.localeCompare(a.payment_date)
-        })
-        const mostRecent = sorted[0] // First = most recent
-        lastPaymentAmount = Number(mostRecent.amount) || 0
-        // Use verified_at timestamp (has actual time when verified), fallback to payment_date or recorded_at
-        lastPaymentDate =
-          mostRecent.verified_at || mostRecent.payment_date || mostRecent.recorded_at
+        // Resolve the display date for each payment (same logic as table row mapping)
+        const withDate = verifiedBackendPayments.map((p) => ({
+          p,
+          displayDate:
+            p.status === 'verified' && p.verified_at
+              ? p.verified_at
+              : p.recorded_at || p.payment_date,
+        }))
+        // Sort by displayDate descending (most recent first)
+        withDate.sort((a, b) => b.displayDate.localeCompare(a.displayDate))
+        const mostRecent = withDate[0]
+        lastPaymentAmount = Number(mostRecent.p.amount) || 0
+        lastPaymentDate = mostRecent.displayDate
       }
     }
 

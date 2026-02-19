@@ -9,83 +9,48 @@ import { useMemo } from 'react'
 import { useDashboard } from './useDashboard'
 import { useOperatorPerformance } from './useOperatorPerformance'
 import { useCommunicationStatistics } from './useCommunicationStatistics'
-import type { Period, ChangeType, DailyTrendUI } from '../types'
+import { getDateRangeForPeriod } from '@/lib/dateUtils'
+import type { Period, ChangeType, HourlyBreakdownUI } from '../types'
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
 /**
- * Get date range for period using user's timezone
- * Backend stores dates in UTC, but we need to send dates based on user's local timezone
+ * Convert UTC hourly breakdown to local time using the user's timezone.
+ * Groups calls that fall into the same local hour after conversion.
  */
-function getDateRangeForPeriod(period: Period): { fromDate: string; toDate: string } {
-  // Get current date in user's local timezone
-  // Using local date methods to avoid UTC conversion issues
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  const toDate = `${year}-${month}-${day}`
+function convertHourlyToLocalTime(
+  utcBreakdown: HourlyBreakdownUI[],
+  userTimezone?: string | null
+): { label: string; calls: number }[] {
+  if (!utcBreakdown.length) return []
 
-  let fromDate: string
-  switch (period) {
-    case 'today':
-      fromDate = toDate
-      break
-    case 'thisWeek': {
-      const weekStart = new Date(now)
-      const dayOfWeek = weekStart.getDay()
-      // Start from Monday (dayOfWeek 1)
-      weekStart.setDate(weekStart.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
-      const wYear = weekStart.getFullYear()
-      const wMonth = String(weekStart.getMonth() + 1).padStart(2, '0')
-      const wDay = String(weekStart.getDate()).padStart(2, '0')
-      fromDate = `${wYear}-${wMonth}-${wDay}`
-      break
-    }
-    case 'thisMonth': {
-      fromDate = `${year}-${month}-01`
-      break
-    }
-    default:
-      fromDate = toDate
+  const tz = userTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone
+
+  // Get UTC offset in hours for a reference date (today)
+  const now = new Date()
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000
+  const localMs = new Date(now.toLocaleString('en-US', { timeZone: tz })).getTime()
+  const offsetHours = Math.round((localMs - utcMs) / 3600000)
+
+  // Accumulate calls into local hours (handle wrap-around with modulo 24)
+  const localCalls: number[] = Array(24).fill(0)
+  for (const entry of utcBreakdown) {
+    const localHour =
+      ((entry.label.split(':')[0] ? parseInt(entry.label.split(':')[0]) : 0) + offsetHours + 24) %
+      24
+    localCalls[localHour] += entry.calls
   }
 
-  return { fromDate, toDate }
-}
-
-/**
- * Generate hourly breakdown from daily trends
- * Note: This is synthetic data as the backend doesn't provide hourly breakdown
- */
-function generateHourlyBreakdown(
-  totalCalls: number,
-  _dailyTrends: DailyTrendUI[] = []
-): { label: string; calls: number }[] {
-  // If we have daily trends, distribute calls across working hours (9AM-6PM)
-  const workingHours = [
-    '09:00-10:00',
-    '10:00-11:00',
-    '11:00-12:00',
-    '12:00-13:00',
-    '13:00-14:00',
-    '14:00-15:00',
-    '15:00-16:00',
-    '16:00-17:00',
-    '17:00-18:00',
-  ]
-
-  // Distribute calls with a realistic pattern (peak around lunch time)
-  const distribution = [0.08, 0.1, 0.12, 0.14, 0.13, 0.12, 0.11, 0.11, 0.09]
-
-  // reference _dailyTrends to satisfy TS about unused parameter when linters/typecheck run
-  void _dailyTrends
-
-  return workingHours.map((label, index) => ({
-    label,
-    calls: Math.round(totalCalls * distribution[index]),
-  }))
+  // Return only hours that have data, formatted as "HH:00-HH+1:00"
+  return localCalls
+    .map((calls, h) => ({
+      label: `${String(h).padStart(2, '0')}:00-${String(h + 1).padStart(2, '0')}:00`,
+      calls,
+    }))
+    .filter((row) => row.calls > 0)
+    .sort((a, b) => parseInt(a.label) - parseInt(b.label))
 }
 
 // ============================================================================
@@ -105,6 +70,7 @@ export interface UseCallsMadeModalParams {
   projectId: number
   period: Period
   enabled?: boolean
+  userTimezone?: string | null
 }
 
 /**
@@ -113,12 +79,18 @@ export interface UseCallsMadeModalParams {
  * Combines dashboard KPIs, operator performance, and communication statistics
  * to provide the data needed by CallsMadeDetailModal.
  */
-export function useCallsMadeModal({ projectId, period, enabled = true }: UseCallsMadeModalParams) {
-  const { fromDate, toDate } = getDateRangeForPeriod(period)
+export function useCallsMadeModal({
+  projectId,
+  period,
+  enabled = true,
+  userTimezone,
+}: UseCallsMadeModalParams) {
+  const { from: fromDate, to: toDate } = getDateRangeForPeriod(period, userTimezone)
 
   const dashboardQuery = useDashboard({
     projectId,
     period,
+    timezone: userTimezone,
     enabled,
   })
 
@@ -126,6 +98,7 @@ export function useCallsMadeModal({ projectId, period, enabled = true }: UseCall
     projectId,
     fromDate,
     toDate,
+    timezone: userTimezone,
     enabled,
   })
 
@@ -133,6 +106,7 @@ export function useCallsMadeModal({ projectId, period, enabled = true }: UseCall
     projectId,
     fromDate,
     toDate,
+    timezone: userTimezone,
     enabled,
   })
 
@@ -145,7 +119,7 @@ export function useCallsMadeModal({ projectId, period, enabled = true }: UseCall
 
     const dashboard = dashboardQuery.data
     const operators = operatorQuery.data?.operators || []
-    const dailyTrends = communicationQuery.data?.dailyTrends || []
+    const rawHourly = communicationQuery.data?.hourlyBreakdown || []
     const totalCalls = dashboard.kpis.callsMade
 
     return {
@@ -153,7 +127,7 @@ export function useCallsMadeModal({ projectId, period, enabled = true }: UseCall
       change: dashboard.kpis.callsTrend.change,
       changeType: dashboard.kpis.callsTrend.changeType,
       previousTotal: dashboard.kpis.callsTrend.previousValue,
-      byHour: generateHourlyBreakdown(totalCalls, dailyTrends),
+      byHour: convertHourlyToLocalTime(rawHourly, userTimezone),
       byOperator: operators
         .map((op) => ({
           name: op.operatorName,
@@ -161,7 +135,7 @@ export function useCallsMadeModal({ projectId, period, enabled = true }: UseCall
         }))
         .sort((a, b) => b.calls - a.calls),
     }
-  }, [dashboardQuery.data, operatorQuery.data, communicationQuery.data])
+  }, [dashboardQuery.data, operatorQuery.data, communicationQuery.data, userTimezone])
 
   return {
     data,
@@ -201,6 +175,7 @@ export interface UseContactRateModalParams {
   projectId: number
   period: Period
   enabled?: boolean
+  userTimezone?: string | null
 }
 
 /**
@@ -213,12 +188,14 @@ export function useContactRateModal({
   projectId,
   period,
   enabled = true,
+  userTimezone,
 }: UseContactRateModalParams) {
-  const { fromDate, toDate } = getDateRangeForPeriod(period)
+  const { from: fromDate, to: toDate } = getDateRangeForPeriod(period, userTimezone)
 
   const dashboardQuery = useDashboard({
     projectId,
     period,
+    timezone: userTimezone,
     enabled,
   })
 
@@ -226,6 +203,7 @@ export function useContactRateModal({
     projectId,
     fromDate,
     toDate,
+    timezone: userTimezone,
     enabled,
   })
 
@@ -233,6 +211,7 @@ export function useContactRateModal({
     projectId,
     fromDate,
     toDate,
+    timezone: userTimezone,
     enabled,
   })
 
@@ -363,6 +342,7 @@ export interface UseSMSSentModalParams {
   projectId: number
   period: Period
   enabled?: boolean
+  userTimezone?: string | null
 }
 
 /**
@@ -371,12 +351,18 @@ export interface UseSMSSentModalParams {
  * Combines dashboard KPIs, operator performance, and communication statistics
  * to provide the data needed by SMSSentDetailModal.
  */
-export function useSMSSentModal({ projectId, period, enabled = true }: UseSMSSentModalParams) {
-  const { fromDate, toDate } = getDateRangeForPeriod(period)
+export function useSMSSentModal({
+  projectId,
+  period,
+  enabled = true,
+  userTimezone,
+}: UseSMSSentModalParams) {
+  const { from: fromDate, to: toDate } = getDateRangeForPeriod(period, userTimezone)
 
   const dashboardQuery = useDashboard({
     projectId,
     period,
+    timezone: userTimezone,
     enabled,
   })
 
@@ -384,6 +370,7 @@ export function useSMSSentModal({ projectId, period, enabled = true }: UseSMSSen
     projectId,
     fromDate,
     toDate,
+    timezone: userTimezone,
     enabled,
   })
 
@@ -391,6 +378,7 @@ export function useSMSSentModal({ projectId, period, enabled = true }: UseSMSSen
     projectId,
     fromDate,
     toDate,
+    timezone: userTimezone,
     enabled,
   })
 

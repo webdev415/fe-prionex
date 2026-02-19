@@ -183,17 +183,8 @@ export function CallsMadeDetailModal({
                   <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                     {t('pages.reports.callsMadeModal.byHour')}:
                   </span>
-                  <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                    {t('pages.reports.estimated', 'Estimated')}
-                  </span>
                 </div>
                 <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white bg-white/50 p-5 px-6">
-                  <p className="-mt-2 mb-1 text-xs text-gray-500">
-                    {t(
-                      'pages.reports.callsMadeModal.estimatedNote',
-                      'Hourly distribution based on typical call patterns. Real hourly data will be available soon.'
-                    )}
-                  </p>
                   {data.byHour.map((row) => (
                     <div key={row.label} className="flex w-full flex-col items-start gap-1">
                       <div className="flex items-center gap-5 self-stretch">

@@ -150,6 +150,7 @@ export function ClientDetailPage() {
         customer_number: phoneNumber,
         caller_id_name: 'CRM Call',
         client_id: Number(clientId),
+        campaign_id: user.active_project_id ?? undefined,
         metadata: {
           client_name: clientName,
         },

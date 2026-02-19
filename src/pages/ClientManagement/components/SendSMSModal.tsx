@@ -42,10 +42,6 @@ const calculateSMSParts = (message: string): number => {
   return Math.ceil(message.length / maxLength)
 }
 
-const calculateCost = (smsParts: number, baseCost: number): number => {
-  return smsParts * baseCost
-}
-
 // Render template message by replacing variables with actual values
 const renderTemplateMessage = (
   templateText: string,
@@ -107,7 +103,6 @@ export function SendSMSModal({
 
   // Memoize templates to avoid recreating array on every render
   const templates = useMemo(() => templatesData?.templates || [], [templatesData?.templates])
-  const baseCost = configData?.base_cost_uah || 0.5
   const dailyLimit = configData?.max_sms_per_recipient_per_day || 3
   const smsSentToday = historyData?.total || 0
 
@@ -286,18 +281,16 @@ export function SendSMSModal({
     const maxChars = hasCyrillic ? 70 : 120
     const charCount = msg.length
     const smsParts = calculateSMSParts(msg)
-    const cost = calculateCost(smsParts, baseCost)
     const exceedsLimit = charCount > maxChars
 
     return {
       charCount,
       maxChars,
       smsParts,
-      cost,
       hasCyrillic,
       exceedsLimit,
     }
-  }, [displayMessage, baseCost])
+  }, [displayMessage])
 
   const isDailyLimitReached = smsSentToday >= dailyLimit
   const canSend =
@@ -357,16 +350,6 @@ export function SendSMSModal({
     } catch (error) {
       toast.error(getErrorMessage(error))
     }
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uk-UA', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-      useGrouping: true,
-    })
-      .format(amount)
-      .replace(/,/g, ' ')
   }
 
   return (
@@ -488,12 +471,13 @@ export function SendSMSModal({
               </div>
 
               {/* Message Metrics */}
-              <div className="flex flex-col items-start justify-center gap-4 self-stretch rounded-xl border border-white bg-white/50 px-4 py-4 sm:gap-5 sm:px-6 sm:py-5">
-                <div className="flex flex-col items-start gap-3 self-stretch sm:flex-row sm:items-center sm:gap-5">
-                  <div className="flex w-full flex-1 items-center gap-1 sm:w-auto">
+              <div className="flex flex-col gap-3 self-stretch rounded-xl border border-white bg-white/50 px-4 py-3 sm:px-6 sm:py-4">
+                <div className="grid grid-cols-3 items-center divide-x divide-gray-200">
+                  {/* Char count */}
+                  <div className="flex items-center justify-center gap-1.5 px-3 first:pl-0 last:pr-0">
                     <div
                       className={cn(
-                        'h-2 w-2 rounded-full',
+                        'h-2 w-2 flex-shrink-0 rounded-full',
                         messageMetrics.exceedsLimit ? 'bg-error-500' : 'bg-success-500'
                       )}
                     />
@@ -502,8 +486,21 @@ export function SendSMSModal({
                       {t('pages.clients.modals.sendSMS.characters')}
                     </span>
                   </div>
-                  <div className="flex w-full flex-1 items-center gap-2 sm:w-auto">
-                    <Icons.TypeCursor size={18} className="text-gray-600 sm:size-5" />
+                  {/* SMS parts */}
+                  <div className="flex items-center justify-center gap-1.5 px-3">
+                    <Icons.Mail size={15} className="text-gray-500 sm:size-4" />
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                      {messageMetrics.smsParts}{' '}
+                      <span className="font-light">
+                        {messageMetrics.smsParts !== 1
+                          ? t('pages.clients.modals.sendSMS.smsParts')
+                          : t('pages.clients.modals.sendSMS.smsPart')}
+                      </span>
+                    </span>
+                  </div>
+                  {/* Script */}
+                  <div className="flex items-center justify-center gap-1.5 px-3 first:pl-0 last:pr-0">
+                    <Icons.TypeCursor size={15} className="text-gray-500 sm:size-4" />
                     <span className="text-dark-500 text-xs font-light sm:text-sm">
                       {t('pages.clients.modals.sendSMS.script')}:{' '}
                       <span className="text-dark-500 font-medium">
@@ -514,34 +511,12 @@ export function SendSMSModal({
                     </span>
                   </div>
                 </div>
-                <div className="flex flex-col items-start gap-3 self-stretch sm:flex-row sm:items-center sm:gap-5">
-                  <div className="flex w-full flex-1 items-center gap-2 sm:w-auto">
-                    <Icons.Mail size={18} className="text-gray-600 sm:size-5" />
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
-                      {messageMetrics.smsParts}{' '}
-                      <span className="font-light">
-                        {messageMetrics.smsParts !== 1
-                          ? t('pages.clients.modals.sendSMS.smsParts')
-                          : t('pages.clients.modals.sendSMS.smsPart')}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="flex w-full flex-1 items-center gap-2 sm:w-auto">
-                    <Icons.Money04 size={18} className="text-gray-600 sm:size-5" />
-                    <span className="text-dark-500 text-xs font-light sm:text-sm">
-                      {t('pages.clients.modals.sendSMS.cost')}:{' '}
-                      <span className="text-dark-500 font-medium">
-                        ₴{formatCurrency(messageMetrics.cost)}
-                      </span>
-                    </span>
-                  </div>
-                </div>
                 {/* Warning if exceeds limit */}
                 {messageMetrics.exceedsLimit && (
-                  <div className="flex items-center justify-center gap-2 self-stretch">
+                  <div className="flex items-center justify-center gap-2">
                     <Icons.Warning
-                      size={18}
-                      className="text-warning-500 sm:size-5"
+                      size={15}
+                      className="text-warning-500 flex-shrink-0 sm:size-4"
                       strokeWidth={2}
                     />
                     <span className="text-error-500 text-xs font-medium sm:text-sm">

@@ -10,6 +10,7 @@ import type {
   BackendOperatorPerformanceResponse,
   BackendClientStatisticsResponse,
   BackendCommunicationStatisticsResponse,
+  BackendHourlyBreakdown,
   KPITrend,
 } from '../api/types'
 
@@ -29,6 +30,7 @@ import type {
   CommunicationStatisticsUI,
   CallStatisticsUI,
   SMSStatisticsUI,
+  HourlyBreakdownUI,
   DailyTrendUI,
   AgentPerformanceRow,
 } from '../types'
@@ -621,6 +623,7 @@ export function transformCommunicationStatistics(
     },
     callStatistics: transformCallStatistics(data.call_statistics),
     smsStatistics: transformSMSStatistics(data.sms_statistics),
+    hourlyBreakdown: (data.hourly_breakdown || []).map(transformHourlyBreakdown),
     dailyTrends: (data.daily_trends || []).map(transformDailyTrend),
     generatedAt: data.generated_at,
   }
@@ -741,5 +744,20 @@ function transformDailyTrend(
     callsAnswered: trend.calls_answered,
     smsSent: trend.sms_sent,
     smsDelivered: trend.sms_delivered,
+  }
+}
+
+/**
+ * Transform a single hourly breakdown entry.
+ * The backend stores UTC hours; conversion to local time is handled
+ * in the hook using the user's timezone.
+ */
+function transformHourlyBreakdown(entry: BackendHourlyBreakdown): HourlyBreakdownUI {
+  const h = entry.hour
+  const label = `${String(h).padStart(2, '0')}:00-${String(h + 1).padStart(2, '0')}:00`
+  return {
+    label,
+    calls: entry.calls_made,
+    callsAnswered: entry.calls_answered,
   }
 }

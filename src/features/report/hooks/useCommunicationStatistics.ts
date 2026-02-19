@@ -27,6 +27,7 @@ export interface UseCommunicationStatisticsParams {
   projectId: number
   fromDate?: string
   toDate?: string
+  timezone?: string | null
   enabled?: boolean
 }
 
@@ -50,12 +51,14 @@ export function useCommunicationStatistics({
   projectId,
   fromDate,
   toDate,
+  timezone,
   enabled = true,
 }: UseCommunicationStatisticsParams) {
   const backendParams: CommunicationStatisticsParams = {
     project_id: projectId,
     from_date: fromDate,
     to_date: toDate,
+    user_timezone: timezone,
   }
 
   return useQuery<CommunicationStatisticsUI>({

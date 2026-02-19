@@ -31,6 +31,7 @@ export interface UseOperatorPerformanceParams {
   operatorId?: number
   fromDate?: string
   toDate?: string
+  timezone?: string | null
   enabled?: boolean
 }
 
@@ -55,6 +56,7 @@ export function useOperatorPerformance({
   operatorId,
   fromDate,
   toDate,
+  timezone,
   enabled = true,
 }: UseOperatorPerformanceParams) {
   const backendParams: OperatorPerformanceParams = {
@@ -62,6 +64,7 @@ export function useOperatorPerformance({
     operator_id: operatorId,
     from_date: fromDate,
     to_date: toDate,
+    user_timezone: timezone,
   }
 
   return useQuery<OperatorPerformanceResponseUI>({
