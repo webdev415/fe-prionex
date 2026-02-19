@@ -356,11 +356,12 @@ export function useClientCallSmsHistory(clientId: number, enabled = true) {
           phone: s.phone_number ?? '',
           phoneLabel: 'Primary',
           status: s.status ?? 'unknown',
-          template: s.template_name ?? '-',
+          template: s.template_name || null,
           message: s.content ?? '',
           operator: extendedSms.operator_name ?? '-',
           cost: extendedSms.cost ?? 0,
           sent_at: s.sent_at ?? s.created_at,
+          delivered_at: s.delivered_at ?? null,
         }
       })
 

@@ -221,6 +221,16 @@ export interface SMSStatisticsUI {
 }
 
 /**
+ * Hourly breakdown entry for UI (hours already converted to local time)
+ */
+export interface HourlyBreakdownUI {
+  /** Local hour label e.g. "09:00-10:00" */
+  label: string
+  calls: number
+  callsAnswered: number
+}
+
+/**
  * Daily trend for UI
  */
 export interface DailyTrendUI {
@@ -242,6 +252,8 @@ export interface CommunicationStatisticsUI {
   }
   callStatistics: CallStatisticsUI
   smsStatistics: SMSStatisticsUI
+  /** Hourly breakdown with hours converted to local time. Empty when no data. */
+  hourlyBreakdown: HourlyBreakdownUI[]
   dailyTrends: DailyTrendUI[]
   generatedAt: string
 }

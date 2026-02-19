@@ -336,14 +336,14 @@ export function PaymentDetailsModal({
               {t('pages.clients.modals.paymentDetails.debtImpact')}
             </span>
             <div className="flex flex-col items-start justify-center gap-2 self-stretch rounded-xl border border-white bg-white/50 p-4 px-4 sm:p-5 sm:px-6">
-              <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-start sm:gap-5">
+              {/* <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-start sm:gap-5">
                 <span className="text-dark-500 w-full text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
                   {t('pages.clients.modals.paymentDetails.debtBefore')}
                 </span>
                 <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {formatCurrency(payment.currentDebt)}
                 </span>
-              </div>
+              </div> */}
               <div className="flex flex-col items-start gap-1 self-stretch">
                 <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-center sm:gap-5">
                   <span className="text-dark-500 w-full text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
@@ -356,14 +356,14 @@ export function PaymentDetailsModal({
 
                 <div className="my-2 h-px w-full bg-gray-200" />
 
-                <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-center sm:gap-5">
+                {/* <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-center sm:gap-5">
                   <span className="text-dark-500 w-full text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
                     {t('pages.clients.modals.paymentDetails.debtAfter')}
                   </span>
                   <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                     {formatCurrency(payment.newDebt)}
                   </span>
-                </div>
+                </div> */}
               </div>
               <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-center sm:gap-5">
                 <span className="text-dark-500 w-full text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">

@@ -97,6 +97,7 @@ export interface DashboardParams {
   period?: 'today' | 'this_week' | 'this_month' | 'custom'
   start_date?: string
   end_date?: string
+  user_timezone?: string | null
 }
 
 // ============================================================================
@@ -172,6 +173,7 @@ export interface OperatorPerformanceParams {
   operator_id?: number
   from_date?: string
   to_date?: string
+  user_timezone?: string | null
 }
 
 // ============================================================================
@@ -259,8 +261,20 @@ export interface BackendCommunicationStatisticsResponse {
   date_range: DateRange
   call_statistics: BackendCallStatistics
   sms_statistics: BackendSMSStatistics
+  hourly_breakdown?: BackendHourlyBreakdown[]
   daily_trends?: BackendDailyTrend[]
   generated_at: string
+}
+
+/**
+ * Hourly breakdown entry from call service
+ */
+export interface BackendHourlyBreakdown {
+  /** UTC hour (0-23) */
+  hour: number
+  calls_made: number
+  calls_answered: number
+  sms_sent: number
 }
 
 /**
@@ -270,6 +284,7 @@ export interface CommunicationStatisticsParams {
   project_id: number
   from_date?: string
   to_date?: string
+  user_timezone?: string | null
 }
 
 // ============================================================================

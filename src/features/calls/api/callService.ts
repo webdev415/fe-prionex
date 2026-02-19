@@ -1,4 +1,4 @@
-import axios from 'axios'
+import api from '@/lib/api'
 import type {
   OriginateCallRequest,
   OriginateCallResponse,
@@ -15,12 +15,12 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 
 class CallService {
   async originateCall(request: OriginateCallRequest): Promise<OriginateCallResponse> {
-    const response = await axios.post(`${API_BASE_URL}/api/v1/calls/originate`, request)
+    const response = await api.post(`${API_BASE_URL}/api/v1/calls/originate`, request)
     return response.data
   }
 
   async getCallDetails(callId: string): Promise<CallDetail> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/calls/${callId}`)
+    const response = await api.get(`${API_BASE_URL}/api/v1/calls/${callId}`)
     return response.data
   }
 
@@ -28,14 +28,14 @@ class CallService {
     clientId: number,
     filters?: CallHistoryFilters
   ): Promise<CallHistoryResponse> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/calls/client/${clientId}`, {
+    const response = await api.get(`${API_BASE_URL}/api/v1/calls/client/${clientId}`, {
       params: filters,
     })
     return response.data
   }
 
   async updateCallOutcome(callId: string, outcome: UpdateCallOutcomeRequest): Promise<void> {
-    await axios.patch(`${API_BASE_URL}/api/v1/calls/${callId}/outcome`, outcome)
+    await api.patch(`${API_BASE_URL}/api/v1/calls/${callId}/outcome`, outcome)
   }
 
   getRecordingUrl(callId: string): string {
@@ -43,17 +43,17 @@ class CallService {
   }
 
   async getAMIHealth(): Promise<AMIHealthResponse> {
-    const response = await axios.get(`${API_BASE_URL}/health/ami`)
+    const response = await api.get(`${API_BASE_URL}/health/ami`)
     return response.data
   }
 
   async getIncomingCallInfo(callId: string): Promise<IncomingCallData> {
-    const response = await axios.get(`${API_BASE_URL}/api/v1/calls/${callId}/incoming-info`)
+    const response = await api.get(`${API_BASE_URL}/api/v1/calls/${callId}/incoming-info`)
     return response.data
   }
 
   async hangupCall(callId: string): Promise<{ status: string; message: string }> {
-    const response = await axios.post(`${API_BASE_URL}/api/v1/calls/${callId}/hangup`)
+    const response = await api.post(`${API_BASE_URL}/api/v1/calls/${callId}/hangup`)
     return response.data
   }
 }

@@ -103,6 +103,7 @@ export type {
   CommunicationStatisticsUI,
   CallStatisticsUI,
   SMSStatisticsUI,
+  HourlyBreakdownUI,
   DailyTrendUI,
   AgentPerformanceRow,
 } from './types'

@@ -1,12 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import axios from 'axios'
 import { callService } from '../callService'
 import type { IncomingCallData } from '../../types'
 
 // Match the API_BASE_URL from callService.ts (uses environment variable or default)
 const API_BASE_URL = 'https://api.dev.crm-prionex.online'
 
-vi.mock('axios')
+const mockApi = vi.hoisted(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  patch: vi.fn(),
+}))
+vi.mock('@/lib/api', () => ({ default: mockApi }))
 
 describe('CallService - Incoming Call Methods', () => {
   beforeEach(() => {
@@ -44,11 +48,13 @@ describe('CallService - Incoming Call Methods', () => {
 
     it('should fetch incoming call information', async () => {
       const mockResponse = { data: mockIncomingCallData }
-      vi.mocked(axios.get).mockResolvedValue(mockResponse)
+      mockApi.get.mockResolvedValue(mockResponse)
 
       const result = await callService.getIncomingCallInfo(callId)
 
-      expect(axios.get).toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/${callId}/incoming-info`)
+      expect(mockApi.get).toHaveBeenCalledWith(
+        `${API_BASE_URL}/api/v1/calls/${callId}/incoming-info`
+      )
       expect(result).toEqual(mockIncomingCallData)
       expect(result.call_id).toBe(callId)
       expect(result.customer_phone).toBe('+380501234567')
@@ -65,7 +71,7 @@ describe('CallService - Incoming Call Methods', () => {
       }
 
       const mockResponse = { data: noLoansData }
-      vi.mocked(axios.get).mockResolvedValue(mockResponse)
+      mockApi.get.mockResolvedValue(mockResponse)
 
       const result = await callService.getIncomingCallInfo(callId)
 
@@ -82,7 +88,7 @@ describe('CallService - Incoming Call Methods', () => {
         },
       }
 
-      vi.mocked(axios.get).mockRejectedValue(mockError)
+      mockApi.get.mockRejectedValue(mockError)
 
       await expect(callService.getIncomingCallInfo(callId)).rejects.toEqual(mockError)
     })
@@ -95,7 +101,7 @@ describe('CallService - Incoming Call Methods', () => {
         },
       }
 
-      vi.mocked(axios.get).mockRejectedValue(mockError)
+      mockApi.get.mockRejectedValue(mockError)
 
       await expect(callService.getIncomingCallInfo(callId)).rejects.toEqual(mockError)
     })
@@ -108,7 +114,7 @@ describe('CallService - Incoming Call Methods', () => {
         },
       }
 
-      vi.mocked(axios.get).mockRejectedValue(mockError)
+      mockApi.get.mockRejectedValue(mockError)
 
       await expect(callService.getIncomingCallInfo(callId)).rejects.toEqual(mockError)
     })
@@ -116,14 +122,14 @@ describe('CallService - Incoming Call Methods', () => {
     it('should handle network errors', async () => {
       const mockError = new Error('Network Error')
 
-      vi.mocked(axios.get).mockRejectedValue(mockError)
+      mockApi.get.mockRejectedValue(mockError)
 
       await expect(callService.getIncomingCallInfo(callId)).rejects.toThrow('Network Error')
     })
 
     it('should return client_name when provided', async () => {
       const mockResponse = { data: mockIncomingCallData }
-      vi.mocked(axios.get).mockResolvedValue(mockResponse)
+      mockApi.get.mockResolvedValue(mockResponse)
 
       const result = await callService.getIncomingCallInfo(callId)
 
@@ -137,7 +143,7 @@ describe('CallService - Incoming Call Methods', () => {
       }
 
       const mockResponse = { data: dataWithoutClient }
-      vi.mocked(axios.get).mockResolvedValue(mockResponse)
+      mockApi.get.mockResolvedValue(mockResponse)
 
       const result = await callService.getIncomingCallInfo(callId)
 

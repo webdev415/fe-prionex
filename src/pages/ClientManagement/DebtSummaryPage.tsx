@@ -49,6 +49,7 @@ interface Payment {
   status: 'Verified' | 'Pending' | 'Cancelled'
   receipt?: string
   reference?: string
+  project_name?: string
 }
 
 interface DebtSummaryData {
@@ -186,6 +187,7 @@ export function DebtSummaryPage() {
         agent_extension: user.asterisk_extension,
         customer_number: phoneNumber,
         caller_id_name: 'CRM Call',
+        campaign_id: user.active_project_id ?? undefined,
         metadata: {
           client_id: clientId,
           client_name: clientName,
@@ -379,28 +381,28 @@ export function DebtSummaryPage() {
     const rawProgress = initialTotal > 0 ? (totalPaid / initialTotal) * 100 : 0
     const progressPercentage = Math.max(0, Math.min(100, rawProgress))
 
-    // Last payment: most recently VERIFIED payment (by verified_at timestamp, not payment_date)
-    // Note: This uses paginated data, so if newest verified payment is on another page, it won't show.
-    // For MVP, we assume most recent verified payment is on first page.
+    // Last payment: most recently recorded payment from payment history
+    // Uses the same date field logic as the payment table rows for consistency.
     let lastPaymentAmount = 0
     let lastPaymentDate = ''
     if (paymentHistoryData) {
       const verifiedBackendPayments = paymentHistoryData.payments.filter(
-        (p) => p.status === 'verified' && p.verified_at
+        (p) => p.status === 'verified'
       )
       if (verifiedBackendPayments.length > 0) {
-        // Sort by verified_at descending (most recent first), then by payment_date descending as fallback
-        const sorted = [...verifiedBackendPayments].sort((a, b) => {
-          if (a.verified_at && b.verified_at) {
-            return b.verified_at.localeCompare(a.verified_at) // Descending (newest first)
-          }
-          // Fallback to payment_date if verified_at missing
-          return b.payment_date.localeCompare(a.payment_date)
-        })
-        const mostRecent = sorted[0] // First = most recent
-        lastPaymentAmount = Number(mostRecent.amount) || 0
-        // Use verified_at timestamp (has actual time when verified)
-        lastPaymentDate = mostRecent.verified_at || mostRecent.recorded_at
+        // Resolve the display date for each payment (same logic as table row mapping)
+        const withDate = verifiedBackendPayments.map((p) => ({
+          p,
+          displayDate:
+            p.status === 'verified' && p.verified_at
+              ? p.verified_at
+              : p.recorded_at || p.payment_date,
+        }))
+        // Sort by displayDate descending (most recent first)
+        withDate.sort((a, b) => b.displayDate.localeCompare(a.displayDate))
+        const mostRecent = withDate[0]
+        lastPaymentAmount = Number(mostRecent.p.amount) || 0
+        lastPaymentDate = mostRecent.displayDate
       }
     }
 
@@ -454,6 +456,23 @@ export function DebtSummaryPage() {
     []
   )
 
+  // Resolve a human-friendly project name for a payment or client.
+  // Prefer the payment-level `project_name` (returned by PaymentResponse),
+  // fall back to client-level `apiClient.project_name` if present, then to Unknown.
+  const resolveProjectName = useCallback(
+    (paymentId?: number) => {
+      try {
+        const fromPayment = paymentHistoryData?.payments.find((p) => p.id === paymentId)
+        if (fromPayment?.project_name) return fromPayment.project_name
+      } catch {
+        // ignore
+      }
+      if (apiClient?.project_id) return `Project ${apiClient.project_id}`
+      return 'Unknown Project'
+    },
+    [paymentHistoryData, apiClient]
+  )
+
   // Convert Payment to PendingPayment format
   const convertPaymentToPendingPayment = useCallback(
     (payment: Payment): import('./components/PaymentVerificationQueueModal').PendingPayment => {
@@ -480,7 +499,7 @@ export function DebtSummaryPage() {
         paymentId: `PMT-${payment.id}`,
         submittedAt,
         client: customerName,
-        project: 'PrivatBank Collection',
+        project: resolveProjectName(payment.id),
         amount: payment.amount,
         method: normalizePaymentMethod(payment.method),
         date: payment.date,
@@ -489,7 +508,7 @@ export function DebtSummaryPage() {
         newDebt,
       }
     },
-    [customerName, debtSummary, normalizePaymentMethod]
+    [customerName, debtSummary, normalizePaymentMethod, resolveProjectName]
   )
 
   // Filter pending payments that are less than 7 days old
@@ -1510,7 +1529,7 @@ export function DebtSummaryPage() {
             clientId: id || '',
             clientName: customerName,
             phone: client?.phones?.[0]?.number || '',
-            project: 'PrivatBank Collection',
+            project: resolveProjectName(selectedPayment?.id),
             // Use backend snapshot for Debt Impact when available
             currentDebt:
               Number(

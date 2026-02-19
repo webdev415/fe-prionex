@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/Label'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { Icons } from '@/lib/icons'
+import { getDateStringInTimezone } from '@/lib/dateUtils'
 import type { Period } from '../types'
 
 // ============================================================================
@@ -117,6 +118,7 @@ export interface AgentPerformanceTableProps {
   customToDate: string | null
   onFromDateChange: (date: string | null) => void
   onToDateChange: (date: string | null) => void
+  userTimezone?: string | null
 }
 
 export interface Column<T> {
@@ -138,6 +140,7 @@ export function AgentPerformanceTable({
   customToDate,
   onFromDateChange,
   onToDateChange,
+  userTimezone,
 }: AgentPerformanceTableProps) {
   const { t, i18n } = useTranslation('common')
   const [clientPhone, setClientPhone] = useState<string>('')
@@ -362,9 +365,10 @@ export function AgentPerformanceTable({
             <div className="flex items-center gap-3">
               <DateSelect
                 key={`date-from-${selectedPeriod}`}
+                disabled={true} // Disable manual date selection when period is selected
                 value={dateRange.from}
                 onChange={({ value }) => {
-                  onFromDateChange(value ? value.toISOString().split('T')[0] : null)
+                  onFromDateChange(value ? getDateStringInTimezone(value, userTimezone) : null)
                 }}
               />
               <span className="text-base leading-[155%] font-medium tracking-[-0.32px] text-gray-700">
@@ -372,9 +376,10 @@ export function AgentPerformanceTable({
               </span>
               <DateSelect
                 key={`date-to-${selectedPeriod}`}
+                disabled={true} // Disable manual date selection when period is selected
                 value={dateRange.to}
                 onChange={({ value }) => {
-                  onToDateChange(value ? value.toISOString().split('T')[0] : null)
+                  onToDateChange(value ? getDateStringInTimezone(value, userTimezone) : null)
                 }}
               />
             </div>

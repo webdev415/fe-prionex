@@ -27,6 +27,7 @@ export interface UseDashboardParams {
   period?: Period
   startDate?: string
   endDate?: string
+  timezone?: string | null
   enabled?: boolean
 }
 
@@ -46,6 +47,7 @@ export function useDashboard({
   period = 'today',
   startDate,
   endDate,
+  timezone,
   enabled = true,
 }: UseDashboardParams) {
   // Convert frontend params to backend format
@@ -54,6 +56,7 @@ export function useDashboard({
     period: mapPeriodToBackend(period),
     start_date: startDate,
     end_date: endDate,
+    user_timezone: timezone,
   }
 
   return useQuery<DashboardUI>({

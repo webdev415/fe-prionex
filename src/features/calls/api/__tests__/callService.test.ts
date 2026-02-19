@@ -5,7 +5,6 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import axios from 'axios'
 import { callService } from '../callService'
 import type {
   OriginateCallRequest,
@@ -16,7 +15,13 @@ import type {
 // Base URL for deployed backend (matches VITE_API_BASE_URL in dev environment)
 const API_BASE_URL = 'https://api.dev.crm-prionex.online'
 
-vi.mock('axios')
+const mockApi = vi.hoisted(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  patch: vi.fn(),
+}))
+
+vi.mock('@/lib/api', () => ({ default: mockApi }))
 
 describe('CallService', () => {
   beforeEach(() => {
@@ -45,11 +50,14 @@ describe('CallService', () => {
         },
       }
 
-      vi.mocked(axios.post).mockResolvedValue(mockResponse)
+      mockApi.post.mockResolvedValue(mockResponse)
 
       const result = await callService.originateCall(mockRequest)
 
-      expect(axios.post).toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/originate`, mockRequest)
+      expect(mockApi.post).toHaveBeenCalledWith(
+        `${API_BASE_URL}/api/v1/calls/originate`,
+        mockRequest
+      )
       expect(result).toEqual(mockResponse.data)
     })
 
@@ -67,7 +75,7 @@ describe('CallService', () => {
         },
       }
 
-      vi.mocked(axios.post).mockRejectedValue(mockError)
+      mockApi.post.mockRejectedValue(mockError)
 
       await expect(callService.originateCall(mockRequest)).rejects.toEqual(mockError)
     })
@@ -87,11 +95,11 @@ describe('CallService', () => {
         },
       }
 
-      vi.mocked(axios.get).mockResolvedValue(mockResponse)
+      mockApi.get.mockResolvedValue(mockResponse)
 
       const result = await callService.getCallDetails(mockCallId)
 
-      expect(axios.get).toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/CALL-123`)
+      expect(mockApi.get).toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/CALL-123`)
       expect(result).toEqual(mockResponse.data)
     })
 
@@ -106,7 +114,7 @@ describe('CallService', () => {
         },
       }
 
-      vi.mocked(axios.get).mockRejectedValue(mockError)
+      mockApi.get.mockRejectedValue(mockError)
 
       await expect(callService.getCallDetails(mockCallId)).rejects.toEqual(mockError)
     })
@@ -131,11 +139,11 @@ describe('CallService', () => {
         },
       }
 
-      vi.mocked(axios.get).mockResolvedValue(mockResponse)
+      mockApi.get.mockResolvedValue(mockResponse)
 
       const result = await callService.getCallHistory(mockClientId)
 
-      expect(axios.get).toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/client/123`, {
+      expect(mockApi.get).toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/client/123`, {
         params: undefined,
       })
       expect(result).toEqual(mockResponse.data)
@@ -158,11 +166,11 @@ describe('CallService', () => {
         },
       }
 
-      vi.mocked(axios.get).mockResolvedValue(mockResponse)
+      mockApi.get.mockResolvedValue(mockResponse)
 
       const result = await callService.getCallHistory(mockClientId, mockFilters)
 
-      expect(axios.get).toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/client/123`, {
+      expect(mockApi.get).toHaveBeenCalledWith(`${API_BASE_URL}/api/v1/calls/client/123`, {
         params: mockFilters,
       })
       expect(result).toEqual(mockResponse.data)
@@ -179,7 +187,7 @@ describe('CallService', () => {
         },
       }
 
-      vi.mocked(axios.get).mockRejectedValue(mockError)
+      mockApi.get.mockRejectedValue(mockError)
 
       await expect(callService.getCallHistory(mockClientId)).rejects.toEqual(mockError)
     })
@@ -195,11 +203,11 @@ describe('CallService', () => {
         follow_up_date: '2025-11-25',
       }
 
-      vi.mocked(axios.patch).mockResolvedValue({ data: {} })
+      mockApi.patch.mockResolvedValue({ data: {} })
 
       await callService.updateCallOutcome(mockCallId, mockOutcome)
 
-      expect(axios.patch).toHaveBeenCalledWith(
+      expect(mockApi.patch).toHaveBeenCalledWith(
         `${API_BASE_URL}/api/v1/calls/CALL-123/outcome`,
         mockOutcome
       )
@@ -221,7 +229,7 @@ describe('CallService', () => {
         },
       }
 
-      vi.mocked(axios.patch).mockRejectedValue(mockError)
+      mockApi.patch.mockRejectedValue(mockError)
 
       await expect(callService.updateCallOutcome(mockCallId, mockOutcome)).rejects.toEqual(
         mockError
@@ -243,7 +251,7 @@ describe('CallService', () => {
         },
       }
 
-      vi.mocked(axios.patch).mockRejectedValue(mockError)
+      mockApi.patch.mockRejectedValue(mockError)
 
       await expect(callService.updateCallOutcome(mockCallId, mockOutcome)).rejects.toEqual(
         mockError
@@ -271,11 +279,11 @@ describe('CallService', () => {
         },
       }
 
-      vi.mocked(axios.get).mockResolvedValue(mockResponse)
+      mockApi.get.mockResolvedValue(mockResponse)
 
       const result = await callService.getAMIHealth()
 
-      expect(axios.get).toHaveBeenCalledWith(`${API_BASE_URL}/health/ami`)
+      expect(mockApi.get).toHaveBeenCalledWith(`${API_BASE_URL}/health/ami`)
       expect(result).toEqual(mockResponse.data)
     })
 
@@ -287,7 +295,7 @@ describe('CallService', () => {
         },
       }
 
-      vi.mocked(axios.get).mockResolvedValue(mockResponse)
+      mockApi.get.mockResolvedValue(mockResponse)
 
       const result = await callService.getAMIHealth()
 
@@ -305,7 +313,7 @@ describe('CallService', () => {
         },
       }
 
-      vi.mocked(axios.get).mockRejectedValue(mockError)
+      mockApi.get.mockRejectedValue(mockError)
 
       await expect(callService.getAMIHealth()).rejects.toEqual(mockError)
     })

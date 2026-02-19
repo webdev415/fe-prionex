@@ -11,6 +11,7 @@ export interface Payment {
   id: number
   payment_number: string
   project_id: number
+  project_name?: string
   client_id: number
   amount: string
   currency: string
