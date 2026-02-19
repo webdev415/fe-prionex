@@ -119,7 +119,9 @@ export function ArchiveDepartmentModal({
           type="button"
           variant="primary"
           onClick={handleArchive}
-          disabled={archiveMutation.isPending || isLoading}
+          disabled={
+            archiveMutation.isPending || isLoading || (department?.assigned_roles_count ?? 0) > 0
+          }
           className="text-dark-500 bg-primary-300 h-[45px] flex-1 text-sm"
         >
           {archiveMutation.isPending

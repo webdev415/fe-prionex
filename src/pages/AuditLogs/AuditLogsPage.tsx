@@ -466,6 +466,10 @@ export function AuditLogsPage() {
       ) {
         return log.reason
       }
+      // Handle call events
+      if (log.entity_type === 'call' && log.reason) {
+        return log.reason
+      }
       // Handle scoring events (RUN STARTED, RUN COMPLETED, RUN FAILED)
       if (log.entity_type === 'score' && log.reason) {
         return log.reason

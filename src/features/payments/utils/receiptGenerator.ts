@@ -78,10 +78,10 @@ export function convertPaymentToReceiptData(
     receivedBy: payment.recorded_by_username || `User #${payment.recorded_by_user_id}`,
     verifiedBy: payment.verified_by_username,
     verifiedOn: payment.verified_at,
-    companyName: companyData?.name || 'PrivatBank Debt Collection',
-    companyAddress: companyData?.address || 'Kyiv, Ukraine, 01001',
-    companyPhone: companyData?.phone || '+380 44 123 4567',
-    companyEmail: companyData?.email || 'collections@privatbank.ua',
+    companyName: companyData?.name || '-',
+    companyAddress: companyData?.address || '-',
+    companyPhone: companyData?.phone || '-',
+    companyEmail: companyData?.email || '-',
     userTimezone,
   }
 }

@@ -102,31 +102,33 @@ export function Step2FileUpload({
             .map((h) => h.trim().toLowerCase())
             .filter((h) => h.length > 0)
 
-          // Required columns (matching backend requirements - exact column names only)
+          // Required columns (matching operator CSV template - sample_column.csv)
           const requiredColumns = [
-            'first_name',
-            'last_name',
+            'first name',
+            'last name',
             'date of birth',
             'tin',
-            'registration_address',
-            'personal_address',
-            'number of family members',
+            'registration address',
+            'personal address',
+            'family members',
             'job: organization name',
             'job: position',
             'income level',
             'passport type',
-            'who issued the passport',
+            'passport issued by',
             'contract number',
-            'start date',
-            'last return date',
-            'loan amount (uah)',
-            'body debt (uah)',
-            'total to refund',
+            'loan start date',
+            'loan end date',
+            'loan amount',
+            'principal debt',
+            'total debt',
             'loan term (days)',
           ]
 
           // Conditionally required: at least one phone column
           const phoneColumns = [
+            'phone (client)',
+            'phone (registry)',
             'phone number from registry',
             'phone_number_from_registry',
             'phone number of client',
@@ -270,8 +272,8 @@ export function Step2FileUpload({
     // Template download functionality
     // Create CSV template with all columns matching the sample CSV format
     const templateContent = [
-      // Header row with all columns from the sample CSV
-      'first_name,last_name,middle_name,Date of birth,TIN,Phone number from registry,Phone number of client,email,registration_address,personal_address,Number of family members,Job: Organization Name,Job: Position,Income level,Passport type,Passport Series,Passport namber,Passport Issue Date,Record number (for ID card),Valid until (for Card ID),Who issued the passport,contract number,Start Date,Last Return Date,Loan amount (UAH),Body debt (UAH),percent debt,comission debt,fines on debt,Total to refund,Legitimate to return,Loan term (days),Overdue (days),Recommender 1,Recommender 2,comments,seller_company',
+      // Header row matching sample_column.csv (operator-friendly names)
+      'First Name,Last Name,Middle Name,Date of Birth,TIN,Phone (Client),Phone (Registry),Email,Registration Address,Personal Address,City,Region,Postal Code,Country,Family Members,Job: Organization Name,Job: Position,Income Level,Passport Type,Passport Series,Passport Number,Passport Issue Date,Passport Record Number,Passport Valid Until,Passport Issued By,Passport Gender,Passport Birth Place,Recommender 1,Recommender 2,Contract Number,Seller Company,Loan Start Date,Loan End Date,Credit Issued Date,Credit Closed Date,Purchase Price,Loan Amount,Remaining Debt,Principal Debt,Interest Debt,Commission Debt,Penalty Debt,Fines Debt,Total Debt,Loan Term (days),Interest Rate,Penalty Rate,Fine Rate,Penalty Start Day,Fine Start Day,Penalty Stop Date,Currency,Portfolio Name,Overdue (days),Comments',
       // Empty row for user to fill in
       '',
     ].join('\n')

@@ -82,6 +82,7 @@ interface Payment {
   status: 'Verified' | 'Pending' | 'Cancelled'
   receipt?: string
   reference?: string
+  project_name?: string
 }
 
 // Mock client data for fallback
@@ -409,6 +410,20 @@ export function PaymentHistoryPage() {
     }
   }, [])
 
+  // Resolve a human-friendly project name for a payment
+  const resolveProjectName = useCallback(
+    (paymentId?: number) => {
+      try {
+        const fromPayment = paymentHistoryData?.payments.find((p) => p.id === paymentId)
+        if (fromPayment?.project_name) return fromPayment.project_name
+      } catch {
+        // ignore
+      }
+      return 'Unknown Project'
+    },
+    [paymentHistoryData]
+  )
+
   // Convert Payment to PendingPayment format
   const convertPaymentToPendingPayment = useCallback(
     (payment: Payment): import('./components/PaymentVerificationQueueModal').PendingPayment => {
@@ -442,7 +457,7 @@ export function PaymentHistoryPage() {
         paymentId: `PMT-${payment.id}`,
         submittedAt,
         client: customerName,
-        project: 'PrivatBank Collection', // Default project, can be enhanced later
+        project: resolveProjectName(payment.id),
         amount: payment.amount,
         method: payment.method,
         date: payment.date,
@@ -451,7 +466,7 @@ export function PaymentHistoryPage() {
         newDebt,
       }
     },
-    [customerName, paymentHistory, paymentHistoryData]
+    [customerName, paymentHistory, paymentHistoryData, resolveProjectName]
   )
 
   // Filter pending payments that are less than 7 days old
@@ -1531,6 +1546,8 @@ export function PaymentHistoryPage() {
                                         if (backendPayment) {
                                           generateReceiptMutation({
                                             paymentId: backendPayment.id,
+                                            payment: backendPayment,
+                                            clientId: clientId,
                                             format: 'pdf',
                                           })
                                         } else {
@@ -1604,6 +1621,8 @@ export function PaymentHistoryPage() {
                                             if (backendPayment) {
                                               generateReceiptMutation({
                                                 paymentId: backendPayment.id,
+                                                payment: backendPayment,
+                                                clientId: clientId,
                                                 format: 'pdf',
                                               })
                                             } else {
@@ -1743,7 +1762,7 @@ export function PaymentHistoryPage() {
             clientId: id || '',
             clientName: paymentHistory.customerName,
             phone: apiClient?.phone_primary || '+380 50 123 4567',
-            project: 'PrivatBank Collection', // TODO: Get from project data
+            project: resolveProjectName(selectedPayment?.id),
             // Debt Impact: use backend snapshot when available
             currentDebt: backendPayment
               ? Number(backendPayment.debt_before)
@@ -1774,6 +1793,8 @@ export function PaymentHistoryPage() {
             // Prepare client data if available
             generateReceiptMutation({
               paymentId: backendPayment.id,
+              payment: backendPayment,
+              clientId: clientId,
               format: 'pdf',
             })
           }}
@@ -1785,6 +1806,8 @@ export function PaymentHistoryPage() {
             // Prepare client data if available
             generateReceiptMutation({
               paymentId: backendPayment.id,
+              payment: backendPayment,
+              clientId: clientId,
               format: 'pdf',
             })
           }}

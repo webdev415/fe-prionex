@@ -49,6 +49,7 @@ interface Payment {
   status: 'Verified' | 'Pending' | 'Cancelled'
   receipt?: string
   reference?: string
+  project_name?: string
 }
 
 interface DebtSummaryData {
@@ -386,7 +387,7 @@ export function DebtSummaryPage() {
     let lastPaymentDate = ''
     if (paymentHistoryData) {
       const verifiedBackendPayments = paymentHistoryData.payments.filter(
-        (p) => p.status === 'verified' && p.verified_at
+        (p) => p.status === 'verified'
       )
       if (verifiedBackendPayments.length > 0) {
         // Sort by verified_at descending (most recent first), then by payment_date descending as fallback
@@ -399,8 +400,9 @@ export function DebtSummaryPage() {
         })
         const mostRecent = sorted[0] // First = most recent
         lastPaymentAmount = Number(mostRecent.amount) || 0
-        // Use verified_at timestamp (has actual time when verified)
-        lastPaymentDate = mostRecent.verified_at || mostRecent.recorded_at
+        // Use verified_at timestamp (has actual time when verified), fallback to payment_date or recorded_at
+        lastPaymentDate =
+          mostRecent.verified_at || mostRecent.payment_date || mostRecent.recorded_at
       }
     }
 
@@ -454,6 +456,23 @@ export function DebtSummaryPage() {
     []
   )
 
+  // Resolve a human-friendly project name for a payment or client.
+  // Prefer the payment-level `project_name` (returned by PaymentResponse),
+  // fall back to client-level `apiClient.project_name` if present, then to Unknown.
+  const resolveProjectName = useCallback(
+    (paymentId?: number) => {
+      try {
+        const fromPayment = paymentHistoryData?.payments.find((p) => p.id === paymentId)
+        if (fromPayment?.project_name) return fromPayment.project_name
+      } catch {
+        // ignore
+      }
+      if (apiClient?.project_id) return `Project ${apiClient.project_id}`
+      return 'Unknown Project'
+    },
+    [paymentHistoryData, apiClient]
+  )
+
   // Convert Payment to PendingPayment format
   const convertPaymentToPendingPayment = useCallback(
     (payment: Payment): import('./components/PaymentVerificationQueueModal').PendingPayment => {
@@ -480,7 +499,7 @@ export function DebtSummaryPage() {
         paymentId: `PMT-${payment.id}`,
         submittedAt,
         client: customerName,
-        project: 'PrivatBank Collection',
+        project: resolveProjectName(payment.id),
         amount: payment.amount,
         method: normalizePaymentMethod(payment.method),
         date: payment.date,
@@ -489,7 +508,7 @@ export function DebtSummaryPage() {
         newDebt,
       }
     },
-    [customerName, debtSummary, normalizePaymentMethod]
+    [customerName, debtSummary, normalizePaymentMethod, resolveProjectName]
   )
 
   // Filter pending payments that are less than 7 days old
@@ -1510,7 +1529,7 @@ export function DebtSummaryPage() {
             clientId: id || '',
             clientName: customerName,
             phone: client?.phones?.[0]?.number || '',
-            project: 'PrivatBank Collection',
+            project: resolveProjectName(selectedPayment?.id),
             // Use backend snapshot for Debt Impact when available
             currentDebt:
               Number(

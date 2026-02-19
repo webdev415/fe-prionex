@@ -547,6 +547,14 @@ const drawCheck = (doc: jsPDF, x: number, y: number, size = 3) => {
 }
 
 export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
+  // Debug: Check what company data is being passed
+  console.log('Company data received:', {
+    companyName: data.companyName,
+    companyAddress: data.companyAddress,
+    companyPhone: data.companyPhone,
+    companyEmail: data.companyEmail,
+  })
+
   const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
 
   // Load Noto Sans font if available (critical for ₴ symbol support)
@@ -678,7 +686,7 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
   setText(TEXT)
   doc.text('Payment Receipt', xLabel, y)
 
-  const companyName = data.companyName || 'PrivatBank Debt Collection'
+  const companyName = data.companyName || '-'
   doc.setFontSize(fsBody + 1)
   safeSetFont('bold')
   doc.text(companyName, xRight, y, { align: 'right' })
@@ -795,10 +803,10 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
     if (i < rows - 1) hr(boxX, yy + 3.3, boxX + boxW)
   }
 
-  boxRow(0, 'Outstanding Balance Before:', formatCurrency(data.outstandingBalanceBefore))
+  // boxRow(0, 'Outstanding Balance Before:', formatCurrency(data.outstandingBalanceBefore))
   // paymentApplied is already negative, so format it directly (will show "- ₴ amount")
   boxRow(1, 'Payment Applied:', formatCurrency(data.paymentApplied))
-  boxRow(2, 'Remaining Balance:', formatCurrency(data.remainingBalance))
+  // boxRow(2, 'Remaining Balance:', formatCurrency(data.remainingBalance))
 
   y = Math.max(leftEndY, boxTopY + boxH) + 12
 
@@ -842,9 +850,9 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
   doc.text(`${companyName} Department`, xLabel, y)
   y += 8
 
-  const address = data.companyAddress || 'Kyiv, Ukraine, 01001'
-  const phone = data.companyPhone || '+380 44 123 4567'
-  const email = data.companyEmail || 'collections@privatbank.ua'
+  const address = data.companyAddress || '-'
+  const phone = data.companyPhone || '-'
+  const email = data.companyEmail || '-'
 
   kv('Address:', address, y)
   y += 6

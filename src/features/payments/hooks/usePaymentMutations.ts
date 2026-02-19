@@ -309,11 +309,10 @@ export function useGenerateReceipt() {
           // Map backend fields (primary_contact_phone, primary_contact_email, legal_address)
           // to frontend fields (contact_phone, contact_email, address)
           companyData = {
-            name: seller.seller_name || 'PrivatBank Debt Collection',
-            address: seller.legal_address || seller.address || 'Kyiv, Ukraine, 01001',
-            phone: seller.primary_contact_phone || seller.contact_phone || '+380 44 123 4567',
-            email:
-              seller.primary_contact_email || seller.contact_email || 'collections@privatbank.ua',
+            name: seller.seller_name || '-',
+            address: seller.legal_address || seller.address || '-',
+            phone: seller.primary_contact_phone || seller.contact_phone || '-',
+            email: seller.primary_contact_email || seller.contact_email || '-',
           }
           console.log('Using seller company data:', companyData)
         } catch (error) {
@@ -324,16 +323,16 @@ export function useGenerateReceipt() {
               const { getProject } = await import('@/features/projects/api/projectsApi')
               const project = await getProject(paymentData.project_id)
               companyData = {
-                name: project.client_company || project.name || 'PrivatBank Debt Collection',
+                name: project.client_company || project.name || '-',
                 address:
                   ((project.settings as Record<string, unknown>)?.address as string | undefined) ||
-                  'Kyiv, Ukraine, 01001',
+                  '-',
                 phone:
                   ((project.settings as Record<string, unknown>)?.phone as string | undefined) ||
-                  '+380 44 123 4567',
+                  '-',
                 email:
                   ((project.settings as Record<string, unknown>)?.email as string | undefined) ||
-                  'collections@privatbank.ua',
+                  '-',
               }
             } catch (projectError) {
               console.warn('Failed to fetch project data for receipt:', projectError)
@@ -348,16 +347,14 @@ export function useGenerateReceipt() {
             const { getProject } = await import('@/features/projects/api/projectsApi')
             const project = await getProject(paymentData.project_id)
             companyData = {
-              name: project.client_company || project.name || 'PrivatBank Debt Collection',
+              name: project.client_company || project.name || '-',
               address:
                 ((project.settings as Record<string, unknown>)?.address as string | undefined) ||
-                'Kyiv, Ukraine, 01001',
+                '-',
               phone:
-                ((project.settings as Record<string, unknown>)?.phone as string | undefined) ||
-                '+380 44 123 4567',
+                ((project.settings as Record<string, unknown>)?.phone as string | undefined) || '-',
               email:
-                ((project.settings as Record<string, unknown>)?.email as string | undefined) ||
-                'collections@privatbank.ua',
+                ((project.settings as Record<string, unknown>)?.email as string | undefined) || '-',
             }
           } catch (error) {
             console.warn('Failed to fetch project data for receipt:', error)

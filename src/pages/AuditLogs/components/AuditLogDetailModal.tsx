@@ -202,7 +202,7 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
                     {t('pages.auditLogs.detailModal.user')}:
                   </span>
                   <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
-                    {log.username} {log.user_id ? `(ID: ${log.user_id})` : ''}
+                    {log.username || '—'}
                   </span>
                 </div>
                 <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
@@ -240,7 +240,7 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
                     {t('pages.auditLogs.detailModal.ipAddress')}:
                   </span>
                   <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
-                    {log.ip_address || '—'}
+                    {log.http_method === 'AMI' ? 'N/A (Asterisk event)' : log.ip_address || '—'}
                   </span>
                 </div>
                 <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
@@ -248,7 +248,7 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
                     {t('pages.auditLogs.detailModal.sessionId')}:
                   </span>
                   <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
-                    {log.session_id || '—'}
+                    {log.http_method === 'AMI' ? 'N/A (Asterisk event)' : log.session_id || '—'}
                   </span>
                 </div>
                 <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
@@ -364,46 +364,81 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
             </span>
             <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 px-3 py-4 sm:px-6 sm:py-5">
               <div className="flex w-full flex-col items-start gap-2 py-0 sm:w-[472px]">
-                <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
-                  <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
-                    {t('pages.auditLogs.detailModal.httpMethod')}:
-                  </span>
-                  <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
-                    {log.http_method || '—'}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
-                  <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
-                    {t('pages.auditLogs.detailModal.apiPath')}:
-                  </span>
-                  <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
-                    {log.api_path || '—'}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
-                  <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
-                    {t('pages.auditLogs.detailModal.responseStatus')}:
-                  </span>
-                  <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
-                    {log.response_status || '—'}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
-                  <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
-                    {t('pages.auditLogs.detailModal.responseTime')}:
-                  </span>
-                  <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
-                    {log.response_time !== undefined ? `${log.response_time} ms` : '—'}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
-                  <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
-                    {t('pages.auditLogs.detailModal.userAgent')}:
-                  </span>
-                  <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
-                    {log.user_agent || '—'}
-                  </span>
-                </div>
+                {log.http_method === 'AMI' ? (
+                  /* AMI / Asterisk-triggered events — no HTTP context */
+                  <>
+                    <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
+                      <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
+                        {t('pages.auditLogs.detailModal.httpMethod')}:
+                      </span>
+                      <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
+                        AMI
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
+                      <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
+                        {t('pages.auditLogs.detailModal.apiPath')}:
+                      </span>
+                      <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
+                        {log.api_path || '—'}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
+                      <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
+                        Source:
+                      </span>
+                      <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
+                        Asterisk (system event — no HTTP request)
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  /* HTTP-triggered events — full request context */
+                  <>
+                    <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
+                      <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
+                        {t('pages.auditLogs.detailModal.httpMethod')}:
+                      </span>
+                      <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
+                        {log.http_method || '—'}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
+                      <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
+                        {t('pages.auditLogs.detailModal.apiPath')}:
+                      </span>
+                      <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
+                        {log.api_path || '—'}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
+                      <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
+                        {t('pages.auditLogs.detailModal.responseStatus')}:
+                      </span>
+                      <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
+                        {log.response_status || '—'}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
+                      <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
+                        {t('pages.auditLogs.detailModal.responseTime')}:
+                      </span>
+                      <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
+                        {log.response_time !== undefined && log.response_time !== null
+                          ? `${log.response_time} ms`
+                          : '—'}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
+                      <span className="text-dark-500 shrink-0 text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
+                        {t('pages.auditLogs.detailModal.userAgent')}:
+                      </span>
+                      <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
+                        {log.user_agent || '—'}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
