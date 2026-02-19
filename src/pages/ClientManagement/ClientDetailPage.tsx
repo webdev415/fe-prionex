@@ -1386,12 +1386,9 @@ export function ClientDetailPage() {
                     <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                       {t('pages.clients.detail.maritalStatus')}
                     </label>
-                    <div className="flex flex-1 items-center justify-end gap-2">
-                      <p className="text-dark-500 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.maritalStatus}
-                      </p>
-                      <Icons.Tick01 size={18} className="text-gray-800" />
-                    </div>
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.personalDetails.maritalStatus}
+                    </p>
                   </div>
                   <div className="flex items-center self-stretch p-0">
                     <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">

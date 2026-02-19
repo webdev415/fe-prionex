@@ -15,28 +15,49 @@ export const api = axios.create({
 // Token storage key
 const TOKEN_KEY = 'prionex_token'
 
-// Initialize token from sessionStorage (survives page refresh within session)
-let accessToken: string | null = sessionStorage.getItem(TOKEN_KEY)
+// Initialize token from localStorage (shared across tabs in the same browser)
+let accessToken: string | null = localStorage.getItem(TOKEN_KEY)
 
 export const setAccessToken = (token: string | null) => {
   accessToken = token
   if (token) {
-    sessionStorage.setItem(TOKEN_KEY, token)
+    localStorage.setItem(TOKEN_KEY, token)
   } else {
-    sessionStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(TOKEN_KEY)
   }
 }
 
 export const getAccessToken = () => {
-  // Always check sessionStorage as source of truth
+  // Always check localStorage as source of truth
   // This ensures we get the latest token even if in-memory variable is stale
-  const tokenFromStorage = sessionStorage.getItem(TOKEN_KEY)
+  const tokenFromStorage = localStorage.getItem(TOKEN_KEY)
   if (tokenFromStorage && tokenFromStorage !== accessToken) {
-    // Sync in-memory token with sessionStorage
+    // Sync in-memory token with localStorage
     accessToken = tokenFromStorage
   }
   return accessToken || tokenFromStorage
 }
+
+// Cross-tab sync: detect logout/login from other tabs
+window.addEventListener('storage', (event) => {
+  if (event.key !== TOKEN_KEY) return
+
+  if (event.newValue === null) {
+    // Token was removed in another tab (logout) — sync and redirect
+    accessToken = null
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      isImpersonating: false,
+      impersonatedUser: null,
+      originalAdminUser: null,
+    })
+    window.location.href = '/login'
+  } else if (event.newValue !== accessToken) {
+    // Token was set/changed in another tab (login) — sync in-memory
+    accessToken = event.newValue
+  }
+})
 
 // Race condition handling for token refresh
 let isRefreshing = false
@@ -54,9 +75,9 @@ const onTokenRefreshed = (token: string) => {
 // Request interceptor - add token to requests
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Refresh token from sessionStorage in case it was updated elsewhere
+    // Refresh token from localStorage in case it was updated in another tab
     // This ensures we always have the latest token
-    const currentToken = sessionStorage.getItem(TOKEN_KEY) || accessToken
+    const currentToken = localStorage.getItem(TOKEN_KEY) || accessToken
     if (currentToken) {
       // Update in-memory token if it changed
       if (currentToken !== accessToken) {

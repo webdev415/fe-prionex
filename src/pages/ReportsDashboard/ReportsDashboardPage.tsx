@@ -189,7 +189,7 @@ export function ReportsDashboardPage() {
   // Check token expiry in useEffect to avoid impure operations during render
   useEffect(() => {
     if (import.meta.env.DEV) {
-      const token = sessionStorage.getItem('prionex_token')
+      const token = localStorage.getItem('prionex_token')
       console.log('[ReportsDashboard] Auth Status:', {
         isAuthenticated,
         hasUser: !!user,
@@ -222,7 +222,7 @@ export function ReportsDashboardPage() {
           if (isExpired) {
             console.error('[ReportsDashboard] ⚠️ TOKEN IS EXPIRED! Redirecting to login...')
             // Clear expired token
-            sessionStorage.removeItem('prionex_token')
+            localStorage.removeItem('prionex_token')
             // Force logout
             setTimeout(() => {
               window.location.href = '/login'
