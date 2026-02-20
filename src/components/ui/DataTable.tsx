@@ -68,6 +68,7 @@ export interface DataTableProps<T> {
   // Table header actions (works independently of bulk selection)
   tableHeaderActions?: ReactNode // Buttons/actions to display in a header row above the table
   tableHeaderTitle?: string | ReactNode // Optional title/text to display on the left side of the table header
+  tableClassName?: string // Additional classes for the <table> element (e.g., 'table-fixed')
 }
 
 export function DataTable<T extends { id: number | string }>({
@@ -91,6 +92,7 @@ export function DataTable<T extends { id: number | string }>({
   headerActions,
   tableHeaderActions,
   tableHeaderTitle,
+  tableClassName,
 }: DataTableProps<T>) {
   const { t } = useTranslation('common')
   const handleSort = (column: Column<T>) => {
@@ -280,7 +282,7 @@ export function DataTable<T extends { id: number | string }>({
           </div>
         )}
 
-        <table className="min-w-full border-collapse whitespace-nowrap">
+        <table className={`min-w-full border-collapse ${tableClassName || 'whitespace-nowrap'}`}>
           <thead className="sticky top-0 z-10">
             <tr className="bg-white">
               {/* Checkbox column for bulk selection */}
@@ -304,7 +306,7 @@ export function DataTable<T extends { id: number | string }>({
                   key={column.key}
                   scope="col"
                   style={{ height: `${headerHeight}px` }}
-                  className={`border-b border-[#EBECE8] bg-white px-4 text-xs font-semibold whitespace-nowrap text-[#05040D] ${
+                  className={`border-b border-[#EBECE8] bg-white px-4 text-xs font-semibold ${column.className ? '' : 'whitespace-nowrap'} text-[#05040D] ${
                     column.align === 'center'
                       ? 'text-center'
                       : column.align === 'right'
@@ -369,7 +371,7 @@ export function DataTable<T extends { id: number | string }>({
                     {columns.map((column, colIndex) => (
                       <td
                         key={column.key}
-                        className={`text-dark-500 h-[49px] px-4 text-xs font-medium whitespace-nowrap ${
+                        className={`text-dark-500 h-[49px] px-4 text-xs font-medium ${column.className ? '' : 'whitespace-nowrap'} ${
                           column.align === 'center'
                             ? 'text-center'
                             : column.align === 'right'

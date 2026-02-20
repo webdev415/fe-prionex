@@ -34,6 +34,7 @@ import {
   useBulkAssignClients,
   useClients,
 } from '@/features/clients/hooks/useClients'
+import { useUsers } from '@/features/users/hooks/useUsers'
 import { useSearchStore } from '@/stores/searchStore'
 import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
@@ -55,6 +56,8 @@ interface DisplayClient {
   debt: string
   priority: 'Critical' | 'High' | 'Medium' | 'Low'
   score: number
+  employeeName: string
+  searcherName: string
 }
 
 // Default thresholds (fallback if API not available)
@@ -68,7 +71,8 @@ const DEFAULT_THRESHOLDS: PriorityThresholds = {
 // Helper to map API Client to DisplayClient
 const mapAPIClientToDisplay = (
   client: APIClient,
-  thresholds: PriorityThresholds
+  thresholds: PriorityThresholds,
+  userNameMap: Map<number, string>
 ): DisplayClient => {
   const fullName = [client.first_name, client.middle_name, client.last_name]
     .filter(Boolean)
@@ -88,6 +92,12 @@ const mapAPIClientToDisplay = (
       (client.manual_priority as 'Critical' | 'High' | 'Medium' | 'Low') ||
       mapScoreToPriority(client.priority_score, thresholds),
     score: client.priority_score,
+    employeeName: client.responsible_employee_id
+      ? userNameMap.get(client.responsible_employee_id) || '-'
+      : '-',
+    searcherName: client.responsible_searcher_id
+      ? userNameMap.get(client.responsible_searcher_id) || '-'
+      : '-',
   }
 }
 
@@ -145,8 +155,8 @@ export function ClientManagementPage() {
   const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
   const [rowsPerPage, setRowsPerPage] = useURLState<number>('pageSize', 10)
 
-  // URL state for sorting (separate params for sort field and order)
-  const [sortBy, setSortBy] = useURLState<string>('sort_by', 'priority_score')
+  // URL state for sorting (stores frontend column key, converted to backend field in apiParams)
+  const [sortBy, setSortBy] = useURLState<string>('sort_by', 'priority')
   const [sortOrder, setSortOrder] = useURLState<'asc' | 'desc'>('sort_order', 'desc')
 
   // URL state for filters
@@ -219,17 +229,10 @@ export function ClientManagementPage() {
     ]
   )
 
-  // Compute sortConfig from URL state (map backend keys to frontend keys for DataTable)
+  // Compute sortConfig from URL state (sortBy already stores the frontend column key)
   const sortConfig: SortConfig | undefined = useMemo(() => {
     if (!sortBy) return undefined
-    // Map backend sort fields to frontend keys
-    const backendToFrontendMap: Record<string, string> = {
-      priority_score: 'priority',
-      first_name: 'fullName',
-      id: 'id',
-    }
-    const frontendKey = backendToFrontendMap[sortBy] || sortBy
-    return { key: frontendKey, order: sortOrder }
+    return { key: sortBy, order: sortOrder }
   }, [sortBy, sortOrder])
 
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
@@ -437,12 +440,27 @@ export function ClientManagementPage() {
 
   // Convert frontend filters to API parameters
   const apiParams = useMemo(() => {
+    // Map frontend column keys to backend sort fields
+    const frontendToBackendSort: Record<string, string> = {
+      priority: 'priority_score',
+      score: 'priority_score',
+      fullName: 'first_name',
+      id: 'id',
+      createdDate: 'created_at',
+      taxIdNumber: 'tax_id',
+      phoneNumber: 'phone_primary',
+      employeeName: 'responsible_employee_id',
+      searcherName: 'responsible_searcher_id',
+      creditor: 'primary_creditor',
+      debt: 'total_debt',
+    }
+
     const params: Record<string, unknown> = {
       // Server-side pagination
       skip: (currentPage - 1) * rowsPerPage,
       limit: rowsPerPage,
-      // Sorting (always present with defaults)
-      sort_by: sortBy,
+      // Sorting (convert frontend key to backend field)
+      sort_by: frontendToBackendSort[sortBy] || 'priority_score',
       sort_order: sortOrder,
     }
 
@@ -552,14 +570,29 @@ export function ClientManagementPage() {
   // Fetch priority thresholds configuration
   const { data: thresholds = DEFAULT_THRESHOLDS } = usePriorityThresholds()
 
+  // Fetch active users for resolving employee/searcher IDs to names
+  const { data: usersResponse } = useUsers({ status: 'active', page_size: 100 })
+  const userNameMap = useMemo(() => {
+    const map = new Map<number, string>()
+    if (usersResponse?.users) {
+      for (const user of usersResponse.users) {
+        map.set(
+          user.id,
+          [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' ')
+        )
+      }
+    }
+    return map
+  }, [usersResponse])
+
   // Assignment mutations
   const assignClientMutation = useAssignClient()
   const bulkAssignClientsMutation = useBulkAssignClients()
 
   // Map API clients to display format
   const displayClients = useMemo(() => {
-    return apiClients.map((client) => mapAPIClientToDisplay(client, thresholds))
-  }, [apiClients, thresholds])
+    return apiClients.map((client) => mapAPIClientToDisplay(client, thresholds, userNameMap))
+  }, [apiClients, thresholds, userNameMap])
 
   // Count applied filters
   const appliedFiltersCount = useMemo(() => {
@@ -615,15 +648,7 @@ export function ClientManagementPage() {
   }, [prioritySummaryData])
 
   const handleSort = (key: string, order: 'asc' | 'desc') => {
-    // Map frontend sort keys to backend sort fields
-    const sortFieldMap: Record<string, string> = {
-      priority: 'priority_score',
-      score: 'priority_score',
-      fullName: 'first_name',
-      id: 'id',
-    }
-    const backendSortField = sortFieldMap[key] || key
-    setSortBy(backendSortField)
+    setSortBy(key)
     setSortOrder(order)
     // Reset to page 1 when sort changes
     setCurrentPage(1)
@@ -933,7 +958,7 @@ export function ClientManagementPage() {
     setCurrentPage(1)
 
     // Reset sorting to defaults
-    setSortBy('priority_score')
+    setSortBy('priority')
     setSortOrder('desc')
 
     // Clear search query from global store
@@ -993,6 +1018,8 @@ export function ClientManagementPage() {
       key: 'taxIdNumber',
       header: t('pages.clients.tableHeaders.taxIdNumber'),
       align: 'left',
+      sortable: true,
+      sortKey: 'taxIdNumber',
     },
     {
       key: 'tags',
@@ -1014,18 +1041,23 @@ export function ClientManagementPage() {
       key: 'phoneNumber',
       header: t('pages.clients.tableHeaders.phoneNumber'),
       align: 'left',
+      sortable: true,
+      sortKey: 'phoneNumber',
       render: (client) => client.phoneNumber,
     },
     {
       key: 'creditor',
       header: t('pages.clients.tableHeaders.creditor'),
       align: 'left',
+      sortable: true,
+      sortKey: 'creditor',
     },
     {
       key: 'debt',
       header: t('pages.clients.tableHeaders.totalDebt'),
       align: 'right',
-      sortable: false, // total_debt computed post-query, not sortable
+      sortable: true,
+      sortKey: 'debt',
       render: (client) => `${formatCurrency(client.debt)} ₴`,
     },
     {
@@ -1046,6 +1078,18 @@ export function ClientManagementPage() {
     {
       key: 'createdDate',
       header: t('pages.clients.tableHeaders.createdDate'),
+      align: 'left',
+      sortable: true,
+      sortKey: 'createdDate',
+    },
+    {
+      key: 'employeeName',
+      header: t('pages.clients.tableHeaders.employee'),
+      align: 'left',
+    },
+    {
+      key: 'searcherName',
+      header: t('pages.clients.tableHeaders.searcher'),
       align: 'left',
     },
     {

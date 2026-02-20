@@ -699,6 +699,8 @@
         "totalDebt": "Total Debt",
         "priority": "Priority",
         "score": "Score",
+        "employee": "Employee",
+        "searcher": "Searcher",
         "actions": "Actions"
       },
       "priorities": {

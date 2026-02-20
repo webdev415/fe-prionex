@@ -711,41 +711,37 @@ export function ClientDetailPage() {
       key: 'date',
       header: t('pages.clients.activity.tableHeaders.date'),
       align: 'left',
-      className: 'w-[80px]',
+      className: 'w-[90px] overflow-hidden whitespace-normal',
     },
     {
       key: 'number',
       header: t('pages.clients.activity.tableHeaders.loanNumber'),
       align: 'left',
-      className: 'w-[100px]',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'type',
       header: t('pages.clients.activity.tableHeaders.type'),
       align: 'left',
-      render: (activity) => (
-        <div className="max-w-[120px] break-words whitespace-normal">{activity.type}</div>
-      ),
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'subtype',
       header: t('pages.clients.activity.tableHeaders.subtype'),
       align: 'left',
-      render: (activity) => (
-        <div className="max-w-[120px] break-words whitespace-normal">{activity.subtype}</div>
-      ),
+      className: 'w-[100px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'result',
       header: t('pages.clients.activity.tableHeaders.result'),
       align: 'left',
-      className: 'w-[110px]',
+      className: 'w-[100px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'promisedAmount',
       header: t('pages.clients.activity.tableHeaders.promisedAmount'),
       align: 'right',
-      className: 'w-[90px]',
+      className: 'w-[140px] overflow-hidden whitespace-normal break-words',
       render: (activity) =>
         activity.promisedAmount ? `${formatCurrencyWithDecimals(activity.promisedAmount)}₴` : '-',
     },
@@ -753,16 +749,15 @@ export function ClientDetailPage() {
       key: 'promisedDate',
       header: t('pages.clients.activity.tableHeaders.promisedDate'),
       align: 'left',
-      className: 'w-[90px]',
-      render: (activity) => activity.promisedDate || '-',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'comment',
       header: t('pages.clients.activity.tableHeaders.comment'),
       align: 'left',
-      className: 'min-w-[250px]',
+      className: 'whitespace-normal break-words',
       render: (activity) => (
-        <div className="py-2 text-sm leading-tight break-words whitespace-normal">
+        <div className="py-1 text-sm leading-tight break-words whitespace-normal">
           {activity.comment || '-'}
         </div>
       ),
@@ -771,7 +766,7 @@ export function ClientDetailPage() {
       key: 'employee',
       header: t('pages.clients.activity.tableHeaders.employee'),
       align: 'left',
-      className: 'w-[90px]',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
   ]
 
@@ -1232,7 +1227,7 @@ export function ClientDetailPage() {
                   onClick={() => setActiveClientCardTab('personal')}
                   title={t('pages.clients.detail.tabs.personal')}
                   className={cn(
-                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-3 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-4 xl:p-3 2xl:p-4',
+                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
                     activeClientCardTab === 'personal'
                       ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
                       : 'md:border-transparent'
@@ -1241,18 +1236,10 @@ export function ClientDetailPage() {
                   <Icons.UserAccount
                     size={24}
                     className={cn(
-                      'mx-1 my-1 shrink-0',
+                      'shrink-0',
                       activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
                     )}
                   />
-                  <span
-                    className={cn(
-                      'text-sm font-medium whitespace-nowrap xl:hidden 2xl:inline',
-                      activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
-                    )}
-                  >
-                    {t('pages.clients.detail.tabs.personal')}
-                  </span>
                 </button>
                 <button
                   type="button"
@@ -1260,7 +1247,7 @@ export function ClientDetailPage() {
                   onClick={() => setActiveClientCardTab('work')}
                   title={t('pages.clients.detail.tabs.work')}
                   className={cn(
-                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-3 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-4 xl:p-3 2xl:p-4',
+                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
                     activeClientCardTab === 'work'
                       ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
                       : 'md:border-transparent'
@@ -1269,18 +1256,10 @@ export function ClientDetailPage() {
                   <Icons.Briefcase01
                     size={24}
                     className={cn(
-                      'mx-1 my-1 shrink-0',
+                      'shrink-0',
                       activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
                     )}
                   />
-                  <span
-                    className={cn(
-                      'text-sm font-medium whitespace-nowrap xl:hidden 2xl:inline',
-                      activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
-                    )}
-                  >
-                    {t('pages.clients.detail.tabs.work')}
-                  </span>
                 </button>
                 <button
                   type="button"
@@ -1288,7 +1267,7 @@ export function ClientDetailPage() {
                   onClick={() => setActiveClientCardTab('recommenders')}
                   title={t('pages.clients.detail.tabs.recommenders')}
                   className={cn(
-                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-3 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-4 xl:p-3 2xl:p-4',
+                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
                     activeClientCardTab === 'recommenders'
                       ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
                       : 'md:border-transparent'
@@ -1297,22 +1276,12 @@ export function ClientDetailPage() {
                   <Icons.UserCheck01
                     size={24}
                     className={cn(
-                      'mx-1 my-1 shrink-0',
+                      'shrink-0',
                       activeClientCardTab === 'recommenders'
                         ? 'text-secondary-800'
                         : 'text-gray-700'
                     )}
                   />
-                  <span
-                    className={cn(
-                      'text-sm font-medium whitespace-nowrap xl:hidden 2xl:inline',
-                      activeClientCardTab === 'recommenders'
-                        ? 'text-secondary-800'
-                        : 'text-gray-700'
-                    )}
-                  >
-                    {t('pages.clients.detail.tabs.recommenders')}
-                  </span>
                 </button>
                 <button
                   type="button"
@@ -1320,7 +1289,7 @@ export function ClientDetailPage() {
                   onClick={() => setActiveClientCardTab('addresses')}
                   title={t('pages.clients.detail.tabs.addresses')}
                   className={cn(
-                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-3 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-4 xl:p-3 2xl:p-4',
+                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
                     activeClientCardTab === 'addresses'
                       ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
                       : 'md:border-transparent'
@@ -1329,18 +1298,10 @@ export function ClientDetailPage() {
                   <Icons.Location01
                     size={24}
                     className={cn(
-                      'mx-1 my-1 shrink-0',
+                      'shrink-0',
                       activeClientCardTab === 'addresses' ? 'text-secondary-800' : 'text-gray-700'
                     )}
                   />
-                  <span
-                    className={cn(
-                      'text-sm font-medium whitespace-nowrap xl:hidden 2xl:inline',
-                      activeClientCardTab === 'addresses' ? 'text-secondary-800' : 'text-gray-700'
-                    )}
-                  >
-                    {t('pages.clients.detail.tabs.addresses')}
-                  </span>
                 </button>
               </div>
             </div>
@@ -2502,6 +2463,7 @@ export function ClientDetailPage() {
               columns={activityColumns}
               data={client.activities.slice(0, 10)}
               className="w-full"
+              tableClassName="table-fixed w-full"
             />
           ))}
 
