@@ -99,29 +99,27 @@ export function Step2FileUpload({
 
           const headers = headerLine
             .split(delimiter)
-            .map((h) => h.trim().toLowerCase())
+            .map((h) => h.trim().replace(/\*+$/, '').trim().toLowerCase())
             .filter((h) => h.length > 0)
 
-          // Required columns (matching operator CSV template - sample_column.csv)
+          // Required columns (matching backend CSV template exactly)
           const requiredColumns = [
-            'first name',
-            'last name',
+            'first_name',
+            'last_name',
             'date of birth',
             'tin',
-            'registration address',
-            'personal address',
-            'family members',
-            'job: organization name',
-            'job: position',
-            'income level',
+            'registration_address',
+            'personal_address',
             'passport type',
-            'passport issued by',
+            'passport number',
+            'passport issue date',
+            'who issued the passport',
             'contract number',
-            'loan start date',
-            'loan end date',
-            'loan amount',
-            'principal debt',
-            'total debt',
+            'start date',
+            'last return date',
+            'loan amount (uah)',
+            'body debt (uah)',
+            'total to refund',
             'loan term (days)',
           ]
 
