@@ -126,7 +126,6 @@ export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
   const hasCyrillic = /[\u0400-\u04FF]/.test(smsData.message)
   const maxChars = hasCyrillic ? 70 : 120
   const charCount = smsData.message.length
-  const cost = smsParts * 1.0 // Assuming 1.00 per SMS part
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="xl" className="p-4 sm:p-6">
@@ -223,42 +222,40 @@ export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
             </div>
 
             {/* Message Metrics */}
-            <div className="rounded-lg border border-gray-200 bg-gray-100 p-3 sm:p-4">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="bg-success-500 h-2 w-2 rounded-full" />
-                  <span className="text-xs font-light text-gray-700 sm:text-sm">
-                    {charCount}/{maxChars} {t('pages.clients.modals.viewSMS.characters')}
+            <div className="flex flex-row justify-between rounded-lg border border-gray-200 bg-gray-100 p-3 sm:p-4">
+              <div className="flex items-center gap-2">
+                <span className="bg-success-500 h-2 w-2 rounded-full" />
+                <span className="text-xs font-light text-gray-700 sm:text-sm">
+                  {charCount}/{maxChars} {t('pages.clients.modals.viewSMS.characters')}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Icons.File size={14} className="text-gray-600 sm:size-4" />
+                <span className="text-xs font-light text-gray-700 sm:text-sm">
+                  {t('pages.clients.modals.viewSMS.script')}:{' '}
+                  <span className="text-dark-500 font-semibold">
+                    {hasCyrillic
+                      ? t('pages.clients.modals.viewSMS.cyrillic')
+                      : t('pages.clients.modals.viewSMS.latin')}
                   </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Icons.File size={14} className="text-gray-600 sm:size-4" />
-                  <span className="text-xs font-light text-gray-700 sm:text-sm">
-                    {t('pages.clients.modals.viewSMS.script')}:{' '}
-                    <span className="text-dark-500 font-semibold">
-                      {hasCyrillic
-                        ? t('pages.clients.modals.viewSMS.cyrillic')
-                        : t('pages.clients.modals.viewSMS.latin')}
-                    </span>
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Icons.Mail size={14} className="text-gray-600 sm:size-4" />
-                  <span className="text-xs font-light text-gray-700 sm:text-sm">
-                    {smsParts}{' '}
-                    {smsParts !== 1
-                      ? t('pages.clients.modals.viewSMS.smsParts')
-                      : t('pages.clients.modals.viewSMS.smsPart')}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Icons.Mail size={14} className="text-gray-600 sm:size-4" />
+                <span className="text-xs font-light text-gray-700 sm:text-sm">
+                  {smsParts}{' '}
+                  {smsParts !== 1
+                    ? t('pages.clients.modals.viewSMS.smsParts')
+                    : t('pages.clients.modals.viewSMS.smsPart')}
+                </span>
+              </div>
+              {/* <div className="flex items-center gap-2">
                   <Icons.MoneyRemove01 size={14} className="text-gray-600 sm:size-4" />
                   <span className="text-xs font-light text-gray-700 sm:text-sm">
                     {t('pages.clients.modals.viewSMS.cost')}:{' '}
                     <span className="text-dark-500 font-semibold">₴{cost.toFixed(2)}</span>
                   </span>
-                </div>
-              </div>
+                </div> */}
             </div>
 
             {/* Delivery Timestamps */}
