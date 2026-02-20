@@ -628,6 +628,8 @@
         "totalDebt": "Общий долг",
         "priority": "Приоритет",
         "score": "Оценка",
+        "employee": "Сотрудник",
+        "searcher": "Розыскник",
         "actions": "Действия"
       },
       "priorities": {

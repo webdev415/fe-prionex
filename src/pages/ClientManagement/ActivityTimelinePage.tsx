@@ -167,41 +167,37 @@ export function ActivityTimelinePage() {
       key: 'date',
       header: t('pages.clients.activity.tableHeaders.date'),
       align: 'left',
-      className: 'w-[80px]',
+      className: 'w-[90px] overflow-hidden whitespace-normal',
     },
     {
       key: 'number',
       header: t('pages.clients.activity.tableHeaders.loanNumber', 'Loan Number'),
       align: 'left',
-      className: 'w-[100px]',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'type',
       header: t('pages.clients.activity.tableHeaders.type', 'Type'),
       align: 'left',
-      render: (activity) => (
-        <div className="max-w-[120px] break-words whitespace-normal">{activity.type}</div>
-      ),
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'subtype',
       header: t('pages.clients.activity.tableHeaders.subtype', 'Subtype'),
       align: 'left',
-      render: (activity) => (
-        <div className="max-w-[120px] break-words whitespace-normal">{activity.subtype}</div>
-      ),
+      className: 'w-[100px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'result',
       header: t('pages.clients.activity.tableHeaders.result'),
       align: 'left',
-      className: 'w-[110px]',
+      className: 'w-[100px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'promisedAmount',
       header: t('pages.clients.activity.tableHeaders.promisedAmount'),
       align: 'right',
-      className: 'w-[90px]',
+      className: 'w-[140px] overflow-hidden whitespace-normal break-words',
       render: (activity) =>
         activity.promisedAmount ? `${formatCurrencyWithDecimals(activity.promisedAmount)}₴` : '-',
     },
@@ -209,16 +205,15 @@ export function ActivityTimelinePage() {
       key: 'promisedDate',
       header: t('pages.clients.activity.tableHeaders.promisedDate'),
       align: 'left',
-      className: 'w-[90px]',
-      render: (activity) => activity.promisedDate || '-',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'comment',
       header: t('pages.clients.activity.tableHeaders.comment'),
       align: 'left',
-      className: 'min-w-[250px]',
+      className: 'whitespace-normal break-words',
       render: (activity) => (
-        <div className="py-2 text-sm leading-tight break-words whitespace-normal">
+        <div className="py-1 text-sm leading-tight break-words whitespace-normal">
           {activity.comment || '-'}
         </div>
       ),
@@ -227,7 +222,7 @@ export function ActivityTimelinePage() {
       key: 'employee',
       header: t('pages.clients.activity.tableHeaders.employee'),
       align: 'left',
-      className: 'w-[90px]',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
   ]
 
@@ -381,7 +376,12 @@ export function ActivityTimelinePage() {
             )}
           </div>
         ) : (
-          <DataTable columns={activityColumns} data={paginatedActivities} className="w-full" />
+          <DataTable
+            columns={activityColumns}
+            data={paginatedActivities}
+            className="w-full"
+            tableClassName="table-fixed w-full"
+          />
         )}
       </div>
 

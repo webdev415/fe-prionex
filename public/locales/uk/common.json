@@ -623,6 +623,8 @@
         "totalDebt": "Загальний борг",
         "priority": "Пріоритет",
         "score": "Оцінка",
+        "employee": "Співробітник",
+        "searcher": "Пошуковець",
         "actions": "Дії"
       },
       "priorities": {
