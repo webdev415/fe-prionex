@@ -649,7 +649,6 @@ export function ClientManagementPage() {
     searcherId?: string
     distributionMethod: 'assign-all' | 'distribute-evenly'
     reason: string
-    notes?: string
   }) => {
     // Collect client IDs to assign
     let clientIds: number[]
@@ -738,7 +737,6 @@ export function ClientManagementPage() {
     employeeId?: string
     searcherId?: string
     reason: string
-    notes?: string
   }) => {
     if (!assignModalClientId) return
 

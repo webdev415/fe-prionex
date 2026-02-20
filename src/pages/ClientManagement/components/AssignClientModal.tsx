@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
-import { Textarea } from '@/components/ui/Textarea'
 import { Label } from '@/components/ui/Label'
 import { Icons } from '@/lib/icons'
 import { useClient } from '@/features/clients/hooks/useClients'
@@ -40,12 +39,7 @@ interface AssignClientModalProps {
   open: boolean
   clientId: number | null
   onClose: () => void
-  onAssign: (assignmentData: {
-    employeeId?: string
-    searcherId?: string
-    reason: string
-    notes?: string
-  }) => void
+  onAssign: (assignmentData: { employeeId?: string; searcherId?: string; reason: string }) => void
 }
 
 const assignmentReasons = [
@@ -79,7 +73,6 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
   const [employeeId, setEmployeeId] = useState<string>('')
   const [searcherId, setSearcherId] = useState<string>('')
   const [reason, setReason] = useState<string>('')
-  const [notes, setNotes] = useState<string>('')
 
   // Populate current assignments when modal opens
   useEffect(() => {
@@ -101,14 +94,12 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
       employeeId: employeeId || undefined,
       searcherId: searcherId || undefined,
       reason,
-      notes: notes || undefined,
     })
 
     // Reset form
     setEmployeeId('')
     setSearcherId('')
     setReason('')
-    setNotes('')
     onClose()
   }
 
@@ -117,7 +108,6 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
     setEmployeeId('')
     setSearcherId('')
     setReason('')
-    setNotes('')
     onClose()
   }
 
@@ -198,12 +188,6 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                         </div>
                       ))}
                     </div>
-                  </div>
-
-                  {/* Notes Skeleton */}
-                  <div className="flex flex-1 flex-col items-start justify-center gap-1">
-                    <div className="h-3 w-24 animate-pulse rounded bg-gray-200" />
-                    <div className="h-20 w-full animate-pulse rounded-md bg-gray-200" />
                   </div>
                 </div>
               </div>
@@ -375,24 +359,6 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                         })}
                       </div>
                     </RadioGroup>
-                  </div>
-
-                  {/* Notes */}
-                  <div className="flex w-full flex-col items-start justify-center gap-1 sm:flex-1">
-                    <Label
-                      htmlFor="notes"
-                      className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]"
-                    >
-                      {t('pages.clients.modals.assignClient.notes')}
-                    </Label>
-                    <Textarea
-                      id="notes"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder={t('pages.clients.modals.assignClient.enterAdditionalNotes')}
-                      textareaSize="md"
-                      className="text-dark-500 w-full rounded-md text-xs leading-[140%] font-light tracking-[-0.24px]"
-                    />
                   </div>
                 </div>
               </div>

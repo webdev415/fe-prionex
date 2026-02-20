@@ -13,6 +13,7 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { AddNoteModal } from './components/AddNoteModal'
 import { DeleteClientModal } from './components/DeleteClientModal'
+import { AssignRoleModal, type AssignRoleMode } from './components/AssignRoleModal'
 import { PriorityBadge } from './components/PriorityBadge'
 import type { Priority } from './types'
 import { TagBadge } from '@/components/ui/TagBadge'
@@ -32,6 +33,7 @@ import {
   useClientDocuments,
   useClientActivities,
   useClientDialHistory,
+  useAssignClient,
 } from '@/features/clients/hooks/useClients'
 import { useCreateNoteInteraction } from '@/features/clients/hooks/useNoteInteraction'
 import { LinkButton } from '@/components/ui/LinkButton'
@@ -236,6 +238,9 @@ export function ClientDetailPage() {
 
   // Note creation mutation (via interaction API)
   const { mutate: createNote } = useCreateNoteInteraction()
+
+  // Assign client mutation (used by AssignRoleModal)
+  const assignClientMutation = useAssignClient()
 
   // Compose single client object from profile + sections for the rest of the page
   // Maps backend response fields to UI-expected shape for backward compatibility
@@ -450,6 +455,7 @@ export function ClientDetailPage() {
   const [isCallRecordingModalOpen, setIsCallRecordingModalOpen] = useState(false)
   const [isTagModalOpen, setIsTagModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [assignRoleModalMode, setAssignRoleModalMode] = useState<AssignRoleMode | null>(null)
   const [selectedCallData, setSelectedCallData] = useState<{
     type: string
     clientName: string
@@ -1123,17 +1129,43 @@ export function ClientDetailPage() {
                 <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                   {t('pages.clients.filters.responsibleEmployee')}
                 </label>
-                <p className="text-dark-500 ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                  {client.responsibleEmployee || '-'}
-                </p>
+                <div className="ml-2 flex flex-1 items-center justify-end gap-1">
+                  {profile?.responsible_employee_id ? (
+                    <p className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.responsibleEmployee}
+                    </p>
+                  ) : (
+                    <button
+                      onClick={() => setAssignRoleModalMode('employee')}
+                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                      title="Assign employee"
+                      type="button"
+                    >
+                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex min-h-8 items-center self-stretch p-0">
                 <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                   {t('pages.clients.filters.responsibleSearcher')}
                 </label>
-                <p className="text-dark-500 ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                  {client.responsibleResearcher}
-                </p>
+                <div className="ml-2 flex flex-1 items-center justify-end gap-1">
+                  {profile?.responsible_searcher_id ? (
+                    <p className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.responsibleResearcher}
+                    </p>
+                  ) : (
+                    <button
+                      onClick={() => setAssignRoleModalMode('searcher')}
+                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                      title="Assign searcher"
+                      type="button"
+                    >
+                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex flex-row items-center justify-between gap-2 self-stretch p-0">
@@ -2663,6 +2695,37 @@ export function ClientDetailPage() {
           setIsDeleteModalOpen(false)
         }}
       />
+
+      {/* Assign Role Modal (Employee / Searcher) */}
+      {assignRoleModalMode && (
+        <AssignRoleModal
+          open={true}
+          mode={assignRoleModalMode}
+          currentUserId={
+            assignRoleModalMode === 'employee'
+              ? (profile?.responsible_employee_id ?? null)
+              : (profile?.responsible_searcher_id ?? null)
+          }
+          onClose={() => setAssignRoleModalMode(null)}
+          onAssign={({ userId, reason }) => {
+            assignClientMutation.mutate(
+              {
+                clientId,
+                data: {
+                  responsible_employee_id:
+                    assignRoleModalMode === 'employee' ? parseInt(userId) : undefined,
+                  responsible_searcher_id:
+                    assignRoleModalMode === 'searcher' ? parseInt(userId) : undefined,
+                  assignment_reason: reason,
+                },
+              },
+              {
+                onSuccess: () => setAssignRoleModalMode(null),
+              }
+            )
+          }}
+        />
+      )}
     </div>
   )
 }
