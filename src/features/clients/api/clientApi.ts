@@ -7,6 +7,7 @@
 
 import api from '@/lib/api'
 import type {
+  AddressResponse,
   AssignClientRequest,
   AssignmentHistoryResponse,
   BulkAssignClientRequest,
@@ -14,12 +15,19 @@ import type {
   Client,
   ClientDetail,
   ClientProfileResponse,
+  ContactResponse,
+  CreateAddressRequest,
   CreateClientRequest,
+  CreateContactRequest,
   GetClientsParams,
   ManualPriorityRequest,
   PaginatedClientResponse,
   SearchByTinParams,
+  UpdateAddressRequest,
   UpdateClientRequest,
+  UpdateContactRequest,
+  UpdateEmploymentRequest,
+  UpdatePassportRequest,
   WriteoffsResponse,
 } from './types'
 
@@ -179,6 +187,83 @@ export async function getClientAssignmentHistory(
 }
 
 /**
+ * Create a new address for a client
+ */
+export async function createAddress(
+  clientId: number,
+  data: CreateAddressRequest
+): Promise<AddressResponse> {
+  const response = await api.post<AddressResponse>(`${BASE_URL}/${clientId}/addresses`, data)
+  return response.data
+}
+
+/**
+ * Update an existing address
+ */
+export async function updateAddress(
+  clientId: number,
+  addressId: number,
+  data: UpdateAddressRequest
+): Promise<AddressResponse> {
+  const response = await api.put<AddressResponse>(
+    `${BASE_URL}/${clientId}/addresses/${addressId}`,
+    data
+  )
+  return response.data
+}
+
+/**
+ * Delete an address (soft delete)
+ */
+export async function deleteAddress(clientId: number, addressId: number): Promise<void> {
+  await api.delete(`${BASE_URL}/${clientId}/addresses/${addressId}`)
+}
+
+/**
+ * Create a new contact for a client
+ */
+export async function createContact(
+  clientId: number,
+  data: CreateContactRequest
+): Promise<ContactResponse> {
+  const response = await api.post<ContactResponse>(`${BASE_URL}/${clientId}/contacts`, data)
+  return response.data
+}
+
+/**
+ * Update an existing contact
+ */
+export async function updateContact(
+  clientId: number,
+  contactId: number,
+  data: UpdateContactRequest
+): Promise<ContactResponse> {
+  const response = await api.put<ContactResponse>(
+    `${BASE_URL}/${clientId}/contacts/${contactId}`,
+    data
+  )
+  return response.data
+}
+
+/**
+ * Delete a contact (soft delete)
+ */
+export async function deleteContact(clientId: number, contactId: number): Promise<void> {
+  await api.delete(`${BASE_URL}/${clientId}/contacts/${contactId}`)
+}
+
+export async function updateEmployment(
+  clientId: number,
+  data: UpdateEmploymentRequest
+): Promise<void> {
+  await api.put(`${BASE_URL}/${clientId}/employment`, data)
+}
+
+export async function updatePassport(clientId: number, data: UpdatePassportRequest): Promise<void> {
+  await api.put(`${BASE_URL}/${clientId}/passport`, data)
+}
+
+/**
  * Exported API object for easier importing
  * Consistent with other service APIs (usersApi, rolesApi, projectsApi, etc.)
  */
@@ -197,4 +282,12 @@ export const clientApi = {
   getClientProfile,
   getClientWriteoffs,
   getClientAssignmentHistory,
+  createAddress,
+  updateAddress,
+  deleteAddress,
+  createContact,
+  updateContact,
+  deleteContact,
+  updateEmployment,
+  updatePassport,
 }

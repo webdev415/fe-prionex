@@ -3,7 +3,7 @@
  *
  * Full page view for displaying detailed client information.
  */
-import { useState, useMemo, useRef, useEffect } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { AddNoteModal } from './components/AddNoteModal'
-import { DeleteClientModal } from './components/DeleteClientModal'
+// import { DeleteClientModal } from './components/DeleteClientModal'
+import { EditClientModal } from './components/EditClientModal'
 import { AssignRoleModal, type AssignRoleMode } from './components/AssignRoleModal'
 import { PriorityBadge } from './components/PriorityBadge'
 import type { Priority } from './types'
@@ -23,6 +24,13 @@ import { ViewSMSModal } from './components/ViewSMSModal'
 import { SendSMSModal } from './components/SendSMSModal'
 import { CallLogCard } from './components/CallLogCard'
 import { cn } from '@/lib/utils'
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuTrigger,
+// } from '@/components/ui/DropdownMenu'
+// import { useUserRole } from '@/hooks/usePermissions'
 import {
   useClientProfile,
   useClientLoans,
@@ -261,9 +269,11 @@ export function ClientDetailPage() {
         .forEach((p) => phones.push({ number: p.number, type: p.type }))
     }
 
-    // Build addresses object from array
-    const registrationAddr = profile.addresses?.find((a) => a.address_type === 'registration')
-    const actualAddr = profile.addresses?.find((a) => a.address_type === 'actual')
+    // Address type label map
+    const ADDRESS_TYPE_LABEL_MAP: Record<string, string> = {
+      registration: t('pages.clients.detail.registrationAddress'),
+      actual: t('pages.clients.detail.personalAddress'),
+    }
 
     return {
       ...profile,
@@ -283,24 +293,21 @@ export function ClientDetailPage() {
       // Personal details (nested for compatibility)
       personalDetails: {
         tin: profile.tax_id,
-        dateOfBirth: profile.date_of_birth ?? '-',
-        age: profile.age ?? '-',
-        passport: profile.passport
-          ? profile.passport.document_type === 'id_card'
-            ? profile.passport.record_number || '-'
-            : profile.passport.series
-              ? `${profile.passport.series} ${profile.passport.number}`
-              : profile.passport.number || '-'
-          : '-',
+        dateOfBirth: profile.date_of_birth ?? '',
+        age: profile.age ?? '',
+        documentType: profile.passport?.document_type ?? '',
+        passportSeries: profile.passport?.series ?? '',
+        passportNumber: profile.passport?.number ?? '',
+        issuedBy: profile.passport?.issued_by ?? '',
+        issuedDate: profile.passport?.issued_date ?? '',
+        expiresDate: profile.passport?.expires_date ?? '',
+        gender: profile.passport?.gender ?? '',
+        recordNumber: profile.passport?.record_number ?? '',
         maritalStatus: profile.marital_status
           ? (MARITAL_STATUS_MAP[profile.marital_status] ?? profile.marital_status)
-          : '-',
-        familyMembers: profile.family_members_count ?? '-',
-        incomeLevel: profile.income_level ?? '-',
-        employmentType: profile.employment?.employment_type
-          ? (EMPLOYMENT_TYPE_MAP[profile.employment.employment_type] ??
-            profile.employment.employment_type)
-          : '-',
+          : '',
+        familyMembers: profile.family_members_count ?? '',
+        incomeLevel: profile.income_level ?? '',
       },
       // Work
       work: profile.employment
@@ -313,24 +320,26 @@ export function ClientDetailPage() {
                 : (profile.employment.employment_date ?? '-'),
             managerFullName:
               profile.employment.manager_full_name ?? profile.employment.manager_name ?? '-',
+            employmentType: profile.employment.employment_type
+              ? (EMPLOYMENT_TYPE_MAP[profile.employment.employment_type] ??
+                profile.employment.employment_type)
+              : '-',
+            workPhone: profile.employment.work_phone ?? '-',
           }
         : null,
-      // Recommenders mapped to UI shape
-      // TODO: Legacy contacts often have no name data (first_name/last_name/middle_name empty).
-      //       full_name will be empty for these records until data is enriched.
       recommenders: (profile.recommenders ?? []).map((r) => ({
         id: r.id,
-        fullName: r.full_name || null,
-        relationship:
-          r.relationship || CONTACT_TYPE_MAP[r.contact_type ?? ''] || r.contact_type || '-',
-        phoneNumber: r.phone ?? '-',
-        comment: r.notes ?? '-',
+        fullName: r.full_name ?? '',
+        contactType: CONTACT_TYPE_MAP[r.contact_type] ?? r.contact_type ?? '',
+        relationship: r.relationship ?? '',
+        phoneNumber: r.phone ?? '',
+        comment: r.notes ?? '',
       })),
-      // Addresses as object
-      addresses: {
-        registrationAddress: registrationAddr?.full_address ?? '-',
-        personalAddress: actualAddr?.full_address ?? '-',
-      },
+      addresses: (profile.addresses ?? []).map((a) => ({
+        id: a.id,
+        type: ADDRESS_TYPE_LABEL_MAP[a.address_type] ?? a.address_type,
+        fullAddress: a.full_address ?? '',
+      })),
       // Comments mapped
       comments: (profile.comments ?? []).map((c) => ({
         id: c.id,
@@ -446,6 +455,7 @@ export function ClientDetailPage() {
     documents,
     activities,
     responsibleEmployeeDepartment,
+    t,
   ])
 
   // Tags are now fetched from useClientTags hook instead of local state
@@ -454,8 +464,11 @@ export function ClientDetailPage() {
   const [currentCallId, setCurrentCallId] = useState<string | null>(null)
   const [isCallRecordingModalOpen, setIsCallRecordingModalOpen] = useState(false)
   const [isTagModalOpen, setIsTagModalOpen] = useState(false)
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  // const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [assignRoleModalMode, setAssignRoleModalMode] = useState<AssignRoleMode | null>(null)
+  // const userRole = useUserRole()
+  // const canDelete = userRole === 'Admin' || userRole === 'Supervisor'
   const [selectedCallData, setSelectedCallData] = useState<{
     type: string
     clientName: string
@@ -480,6 +493,8 @@ export function ClientDetailPage() {
   } | null>(null)
   const [isSendSMSModalOpen, setIsSendSMSModalOpen] = useState(false)
   const [selectedPhoneForSMS, setSelectedPhoneForSMS] = useState<string>('')
+  const [selectedPhoneForCall, setSelectedPhoneForCall] = useState<string>('')
+  const [selectedPhoneForNote, setSelectedPhoneForNote] = useState<string>('')
   const [activeClientCardTab, setActiveClientCardTab] = useState<
     'personal' | 'recommenders' | 'addresses' | 'work'
   >('personal')
@@ -1066,6 +1081,7 @@ export function ClientDetailPage() {
               }
 
               // Open modal in 'initial' state to let user select call type
+              setSelectedPhoneForCall(phoneNumber)
               setOpenCallModal('call-dialog')
               setIsCallModalOpen(true)
             }}
@@ -1074,13 +1090,35 @@ export function ClientDetailPage() {
           </Button>
           <Button
             size="md"
-            variant="danger"
-            leftIcon={<Icons.Delete size={20} />}
+            variant="primary"
+            leftIcon={<Icons.PencilEdit size={20} />}
             className="w-full flex-1 rounded-full xl:w-auto xl:flex-none"
-            onClick={() => setIsDeleteModalOpen(true)}
+            onClick={() => setIsEditModalOpen(true)}
           >
-            {t('pages.clients.activity.deleteClient')}
+            {t('pages.clients.activity.editClient')}
           </Button>
+          {/* {canDelete && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="text-dark-500 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100"
+                  aria-label="More actions"
+                >
+                  <Icons.FilterVertical size={18} strokeWidth={1.5} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 bg-white">
+                <DropdownMenuItem
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="flex cursor-pointer items-center gap-2 text-sm text-red-600 hover:text-red-700"
+                >
+                  <Icons.Delete size={16} strokeWidth={1.5} />
+                  <span>{t('pages.clients.activity.deleteClient')}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )} */}
         </div>
       </div>
       <div className="flex flex-col items-start gap-4 self-stretch xl:flex-row xl:gap-5">
@@ -1185,6 +1223,7 @@ export function ClientDetailPage() {
                             )
                             return
                           }
+                          setSelectedPhoneForCall(phone.number)
                           setOpenCallModal('call-dialog')
                           setIsCallModalOpen(true)
                         }}
@@ -1202,7 +1241,10 @@ export function ClientDetailPage() {
                         <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
                       </button>
                       <button
-                        onClick={() => setIsNoteModalOpen(true)}
+                        onClick={() => {
+                          setSelectedPhoneForNote(phone.number)
+                          setIsNoteModalOpen(true)
+                        }}
                         className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
                       >
                         <Icons.PencilEdit size={16} className="flex-shrink-0" />
@@ -1372,28 +1414,104 @@ export function ClientDetailPage() {
                       {client.personalDetails.age}
                     </p>
                   </div>
+                  <div className="mx-2 h-px self-stretch bg-gray-200"></div>
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.passport')}
+                        {t('pages.clients.detail.documentType')}
                       </label>
                     </div>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.passport}
+                      {client.personalDetails.documentType}
                     </p>
                   </div>
-                  <div className="flex items-center justify-between self-stretch p-0">
-                    <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      {t('pages.clients.detail.maritalStatus')}
-                    </label>
+                  <div className="flex items-center self-stretch p-0">
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.passportSeries')}
+                      </label>
+                    </div>
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.personalDetails.passportSeries}
+                    </p>
+                  </div>
+                  <div className="flex items-center self-stretch p-0">
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.passportNumber')}
+                      </label>
+                    </div>
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.personalDetails.passportNumber}
+                    </p>
+                  </div>
+                  <div className="flex items-center self-stretch p-0">
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.issuedBy')}
+                      </label>
+                    </div>
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.personalDetails.issuedBy}
+                    </p>
+                  </div>
+                  <div className="flex items-center self-stretch p-0">
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.issuedDate')}
+                      </label>
+                    </div>
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.personalDetails.issuedDate}
+                    </p>
+                  </div>
+                  <div className="flex items-center self-stretch p-0">
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.expiresDate')}
+                      </label>
+                    </div>
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.personalDetails.expiresDate}
+                    </p>
+                  </div>
+                  <div className="flex items-center self-stretch p-0">
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.gender')}
+                      </label>
+                    </div>
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.personalDetails.gender}
+                    </p>
+                  </div>
+                  <div className="flex items-center self-stretch p-0">
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.recordNumber')}
+                      </label>
+                    </div>
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.personalDetails.recordNumber}
+                    </p>
+                  </div>
+                  <div className="mx-2 h-px self-stretch bg-gray-200"></div>
+                  <div className="flex items-center self-stretch p-0">
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.maritalStatus')}
+                      </label>
+                    </div>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {client.personalDetails.maritalStatus}
                     </p>
                   </div>
                   <div className="flex items-center self-stretch p-0">
-                    <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      {t('pages.clients.detail.numberOfFamilyMembers')}
-                    </label>
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.numberOfFamilyMembers')}
+                      </label>
+                    </div>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {client.personalDetails.familyMembers}
                     </p>
@@ -1405,17 +1523,7 @@ export function ClientDetailPage() {
                       </label>
                     </div>
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.incomeLevel || '-'}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.employmentType')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.employmentType || '-'}
+                      {client.personalDetails.incomeLevel}
                     </p>
                   </div>
                 </>
@@ -1423,22 +1531,28 @@ export function ClientDetailPage() {
 
               {activeClientCardTab === 'recommenders' && (
                 <>
-                  {client.recommenders.map((friend) => (
-                    <>
-                      {/* <div key={friend.id} className="flex flex-col gap-3 self-stretch"> */}
-                      {/* TODO: Legacy contacts have no name data — row hidden until data enriched */}
-                      {friend.fullName && (
-                        <div className="flex items-center self-stretch p-0">
-                          <div className="flex flex-1 items-center gap-2.5">
-                            <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                              {t('pages.clients.detail.fullName')}
-                            </label>
-                          </div>
-                          <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                            {friend.fullName}
-                          </p>
+                  {client.recommenders.map((friend, index) => (
+                    <React.Fragment key={friend.id}>
+                      <div className="flex items-center self-stretch p-0">
+                        <div className="flex flex-1 items-center gap-2.5">
+                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                            {t('pages.clients.detail.fullName')}
+                          </label>
                         </div>
-                      )}
+                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                          {friend.fullName}
+                        </p>
+                      </div>
+                      <div className="flex items-center self-stretch p-0">
+                        <div className="flex flex-1 items-center gap-2.5">
+                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                            {t('pages.clients.editModal.contactType')}
+                          </label>
+                        </div>
+                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                          {friend.contactType}
+                        </p>
+                      </div>
                       <div className="flex items-center self-stretch p-0">
                         <div className="flex flex-1 items-center gap-2.5">
                           <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
@@ -1455,9 +1569,50 @@ export function ClientDetailPage() {
                             {t('pages.clients.detail.phoneNumber')}
                           </label>
                         </div>
-                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                          {friend.phoneNumber}
-                        </p>
+                        <div className="flex flex-1 items-center justify-end gap-2 md:gap-3">
+                          <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                            {friend.phoneNumber}
+                          </span>
+                          {friend.phoneNumber && (
+                            <div className="flex shrink-0 items-center gap-1 md:gap-2">
+                              <button
+                                onClick={() => {
+                                  if (isCallActive()) {
+                                    toast.warning(
+                                      t('pages.clients.modals.callDialog.callInProgress') ||
+                                        'Another call or recording is already in progress. Please finish or close it first.'
+                                    )
+                                    return
+                                  }
+                                  setSelectedPhoneForCall(friend.phoneNumber)
+                                  setOpenCallModal('call-dialog')
+                                  setIsCallModalOpen(true)
+                                }}
+                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                              >
+                                <Icons.Headset size={16} className="flex-shrink-0" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedPhoneForSMS(friend.phoneNumber)
+                                  setIsSendSMSModalOpen(true)
+                                }}
+                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                              >
+                                <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedPhoneForNote(friend.phoneNumber)
+                                  setIsNoteModalOpen(true)
+                                }}
+                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                              >
+                                <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-start self-stretch p-0">
                         <div className="flex flex-1 items-center gap-2.5">
@@ -1469,38 +1624,33 @@ export function ClientDetailPage() {
                           {friend.comment}
                         </p>
                       </div>
-                      {/* </div> */}
-                      {friend.id < client.recommenders.length && (
-                        <div className="flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
+                      {index < client.recommenders.length - 1 && (
+                        <div className="mx-2 h-px self-stretch bg-gray-200"></div>
                       )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </>
               )}
 
               {activeClientCardTab === 'addresses' && (
                 <>
-                  <div className="flex items-start self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.registrationAddress')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.addresses.registrationAddress}
-                    </p>
-                  </div>
-                  <div className="my-2 flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
-                  <div className="flex items-start self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.personalAddress')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.addresses.personalAddress}
-                    </p>
-                  </div>
+                  {client.addresses.map((addr, index) => (
+                    <React.Fragment key={addr.id}>
+                      <div className="flex items-start self-stretch p-0">
+                        <div className="flex flex-1 items-center gap-2.5">
+                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                            {addr.type}
+                          </label>
+                        </div>
+                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                          {addr.fullAddress}
+                        </p>
+                      </div>
+                      {index < client.addresses.length - 1 && (
+                        <div className="mx-2 h-px self-stretch bg-gray-200"></div>
+                      )}
+                    </React.Fragment>
+                  ))}
                 </>
               )}
 
@@ -1545,6 +1695,67 @@ export function ClientDetailPage() {
                     <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {client.work?.managerFullName || '-'}
                     </p>
+                  </div>
+                  <div className="flex items-center self-stretch p-0">
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.employmentType')}
+                      </label>
+                    </div>
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.work?.employmentType || '-'}
+                    </p>
+                  </div>
+                  <div className="flex items-center self-stretch p-0">
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.editModal.workPhone')}
+                      </label>
+                    </div>
+                    <div className="flex flex-1 items-center justify-end gap-2 md:gap-3">
+                      <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.work?.workPhone || '-'}
+                      </span>
+                      {client.work?.workPhone && client.work.workPhone !== '-' && (
+                        <div className="flex shrink-0 items-center gap-1 md:gap-2">
+                          <button
+                            onClick={() => {
+                              if (isCallActive()) {
+                                toast.warning(
+                                  t('pages.clients.modals.callDialog.callInProgress') ||
+                                    'Another call or recording is already in progress. Please finish or close it first.'
+                                )
+                                return
+                              }
+                              setSelectedPhoneForCall(client.work?.workPhone || '')
+                              setOpenCallModal('call-dialog')
+                              setIsCallModalOpen(true)
+                            }}
+                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                          >
+                            <Icons.Headset size={16} className="flex-shrink-0" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedPhoneForSMS(client.work?.workPhone || '')
+                              setIsSendSMSModalOpen(true)
+                            }}
+                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                          >
+                            <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedPhoneForNote(client.work?.workPhone || '')
+                              setIsNoteModalOpen(true)
+                            }}
+                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                          >
+                            <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </>
               )}
@@ -2542,8 +2753,11 @@ export function ClientDetailPage() {
       {/* Add Note Modal */}
       <AddNoteModal
         open={isNoteModalOpen}
-        onClose={() => setIsNoteModalOpen(false)}
-        phoneNumber={client.phones?.[0]?.number || ''}
+        onClose={() => {
+          setIsNoteModalOpen(false)
+          setSelectedPhoneForNote('')
+        }}
+        phoneNumber={selectedPhoneForNote || client.phones?.[0]?.number || ''}
         clientId={clientId}
         onSave={(data) => {
           createNote({
@@ -2561,23 +2775,22 @@ export function ClientDetailPage() {
           setOpenCallModal(null)
           setIsCallModalOpen(false)
           setCurrentCallId(null)
+          setSelectedPhoneForCall('')
           handleClearCallError()
         }}
         clientName={client.fullName}
-        phoneNumber={client.phones?.[0]?.number || ''}
+        phoneNumber={selectedPhoneForCall || client.phones?.[0]?.number || ''}
         callId={currentCallId}
         initialState="initial"
         error={callError}
         isLoading={isOriginatingCall}
         onCallStart={(_callType: CallType) => {
-          // User selected call type and clicked "Call Now"
-          const phoneNumber = client.phones?.[0]?.number
+          const phoneNumber = selectedPhoneForCall || client.phones?.[0]?.number
           if (!phoneNumber) {
             setCallError('Client has no phone number')
             return
           }
 
-          // Originate call via API (callType can be used for future call type handling)
           handleOriginateCall(phoneNumber, client.fullName, client.id.toString())
         }}
         onCallEnd={(duration: number, status: CallStatus) => {
@@ -2640,7 +2853,14 @@ export function ClientDetailPage() {
         onClose={() => setIsTagModalOpen(false)}
       />
 
-      {/* Delete Client Modal */}
+      {/* Edit Client Modal */}
+      <EditClientModal
+        open={isEditModalOpen}
+        clientId={clientId}
+        onClose={() => setIsEditModalOpen(false)}
+      />
+
+      {/* Delete Client Modal
       <DeleteClientModal
         open={isDeleteModalOpen}
         client={{
@@ -2656,7 +2876,7 @@ export function ClientDetailPage() {
           // Success callback - navigation happens in the modal
           setIsDeleteModalOpen(false)
         }}
-      />
+      /> */}
 
       {/* Assign Role Modal (Employee / Searcher) */}
       {assignRoleModalMode && (
