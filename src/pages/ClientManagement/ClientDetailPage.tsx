@@ -1163,20 +1163,19 @@ export function ClientDetailPage() {
                   {t('pages.clients.filters.responsibleEmployee')}
                 </label>
                 <div className="ml-2 flex flex-1 items-center justify-end gap-1">
-                  {profile?.responsible_employee_id ? (
+                  {profile?.responsible_employee_id && (
                     <p className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {client.responsibleEmployee}
                     </p>
-                  ) : (
-                    <button
-                      onClick={() => setAssignRoleModalMode('employee')}
-                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                      title="Assign employee"
-                      type="button"
-                    >
-                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                    </button>
                   )}
+                  <button
+                    onClick={() => setAssignRoleModalMode('employee')}
+                    className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                    title="Assign employee"
+                    type="button"
+                  >
+                    <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                  </button>
                 </div>
               </div>
               <div className="flex min-h-8 items-center self-stretch p-0">
@@ -1184,20 +1183,19 @@ export function ClientDetailPage() {
                   {t('pages.clients.filters.responsibleSearcher')}
                 </label>
                 <div className="ml-2 flex flex-1 items-center justify-end gap-1">
-                  {profile?.responsible_searcher_id ? (
+                  {profile?.responsible_searcher_id && (
                     <p className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                       {client.responsibleResearcher}
                     </p>
-                  ) : (
-                    <button
-                      onClick={() => setAssignRoleModalMode('searcher')}
-                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                      title="Assign searcher"
-                      type="button"
-                    >
-                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                    </button>
                   )}
+                  <button
+                    onClick={() => setAssignRoleModalMode('searcher')}
+                    className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                    title="Assign searcher"
+                    type="button"
+                  >
+                    <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                  </button>
                 </div>
               </div>
             </div>
