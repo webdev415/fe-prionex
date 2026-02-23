@@ -113,6 +113,7 @@ export interface CreateClientRequest {
 }
 
 export interface UpdateClientRequest {
+  tax_id?: string
   phone_primary?: string
   first_name?: string
   last_name?: string
@@ -125,7 +126,29 @@ export interface UpdateClientRequest {
   region?: string
   postal_code?: string
   country?: string
-  // Note: tax_id CANNOT be changed after creation
+  marital_status?: string
+  family_members_count?: number
+  income_level?: string
+}
+
+export interface UpdateEmploymentRequest {
+  company_name?: string
+  position?: string
+  employment_type?: string
+  manager_full_name?: string
+  work_phone?: string
+  work_experience_years?: number
+}
+
+export interface UpdatePassportRequest {
+  document_type?: string
+  series?: string
+  number?: string
+  issued_by?: string
+  issued_date?: string
+  expires_date?: string
+  gender?: string
+  record_number?: string
 }
 
 export interface GetClientsParams {
@@ -230,6 +253,10 @@ export interface BulkAssignmentResponse {
 export interface ClientProfileResponse {
   id: number
   full_name: string
+  first_name: string
+  last_name: string
+  middle_name?: string | null
+  email?: string | null
   tax_id: string
   phone_primary: string
   phone_secondary?: string | null
@@ -261,6 +288,7 @@ export interface ClientProfileResponse {
     issued_date?: string | null
     record_number?: string | null
     expires_date?: string | null
+    gender?: string | null
   } | null
   employment?: {
     company_name?: string | null
@@ -272,10 +300,14 @@ export interface ClientProfileResponse {
     manager_full_name?: string | null
     employment_date?: string | null
     work_experience_years?: number | null
+    work_phone?: string | null
   } | null
   recommenders: Array<{
     id: number
     full_name: string
+    first_name: string
+    last_name?: string | null
+    middle_name?: string | null
     relationship?: string | null
     phone?: string | null
     notes?: string | null
@@ -335,6 +367,89 @@ export interface WriteoffResponse {
     paid_at?: string | null
   }>
   created_at: string
+}
+
+// --- Address CRUD Types ---
+
+export interface CreateAddressRequest {
+  address_type: string
+  country?: string
+  region?: string
+  city?: string
+  street?: string
+  building?: string
+  apartment?: string
+  postal_code?: string
+  is_primary?: boolean
+}
+
+export interface UpdateAddressRequest {
+  address_type?: string
+  country?: string
+  region?: string
+  city?: string
+  street?: string
+  building?: string
+  apartment?: string
+  postal_code?: string
+  is_primary?: boolean
+}
+
+export interface AddressResponse {
+  id: number
+  client_id: number
+  address_type: string
+  full_address?: string | null
+  country?: string | null
+  region?: string | null
+  city?: string | null
+  street?: string | null
+  building?: string | null
+  apartment?: string | null
+  postal_code?: string | null
+  is_primary: boolean
+  is_current: boolean
+  created_at: string
+  updated_at?: string | null
+}
+
+// --- Contact CRUD Types ---
+
+export interface CreateContactRequest {
+  contact_type: string
+  relationship?: string
+  first_name: string
+  last_name?: string
+  middle_name?: string
+  phone: string
+  notes?: string
+}
+
+export interface UpdateContactRequest {
+  contact_type?: string
+  relationship?: string
+  first_name?: string
+  last_name?: string
+  middle_name?: string
+  phone?: string
+  is_active?: boolean
+  notes?: string
+}
+
+export interface ContactResponse {
+  id: number
+  client_id: number
+  contact_type: string
+  relationship?: string | null
+  full_name: string
+  first_name: string
+  last_name?: string | null
+  phone: string
+  is_primary: boolean
+  is_active: boolean
+  notes?: string | null
+  created_at: string
+  updated_at?: string | null
 }
 
 export interface WriteoffsResponse {

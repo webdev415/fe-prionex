@@ -14,11 +14,15 @@ import { callSmsApi } from '../api/callSmsApi'
 import type {
   AssignClientRequest,
   BulkAssignClientRequest,
+  CreateAddressRequest,
   CreateClientRequest,
+  CreateContactRequest,
   GetClientsParams,
   ManualPriorityRequest,
   SearchByTinParams,
+  UpdateAddressRequest,
   UpdateClientRequest,
+  UpdateContactRequest,
 } from '../api/types'
 
 // Query keys
@@ -118,22 +122,9 @@ export function useCreateClient() {
  * Update client
  */
 export function useUpdateClient() {
-  const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateClientRequest }) =>
       clientApi.updateClient(id, data),
-    onSuccess: (_, variables) => {
-      // Invalidate specific client and lists
-      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.id) })
-      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
-      queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
-      toast.success('Client updated successfully')
-    },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to update client'
-      toast.error(message)
-    },
   })
 }
 
@@ -504,5 +495,163 @@ export function useCreateInteraction() {
       const message = error?.response?.data?.detail || 'Failed to record interaction'
       toast.error(message)
     },
+  })
+}
+
+/**
+ * Create address for a client
+ */
+export function useCreateAddress() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, data }: { clientId: number; data: CreateAddressRequest }) =>
+      clientApi.createAddress(clientId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to add address'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Update address for a client
+ */
+export function useUpdateAddress() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      addressId,
+      data,
+    }: {
+      clientId: number
+      addressId: number
+      data: UpdateAddressRequest
+    }) => clientApi.updateAddress(clientId, addressId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to update address'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Delete address for a client
+ */
+export function useDeleteAddress() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, addressId }: { clientId: number; addressId: number }) =>
+      clientApi.deleteAddress(clientId, addressId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to delete address'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Create contact for a client
+ */
+export function useCreateContact() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, data }: { clientId: number; data: CreateContactRequest }) =>
+      clientApi.createContact(clientId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to add contact'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Update contact for a client
+ */
+export function useUpdateContact() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      contactId,
+      data,
+    }: {
+      clientId: number
+      contactId: number
+      data: UpdateContactRequest
+    }) => clientApi.updateContact(clientId, contactId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to update contact'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Delete contact for a client
+ */
+export function useDeleteContact() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, contactId }: { clientId: number; contactId: number }) =>
+      clientApi.deleteContact(clientId, contactId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to delete contact'
+      toast.error(message)
+    },
+  })
+}
+
+export function useUpdateEmployment() {
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      data,
+    }: {
+      clientId: number
+      data: import('../api/types').UpdateEmploymentRequest
+    }) => clientApi.updateEmployment(clientId, data),
+  })
+}
+
+export function useUpdatePassport() {
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      data,
+    }: {
+      clientId: number
+      data: import('../api/types').UpdatePassportRequest
+    }) => clientApi.updatePassport(clientId, data),
   })
 }
