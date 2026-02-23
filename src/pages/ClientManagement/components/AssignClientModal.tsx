@@ -8,13 +8,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/Select'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { Label } from '@/components/ui/Label'
 import { Icons } from '@/lib/icons'
@@ -271,26 +265,13 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                     >
                       {t('pages.clients.modals.assignClient.employee')}
                     </Label>
-                    <Select value={employeeId} onValueChange={setEmployeeId}>
-                      <SelectTrigger id="employee" className="h-[45px] w-full rounded-md sm:flex-1">
-                        <SelectValue
-                          placeholder={t('pages.clients.modals.assignClient.selectEmployee')}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {userOptions.length === 0 ? (
-                          <div className="px-2 py-6 text-center text-sm text-gray-500">
-                            {t('pages.clients.modals.assignClient.noUsersAvailable')}
-                          </div>
-                        ) : (
-                          userOptions.map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      id="employee"
+                      options={userOptions}
+                      value={employeeId}
+                      onValueChange={setEmployeeId}
+                      placeholder={t('pages.clients.modals.assignClient.selectEmployee')}
+                    />
                   </div>
 
                   {/* Searcher Dropdown */}
@@ -301,26 +282,13 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                     >
                       {t('pages.clients.modals.assignClient.searcher')}
                     </Label>
-                    <Select value={searcherId} onValueChange={setSearcherId}>
-                      <SelectTrigger id="searcher" className="h-[45px] w-full rounded-md sm:flex-1">
-                        <SelectValue
-                          placeholder={t('pages.clients.modals.assignClient.selectSearcher')}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {userOptions.length === 0 ? (
-                          <div className="px-2 py-6 text-center text-sm text-gray-500">
-                            {t('pages.clients.modals.assignClient.noUsersAvailable')}
-                          </div>
-                        ) : (
-                          userOptions.map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <SearchableSelect
+                      id="searcher"
+                      options={userOptions}
+                      value={searcherId}
+                      onValueChange={setSearcherId}
+                      placeholder={t('pages.clients.modals.assignClient.selectSearcher')}
+                    />
                   </div>
                 </div>
                 <div className="flex w-full flex-col gap-4 self-stretch sm:flex-row sm:items-start sm:gap-4">

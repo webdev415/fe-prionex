@@ -10,13 +10,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/Select'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { Label } from '@/components/ui/Label'
 import { Icons } from '@/lib/icons'
@@ -138,24 +132,13 @@ export function AssignRoleModal({
             >
               {t(labelKey)}
             </Label>
-            <Select value={userId} onValueChange={setUserId}>
-              <SelectTrigger id="assign-role-user" className="h-[45px] w-full rounded-md">
-                <SelectValue placeholder={selectPlaceholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {userOptions.length === 0 ? (
-                  <div className="px-2 py-6 text-center text-sm text-gray-500">
-                    {t('pages.clients.modals.assignClient.noUsersAvailable')}
-                  </div>
-                ) : (
-                  userOptions.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              id="assign-role-user"
+              options={userOptions}
+              value={userId}
+              onValueChange={setUserId}
+              placeholder={selectPlaceholder}
+            />
           </div>
 
           {/* Assignment Reason — required for both employee and searcher */}
