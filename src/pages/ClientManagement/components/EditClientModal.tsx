@@ -14,6 +14,8 @@ import {
   SelectItem,
 } from '@/components/ui/Select'
 import { useQueryClient } from '@tanstack/react-query'
+import { useHasPermission } from '@/hooks'
+import { PERMISSIONS } from '@/constants/permissions'
 import {
   useClientProfile,
   useUpdateClient,
@@ -124,6 +126,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const { mutate: deleteContact } = useDeleteContact()
   const { mutate: updateEmployment, isPending: isSavingWork } = useUpdateEmployment()
   const { mutate: updatePassport, isPending: isSavingPassport } = useUpdatePassport()
+  const canEditAll = useHasPermission(PERMISSIONS.CLIENTS.EDIT)
 
   // Personal info — initialized from profile (component remounts via key when profile changes)
   // Fallback: parse full_name if first_name/last_name are empty (legacy import data)
@@ -199,10 +202,8 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const [editContactData, setEditContactData] = useState<UpdateContactRequest>({})
 
   const handleSavePersonalInfo = () => {
-    updateClient(
-      {
-        id: clientId,
-        data: {
+    const data = canEditAll
+      ? {
           first_name: firstName,
           last_name: lastName,
           middle_name: middleName || undefined,
@@ -214,7 +215,15 @@ function EditForm({ profile, clientId }: EditFormProps) {
           marital_status: maritalStatus || undefined,
           family_members_count: familyMembers ? Number(familyMembers) : undefined,
           income_level: incomeLevel || undefined,
-        },
+        }
+      : {
+          phone_primary: phonePrimary,
+          phone_secondary: phoneSecondary || undefined,
+        }
+    updateClient(
+      {
+        id: clientId,
+        data,
       },
       {
         onSuccess: async () => {
@@ -480,8 +489,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <Input
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
@@ -491,8 +501,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <Input
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
           </div>
@@ -505,8 +516,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <Input
                 value={middleName}
                 onChange={(e) => setMiddleName(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
@@ -517,8 +529,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
           </div>
@@ -531,16 +544,17 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 type="date"
                 value={dateOfBirth}
                 onChange={(e) => setDateOfBirth(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
               <label className="text-dark-500 text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.maritalStatus')}
               </label>
-              <Select value={maritalStatus} onValueChange={setMaritalStatus}>
-                <SelectTrigger className="text-dark-500 h-[42px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light">
+              <Select value={maritalStatus} onValueChange={setMaritalStatus} disabled={!canEditAll}>
+                <SelectTrigger className="text-dark-500 h-[42px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-50">
                   <SelectValue placeholder="-" />
                 </SelectTrigger>
                 <SelectContent>
@@ -561,8 +575,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <Input
                 value={taxId}
                 onChange={(e) => setTaxId(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
@@ -572,8 +587,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <Input
                 value={documentType}
                 onChange={(e) => setDocumentType(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
           </div>
@@ -585,8 +601,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <Input
                 value={passportSeries}
                 onChange={(e) => setPassportSeries(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
@@ -596,8 +613,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <Input
                 value={passportNumber}
                 onChange={(e) => setPassportNumber(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
           </div>
@@ -609,8 +627,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <Input
                 value={issuedBy}
                 onChange={(e) => setIssuedBy(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
@@ -621,8 +640,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 type="date"
                 value={issuedDate}
                 onChange={(e) => setIssuedDate(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
           </div>
@@ -635,8 +655,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 type="date"
                 value={expiresDate}
                 onChange={(e) => setExpiresDate(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
@@ -646,8 +667,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <Input
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
           </div>
@@ -659,8 +681,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <Input
                 value={recordNumber}
                 onChange={(e) => setRecordNumber(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
             <div className="flex flex-1" />
@@ -674,8 +697,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 type="number"
                 value={familyMembers}
                 onChange={(e) => setFamilyMembers(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
@@ -685,8 +709,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <Input
                 value={incomeLevel}
                 onChange={(e) => setIncomeLevel(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
           </div>
@@ -694,16 +719,18 @@ function EditForm({ profile, clientId }: EditFormProps) {
       </div>
 
       {/* Save Document Info */}
-      <div className="flex justify-end">
-        <Button
-          variant="primary"
-          onClick={handleSavePassport}
-          disabled={isSavingPassport}
-          className="rounded-md"
-        >
-          {isSavingPassport ? 'Saving...' : t('pages.clients.editModal.save')}
-        </Button>
-      </div>
+      {canEditAll && (
+        <div className="flex justify-end">
+          <Button
+            variant="primary"
+            onClick={handleSavePassport}
+            disabled={isSavingPassport}
+            className="rounded-md"
+          >
+            {isSavingPassport ? 'Saving...' : t('pages.clients.editModal.save')}
+          </Button>
+        </div>
+      )}
 
       {/* Section 2: Phone Numbers */}
       <div className="flex flex-col items-start gap-2 self-stretch">
@@ -745,7 +772,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
           variant="primary"
           onClick={handleSavePersonalInfo}
           disabled={
-            isSavingPersonal || !firstName.trim() || !lastName.trim() || !phonePrimary.trim()
+            isSavingPersonal ||
+            !phonePrimary.trim() ||
+            (canEditAll && (!firstName.trim() || !lastName.trim()))
           }
           className="rounded-md"
         >
@@ -767,8 +796,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <Input
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
@@ -778,8 +808,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <Input
                 value={position}
                 onChange={(e) => setPosition(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
           </div>
@@ -792,8 +823,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 type="number"
                 value={workExperience}
                 onChange={(e) => setWorkExperience(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
@@ -803,8 +835,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <Input
                 value={managerFullName}
                 onChange={(e) => setManagerFullName(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
           </div>
@@ -813,8 +846,12 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <label className="text-dark-500 text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.employmentType')}
               </label>
-              <Select value={employmentType} onValueChange={setEmploymentType}>
-                <SelectTrigger className="text-dark-500 h-[42px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light">
+              <Select
+                value={employmentType}
+                onValueChange={setEmploymentType}
+                disabled={!canEditAll}
+              >
+                <SelectTrigger className="text-dark-500 h-[42px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-50">
                   <SelectValue placeholder="-" />
                 </SelectTrigger>
                 <SelectContent>
@@ -833,8 +870,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <Input
                 value={workPhone}
                 onChange={(e) => setWorkPhone(e.target.value)}
+                disabled={!canEditAll}
                 inputSize="md"
-                className="rounded-md"
+                className="rounded-md disabled:bg-gray-50"
               />
             </div>
           </div>
@@ -842,16 +880,18 @@ function EditForm({ profile, clientId }: EditFormProps) {
       </div>
 
       {/* Save Work Info */}
-      <div className="flex justify-end">
-        <Button
-          variant="primary"
-          onClick={handleSaveWork}
-          disabled={isSavingWork}
-          className="rounded-md"
-        >
-          {isSavingWork ? 'Saving...' : t('pages.clients.editModal.save')}
-        </Button>
-      </div>
+      {canEditAll && (
+        <div className="flex justify-end">
+          <Button
+            variant="primary"
+            onClick={handleSaveWork}
+            disabled={isSavingWork}
+            className="rounded-md"
+          >
+            {isSavingWork ? 'Saving...' : t('pages.clients.editModal.save')}
+          </Button>
+        </div>
+      )}
 
       {/* Section 4: Contacts & Referrals */}
       <div className="flex flex-col items-start gap-2 self-stretch">
@@ -991,7 +1031,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                       }}
                       className="rounded-md"
                     >
-                      {t('common.close')}
+                      {t('actions.close')}
                     </Button>
                   </div>
                 </div>
@@ -1141,7 +1181,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   onClick={() => setShowContactForm(false)}
                   className="rounded-md"
                 >
-                  {t('common.close')}
+                  {t('actions.close')}
                 </Button>
               </div>
             </div>
@@ -1155,15 +1195,17 @@ function EditForm({ profile, clientId }: EditFormProps) {
           <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
             {t('pages.clients.editModal.addresses')}
           </span>
-          <Button
-            variant="outline"
-            size="sm"
-            leftIcon={<Icons.PlusSignCircle size={16} />}
-            onClick={() => setShowAddressForm(true)}
-            className="text-xs"
-          >
-            {t('pages.clients.editModal.addAddress')}
-          </Button>
+          {canEditAll && (
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<Icons.PlusSignCircle size={16} />}
+              onClick={() => setShowAddressForm(true)}
+              className="text-xs"
+            >
+              {t('pages.clients.editModal.addAddress')}
+            </Button>
+          )}
         </div>
         <div className="flex flex-col gap-3 self-stretch">
           {profile.addresses?.map((address) => (
@@ -1282,7 +1324,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                       }}
                       className="rounded-md"
                     >
-                      {t('common.close')}
+                      {t('actions.close')}
                     </Button>
                   </div>
                 </div>
@@ -1306,26 +1348,28 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         [address.city, address.street, address.building].filter(Boolean).join(', ')}
                     </span>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <button
-                      type="button"
-                      data-testid="edit-address-btn"
-                      aria-label={t('pages.clients.editModal.editAddress')}
-                      onClick={() => handleStartEditAddress(address)}
-                      className="text-gray-600 transition-colors hover:text-blue-500"
-                    >
-                      <Icons.PencilEdit size={16} strokeWidth={1.5} />
-                    </button>
-                    <button
-                      type="button"
-                      data-testid="delete-address-btn"
-                      aria-label={t('pages.clients.editModal.deleteAddress')}
-                      onClick={() => handleDeleteAddress(address.id)}
-                      className="text-gray-600 transition-colors hover:text-red-500"
-                    >
-                      <Icons.Delete size={16} strokeWidth={1.5} />
-                    </button>
-                  </div>
+                  {canEditAll && (
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
+                        data-testid="edit-address-btn"
+                        aria-label={t('pages.clients.editModal.editAddress')}
+                        onClick={() => handleStartEditAddress(address)}
+                        className="text-gray-600 transition-colors hover:text-blue-500"
+                      >
+                        <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="delete-address-btn"
+                        aria-label={t('pages.clients.editModal.deleteAddress')}
+                        onClick={() => handleDeleteAddress(address.id)}
+                        className="text-gray-600 transition-colors hover:text-red-500"
+                      >
+                        <Icons.Delete size={16} strokeWidth={1.5} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1429,7 +1473,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   onClick={() => setShowAddressForm(false)}
                   className="rounded-md"
                 >
-                  {t('common.close')}
+                  {t('actions.close')}
                 </Button>
               </div>
             </div>
@@ -1466,7 +1510,7 @@ export function EditClientModal({ open, clientId, onClose }: EditClientModalProp
       </ModalContent>
       <ModalFooter className="flex flex-col gap-3 self-stretch border-none">
         <Button variant="cancel" onClick={onClose} className="h-12 w-full rounded-md">
-          {t('common.close')}
+          {t('actions.close')}
         </Button>
       </ModalFooter>
     </Modal>
