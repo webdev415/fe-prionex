@@ -104,4 +104,13 @@ export const taskApi = {
   deleteTask,
   addTaskComment,
   getTaskSubjects,
+  getMyTasks,
+}
+
+/**
+ * Get past tasks assigned to the current user (for bell notification)
+ */
+export async function getMyTasks(): Promise<TaskListResponse> {
+  const response = await api.get<TaskListResponse>(`${BASE_URL}/my-tasks`)
+  return response.data
 }

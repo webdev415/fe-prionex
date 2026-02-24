@@ -469,12 +469,38 @@ export function useCreateTask() {
     mutationFn: (data: Parameters<typeof taskApi.createTask>[0]) => taskApi.createTask(data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.tasks(variables.client_id) })
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
       toast.success('Task created successfully')
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       const message = error?.response?.data?.detail || 'Failed to create task'
       toast.error(message)
     },
+  })
+}
+
+/**
+ * Get past tasks assigned to the current user (bell notifications)
+ */
+export function useMyTasks() {
+  return useQuery({
+    queryKey: ['tasks', 'my-tasks'],
+    queryFn: () => taskApi.getMyTasks(),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+    select: (data) => data.tasks ?? [],
+  })
+}
+
+/**
+ * Get task subjects for dropdown
+ */
+export function useTaskSubjects() {
+  return useQuery({
+    queryKey: ['task-subjects'],
+    queryFn: () => taskApi.getTaskSubjects(true),
+    staleTime: 5 * 60_000,
+    select: (data) => data.subjects ?? [],
   })
 }
 
