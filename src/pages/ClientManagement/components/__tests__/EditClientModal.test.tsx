@@ -5,8 +5,12 @@ import { MemoryRouter } from 'react-router-dom'
 import { EditClientModal } from '../EditClientModal'
 import * as useClientsModule from '@/features/clients/hooks/useClients'
 import { toast } from 'sonner'
+import { useHasPermission } from '@/hooks'
 
 vi.mock('@/features/clients/hooks/useClients')
+vi.mock('@/hooks', () => ({
+  useHasPermission: vi.fn(),
+}))
 vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
@@ -46,7 +50,7 @@ vi.mock('react-i18next', () => ({
         'pages.clients.editModal.save': 'Save Changes',
         'pages.clients.editModal.saving': 'Saving...',
         'pages.clients.editModal.cancel': 'Cancel',
-        'common.close': 'Close',
+        'actions.close': 'Close',
         'pages.clients.editModal.saveSuccess': 'Client updated successfully',
         'pages.clients.editModal.saveError': 'Failed to update client',
         'pages.clients.editModal.addressCreated': 'Address added successfully',
@@ -157,6 +161,7 @@ describe('EditClientModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(useHasPermission).mockReturnValue(true)
 
     vi.mocked(useClientsModule.useClientProfile).mockReturnValue({
       data: mockProfileData,
@@ -494,6 +499,155 @@ describe('EditClientModal', () => {
       render(<EditClientModal {...defaultProps} open={false} />, { wrapper: createWrapper() })
 
       expect(screen.queryByText('Edit Client')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('RBAC Field Restrictions', () => {
+    const richMockProfile = {
+      ...mockProfileData,
+      passport: {
+        id: 1,
+        document_type: 'passport',
+        series: 'AB',
+        number: '123456',
+        issued_by: 'Test Agency',
+        issued_date: '2020-01-01',
+        expires_date: '2030-01-01',
+        gender: 'male',
+        record_number: 'RN001',
+      },
+      employment: {
+        id: 1,
+        company_name: 'Test Corp',
+        position: 'Developer',
+        employment_type: 'full_time',
+        work_experience_years: 5,
+        manager_full_name: 'Boss Man',
+        manager_name: null,
+        work_phone: '+380441234567',
+      },
+    }
+
+    describe('Operator (no edit_clients permission)', () => {
+      beforeEach(() => {
+        vi.mocked(useHasPermission).mockReturnValue(false)
+        vi.mocked(useClientsModule.useClientProfile).mockReturnValue({
+          data: richMockProfile,
+          isLoading: false,
+          isError: false,
+          error: null,
+        } as unknown as ReturnType<typeof useClientsModule.useClientProfile>)
+      })
+
+      it('should disable personal info fields for operators', () => {
+        render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+        expect(screen.getByDisplayValue('John')).toBeDisabled()
+        expect(screen.getByDisplayValue('Doe')).toBeDisabled()
+        expect(screen.getByDisplayValue('Michael')).toBeDisabled()
+        expect(screen.getByDisplayValue('john@example.com')).toBeDisabled()
+        expect(screen.getByDisplayValue('1990-01-15')).toBeDisabled()
+        expect(screen.getByDisplayValue('1234567890')).toBeDisabled()
+      })
+
+      it('should disable passport fields for operators', () => {
+        render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+        expect(screen.getByDisplayValue('AB')).toBeDisabled()
+        expect(screen.getByDisplayValue('123456')).toBeDisabled()
+        expect(screen.getByDisplayValue('Test Agency')).toBeDisabled()
+      })
+
+      it('should disable work info fields for operators', () => {
+        render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+        expect(screen.getByDisplayValue('Test Corp')).toBeDisabled()
+        expect(screen.getByDisplayValue('Developer')).toBeDisabled()
+        expect(screen.getByDisplayValue('+380441234567')).toBeDisabled()
+      })
+
+      it('should keep phone fields editable for operators', () => {
+        render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+        expect(screen.getByDisplayValue('+380501234567')).not.toBeDisabled()
+        expect(screen.getByDisplayValue('+380671234567')).not.toBeDisabled()
+      })
+
+      it('should hide document and work save buttons for operators', () => {
+        render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+        const saveButtons = screen.getAllByText('Save Changes')
+        expect(saveButtons).toHaveLength(1)
+      })
+
+      it('should allow contact CRUD for operators', () => {
+        render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+        expect(screen.getByText('Add Contact')).toBeInTheDocument()
+        expect(screen.getAllByTestId('edit-contact-btn').length).toBeGreaterThan(0)
+        expect(screen.getAllByTestId('delete-contact-btn').length).toBeGreaterThan(0)
+      })
+
+      it('should hide address management buttons for operators', () => {
+        render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+        expect(screen.queryByText('Add Address')).not.toBeInTheDocument()
+        expect(screen.queryAllByTestId('edit-address-btn')).toHaveLength(0)
+        expect(screen.queryAllByTestId('delete-address-btn')).toHaveLength(0)
+      })
+
+      it('should only send phone fields in save payload for operators', async () => {
+        render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+        const saveButton = screen.getByText('Save Changes')
+        fireEvent.click(saveButton)
+
+        await waitFor(() => {
+          expect(mockMutate).toHaveBeenCalledWith(
+            expect.objectContaining({
+              data: {
+                phone_primary: '+380501234567',
+                phone_secondary: '+380671234567',
+              },
+            }),
+            expect.anything()
+          )
+        })
+      })
+    })
+
+    describe('Admin/Supervisor (has edit_clients permission)', () => {
+      beforeEach(() => {
+        vi.mocked(useClientsModule.useClientProfile).mockReturnValue({
+          data: richMockProfile,
+          isLoading: false,
+          isError: false,
+          error: null,
+        } as unknown as ReturnType<typeof useClientsModule.useClientProfile>)
+      })
+
+      it('should enable all personal info fields', () => {
+        render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+        expect(screen.getByDisplayValue('John')).not.toBeDisabled()
+        expect(screen.getByDisplayValue('Doe')).not.toBeDisabled()
+        expect(screen.getByDisplayValue('1234567890')).not.toBeDisabled()
+      })
+
+      it('should show all save buttons', () => {
+        render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+        const saveButtons = screen.getAllByText('Save Changes')
+        expect(saveButtons).toHaveLength(3)
+      })
+
+      it('should show address management buttons', () => {
+        render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+        expect(screen.getByText('Add Address')).toBeInTheDocument()
+        expect(screen.getAllByTestId('edit-address-btn').length).toBeGreaterThan(0)
+        expect(screen.getAllByTestId('delete-address-btn').length).toBeGreaterThan(0)
+      })
     })
   })
 })
