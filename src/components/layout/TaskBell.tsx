@@ -16,16 +16,24 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Icons } from '@/lib/icons'
 import { useMyTasks } from '@/features/clients/hooks/useClients'
 import { taskApi } from '@/features/clients/api/taskApi'
+import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/utils'
 
-function formatDateTime(isoDate: string): string {
+function formatDateTime(isoDate: string, timezone?: string): string {
   try {
+    // Backend sends naive UTC datetimes without "Z". Append it so the browser
+    // parses the string as UTC instead of local time.
+    let dateStr = isoDate
+    if (!dateStr.endsWith('Z') && !dateStr.includes('+')) {
+      dateStr = dateStr.replace(' ', 'T') + 'Z'
+    }
     return new Intl.DateTimeFormat(undefined, {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    }).format(new Date(isoDate))
+      timeZone: timezone ?? 'UTC',
+    }).format(new Date(dateStr))
   } catch {
     return isoDate
   }
@@ -35,6 +43,7 @@ export function TaskBell() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: tasks = [] } = useMyTasks()
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
   const count = tasks.length
 
   const [isOpen, setIsOpen] = useState(false)
@@ -187,7 +196,7 @@ export function TaskBell() {
                     <div className="flex items-center gap-1 text-gray-400">
                       <Icons.Clock01 size={11} strokeWidth={1.5} />
                       <span className="text-[11px]">
-                        {task.due_date ? formatDateTime(task.due_date) : '—'}
+                        {task.due_date ? formatDateTime(task.due_date, userTimezone) : '—'}
                       </span>
                     </div>
                   </button>
