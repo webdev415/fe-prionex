@@ -590,6 +590,8 @@ export interface TaskResponse {
   completed_at?: string | null
   comment_count?: number
   internal_notes?: string | null
+  client_name?: string | null
+  is_dismissed?: boolean
 }
 
 export interface TaskCommentResponse {

@@ -1,0 +1,242 @@
+/**
+ * Add Task Modal
+ *
+ * Opens from the "Add Task" button on the Client Detail page.
+ * Fields:
+ *  - Task Subject (searchable select from task_subjects table)
+ *  - Description (textarea)
+ *  - Priority (radio: High / Normal / Low)
+ *  - Due Date (datetime-local input)
+ *  - Assigned To (searchable select from active users)
+ *  - Comment (textarea)
+ *
+ * Status is always set to "pending" on creation.
+ */
+
+import { useState, useMemo, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
+import { Button } from '@/components/ui/Button'
+import { Label } from '@/components/ui/Label'
+import { Textarea } from '@/components/ui/Textarea'
+import { RadioGroup, RadioItem } from '@/components/ui/Radio'
+import { Icons } from '@/lib/icons'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { useCreateTask, useTaskSubjects } from '@/features/clients/hooks/useClients'
+import { useOperators } from '@/features/users/hooks/useUsers'
+import { useAuthStore } from '@/stores/authStore'
+
+interface AddTaskModalProps {
+  open: boolean
+  clientId: number
+  onClose: () => void
+}
+
+const PRIORITIES = [
+  { value: 'high', labelKey: 'pages.clients.tasks.priority.high', fallback: 'High' },
+  { value: 'normal', labelKey: 'pages.clients.tasks.priority.normal', fallback: 'Normal' },
+  { value: 'low', labelKey: 'pages.clients.tasks.priority.low', fallback: 'Low' },
+]
+
+export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
+  const { t } = useTranslation('common')
+  const createTask = useCreateTask()
+  const { user } = useAuthStore()
+  const projectId = user?.active_project_id ? Number(user.active_project_id) : null
+
+  const { data: subjects = [] } = useTaskSubjects()
+  const { data: operators = [] } = useOperators(projectId)
+
+  const subjectOptions = useMemo(
+    () => subjects.map((s) => ({ id: s.id.toString(), name: s.name })),
+    [subjects]
+  )
+
+  const userOptions = useMemo(() => {
+    return operators.map((u) => ({
+      id: u.id.toString(),
+      name: [u.first_name, u.last_name].filter(Boolean).join(' '),
+    }))
+  }, [operators])
+
+  const [subjectId, setSubjectId] = useState('')
+  const [description, setDescription] = useState('')
+  const [priority, setPriority] = useState('normal')
+  const [dueDate, setDueDate] = useState('')
+  const [assignedUserId, setAssignedUserId] = useState('')
+  const [comment, setComment] = useState('')
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      requestAnimationFrame(() => {
+        setSubjectId('')
+        setDescription('')
+        setPriority('normal')
+        setDueDate('')
+        setAssignedUserId('')
+        setComment('')
+      })
+    }
+  }, [open])
+
+  const canSubmit = description.trim() !== '' && assignedUserId !== ''
+
+  const handleSubmit = () => {
+    if (!canSubmit) return
+
+    const selectedUser = userOptions.find((u) => u.id === assignedUserId)
+
+    createTask.mutate(
+      {
+        client_id: clientId,
+        title: description.trim().slice(0, 100),
+        description: description.trim(),
+        priority,
+        due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
+        subject_id: subjectId ? parseInt(subjectId) : undefined,
+        assigned_to_user_id: parseInt(assignedUserId),
+        assigned_to_username: selectedUser?.name,
+        internal_notes: comment.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          onClose()
+        },
+      }
+    )
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} maxWidth="md">
+      <ModalHeader
+        icon={
+          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <Icons.Clock01 size={20} className="text-dark-500" strokeWidth={1.5} />
+          </div>
+        }
+        title={t('pages.clients.tasks.addTask', 'Add Task')}
+      />
+
+      <ModalContent>
+        <div className="flex flex-col gap-4">
+          {/* Task Subject */}
+          <div className="flex flex-col gap-1">
+            <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+              {t('pages.clients.tasks.subject', 'Task Subject')}
+            </Label>
+            <SearchableSelect
+              options={subjectOptions}
+              value={subjectId}
+              onValueChange={setSubjectId}
+              placeholder={t('pages.clients.tasks.selectSubject', 'Select subject...')}
+            />
+          </div>
+
+          {/* Description */}
+          <div className="flex flex-col gap-1">
+            <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+              {t('pages.clients.tasks.description', 'Description')}
+              <span className="ml-1 text-red-500">*</span>
+            </Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={t(
+                'pages.clients.tasks.descriptionPlaceholder',
+                'Enter task description...'
+              )}
+              textareaSize="md"
+              className="text-dark-500 w-full text-xs leading-[140%] font-light tracking-[-0.24px]"
+            />
+          </div>
+
+          {/* Priority */}
+          <div className="flex flex-col gap-2">
+            <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+              {t('pages.clients.tasks.priority.label', 'Priority')}
+            </Label>
+            <RadioGroup value={priority} onValueChange={setPriority}>
+              <div className="flex flex-row gap-6">
+                {PRIORITIES.map((p) => (
+                  <div key={p.value} className="flex items-center gap-2">
+                    <RadioItem value={p.value} id={`task-priority-${p.value}`} />
+                    <Label
+                      htmlFor={`task-priority-${p.value}`}
+                      className="text-dark-500 text-xs font-light tracking-[-0.24px]"
+                    >
+                      {t(p.labelKey, p.fallback)}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </RadioGroup>
+          </div>
+
+          {/* Due Date */}
+          <div className="flex flex-col gap-1">
+            <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+              {t('pages.clients.tasks.dueDate', 'Due Date')}
+            </Label>
+            <input
+              type="datetime-local"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="border-input text-dark-500 focus:ring-primary-500 h-[45px] w-full rounded-lg border border-gray-400 bg-white px-3 text-sm font-light focus:ring-2 focus:outline-none"
+            />
+          </div>
+
+          {/* Assigned To */}
+          <div className="flex flex-col gap-1">
+            <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+              {t('pages.clients.tasks.assignedTo', 'Assigned To')}
+              <span className="ml-1 text-red-500">*</span>
+            </Label>
+            <SearchableSelect
+              options={userOptions}
+              value={assignedUserId}
+              onValueChange={setAssignedUserId}
+              placeholder={t('pages.clients.tasks.selectUser', 'Select user...')}
+            />
+          </div>
+
+          {/* Comment */}
+          <div className="flex flex-col gap-1">
+            <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
+              {t('pages.clients.tasks.comment', 'Comment')}
+            </Label>
+            <Textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder={t('pages.clients.tasks.commentPlaceholder', 'Optional comment...')}
+              textareaSize="md"
+              className="text-dark-500 w-full text-xs leading-[140%] font-light tracking-[-0.24px]"
+            />
+          </div>
+        </div>
+      </ModalContent>
+
+      <ModalFooter>
+        <Button
+          type="button"
+          variant="cancel"
+          onClick={onClose}
+          className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
+        >
+          {t('actions.cancel', 'Cancel')}
+        </Button>
+        <Button
+          type="button"
+          variant="primary"
+          onClick={handleSubmit}
+          disabled={!canSubmit || createTask.isPending}
+          className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
+        >
+          {createTask.isPending
+            ? t('actions.saving', 'Saving...')
+            : t('pages.clients.tasks.addTask', 'Add Task')}
+        </Button>
+      </ModalFooter>
+    </Modal>
+  )
+}
