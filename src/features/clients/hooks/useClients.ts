@@ -41,6 +41,10 @@ export const clientKeys = {
   documents: (id: number) => [...clientKeys.details(), id, 'documents'] as const,
   activities: (id: number) => [...clientKeys.details(), id, 'activities'] as const,
   dialHistory: (id: number) => [...clientKeys.details(), id, 'dialHistory'] as const,
+  restructuringAgreements: (id: number) =>
+    [...clientKeys.details(), id, 'restructuringAgreements'] as const,
+  restructuringDetail: (id: number, raId: number) =>
+    [...clientKeys.details(), id, 'restructuringDetail', raId] as const,
   search: (params: SearchByTinParams) => [...clientKeys.all, 'search', params] as const,
   count: () => [...clientKeys.all, 'count'] as const,
   prioritySummary: () => [...clientKeys.all, 'priority-summary'] as const,
@@ -454,6 +458,30 @@ export function useClientDialHistory(clientId: number, enabled = true) {
     enabled: enabled && clientId > 0,
     staleTime: 30000,
     select: (data) => data.records ?? [],
+  })
+}
+
+/**
+ * Get restructuring agreements for a client (RR tab).
+ */
+export function useClientRestructuringAgreements(clientId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.restructuringAgreements(clientId),
+    queryFn: () => clientApi.getClientRestructuringAgreements(clientId),
+    enabled: enabled && clientId > 0,
+    staleTime: 30000,
+  })
+}
+
+/**
+ * Get restructuring agreement detail (RR modal).
+ */
+export function useRestructuringAgreementDetail(clientId: number, raId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.restructuringDetail(clientId, raId),
+    queryFn: () => clientApi.getRestructuringAgreementDetail(clientId, raId),
+    enabled: enabled && clientId > 0 && raId > 0,
+    staleTime: 30000,
   })
 }
 
