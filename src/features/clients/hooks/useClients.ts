@@ -488,7 +488,7 @@ export function useMyTasks() {
     queryFn: () => taskApi.getMyTasks(),
     refetchInterval: 60_000,
     staleTime: 30_000,
-    select: (data) => data.tasks ?? [],
+    select: (data) => data,
   })
 }
 

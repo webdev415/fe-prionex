@@ -105,12 +105,20 @@ export const taskApi = {
   addTaskComment,
   getTaskSubjects,
   getMyTasks,
+  dismissTask,
 }
 
 /**
  * Get past tasks assigned to the current user (for bell notification)
  */
-export async function getMyTasks(): Promise<TaskListResponse> {
-  const response = await api.get<TaskListResponse>(`${BASE_URL}/my-tasks`)
+export async function getMyTasks(): Promise<TaskResponse[]> {
+  const response = await api.get<TaskResponse[]>(`${BASE_URL}/my-tasks`)
   return response.data
+}
+
+/**
+ * Dismiss a task from the bell dropdown
+ */
+export async function dismissTask(taskId: number): Promise<void> {
+  await api.patch(`${BASE_URL}/my-tasks/${taskId}/dismiss`)
 }

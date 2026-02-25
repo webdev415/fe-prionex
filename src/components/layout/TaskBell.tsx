@@ -12,8 +12,10 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { Icons } from '@/lib/icons'
 import { useMyTasks } from '@/features/clients/hooks/useClients'
+import { taskApi } from '@/features/clients/api/taskApi'
 import { cn } from '@/lib/utils'
 
 function formatDateTime(isoDate: string): string {
@@ -31,6 +33,7 @@ function formatDateTime(isoDate: string): string {
 
 export function TaskBell() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { data: tasks = [] } = useMyTasks()
   const count = tasks.length
 
@@ -117,73 +120,92 @@ export function TaskBell() {
               </div>
             ) : (
               tasks.map((task) => (
-                <button
+                <div
                   key={task.id}
-                  type="button"
-                  disabled={!task.client_id}
-                  onClick={() => {
-                    if (task.client_id) {
-                      navigate(`/dashboard/clients/${task.client_id}`)
-                      setIsOpen(false)
-                    }
-                  }}
-                  className="flex w-full flex-col gap-1.5 border-b border-gray-100 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-gray-50 disabled:cursor-default"
+                  className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50"
                 >
-                  {/* Client name + ID + Priority + Status on same line */}
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <p className="line-clamp-1 text-xs font-semibold text-gray-800">
-                      {task.client_name ?? `Client #${task.client_id}`}
-                      {task.client_id && (
-                        <span className="ml-1 font-normal text-gray-400">
-                          (ID: {task.client_id})
-                        </span>
-                      )}
-                      {task.debt_id && (
-                        <span className="ml-1 font-normal text-gray-400">
-                          / Debt: {task.debt_id}
-                        </span>
-                      )}
-                    </p>
-                    <span
-                      className={cn(
-                        'rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
-                        task.priority === 'high' && 'bg-red-100 text-red-600',
-                        task.priority === 'normal' && 'bg-blue-100 text-blue-600',
-                        task.priority === 'low' && 'bg-gray-100 text-gray-500'
-                      )}
-                    >
-                      {task.priority}
-                    </span>
-                    <span
-                      className={cn(
-                        'rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
-                        task.status === 'pending' && 'bg-yellow-100 text-yellow-600',
-                        task.status === 'in_progress' && 'bg-blue-100 text-blue-600',
-                        task.status === 'completed' && 'bg-green-100 text-green-600',
-                        task.status === 'extended' && 'bg-purple-100 text-purple-600',
-                        task.status === 'rejected' && 'bg-red-100 text-red-600',
-                        task.status === 'incoming_line_result' && 'bg-orange-100 text-orange-600'
-                      )}
-                    >
-                      {task.status.replace(/_/g, ' ')}
-                    </span>
-                  </div>
+                  {/* Clickable area → navigate to client */}
+                  <button
+                    type="button"
+                    disabled={!task.client_id}
+                    onClick={() => {
+                      if (task.client_id) {
+                        navigate(`/dashboard/clients/${task.client_id}`)
+                        setIsOpen(false)
+                      }
+                    }}
+                    className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
+                  >
+                    {/* Client name + ID + Priority + Status on same line */}
+                    <div className="flex flex-wrap items-center gap-1.5 pr-5">
+                      <p className="line-clamp-1 text-xs font-semibold text-gray-800">
+                        {task.client_name ?? `Client #${task.client_id}`}
+                        {task.client_id && (
+                          <span className="ml-1 font-normal text-gray-400">
+                            (ID: {task.client_id})
+                          </span>
+                        )}
+                        {task.debt_id && (
+                          <span className="ml-1 font-normal text-gray-400">
+                            / Debt: {task.debt_id}
+                          </span>
+                        )}
+                      </p>
+                      <span
+                        className={cn(
+                          'rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
+                          task.priority === 'high' && 'bg-red-100 text-red-600',
+                          task.priority === 'normal' && 'bg-blue-100 text-blue-600',
+                          task.priority === 'low' && 'bg-gray-100 text-gray-500'
+                        )}
+                      >
+                        {task.priority}
+                      </span>
+                      <span
+                        className={cn(
+                          'rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
+                          task.status === 'pending' && 'bg-yellow-100 text-yellow-600',
+                          task.status === 'in_progress' && 'bg-blue-100 text-blue-600',
+                          task.status === 'completed' && 'bg-green-100 text-green-600',
+                          task.status === 'extended' && 'bg-purple-100 text-purple-600',
+                          task.status === 'rejected' && 'bg-red-100 text-red-600',
+                          task.status === 'incoming_line_result' && 'bg-orange-100 text-orange-600'
+                        )}
+                      >
+                        {task.status.replace(/_/g, ' ')}
+                      </span>
+                    </div>
 
-                  {/* Description with ellipsis if long */}
-                  {(task.description || task.title) && (
-                    <p className="w-full overflow-hidden text-xs text-ellipsis whitespace-nowrap text-gray-500">
-                      {task.description || task.title}
-                    </p>
-                  )}
+                    {/* Description with ellipsis if long */}
+                    {(task.description || task.title) && (
+                      <p className="w-full min-w-0 truncate text-xs text-gray-500">
+                        {task.description || task.title}
+                      </p>
+                    )}
 
-                  {/* Bottom row: due date */}
-                  <div className="flex items-center gap-1 text-gray-400">
-                    <Icons.Clock01 size={11} strokeWidth={1.5} />
-                    <span className="text-[11px]">
-                      {task.due_date ? formatDateTime(task.due_date) : '—'}
-                    </span>
-                  </div>
-                </button>
+                    {/* Bottom row: due date */}
+                    <div className="flex items-center gap-1 text-gray-400">
+                      <Icons.Clock01 size={11} strokeWidth={1.5} />
+                      <span className="text-[11px]">
+                        {task.due_date ? formatDateTime(task.due_date) : '—'}
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Dismiss (X) button */}
+                  <button
+                    type="button"
+                    aria-label="Dismiss task"
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      await taskApi.dismissTask(task.id)
+                      queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
+                    }}
+                    className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-600"
+                  >
+                    <Icons.Cancel01 size={12} strokeWidth={2} />
+                  </button>
+                </div>
               ))
             )}
           </div>
