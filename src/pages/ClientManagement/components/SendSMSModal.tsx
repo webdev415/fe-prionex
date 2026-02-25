@@ -32,7 +32,7 @@ export interface SendSMSModalProps {
   clientId: number
   clientName: string
   phoneNumber: string
-  debtAmount?: number
+  loans?: Array<{ id: number; loanNumber: string; totalToRepay: number }>
   onSent?: () => void
 }
 
@@ -40,6 +40,24 @@ const calculateSMSParts = (message: string): number => {
   const hasCyrillic = /[\u0400-\u04FF]/.test(message)
   const maxLength = hasCyrillic ? 70 : 120
   return Math.ceil(message.length / maxLength)
+}
+
+/**
+ * Formats a full name (FirstName MiddleName LastName) into
+ * "LastName F. M." format as required for SMS display.
+ * Falls back to original string if parsing fails.
+ */
+const formatClientNameInitials = (fullName: string): string => {
+  const parts = fullName.trim().split(/\s+/)
+  if (parts.length === 3) {
+    const [firstName, middleName, lastName] = parts
+    return `${lastName} ${firstName[0].toUpperCase()}. ${middleName[0].toUpperCase()}.`
+  }
+  if (parts.length === 2) {
+    const [firstName, lastName] = parts
+    return `${lastName} ${firstName[0].toUpperCase()}.`
+  }
+  return fullName
 }
 
 // Render template message by replacing variables with actual values
@@ -68,7 +86,7 @@ export function SendSMSModal({
   clientId,
   clientName,
   phoneNumber,
-  debtAmount = 0,
+  loans = [],
   onSent,
 }: SendSMSModalProps) {
   const { t } = useTranslation('common')
@@ -110,10 +128,14 @@ export function SendSMSModal({
   const [message, setMessage] = useState<string>('')
   const [customMessage, setCustomMessage] = useState<string>('')
   const [messageEdited, setMessageEdited] = useState<boolean>(false)
-  const [clientNameField, setClientNameField] = useState<string>(clientName)
-  const [debtAmountField, setDebtAmountField] = useState<string>(
-    Number(debtAmount) > 0 ? Number(debtAmount).toFixed(2) : ''
+  const [clientNameField, setClientNameField] = useState<string>(
+    formatClientNameInitials(clientName)
   )
+  const [selectedLoanId, setSelectedLoanId] = useState<number | null>(
+    loans.length > 0 ? loans[0].id : null
+  )
+
+  const selectedLoan = loans.find((l) => l.id === selectedLoanId) ?? loans[0] ?? null
 
   // Reset form when modal opens/closes
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -124,8 +146,8 @@ export function SendSMSModal({
       setMessage('')
       setCustomMessage('')
       setMessageEdited(false)
-      setClientNameField(clientName)
-      setDebtAmountField(Number(debtAmount) > 0 ? Number(debtAmount).toFixed(2) : '')
+      setClientNameField(formatClientNameInitials(clientName))
+      setSelectedLoanId(loans.length > 0 ? loans[0].id : null)
 
       // Set default template if available
       if (templates.length > 0) {
@@ -140,7 +162,7 @@ export function SendSMSModal({
       setCustomMessage('')
       setMessageEdited(false)
     }
-  }, [open, clientName, debtAmount, templates])
+  }, [open, clientName, loans, templates])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // Update message when template changes
@@ -252,13 +274,13 @@ export function SendSMSModal({
 
     return {
       client_name: clientNameField,
-      debt_amount: debtAmountField,
+      debt_amount: selectedLoan ? Number(selectedLoan.totalToRepay).toFixed(2) : '',
       operator_name: user?.username || '',
       operator_phone: operatorPhone,
       due_date: dueDate,
       contract_number: contractNumber,
     }
-  }, [clientData, clientNameField, debtAmountField, user?.username, currentUserData])
+  }, [clientData, clientNameField, selectedLoan, user?.username, currentUserData])
 
   // Render template message with variables replaced, or use custom message
   // If message was manually edited, use it as-is (don't re-render)
@@ -513,7 +535,7 @@ export function SendSMSModal({
                 </div>
                 {/* Warning if exceeds limit */}
                 {messageMetrics.exceedsLimit && (
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex items-center justify-center gap-2 text-center">
                     <Icons.Warning
                       size={15}
                       className="text-warning-500 flex-shrink-0 sm:size-4"
@@ -527,7 +549,7 @@ export function SendSMSModal({
                 )}
               </div>
 
-              {/* Client Name and Debt Amount */}
+              {/* Client Name and Loan Number */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <label className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-950 sm:text-sm">
@@ -537,19 +559,38 @@ export function SendSMSModal({
                     type="text"
                     value={clientNameField}
                     onChange={(e) => setClientNameField(e.target.value)}
+                    readOnly
                     className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none sm:text-sm"
                   />
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-950 sm:text-sm">
-                    {t('pages.clients.modals.sendSMS.debtAmount')}:
+                    {t('pages.clients.modals.sendSMS.loanNumber')}:
                   </label>
-                  <input
-                    type="text"
-                    value={debtAmountField}
-                    onChange={(e) => setDebtAmountField(e.target.value)}
-                    className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none sm:text-sm"
-                  />
+                  {loans.length > 0 ? (
+                    <Select
+                      value={selectedLoanId?.toString() ?? ''}
+                      onValueChange={(value) => setSelectedLoanId(Number(value))}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="—" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {loans.map((loan) => (
+                          <SelectItem key={loan.id} value={loan.id.toString()}>
+                            {loan.loanNumber} — ₴{Number(loan.totalToRepay).toFixed(2)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <input
+                      type="text"
+                      value="—"
+                      readOnly
+                      className="text-dark-500 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light sm:text-sm"
+                    />
+                  )}
                 </div>
               </div>
             </>
