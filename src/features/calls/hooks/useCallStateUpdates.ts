@@ -72,8 +72,11 @@ export function useCallStateUpdates(agentExtension: string | null, callId: strin
         // Invalidate the call details query to trigger immediate re-fetch
         queryClient.invalidateQueries({ queryKey: ['callDetails', callId] })
 
-        // Also invalidate call history
-        queryClient.invalidateQueries({ queryKey: ['callHistory'] })
+        // Also invalidate call/SMS history on client detail page
+        queryClient.invalidateQueries({
+          queryKey: ['clients', 'detail'],
+          exact: false,
+        })
       }
     }
 
