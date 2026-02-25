@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { AddNoteModal } from './components/AddNoteModal'
+import { AddTaskModal } from './components/AddTaskModal'
 // import { DeleteClientModal } from './components/DeleteClientModal'
 import { EditClientModal } from './components/EditClientModal'
 import { AssignRoleModal, type AssignRoleMode } from './components/AssignRoleModal'
@@ -460,6 +461,7 @@ export function ClientDetailPage() {
 
   // Tags are now fetched from useClientTags hook instead of local state
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
   const [currentCallId, setCurrentCallId] = useState<string | null>(null)
   const [isCallRecordingModalOpen, setIsCallRecordingModalOpen] = useState(false)
@@ -1059,6 +1061,15 @@ export function ClientDetailPage() {
             onClick={() => setIsNoteModalOpen(true)}
           >
             {t('pages.clients.activity.addNote')}
+          </Button>
+          <Button
+            size="md"
+            variant="outline"
+            leftIcon={<Icons.Clock01 size={20} />}
+            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
+            onClick={() => setIsTaskModalOpen(true)}
+          >
+            {t('pages.clients.tasks.addTask', 'Add Task')}
           </Button>
           <Button
             size="md"
@@ -2764,6 +2775,13 @@ export function ClientDetailPage() {
           })
           setIsNoteModalOpen(false)
         }}
+      />
+
+      {/* Add Task Modal */}
+      <AddTaskModal
+        open={isTaskModalOpen}
+        clientId={clientId}
+        onClose={() => setIsTaskModalOpen(false)}
       />
 
       {/* Call Dialog Modal */}

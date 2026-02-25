@@ -1,10 +1,12 @@
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import type { LoginRequest } from '@/types/api'
 
 export function useAuth() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const {
     user,
@@ -43,8 +45,9 @@ export function useAuth() {
 
   const logout = useCallback(async () => {
     await storeLogout()
+    queryClient.clear()
     navigate('/login')
-  }, [storeLogout, navigate])
+  }, [storeLogout, queryClient, navigate])
 
   const forceLogin = useCallback(async () => {
     try {

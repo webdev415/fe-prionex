@@ -12,6 +12,7 @@ import { Sidebar, type SidebarItem, type SidebarSubItem } from './Sidebar'
 import { SearchBar } from './SearchBar'
 import { UserProfile } from './UserProfile'
 import { MinimizedCallBubble } from './MinimizedCallBubble'
+import { TaskBell } from './TaskBell'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
@@ -777,6 +778,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Desktop: Project Selector, Language Switcher and User Profile */}
           <div className="hidden items-center gap-3 lg:flex">
             <MinimizedCallBubble />
+            <TaskBell />
             <UserProfile onLogoutClick={handleLogoutClick} />
           </div>
 
