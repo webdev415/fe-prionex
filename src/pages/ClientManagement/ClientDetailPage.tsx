@@ -11,6 +11,7 @@ import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { AddNoteModal } from './components/AddNoteModal'
 // import { DeleteClientModal } from './components/DeleteClientModal'
 import { EditClientModal } from './components/EditClientModal'
@@ -42,7 +43,10 @@ import {
   useClientActivities,
   useClientDialHistory,
   useAssignClient,
+  useClientRestructuringAgreements,
+  useRestructuringAgreementDetail,
 } from '@/features/clients/hooks/useClients'
+import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
 import { useCreateNoteInteraction } from '@/features/clients/hooks/useNoteInteraction'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
@@ -127,6 +131,7 @@ export function ClientDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [activeLoanTab, setActiveLoanTab] = useState<'process' | 'closed' | 'rr'>('process')
+  const [selectedRaId, setSelectedRaId] = useState<number | null>(null)
   const [activeCommentTab, setActiveCommentTab] = useState<'comments' | 'primary' | 'dial-history'>(
     'comments'
   )
@@ -211,6 +216,13 @@ export function ClientDetailPage() {
     error: profileError,
   } = useClientProfile(clientId, isValidClientId)
   const { data: loans = [], isLoading: isLoansLoading } = useClientLoans(clientId, isValidClientId)
+  const { data: restructuringAgreements = [], isLoading: isRrLoading } =
+    useClientRestructuringAgreements(clientId, isValidClientId)
+  const { data: rrDetail } = useRestructuringAgreementDetail(
+    clientId,
+    selectedRaId ?? 0,
+    !!selectedRaId
+  )
   const { data: paymentsSection, isLoading: isPaymentsLoading } = useClientPaymentsSection(
     clientId,
     isValidClientId
@@ -354,9 +366,10 @@ export function ClientDetailPage() {
         loanNumber: d.contract_number,
         counterparty: d.seller_company,
         saleDate: d.purchase_date ?? '-',
-        loanAmount: Number(d.original_debt_amount ?? 0),
-        principalDebt: Number(d.principal_amount ?? d.original_debt_amount ?? 0),
-        totalToRepay: Number(d.remaining_debt_amount ?? 0),
+        principalAmount: Number(d.principal_amount ?? 0),
+        principalDebt: Number(d.principal_debt ?? d.principal_amount ?? 0),
+        remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
+        totalToReturn: Number(d.total_to_return ?? d.remaining_debt_amount ?? 0),
         status: d.status,
       })),
       // Payments mapped from PaymentResponse to UI shape
@@ -708,10 +721,10 @@ export function ClientDetailPage() {
     },
     { key: 'saleDate', header: t('pages.clients.detail.tableHeaders.saleDate'), align: 'left' },
     {
-      key: 'loanAmount',
-      header: t('pages.clients.detail.tableHeaders.loanAmount'),
+      key: 'principalAmount',
+      header: t('pages.clients.detail.tableHeaders.principalAmount'),
       align: 'right',
-      render: (loan) => `₴ ${formatCurrency(loan.loanAmount)}`,
+      render: (loan) => `₴ ${formatCurrency(loan.principalAmount)}`,
     },
     {
       key: 'principalDebt',
@@ -720,10 +733,66 @@ export function ClientDetailPage() {
       render: (loan) => `₴ ${formatCurrency(loan.principalDebt)}`,
     },
     {
-      key: 'totalToRepay',
+      key: 'remainingDebtAmount',
+      header: t('pages.clients.detail.tableHeaders.remainingDebtAmount'),
+      align: 'right',
+      render: (loan) => `₴ ${formatCurrency(loan.remainingDebtAmount)}`,
+    },
+    {
+      key: 'totalToReturn',
+      header: t('pages.clients.detail.tableHeaders.totalToReturn'),
+      align: 'right',
+      render: (loan) => `₴ ${formatCurrency(loan.totalToReturn)}`,
+    },
+  ]
+
+  type RrRow = (typeof restructuringAgreements)[0]
+  const rrColumns: Column<RrRow>[] = [
+    {
+      key: 'contract_number',
+      header: t('pages.clients.detail.tableHeaders.loanNumber'),
+      align: 'left',
+    },
+    {
+      key: 'seller_company',
+      header: t('pages.clients.detail.tableHeaders.counterparty'),
+      align: 'left',
+    },
+    {
+      key: 'purchase_date',
+      header: t('pages.clients.detail.tableHeaders.saleDate'),
+      align: 'left',
+    },
+    {
+      key: 'restructuring_amount',
+      header: t('pages.clients.detail.tableHeaders.rrAmount'),
+      align: 'right',
+      render: (row) => `₴ ${formatCurrency(Number(row.restructuring_amount ?? 0))}`,
+    },
+    {
+      key: 'first_payment_date',
+      header: t('pages.clients.detail.tableHeaders.rrConnectionDate'),
+      align: 'left',
+    },
+    {
+      key: 'remaining_debt_amount',
       header: t('pages.clients.detail.tableHeaders.totalToBeRepaid'),
       align: 'right',
-      render: (loan) => `₴ ${formatCurrency(loan.totalToRepay)}`,
+      render: (row) => `₴ ${formatCurrency(Number(row.remaining_debt_amount ?? 0))}`,
+    },
+    {
+      key: 'id',
+      header: t('pages.clients.detail.tableHeaders.actions'),
+      align: 'center',
+      render: (row) => (
+        <button
+          onClick={() => setSelectedRaId(row.id)}
+          className="text-secondary-800 hover:text-secondary-600 p-1"
+          title={t('pages.clients.detail.viewDetail')}
+        >
+          <Icons.Eye size={18} />
+        </button>
+      ),
     },
   ]
 
@@ -1947,15 +2016,24 @@ export function ClientDetailPage() {
                   </div>
                   {/* Data table filtered by sub-tab */}
                   <div className="flex flex-col items-start gap-2.5 self-stretch px-3 py-4 md:px-6">
-                    {isLoansLoading ? (
-                      <TableSkeleton columns={6} rows={3} />
+                    {activeLoanTab === 'rr' ? (
+                      isRrLoading ? (
+                        <TableSkeleton columns={7} rows={3} />
+                      ) : (
+                        <DataTable
+                          columns={rrColumns}
+                          data={restructuringAgreements}
+                          className="w-full"
+                        />
+                      )
+                    ) : isLoansLoading ? (
+                      <TableSkeleton columns={7} rows={3} />
                     ) : (
                       <DataTable
                         columns={loanColumns}
                         data={client.loans.filter((loan) => {
                           if (activeLoanTab === 'process') return loan.status === 'active'
                           if (activeLoanTab === 'closed') return loan.status === 'closed'
-                          if (activeLoanTab === 'rr') return loan.status === 'restructuring'
                           return true
                         })}
                         className="w-full"
@@ -2836,7 +2914,7 @@ export function ClientDetailPage() {
         clientId={clientId}
         clientName={client.fullName}
         phoneNumber={selectedPhoneForSMS || client.phones?.[0]?.number || ''}
-        debtAmount={client.loans?.reduce((sum, loan) => sum + (loan.totalToRepay || 0), 0) || 0}
+        debtAmount={client.loans?.reduce((sum, loan) => sum + (loan.totalToReturn || 0), 0) || 0}
         onSent={() => {
           // SMS sent successfully - history will refresh automatically via query invalidation
         }}
@@ -2906,6 +2984,115 @@ export function ClientDetailPage() {
           }}
         />
       )}
+
+      {/* RR Detail Modal */}
+      <Modal open={!!selectedRaId} onClose={() => setSelectedRaId(null)} maxWidth="lg">
+        <ModalHeader
+          icon={
+            <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+              <Icons.Calculate size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+            </div>
+          }
+          title={t('pages.clients.detail.rrDetail')}
+        />
+        <ModalContent>
+          {rrDetail ? (
+            <div className="flex flex-col gap-4">
+              {/* Two fields per row */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                <div className="flex flex-col gap-1">
+                  <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    {t('pages.clients.detail.rrLoanNumber')}
+                  </span>
+                  <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    {rrDetail.contract_number ?? '-'}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    {t('pages.clients.detail.rrClientNumber')}
+                  </span>
+                  <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    {rrDetail.client_id ?? '-'}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    {t('pages.clients.detail.rrRestructuringAmount')}
+                  </span>
+                  <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    ₴ {formatCurrency(Number(rrDetail.restructuring_amount ?? 0))}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    {t('pages.clients.detail.rrFirstPaymentDate')}
+                  </span>
+                  <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    {rrDetail.first_payment_date ?? '-'}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    {t('pages.clients.detail.rrFirstPaymentAmount')}
+                  </span>
+                  <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    ₴ {formatCurrency(Number(rrDetail.first_payment_amount ?? 0))}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-dark-500 text-xs font-light sm:text-sm">
+                    {t('pages.clients.detail.rrResponsibleEmployee')}
+                  </span>
+                  <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                    {rrDetail.responsible_user_name ?? '-'}
+                  </span>
+                </div>
+              </div>
+              {/* Payment schedule with vertical scroll */}
+              {rrDetail.payments.length > 0 && (
+                <div className="pt-2">
+                  <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                    {t('pages.clients.detail.rrPaymentSchedule')}
+                  </h3>
+                  <div className="max-h-48 overflow-y-auto">
+                    <DataTable<RestructuringPaymentEntry & { id: number }>
+                      columns={[
+                        {
+                          key: 'date',
+                          header: t('pages.clients.detail.rrPaymentDate'),
+                          render: (p) => p.date ?? '-',
+                        },
+                        {
+                          key: 'amount',
+                          header: t('pages.clients.detail.rrPaymentAmount'),
+                          align: 'right',
+                          render: (p) => `₴ ${formatCurrency(Number(p.amount ?? 0))}`,
+                        },
+                      ]}
+                      data={rrDetail.payments.map((p, idx) => ({ ...p, id: idx }))}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex justify-center py-8">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+            </div>
+          )}
+        </ModalContent>
+        <ModalFooter>
+          <Button
+            variant="cancel"
+            size="sm"
+            onClick={() => setSelectedRaId(null)}
+            className="w-full rounded-md sm:w-auto"
+          >
+            {t('actions.close')}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   )
 }

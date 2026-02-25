@@ -22,6 +22,8 @@ import type {
   GetClientsParams,
   ManualPriorityRequest,
   PaginatedClientResponse,
+  RestructuringAgreementDetail,
+  RestructuringAgreementSummary,
   SearchByTinParams,
   UpdateAddressRequest,
   UpdateClientRequest,
@@ -264,6 +266,31 @@ export async function updatePassport(clientId: number, data: UpdatePassportReque
 }
 
 /**
+ * Get restructuring agreements for a client
+ */
+export async function getClientRestructuringAgreements(
+  clientId: number
+): Promise<RestructuringAgreementSummary[]> {
+  const response = await api.get<RestructuringAgreementSummary[]>(
+    `${BASE_URL}/${clientId}/restructuring-agreements`
+  )
+  return response.data
+}
+
+/**
+ * Get restructuring agreement detail for modal
+ */
+export async function getRestructuringAgreementDetail(
+  clientId: number,
+  raId: number
+): Promise<RestructuringAgreementDetail> {
+  const response = await api.get<RestructuringAgreementDetail>(
+    `${BASE_URL}/${clientId}/restructuring-agreements/${raId}`
+  )
+  return response.data
+}
+
+/**
  * Exported API object for easier importing
  * Consistent with other service APIs (usersApi, rolesApi, projectsApi, etc.)
  */
@@ -290,4 +317,6 @@ export const clientApi = {
   deleteContact,
   updateEmployment,
   updatePassport,
+  getClientRestructuringAgreements,
+  getRestructuringAgreementDetail,
 }

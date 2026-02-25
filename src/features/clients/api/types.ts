@@ -32,6 +32,43 @@ export interface DebtDetail {
   credit_term_days?: number | null
   credit_closed_date?: string | null
   portfolio_name?: string | null
+  // Enriched fields from loans refactor
+  principal_paid?: string | null
+  principal_written_off?: string | null
+  principal_debt?: string | null
+  total_paid_amount?: string | null
+  total_to_return?: string | null
+}
+
+export interface RestructuringAgreementSummary {
+  id: number
+  debt_id?: number | null
+  contract_number?: string | null
+  seller_company?: string | null
+  purchase_date?: string | null
+  restructuring_amount?: string | null
+  first_payment_date?: string | null
+  remaining_debt_amount?: string | null
+  status_id?: number | null
+  status_name?: string | null
+}
+
+export interface RestructuringPaymentEntry {
+  date?: string | null
+  amount?: string | null
+}
+
+export interface RestructuringAgreementDetail {
+  id: number
+  contract_number?: string | null
+  client_id?: number | null
+  restructuring_amount?: string | null
+  first_payment_date?: string | null
+  first_payment_amount?: string | null
+  num_payments?: number | null
+  monthly_payment_amount?: string | null
+  responsible_user_name?: string | null
+  payments: RestructuringPaymentEntry[]
 }
 
 export interface Client {
