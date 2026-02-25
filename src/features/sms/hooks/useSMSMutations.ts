@@ -43,6 +43,10 @@ export function useSendSMS() {
             )
           },
         })
+        // Also invalidate the client detail call/SMS history panel
+        queryClient.invalidateQueries({
+          queryKey: ['clients', 'detail', variables.client_id, 'callSmsHistory'],
+        })
       }
       // Invalidate templates to update usage stats
       queryClient.invalidateQueries({ queryKey: ['sms', 'templates'] })

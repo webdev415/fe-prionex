@@ -2854,7 +2854,11 @@ export function ClientDetailPage() {
         clientId={clientId}
         clientName={client.fullName}
         phoneNumber={selectedPhoneForSMS || client.phones?.[0]?.number || ''}
-        debtAmount={client.loans?.reduce((sum, loan) => sum + (loan.totalToRepay || 0), 0) || 0}
+        loans={client.loans?.map((l) => ({
+          id: l.id,
+          loanNumber: l.loanNumber,
+          totalToRepay: l.totalToRepay,
+        }))}
         onSent={() => {
           // SMS sent successfully - history will refresh automatically via query invalidation
         }}
