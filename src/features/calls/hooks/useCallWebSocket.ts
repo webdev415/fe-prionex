@@ -83,9 +83,10 @@ export function useCallWebSocket(agentExtension: string | null) {
         queryKey: ['callDetails', event.call_id],
       })
 
-      // Update call history
+      // Update call/SMS history on client detail page
       queryClient.invalidateQueries({
-        queryKey: ['callHistory'],
+        queryKey: ['clients', 'detail'],
+        exact: false,
       })
     })
 
