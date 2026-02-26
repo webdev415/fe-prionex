@@ -239,12 +239,18 @@ export function DebtSummaryPage() {
     { enabled: !!clientId }
   )
 
-  // Load user details for "Cancelled by" in payment details modal
-  const cancelledByUserId =
+  // Load user details for payment details modal audit trail
+  const selectedPaymentData =
     paymentHistoryData && selectedPayment
-      ? (paymentHistoryData.payments.find((p) => p.id === selectedPayment.id)
-          ?.reversed_by_user_id ?? null)
+      ? paymentHistoryData.payments.find((p) => p.id === selectedPayment.id)
       : null
+
+  const createdByUserId = selectedPaymentData?.recorded_by_user_id ?? null
+  const verifiedByUserId = selectedPaymentData?.verified_by_user_id ?? null
+  const cancelledByUserId = selectedPaymentData?.reversed_by_user_id ?? null
+
+  const { data: createdByUser } = useUser(createdByUserId)
+  const { data: verifiedByUser } = useUser(verifiedByUserId)
   const { data: cancelledByUser } = useUser(cancelledByUserId)
 
   // Use mock data as fallback for missing fields until backend is fully integrated (same as ClientDetailPage)
@@ -1539,25 +1545,14 @@ export function DebtSummaryPage() {
               Number(
                 paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.debt_after
               ) || Math.max(0, debtSummary.totalDebt - selectedPayment.amount),
-            // Audit trail (real data when present, fallback to 'Unknown')
-            createdBy:
-              paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
-                ?.recorded_by_username || 'Unknown',
-            createdAt:
-              paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.recorded_at ||
-              'Unknown',
-            verifiedBy:
-              paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
-                ?.verified_by_username || undefined,
-            verifiedAt:
-              paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.verified_at ||
-              undefined,
+            // Audit trail — resolved via useUser hooks
+            createdBy: createdByUser?.username || 'Unknown',
+            createdAt: selectedPaymentData?.recorded_at || 'Unknown',
+            verifiedBy: verifiedByUser?.username || undefined,
+            verifiedAt: selectedPaymentData?.verified_at || undefined,
             cancelledBy:
               cancelledByUser?.username ||
-              (paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
-                ?.reversed_by_user_id
-                ? 'Unknown'
-                : undefined),
+              (selectedPaymentData?.reversed_by_user_id ? 'Unknown' : undefined),
             cancelledAt:
               paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.reversed_at ||
               undefined,
