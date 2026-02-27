@@ -174,7 +174,7 @@ export interface UpdateEmploymentRequest {
   employment_type?: string
   manager_full_name?: string
   work_phone?: string
-  work_experience_years?: number
+  work_experience_months?: number
 }
 
 export interface UpdatePassportRequest {
@@ -185,7 +185,6 @@ export interface UpdatePassportRequest {
   issued_date?: string
   expires_date?: string
   gender?: string
-  record_number?: string
 }
 
 export interface GetClientsParams {
@@ -323,32 +322,24 @@ export interface ClientProfileResponse {
     number: string
     issued_by?: string | null
     issued_date?: string | null
-    record_number?: string | null
     expires_date?: string | null
     gender?: string | null
   } | null
   employment?: {
     company_name?: string | null
-    company_type?: string | null
-    employment_type?: string | null
     position?: string | null
-    department?: string | null
-    manager_name?: string | null
+    work_experience_months?: number | null
     manager_full_name?: string | null
-    employment_date?: string | null
-    work_experience_years?: number | null
+    employment_type?: string | null
     work_phone?: string | null
   } | null
   recommenders: Array<{
     id: number
-    full_name: string
-    first_name: string
-    last_name?: string | null
-    middle_name?: string | null
-    relationship?: string | null
-    phone?: string | null
-    notes?: string | null
-    contact_type: string
+    contact_value: string
+    contact_type_id?: number | null
+    contact_type_name?: string | null
+    is_phone?: boolean
+    comment?: string | null
   }>
   addresses: Array<{
     id: number
@@ -357,11 +348,14 @@ export interface ClientProfileResponse {
     country?: string | null
     region?: string | null
     city?: string | null
+    district?: string | null
     street?: string | null
     building?: string | null
+    house_number?: string | null
     apartment?: string | null
     postal_code?: string | null
-    is_primary: boolean
+    housing_type?: string | null
+    is_primary?: boolean
   }>
   additional_phones: Array<{
     number: string
@@ -413,10 +407,13 @@ export interface CreateAddressRequest {
   country?: string
   region?: string
   city?: string
+  district?: string
   street?: string
   building?: string
+  house_number?: string
   apartment?: string
   postal_code?: string
+  housing_type?: string
   is_primary?: boolean
 }
 
@@ -425,10 +422,13 @@ export interface UpdateAddressRequest {
   country?: string
   region?: string
   city?: string
+  district?: string
   street?: string
   building?: string
+  house_number?: string
   apartment?: string
   postal_code?: string
+  housing_type?: string
   is_primary?: boolean
 }
 
@@ -453,40 +453,34 @@ export interface AddressResponse {
 // --- Contact CRUD Types ---
 
 export interface CreateContactRequest {
-  contact_type: string
-  relationship?: string
-  first_name: string
-  last_name?: string
-  middle_name?: string
-  phone: string
-  notes?: string
+  contact_value: string
+  contact_type_id?: number | null
+  comment?: string
 }
 
 export interface UpdateContactRequest {
-  contact_type?: string
-  relationship?: string
-  first_name?: string
-  last_name?: string
-  middle_name?: string
-  phone?: string
-  is_active?: boolean
-  notes?: string
+  contact_value?: string
+  contact_type_id?: number | null
+  comment?: string
 }
 
 export interface ContactResponse {
   id: number
   client_id: number
-  contact_type: string
-  relationship?: string | null
-  full_name: string
-  first_name: string
-  last_name?: string | null
-  phone: string
-  is_primary: boolean
-  is_active: boolean
-  notes?: string | null
+  contact_value: string
+  contact_type_id?: number | null
+  comment?: string | null
+  added_date?: string | null
+  added_by_user_id?: number | null
   created_at: string
   updated_at?: string | null
+}
+
+export interface ContactTypeOption {
+  id: number
+  code: string
+  name: string
+  is_phone: boolean
 }
 
 export interface WriteoffsResponse {

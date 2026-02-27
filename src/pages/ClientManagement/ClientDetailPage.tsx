@@ -109,20 +109,7 @@ const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
   other: 'Інше',
 }
 
-const CONTACT_TYPE_MAP: Record<string, string> = {
-  phone_mobile_third_party: 'Третя особа (моб.)',
-  phone_home_third_party: 'Третя особа (дом.)',
-  phone_work_third_party: 'Третя особа (роб.)',
-  phone_mobile_guarantor: 'Поручитель (моб.)',
-  phone_work_guarantor: 'Поручитель (роб.)',
-  phone_home_guarantor: 'Поручитель (дом.)',
-  phone_other: 'Інший телефон',
-  phone_mobile_other: 'Інший (моб.)',
-  phone_work_other: 'Інший (роб.)',
-  phone_home_other: 'Інший (дом.)',
-  phone_home_client: 'Клієнт (дом.)',
-  phone_fax: 'Факс',
-}
+// Contact type names are now returned by the backend from client_contact_types lookup table
 
 // Client data loaded via useClientProfile + section-specific hooks (real API endpoints)
 
@@ -282,12 +269,6 @@ export function ClientDetailPage() {
         .forEach((p) => phones.push({ number: p.number, type: p.type }))
     }
 
-    // Address type label map
-    const ADDRESS_TYPE_LABEL_MAP: Record<string, string> = {
-      registration: t('pages.clients.detail.registrationAddress'),
-      actual: t('pages.clients.detail.personalAddress'),
-    }
-
     return {
       ...profile,
       // Header fields
@@ -315,7 +296,6 @@ export function ClientDetailPage() {
         issuedDate: profile.passport?.issued_date ?? '',
         expiresDate: profile.passport?.expires_date ?? '',
         gender: profile.passport?.gender ?? '',
-        recordNumber: profile.passport?.record_number ?? '',
         maritalStatus: profile.marital_status
           ? (MARITAL_STATUS_MAP[profile.marital_status] ?? profile.marital_status)
           : '',
@@ -328,11 +308,10 @@ export function ClientDetailPage() {
             organizationName: profile.employment.company_name ?? '-',
             position: profile.employment.position ?? '-',
             experience:
-              profile.employment.work_experience_years != null
-                ? `${profile.employment.work_experience_years} р.`
-                : (profile.employment.employment_date ?? '-'),
-            managerFullName:
-              profile.employment.manager_full_name ?? profile.employment.manager_name ?? '-',
+              profile.employment.work_experience_months != null
+                ? `${profile.employment.work_experience_months} міс.`
+                : '-',
+            managerFullName: profile.employment.manager_full_name ?? '-',
             employmentType: profile.employment.employment_type
               ? (EMPLOYMENT_TYPE_MAP[profile.employment.employment_type] ??
                 profile.employment.employment_type)
@@ -342,16 +321,15 @@ export function ClientDetailPage() {
         : null,
       recommenders: (profile.recommenders ?? []).map((r) => ({
         id: r.id,
-        fullName: r.full_name ?? '',
-        contactType: CONTACT_TYPE_MAP[r.contact_type] ?? r.contact_type ?? '',
-        relationship: r.relationship ?? '',
-        phoneNumber: r.phone ?? '',
-        comment: r.notes ?? '',
+        contactValue: r.contact_value ?? '',
+        contactType: r.contact_type_name ?? '',
+        isPhone: r.is_phone ?? false,
+        comment: r.comment ?? '',
       })),
       addresses: (profile.addresses ?? []).map((a) => ({
         id: a.id,
-        type: ADDRESS_TYPE_LABEL_MAP[a.address_type] ?? a.address_type,
-        fullAddress: a.full_address ?? '',
+        addressType: a.address_type,
+        fullAddress: a.full_address ?? '-',
       })),
       // Comments mapped
       comments: (profile.comments ?? []).map((c) => ({
@@ -469,7 +447,6 @@ export function ClientDetailPage() {
     documents,
     activities,
     responsibleEmployeeDepartment,
-    t,
   ])
 
   // Tags are now fetched from useClientTags hook instead of local state
@@ -1459,7 +1436,7 @@ export function ClientDetailPage() {
             </div>
 
             {/* Right side content for selected client card tab */}
-            <div className="flex w-full flex-col items-center gap-6 self-stretch px-4 py-4 md:px-0">
+            <div className="flex w-full min-w-0 flex-col items-center gap-6 self-stretch overflow-hidden px-4 py-4 md:px-0">
               {activeClientCardTab === 'personal' && (
                 <>
                   <div className="flex items-center self-stretch p-0">
@@ -1563,16 +1540,6 @@ export function ClientDetailPage() {
                       {client.personalDetails.gender}
                     </p>
                   </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.recordNumber')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.recordNumber}
-                    </p>
-                  </div>
                   <div className="mx-2 h-px self-stretch bg-gray-200"></div>
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2.5">
@@ -1609,49 +1576,19 @@ export function ClientDetailPage() {
 
               {activeClientCardTab === 'recommenders' && (
                 <>
-                  {client.recommenders.map((friend, index) => (
-                    <React.Fragment key={friend.id}>
-                      <div className="flex items-center self-stretch p-0">
-                        <div className="flex flex-1 items-center gap-2.5">
+                  {client.recommenders.map((contact, index) => (
+                    <React.Fragment key={contact.id}>
+                      <div className="flex min-w-0 items-start self-stretch p-0">
+                        <div className="flex shrink-0 items-start gap-2.5 pt-0.5">
                           <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.fullName')}
+                            {t('pages.clients.detail.contactValue')}
                           </label>
                         </div>
-                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                          {friend.fullName}
-                        </p>
-                      </div>
-                      <div className="flex items-center self-stretch p-0">
-                        <div className="flex flex-1 items-center gap-2.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.editModal.contactType')}
-                          </label>
-                        </div>
-                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                          {friend.contactType}
-                        </p>
-                      </div>
-                      <div className="flex items-center self-stretch p-0">
-                        <div className="flex flex-1 items-center gap-2.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.relationshipTo')}
-                          </label>
-                        </div>
-                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                          {friend.relationship}
-                        </p>
-                      </div>
-                      <div className="flex items-center self-stretch p-0">
-                        <div className="flex flex-1 items-center gap-2.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.phoneNumber')}
-                          </label>
-                        </div>
-                        <div className="flex flex-1 items-center justify-end gap-2 md:gap-3">
-                          <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                            {friend.phoneNumber}
+                        <div className="flex min-w-0 flex-1 items-start justify-end gap-2 md:gap-3">
+                          <span className="text-dark-500 min-w-0 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                            {contact.contactValue}
                           </span>
-                          {friend.phoneNumber && (
+                          {contact.isPhone && contact.contactValue && (
                             <div className="flex shrink-0 items-center gap-1 md:gap-2">
                               <button
                                 onClick={() => {
@@ -1662,7 +1599,7 @@ export function ClientDetailPage() {
                                     )
                                     return
                                   }
-                                  setSelectedPhoneForCall(friend.phoneNumber)
+                                  setSelectedPhoneForCall(contact.contactValue)
                                   setOpenCallModal('call-dialog')
                                   setIsCallModalOpen(true)
                                 }}
@@ -1672,7 +1609,7 @@ export function ClientDetailPage() {
                               </button>
                               <button
                                 onClick={() => {
-                                  setSelectedPhoneForSMS(friend.phoneNumber)
+                                  setSelectedPhoneForSMS(contact.contactValue)
                                   setIsSendSMSModalOpen(true)
                                 }}
                                 className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
@@ -1681,7 +1618,7 @@ export function ClientDetailPage() {
                               </button>
                               <button
                                 onClick={() => {
-                                  setSelectedPhoneForNote(friend.phoneNumber)
+                                  setSelectedPhoneForNote(contact.contactValue)
                                   setIsNoteModalOpen(true)
                                 }}
                                 className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
@@ -1692,14 +1629,24 @@ export function ClientDetailPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-start self-stretch p-0">
-                        <div className="flex flex-1 items-center gap-2.5">
+                      <div className="flex min-w-0 items-start self-stretch p-0">
+                        <div className="flex shrink-0 items-start gap-2.5">
+                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                            {t('pages.clients.detail.contactType')}
+                          </label>
+                        </div>
+                        <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                          {contact.contactType}
+                        </p>
+                      </div>
+                      <div className="flex min-w-0 items-start self-stretch p-0">
+                        <div className="flex shrink-0 items-start gap-2.5">
                           <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                             {t('pages.clients.detail.comment')}
                           </label>
                         </div>
-                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                          {friend.comment}
+                        <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                          {contact.comment}
                         </p>
                       </div>
                       {index < client.recommenders.length - 1 && (
@@ -1712,16 +1659,18 @@ export function ClientDetailPage() {
 
               {activeClientCardTab === 'addresses' && (
                 <>
-                  {client.addresses.map((addr, index) => (
-                    <React.Fragment key={addr.id}>
+                  {client.addresses.map((address, index) => (
+                    <React.Fragment key={address.id}>
                       <div className="flex items-start self-stretch p-0">
-                        <div className="flex flex-1 items-center gap-2.5">
+                        <div className="flex shrink-0 items-start gap-2.5">
                           <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {addr.type}
+                            {address.addressType === 'registration'
+                              ? t('pages.clients.detail.registrationAddress')
+                              : t('pages.clients.detail.personalAddress')}
                           </label>
                         </div>
-                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                          {addr.fullAddress}
+                        <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                          {address.fullAddress}
                         </p>
                       </div>
                       {index < client.addresses.length - 1 && (
@@ -1729,6 +1678,7 @@ export function ClientDetailPage() {
                       )}
                     </React.Fragment>
                   ))}
+                  {client.addresses.length === 0 && <p className="text-xs text-gray-500">-</p>}
                 </>
               )}
 
@@ -1787,7 +1737,7 @@ export function ClientDetailPage() {
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.editModal.workPhone')}
+                        {t('pages.clients.detail.workPhone')}
                       </label>
                     </div>
                     <div className="flex flex-1 items-center justify-end gap-2 md:gap-3">

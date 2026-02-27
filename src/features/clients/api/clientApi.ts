@@ -16,6 +16,7 @@ import type {
   ClientDetail,
   ClientProfileResponse,
   ContactResponse,
+  ContactTypeOption,
   CreateAddressRequest,
   CreateClientRequest,
   CreateContactRequest,
@@ -291,6 +292,14 @@ export async function getRestructuringAgreementDetail(
 }
 
 /**
+ * Get all contact types from the lookup table
+ */
+export async function getContactTypes(): Promise<ContactTypeOption[]> {
+  const response = await api.get<ContactTypeOption[]>(`${BASE_URL}/contact-types`)
+  return response.data
+}
+
+/**
  * Exported API object for easier importing
  * Consistent with other service APIs (usersApi, rolesApi, projectsApi, etc.)
  */
@@ -315,6 +324,7 @@ export const clientApi = {
   createContact,
   updateContact,
   deleteContact,
+  getContactTypes,
   updateEmployment,
   updatePassport,
   getClientRestructuringAgreements,

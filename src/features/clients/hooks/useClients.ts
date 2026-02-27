@@ -48,6 +48,7 @@ export const clientKeys = {
   search: (params: SearchByTinParams) => [...clientKeys.all, 'search', params] as const,
   count: () => [...clientKeys.all, 'count'] as const,
   prioritySummary: () => [...clientKeys.all, 'priority-summary'] as const,
+  contactTypes: () => [...clientKeys.all, 'contact-types'] as const,
 }
 
 /**
@@ -565,10 +566,6 @@ export function useCreateAddress() {
       queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
       queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
     },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to add address'
-      toast.error(message)
-    },
   })
 }
 
@@ -592,10 +589,6 @@ export function useUpdateAddress() {
       queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
       queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
     },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to update address'
-      toast.error(message)
-    },
   })
 }
 
@@ -612,10 +605,6 @@ export function useDeleteAddress() {
       queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
       queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
     },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to delete address'
-      toast.error(message)
-    },
   })
 }
 
@@ -631,10 +620,6 @@ export function useCreateContact() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
       queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
-    },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to add contact'
-      toast.error(message)
     },
   })
 }
@@ -659,10 +644,6 @@ export function useUpdateContact() {
       queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
       queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
     },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to update contact'
-      toast.error(message)
-    },
   })
 }
 
@@ -679,10 +660,17 @@ export function useDeleteContact() {
       queryClient.invalidateQueries({ queryKey: clientKeys.profile(variables.clientId) })
       queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
     },
-    onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to delete contact'
-      toast.error(message)
-    },
+  })
+}
+
+/**
+ * Fetch contact type options from the lookup table
+ */
+export function useContactTypes() {
+  return useQuery({
+    queryKey: clientKeys.contactTypes(),
+    queryFn: () => clientApi.getContactTypes(),
+    staleTime: Infinity, // Lookup data rarely changes
   })
 }
 
