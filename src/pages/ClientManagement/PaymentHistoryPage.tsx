@@ -70,6 +70,7 @@ interface Payment {
   id: number
   date: string
   amount: number
+  contractNumber?: string
   method:
     | 'Bank Transfer'
     | 'Online Gateway'
@@ -299,6 +300,7 @@ export function PaymentHistoryPage() {
             ? backendPayment.reversed_at
             : backendPayment.recorded_at,
       amount: Number(backendPayment.amount),
+      contractNumber: backendPayment.debt_contract_number || undefined,
       method: backendToFrontendPaymentMethod(backendPayment.payment_method),
       status: backendToFrontendPaymentStatus(backendPayment.status),
       receipt: backendPayment.receipt_url,
@@ -805,6 +807,10 @@ export function PaymentHistoryPage() {
           case 'reference':
             aValue = (a.reference || '').toLowerCase()
             bValue = (b.reference || '').toLowerCase()
+            break
+          case 'contract':
+            aValue = (a.contractNumber || '').toLowerCase()
+            bValue = (b.contractNumber || '').toLowerCase()
             break
           default:
             return 0
@@ -1425,6 +1431,15 @@ export function PaymentHistoryPage() {
                       </th>
                       <th
                         className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                        onClick={() => handleSort('contract')}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {t('pages.clients.paymentHistory.tableHeaders.contractNumber')}
+                          {getSortIcon('contract')}
+                        </span>
+                      </th>
+                      <th
+                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
                         onClick={() => handleSort('status')}
                       >
                         <span className="inline-flex items-center gap-1">
@@ -1441,7 +1456,7 @@ export function PaymentHistoryPage() {
                     {paginatedPayments.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={6}
+                          colSpan={7}
                           className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium"
                         >
                           {t('pages.clients.paymentHistory.noPaymentHistory')}
@@ -1504,6 +1519,9 @@ export function PaymentHistoryPage() {
                             </td>
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
                               {payment.reference || '-'}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              {payment.contractNumber || '-'}
                             </td>
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
                               <div className="flex items-center gap-2">

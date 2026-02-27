@@ -1223,6 +1223,8 @@
           "currentDebt": "Current Debt:",
           "paymentInformation": "Payment Information",
           "paymentAmount": "Payment Amount",
+          "contractNumber": "Contract Number",
+          "contractPlaceholder": "Select contract",
           "paymentDate": "Payment Date",
           "selectDate": "Select date",
           "paymentMethod": "Payment Method:",
@@ -1528,6 +1530,7 @@
           "amount": "Amount",
           "method": "Method",
           "reference": "Reference",
+          "contractNumber": "Contract #",
           "status": "Status",
           "actions": "Actions"
         },
