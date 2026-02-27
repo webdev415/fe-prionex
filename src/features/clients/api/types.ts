@@ -83,10 +83,7 @@ export interface Client {
   date_of_birth?: string | null
   email?: string | null
   address?: string | null
-  city?: string | null
-  region?: string | null
   postal_code?: string | null
-  country?: string
 
   // Priority scoring (moved from client_projects)
   priority_score: number
@@ -102,7 +99,6 @@ export interface Client {
   contact_count: number
 
   // Metadata
-  source: string
   first_import_batch_id?: string | null
   legacy_id?: string | null
   created_at: string
@@ -143,10 +139,7 @@ export interface CreateClientRequest {
   phone_secondary?: string
   email?: string
   address?: string
-  city?: string
-  region?: string
   postal_code?: string
-  country?: string
 }
 
 export interface UpdateClientRequest {
@@ -159,10 +152,7 @@ export interface UpdateClientRequest {
   phone_secondary?: string
   email?: string
   address?: string
-  city?: string
-  region?: string
   postal_code?: string
-  country?: string
   marital_status?: string
   family_members_count?: number
   income_level?: string
