@@ -369,10 +369,10 @@ export function ClientDetailPage() {
         id: w.id,
         loanNumber: w.contract_number ?? '-',
         counterparty: w.seller_name ?? '-',
-        saleDate: '-',
+        saleDate: w.purchase_date ?? '-',
         writeOffDate: w.writeoff_date ?? '-',
-        amount: Number(w.amount),
-        writeOffMethod: w.writeoff_type,
+        amount: Number(w.amount || 0),
+        writeOffMethod: w.writeoff_type ?? '-',
         employee: w.submitted_by_name ?? '-',
       })),
       // Primary Creditor Payments - Not yet implemented (Phase 8)

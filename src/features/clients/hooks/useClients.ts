@@ -283,9 +283,7 @@ export function useClientPaymentsSection(clientId: number, enabled = true) {
     queryFn: async () => {
       const [paymentsData, writeoffsData] = await Promise.all([
         paymentApi.getClientPayments(clientId),
-        clientApi
-          .getClientWriteoffs(clientId)
-          .catch(() => ({ writeoffs: [], total: 0, skip: 0, limit: 50 })),
+        clientApi.getClientWriteoffs(clientId).catch(() => ({ writeoffs: [], total: 0 })),
       ])
       return {
         payments: paymentsData.payments,

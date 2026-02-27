@@ -377,27 +377,11 @@ export interface WriteoffResponse {
   debt_id: number
   contract_number?: string | null
   seller_name?: string | null
-  writeoff_type: string
-  amount: string
-  currency: string
+  purchase_date?: string | null
   writeoff_date?: string | null
-  reason?: string | null
-  notes?: string | null
-  status: string
-  submitted_by: number
+  amount?: string | null
+  writeoff_type?: string | null
   submitted_by_name?: string | null
-  submitted_at?: string | null
-  approved_by?: number | null
-  approved_by_name?: string | null
-  approved_at?: string | null
-  payment_schedules: Array<{
-    id: number
-    scheduled_date: string
-    amount: string
-    status: string
-    paid_at?: string | null
-  }>
-  created_at: string
 }
 
 // --- Address CRUD Types ---
@@ -486,8 +470,6 @@ export interface ContactTypeOption {
 export interface WriteoffsResponse {
   writeoffs: WriteoffResponse[]
   total: number
-  skip: number
-  limit: number
 }
 
 export interface AssignmentHistoryEntry {
