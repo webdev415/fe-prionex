@@ -102,77 +102,23 @@ export function Step2FileUpload({
             .map((h) => h.trim().replace(/\*+$/, '').trim().toLowerCase())
             .filter((h) => h.length > 0)
 
-          // Required columns (matching backend CSV template exactly)
+          // Required columns (matching backend CSVParserService exactly)
           const requiredColumns = [
-            'first_name',
-            'last_name',
-            'date of birth',
-            'tin',
-            'registration_address',
-            'personal_address',
-            'passport type',
-            'passport number',
-            'passport issue date',
-            'who issued the passport',
-            'contract number',
-            'start date',
-            'last return date',
-            'loan amount (uah)',
-            'body debt (uah)',
-            'total to refund',
-            'loan term (days)',
+            'clients_first_name',
+            'clients_last_name',
+            'clients_phone_primary',
+            'clients_tax_id',
+            'debts_1_contract_number',
+            'debts_1_remaining_debt_amount',
           ]
 
-          // Conditionally required: at least one phone column
-          const phoneColumns = [
-            'phone (client)',
-            'phone (registry)',
-            'phone number from registry',
-            'phone_number_from_registry',
-            'phone number of client',
-            'phone_number_of_client',
-            'phone',
-          ]
-
-          // Check for required columns
+          // Check for required columns (strip * from headers to support required markers)
           const missingColumns: string[] = []
-          const headerSet = new Set(headers)
+          const headerSet = new Set(headers.map((h) => h.replace(/\*$/, '')))
 
           for (const reqCol of requiredColumns) {
             if (!headerSet.has(reqCol)) {
-              // Check if we already found this column (e.g., first_name vs First Name)
-              const found = headers.some(
-                (h) =>
-                  h.replace(/\s+/g, '_') === reqCol ||
-                  h.replace(/\s+/g, '_') === reqCol.replace(/_/g, ' ') ||
-                  reqCol.replace(/_/g, ' ') === h
-              )
-              if (!found) {
-                // Only add if not already in missingColumns (avoid duplicates)
-                const colName = reqCol.replace(/_/g, ' ')
-                if (!missingColumns.includes(colName) && !missingColumns.includes(reqCol)) {
-                  missingColumns.push(reqCol)
-                }
-              }
-            }
-          }
-
-          // Check for at least one phone column
-          const hasPhone = phoneColumns.some((col) => headerSet.has(col))
-          if (!hasPhone) {
-            // Check if any phone column exists with different formatting
-            const hasPhoneFormatted = headers.some((h) =>
-              phoneColumns.some(
-                (pc) =>
-                  h.replace(/\s+/g, '_') === pc ||
-                  h.replace(/\s+/g, '_') === pc.replace(/_/g, ' ') ||
-                  pc.replace(/_/g, ' ') === h ||
-                  h.includes('phone')
-              )
-            )
-            if (!hasPhoneFormatted) {
-              // Don't add phone to missing columns as it's conditionally required
-              // Backend will handle this during upload
+              missingColumns.push(reqCol)
             }
           }
 
@@ -267,14 +213,71 @@ export function Step2FileUpload({
   }
 
   const handleDownloadTemplate = () => {
-    // Template download functionality
-    // Create CSV template with all columns matching the sample CSV format
-    const templateContent = [
-      // Header row matching sample_column.csv (operator-friendly names)
-      'First Name,Last Name,Middle Name,Date of Birth,TIN,Phone (Client),Phone (Registry),Email,Registration Address,Personal Address,City,Region,Postal Code,Country,Family Members,Job: Organization Name,Job: Position,Income Level,Passport Type,Passport Series,Passport Number,Passport Issue Date,Passport Record Number,Passport Valid Until,Passport Issued By,Passport Gender,Passport Birth Place,Recommender 1,Recommender 2,Contract Number,Seller Company,Loan Start Date,Loan End Date,Credit Issued Date,Credit Closed Date,Purchase Price,Loan Amount,Remaining Debt,Principal Debt,Interest Debt,Commission Debt,Penalty Debt,Fines Debt,Total Debt,Loan Term (days),Interest Rate,Penalty Rate,Fine Rate,Penalty Start Day,Fine Start Day,Penalty Stop Date,Currency,Portfolio Name,Overdue (days),Comments',
-      // Empty row for user to fill in
-      '',
-    ].join('\n')
+    // Template download: tablename_columnname format matching import service
+    const columns = [
+      // clients (required marked with *)
+      'clients_first_name*',
+      'clients_last_name*',
+      'clients_middle_name',
+      'clients_date_of_birth',
+      'clients_phone_primary*',
+      'clients_phone_secondary',
+      'clients_email',
+      'clients_tax_id*',
+      'clients_marital_status',
+      'clients_family_members_count',
+      'clients_income_level',
+      'clients_sale_notes',
+      // passport
+      'client_passports_document_type',
+      'client_passports_series',
+      'client_passports_number',
+      'client_passports_issued_by',
+      'client_passports_issued_date',
+      'client_passports_expires_date',
+      // employment
+      'client_employment_company_name',
+      'client_employment_position',
+      'client_employment_employment_type',
+      'client_employment_work_experience_months',
+      'client_employment_manager_full_name',
+      'client_employment_work_phone',
+      // addresses (registration)
+      'client_addresses_registration_region',
+      'client_addresses_registration_city',
+      'client_addresses_registration_street',
+      'client_addresses_registration_building',
+      'client_addresses_registration_apartment',
+      // addresses (actual)
+      'client_addresses_actual_region',
+      'client_addresses_actual_city',
+      'client_addresses_actual_street',
+      'client_addresses_actual_building',
+      'client_addresses_actual_apartment',
+      // contacts (common types)
+      'client_contacts_client_mobile_phone_contact_value',
+      'client_contacts_client_mobile_phone_comment',
+      'client_contacts_client_home_phone_contact_value',
+      'client_contacts_client_home_phone_comment',
+      'client_contacts_guarantor_mobile_phone_contact_value',
+      'client_contacts_guarantor_mobile_phone_comment',
+      'client_contacts_personal_email_contact_value',
+      'client_contacts_personal_email_comment',
+      // debt 1 (required: contract_number, remaining_debt_amount)
+      'debts_1_contract_number*',
+      'debts_1_remaining_debt_amount*',
+      'debts_1_principal_amount',
+      'debts_1_interest_amount',
+      'debts_1_fees_amount',
+      'debts_1_penalties_amount',
+      'debts_1_fines_amount',
+      'debts_1_credit_term_days',
+      'debts_1_credit_issued_date',
+      'debts_1_seller_company_legacy',
+      'debts_1_portfolio_name',
+    ]
+
+    const templateContent = columns.join(',') + '\n'
 
     const blob = new Blob([templateContent], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -718,8 +721,10 @@ export function Step2FileUpload({
                 </div>
                 <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:gap-3">
                   {data.csvValidationError.missingColumns.map((column) => {
-                    // Format column name: first_name -> First Name, debt_amount -> Debt Amount
-                    const formattedName = column
+                    // Format column name for display
+                    // e.g. clients_first_name -> first_name, debts_1_contract_number -> debts_1_contract_number
+                    const stripped = column.replace(/^clients_/, '').replace(/^client_\w+_/, '')
+                    const formattedName = stripped
                       .split('_')
                       .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
                       .join(' ')
