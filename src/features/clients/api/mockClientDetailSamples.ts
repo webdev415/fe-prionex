@@ -37,16 +37,14 @@ export const mockClientProfile = {
   recommenders: [
     {
       id: 1,
-      fullName: 'Elena Petrovna Ivanova',
-      relationship: 'Friend',
-      phoneNumber: '+3809321234567',
+      contactValue: '+3809321234567',
+      contactType: 'Third party mobile phone',
       comment: 'give their best on and off the field',
     },
     {
       id: 2,
-      fullName: 'Oksana Mykolaivna Kovalenko',
-      relationship: 'Friend',
-      phoneNumber: '+3809331234567',
+      contactValue: '+3809331234567',
+      contactType: 'Third party home phone',
       comment: 'always inspiring the team to give their best.',
     },
   ],

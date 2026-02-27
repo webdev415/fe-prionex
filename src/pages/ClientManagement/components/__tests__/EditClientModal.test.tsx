@@ -43,7 +43,10 @@ vi.mock('react-i18next', () => ({
         'pages.clients.editModal.apartment': 'Apartment',
         'pages.clients.editModal.postalCode': 'Postal Code',
         'pages.clients.editModal.isPrimary': 'Primary',
-        'pages.clients.editModal.contactType': 'Contact Type',
+        'pages.clients.detail.contactValue': 'Contact',
+        'pages.clients.detail.comment': 'Comment',
+        'pages.clients.detail.contactType': 'Contact type',
+        'pages.clients.detail.workPhone': 'Work phone',
         'pages.clients.editModal.relationship': 'Relationship',
         'pages.clients.editModal.phone': 'Phone',
         'pages.clients.editModal.notes': 'Notes',
@@ -112,14 +115,10 @@ const mockProfileData = {
   recommenders: [
     {
       id: 10,
-      full_name: 'Smith Jane',
-      first_name: 'Jane',
-      last_name: 'Smith',
-      middle_name: null,
-      relationship: 'wife',
-      phone: '+380509999999',
-      notes: null,
-      contact_type: 'phone_mobile_third_party',
+      contact_value: '+380509999999',
+      contact_type_id: 7,
+      contact_type_name: 'Third party mobile phone',
+      comment: null,
     },
   ],
   addresses: [
@@ -225,6 +224,16 @@ describe('EditClientModal', () => {
       isPending: false,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
+
+    vi.mocked(useClientsModule.useContactTypes).mockReturnValue({
+      data: [
+        { id: 7, code: 'third_party_mobile', name: 'Third party mobile phone', is_phone: true },
+      ],
+      isLoading: false,
+      isError: false,
+      error: null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
   })
 
   afterEach(() => {
@@ -274,7 +283,7 @@ describe('EditClientModal', () => {
       render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
 
       expect(screen.getByText('Contacts & Referrals')).toBeInTheDocument()
-      expect(screen.getByText(/Smith Jane/)).toBeInTheDocument()
+      expect(screen.getByText(/\+380509999999/)).toBeInTheDocument()
     })
   })
 
@@ -312,7 +321,7 @@ describe('EditClientModal', () => {
       })
     })
 
-    it('should show error toast on failed save', async () => {
+    it('should show inline error on failed save', async () => {
       let onErrorCallback:
         | ((error: { response?: { data?: { detail?: string } } }) => void)
         | undefined
@@ -332,7 +341,7 @@ describe('EditClientModal', () => {
       onErrorCallback?.({ response: { data: { detail: 'Validation failed' } } })
 
       await waitFor(() => {
-        expect(toast.error).toHaveBeenCalled()
+        expect(screen.getByText('Validation failed')).toBeInTheDocument()
       })
     })
   })
@@ -430,7 +439,7 @@ describe('EditClientModal', () => {
 
       fireEvent.click(screen.getByText('Add Contact'))
 
-      expect(screen.getByText('Contact Type')).toBeInTheDocument()
+      expect(screen.getByText('Contact type')).toBeInTheDocument()
     })
 
     it('should show edit and delete buttons for existing contacts', () => {
@@ -445,8 +454,6 @@ describe('EditClientModal', () => {
 
       fireEvent.click(screen.getByTestId('edit-contact-btn'))
 
-      expect(screen.getByDisplayValue('Jane')).toBeInTheDocument()
-      expect(screen.getByDisplayValue('Smith')).toBeInTheDocument()
       expect(screen.getByDisplayValue('+380509999999')).toBeInTheDocument()
     })
 
@@ -521,7 +528,7 @@ describe('EditClientModal', () => {
         company_name: 'Test Corp',
         position: 'Developer',
         employment_type: 'full_time',
-        work_experience_years: 5,
+        work_experience_months: 5,
         manager_full_name: 'Boss Man',
         manager_name: null,
         work_phone: '+380441234567',

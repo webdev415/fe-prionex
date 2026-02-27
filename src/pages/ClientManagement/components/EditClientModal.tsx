@@ -27,6 +27,7 @@ import {
   useDeleteContact,
   useUpdateEmployment,
   useUpdatePassport,
+  useContactTypes,
   clientKeys,
 } from '@/features/clients/hooks/useClients'
 import type {
@@ -79,34 +80,12 @@ const ADDRESS_TYPE_KEYS: Record<string, string> = {
   actual: 'pages.clients.detail.personalAddress',
 }
 
-const CONTACT_TYPES = [
-  'phone_mobile_third_party',
-  'phone_home_third_party',
-  'phone_work_third_party',
-  'phone_mobile_guarantor',
-  'phone_work_guarantor',
-  'phone_home_guarantor',
-  'phone_other',
-  'phone_mobile_other',
-  'phone_work_other',
-  'phone_home_other',
-  'phone_home_client',
-  'phone_fax',
-] as const
-
-const CONTACT_TYPE_LABELS: Record<string, string> = {
-  phone_mobile_third_party: 'Третя особа (моб.)',
-  phone_home_third_party: 'Третя особа (дом.)',
-  phone_work_third_party: 'Третя особа (роб.)',
-  phone_mobile_guarantor: 'Поручитель (моб.)',
-  phone_work_guarantor: 'Поручитель (роб.)',
-  phone_home_guarantor: 'Поручитель (дом.)',
-  phone_other: 'Інший телефон',
-  phone_mobile_other: 'Інший (моб.)',
-  phone_work_other: 'Інший (роб.)',
-  phone_home_other: 'Інший (дом.)',
-  phone_home_client: 'Клієнт (дом.)',
-  phone_fax: 'Факс',
+function extractErrorMessage(error: unknown, fallback: string): string {
+  const detail = (error as AxiosError<{ detail?: string | Array<{ msg?: string }> }>)?.response
+    ?.data?.detail
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) return detail.map((e) => e.msg).join(', ')
+  return fallback
 }
 
 interface EditFormProps {
@@ -126,6 +105,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const { mutate: deleteContact } = useDeleteContact()
   const { mutate: updateEmployment, isPending: isSavingWork } = useUpdateEmployment()
   const { mutate: updatePassport, isPending: isSavingPassport } = useUpdatePassport()
+  const { data: contactTypes = [] } = useContactTypes()
   const canEditAll = useHasPermission(PERMISSIONS.CLIENTS.EDIT)
 
   // Personal info — initialized from profile (component remounts via key when profile changes)
@@ -154,17 +134,16 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const [issuedDate, setIssuedDate] = useState(profile.passport?.issued_date || '')
   const [expiresDate, setExpiresDate] = useState(profile.passport?.expires_date || '')
   const [gender, setGender] = useState(profile.passport?.gender || '')
-  const [recordNumber, setRecordNumber] = useState(profile.passport?.record_number || '')
 
   // Work info — from employment sub-resource
   const [companyName, setCompanyName] = useState(profile.employment?.company_name || '')
   const [position, setPosition] = useState(profile.employment?.position || '')
   const [employmentType, setEmploymentType] = useState(profile.employment?.employment_type || '')
   const [workExperience, setWorkExperience] = useState(
-    profile.employment?.work_experience_years?.toString() || ''
+    profile.employment?.work_experience_months?.toString() || ''
   )
   const [managerFullName, setManagerFullName] = useState(
-    profile.employment?.manager_full_name || profile.employment?.manager_name || ''
+    profile.employment?.manager_full_name || ''
   )
   const [workPhone, setWorkPhone] = useState(profile.employment?.work_phone || '')
 
@@ -175,22 +154,22 @@ function EditForm({ profile, clientId }: EditFormProps) {
     country: 'Ukraine',
     region: '',
     city: '',
+    district: '',
     street: '',
     building: '',
+    house_number: '',
     apartment: '',
     postal_code: '',
+    housing_type: '',
     is_primary: false,
   })
 
   // Contact form state
   const [showContactForm, setShowContactForm] = useState(false)
   const [newContact, setNewContact] = useState<CreateContactRequest>({
-    contact_type: 'phone_mobile_third_party',
-    relationship: '',
-    first_name: '',
-    last_name: '',
-    phone: '',
-    notes: '',
+    contact_value: '',
+    contact_type_id: 7,
+    comment: '',
   })
 
   // Inline edit state for addresses
@@ -201,7 +180,15 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const [editingContactId, setEditingContactId] = useState<number | null>(null)
   const [editContactData, setEditContactData] = useState<UpdateContactRequest>({})
 
+  // Inline error state per section
+  const [personalError, setPersonalError] = useState<string | null>(null)
+  const [passportError, setPassportError] = useState<string | null>(null)
+  const [workError, setWorkError] = useState<string | null>(null)
+  const [addressError, setAddressError] = useState<string | null>(null)
+  const [contactError, setContactError] = useState<string | null>(null)
+
   const handleSavePersonalInfo = () => {
+    setPersonalError(null)
     const data = canEditAll
       ? {
           first_name: firstName,
@@ -234,21 +221,14 @@ function EditForm({ profile, clientId }: EditFormProps) {
           queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
         },
         onError: (error) => {
-          const detail = (error as AxiosError<{ detail?: string | Array<{ msg?: string }> }>)
-            ?.response?.data?.detail
-          const message =
-            typeof detail === 'string'
-              ? detail
-              : Array.isArray(detail)
-                ? detail.map((e) => e.msg).join(', ')
-                : t('pages.clients.editModal.saveError')
-          toast.error(message)
+          setPersonalError(extractErrorMessage(error, t('pages.clients.editModal.saveError')))
         },
       }
     )
   }
 
   const handleSaveWork = () => {
+    setWorkError(null)
     updateEmployment(
       {
         clientId,
@@ -256,7 +236,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
           company_name: companyName || undefined,
           position: position || undefined,
           employment_type: employmentType || undefined,
-          work_experience_years: workExperience ? Number(workExperience) : undefined,
+          work_experience_months: workExperience ? Number(workExperience) : undefined,
           manager_full_name: managerFullName || undefined,
           work_phone: workPhone || undefined,
         },
@@ -268,21 +248,14 @@ function EditForm({ profile, clientId }: EditFormProps) {
           queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId) })
         },
         onError: (error) => {
-          const detail = (error as AxiosError<{ detail?: string | Array<{ msg?: string }> }>)
-            ?.response?.data?.detail
-          const message =
-            typeof detail === 'string'
-              ? detail
-              : Array.isArray(detail)
-                ? detail.map((e) => e.msg).join(', ')
-                : t('pages.clients.editModal.saveError')
-          toast.error(message)
+          setWorkError(extractErrorMessage(error, t('pages.clients.editModal.saveError')))
         },
       }
     )
   }
 
   const handleSavePassport = () => {
+    setPassportError(null)
     updatePassport(
       {
         clientId,
@@ -294,7 +267,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
           issued_date: issuedDate || undefined,
           expires_date: expiresDate || undefined,
           gender: gender || undefined,
-          record_number: recordNumber || undefined,
         },
       },
       {
@@ -304,21 +276,14 @@ function EditForm({ profile, clientId }: EditFormProps) {
           queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId) })
         },
         onError: (error) => {
-          const detail = (error as AxiosError<{ detail?: string | Array<{ msg?: string }> }>)
-            ?.response?.data?.detail
-          const message =
-            typeof detail === 'string'
-              ? detail
-              : Array.isArray(detail)
-                ? detail.map((e) => e.msg).join(', ')
-                : t('pages.clients.editModal.saveError')
-          toast.error(message)
+          setPassportError(extractErrorMessage(error, t('pages.clients.editModal.saveError')))
         },
       }
     )
   }
 
   const handleCreateAddress = () => {
+    setAddressError(null)
     createAddress(
       { clientId, data: newAddress },
       {
@@ -330,24 +295,25 @@ function EditForm({ profile, clientId }: EditFormProps) {
             country: 'Ukraine',
             region: '',
             city: '',
+            district: '',
             street: '',
             building: '',
+            house_number: '',
             apartment: '',
             postal_code: '',
+            housing_type: '',
             is_primary: false,
           })
         },
         onError: (error) => {
-          const message =
-            (error as AxiosError<{ detail?: string }>)?.response?.data?.detail ||
-            'Failed to add address'
-          toast.error(message)
+          setAddressError(extractErrorMessage(error, 'Failed to add address'))
         },
       }
     )
   }
 
   const handleDeleteAddress = (addressId: number) => {
+    setAddressError(null)
     deleteAddress(
       { clientId, addressId },
       {
@@ -355,10 +321,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
           toast.success(t('pages.clients.editModal.addressDeleted'))
         },
         onError: (error) => {
-          const message =
-            (error as AxiosError<{ detail?: string }>)?.response?.data?.detail ||
-            'Failed to delete address'
-          toast.error(message)
+          setAddressError(extractErrorMessage(error, 'Failed to delete address'))
         },
       }
     )
@@ -370,16 +333,20 @@ function EditForm({ profile, clientId }: EditFormProps) {
       address_type: address.address_type,
       region: address.region || '',
       city: address.city || '',
+      district: address.district || '',
       street: address.street || '',
       building: address.building || '',
+      house_number: address.house_number || '',
       apartment: address.apartment || '',
       postal_code: address.postal_code || '',
+      housing_type: address.housing_type || '',
       is_primary: address.is_primary,
     })
   }
 
   const handleUpdateAddress = () => {
     if (editingAddressId === null) return
+    setAddressError(null)
     updateAddress(
       { clientId, addressId: editingAddressId, data: editAddressData },
       {
@@ -389,10 +356,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
           setEditAddressData({})
         },
         onError: (error) => {
-          const message =
-            (error as AxiosError<{ detail?: string }>)?.response?.data?.detail ||
-            t('pages.clients.editModal.saveError')
-          toast.error(message)
+          setAddressError(extractErrorMessage(error, t('pages.clients.editModal.saveError')))
         },
       }
     )
@@ -401,17 +365,15 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const handleStartEditContact = (contact: ClientProfileResponse['recommenders'][number]) => {
     setEditingContactId(contact.id)
     setEditContactData({
-      contact_type: contact.contact_type,
-      relationship: contact.relationship || '',
-      first_name: contact.first_name || '',
-      last_name: contact.last_name || '',
-      phone: contact.phone || '',
-      notes: contact.notes || '',
+      contact_value: contact.contact_value || '',
+      contact_type_id: contact.contact_type_id ?? undefined,
+      comment: contact.comment || '',
     })
   }
 
   const handleUpdateContact = () => {
     if (editingContactId === null) return
+    setContactError(null)
     updateContact(
       { clientId, contactId: editingContactId, data: editContactData },
       {
@@ -421,16 +383,14 @@ function EditForm({ profile, clientId }: EditFormProps) {
           setEditContactData({})
         },
         onError: (error) => {
-          const message =
-            (error as AxiosError<{ detail?: string }>)?.response?.data?.detail ||
-            t('pages.clients.editModal.saveError')
-          toast.error(message)
+          setContactError(extractErrorMessage(error, t('pages.clients.editModal.saveError')))
         },
       }
     )
   }
 
   const handleCreateContact = () => {
+    setContactError(null)
     createContact(
       { clientId, data: newContact },
       {
@@ -438,25 +398,20 @@ function EditForm({ profile, clientId }: EditFormProps) {
           toast.success(t('pages.clients.editModal.contactCreated'))
           setShowContactForm(false)
           setNewContact({
-            contact_type: 'phone_mobile_third_party',
-            relationship: '',
-            first_name: '',
-            last_name: '',
-            phone: '',
-            notes: '',
+            contact_value: '',
+            contact_type_id: 7,
+            comment: '',
           })
         },
         onError: (error) => {
-          const message =
-            (error as AxiosError<{ detail?: string }>)?.response?.data?.detail ||
-            'Failed to add contact'
-          toast.error(message)
+          setContactError(extractErrorMessage(error, 'Failed to add contact'))
         },
       }
     )
   }
 
   const handleDeleteContact = (contactId: number) => {
+    setContactError(null)
     deleteContact(
       { clientId, contactId },
       {
@@ -464,10 +419,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
           toast.success(t('pages.clients.editModal.contactDeleted'))
         },
         onError: (error) => {
-          const message =
-            (error as AxiosError<{ detail?: string }>)?.response?.data?.detail ||
-            'Failed to delete contact'
-          toast.error(message)
+          setContactError(extractErrorMessage(error, 'Failed to delete contact'))
         },
       }
     )
@@ -676,21 +628,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
               <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                {t('pages.clients.detail.recordNumber')}
-              </label>
-              <Input
-                value={recordNumber}
-                onChange={(e) => setRecordNumber(e.target.value)}
-                disabled={!canEditAll}
-                inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
-              />
-            </div>
-            <div className="flex flex-1" />
-          </div>
-          <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
-            <div className="flex flex-1 flex-col gap-1">
-              <label className="text-dark-500 text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.numberOfFamilyMembers')}
               </label>
               <Input
@@ -719,6 +656,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
       </div>
 
       {/* Save Document Info */}
+      {passportError && <p className="text-error-500 text-sm">{passportError}</p>}
       {canEditAll && (
         <div className="flex justify-end">
           <Button
@@ -767,6 +705,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
       </div>
 
       {/* Save Personal Info + Phones */}
+      {personalError && <p className="text-error-500 text-sm">{personalError}</p>}
       <div className="flex justify-end">
         <Button
           variant="primary"
@@ -865,7 +804,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
             </div>
             <div className="flex flex-1 flex-col gap-1">
               <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                {t('pages.clients.editModal.workPhone')}
+                {t('pages.clients.detail.workPhone')}
               </label>
               <Input
                 value={workPhone}
@@ -880,6 +819,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
       </div>
 
       {/* Save Work Info */}
+      {workError && <p className="text-error-500 text-sm">{workError}</p>}
       {canEditAll && (
         <div className="flex justify-end">
           <Button
@@ -909,85 +849,21 @@ function EditForm({ profile, clientId }: EditFormProps) {
             {t('pages.clients.editModal.addContact')}
           </Button>
         </div>
+        {contactError && <p className="text-error-500 text-sm">{contactError}</p>}
         <div className="flex flex-col gap-3 self-stretch">
           {profile.recommenders?.map((contact, index) => (
             <div key={contact.id}>
               {editingContactId === contact.id ? (
                 <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white/50 p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
-                    <div className="flex flex-1 flex-col gap-1">
-                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                        {t('pages.clients.editModal.contactType')}
-                      </label>
-                      <Select
-                        value={editContactData.contact_type || ''}
-                        onValueChange={(value) =>
-                          setEditContactData({ ...editContactData, contact_type: value })
-                        }
-                      >
-                        <SelectTrigger className="text-dark-500 h-[42px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CONTACT_TYPES.map((type) => (
-                            <SelectItem key={type} value={type}>
-                              {CONTACT_TYPE_LABELS[type] || type}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex flex-1 flex-col gap-1">
-                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                        {t('pages.clients.editModal.relationship')}
-                      </label>
-                      <Input
-                        value={editContactData.relationship || ''}
-                        onChange={(e) =>
-                          setEditContactData({ ...editContactData, relationship: e.target.value })
-                        }
-                        inputSize="md"
-                        className="rounded-md"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
-                    <div className="flex flex-1 flex-col gap-1">
-                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                        {t('pages.clients.editModal.firstName')}{' '}
-                        <span className="text-error-500">*</span>
-                      </label>
-                      <Input
-                        value={editContactData.first_name || ''}
-                        onChange={(e) =>
-                          setEditContactData({ ...editContactData, first_name: e.target.value })
-                        }
-                        inputSize="md"
-                        className="rounded-md"
-                      />
-                    </div>
-                    <div className="flex flex-1 flex-col gap-1">
-                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                        {t('pages.clients.editModal.lastName')}
-                      </label>
-                      <Input
-                        value={editContactData.last_name || ''}
-                        onChange={(e) =>
-                          setEditContactData({ ...editContactData, last_name: e.target.value })
-                        }
-                        inputSize="md"
-                        className="rounded-md"
-                      />
-                    </div>
-                  </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                      {t('pages.clients.editModal.phone')} <span className="text-error-500">*</span>
+                      {t('pages.clients.detail.contactValue')}{' '}
+                      <span className="text-error-500">*</span>
                     </label>
                     <Input
-                      value={editContactData.phone || ''}
+                      value={editContactData.contact_value || ''}
                       onChange={(e) =>
-                        setEditContactData({ ...editContactData, phone: e.target.value })
+                        setEditContactData({ ...editContactData, contact_value: e.target.value })
                       }
                       inputSize="md"
                       className="rounded-md"
@@ -995,12 +871,34 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                      {t('pages.clients.editModal.notes')}
+                      {t('pages.clients.detail.contactType')}
+                    </label>
+                    <Select
+                      value={String(editContactData.contact_type_id ?? '')}
+                      onValueChange={(value) =>
+                        setEditContactData({ ...editContactData, contact_type_id: Number(value) })
+                      }
+                    >
+                      <SelectTrigger className="text-dark-500 h-[42px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contactTypes.map((ct) => (
+                          <SelectItem key={ct.id} value={String(ct.id)}>
+                            {ct.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                      {t('pages.clients.detail.comment')}
                     </label>
                     <Input
-                      value={editContactData.notes || ''}
+                      value={editContactData.comment || ''}
                       onChange={(e) =>
-                        setEditContactData({ ...editContactData, notes: e.target.value })
+                        setEditContactData({ ...editContactData, comment: e.target.value })
                       }
                       inputSize="md"
                       className="rounded-md"
@@ -1011,11 +909,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                       variant="primary"
                       size="sm"
                       onClick={handleUpdateContact}
-                      disabled={
-                        isUpdatingContact ||
-                        !(editContactData.first_name || '').trim() ||
-                        !(editContactData.phone || '').trim()
-                      }
+                      disabled={isUpdatingContact || !(editContactData.contact_value || '').trim()}
                       className="rounded-md"
                     >
                       {isUpdatingContact
@@ -1040,16 +934,12 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   <div className="flex items-center justify-between gap-3 rounded-xl border border-white bg-white/50 p-3 sm:p-4">
                     <div className="flex flex-1 flex-col gap-1.5">
                       <span className="text-dark-500 text-xs font-medium sm:text-sm">
-                        {contact.full_name}
+                        {contact.contact_value}
                       </span>
                       <span className="text-xs font-light text-gray-700">
-                        {CONTACT_TYPE_LABELS[contact.contact_type] ?? contact.contact_type}
+                        {contact.contact_type_name ?? ''}
                       </span>
-                      <span className="text-xs font-light text-gray-700">
-                        {contact.relationship}
-                      </span>
-                      <span className="text-xs font-light text-gray-700">{contact.phone}</span>
-                      <span className="text-xs font-light text-gray-500">{contact.notes}</span>
+                      <span className="text-xs font-light text-gray-500">{contact.comment}</span>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <button
@@ -1083,82 +973,46 @@ function EditForm({ profile, clientId }: EditFormProps) {
           {/* Add Contact Form */}
           {showContactForm && (
             <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white/50 p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
-                <div className="flex flex-1 flex-col gap-1">
-                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                    {t('pages.clients.editModal.contactType')}
-                  </label>
-                  <Select
-                    value={newContact.contact_type}
-                    onValueChange={(value) => setNewContact({ ...newContact, contact_type: value })}
-                  >
-                    <SelectTrigger className="text-dark-500 h-[42px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CONTACT_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {CONTACT_TYPE_LABELS[type] || type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-1 flex-col gap-1">
-                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                    {t('pages.clients.editModal.relationship')}
-                  </label>
-                  <Input
-                    value={newContact.relationship || ''}
-                    onChange={(e) => setNewContact({ ...newContact, relationship: e.target.value })}
-                    inputSize="md"
-                    className="rounded-md"
-                  />
-                </div>
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
-                <div className="flex flex-1 flex-col gap-1">
-                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                    {t('pages.clients.editModal.firstName')}{' '}
-                    <span className="text-error-500">*</span>
-                  </label>
-                  <Input
-                    value={newContact.first_name}
-                    onChange={(e) => setNewContact({ ...newContact, first_name: e.target.value })}
-                    inputSize="md"
-                    className="rounded-md"
-                  />
-                </div>
-                <div className="flex flex-1 flex-col gap-1">
-                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                    {t('pages.clients.editModal.lastName')}
-                  </label>
-                  <Input
-                    value={newContact.last_name || ''}
-                    onChange={(e) => setNewContact({ ...newContact, last_name: e.target.value })}
-                    inputSize="md"
-                    className="rounded-md"
-                  />
-                </div>
-              </div>
               <div className="flex flex-col gap-1">
                 <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                  {t('pages.clients.editModal.phone')} <span className="text-error-500">*</span>
+                  {t('pages.clients.detail.contactValue')} <span className="text-error-500">*</span>
                 </label>
                 <Input
-                  value={newContact.phone}
-                  onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
+                  value={newContact.contact_value}
+                  onChange={(e) => setNewContact({ ...newContact, contact_value: e.target.value })}
                   inputSize="md"
                   className="rounded-md"
                 />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                  {t('pages.clients.editModal.notes')}
+                  {t('pages.clients.detail.contactType')}
+                </label>
+                <Select
+                  value={String(newContact.contact_type_id ?? '')}
+                  onValueChange={(value) =>
+                    setNewContact({ ...newContact, contact_type_id: Number(value) })
+                  }
+                >
+                  <SelectTrigger className="text-dark-500 h-[42px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contactTypes.map((ct) => (
+                      <SelectItem key={ct.id} value={String(ct.id)}>
+                        {ct.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                  {t('pages.clients.detail.comment')}
                 </label>
                 <Input
-                  value={newContact.notes || ''}
-                  onChange={(e) => setNewContact({ ...newContact, notes: e.target.value })}
+                  value={newContact.comment || ''}
+                  onChange={(e) => setNewContact({ ...newContact, comment: e.target.value })}
                   inputSize="md"
                   className="rounded-md"
                 />
@@ -1168,9 +1022,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   variant="primary"
                   size="sm"
                   onClick={handleCreateContact}
-                  disabled={
-                    isCreatingContact || !newContact.first_name.trim() || !newContact.phone.trim()
-                  }
+                  disabled={isCreatingContact || !newContact.contact_value.trim()}
                   className="rounded-md"
                 >
                   {isCreatingContact ? 'Adding...' : t('pages.clients.editModal.save')}
@@ -1207,6 +1059,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
             </Button>
           )}
         </div>
+        {addressError && <p className="text-error-500 text-sm">{addressError}</p>}
         <div className="flex flex-col gap-3 self-stretch">
           {profile.addresses?.map((address) => (
             <div key={address.id}>
@@ -1265,6 +1118,34 @@ function EditForm({ profile, clientId }: EditFormProps) {
                   <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                     <div className="flex flex-1 flex-col gap-1">
                       <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                        {t('pages.clients.editModal.district')}
+                      </label>
+                      <Input
+                        value={editAddressData.district || ''}
+                        onChange={(e) =>
+                          setEditAddressData({ ...editAddressData, district: e.target.value })
+                        }
+                        inputSize="md"
+                        className="rounded-md"
+                      />
+                    </div>
+                    <div className="flex flex-1 flex-col gap-1">
+                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                        {t('pages.clients.editModal.postalCode')}
+                      </label>
+                      <Input
+                        value={editAddressData.postal_code || ''}
+                        onChange={(e) =>
+                          setEditAddressData({ ...editAddressData, postal_code: e.target.value })
+                        }
+                        inputSize="md"
+                        className="rounded-md"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                    <div className="flex flex-1 flex-col gap-1">
+                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
                         {t('pages.clients.editModal.street')}
                       </label>
                       <Input
@@ -1291,12 +1172,40 @@ function EditForm({ profile, clientId }: EditFormProps) {
                     </div>
                     <div className="flex w-24 flex-col gap-1">
                       <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                        {t('pages.clients.editModal.houseNumber')}
+                      </label>
+                      <Input
+                        value={editAddressData.house_number || ''}
+                        onChange={(e) =>
+                          setEditAddressData({ ...editAddressData, house_number: e.target.value })
+                        }
+                        inputSize="md"
+                        className="rounded-md"
+                      />
+                    </div>
+                    <div className="flex w-24 flex-col gap-1">
+                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
                         {t('pages.clients.editModal.apartment')}
                       </label>
                       <Input
                         value={editAddressData.apartment || ''}
                         onChange={(e) =>
                           setEditAddressData({ ...editAddressData, apartment: e.target.value })
+                        }
+                        inputSize="md"
+                        className="rounded-md"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                    <div className="flex flex-1 flex-col gap-1">
+                      <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                        {t('pages.clients.editModal.housingType')}
+                      </label>
+                      <Input
+                        value={editAddressData.housing_type || ''}
+                        onChange={(e) =>
+                          setEditAddressData({ ...editAddressData, housing_type: e.target.value })
                         }
                         inputSize="md"
                         className="rounded-md"
@@ -1425,6 +1334,30 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                 <div className="flex flex-1 flex-col gap-1">
                   <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                    {t('pages.clients.editModal.district')}
+                  </label>
+                  <Input
+                    value={newAddress.district || ''}
+                    onChange={(e) => setNewAddress({ ...newAddress, district: e.target.value })}
+                    inputSize="md"
+                    className="rounded-md"
+                  />
+                </div>
+                <div className="flex flex-1 flex-col gap-1">
+                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                    {t('pages.clients.editModal.postalCode')}
+                  </label>
+                  <Input
+                    value={newAddress.postal_code || ''}
+                    onChange={(e) => setNewAddress({ ...newAddress, postal_code: e.target.value })}
+                    inputSize="md"
+                    className="rounded-md"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                <div className="flex flex-1 flex-col gap-1">
+                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
                     {t('pages.clients.editModal.street')}
                   </label>
                   <Input
@@ -1447,11 +1380,35 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 </div>
                 <div className="flex w-24 flex-col gap-1">
                   <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                    {t('pages.clients.editModal.houseNumber')}
+                  </label>
+                  <Input
+                    value={newAddress.house_number || ''}
+                    onChange={(e) => setNewAddress({ ...newAddress, house_number: e.target.value })}
+                    inputSize="md"
+                    className="rounded-md"
+                  />
+                </div>
+                <div className="flex w-24 flex-col gap-1">
+                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
                     {t('pages.clients.editModal.apartment')}
                   </label>
                   <Input
                     value={newAddress.apartment || ''}
                     onChange={(e) => setNewAddress({ ...newAddress, apartment: e.target.value })}
+                    inputSize="md"
+                    className="rounded-md"
+                  />
+                </div>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                <div className="flex flex-1 flex-col gap-1">
+                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                    {t('pages.clients.editModal.housingType')}
+                  </label>
+                  <Input
+                    value={newAddress.housing_type || ''}
+                    onChange={(e) => setNewAddress({ ...newAddress, housing_type: e.target.value })}
                     inputSize="md"
                     className="rounded-md"
                   />
