@@ -35,7 +35,12 @@ export function useAuth() {
     async (credentials: LoginRequest) => {
       try {
         await storeLogin(credentials)
-        navigate('/dashboard')
+        const currentUser = useAuthStore.getState().user
+        if (currentUser?.mustChangePassword) {
+          navigate('/change-password')
+        } else {
+          navigate('/dashboard')
+        }
       } catch {
         // Error is handled by the store
       }
@@ -52,7 +57,12 @@ export function useAuth() {
   const forceLogin = useCallback(async () => {
     try {
       await storeForceLogin()
-      navigate('/dashboard')
+      const currentUser = useAuthStore.getState().user
+      if (currentUser?.mustChangePassword) {
+        navigate('/change-password')
+      } else {
+        navigate('/dashboard')
+      }
     } catch {
       // Error is handled by the store
     }
