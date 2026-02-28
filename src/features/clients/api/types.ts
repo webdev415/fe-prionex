@@ -75,8 +75,7 @@ export interface Client {
   id: number
   project_id: number
   tax_id: string // Ukrainian TIN - MANDATORY
-  phone_primary: string
-  phone_secondary?: string | null
+  phone_primary?: string | null
   first_name: string
   last_name: string
   middle_name?: string | null
@@ -130,13 +129,11 @@ export interface ClientDetail extends Client {
 }
 
 export interface CreateClientRequest {
-  phone_primary: string
   tax_id: string // MANDATORY
   first_name: string
   last_name: string
   middle_name?: string
   date_of_birth?: string
-  phone_secondary?: string
   email?: string
   address?: string
   postal_code?: string
@@ -144,12 +141,10 @@ export interface CreateClientRequest {
 
 export interface UpdateClientRequest {
   tax_id?: string
-  phone_primary?: string
   first_name?: string
   last_name?: string
   middle_name?: string
   date_of_birth?: string
-  phone_secondary?: string
   email?: string
   address?: string
   postal_code?: string
@@ -284,8 +279,7 @@ export interface ClientProfileResponse {
   middle_name?: string | null
   email?: string | null
   tax_id: string
-  phone_primary: string
-  phone_secondary?: string | null
+  phone_primary?: string | null
   date_of_birth?: string | null
   age?: number | null
   priority_score: number

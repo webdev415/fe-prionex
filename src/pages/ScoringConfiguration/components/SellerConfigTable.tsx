@@ -12,6 +12,8 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { Icons } from '@/lib/icons'
 import { configApi, type SellerConfig } from '@/features/clients/api/configApi'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 
 interface SellerConfigTableProps {
   configs: SellerConfig[]
@@ -116,35 +118,39 @@ export function SellerConfigTable({ configs, onEdit, onDelete }: SellerConfigTab
         align: 'center',
         render: (item) => (
           <div className="flex items-center justify-center gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation()
-                onEdit(item)
-              }}
-              className="rounded-md"
-            >
-              <Icons.PencilEdit02 size={16} />
-              {t('actions.edit', 'Edit')}
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation()
-                handleRequestDelete(item)
-              }}
-              disabled={deletingSellerId === item.seller_id || deletingSellerId !== null}
-              className="rounded-md"
-            >
-              <Icons.Delete size={16} />
-              {deletingSellerId === item.seller_id
-                ? t('common.deleting', 'Deleting...')
-                : t('actions.delete', 'Delete')}
-            </Button>
+            <PermissionGuard permission={PERMISSIONS.SCORING_CONFIG.MANAGE_SELLER_CONFIG}>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEdit(item)
+                }}
+                className="rounded-md"
+              >
+                <Icons.PencilEdit02 size={16} />
+                {t('actions.edit', 'Edit')}
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permission={PERMISSIONS.SCORING_CONFIG.MANAGE_SELLER_CONFIG}>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleRequestDelete(item)
+                }}
+                disabled={deletingSellerId === item.seller_id || deletingSellerId !== null}
+                className="rounded-md"
+              >
+                <Icons.Delete size={16} />
+                {deletingSellerId === item.seller_id
+                  ? t('common.deleting', 'Deleting...')
+                  : t('actions.delete', 'Delete')}
+              </Button>
+            </PermissionGuard>
           </div>
         ),
       },

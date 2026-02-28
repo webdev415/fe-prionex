@@ -39,6 +39,8 @@ import {
   backendToFrontendPaymentStatus,
 } from '@/features/payments/utils'
 import { mockClientDetail } from './mockClientDetails'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 
 // Types
 interface Payment {
@@ -268,7 +270,7 @@ export function DebtSummaryPage() {
       id: apiClient.id,
       fullName,
       taxIdNumber: apiClient.tax_id,
-      phoneNumber: apiClient.phone_primary,
+      phoneNumber: apiClient.phone_primary || '-',
       tags: [], // TODO: Add tags support in backend
       score: apiClient.priority_score,
       priority:
@@ -280,12 +282,9 @@ export function DebtSummaryPage() {
             : apiClient.priority_score >= 25
               ? 'Medium'
               : 'Low'),
-      phones: [
-        { number: apiClient.phone_primary, type: 'primary' as const },
-        ...(apiClient.phone_secondary
-          ? [{ number: apiClient.phone_secondary, type: 'secondary' as const }]
-          : []),
-      ],
+      phones: apiClient.phone_primary
+        ? [{ number: apiClient.phone_primary, type: 'mobile' as const }]
+        : [],
       personalDetails: {
         ...mockClientDetail.personalDetails,
         tin: apiClient.tax_id,
@@ -961,24 +960,26 @@ export function DebtSummaryPage() {
             {t('pages.clients.debtSummary.title')}
           </span>
         </div>
-        {/* Mobile: Icon-only button */}
-        <Button
-          variant="primary"
-          size="icon-md"
-          onClick={() => setIsRecordPaymentModalOpen(true)}
-          className="rounded-full sm:hidden"
-        >
-          <Icons.Add size={20} className="text-dark-500" />
-        </Button>
-        {/* Desktop: Full button with text */}
-        <DoubleButton
-          icon={<Icons.Add size={24} />}
-          iconPosition="left"
-          onClick={() => setIsRecordPaymentModalOpen(true)}
-          className="hidden sm:flex"
-        >
-          {t('pages.clients.debtSummary.recordPayment')}
-        </DoubleButton>
+        <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT_DEBT}>
+          {/* Mobile: Icon-only button */}
+          <Button
+            variant="primary"
+            size="icon-md"
+            onClick={() => setIsRecordPaymentModalOpen(true)}
+            className="rounded-full sm:hidden"
+          >
+            <Icons.Add size={20} className="text-dark-500" />
+          </Button>
+          {/* Desktop: Full button with text */}
+          <DoubleButton
+            icon={<Icons.Add size={24} />}
+            iconPosition="left"
+            onClick={() => setIsRecordPaymentModalOpen(true)}
+            className="hidden sm:flex"
+          >
+            {t('pages.clients.debtSummary.recordPayment')}
+          </DoubleButton>
+        </PermissionGuard>
       </div>
 
       {/* Main Content */}
@@ -1110,33 +1111,35 @@ export function DebtSummaryPage() {
 
             {/* Action Buttons */}
             <div className="flex w-full flex-col items-start gap-3 sm:flex-row">
-              <Button
-                variant="primary"
-                leftIcon={<Icons.Headset size={18} />}
-                className="w-full rounded-full sm:w-auto sm:flex-1"
-                disabled={!user?.asterisk_extension}
-                onClick={() => {
-                  const phoneNumber = client.phones?.[0]?.number
-                  if (!phoneNumber) {
-                    toast.error('Client has no phone number')
-                    return
-                  }
+              <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+                <Button
+                  variant="primary"
+                  leftIcon={<Icons.Headset size={18} />}
+                  className="w-full rounded-full sm:w-auto sm:flex-1"
+                  disabled={!user?.is_agent || !user?.asterisk_extension}
+                  onClick={() => {
+                    const phoneNumber = client.phones?.[0]?.number
+                    if (!phoneNumber) {
+                      toast.error('Client has no phone number')
+                      return
+                    }
 
-                  if (isCallActive()) {
-                    toast.warning(
-                      t('pages.clients.modals.callDialog.callInProgress') ||
-                        'Another call or recording is already in progress. Please finish or close it first.'
-                    )
-                    return
-                  }
+                    if (isCallActive()) {
+                      toast.warning(
+                        t('pages.clients.modals.callDialog.callInProgress') ||
+                          'Another call or recording is already in progress. Please finish or close it first.'
+                      )
+                      return
+                    }
 
-                  // Open modal in 'initial' state to let user select call type
-                  setOpenCallModal('call-dialog')
-                  setIsCallModalOpen(true)
-                }}
-              >
-                {t('pages.clients.debtSummary.call')}
-              </Button>
+                    // Open modal in 'initial' state to let user select call type
+                    setOpenCallModal('call-dialog')
+                    setIsCallModalOpen(true)
+                  }}
+                >
+                  {t('pages.clients.debtSummary.call')}
+                </Button>
+              </PermissionGuard>
               <Button
                 variant="secondary"
                 leftIcon={<Icons.PencilEdit02 size={18} />}
@@ -1338,10 +1341,7 @@ export function DebtSummaryPage() {
                                             ]
                                               .filter(Boolean)
                                               .join(' '),
-                                            phone:
-                                              apiClient.phone_primary ||
-                                              apiClient.phone_secondary ||
-                                              'N/A',
+                                            phone: apiClient.phone_primary || 'N/A',
                                             contract:
                                               (apiClient.debts &&
                                                 apiClient.debts.length > 0 &&
@@ -1371,18 +1371,20 @@ export function DebtSummaryPage() {
                               <div className="flex items-center justify-center gap-1 sm:gap-2">
                                 {payment.status === 'Pending' &&
                                   isPaymentLessThan7DaysOld(payment.date) && (
-                                    <LinkButton
-                                      variant="regular-secondary"
-                                      size="xs"
-                                      leftIcon={<Icons.Success size={14} />}
-                                      onClick={() => {
-                                        setSelectedPaymentId(payment.id)
-                                        setIsVerificationModalOpen(true)
-                                      }}
-                                      className="text-xs"
-                                    >
-                                      <span>{t('pages.clients.debtSummary.actions.verify')}</span>
-                                    </LinkButton>
+                                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT_DEBT}>
+                                      <LinkButton
+                                        variant="regular-secondary"
+                                        size="xs"
+                                        leftIcon={<Icons.Success size={14} />}
+                                        onClick={() => {
+                                          setSelectedPaymentId(payment.id)
+                                          setIsVerificationModalOpen(true)
+                                        }}
+                                        className="text-xs"
+                                      >
+                                        <span>{t('pages.clients.debtSummary.actions.verify')}</span>
+                                      </LinkButton>
+                                    </PermissionGuard>
                                   )}
                                 {(payment.status === 'Verified' ||
                                   payment.status === 'Cancelled' ||
@@ -1601,7 +1603,7 @@ export function DebtSummaryPage() {
                   fullName: [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
                     .filter(Boolean)
                     .join(' '),
-                  phone: apiClient.phone_primary || apiClient.phone_secondary || 'N/A',
+                  phone: apiClient.phone_primary || 'N/A',
                   contract:
                     (apiClient.debts &&
                       apiClient.debts.length > 0 &&
@@ -1622,55 +1624,57 @@ export function DebtSummaryPage() {
       )}
 
       {/* Cancel Payment Modal */}
-      {selectedPayment && debtSummary && isCancelModalOpen && (
-        <CancelPaymentModal
-          open={isCancelModalOpen}
-          onClose={() => {
-            setIsCancelModalOpen(false)
-            setSelectedPayment(null)
-          }}
-          payment={{
-            paymentId: `PMT-${selectedPayment.id}`,
-            client: customerName,
-            amount: selectedPayment.amount,
-            paymentDate: selectedPayment.date,
-            method: normalizePaymentMethod(selectedPayment.method),
-            reference:
-              selectedPayment.reference || `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
-            status: selectedPayment.status as 'Verified' | 'Pending' | 'Cancelled',
-            createdBy: 'Operator Sidorov',
-            createdAt: '2025-12-10 09:15:32',
-            currentDebt: debtSummary.totalDebt,
-          }}
-          onConfirm={(data) => {
-            if (!selectedPayment) return
+      <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT_DEBT}>
+        {selectedPayment && debtSummary && isCancelModalOpen && (
+          <CancelPaymentModal
+            open={isCancelModalOpen}
+            onClose={() => {
+              setIsCancelModalOpen(false)
+              setSelectedPayment(null)
+            }}
+            payment={{
+              paymentId: `PMT-${selectedPayment.id}`,
+              client: customerName,
+              amount: selectedPayment.amount,
+              paymentDate: selectedPayment.date,
+              method: normalizePaymentMethod(selectedPayment.method),
+              reference:
+                selectedPayment.reference || `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
+              status: selectedPayment.status as 'Verified' | 'Pending' | 'Cancelled',
+              createdBy: 'Operator Sidorov',
+              createdAt: '2025-12-10 09:15:32',
+              currentDebt: debtSummary.totalDebt,
+            }}
+            onConfirm={(data) => {
+              if (!selectedPayment) return
 
-            const backendPayment = paymentHistoryData?.payments.find(
-              (p) => p.id === selectedPayment.id
-            )
-            if (!backendPayment) {
-              toast.error('Payment not found')
-              return
-            }
-
-            cancelPaymentMutation(
-              {
-                paymentId: backendPayment.payment_number || backendPayment.id.toString(),
-                request: {
-                  cancellation_reason: data.reason,
-                },
-              },
-              {
-                onSuccess: () => {
-                  setIsCancelModalOpen(false)
-                  setSelectedPayment(null)
-                  refetchPayments()
-                },
+              const backendPayment = paymentHistoryData?.payments.find(
+                (p) => p.id === selectedPayment.id
+              )
+              if (!backendPayment) {
+                toast.error('Payment not found')
+                return
               }
-            )
-          }}
-        />
-      )}
+
+              cancelPaymentMutation(
+                {
+                  paymentId: backendPayment.payment_number || backendPayment.id.toString(),
+                  request: {
+                    cancellation_reason: data.reason,
+                  },
+                },
+                {
+                  onSuccess: () => {
+                    setIsCancelModalOpen(false)
+                    setSelectedPayment(null)
+                    refetchPayments()
+                  },
+                }
+              )
+            }}
+          />
+        )}
+      </PermissionGuard>
     </div>
   )
 }

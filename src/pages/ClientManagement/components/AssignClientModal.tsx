@@ -16,7 +16,8 @@ import { useClient } from '@/features/clients/hooks/useClients'
 import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import { PriorityBadge } from './PriorityBadge'
-import { useUsers } from '@/features/users/hooks/useUsers'
+import { useOperators } from '@/features/users/hooks/useUsers'
+import { useAuthStore } from '@/stores/authStore'
 
 // Format currency for Ukrainian Hryvnia
 const formatUAH = (amount: number) => {
@@ -48,21 +49,19 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
   const { t } = useTranslation('common')
   const { data: client, isLoading } = useClient(clientId || 0, open && !!clientId)
   const { data: thresholds } = usePriorityThresholds()
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
 
   // Fetch active users for employee and searcher dropdowns
-  const { data: usersResponse } = useUsers({
-    status: 'active',
-    page_size: 100,
-  })
+  const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
   // Map users to dropdown options (full name format)
   const userOptions = useMemo(() => {
-    if (!usersResponse?.users) return []
-    return usersResponse.users.map((user) => ({
+    if (!operators) return []
+    return operators.map((user) => ({
       id: user.id.toString(),
       name: [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' '),
     }))
-  }, [usersResponse])
+  }, [operators])
 
   const [employeeId, setEmployeeId] = useState<string>('')
   const [searcherId, setSearcherId] = useState<string>('')

@@ -22,6 +22,8 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ErrorState } from '@/components/ErrorState'
 import { Pagination } from '@/components/ui/Pagination'
 import { ProjectManagementPageSkeleton } from './components/ProjectManagementPageSkeleton'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -418,25 +420,29 @@ export function ProjectManagementPage() {
       </div>
 
       {/* Edit Modal */}
-      {editingProject && (
-        <EditProjectModal
-          project={editingProject}
-          open={editingProject !== null}
-          onClose={() => setEditingProject(null)}
-          onSuccess={handleEditSuccess}
-        />
-      )}
+      <PermissionGuard permission={PERMISSIONS.PROJECTS.MANAGE}>
+        {editingProject && (
+          <EditProjectModal
+            project={editingProject}
+            open={editingProject !== null}
+            onClose={() => setEditingProject(null)}
+            onSuccess={handleEditSuccess}
+          />
+        )}
+      </PermissionGuard>
 
       {/* Delete Confirmation Modal */}
-      {deletingProject && (
-        <DeleteProjectConfirmationModal
-          open={deletingProject !== null}
-          projectName={deletingProject.name}
-          onConfirm={handleDeleteConfirm}
-          onCancel={handleDeleteCancel}
-          isLoading={deleteMutation.isPending}
-        />
-      )}
+      <PermissionGuard permission={PERMISSIONS.PROJECTS.MANAGE}>
+        {deletingProject && (
+          <DeleteProjectConfirmationModal
+            open={deletingProject !== null}
+            projectName={deletingProject.name}
+            onConfirm={handleDeleteConfirm}
+            onCancel={handleDeleteCancel}
+            isLoading={deleteMutation.isPending}
+          />
+        )}
+      </PermissionGuard>
 
       {/* Project Detail Modal - shown on mobile when project is clicked */}
       {showDetailModal && (

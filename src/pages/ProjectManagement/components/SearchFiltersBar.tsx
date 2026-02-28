@@ -26,6 +26,8 @@ import type { ProjectFilters } from '@/features/projects/types'
 import { CreateProjectModal } from './CreateProjectModal'
 import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 
 interface SearchFiltersBarProps {
   filters: ProjectFilters
@@ -476,26 +478,28 @@ export function SearchFiltersBar({
         )}
 
         {/* Export Button - icon-only on mobile/tablet, full on desktop */}
-        <Button
-          variant="primary"
-          size="md"
-          onClick={onExport}
-          disabled={isLoading}
-          leftIcon={<Icons.FileImport size={16} className="text-dark-500" />}
-          className="hidden h-[45px] rounded-full text-xs lg:flex"
-        >
-          {t('pages.projects.searchFilters.export')}
-        </Button>
-        {/* Mobile/Tablet: Icon-only button */}
-        <button
-          type="button"
-          onClick={onExport}
-          disabled={isLoading}
-          className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60 lg:hidden"
-          aria-label={t('pages.projects.searchFilters.export')}
-        >
-          <Icons.FileImport size={18} className="text-dark-500" strokeWidth={1.5} />
-        </button>
+        <PermissionGuard permission={PERMISSIONS.PROJECTS.MANAGE}>
+          <Button
+            variant="primary"
+            size="md"
+            onClick={onExport}
+            disabled={isLoading}
+            leftIcon={<Icons.FileImport size={16} className="text-dark-500" />}
+            className="hidden h-[45px] rounded-full text-xs lg:flex"
+          >
+            {t('pages.projects.searchFilters.export')}
+          </Button>
+          {/* Mobile/Tablet: Icon-only button */}
+          <button
+            type="button"
+            onClick={onExport}
+            disabled={isLoading}
+            className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60 lg:hidden"
+            aria-label={t('pages.projects.searchFilters.export')}
+          >
+            <Icons.FileImport size={18} className="text-dark-500" strokeWidth={1.5} />
+          </button>
+        </PermissionGuard>
       </div>
     </div>
   )

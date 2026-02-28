@@ -20,7 +20,8 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Label } from '@/components/ui/Label'
 import { Icons } from '@/lib/icons'
 import { PriorityBadge } from './PriorityBadge'
-import { useUsers } from '@/features/users/hooks/useUsers'
+import { useOperators } from '@/features/users/hooks/useUsers'
+import { useAuthStore } from '@/stores/authStore'
 
 // Format currency for Ukrainian Hryvnia
 const formatUAH = (amount: string | number) => {
@@ -74,20 +75,18 @@ export function BulkAssignClientModal({
 }: BulkAssignClientModalProps) {
   const { t } = useTranslation('common')
 
-  // Fetch active users for employee and searcher dropdowns
-  const { data: usersResponse } = useUsers({
-    status: 'active',
-    page_size: 100,
-  })
+  // Fetch active users for employee and searcher dropdowns (project-scoped)
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
   // Map users to dropdown options (full name format)
   const userOptions = useMemo(() => {
-    if (!usersResponse?.users) return []
-    return usersResponse.users.map((user) => ({
+    if (!operators) return []
+    return operators.map((user) => ({
       id: user.id.toString(),
       name: [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' '),
     }))
-  }, [usersResponse])
+  }, [operators])
 
   const [employeeId, setEmployeeId] = useState<string>('')
   const [searcherId, setSearcherId] = useState<string>('')

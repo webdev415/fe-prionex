@@ -22,6 +22,9 @@ import {
   type ScoringConfigResponse,
   type PreviewResponse,
 } from '@/features/clients/api/configApi'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
+import { useHasPermission } from '@/hooks'
 import { ScoringConfigurationPageSkeleton } from './ScoringConfigurationPageSkeleton'
 
 interface ScoreWeights {
@@ -49,6 +52,7 @@ export function ScoringConfigurationPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const canEditScoring = useHasPermission(PERMISSIONS.SCORING_CONFIG.EDIT)
 
   // Get active project name
   const activeProject = useMemo(() => {
@@ -445,6 +449,7 @@ export function ScoringConfigurationPage() {
                         max={100}
                         step={1}
                         className="w-full"
+                        disabled={!canEditScoring}
                       />
                     </div>
                   </div>
@@ -464,6 +469,7 @@ export function ScoringConfigurationPage() {
                         max={100}
                         step={1}
                         className="w-full"
+                        disabled={!canEditScoring}
                       />
                     </div>
                   </div>
@@ -486,6 +492,7 @@ export function ScoringConfigurationPage() {
                         max={100}
                         step={1}
                         className="w-full"
+                        disabled={!canEditScoring}
                       />
                     </div>
                   </div>
@@ -526,16 +533,18 @@ export function ScoringConfigurationPage() {
 
               {/* Save Button for Weights */}
               <div className="flex items-center justify-end">
-                <Button
-                  variant="primary"
-                  onClick={handleSaveWeights}
-                  disabled={isSavingWeights || totalWeight !== 100}
-                  className="rounded-md"
-                >
-                  {isSavingWeights
-                    ? t('pages.scoringConfiguration.saving', 'Saving...')
-                    : t('pages.scoringConfiguration.saveWeights', 'Save Weights')}
-                </Button>
+                <PermissionGuard permission={PERMISSIONS.SCORING_CONFIG.EDIT}>
+                  <Button
+                    variant="primary"
+                    onClick={handleSaveWeights}
+                    disabled={isSavingWeights || totalWeight !== 100}
+                    className="rounded-md"
+                  >
+                    {isSavingWeights
+                      ? t('pages.scoringConfiguration.saving', 'Saving...')
+                      : t('pages.scoringConfiguration.saveWeights', 'Save Weights')}
+                  </Button>
+                </PermissionGuard>
               </div>
             </div>
           )}
@@ -559,14 +568,16 @@ export function ScoringConfigurationPage() {
                       )}
                     </p>
                   </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleResetDefaults}
-                    className="w-full rounded-md sm:w-auto"
-                  >
-                    {t('pages.scoringConfiguration.resetDefaults', 'Reset Defaults')}
-                  </Button>
+                  <PermissionGuard permission={PERMISSIONS.SCORING_CONFIG.EDIT}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleResetDefaults}
+                      className="w-full rounded-md sm:w-auto"
+                    >
+                      {t('pages.scoringConfiguration.resetDefaults', 'Reset Defaults')}
+                    </Button>
+                  </PermissionGuard>
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -587,6 +598,7 @@ export function ScoringConfigurationPage() {
                             }
                             className="w-20 rounded-md"
                             inputSize="sm"
+                            disabled={!canEditScoring}
                           />
                         </div>
                       </div>
@@ -608,6 +620,7 @@ export function ScoringConfigurationPage() {
                             }
                             className="w-20 rounded-md"
                             inputSize="sm"
+                            disabled={!canEditScoring}
                           />
                         </div>
                       </div>
@@ -630,6 +643,7 @@ export function ScoringConfigurationPage() {
                             }
                             className="w-20 rounded-md"
                             inputSize="sm"
+                            disabled={!canEditScoring}
                           />
                         </div>
                       </div>
@@ -690,16 +704,18 @@ export function ScoringConfigurationPage() {
 
                 {/* Save Button for Thresholds */}
                 <div className="flex items-center justify-end">
-                  <Button
-                    variant="primary"
-                    onClick={handleSaveThresholds}
-                    disabled={isSavingThresholds}
-                    className="rounded-md"
-                  >
-                    {isSavingThresholds
-                      ? t('pages.scoringConfiguration.saving', 'Saving...')
-                      : t('pages.scoringConfiguration.saveThresholds', 'Save Thresholds')}
-                  </Button>
+                  <PermissionGuard permission={PERMISSIONS.SCORING_CONFIG.EDIT}>
+                    <Button
+                      variant="primary"
+                      onClick={handleSaveThresholds}
+                      disabled={isSavingThresholds}
+                      className="rounded-md"
+                    >
+                      {isSavingThresholds
+                        ? t('pages.scoringConfiguration.saving', 'Saving...')
+                        : t('pages.scoringConfiguration.saveThresholds', 'Save Thresholds')}
+                    </Button>
+                  </PermissionGuard>
                 </div>
               </div>
 
@@ -720,17 +736,19 @@ export function ScoringConfigurationPage() {
                       )}
                     </p>
                   </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handlePreview}
-                    disabled={isPreviewing}
-                    className="w-full rounded-md sm:w-auto"
-                  >
-                    {isPreviewing
-                      ? t('pages.scoringConfiguration.previewing', 'Previewing...')
-                      : t('pages.scoringConfiguration.previewChanges', 'Preview Changes')}
-                  </Button>
+                  <PermissionGuard permission={PERMISSIONS.SCORING_CONFIG.EDIT}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handlePreview}
+                      disabled={isPreviewing}
+                      className="w-full rounded-md sm:w-auto"
+                    >
+                      {isPreviewing
+                        ? t('pages.scoringConfiguration.previewing', 'Previewing...')
+                        : t('pages.scoringConfiguration.previewChanges', 'Preview Changes')}
+                    </Button>
+                  </PermissionGuard>
                 </div>
 
                 {/* Preview Content */}

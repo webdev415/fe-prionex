@@ -41,6 +41,8 @@ import { EditPaymentModal } from './components/EditPaymentModal'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { useCallStore } from '@/stores/callStore'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useOriginateCall } from '@/features/calls/hooks/useCall'
 import { useCallWebSocket } from '@/features/calls/hooks/useCallWebSocket'
@@ -271,12 +273,9 @@ export function PaymentHistoryPage() {
     return {
       id: apiClient.id,
       fullName: fullName || mockClientDetail.fullName,
-      phones: [
-        { number: apiClient.phone_primary, type: 'primary' as const },
-        ...(apiClient.phone_secondary
-          ? [{ number: apiClient.phone_secondary, type: 'secondary' as const }]
-          : []),
-      ],
+      phones: apiClient.phone_primary
+        ? [{ number: apiClient.phone_primary, type: 'mobile' as const }]
+        : [],
     }
   }, [apiClient])
 
@@ -1066,14 +1065,16 @@ export function PaymentHistoryPage() {
             <span className="font-medium">{paymentHistory.customerName}</span>
           </span>
         </div>
-        <Button
-          variant="primary"
-          leftIcon={<Icons.Csv02 size={18} className="sm:size-5" />}
-          onClick={() => setIsExportModalOpen(true)}
-          className="h-10 w-full rounded-full sm:h-12 sm:w-auto"
-        >
-          {t('pages.clients.paymentHistory.exportCSV')}
-        </Button>
+        <PermissionGuard permission={PERMISSIONS.DATA.EXPORT}>
+          <Button
+            variant="primary"
+            leftIcon={<Icons.Csv02 size={18} className="sm:size-5" />}
+            onClick={() => setIsExportModalOpen(true)}
+            className="h-10 w-full rounded-full sm:h-12 sm:w-auto"
+          >
+            {t('pages.clients.paymentHistory.exportCSV')}
+          </Button>
+        </PermissionGuard>
       </div>
 
       {/* Main Content */}
@@ -1182,33 +1183,35 @@ export function PaymentHistoryPage() {
 
             {/* Action Buttons */}
             <div className="flex w-full flex-col items-start gap-3 sm:flex-row">
-              <Button
-                variant="primary"
-                leftIcon={<Icons.Headset size={18} className="sm:size-5" />}
-                className="w-full rounded-full"
-                disabled={!user?.asterisk_extension}
-                onClick={() => {
-                  const phoneNumber = client?.phones?.[0]?.number
-                  if (!phoneNumber) {
-                    toast.error('Client has no phone number')
-                    return
-                  }
+              <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+                <Button
+                  variant="primary"
+                  leftIcon={<Icons.Headset size={18} className="sm:size-5" />}
+                  className="w-full rounded-full"
+                  disabled={!user?.is_agent || !user?.asterisk_extension}
+                  onClick={() => {
+                    const phoneNumber = client?.phones?.[0]?.number
+                    if (!phoneNumber) {
+                      toast.error('Client has no phone number')
+                      return
+                    }
 
-                  if (isCallActive()) {
-                    toast.warning(
-                      t('pages.clients.modals.callDialog.callInProgress') ||
-                        'Another call or recording is already in progress. Please finish or close it first.'
-                    )
-                    return
-                  }
+                    if (isCallActive()) {
+                      toast.warning(
+                        t('pages.clients.modals.callDialog.callInProgress') ||
+                          'Another call or recording is already in progress. Please finish or close it first.'
+                      )
+                      return
+                    }
 
-                  // Open modal in 'initial' state to let user select call type
-                  setOpenCallModal('call-dialog')
-                  setIsCallModalOpen(true)
-                }}
-              >
-                {t('pages.clients.paymentHistory.call')}
-              </Button>
+                    // Open modal in 'initial' state to let user select call type
+                    setOpenCallModal('call-dialog')
+                    setIsCallModalOpen(true)
+                  }}
+                >
+                  {t('pages.clients.paymentHistory.call')}
+                </Button>
+              </PermissionGuard>
               <Button
                 variant="secondary"
                 leftIcon={<Icons.PencilEdit02 size={18} className="sm:size-5" />}
@@ -1579,23 +1582,25 @@ export function PaymentHistoryPage() {
                                   )}
                                   {payment.status === 'Pending' &&
                                     checkPaymentLessThan7DaysOld(payment.date) && (
-                                      <LinkButton
-                                        variant="regular-black"
-                                        size="xs"
-                                        leftIcon={
-                                          <Icons.Success
-                                            size={16}
-                                            color="#05040D"
-                                            strokeWidth={1.5}
-                                          />
-                                        }
-                                        onClick={() => {
-                                          setSelectedPaymentId(payment.id)
-                                          setIsVerificationModalOpen(true)
-                                        }}
-                                      >
-                                        {t('pages.clients.paymentHistory.actions.verify')}
-                                      </LinkButton>
+                                      <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT_DEBT}>
+                                        <LinkButton
+                                          variant="regular-black"
+                                          size="xs"
+                                          leftIcon={
+                                            <Icons.Success
+                                              size={16}
+                                              color="#05040D"
+                                              strokeWidth={1.5}
+                                            />
+                                          }
+                                          onClick={() => {
+                                            setSelectedPaymentId(payment.id)
+                                            setIsVerificationModalOpen(true)
+                                          }}
+                                        >
+                                          {t('pages.clients.paymentHistory.actions.verify')}
+                                        </LinkButton>
+                                      </PermissionGuard>
                                     )}
                                   <LinkButton
                                     variant="regular-black"
@@ -1659,19 +1664,23 @@ export function PaymentHistoryPage() {
                                       )}
                                       {payment.status === 'Pending' &&
                                         checkPaymentLessThan7DaysOld(payment.date) && (
-                                          <DropdownMenuItem
-                                            onClick={() => {
-                                              setSelectedPaymentId(payment.id)
-                                              setIsVerificationModalOpen(true)
-                                              setOpenDropdownPaymentId(null)
-                                            }}
-                                            className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                                          <PermissionGuard
+                                            permission={PERMISSIONS.CLIENTS.EDIT_DEBT}
                                           >
-                                            <Icons.Success size={16} strokeWidth={1.5} />
-                                            <span>
-                                              {t('pages.clients.paymentHistory.actions.verify')}
-                                            </span>
-                                          </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                setSelectedPaymentId(payment.id)
+                                                setIsVerificationModalOpen(true)
+                                                setOpenDropdownPaymentId(null)
+                                              }}
+                                              className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                                            >
+                                              <Icons.Success size={16} strokeWidth={1.5} />
+                                              <span>
+                                                {t('pages.clients.paymentHistory.actions.verify')}
+                                              </span>
+                                            </DropdownMenuItem>
+                                          </PermissionGuard>
                                         )}
                                       <DropdownMenuItem
                                         onClick={() => {
@@ -1834,90 +1843,94 @@ export function PaymentHistoryPage() {
       )}
 
       {/* Cancel Payment Modal */}
-      {selectedPayment && paymentHistory && isCancelModalOpen && (
-        <CancelPaymentModal
-          open={isCancelModalOpen}
-          onClose={() => {
-            setIsCancelModalOpen(false)
-            setSelectedPayment(null)
-          }}
-          payment={{
-            paymentId: `PMT-${selectedPayment.id}`,
-            client: paymentHistory.customerName,
-            amount: selectedPayment.amount,
-            paymentDate: selectedPayment.date,
-            method: selectedPayment.method,
-            reference: `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
-            status: selectedPayment.status as 'Verified' | 'Pending' | 'Cancelled',
-            createdBy: 'Operator Sidorov',
-            createdAt: '2025-12-10 09:15:32',
-            currentDebt: paymentHistory.totalDebt,
-          }}
-          onConfirm={(data) => {
-            if (!selectedPayment) return
+      <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT_DEBT}>
+        {selectedPayment && paymentHistory && isCancelModalOpen && (
+          <CancelPaymentModal
+            open={isCancelModalOpen}
+            onClose={() => {
+              setIsCancelModalOpen(false)
+              setSelectedPayment(null)
+            }}
+            payment={{
+              paymentId: `PMT-${selectedPayment.id}`,
+              client: paymentHistory.customerName,
+              amount: selectedPayment.amount,
+              paymentDate: selectedPayment.date,
+              method: selectedPayment.method,
+              reference: `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
+              status: selectedPayment.status as 'Verified' | 'Pending' | 'Cancelled',
+              createdBy: 'Operator Sidorov',
+              createdAt: '2025-12-10 09:15:32',
+              currentDebt: paymentHistory.totalDebt,
+            }}
+            onConfirm={(data) => {
+              if (!selectedPayment) return
 
-            const backendPayment = paymentHistoryData?.payments.find(
-              (p) => p.id === selectedPayment.id
-            )
-            if (!backendPayment) {
-              toast.error('Payment not found')
-              return
-            }
-
-            cancelPaymentMutation(
-              {
-                paymentId: backendPayment.payment_number || backendPayment.id.toString(),
-                request: {
-                  cancellation_reason: data.reason,
-                },
-              },
-              {
-                onSuccess: () => {
-                  setIsCancelModalOpen(false)
-                  setSelectedPayment(null)
-                  refetchPayments()
-                },
+              const backendPayment = paymentHistoryData?.payments.find(
+                (p) => p.id === selectedPayment.id
+              )
+              if (!backendPayment) {
+                toast.error('Payment not found')
+                return
               }
-            )
-          }}
-        />
-      )}
+
+              cancelPaymentMutation(
+                {
+                  paymentId: backendPayment.payment_number || backendPayment.id.toString(),
+                  request: {
+                    cancellation_reason: data.reason,
+                  },
+                },
+                {
+                  onSuccess: () => {
+                    setIsCancelModalOpen(false)
+                    setSelectedPayment(null)
+                    refetchPayments()
+                  },
+                }
+              )
+            }}
+          />
+        )}
+      </PermissionGuard>
 
       {/* Edit Payment Modal */}
-      {selectedPayment && paymentHistory && (
-        <EditPaymentModal
-          open={isEditModalOpen}
-          onClose={() => {
-            setIsEditModalOpen(false)
-            setSelectedPayment(null)
-          }}
-          payment={{
-            paymentId: `PMT-${selectedPayment.id}`,
-            amount: selectedPayment.amount,
-            paymentDate: selectedPayment.date,
-            method: (() => {
-              // Normalize payment method to match EditPaymentModal expected types
-              const method = selectedPayment.method
-              if (method === 'Card') return 'Card'
-              if (method === 'Bank Transfer' || method === 'Bank') return 'Bank Transfer'
-              if (method === 'Online Gateway' || method === 'Online') return 'Online Gateway'
-              if (method === 'Cash') return 'Cash'
-              return 'Other'
-            })(),
-            reference:
-              selectedPayment.reference || `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
-            createdBy: 'Operator Sidorov',
-            createdAt: '2025-12-10 09:15:32',
-            currentDebt: paymentHistory.totalDebt,
-            referenceNumber: selectedPayment.reference || undefined,
-            last4Digits: selectedPayment.reference?.match(/^\d{4}$/)
-              ? selectedPayment.reference
-              : undefined,
-            paymentMethodDetails: undefined,
-          }}
-          onSave={handleSaveEditPayment}
-        />
-      )}
+      <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT_DEBT}>
+        {selectedPayment && paymentHistory && (
+          <EditPaymentModal
+            open={isEditModalOpen}
+            onClose={() => {
+              setIsEditModalOpen(false)
+              setSelectedPayment(null)
+            }}
+            payment={{
+              paymentId: `PMT-${selectedPayment.id}`,
+              amount: selectedPayment.amount,
+              paymentDate: selectedPayment.date,
+              method: (() => {
+                // Normalize payment method to match EditPaymentModal expected types
+                const method = selectedPayment.method
+                if (method === 'Card') return 'Card'
+                if (method === 'Bank Transfer' || method === 'Bank') return 'Bank Transfer'
+                if (method === 'Online Gateway' || method === 'Online') return 'Online Gateway'
+                if (method === 'Cash') return 'Cash'
+                return 'Other'
+              })(),
+              reference:
+                selectedPayment.reference || `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
+              createdBy: 'Operator Sidorov',
+              createdAt: '2025-12-10 09:15:32',
+              currentDebt: paymentHistory.totalDebt,
+              referenceNumber: selectedPayment.reference || undefined,
+              last4Digits: selectedPayment.reference?.match(/^\d{4}$/)
+                ? selectedPayment.reference
+                : undefined,
+              paymentMethodDetails: undefined,
+            }}
+            onSave={handleSaveEditPayment}
+          />
+        )}
+      </PermissionGuard>
 
       {/* Call Dialog Modal */}
       <CallDialogModal

@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { CreateSellerModal, EditSellerModal, DeleteSellerConfirmationModal } from './components'
 import { useSellers, useDeleteSeller, type Seller } from '@/features/sellers'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -194,22 +196,26 @@ export function SellerManagementPage() {
         <div className="flex items-center justify-center gap-2 sm:gap-4">
           {/* Desktop: Individual buttons */}
           <div className="hidden items-center gap-4 lg:flex">
-            <LinkButton
-              variant="regular-black"
-              size="xs"
-              onClick={() => handleEdit(seller)}
-              leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
-            >
-              {t('pages.sellers.actions.edit')}
-            </LinkButton>
-            <LinkButton
-              variant="regular-black"
-              size="xs"
-              onClick={() => handleDelete(seller)}
-              leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
-            >
-              {t('pages.sellers.actions.delete')}
-            </LinkButton>
+            <PermissionGuard permission={PERMISSIONS.SELLERS.EDIT}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => handleEdit(seller)}
+                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('pages.sellers.actions.edit')}
+              </LinkButton>
+            </PermissionGuard>
+            <PermissionGuard permission={PERMISSIONS.SELLERS.DELETE}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => handleDelete(seller)}
+                leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('pages.sellers.actions.delete')}
+              </LinkButton>
+            </PermissionGuard>
           </div>
 
           {/* Mobile/Tablet: Dropdown button group */}
@@ -229,20 +235,24 @@ export function SellerManagementPage() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-white">
-                <DropdownMenuItem
-                  onClick={() => handleEdit(seller)}
-                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
-                >
-                  <Icons.PencilEdit size={16} strokeWidth={1.5} />
-                  <span>{t('pages.sellers.actions.edit')}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleDelete(seller)}
-                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
-                >
-                  <Icons.Delete size={16} strokeWidth={1.5} />
-                  <span>{t('pages.sellers.actions.delete')}</span>
-                </DropdownMenuItem>
+                <PermissionGuard permission={PERMISSIONS.SELLERS.EDIT}>
+                  <DropdownMenuItem
+                    onClick={() => handleEdit(seller)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                  >
+                    <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                    <span>{t('pages.sellers.actions.edit')}</span>
+                  </DropdownMenuItem>
+                </PermissionGuard>
+                <PermissionGuard permission={PERMISSIONS.SELLERS.DELETE}>
+                  <DropdownMenuItem
+                    onClick={() => handleDelete(seller)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                  >
+                    <Icons.Delete size={16} strokeWidth={1.5} />
+                    <span>{t('pages.sellers.actions.delete')}</span>
+                  </DropdownMenuItem>
+                </PermissionGuard>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -262,25 +272,27 @@ export function SellerManagementPage() {
           <span className="text-sm font-light text-gray-500 sm:text-base">{totalSellers}</span>
         </div>
 
-        {/* Desktop: Full button with text, Mobile: Icon-only button */}
-        <div className="hidden sm:block">
-          <DoubleButton
-            size="md"
-            icon={<Icons.Add size={20} strokeWidth={2} />}
-            iconPosition="left"
+        <PermissionGuard permission={PERMISSIONS.SELLERS.CREATE}>
+          {/* Desktop: Full button with text, Mobile: Icon-only button */}
+          <div className="hidden sm:block">
+            <DoubleButton
+              size="md"
+              icon={<Icons.Add size={20} strokeWidth={2} />}
+              iconPosition="left"
+              onClick={() => setShowCreateModal(true)}
+            >
+              {t('pages.sellers.addNewSeller')}
+            </DoubleButton>
+          </div>
+          {/* Mobile: Icon-only button */}
+          <button
             onClick={() => setShowCreateModal(true)}
+            className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+            aria-label={t('pages.sellers.addNewSeller')}
           >
-            {t('pages.sellers.addNewSeller')}
-          </DoubleButton>
-        </div>
-        {/* Mobile: Icon-only button */}
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
-          aria-label={t('pages.sellers.addNewSeller')}
-        >
-          <Icons.Add size={20} strokeWidth={2} />
-        </button>
+            <Icons.Add size={20} strokeWidth={2} />
+          </button>
+        </PermissionGuard>
       </div>
 
       {/* Search Bar */}

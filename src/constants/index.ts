@@ -31,7 +31,6 @@ export const ROUTES = {
   USERS: '/dashboard/users',
   PROJECTS: '/dashboard/projects',
   ROLES: '/dashboard/roles',
-  FORBIDDEN: '/forbidden',
 } as const
 
 /**

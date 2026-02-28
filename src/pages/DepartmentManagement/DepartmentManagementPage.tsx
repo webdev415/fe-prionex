@@ -28,6 +28,8 @@ import {
 import { ErrorState } from '@/components/ErrorState'
 import { Icons } from '@/lib/icons'
 import { DoubleButton } from '@/components/ui/DoubleButton'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 import {
   CreateDepartmentModal,
   DepartmentDetailModal,
@@ -134,22 +136,26 @@ export function DepartmentManagementPage() {
               <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
               {t('pages.departments.actions.view')}
             </button>
-            <button
-              type="button"
-              className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
-              onClick={() => setEditDepartmentId(department.id)}
-            >
-              <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
-              {t('pages.departments.actions.edit')}
-            </button>
-            <button
-              type="button"
-              className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
-              onClick={() => setArchiveDepartmentId(department.id)}
-            >
-              <Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />
-              {t('pages.departments.actions.delete')}
-            </button>
+            <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
+              <button
+                type="button"
+                className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+                onClick={() => setEditDepartmentId(department.id)}
+              >
+                <Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />
+                {t('pages.departments.actions.edit')}
+              </button>
+            </PermissionGuard>
+            <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
+              <button
+                type="button"
+                className="text-dark-500 flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
+                onClick={() => setArchiveDepartmentId(department.id)}
+              >
+                <Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />
+                {t('pages.departments.actions.delete')}
+              </button>
+            </PermissionGuard>
           </div>
 
           {/* Mobile/Tablet: Dropdown button group */}
@@ -176,20 +182,24 @@ export function DepartmentManagementPage() {
                   <Icons.View size={16} strokeWidth={1.5} />
                   <span>{t('pages.departments.actions.view')}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setEditDepartmentId(department.id)}
-                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
-                >
-                  <Icons.PencilEdit size={16} strokeWidth={1.5} />
-                  <span>{t('pages.departments.actions.edit')}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setArchiveDepartmentId(department.id)}
-                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
-                >
-                  <Icons.Delete size={16} strokeWidth={1.5} />
-                  <span>{t('pages.departments.actions.delete')}</span>
-                </DropdownMenuItem>
+                <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
+                  <DropdownMenuItem
+                    onClick={() => setEditDepartmentId(department.id)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                  >
+                    <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                    <span>{t('pages.departments.actions.edit')}</span>
+                  </DropdownMenuItem>
+                </PermissionGuard>
+                <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
+                  <DropdownMenuItem
+                    onClick={() => setArchiveDepartmentId(department.id)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                  >
+                    <Icons.Delete size={16} strokeWidth={1.5} />
+                    <span>{t('pages.departments.actions.delete')}</span>
+                  </DropdownMenuItem>
+                </PermissionGuard>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -211,26 +221,28 @@ export function DepartmentManagementPage() {
             </h1>
           </div>
           {/* Desktop: Full button with text, Mobile: Icon-only button */}
-          <div className="hidden sm:block">
-            <DoubleButton
-              size="md"
-              icon={<Icons.Add size={20} strokeWidth={2} />}
-              iconPosition="left"
+          <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
+            <div className="hidden sm:block">
+              <DoubleButton
+                size="md"
+                icon={<Icons.Add size={20} strokeWidth={2} />}
+                iconPosition="left"
+                onClick={() => setShowCreateModal(true)}
+                disabled={!selectedProjectId}
+              >
+                {t('pages.departments.newDepartment')}
+              </DoubleButton>
+            </div>
+            {/* Mobile: Icon-only button */}
+            <button
               onClick={() => setShowCreateModal(true)}
               disabled={!selectedProjectId}
+              className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:hidden"
+              aria-label={t('pages.departments.newDepartment')}
             >
-              {t('pages.departments.newDepartment')}
-            </DoubleButton>
-          </div>
-          {/* Mobile: Icon-only button */}
-          <button
-            onClick={() => setShowCreateModal(true)}
-            disabled={!selectedProjectId}
-            className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:hidden"
-            aria-label={t('pages.departments.newDepartment')}
-          >
-            <Icons.Add size={20} strokeWidth={2} />
-          </button>
+              <Icons.Add size={20} strokeWidth={2} />
+            </button>
+          </PermissionGuard>
         </div>
       )}
 

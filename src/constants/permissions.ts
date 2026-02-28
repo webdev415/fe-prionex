@@ -5,19 +5,22 @@
  * These permissions control access to features, routes, and UI elements.
  *
  * Backend Source: /home/pst/dev/prionex/api-prionex/services/auth/alembic/versions/20251122_0002_002_seed_initial_data.py
- * Total Permissions: 34 (26 pre-existing + 8 seller/scoring config permissions)
+ * Total Permissions: 37 (34 pre-existing + 3 interaction/task permissions)
  */
 
 export const PERMISSIONS = {
   /**
-   * Clients Category (4 permissions)
+   * Clients Category (7 permissions)
    * Controls access to client data and management
    */
   CLIENTS: {
     VIEW: 'view_clients',
     EDIT: 'edit_clients',
-    EDIT_DEBT: 'edit_debt',
+    EDIT_DEBT: 'edit_client_debt',
     DELETE: 'delete_clients',
+    CREATE_INTERACTIONS: 'create_interactions',
+    CREATE_TASKS: 'create_tasks',
+    VIEW_TASKS: 'view_tasks',
   },
 
   /**
@@ -35,19 +38,19 @@ export const PERMISSIONS = {
    * Controls access to statistics and reporting
    */
   REPORTS: {
-    VIEW_OWN_STATS: 'view_own_stats',
-    VIEW_TEAM_STATS: 'view_team_stats',
+    VIEW_OWN_REPORTS: 'view_own_reports',
+    VIEW_TEAM_REPORTS: 'view_team_reports',
     VIEW_ALL_REPORTS: 'view_all_reports',
   },
 
   /**
    * Data Category (3 permissions)
-   * Controls access to data import/export and manual priority
+   * Controls access to data import/export and client priority
    */
   DATA: {
-    IMPORT_DATA: 'import_data',
-    EXPORT_DATA: 'export_data',
-    MANUAL_PRIORITY: 'manual_priority',
+    IMPORT: 'import_clients',
+    EXPORT: 'export_clients',
+    MANAGE_PRIORITY: 'manage_client_priority',
   },
 
   /**
@@ -113,8 +116,8 @@ export const PERMISSIONS = {
   SCORING_CONFIG: {
     VIEW: 'view_scoring_config',
     EDIT: 'edit_scoring_config',
-    MANAGE_SELLER_CONFIG: 'manage_seller_config',
-    VIEW_HISTORY: 'view_config_history',
+    MANAGE_SELLER_CONFIG: 'manage_seller_scoring_config',
+    VIEW_HISTORY: 'view_scoring_config_history',
   },
 } as const
 
@@ -173,8 +176,11 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Clients
   view_clients: 'View client data and information',
   edit_clients: 'Edit client information (except debt amounts)',
-  edit_debt: 'Edit debt amounts and DPD (Days Past Due)',
+  edit_client_debt: 'Edit debt amounts and DPD (Days Past Due)',
   delete_clients: 'Delete client records (soft delete)',
+  create_interactions: 'Create client interactions (add notes)',
+  create_tasks: 'Create and manage tasks for clients',
+  view_tasks: 'View tasks for clients',
 
   // Communication
   make_calls: 'Make outbound phone calls to clients',
@@ -182,14 +188,14 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   view_call_history: 'View call recordings and SMS history',
 
   // Reports
-  view_own_stats: 'View own performance statistics',
-  view_team_stats: 'View team performance statistics',
+  view_own_reports: 'View own performance statistics',
+  view_team_reports: 'View team performance statistics',
   view_all_reports: 'View all system reports and analytics',
 
   // Data
-  import_data: 'Import client data from files',
-  export_data: 'Export client and system data',
-  manual_priority: 'Manually change client contact priority',
+  import_clients: 'Import client data from files',
+  export_clients: 'Export client and system data',
+  manage_client_priority: 'Manually change client contact priority',
 
   // Users
   view_users: 'View user accounts',
@@ -221,6 +227,6 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Scoring Configuration
   view_scoring_config: 'View scoring configuration and thresholds',
   edit_scoring_config: 'Update scoring weights and priority thresholds',
-  manage_seller_config: 'Manage seller-specific scoring configurations',
-  view_config_history: 'View scoring configuration change history',
+  manage_seller_scoring_config: 'Manage seller-specific scoring configurations',
+  view_scoring_config_history: 'View scoring configuration change history',
 }

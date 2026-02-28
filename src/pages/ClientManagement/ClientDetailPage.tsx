@@ -59,6 +59,8 @@ import { useOriginateCall } from '@/features/calls/hooks/useCall'
 import { useCallWebSocket } from '@/features/calls/hooks/useCallWebSocket'
 import { useAuthStore } from '@/stores/authStore'
 import { useUserDepartment } from '@/features/users'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 
 // Extended types for SMS and Call items with API-specific properties
 type ExtendedSMSItem = {
@@ -255,18 +257,16 @@ export function ClientDetailPage() {
   const client = useMemo(() => {
     if (!profile) return null
 
-    // Build phones array from profile fields
-    // Filter out placeholder "000000000000" phones from legacy data migration
+    // Build phones array from additional_phones (sourced from client_contacts types 1, 2, 29)
     const isValidPhone = (p: string | null | undefined): p is string => !!p && !/^0+$/.test(p)
     const phones: Array<{ number: string; type: string }> = []
-    if (isValidPhone(profile.phone_primary))
-      phones.push({ number: profile.phone_primary, type: 'primary' })
-    if (isValidPhone(profile.phone_secondary))
-      phones.push({ number: profile.phone_secondary, type: 'secondary' })
-    if (profile.additional_phones) {
+    if (profile.additional_phones && profile.additional_phones.length > 0) {
       profile.additional_phones
         .filter((p) => isValidPhone(p.number))
         .forEach((p) => phones.push({ number: p.number, type: p.type }))
+    } else if (isValidPhone(profile.phone_primary)) {
+      // Fallback for backward compat
+      phones.push({ number: profile.phone_primary, type: 'mobile' })
     }
 
     return {
@@ -1099,52 +1099,58 @@ export function ClientDetailPage() {
           >
             {t('pages.clients.debtSummary.title')}
           </Button>
-          <Button
-            size="md"
-            variant="outline"
-            leftIcon={<Icons.PencilEdit size={20} />}
-            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
-            onClick={() => setIsNoteModalOpen(true)}
-          >
-            {t('pages.clients.activity.addNote')}
-          </Button>
-          <Button
-            size="md"
-            variant="outline"
-            leftIcon={<Icons.Clock01 size={20} />}
-            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
-            onClick={() => setIsTaskModalOpen(true)}
-          >
-            {t('pages.clients.tasks.addTask', 'Add Task')}
-          </Button>
-          <Button
-            size="md"
-            leftIcon={<Icons.Headset size={20} />}
-            className="w-full flex-1 rounded-full xl:w-auto xl:flex-none"
-            disabled={!user?.asterisk_extension}
-            onClick={() => {
-              const phoneNumber = client.phones?.[0]?.number
-              if (!phoneNumber) {
-                toast.error('Client has no phone number')
-                return
-              }
+          <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+            <Button
+              size="md"
+              variant="outline"
+              leftIcon={<Icons.PencilEdit size={20} />}
+              className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
+              onClick={() => setIsNoteModalOpen(true)}
+            >
+              {t('pages.clients.activity.addNote')}
+            </Button>
+          </PermissionGuard>
+          <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_TASKS}>
+            <Button
+              size="md"
+              variant="outline"
+              leftIcon={<Icons.Clock01 size={20} />}
+              className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
+              onClick={() => setIsTaskModalOpen(true)}
+            >
+              {t('pages.clients.tasks.addTask', 'Add Task')}
+            </Button>
+          </PermissionGuard>
+          <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+            <Button
+              size="md"
+              leftIcon={<Icons.Headset size={20} />}
+              className="w-full flex-1 rounded-full xl:w-auto xl:flex-none"
+              disabled={!user?.is_agent || !user?.asterisk_extension}
+              onClick={() => {
+                const phoneNumber = client.phones?.[0]?.number
+                if (!phoneNumber) {
+                  toast.error('Client has no phone number')
+                  return
+                }
 
-              if (isCallActive()) {
-                toast.warning(
-                  t('pages.clients.modals.callDialog.callInProgress') ||
-                    'Another call or recording is already in progress. Please finish or close it first.'
-                )
-                return
-              }
+                if (isCallActive()) {
+                  toast.warning(
+                    t('pages.clients.modals.callDialog.callInProgress') ||
+                      'Another call or recording is already in progress. Please finish or close it first.'
+                  )
+                  return
+                }
 
-              // Open modal in 'initial' state to let user select call type
-              setSelectedPhoneForCall(phoneNumber)
-              setOpenCallModal('call-dialog')
-              setIsCallModalOpen(true)
-            }}
-          >
-            {t('pages.clients.activity.call')}
-          </Button>
+                // Open modal in 'initial' state to let user select call type
+                setSelectedPhoneForCall(phoneNumber)
+                setOpenCallModal('call-dialog')
+                setIsCallModalOpen(true)
+              }}
+            >
+              {t('pages.clients.activity.call')}
+            </Button>
+          </PermissionGuard>
           <Button
             size="md"
             variant="primary"
@@ -1196,14 +1202,16 @@ export function ClientDetailPage() {
                     </span>
                   )}
                 </div>
-                <button
-                  onClick={() => setIsTagModalOpen(true)}
-                  className="shrink-0 text-gray-500 transition-colors hover:text-gray-700"
-                  title="Manage tags"
-                  type="button"
-                >
-                  <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
-                </button>
+                <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                  <button
+                    onClick={() => setIsTagModalOpen(true)}
+                    className="shrink-0 text-gray-500 transition-colors hover:text-gray-700"
+                    title="Manage tags"
+                    type="button"
+                  >
+                    <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
+                  </button>
+                </PermissionGuard>
               </div>
             </div>
             <div className="flex flex-col gap-1 self-stretch">
@@ -1225,14 +1233,16 @@ export function ClientDetailPage() {
                       {client.responsibleEmployee}
                     </p>
                   )}
-                  <button
-                    onClick={() => setAssignRoleModalMode('employee')}
-                    className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                    title="Assign employee"
-                    type="button"
-                  >
-                    <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                  </button>
+                  <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                    <button
+                      onClick={() => setAssignRoleModalMode('employee')}
+                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                      title="Assign employee"
+                      type="button"
+                    >
+                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                    </button>
+                  </PermissionGuard>
                 </div>
               </div>
               <div className="flex min-h-8 items-center self-stretch p-0">
@@ -1245,14 +1255,16 @@ export function ClientDetailPage() {
                       {client.responsibleResearcher}
                     </p>
                   )}
-                  <button
-                    onClick={() => setAssignRoleModalMode('searcher')}
-                    className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                    title="Assign searcher"
-                    type="button"
-                  >
-                    <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                  </button>
+                  <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                    <button
+                      onClick={() => setAssignRoleModalMode('searcher')}
+                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                      title="Assign searcher"
+                      type="button"
+                    >
+                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                    </button>
+                  </PermissionGuard>
                 </div>
               </div>
             </div>
@@ -1269,41 +1281,48 @@ export function ClientDetailPage() {
                       {phone.number}
                     </span>
                     <div className="flex shrink-0 items-center gap-1 md:gap-2">
-                      <button
-                        onClick={() => {
-                          if (isCallActive()) {
-                            toast.warning(
-                              t('pages.clients.modals.callDialog.callInProgress') ||
-                                'Another call or recording is already in progress. Please finish or close it first.'
-                            )
-                            return
-                          }
-                          setSelectedPhoneForCall(phone.number)
-                          setOpenCallModal('call-dialog')
-                          setIsCallModalOpen(true)
-                        }}
-                        className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                      >
-                        <Icons.Headset size={16} className="flex-shrink-0" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedPhoneForSMS(phone.number)
-                          setIsSendSMSModalOpen(true)
-                        }}
-                        className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                      >
-                        <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedPhoneForNote(phone.number)
-                          setIsNoteModalOpen(true)
-                        }}
-                        className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                      >
-                        <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                      </button>
+                      <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+                        <button
+                          disabled={!user?.is_agent || !user?.asterisk_extension}
+                          onClick={() => {
+                            if (isCallActive()) {
+                              toast.warning(
+                                t('pages.clients.modals.callDialog.callInProgress') ||
+                                  'Another call or recording is already in progress. Please finish or close it first.'
+                              )
+                              return
+                            }
+                            setSelectedPhoneForCall(phone.number)
+                            setOpenCallModal('call-dialog')
+                            setIsCallModalOpen(true)
+                          }}
+                          className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                        >
+                          <Icons.Headset size={16} className="flex-shrink-0" />
+                        </button>
+                      </PermissionGuard>
+                      <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                        <button
+                          onClick={() => {
+                            setSelectedPhoneForSMS(phone.number)
+                            setIsSendSMSModalOpen(true)
+                          }}
+                          className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                        >
+                          <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                        </button>
+                      </PermissionGuard>
+                      <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+                        <button
+                          onClick={() => {
+                            setSelectedPhoneForNote(phone.number)
+                            setIsNoteModalOpen(true)
+                          }}
+                          className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                        >
+                          <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                        </button>
+                      </PermissionGuard>
                     </div>
                   </div>
                 ))}
@@ -1590,41 +1609,48 @@ export function ClientDetailPage() {
                           </span>
                           {contact.isPhone && contact.contactValue && (
                             <div className="flex shrink-0 items-center gap-1 md:gap-2">
-                              <button
-                                onClick={() => {
-                                  if (isCallActive()) {
-                                    toast.warning(
-                                      t('pages.clients.modals.callDialog.callInProgress') ||
-                                        'Another call or recording is already in progress. Please finish or close it first.'
-                                    )
-                                    return
-                                  }
-                                  setSelectedPhoneForCall(contact.contactValue)
-                                  setOpenCallModal('call-dialog')
-                                  setIsCallModalOpen(true)
-                                }}
-                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                              >
-                                <Icons.Headset size={16} className="flex-shrink-0" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedPhoneForSMS(contact.contactValue)
-                                  setIsSendSMSModalOpen(true)
-                                }}
-                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                              >
-                                <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedPhoneForNote(contact.contactValue)
-                                  setIsNoteModalOpen(true)
-                                }}
-                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                              >
-                                <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                              </button>
+                              <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+                                <button
+                                  disabled={!user?.is_agent || !user?.asterisk_extension}
+                                  onClick={() => {
+                                    if (isCallActive()) {
+                                      toast.warning(
+                                        t('pages.clients.modals.callDialog.callInProgress') ||
+                                          'Another call or recording is already in progress. Please finish or close it first.'
+                                      )
+                                      return
+                                    }
+                                    setSelectedPhoneForCall(contact.contactValue)
+                                    setOpenCallModal('call-dialog')
+                                    setIsCallModalOpen(true)
+                                  }}
+                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                                >
+                                  <Icons.Headset size={16} className="flex-shrink-0" />
+                                </button>
+                              </PermissionGuard>
+                              <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                                <button
+                                  onClick={() => {
+                                    setSelectedPhoneForSMS(contact.contactValue)
+                                    setIsSendSMSModalOpen(true)
+                                  }}
+                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                                >
+                                  <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                                </button>
+                              </PermissionGuard>
+                              <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+                                <button
+                                  onClick={() => {
+                                    setSelectedPhoneForNote(contact.contactValue)
+                                    setIsNoteModalOpen(true)
+                                  }}
+                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                                >
+                                  <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                                </button>
+                              </PermissionGuard>
                             </div>
                           )}
                         </div>
@@ -1746,41 +1772,48 @@ export function ClientDetailPage() {
                       </span>
                       {client.work?.workPhone && client.work.workPhone !== '-' && (
                         <div className="flex shrink-0 items-center gap-1 md:gap-2">
-                          <button
-                            onClick={() => {
-                              if (isCallActive()) {
-                                toast.warning(
-                                  t('pages.clients.modals.callDialog.callInProgress') ||
-                                    'Another call or recording is already in progress. Please finish or close it first.'
-                                )
-                                return
-                              }
-                              setSelectedPhoneForCall(client.work?.workPhone || '')
-                              setOpenCallModal('call-dialog')
-                              setIsCallModalOpen(true)
-                            }}
-                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                          >
-                            <Icons.Headset size={16} className="flex-shrink-0" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedPhoneForSMS(client.work?.workPhone || '')
-                              setIsSendSMSModalOpen(true)
-                            }}
-                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                          >
-                            <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedPhoneForNote(client.work?.workPhone || '')
-                              setIsNoteModalOpen(true)
-                            }}
-                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                          >
-                            <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                          </button>
+                          <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+                            <button
+                              disabled={!user?.is_agent || !user?.asterisk_extension}
+                              onClick={() => {
+                                if (isCallActive()) {
+                                  toast.warning(
+                                    t('pages.clients.modals.callDialog.callInProgress') ||
+                                      'Another call or recording is already in progress. Please finish or close it first.'
+                                  )
+                                  return
+                                }
+                                setSelectedPhoneForCall(client.work?.workPhone || '')
+                                setOpenCallModal('call-dialog')
+                                setIsCallModalOpen(true)
+                              }}
+                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                            >
+                              <Icons.Headset size={16} className="flex-shrink-0" />
+                            </button>
+                          </PermissionGuard>
+                          <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                            <button
+                              onClick={() => {
+                                setSelectedPhoneForSMS(client.work?.workPhone || '')
+                                setIsSendSMSModalOpen(true)
+                              }}
+                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                            >
+                              <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                            </button>
+                          </PermissionGuard>
+                          <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+                            <button
+                              onClick={() => {
+                                setSelectedPhoneForNote(client.work?.workPhone || '')
+                                setIsNoteModalOpen(true)
+                              }}
+                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                            >
+                              <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                            </button>
+                          </PermissionGuard>
                         </div>
                       )}
                     </div>

@@ -21,6 +21,8 @@ import type { SmsTemplate } from './types'
 import { mapTemplateResponseArray } from './utils'
 import { useSMSTemplates } from '@/features/sms'
 import { useAuthStore } from '@/stores/authStore'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 import {
   CreateTemplateModal,
   EditTemplateModal,
@@ -227,14 +229,16 @@ export function SmsTemplatesPage() {
         <div className="flex items-center justify-center gap-2 sm:gap-4">
           {/* Desktop: Individual link buttons */}
           <div className="hidden items-center gap-4 lg:flex">
-            <LinkButton
-              variant="regular-black"
-              size="xs"
-              onClick={() => handleEdit(template)}
-              leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
-            >
-              {t('actions.edit')}
-            </LinkButton>
+            <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => handleEdit(template)}
+                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('actions.edit')}
+              </LinkButton>
+            </PermissionGuard>
             <LinkButton
               variant="regular-black"
               size="xs"
@@ -243,15 +247,17 @@ export function SmsTemplatesPage() {
             >
               {t('pages.smsTemplates.view')}
             </LinkButton>
-            <LinkButton
-              variant="regular-black"
-              size="xs"
-              disabled={template.isSystem}
-              onClick={() => handleDelete(template)}
-              leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
-            >
-              {t('actions.delete')}
-            </LinkButton>
+            <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                disabled={template.isSystem}
+                onClick={() => handleDelete(template)}
+                leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('actions.delete')}
+              </LinkButton>
+            </PermissionGuard>
           </div>
 
           {/* Mobile/Tablet: Dropdown button group */}
@@ -271,13 +277,15 @@ export function SmsTemplatesPage() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-white">
-                <DropdownMenuItem
-                  onClick={() => handleEdit(template)}
-                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
-                >
-                  <Icons.PencilEdit size={16} strokeWidth={1.5} />
-                  <span>{t('actions.edit')}</span>
-                </DropdownMenuItem>
+                <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+                  <DropdownMenuItem
+                    onClick={() => handleEdit(template)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                  >
+                    <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                    <span>{t('actions.edit')}</span>
+                  </DropdownMenuItem>
+                </PermissionGuard>
                 <DropdownMenuItem
                   onClick={() => handleView(template)}
                   className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
@@ -285,14 +293,16 @@ export function SmsTemplatesPage() {
                   <Icons.View size={16} strokeWidth={1.5} />
                   <span>{t('pages.smsTemplates.view')}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => handleDelete(template)}
-                  disabled={template.isSystem}
-                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Icons.Delete size={16} strokeWidth={1.5} />
-                  <span>{t('actions.delete')}</span>
-                </DropdownMenuItem>
+                <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+                  <DropdownMenuItem
+                    onClick={() => handleDelete(template)}
+                    disabled={template.isSystem}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Icons.Delete size={16} strokeWidth={1.5} />
+                    <span>{t('actions.delete')}</span>
+                  </DropdownMenuItem>
+                </PermissionGuard>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -320,24 +330,26 @@ export function SmsTemplatesPage() {
         </div>
 
         {/* Desktop: Full button with text, Mobile: Icon-only button */}
-        <div className="hidden sm:block">
-          <DoubleButton
-            size="md"
-            icon={<Icons.Add size={20} strokeWidth={2} />}
-            iconPosition="left"
+        <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+          <div className="hidden sm:block">
+            <DoubleButton
+              size="md"
+              icon={<Icons.Add size={20} strokeWidth={2} />}
+              iconPosition="left"
+              onClick={() => setShowCreateModal(true)}
+            >
+              {t('pages.smsTemplates.createTemplate')}
+            </DoubleButton>
+          </div>
+          {/* Mobile: Icon-only button */}
+          <button
             onClick={() => setShowCreateModal(true)}
+            className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+            aria-label={t('pages.smsTemplates.createTemplate')}
           >
-            {t('pages.smsTemplates.createTemplate')}
-          </DoubleButton>
-        </div>
-        {/* Mobile: Icon-only button */}
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
-          aria-label={t('pages.smsTemplates.createTemplate')}
-        >
-          <Icons.Add size={20} strokeWidth={2} />
-        </button>
+            <Icons.Add size={20} strokeWidth={2} />
+          </button>
+        </PermissionGuard>
       </div>
 
       {/* Data Table */}
