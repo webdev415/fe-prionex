@@ -9,6 +9,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth'
 import { authApi } from '@/features/auth/api/authApi'
 import { useAuthStore } from '@/stores/authStore'
@@ -26,6 +27,7 @@ import { cn } from '@/lib/utils'
 export function ProjectSelector() {
   const { t } = useTranslation('common')
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [isSwitchingProject, setIsSwitchingProject] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
 
@@ -101,9 +103,13 @@ export function ProjectSelector() {
 
         // Update store state directly
         useAuthStore.setState({ user: updatedUser, hasCheckedAuth: true })
+
+        // Clear all React Query cache so data re-fetches with new project context
+        queryClient.removeQueries()
       } catch (meError) {
         console.warn('Failed to fetch updated user data after project switch:', meError)
-        // Still show success since the switch worked, just couldn't refresh user data
+        // Still clear cache even if user fetch failed — token was already updated
+        queryClient.removeQueries()
       }
 
       toast.success(
