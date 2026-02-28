@@ -118,8 +118,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const [lastName, setLastName] = useState(profile.last_name || parsedNames?.[1] || '')
   const [middleName, setMiddleName] = useState(profile.middle_name || parsedNames?.[2] || '')
   const [email, setEmail] = useState(profile.email || '')
-  const [phonePrimary, setPhonePrimary] = useState(profile.phone_primary || '')
-  const [phoneSecondary, setPhoneSecondary] = useState(profile.phone_secondary || '')
+  // Phone fields from contacts (type 1 = mobile, type 2 = home, type 29 = register)
+  const existingMobileContact = profile.recommenders?.find((c) => c.contact_type_id === 1)
+  const existingHomeContact = profile.recommenders?.find((c) => c.contact_type_id === 2)
+  const existingRegisterContact = profile.recommenders?.find((c) => c.contact_type_id === 29)
+  const [phoneMobile, setPhoneMobile] = useState(existingMobileContact?.contact_value || '')
+  const [phoneHome, setPhoneHome] = useState(existingHomeContact?.contact_value || '')
+  const [phoneRegister, setPhoneRegister] = useState(existingRegisterContact?.contact_value || '')
   const [dateOfBirth, setDateOfBirth] = useState(profile.date_of_birth || '')
   const [maritalStatus, setMaritalStatus] = useState(profile.marital_status || '')
   const [familyMembers, setFamilyMembers] = useState(profile.family_members_count?.toString() || '')
@@ -187,8 +192,10 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const [addressError, setAddressError] = useState<string | null>(null)
   const [contactError, setContactError] = useState<string | null>(null)
 
-  const handleSavePersonalInfo = () => {
+  const handleSavePersonalInfo = async () => {
     setPersonalError(null)
+
+    // 1. Save client fields (without phone)
     const data = canEditAll
       ? {
           first_name: firstName,
@@ -196,35 +203,113 @@ function EditForm({ profile, clientId }: EditFormProps) {
           middle_name: middleName || undefined,
           email: email.trim() || undefined,
           date_of_birth: dateOfBirth || undefined,
-          phone_primary: phonePrimary,
-          phone_secondary: phoneSecondary || undefined,
           tax_id: taxId || undefined,
           marital_status: maritalStatus || undefined,
           family_members_count: familyMembers ? Number(familyMembers) : undefined,
           income_level: incomeLevel || undefined,
         }
-      : {
-          phone_primary: phonePrimary,
-          phone_secondary: phoneSecondary || undefined,
+      : {}
+
+    // Save client fields if any
+    if (Object.keys(data).length > 0) {
+      updateClient(
+        { id: clientId, data },
+        {
+          onError: (error) => {
+            setPersonalError(extractErrorMessage(error, t('pages.clients.editModal.saveError')))
+          },
         }
-    updateClient(
-      {
-        id: clientId,
-        data,
-      },
-      {
-        onSuccess: async () => {
-          toast.success(t('pages.clients.editModal.saveSuccess'))
-          await queryClient.invalidateQueries({ queryKey: clientKeys.profile(clientId) })
-          queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId) })
-          queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
-          queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
-        },
-        onError: (error) => {
-          setPersonalError(extractErrorMessage(error, t('pages.clients.editModal.saveError')))
-        },
+      )
+    }
+
+    // 2. Save phone contacts (type 1 = mobile, type 2 = home)
+    const invalidateAll = () => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.profile(clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
+    }
+    const onPhoneError = (error: unknown) => {
+      setPersonalError(extractErrorMessage(error, t('pages.clients.editModal.saveError')))
+    }
+
+    // Mobile phone (type 1) — required
+    if (existingMobileContact) {
+      if (phoneMobile.trim() !== existingMobileContact.contact_value) {
+        updateContact(
+          {
+            clientId,
+            contactId: existingMobileContact.id,
+            data: { contact_value: phoneMobile.trim() },
+          },
+          { onSuccess: invalidateAll, onError: onPhoneError }
+        )
       }
-    )
+    } else if (phoneMobile.trim()) {
+      createContact(
+        { clientId, data: { contact_value: phoneMobile.trim(), contact_type_id: 1 } },
+        { onSuccess: invalidateAll, onError: onPhoneError }
+      )
+    }
+
+    // Home phone (type 2) — optional
+    if (existingHomeContact) {
+      if (phoneHome.trim()) {
+        if (phoneHome.trim() !== existingHomeContact.contact_value) {
+          updateContact(
+            {
+              clientId,
+              contactId: existingHomeContact.id,
+              data: { contact_value: phoneHome.trim() },
+            },
+            { onSuccess: invalidateAll, onError: onPhoneError }
+          )
+        }
+      } else {
+        // Remove home phone if cleared
+        deleteContact(
+          { clientId, contactId: existingHomeContact.id },
+          { onSuccess: invalidateAll, onError: onPhoneError }
+        )
+      }
+    } else if (phoneHome.trim()) {
+      createContact(
+        { clientId, data: { contact_value: phoneHome.trim(), contact_type_id: 2 } },
+        { onSuccess: invalidateAll, onError: onPhoneError }
+      )
+    }
+
+    // Register phone (type 29) — optional
+    if (existingRegisterContact) {
+      if (phoneRegister.trim()) {
+        if (phoneRegister.trim() !== existingRegisterContact.contact_value) {
+          updateContact(
+            {
+              clientId,
+              contactId: existingRegisterContact.id,
+              data: { contact_value: phoneRegister.trim() },
+            },
+            { onSuccess: invalidateAll, onError: onPhoneError }
+          )
+        }
+      } else {
+        // Remove register phone if cleared
+        deleteContact(
+          { clientId, contactId: existingRegisterContact.id },
+          { onSuccess: invalidateAll, onError: onPhoneError }
+        )
+      }
+    } else if (phoneRegister.trim()) {
+      createContact(
+        { clientId, data: { contact_value: phoneRegister.trim(), contact_type_id: 29 } },
+        { onSuccess: invalidateAll, onError: onPhoneError }
+      )
+    }
+
+    if (!personalError) {
+      toast.success(t('pages.clients.editModal.saveSuccess'))
+      invalidateAll()
+    }
   }
 
   const handleSaveWork = () => {
@@ -679,27 +764,40 @@ function EditForm({ profile, clientId }: EditFormProps) {
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
               <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                {t('pages.clients.editModal.phonePrimary')}{' '}
-                <span className="text-error-500">*</span>
+                {t('pages.clients.editModal.phoneMobile')} <span className="text-error-500">*</span>
               </label>
               <Input
-                value={phonePrimary}
-                onChange={(e) => setPhonePrimary(e.target.value)}
+                value={phoneMobile}
+                onChange={(e) => setPhoneMobile(e.target.value)}
                 inputSize="md"
                 className="rounded-md"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
               <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                {t('pages.clients.editModal.phoneSecondary')}
+                {t('pages.clients.editModal.phoneHome')}
               </label>
               <Input
-                value={phoneSecondary}
-                onChange={(e) => setPhoneSecondary(e.target.value)}
+                value={phoneHome}
+                onChange={(e) => setPhoneHome(e.target.value)}
                 inputSize="md"
                 className="rounded-md"
               />
             </div>
+          </div>
+          <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
+            <div className="flex flex-1 flex-col gap-1">
+              <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                {t('pages.clients.editModal.phoneRegister')}
+              </label>
+              <Input
+                value={phoneRegister}
+                onChange={(e) => setPhoneRegister(e.target.value)}
+                inputSize="md"
+                className="rounded-md"
+              />
+            </div>
+            <div className="flex-1" />
           </div>
         </div>
       </div>
@@ -712,7 +810,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
           onClick={handleSavePersonalInfo}
           disabled={
             isSavingPersonal ||
-            !phonePrimary.trim() ||
+            !phoneMobile.trim() ||
             (canEditAll && (!firstName.trim() || !lastName.trim()))
           }
           className="rounded-md"

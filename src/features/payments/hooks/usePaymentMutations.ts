@@ -267,8 +267,7 @@ export function useGenerateReceipt() {
 
             finalClientData = {
               fullName: finalClientData?.fullName || fullName || `Client #${client.id}`,
-              phone:
-                finalClientData?.phone || client.phone_primary || client.phone_secondary || 'N/A',
+              phone: finalClientData?.phone || client.phone_primary || 'N/A',
               contract: contractNumber,
               daysPastDue: finalClientData?.daysPastDue ?? daysPastDue,
             }
@@ -280,7 +279,7 @@ export function useGenerateReceipt() {
 
             finalClientData = {
               fullName: fullName || `Client #${client.id}`,
-              phone: client.phone_primary || client.phone_secondary || 'N/A',
+              phone: client.phone_primary || 'N/A',
               contract: 'N/A',
               daysPastDue: undefined,
             }

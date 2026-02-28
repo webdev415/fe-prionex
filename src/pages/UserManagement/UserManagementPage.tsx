@@ -348,18 +348,20 @@ export function UserManagementPage() {
           </div>
 
           {/* Status toggle - hide for current user */}
-          {currentUser?.id !== String(user.id) && (
-            <div className="flex items-center gap-1 sm:gap-2">
-              <label className="text-dark-500 hidden text-xs font-medium sm:inline">
-                {t('pages.users.actions.status')}
-              </label>
-              <ToggleSwitch
-                checked={isActive(user)}
-                onChange={(checked) => handleStatusToggle(user, checked)}
-                ariaLabel={`${isActive(user) ? t('pages.users.actions.deactivate') : t('pages.users.actions.activate')} user ${user.username}`}
-              />
-            </div>
-          )}
+          <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+            {currentUser?.id !== String(user.id) && (
+              <div className="flex items-center gap-1 sm:gap-2">
+                <label className="text-dark-500 hidden text-xs font-medium sm:inline">
+                  {t('pages.users.actions.status')}
+                </label>
+                <ToggleSwitch
+                  checked={isActive(user)}
+                  onChange={(checked) => handleStatusToggle(user, checked)}
+                  ariaLabel={`${isActive(user) ? t('pages.users.actions.deactivate') : t('pages.users.actions.activate')} user ${user.username}`}
+                />
+              </div>
+            )}
+          </PermissionGuard>
         </div>
       ),
     },

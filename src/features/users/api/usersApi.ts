@@ -128,6 +128,7 @@ export interface OperatorUser {
   username: string
   full_name: string
   first_name: string
+  middle_name: string | null
   last_name: string
   email: string
   status: string
@@ -147,6 +148,21 @@ export async function getOperators(
   return response.data
 }
 
+/**
+ * Get the department name for a user in a project.
+ * Uses the non-admin endpoint accessible to any authenticated user.
+ */
+export async function getUserDepartment(
+  userId: number,
+  projectId?: number
+): Promise<{ department_name: string | null }> {
+  const response = await api.get<{ department_name: string | null }>(
+    `/api/v1/users/${userId}/department`,
+    { params: projectId ? { project_id: projectId } : {} }
+  )
+  return response.data
+}
+
 export const usersApi = {
   getUsers,
   getUser,
@@ -157,4 +173,5 @@ export const usersApi = {
   resetPassword,
   unlockAccount,
   getOperators,
+  getUserDepartment,
 }

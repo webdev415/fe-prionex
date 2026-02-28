@@ -29,12 +29,16 @@ import { useCallStore } from '@/stores/callStore'
 import { useClientProfile, useClientActivities } from '@/features/clients/hooks/useClients'
 import { useCreateNoteInteraction } from '@/features/clients/hooks/useNoteInteraction'
 import { useInteractionTypes } from '@/features/clients/hooks/useNoteInteraction'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 
 export function ActivityTimelinePage() {
   const { t } = useTranslation('common')
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { isCallActive, setOpenCallModal } = useCallStore()
+  const { user } = useAuth()
   const clientId = Number(id) || 0
 
   // Fetch real data from API
@@ -47,11 +51,13 @@ export function ActivityTimelinePage() {
   // Build client object from profile
   const client = useMemo(() => {
     if (!profile) return null
-    // Build phones array from primary + additional phones
-    const phones = [
-      { number: profile.phone_primary, type: 'primary', label: 'Primary' },
-      ...(profile.additional_phones ?? []),
-    ]
+    // Build phones array from additional_phones (sourced from contacts)
+    const phones =
+      profile.additional_phones && profile.additional_phones.length > 0
+        ? profile.additional_phones
+        : profile.phone_primary
+          ? [{ number: profile.phone_primary, type: 'mobile', label: 'Mobile' }]
+          : []
     return {
       id: profile.id,
       fullName: profile.full_name,
@@ -259,41 +265,48 @@ export function ActivityTimelinePage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 md:gap-5">
-          <Button
-            size="md"
-            variant="outline"
-            leftIcon={<Icons.PencilEdit size={20} />}
-            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
-            onClick={() => setIsNoteModalOpen(true)}
-          >
-            {t('pages.clients.activity.addNote')}
-          </Button>
-          <Button
-            size="md"
-            leftIcon={<Icons.Headset size={20} />}
-            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
-            onClick={() => {
-              if (isCallActive()) {
-                toast.warning(
-                  t('pages.clients.modals.callDialog.callInProgress') ||
-                    'Another call or recording is already in progress. Please finish or close it first.'
-                )
-                return
-              }
-              setOpenCallModal('call-dialog')
-              setIsCallModalOpen(true)
-            }}
-          >
-            {t('pages.clients.activity.call')}
-          </Button>
-          <Button
-            size="md"
-            variant="secondary"
-            leftIcon={<Icons.RemoveMale size={20} />}
-            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
-          >
-            {t('pages.clients.activity.deleteClient')}
-          </Button>
+          <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+            <Button
+              size="md"
+              variant="outline"
+              leftIcon={<Icons.PencilEdit size={20} />}
+              className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
+              onClick={() => setIsNoteModalOpen(true)}
+            >
+              {t('pages.clients.activity.addNote')}
+            </Button>
+          </PermissionGuard>
+          <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+            <Button
+              size="md"
+              leftIcon={<Icons.Headset size={20} />}
+              className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
+              disabled={!user?.is_agent || !user?.asterisk_extension}
+              onClick={() => {
+                if (isCallActive()) {
+                  toast.warning(
+                    t('pages.clients.modals.callDialog.callInProgress') ||
+                      'Another call or recording is already in progress. Please finish or close it first.'
+                  )
+                  return
+                }
+                setOpenCallModal('call-dialog')
+                setIsCallModalOpen(true)
+              }}
+            >
+              {t('pages.clients.activity.call')}
+            </Button>
+          </PermissionGuard>
+          <PermissionGuard permission={PERMISSIONS.CLIENTS.DELETE}>
+            <Button
+              size="md"
+              variant="secondary"
+              leftIcon={<Icons.RemoveMale size={20} />}
+              className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
+            >
+              {t('pages.clients.activity.deleteClient')}
+            </Button>
+          </PermissionGuard>
         </div>
       </div>
 

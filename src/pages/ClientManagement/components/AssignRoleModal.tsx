@@ -14,7 +14,8 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { Label } from '@/components/ui/Label'
 import { Icons } from '@/lib/icons'
-import { useUsers } from '@/features/users/hooks/useUsers'
+import { useOperators } from '@/features/users/hooks/useUsers'
+import { useAuthStore } from '@/stores/authStore'
 
 export type AssignRoleMode = 'employee' | 'searcher'
 
@@ -51,16 +52,17 @@ export function AssignRoleModal({
   onAssign,
 }: AssignRoleModalProps) {
   const { t } = useTranslation('common')
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
 
-  const { data: usersResponse } = useUsers({ status: 'active', page_size: 100 })
+  const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
   const userOptions = useMemo(() => {
-    if (!usersResponse?.users) return []
-    return usersResponse.users.map((user) => ({
+    if (!operators) return []
+    return operators.map((user) => ({
       id: user.id.toString(),
       name: [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' '),
     }))
-  }, [usersResponse])
+  }, [operators])
 
   const [userId, setUserId] = useState<string>('')
   const [reason, setReason] = useState<string>('')

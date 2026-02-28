@@ -480,7 +480,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           id: item.id,
           name: item.full_name,
           debt: item.total_debt,
-          phone: item.phone_primary,
+          phone: item.phone_primary ?? '',
           priority: mapPriorityLevel(item.priority_level),
           score: item.priority_score,
         }))
@@ -555,13 +555,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navItemsResult = useMemo(() => {
     // All navigation items with required permissions
     const allNavItems: ExtendedSidebarItem[] = [
-      { path: '/dashboard', icon: 'home-04', label: t('navigation.dashboard') },
-      { path: '/dashboard', icon: 'activity-01', label: t('navigation.activity'), disabled: true }, // Route doesn't exist
+      {
+        path: '/dashboard',
+        icon: 'home-04',
+        label: t('navigation.dashboard'),
+        requiredPermission: PERMISSIONS.CLIENTS.VIEW,
+      },
       {
         path: '/dashboard/import',
         icon: 'file-import',
         label: t('navigation.importClients'),
-        requiredPermission: PERMISSIONS.DATA.IMPORT_DATA,
+        requiredPermission: PERMISSIONS.DATA.IMPORT,
       },
       {
         path: '/dashboard/projects',
@@ -585,6 +589,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         path: '/dashboard/sellers',
         icon: 'user-multiple',
         label: t('navigation.sellers'),
+        requiredPermission: PERMISSIONS.SELLERS.VIEW,
       },
       {
         path: '/dashboard/roles',
@@ -602,26 +607,31 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         path: '/dashboard/audit-logs',
         icon: 'transaction-history',
         label: t('navigation.auditLogs'),
+        requiredPermission: PERMISSIONS.SYSTEM.VIEW_AUDIT_LOGS,
       },
       {
         path: '/dashboard/system-settings',
         icon: 'setting-07',
         label: t('navigation.systemSettings', 'System Settings'),
+        requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
         subItems: [
           {
             path: '/dashboard/system-settings/tags',
             label: t('navigation.tags', 'Tags'),
             icon: 'file-01',
+            requiredPermission: PERMISSIONS.TAGS.VIEW,
           },
           {
             path: '/dashboard/system-settings/scoring-configuration',
             label: t('navigation.scoringConfiguration'),
             icon: 'chart-01',
+            requiredPermission: PERMISSIONS.SCORING_CONFIG.VIEW,
           },
           {
             path: '/dashboard/system-settings/sms-templates',
             label: t('navigation.smsTemplates'),
             icon: 'mail-send-01',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
           },
         ],
       },

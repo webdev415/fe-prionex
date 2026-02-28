@@ -106,7 +106,6 @@ export function Step2FileUpload({
           const requiredColumns = [
             'clients_first_name',
             'clients_last_name',
-            'clients_phone_primary',
             'clients_tax_id',
             'debts_1_contract_number',
             'debts_1_remaining_debt_amount',
@@ -220,7 +219,7 @@ export function Step2FileUpload({
       'clients_last_name*',
       'clients_middle_name',
       'clients_date_of_birth',
-      'clients_phone_primary*',
+      'clients_phone_primary',
       'clients_phone_secondary',
       'clients_email',
       'clients_tax_id*',

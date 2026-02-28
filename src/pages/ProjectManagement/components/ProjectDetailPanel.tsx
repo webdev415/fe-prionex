@@ -14,6 +14,8 @@ import { formatCurrency, formatNumber, formatDateTime, truncateText } from '@/li
 import type { ApiProjectDetail } from '@/features/projects/types'
 import { ProjectDetailPanelSkeleton } from './ProjectDetailPanelSkeleton'
 import { Button } from '@/components/ui/Button'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 
 interface ProjectDetailPanelProps {
   project: ApiProjectDetail | null
@@ -219,26 +221,28 @@ export function ProjectDetailPanel({
       </div>
 
       {/* Footer Actions */}
-      <div className="flex gap-3 pt-3">
-        <Button
-          variant="primary"
-          size="xl"
-          onClick={onEdit}
-          className="h-[45px] flex-1 rounded-md text-sm"
-          leftIcon={<Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />}
-        >
-          {t('pages.projects.detailPanel.edit')}
-        </Button>
-        <Button
-          variant="danger"
-          size="xl"
-          onClick={onDelete}
-          className="h-[45px] flex-1 rounded-md text-sm"
-          leftIcon={<Icons.Delete size={20} className="text-white" strokeWidth={2} />}
-        >
-          {t('pages.projects.detailPanel.delete')}
-        </Button>
-      </div>
+      <PermissionGuard permission={PERMISSIONS.PROJECTS.MANAGE}>
+        <div className="flex gap-3 pt-3">
+          <Button
+            variant="primary"
+            size="xl"
+            onClick={onEdit}
+            className="h-[45px] flex-1 rounded-md text-sm"
+            leftIcon={<Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />}
+          >
+            {t('pages.projects.detailPanel.edit')}
+          </Button>
+          <Button
+            variant="danger"
+            size="xl"
+            onClick={onDelete}
+            className="h-[45px] flex-1 rounded-md text-sm"
+            leftIcon={<Icons.Delete size={20} className="text-white" strokeWidth={2} />}
+          >
+            {t('pages.projects.detailPanel.delete')}
+          </Button>
+        </div>
+      </PermissionGuard>
     </div>
   )
 }

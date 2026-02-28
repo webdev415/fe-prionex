@@ -30,6 +30,8 @@ import {
   useSMSSentModal,
   type Period,
 } from '@/features/report'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 
 // ============================================================================
 // Error State Component
@@ -275,18 +277,20 @@ export function ReportsDashboardPage() {
           <PeriodTabs selectedPeriod={selectedPeriod} onPeriodChange={handlePeriodChange} />
         </div>
         <div className="flex h-12 flex-1 flex-col items-end gap-2.5">
-          <Button
-            variant="primary"
-            size="md"
-            onClick={handleExport}
-            disabled={isExporting}
-            leftIcon={<Icons.Csv02 size={20} />}
-            className="rounded-full"
-          >
-            {isExporting
-              ? t('pages.reports.exporting', 'Exporting...')
-              : t('pages.reports.exportCsv')}
-          </Button>
+          <PermissionGuard permission={PERMISSIONS.REPORTS.VIEW_ALL_REPORTS}>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleExport}
+              disabled={isExporting}
+              leftIcon={<Icons.Csv02 size={20} />}
+              className="rounded-full"
+            >
+              {isExporting
+                ? t('pages.reports.exporting', 'Exporting...')
+                : t('pages.reports.exportCsv')}
+            </Button>
+          </PermissionGuard>
         </div>
       </div>
 

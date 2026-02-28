@@ -120,6 +120,20 @@ const mockProfileData = {
       contact_type_name: 'Third party mobile phone',
       comment: null,
     },
+    {
+      id: 11,
+      contact_value: '+380501234567',
+      contact_type_id: 1,
+      contact_type_name: 'Mobile phone',
+      comment: null,
+    },
+    {
+      id: 12,
+      contact_value: '+380671234567',
+      contact_type_id: 2,
+      contact_type_name: 'Home phone',
+      comment: null,
+    },
   ],
   addresses: [
     {
@@ -452,7 +466,8 @@ describe('EditClientModal', () => {
     it('should show inline edit form when edit button is clicked', () => {
       render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByTestId('edit-contact-btn'))
+      const editButtons = screen.getAllByTestId('edit-contact-btn')
+      fireEvent.click(editButtons[0])
 
       expect(screen.getByDisplayValue('+380509999999')).toBeInTheDocument()
     })
@@ -460,7 +475,8 @@ describe('EditClientModal', () => {
     it('should call updateContact when saving contact edit', async () => {
       render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByTestId('edit-contact-btn'))
+      const editButtons = screen.getAllByTestId('edit-contact-btn')
+      fireEvent.click(editButtons[0])
 
       const saveButtons = screen.getAllByText('Save Changes')
       const contactSaveBtn = saveButtons[saveButtons.length - 1]
@@ -603,22 +619,14 @@ describe('EditClientModal', () => {
         expect(screen.queryAllByTestId('delete-address-btn')).toHaveLength(0)
       })
 
-      it('should only send phone fields in save payload for operators', async () => {
+      it('should not call updateClient for operators (phones saved via contacts)', async () => {
         render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
 
         const saveButton = screen.getByText('Save Changes')
         fireEvent.click(saveButton)
 
         await waitFor(() => {
-          expect(mockMutate).toHaveBeenCalledWith(
-            expect.objectContaining({
-              data: {
-                phone_primary: '+380501234567',
-                phone_secondary: '+380671234567',
-              },
-            }),
-            expect.anything()
-          )
+          expect(mockMutate).not.toHaveBeenCalled()
         })
       })
     })

@@ -12,6 +12,8 @@ import { Alert } from '@/components/ui/Alert'
 import { Icons } from '@/lib/icons'
 import type { ApiUser } from '@/features/users/types'
 import { useAdminUnlockAccount } from '@/features/users/hooks'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { LockedIcon } from '@hugeicons/core-free-icons'
 
@@ -186,16 +188,18 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
         >
           {t('actions.cancel')}
         </Button>
-        <Button
-          type="button"
-          onClick={handleUnlock}
-          disabled={isPending}
-          className="h-[45px] flex-1 text-sm"
-        >
-          {isPending
-            ? t('pages.users.modals.unlock.unlocking')
-            : t('pages.users.modals.unlock.unlockAccountButton')}
-        </Button>
+        <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+          <Button
+            type="button"
+            onClick={handleUnlock}
+            disabled={isPending}
+            className="h-[45px] flex-1 text-sm"
+          >
+            {isPending
+              ? t('pages.users.modals.unlock.unlocking')
+              : t('pages.users.modals.unlock.unlockAccountButton')}
+          </Button>
+        </PermissionGuard>
       </ModalFooter>
     </Modal>
   )

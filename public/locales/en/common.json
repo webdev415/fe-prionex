@@ -823,7 +823,10 @@
         "middleName": "Middle Name",
         "dateOfBirth": "Date of Birth",
         "email": "Email",
-        "phonePrimary": "Primary Phone",
+        "phonePrimary": "Mobile Phone",
+        "phoneMobile": "Mobile Phone",
+        "phoneHome": "Home Phone",
+        "phoneRegister": "Register Phone",
         "phoneSecondary": "Secondary Phone",
         "addAddress": "Add Address",
         "addContact": "Add Contact",
@@ -2132,6 +2135,12 @@
           "successStatus": "Success Status"
         }
       }
+    },
+    "forbidden": {
+      "title": "Access Denied",
+      "message": "You don't have permission to access this page. Contact your administrator if you believe this is a mistake.",
+      "goBack": "Go Back",
+      "goHome": "Go to Dashboard"
     }
   }
 }

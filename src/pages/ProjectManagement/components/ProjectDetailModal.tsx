@@ -15,6 +15,8 @@ import type { ApiProjectDetail } from '@/features/projects/types'
 import { ProjectDetailPanelSkeleton } from './ProjectDetailPanelSkeleton'
 import { Button } from '@/components/ui/Button'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 
 interface ProjectDetailModalProps {
   project: ApiProjectDetail | null
@@ -248,26 +250,28 @@ export function ProjectDetailModal({
           </div>
         </div>
       </ModalContent>
-      <ModalFooter>
-        <Button
-          variant="primary"
-          size="xl"
-          onClick={handleEdit}
-          className="h-[45px] w-full flex-1 self-stretch rounded-md text-sm sm:flex-initial"
-          leftIcon={<Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />}
-        >
-          {t('pages.projects.detailPanel.edit')}
-        </Button>
-        <Button
-          variant="danger"
-          size="xl"
-          onClick={handleDelete}
-          className="h-[45px] w-full flex-1 self-stretch rounded-md text-sm sm:flex-initial"
-          leftIcon={<Icons.Delete size={20} className="text-white" strokeWidth={2} />}
-        >
-          {t('pages.projects.detailPanel.delete')}
-        </Button>
-      </ModalFooter>
+      <PermissionGuard permission={PERMISSIONS.PROJECTS.MANAGE}>
+        <ModalFooter>
+          <Button
+            variant="primary"
+            size="xl"
+            onClick={handleEdit}
+            className="h-[45px] w-full flex-1 self-stretch rounded-md text-sm sm:flex-initial"
+            leftIcon={<Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />}
+          >
+            {t('pages.projects.detailPanel.edit')}
+          </Button>
+          <Button
+            variant="danger"
+            size="xl"
+            onClick={handleDelete}
+            className="h-[45px] w-full flex-1 self-stretch rounded-md text-sm sm:flex-initial"
+            leftIcon={<Icons.Delete size={20} className="text-white" strokeWidth={2} />}
+          >
+            {t('pages.projects.detailPanel.delete')}
+          </Button>
+        </ModalFooter>
+      </PermissionGuard>
     </Modal>
   )
 }

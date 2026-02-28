@@ -5,7 +5,6 @@ import { ImportClientsPage } from '@/pages/ImportClients/ImportClientsPage'
 import { ProjectManagementPage } from '@/pages/ProjectManagement/ProjectManagementPage'
 import { RoleManagementPage } from '@/pages/RoleManagement/RoleManagementPage'
 import { DepartmentManagementPage } from '@/pages/DepartmentManagement'
-import { ForbiddenPage } from '@/pages/errors'
 import { ProtectedRoute } from './ProtectedRoute'
 import { PermissionRoute } from './PermissionRoute'
 import { GuestRoute } from './GuestRoute'
@@ -39,20 +38,14 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: '/forbidden',
-    element: (
-      <ProtectedRoute>
-        <ForbiddenPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
     path: '/dashboard',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <ClientManagementPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
+          <DashboardLayout>
+            <ClientManagementPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
@@ -82,9 +75,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/import',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <ImportClientsPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT}>
+          <DashboardLayout>
+            <ImportClientsPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
@@ -92,9 +87,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/import/history/:id',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <ImportDetailsPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT}>
+          <DashboardLayout>
+            <ImportDetailsPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
@@ -102,9 +99,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/import/history',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <ImportHistoryPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT}>
+          <DashboardLayout>
+            <ImportHistoryPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
@@ -160,9 +159,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/sellers',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <SellerManagementPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.SELLERS.VIEW}>
+          <DashboardLayout>
+            <SellerManagementPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
@@ -171,9 +172,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/system-settings/tags',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <TagsPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.TAGS.VIEW}>
+          <DashboardLayout>
+            <TagsPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
@@ -181,9 +184,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/system-settings/scoring-configuration',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <ScoringConfigurationPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW}>
+          <DashboardLayout>
+            <ScoringConfigurationPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
@@ -191,9 +196,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/system-settings/scoring-configuration/history',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <ConfigurationHistoryPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW_HISTORY}>
+          <DashboardLayout>
+            <ConfigurationHistoryPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
@@ -201,9 +208,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/system-settings/sms-templates',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <SmsTemplatesPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+          <DashboardLayout>
+            <SmsTemplatesPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
@@ -211,9 +220,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/audit-logs',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <AuditLogsPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.VIEW_AUDIT_LOGS}>
+          <DashboardLayout>
+            <AuditLogsPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
@@ -222,9 +233,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/clients/:id',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <ClientDetailPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
+          <DashboardLayout>
+            <ClientDetailPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
@@ -232,9 +245,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/clients/:id/debt-summary',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <DebtSummaryPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
+          <DashboardLayout>
+            <DebtSummaryPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
@@ -242,9 +257,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/clients/:id/activity',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <ActivityTimelinePage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
+          <DashboardLayout>
+            <ActivityTimelinePage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
@@ -252,9 +269,11 @@ export const router = createBrowserRouter([
     path: '/dashboard/clients/:id/payment-history',
     element: (
       <ProtectedRoute>
-        <DashboardLayout>
-          <PaymentHistoryPage />
-        </DashboardLayout>
+        <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
+          <DashboardLayout>
+            <PaymentHistoryPage />
+          </DashboardLayout>
+        </PermissionRoute>
       </ProtectedRoute>
     ),
   },
