@@ -13,6 +13,7 @@ export interface Payment {
   project_id: number
   project_name?: string
   client_id: number
+  debt_contract_number?: string | null
   amount: string
   currency: string
   debt_before: string
@@ -67,6 +68,7 @@ export interface Payment {
 
 export interface RecordPaymentRequest {
   client_id: number
+  debt_id?: number
   amount: number
   payment_date: string // ISO date string (YYYY-MM-DD)
   payment_method: PaymentMethod

@@ -36,12 +36,6 @@ export interface SendSMSModalProps {
   onSent?: () => void
 }
 
-const calculateSMSParts = (message: string): number => {
-  const hasCyrillic = /[\u0400-\u04FF]/.test(message)
-  const maxLength = hasCyrillic ? 70 : 120
-  return Math.ceil(message.length / maxLength)
-}
-
 /**
  * Formats a full name (FirstName MiddleName LastName) into
  * "LastName F. M." format as required for SMS display.
@@ -296,30 +290,9 @@ export function SendSMSModal({
     return customMessage
   }, [selectedTemplateId, message, messageEdited, customMessage, variableValues])
 
-  // Calculate message metrics
-  const messageMetrics = useMemo(() => {
-    const msg = displayMessage
-    const hasCyrillic = /[\u0400-\u04FF]/.test(msg)
-    const maxChars = hasCyrillic ? 70 : 120
-    const charCount = msg.length
-    const smsParts = calculateSMSParts(msg)
-    const exceedsLimit = charCount > maxChars
-
-    return {
-      charCount,
-      maxChars,
-      smsParts,
-      hasCyrillic,
-      exceedsLimit,
-    }
-  }, [displayMessage])
-
   const isDailyLimitReached = smsSentToday >= dailyLimit
   const canSend =
-    !isDailyLimitReached &&
-    displayMessage.trim().length > 0 &&
-    !messageMetrics.exceedsLimit &&
-    !sendSMSMutation.isPending
+    !isDailyLimitReached && displayMessage.trim().length > 0 && !sendSMSMutation.isPending
 
   const handleSend = async () => {
     if (!canSend) return
@@ -490,63 +463,6 @@ export function SendSMSModal({
                   placeholder={t('pages.clients.modals.sendSMS.typeYourMessageHere')}
                   className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[100px] resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 sm:min-h-[120px] sm:text-sm"
                 />
-              </div>
-
-              {/* Message Metrics */}
-              <div className="flex flex-col gap-3 self-stretch rounded-xl border border-white bg-white/50 px-4 py-3 sm:px-6 sm:py-4">
-                <div className="grid grid-cols-3 items-center divide-x divide-gray-200">
-                  {/* Char count */}
-                  <div className="flex items-center justify-center gap-1.5 px-3 first:pl-0 last:pr-0">
-                    <div
-                      className={cn(
-                        'h-2 w-2 flex-shrink-0 rounded-full',
-                        messageMetrics.exceedsLimit ? 'bg-error-500' : 'bg-success-500'
-                      )}
-                    />
-                    <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
-                      {messageMetrics.charCount}/{messageMetrics.maxChars}{' '}
-                      {t('pages.clients.modals.sendSMS.characters')}
-                    </span>
-                  </div>
-                  {/* SMS parts */}
-                  <div className="flex items-center justify-center gap-1.5 px-3">
-                    <Icons.Mail size={15} className="text-gray-500 sm:size-4" />
-                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
-                      {messageMetrics.smsParts}{' '}
-                      <span className="font-light">
-                        {messageMetrics.smsParts !== 1
-                          ? t('pages.clients.modals.sendSMS.smsParts')
-                          : t('pages.clients.modals.sendSMS.smsPart')}
-                      </span>
-                    </span>
-                  </div>
-                  {/* Script */}
-                  <div className="flex items-center justify-center gap-1.5 px-3 first:pl-0 last:pr-0">
-                    <Icons.TypeCursor size={15} className="text-gray-500 sm:size-4" />
-                    <span className="text-dark-500 text-xs font-light sm:text-sm">
-                      {t('pages.clients.modals.sendSMS.script')}:{' '}
-                      <span className="text-dark-500 font-medium">
-                        {messageMetrics.hasCyrillic
-                          ? t('pages.clients.modals.sendSMS.cyrillic')
-                          : t('pages.clients.modals.sendSMS.latin')}
-                      </span>
-                    </span>
-                  </div>
-                </div>
-                {/* Warning if exceeds limit */}
-                {messageMetrics.exceedsLimit && (
-                  <div className="flex items-center justify-center gap-2 text-center">
-                    <Icons.Warning
-                      size={15}
-                      className="text-warning-500 flex-shrink-0 sm:size-4"
-                      strokeWidth={2}
-                    />
-                    <span className="text-error-500 text-xs font-medium sm:text-sm">
-                      {t('pages.clients.modals.sendSMS.messageWillBeSplit')}{' '}
-                      {messageMetrics.smsParts} {t('pages.clients.modals.sendSMS.smsParts')}
-                    </span>
-                  </div>
-                )}
               </div>
 
               {/* Client Name and Loan Number */}

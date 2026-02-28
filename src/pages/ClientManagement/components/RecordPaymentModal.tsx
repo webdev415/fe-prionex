@@ -4,7 +4,7 @@
  * Modal for recording a new payment for a client.
  */
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -14,8 +14,16 @@ import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import type { DebtDetail } from '@/features/clients/api/types'
 
 /**
  * Get today's date at midnight local time.
@@ -31,6 +39,7 @@ export interface RecordPaymentModalProps {
   onClose: () => void
   customerName: string
   currentDebt: number
+  debts?: DebtDetail[]
   onSave: (data: {
     amount: number
     date: Date
@@ -41,6 +50,7 @@ export interface RecordPaymentModalProps {
     referenceNumber?: string
     last4Digits?: string
     paymentMethodDetails?: string
+    debtId?: number
   }) => void
 }
 
@@ -49,6 +59,7 @@ export function RecordPaymentModal({
   onClose,
   customerName,
   currentDebt,
+  debts,
   onSave,
 }: RecordPaymentModalProps) {
   const { t, i18n } = useTranslation('common')
@@ -78,6 +89,17 @@ export function RecordPaymentModal({
   const [paymentMethodDetails, setPaymentMethodDetails] = useState<string>('')
   const [referenceNumberError, setReferenceNumberError] = useState<string | null>(null)
   const [last4DigitsError, setLast4DigitsError] = useState<string | null>(null)
+
+  const activeDebts = useMemo(
+    () =>
+      (debts || [])
+        .filter((debt) => debt.status === 'active' || !debt.status)
+        .sort((a, b) => a.id - b.id),
+    [debts]
+  )
+  const [selectedDebtId, setSelectedDebtId] = useState<number | null>(
+    () => activeDebts[0]?.id ?? null
+  )
 
   const amountValue = parseFloat(paymentAmount) || 0
   const minAmount = 100
@@ -161,7 +183,8 @@ export function RecordPaymentModal({
     amountValue < minAmount ||
     amountValue > maxAmount ||
     (paymentMethod === 'Bank Transfer' && !referenceNumber.trim()) ||
-    (paymentMethod === 'Card' && last4Digits.length !== 4)
+    (paymentMethod === 'Card' && last4Digits.length !== 4) ||
+    (activeDebts.length > 1 && !selectedDebtId)
 
   // Validate payment amount on change
   const handleAmountChange = (value: string) => {
@@ -222,6 +245,7 @@ export function RecordPaymentModal({
       referenceNumber: paymentMethod === 'Bank Transfer' ? referenceNumber.trim() : undefined,
       last4Digits: paymentMethod === 'Card' ? last4Digits : undefined,
       paymentMethodDetails: paymentMethodDetails.trim() || undefined,
+      debtId: selectedDebtId ?? undefined,
     })
 
     // Reset form
@@ -237,6 +261,7 @@ export function RecordPaymentModal({
     setPaymentMethodDetails('')
     setReferenceNumberError(null)
     setLast4DigitsError(null)
+    setSelectedDebtId(activeDebts[0]?.id ?? null)
     onClose()
   }
 
@@ -254,6 +279,7 @@ export function RecordPaymentModal({
     setPaymentMethodDetails('')
     setReferenceNumberError(null)
     setLast4DigitsError(null)
+    setSelectedDebtId(activeDebts[0]?.id ?? null)
     onClose()
   }
 
@@ -319,6 +345,39 @@ export function RecordPaymentModal({
                     </div>
                   )}
                 </div>
+                {activeDebts.length > 1 && (
+                  <div className="flex flex-col items-start gap-2 self-stretch">
+                    <Label
+                      required
+                      className="text-sm leading-[150%] font-medium tracking-[-0.28px]"
+                    >
+                      {t('pages.clients.modals.recordPayment.contractNumber')}
+                    </Label>
+                    <Select
+                      value={selectedDebtId ? String(selectedDebtId) : ''}
+                      onValueChange={(value) => setSelectedDebtId(Number(value))}
+                    >
+                      <SelectTrigger className="w-full rounded-md">
+                        <SelectValue
+                          placeholder={t(
+                            'pages.clients.modals.recordPayment.contractPlaceholder',
+                            'Select contract'
+                          )}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {activeDebts.map((debt) => (
+                          <SelectItem key={debt.id} value={String(debt.id)}>
+                            {debt.contract_number}
+                            {debt.remaining_debt_amount
+                              ? ` • ${formatCurrency(debt.remaining_debt_amount)}`
+                              : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 {/* Payment Date */}
                 <div className="flex flex-col items-start gap-2 self-stretch">
                   <Label required className="text-sm leading-[150%] font-medium tracking-[-0.28px]">

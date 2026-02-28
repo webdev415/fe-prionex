@@ -45,6 +45,7 @@ interface Payment {
   id: number
   date: string
   amount: number
+  contractNumber?: string
   method: 'Online' | 'Bank' | 'Card' | 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Other'
   status: 'Verified' | 'Pending' | 'Cancelled'
   receipt?: string
@@ -360,6 +361,7 @@ export function DebtSummaryPage() {
             ? p.reversed_at
             : p.recorded_at,
       amount: Number(p.amount),
+      contractNumber: p.debt_contract_number || undefined,
       method: backendToFrontendPaymentMethod(p.payment_method),
       status: backendToFrontendPaymentStatus(p.status),
       receipt: p.receipt_url ? 'PDF' : undefined,
@@ -863,6 +865,7 @@ export function DebtSummaryPage() {
     referenceNumber?: string
     last4Digits?: string
     paymentMethodDetails?: string
+    debtId?: number
   }) => {
     const clientId = id ? Number(id) : 0
     if (!clientId) {
@@ -905,6 +908,7 @@ export function DebtSummaryPage() {
     recordPaymentMutation(
       {
         client_id: clientId,
+        debt_id: data.debtId,
         amount: data.amount,
         payment_date: paymentDate,
         payment_method: backendMethod,
@@ -1224,6 +1228,12 @@ export function DebtSummaryPage() {
                         {t('pages.clients.debtSummary.tableHeaders.amount')}
                       </th>
                       <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                        {t(
+                          'pages.clients.paymentHistory.tableHeaders.contractNumber',
+                          'Contract #'
+                        )}
+                      </th>
+                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
                         {t('pages.clients.debtSummary.tableHeaders.method')}
                       </th>
                       <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
@@ -1246,7 +1256,7 @@ export function DebtSummaryPage() {
                       return displayedPayments.length === 0 ? (
                         <tr>
                           <td
-                            colSpan={6}
+                            colSpan={7}
                             className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium"
                           >
                             {t('pages.clients.debtSummary.noPaymentHistory')}
@@ -1265,6 +1275,9 @@ export function DebtSummaryPage() {
                             </td>
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
                               {formatCurrency(payment.amount)}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              {payment.contractNumber || '-'}
                             </td>
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
                               {(() => {
@@ -1445,6 +1458,7 @@ export function DebtSummaryPage() {
           onClose={() => setIsRecordPaymentModalOpen(false)}
           customerName={debtSummary.customerName}
           currentDebt={debtSummary.totalDebt}
+          debts={apiClient?.debts}
           onSave={handleRecordPayment}
         />
       )}

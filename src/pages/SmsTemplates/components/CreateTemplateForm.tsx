@@ -4,7 +4,7 @@
  * Form for creating a new SMS template with variable detection and insertion.
  */
 
-import React, { useMemo, useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -35,7 +35,6 @@ type CreateTemplateFormData = {
 interface CreateTemplateFormProps {
   onSuccess: () => void
   onCancel?: () => void
-  onLimitChange?: (exceedsLimit: boolean) => void
 }
 
 // Available SMS template variables - descriptions will be translated in component
@@ -48,11 +47,7 @@ const AVAILABLE_VARIABLES = [
   { name: 'contract_number', key: 'contractLoanNumber' },
 ] as const
 
-// Character limits for SMS
-const CYRILLIC_SMS_LIMIT = 70
-const LATIN_SMS_LIMIT = 120
-
-export function CreateTemplateForm({ onSuccess, onLimitChange }: CreateTemplateFormProps) {
+export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
   const { t } = useTranslation('common')
   const { user } = useAuthStore()
   const createTemplateMutation = useCreateTemplate()
@@ -93,27 +88,6 @@ export function CreateTemplateForm({ onSuccess, onLimitChange }: CreateTemplateF
     return Array.from(new Set(variables)) // Remove duplicates
   }, [watchedMessageText])
 
-  // Detect Cyrillic script and calculate character count
-  const messageMetrics = useMemo(() => {
-    const msg = watchedMessageText || ''
-    const hasCyrillic = /[\u0400-\u04FF]/.test(msg)
-    const maxChars = hasCyrillic ? CYRILLIC_SMS_LIMIT : LATIN_SMS_LIMIT
-    const charCount = msg.length
-    const exceedsLimit = charCount > maxChars
-
-    return {
-      charCount,
-      maxChars,
-      hasCyrillic,
-      exceedsLimit,
-    }
-  }, [watchedMessageText])
-
-  // Notify parent of limit change
-  React.useEffect(() => {
-    onLimitChange?.(messageMetrics.exceedsLimit)
-  }, [messageMetrics.exceedsLimit, onLimitChange])
-
   // Insert variable into message text at cursor position
   const insertVariable = (variableName: string) => {
     const textarea = textareaRef.current
@@ -136,15 +110,6 @@ export function CreateTemplateForm({ onSuccess, onLimitChange }: CreateTemplateF
   }
 
   const onSubmit = async (data: CreateTemplateFormData) => {
-    // Prevent submission if limit exceeded
-    if (messageMetrics.exceedsLimit) {
-      toast.error(
-        t('pages.smsTemplates.forms.messageExceedsLimit') ||
-          'Message exceeds character limit. Please shorten your message.'
-      )
-      return
-    }
-
     try {
       await createTemplateMutation.mutateAsync({
         name: data.name,
@@ -232,32 +197,6 @@ export function CreateTemplateForm({ onSuccess, onLimitChange }: CreateTemplateF
             />
           )}
         />
-        {/* Character Counter */}
-        <div className="flex items-center justify-end gap-1 self-stretch">
-          <span
-            className={`h-2 w-2 rounded-full ${
-              messageMetrics.exceedsLimit ? 'bg-error-500' : 'bg-success-500'
-            }`}
-          />
-          <span
-            className={`text-sm font-light ${
-              messageMetrics.exceedsLimit ? 'text-error-500' : 'text-dark-500'
-            }`}
-          >
-            {messageMetrics.charCount}/{messageMetrics.maxChars}{' '}
-            {t('pages.smsTemplates.forms.characters')} (
-            {messageMetrics.hasCyrillic
-              ? t('pages.smsTemplates.forms.cyrillicLimit')
-              : t('pages.smsTemplates.forms.latinLimit')}
-            : {messageMetrics.maxChars})
-          </span>
-        </div>
-        {messageMetrics.exceedsLimit && (
-          <p className="text-error-500 text-xs">
-            {t('pages.smsTemplates.forms.messageExceedsLimit') ||
-              'Message exceeds character limit. Please shorten your message.'}
-          </p>
-        )}
       </div>
 
       {/* Variables Detected */}

@@ -77,7 +77,7 @@
     "update": "Оновити",
     "saving": "Збереження...",
     "deleting": "Видалення...",
-    "back": "Назад"
+  "back": "Назад"
   },
   "logout": {
     "confirmTitle": "Підтвердити вихід",
@@ -1120,6 +1120,8 @@
           "currentDebt": "Поточний борг:",
           "paymentInformation": "Інформація про платіж",
           "paymentAmount": "Сума платежу",
+          "contractNumber": "Номер договору",
+          "contractPlaceholder": "Оберіть договір",
           "paymentDate": "Дата платежу",
           "selectDate": "Виберіть дату",
           "paymentMethod": "Спосіб оплати:",
@@ -1425,6 +1427,7 @@
           "amount": "Сума",
           "method": "Спосіб",
           "reference": "Номер посилання",
+          "contractNumber": "Номер договору",
           "status": "Статус",
           "actions": "Дії"
         },

@@ -4,7 +4,6 @@
  * Modal for editing an existing SMS template.
  */
 
-import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { ModalSkeleton } from '@/components/ui/ModalSkeleton'
@@ -28,18 +27,12 @@ export function EditTemplateModal({
   onSuccess,
 }: EditTemplateModalProps) {
   const { t } = useTranslation('common')
-  const [exceedsLimit, setExceedsLimit] = React.useState(false)
-
   const { data: apiTemplate, isLoading } = useSMSTemplate(templateId)
   const template = apiTemplate ? mapTemplateResponseToSmsTemplate(apiTemplate) : null
 
   const handleSuccess = () => {
     onSuccess()
     onClose()
-  }
-
-  const handleLimitChange = (exceeds: boolean) => {
-    setExceedsLimit(exceeds)
   }
 
   return (
@@ -61,12 +54,7 @@ export function EditTemplateModal({
         {isLoading ? (
           <ModalSkeleton />
         ) : template ? (
-          <EditTemplateForm
-            template={template}
-            onSuccess={handleSuccess}
-            onCancel={onClose}
-            onLimitChange={handleLimitChange}
-          />
+          <EditTemplateForm template={template} onSuccess={handleSuccess} onCancel={onClose} />
         ) : (
           <div className="py-8 text-center text-gray-600">
             {t('pages.smsTemplates.modals.templateNotFound')}
@@ -87,7 +75,6 @@ export function EditTemplateModal({
           form="edit-template-form"
           variant="primary"
           className="h-10 w-full flex-1 text-xs sm:h-[45px] sm:text-sm"
-          disabled={exceedsLimit}
         >
           {t('actions.save')}
         </Button>
