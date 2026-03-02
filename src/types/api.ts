@@ -71,6 +71,7 @@ export interface CurrentUserResponse {
   asterisk_extension?: string
   is_agent?: boolean
   agent_status?: string
+  must_change_password?: boolean
 }
 
 export interface User {
@@ -90,6 +91,7 @@ export interface User {
   is_agent?: boolean
   agent_status?: string
   timezone?: string
+  mustChangePassword?: boolean
 }
 
 export interface LoginRequest {

@@ -102,6 +102,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           is_agent: backendUser.is_agent,
           agent_status: backendUser.agent_status,
           timezone: backendUser.timezone,
+          mustChangePassword: backendUser.must_change_password ?? false,
         }
 
         set({
@@ -137,6 +138,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           permissions: [], // No permissions available from login response
           createdAt: undefined,
           updatedAt: undefined,
+          mustChangePassword: false,
         }
 
         set({
@@ -272,6 +274,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           is_agent: backendUser.is_agent,
           agent_status: backendUser.agent_status,
           timezone: backendUser.timezone,
+          mustChangePassword: backendUser.must_change_password ?? false,
         }
 
         set({
@@ -308,6 +311,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           permissions: [], // No permissions available from login response
           createdAt: undefined,
           updatedAt: undefined,
+          mustChangePassword: false,
         }
 
         set({
@@ -396,6 +400,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             is_agent: backendUser.is_agent,
             agent_status: backendUser.agent_status,
             timezone: backendUser.timezone,
+            mustChangePassword: backendUser.must_change_password ?? false,
           }
 
           if (isImpersonating) {
@@ -466,6 +471,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               timezone: tokenPayload.timezone ? String(tokenPayload.timezone) : undefined,
               createdAt: undefined,
               updatedAt: undefined,
+              mustChangePassword: false,
             }
 
             if (isImpersonating) {
@@ -581,6 +587,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         timezone: backendUser.timezone,
         createdAt: backendUser.created_at,
         updatedAt: backendUser.created_at,
+        mustChangePassword: backendUser.must_change_password ?? false,
       }
 
       set({ user })

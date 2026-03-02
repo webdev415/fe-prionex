@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import LoginPage from '@/pages/auth/LoginPage'
+import ForceChangePasswordPage from '@/pages/auth/ForceChangePasswordPage'
 import { UserManagementPage } from '@/pages/UserManagement'
 import { ImportClientsPage } from '@/pages/ImportClients/ImportClientsPage'
 import { ProjectManagementPage } from '@/pages/ProjectManagement/ProjectManagementPage'
@@ -35,6 +36,14 @@ export const router = createBrowserRouter([
       <GuestRoute>
         <LoginPage />
       </GuestRoute>
+    ),
+  },
+  {
+    path: '/change-password',
+    element: (
+      <ProtectedRoute>
+        <ForceChangePasswordPage />
+      </ProtectedRoute>
     ),
   },
   {

@@ -60,6 +60,7 @@ import { useCallWebSocket } from '@/features/calls/hooks/useCallWebSocket'
 import { useAuthStore } from '@/stores/authStore'
 import { useUserDepartment } from '@/features/users'
 import { PermissionGuard } from '@/components/auth'
+import { useHasPermission } from '@/hooks/usePermissions'
 import { PERMISSIONS } from '@/constants/permissions'
 
 // Extended types for SMS and Call items with API-specific properties
@@ -221,7 +222,11 @@ export function ClientDetailPage() {
     clientId,
     isValidClientId
   )
-  const { data: tasks = [], isLoading: isTasksLoading } = useClientTasks(clientId, isValidClientId)
+  const canViewTasks = useHasPermission(PERMISSIONS.CLIENTS.VIEW_TASKS)
+  const { data: tasks = [], isLoading: isTasksLoading } = useClientTasks(
+    clientId,
+    isValidClientId && canViewTasks
+  )
   const { data: operatorsSection, isLoading: isOperatorsLoading } = useClientOperatorsSection(
     clientId,
     isValidClientId
@@ -2839,11 +2844,13 @@ export function ClientDetailPage() {
       />
 
       {/* Add Task Modal */}
-      <AddTaskModal
-        open={isTaskModalOpen}
-        clientId={clientId}
-        onClose={() => setIsTaskModalOpen(false)}
-      />
+      {isTaskModalOpen && (
+        <AddTaskModal
+          open={isTaskModalOpen}
+          clientId={clientId}
+          onClose={() => setIsTaskModalOpen(false)}
+        />
+      )}
 
       {/* Call Dialog Modal */}
       <CallDialogModal
