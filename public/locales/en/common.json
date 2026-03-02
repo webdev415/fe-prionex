@@ -29,6 +29,7 @@
     "phoneNumber": "Phone number",
     "fullName": "Full name",
     "tin": "TIN",
+    "contractNumber": "Contract number",
     "error": "Could not search clients. Please try again.",
     "searching": "Searching...",
     "noResults": "No clients found for '{{query}}'.",

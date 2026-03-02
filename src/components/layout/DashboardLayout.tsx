@@ -466,6 +466,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         } else if (type === 'name' || type === 'tin') {
           // Map name/tin to name search (backend name search includes TIN)
           backendSearchType = 'name'
+        } else if (type === 'contract_number') {
+          backendSearchType = 'contract_number'
         }
 
         // Call real API
@@ -546,6 +548,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { value: 'phone', label: t('search.phoneNumber') },
     { value: 'name', label: t('search.fullName') },
     { value: 'tin', label: t('search.tin') },
+    { value: 'contract_number', label: t('search.contractNumber') },
   ]
 
   const user = useAuthStore((state) => state.user)

@@ -10,7 +10,7 @@ import { api } from '@/lib/api'
 /**
  * Search type enum matching backend
  */
-export type SearchType = 'phone' | 'name' | 'all'
+export type SearchType = 'phone' | 'name' | 'contract_number' | 'all'
 
 /**
  * Priority level from backend
