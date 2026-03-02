@@ -12,6 +12,15 @@ import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
+import { Input } from '@/components/ui/Input'
+import { DateSelect } from '@/components/ui/DateSelect'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { AddNoteModal } from './components/AddNoteModal'
 import { AddTaskModal } from './components/AddTaskModal'
 // import { DeleteClientModal } from './components/DeleteClientModal'
@@ -46,6 +55,7 @@ import {
   useAssignClient,
   useClientRestructuringAgreements,
   useRestructuringAgreementDetail,
+  useCreateRestructuringAgreement,
 } from '@/features/clients/hooks/useClients'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
 import { useCreateNoteInteraction } from '@/features/clients/hooks/useNoteInteraction'
@@ -123,6 +133,18 @@ export function ClientDetailPage() {
   const navigate = useNavigate()
   const [activeLoanTab, setActiveLoanTab] = useState<'process' | 'closed' | 'rr'>('process')
   const [selectedRaId, setSelectedRaId] = useState<number | null>(null)
+  const [isConnectRrOpen, setIsConnectRrOpen] = useState(false)
+  const [connectRrForm, setConnectRrForm] = useState({
+    debtId: '' as string,
+    connectionDate: null as Date | null,
+    totalAmount: '',
+    numPayments: 1,
+    payments: [{ date: null as Date | null, amount: '' }] as Array<{
+      date: Date | null
+      amount: string
+    }>,
+  })
+  const [connectRrError, setConnectRrError] = useState<string | null>(null)
   const [activeCommentTab, setActiveCommentTab] = useState<'comments' | 'primary' | 'dial-history'>(
     'comments'
   )
@@ -214,6 +236,7 @@ export function ClientDetailPage() {
     selectedRaId ?? 0,
     !!selectedRaId
   )
+  const { mutate: createRr, isPending: isCreatingRr } = useCreateRestructuringAgreement()
   const { data: paymentsSection, isLoading: isPaymentsLoading } = useClientPaymentsSection(
     clientId,
     isValidClientId
@@ -2041,7 +2064,7 @@ export function ClientDetailPage() {
                   </div>
                   {/* Action buttons at the bottom */}
                   <div className="flex flex-wrap items-center gap-2 self-stretch px-3 py-4 md:gap-3 md:px-6">
-                    <Button
+                    {/* <Button
                       variant="secondary"
                       leftIcon={<Icons.MoneyRemove01 size={20} />}
                       className="rounded text-xs md:text-sm"
@@ -2088,6 +2111,25 @@ export function ClientDetailPage() {
                       size="sm"
                     >
                       {t('pages.clients.detail.makePayment')}
+                    </Button> */}
+                    <Button
+                      variant="secondary"
+                      leftIcon={<Icons.Calculate size={20} />}
+                      className="rounded text-xs md:text-sm"
+                      size="sm"
+                      onClick={() => {
+                        setConnectRrForm({
+                          debtId: '',
+                          connectionDate: null,
+                          totalAmount: '',
+                          numPayments: 1,
+                          payments: [{ date: null, amount: '' }],
+                        })
+                        setConnectRrError(null)
+                        setIsConnectRrOpen(true)
+                      }}
+                    >
+                      {t('pages.clients.detail.connectRR')}
                     </Button>
                   </div>
                 </div>
@@ -3102,6 +3144,238 @@ export function ClientDetailPage() {
             className="w-full rounded-md sm:w-auto"
           >
             {t('actions.close')}
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Connect RR Modal */}
+      <Modal open={isConnectRrOpen} onClose={() => setIsConnectRrOpen(false)} maxWidth="lg">
+        <ModalHeader
+          icon={
+            <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+              <Icons.Calculate size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+            </div>
+          }
+          title={t('pages.clients.detail.connectRR')}
+        />
+        <ModalContent>
+          <div className="flex flex-col gap-4">
+            {/* Loan Selection */}
+            <div>
+              <label className="text-dark-500 mb-1 block text-sm font-medium">
+                {t('pages.clients.detail.rrSelectLoan')} *
+              </label>
+              <Select
+                value={connectRrForm.debtId}
+                onValueChange={(val) => setConnectRrForm((prev) => ({ ...prev, debtId: val }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('pages.clients.detail.rrSelectLoanPlaceholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {loans.map((loan) => (
+                    <SelectItem key={loan.id} value={String(loan.id)}>
+                      {loan.contract_number} — {loan.seller_company}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Connection Date & Total RR Amount */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+              <DateSelect
+                label={`${t('pages.clients.detail.rrConnectionDate')} *`}
+                value={connectRrForm.connectionDate}
+                onChange={({ value }) =>
+                  setConnectRrForm((prev) => ({ ...prev, connectionDate: value }))
+                }
+                placeholder={t('pages.clients.detail.rrConnectionDate')}
+              />
+              <Input
+                label={`${t('pages.clients.detail.rrRestructuringAmount')} *`}
+                type="number"
+                min={0}
+                step={0.01}
+                value={connectRrForm.totalAmount}
+                onChange={(e) =>
+                  setConnectRrForm((prev) => ({ ...prev, totalAmount: e.target.value }))
+                }
+                placeholder="0.00"
+              />
+            </div>
+            {/* Number of Payments */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+              <Input
+                label={`${t('pages.clients.detail.rrNumPayments')} *`}
+                type="number"
+                min={1}
+                max={12}
+                value={connectRrForm.numPayments}
+                onChange={(e) => {
+                  const num = Math.max(1, Math.min(12, Number(e.target.value) || 1))
+                  setConnectRrForm((prev) => {
+                    const payments = [...prev.payments]
+                    while (payments.length < num) payments.push({ date: null, amount: '' })
+                    return { ...prev, numPayments: num, payments: payments.slice(0, num) }
+                  })
+                }}
+              />
+            </div>
+            {/* Payment Schedule */}
+            <div className="pt-2">
+              <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                {t('pages.clients.detail.rrPaymentSchedule')}
+              </h3>
+              <div className="flex flex-col gap-3">
+                {connectRrForm.payments.map((payment, idx) => (
+                  <div key={idx} className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                    <DateSelect
+                      label={`${t('pages.clients.detail.rrPaymentDate')} ${idx + 1} *`}
+                      value={payment.date}
+                      onChange={({ value }) => {
+                        setConnectRrForm((prev) => {
+                          const payments = [...prev.payments]
+                          payments[idx] = { ...payments[idx], date: value }
+                          return { ...prev, payments }
+                        })
+                      }}
+                      placeholder={t('pages.clients.detail.rrPaymentDate')}
+                    />
+                    <Input
+                      label={`${t('pages.clients.detail.rrPaymentAmount')} ${idx + 1} *`}
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={payment.amount}
+                      onChange={(e) => {
+                        setConnectRrForm((prev) => {
+                          const payments = [...prev.payments]
+                          payments[idx] = { ...payments[idx], amount: e.target.value }
+                          return { ...prev, payments }
+                        })
+                      }}
+                      placeholder="0.00"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          {connectRrError && (
+            <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+              {connectRrError}
+            </div>
+          )}
+        </ModalContent>
+        <ModalFooter>
+          <Button
+            variant="cancel"
+            size="sm"
+            onClick={() => setIsConnectRrOpen(false)}
+            className="w-full rounded-md sm:w-auto"
+          >
+            {t('actions.cancel')}
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={isCreatingRr}
+            onClick={() => {
+              const d = 'pages.clients.detail'
+              setConnectRrError(null)
+              // Validation
+              if (!connectRrForm.debtId) {
+                setConnectRrError(t(`${d}.rrValidationLoanRequired`))
+                return
+              }
+              if (!connectRrForm.connectionDate) {
+                setConnectRrError(t(`${d}.rrValidationConnectionDateRequired`))
+                return
+              }
+              if (!connectRrForm.totalAmount || parseFloat(connectRrForm.totalAmount) <= 0) {
+                setConnectRrError(t(`${d}.rrValidationAmountRequired`))
+                return
+              }
+              for (let i = 0; i < connectRrForm.payments.length; i++) {
+                if (!connectRrForm.payments[i].date) {
+                  setConnectRrError(t(`${d}.rrValidationPaymentDateRequired`, { num: i + 1 }))
+                  return
+                }
+                if (
+                  !connectRrForm.payments[i].amount ||
+                  parseFloat(connectRrForm.payments[i].amount) <= 0
+                ) {
+                  setConnectRrError(t(`${d}.rrValidationPaymentAmountRequired`, { num: i + 1 }))
+                  return
+                }
+              }
+              const totalAmount = parseFloat(connectRrForm.totalAmount)
+              const paymentsSum = connectRrForm.payments.reduce(
+                (sum, p) => sum + (parseFloat(p.amount) || 0),
+                0
+              )
+              if (Math.abs(paymentsSum - totalAmount) > 0.01) {
+                setConnectRrError(
+                  t(`${d}.rrValidationSumMismatch`, {
+                    sum: paymentsSum.toFixed(2),
+                    total: totalAmount.toFixed(2),
+                  })
+                )
+                return
+              }
+
+              const formatDate = (dt: Date | null) => {
+                if (!dt) return null
+                const y = dt.getFullYear()
+                const m = String(dt.getMonth() + 1).padStart(2, '0')
+                const day = String(dt.getDate()).padStart(2, '0')
+                return `${y}-${m}-${day}`
+              }
+              createRr(
+                {
+                  clientId,
+                  data: {
+                    debt_id: parseInt(connectRrForm.debtId),
+                    connection_date: formatDate(connectRrForm.connectionDate),
+                    restructuring_amount: totalAmount,
+                    num_payments: connectRrForm.numPayments,
+                    payments: connectRrForm.payments.map((p) => ({
+                      payment_date: formatDate(p.date),
+                      payment_amount: parseFloat(p.amount),
+                    })),
+                  },
+                },
+                {
+                  onSuccess: () => {
+                    toast.success(t(`${d}.connectRRSuccess`))
+                    setIsConnectRrOpen(false)
+                  },
+                  onError: (error) => {
+                    const detail = (
+                      error as import('axios').AxiosError<{
+                        detail?: string | Array<{ msg?: string }>
+                      }>
+                    )?.response?.data?.detail
+                    let message = t(
+                      `${d}.connectRRError`,
+                      t('errors.somethingWentWrong', 'Something went wrong')
+                    )
+                    if (typeof detail === 'string') {
+                      message = detail
+                    } else if (Array.isArray(detail) && detail.length > 0) {
+                      message = detail
+                        .map((e) => e.msg || '')
+                        .filter(Boolean)
+                        .join('; ')
+                    }
+                    setConnectRrError(message)
+                  },
+                }
+              )
+            }}
+            className="w-full rounded-md sm:w-auto"
+          >
+            {isCreatingRr ? '...' : t('pages.clients.detail.connectRR')}
           </Button>
         </ModalFooter>
       </Modal>

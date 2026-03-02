@@ -17,6 +17,7 @@ import type {
   CreateAddressRequest,
   CreateClientRequest,
   CreateContactRequest,
+  CreateRestructuringAgreementRequest,
   GetClientsParams,
   ManualPriorityRequest,
   SearchByTinParams,
@@ -481,6 +482,28 @@ export function useRestructuringAgreementDetail(clientId: number, raId: number, 
     queryFn: () => clientApi.getRestructuringAgreementDetail(clientId, raId),
     enabled: enabled && clientId > 0 && raId > 0,
     staleTime: 30000,
+  })
+}
+
+/**
+ * Create a restructuring agreement for a client (Connect RR).
+ */
+export function useCreateRestructuringAgreement() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      data,
+    }: {
+      clientId: number
+      data: CreateRestructuringAgreementRequest
+    }) => clientApi.createRestructuringAgreement(clientId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringAgreements(variables.clientId),
+      })
+    },
   })
 }
 

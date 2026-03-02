@@ -58,6 +58,17 @@ export interface RestructuringPaymentEntry {
   amount?: string | null
 }
 
+export interface CreateRestructuringAgreementRequest {
+  debt_id?: number | null
+  connection_date?: string | null
+  restructuring_amount: number
+  num_payments: number
+  payments: Array<{
+    payment_date?: string | null
+    payment_amount?: number | null
+  }>
+}
+
 export interface RestructuringAgreementDetail {
   id: number
   contract_number?: string | null

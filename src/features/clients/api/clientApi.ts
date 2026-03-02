@@ -20,6 +20,7 @@ import type {
   CreateAddressRequest,
   CreateClientRequest,
   CreateContactRequest,
+  CreateRestructuringAgreementRequest,
   GetClientsParams,
   ManualPriorityRequest,
   PaginatedClientResponse,
@@ -292,6 +293,20 @@ export async function getRestructuringAgreementDetail(
 }
 
 /**
+ * Create a restructuring agreement for a client
+ */
+export async function createRestructuringAgreement(
+  clientId: number,
+  data: CreateRestructuringAgreementRequest
+): Promise<{ id: number; status: string }> {
+  const response = await api.post<{ id: number; status: string }>(
+    `${BASE_URL}/${clientId}/restructuring-agreements`,
+    data
+  )
+  return response.data
+}
+
+/**
  * Get all contact types from the lookup table
  */
 export async function getContactTypes(): Promise<ContactTypeOption[]> {
@@ -329,4 +344,5 @@ export const clientApi = {
   updatePassport,
   getClientRestructuringAgreements,
   getRestructuringAgreementDetail,
+  createRestructuringAgreement,
 }
