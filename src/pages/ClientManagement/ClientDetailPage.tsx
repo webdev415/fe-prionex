@@ -515,11 +515,11 @@ export function ClientDetailPage() {
   const [selectedPhoneForSMS, setSelectedPhoneForSMS] = useState<string>('')
   const [selectedPhoneForCall, setSelectedPhoneForCall] = useState<string>('')
   const [selectedPhoneForNote, setSelectedPhoneForNote] = useState<string>('')
-  const [activeClientCardTab, setActiveClientCardTab] = useState<
-    'personal' | 'recommenders' | 'addresses' | 'work'
-  >('personal')
+  const [activeClientCardTab, setActiveClientCardTab] = useState<'personal' | 'passport' | 'work'>(
+    'personal'
+  )
   const [activeRightCardTab, setActiveRightCardTab] = useState<
-    'loans' | 'payments' | 'operators' | 'call-sms-history' | 'tasks' | 'documents'
+    'loans' | 'payments' | 'recommenders' | 'operators' | 'call-sms-history' | 'tasks' | 'documents'
   >('loans')
   const [activePaymentTab, setActivePaymentTab] = useState<
     'payments' | 'writes-off' | 'primary-creditor'
@@ -1214,7 +1214,7 @@ export function ClientDetailPage() {
       </div>
       <div className="flex flex-col items-start gap-4 self-stretch xl:flex-row xl:gap-5">
         {/* Client Card */}
-        <div className="flex min-h-[44px] w-full flex-col items-start justify-center gap-0 rounded-lg bg-white/50 p-0 xl:w-[30%]">
+        <div className="client-panel-scroll flex min-h-[44px] w-full flex-col items-start justify-start gap-0 rounded-lg bg-white/50 p-0 xl:max-h-[70vh] xl:w-[30%] xl:overflow-y-auto">
           {/* Credit Details (top part of card) */}
           <div className="flex flex-col items-start gap-3 self-stretch px-4 py-4 md:px-6 md:py-5">
             <div className="flex flex-col gap-2 self-stretch">
@@ -1439,43 +1439,21 @@ export function ClientDetailPage() {
                 </button>
                 <button
                   type="button"
-                  data-tab="recommenders"
-                  onClick={() => setActiveClientCardTab('recommenders')}
-                  title={t('pages.clients.detail.tabs.recommenders')}
+                  data-tab="passport"
+                  onClick={() => setActiveClientCardTab('passport')}
+                  title={t('pages.clients.detail.tabs.passport')}
                   className={cn(
                     'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
-                    activeClientCardTab === 'recommenders'
+                    activeClientCardTab === 'passport'
                       ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
                       : 'md:border-transparent'
                   )}
                 >
-                  <Icons.UserCheck01
+                  <Icons.File
                     size={24}
                     className={cn(
                       'shrink-0',
-                      activeClientCardTab === 'recommenders'
-                        ? 'text-secondary-800'
-                        : 'text-gray-700'
-                    )}
-                  />
-                </button>
-                <button
-                  type="button"
-                  data-tab="addresses"
-                  onClick={() => setActiveClientCardTab('addresses')}
-                  title={t('pages.clients.detail.tabs.addresses')}
-                  className={cn(
-                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
-                    activeClientCardTab === 'addresses'
-                      ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
-                      : 'md:border-transparent'
-                  )}
-                >
-                  <Icons.Location01
-                    size={24}
-                    className={cn(
-                      'shrink-0',
-                      activeClientCardTab === 'addresses' ? 'text-secondary-800' : 'text-gray-700'
+                      activeClientCardTab === 'passport' ? 'text-secondary-800' : 'text-gray-700'
                     )}
                   />
                 </button>
@@ -1517,6 +1495,59 @@ export function ClientDetailPage() {
                     </p>
                   </div>
                   <div className="mx-2 h-px self-stretch bg-gray-200"></div>
+                  {client.addresses.map((address) => (
+                    <React.Fragment key={address.id}>
+                      <div className="flex items-start self-stretch p-0">
+                        <div className="flex shrink-0 items-start gap-2.5">
+                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                            {address.addressType === 'registration'
+                              ? t('pages.clients.detail.registrationAddress')
+                              : t('pages.clients.detail.personalAddress')}
+                          </label>
+                        </div>
+                        <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                          {address.fullAddress}
+                        </p>
+                      </div>
+                    </React.Fragment>
+                  ))}
+                  {client.addresses.length === 0 && <p className="text-xs text-gray-500">-</p>}
+                  <div className="mx-2 h-px self-stretch bg-gray-200"></div>
+                  <div className="flex items-center self-stretch p-0">
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.maritalStatus')}
+                      </label>
+                    </div>
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.personalDetails.maritalStatus}
+                    </p>
+                  </div>
+                  <div className="flex items-center self-stretch p-0">
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.numberOfFamilyMembers')}
+                      </label>
+                    </div>
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.personalDetails.familyMembers}
+                    </p>
+                  </div>
+                  <div className="flex items-center self-stretch p-0">
+                    <div className="flex flex-1 items-center gap-2.5">
+                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.incomeLevel')}
+                      </label>
+                    </div>
+                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      {client.personalDetails.incomeLevel}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {activeClientCardTab === 'passport' && (
+                <>
                   <div className="flex items-center self-stretch p-0">
                     <div className="flex flex-1 items-center gap-2.5">
                       <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
@@ -1587,152 +1618,6 @@ export function ClientDetailPage() {
                       {client.personalDetails.gender}
                     </p>
                   </div>
-                  <div className="mx-2 h-px self-stretch bg-gray-200"></div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.maritalStatus')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.maritalStatus}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.numberOfFamilyMembers')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.familyMembers}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.incomeLevel')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.incomeLevel}
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {activeClientCardTab === 'recommenders' && (
-                <>
-                  {client.recommenders.map((contact, index) => (
-                    <React.Fragment key={contact.id}>
-                      <div className="flex min-w-0 items-start self-stretch p-0">
-                        <div className="flex shrink-0 items-start gap-2.5 pt-0.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.contactValue')}
-                          </label>
-                        </div>
-                        <div className="flex min-w-0 flex-1 items-start justify-end gap-2 md:gap-3">
-                          <span className="text-dark-500 min-w-0 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
-                            {contact.contactValue}
-                          </span>
-                          {contact.isPhone && contact.contactValue && (
-                            <div className="flex shrink-0 items-center gap-1 md:gap-2">
-                              <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
-                                <button
-                                  disabled={!user?.is_agent || !user?.asterisk_extension}
-                                  onClick={() => {
-                                    if (isCallActive()) {
-                                      toast.warning(
-                                        t('pages.clients.modals.callDialog.callInProgress') ||
-                                          'Another call or recording is already in progress. Please finish or close it first.'
-                                      )
-                                      return
-                                    }
-                                    setSelectedPhoneForCall(contact.contactValue)
-                                    setOpenCallModal('call-dialog')
-                                    setIsCallModalOpen(true)
-                                  }}
-                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
-                                >
-                                  <Icons.Headset size={16} className="flex-shrink-0" />
-                                </button>
-                              </PermissionGuard>
-                              <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
-                                <button
-                                  onClick={() => {
-                                    setSelectedPhoneForSMS(contact.contactValue)
-                                    setIsSendSMSModalOpen(true)
-                                  }}
-                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                                >
-                                  <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                                </button>
-                              </PermissionGuard>
-                              <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
-                                <button
-                                  onClick={() => {
-                                    setSelectedPhoneForNote(contact.contactValue)
-                                    setIsNoteModalOpen(true)
-                                  }}
-                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                                >
-                                  <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                                </button>
-                              </PermissionGuard>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex min-w-0 items-start self-stretch p-0">
-                        <div className="flex shrink-0 items-start gap-2.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.contactType')}
-                          </label>
-                        </div>
-                        <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
-                          {contact.contactType}
-                        </p>
-                      </div>
-                      <div className="flex min-w-0 items-start self-stretch p-0">
-                        <div className="flex shrink-0 items-start gap-2.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.comment')}
-                          </label>
-                        </div>
-                        <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
-                          {contact.comment}
-                        </p>
-                      </div>
-                      {index < client.recommenders.length - 1 && (
-                        <div className="mx-2 h-px self-stretch bg-gray-200"></div>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </>
-              )}
-
-              {activeClientCardTab === 'addresses' && (
-                <>
-                  {client.addresses.map((address, index) => (
-                    <React.Fragment key={address.id}>
-                      <div className="flex items-start self-stretch p-0">
-                        <div className="flex shrink-0 items-start gap-2.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {address.addressType === 'registration'
-                              ? t('pages.clients.detail.registrationAddress')
-                              : t('pages.clients.detail.personalAddress')}
-                          </label>
-                        </div>
-                        <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
-                          {address.fullAddress}
-                        </p>
-                      </div>
-                      {index < client.addresses.length - 1 && (
-                        <div className="mx-2 h-px self-stretch bg-gray-200"></div>
-                      )}
-                    </React.Fragment>
-                  ))}
-                  {client.addresses.length === 0 && <p className="text-xs text-gray-500">-</p>}
                 </>
               )}
 
@@ -1853,7 +1738,7 @@ export function ClientDetailPage() {
         </div>
 
         {/* Right Column - Data + Comments Card with 6 horizontal top tabs */}
-        <div className="flex w-full flex-1 flex-col items-start gap-5 self-stretch xl:w-[64%]">
+        <div className="client-panel-scroll flex w-full flex-1 flex-col items-start gap-5 self-stretch xl:max-h-[70vh] xl:w-[64%] xl:overflow-y-auto">
           <div className="flex flex-1 flex-col items-start gap-0 self-stretch rounded-lg bg-white/50 p-0">
             {/* Horizontal tab bar - 6 tabs at the top - scrollable on mobile */}
             <div className="relative mx-3 flex items-center gap-0 self-stretch border-b border-gray-200">
@@ -1924,7 +1809,24 @@ export function ClientDetailPage() {
                     {t('pages.clients.detail.payments')}
                   </span>
                 </button>
-                {/* Tab 3: Operators */}
+                {/* Tab 3: Recommenders */}
+                <button
+                  type="button"
+                  data-tab="recommenders"
+                  onClick={() => setActiveRightCardTab('recommenders')}
+                  className={cn(
+                    'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                    activeRightCardTab === 'recommenders'
+                      ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                      : 'hover:text-secondary-800 border-transparent text-gray-600'
+                  )}
+                >
+                  <Icons.UserCheck01 size={20} className="shrink-0 text-current" />
+                  <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                    {t('pages.clients.detail.tabs.recommenders')}
+                  </span>
+                </button>
+                {/* Tab 4: Operators */}
                 <button
                   type="button"
                   data-tab="operators"
@@ -2205,7 +2107,99 @@ export function ClientDetailPage() {
                 </div>
               )}
 
-              {/* Tab 3: Operators/Searchers */}
+              {/* Tab 3: Recommenders */}
+              {activeRightCardTab === 'recommenders' && (
+                <div className="flex flex-1 flex-col items-start gap-4 self-stretch p-3 md:gap-5 md:p-6">
+                  {client.recommenders.map((contact, index) => (
+                    <React.Fragment key={contact.id}>
+                      <div className="flex min-w-0 items-start self-stretch p-0">
+                        <div className="flex shrink-0 items-start gap-2.5 pt-0.5">
+                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                            {t('pages.clients.detail.contactValue')}
+                          </label>
+                        </div>
+                        <div className="flex min-w-0 flex-1 items-start justify-end gap-2 md:gap-3">
+                          <span className="text-dark-500 min-w-0 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                            {contact.contactValue}
+                          </span>
+                          {contact.isPhone && contact.contactValue && (
+                            <div className="flex shrink-0 items-center gap-1 md:gap-2">
+                              <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+                                <button
+                                  disabled={!user?.is_agent || !user?.asterisk_extension}
+                                  onClick={() => {
+                                    if (isCallActive()) {
+                                      toast.warning(
+                                        t('pages.clients.modals.callDialog.callInProgress') ||
+                                          'Another call or recording is already in progress. Please finish or close it first.'
+                                      )
+                                      return
+                                    }
+                                    setSelectedPhoneForCall(contact.contactValue)
+                                    setOpenCallModal('call-dialog')
+                                    setIsCallModalOpen(true)
+                                  }}
+                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                                >
+                                  <Icons.Headset size={16} className="flex-shrink-0" />
+                                </button>
+                              </PermissionGuard>
+                              <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                                <button
+                                  onClick={() => {
+                                    setSelectedPhoneForSMS(contact.contactValue)
+                                    setIsSendSMSModalOpen(true)
+                                  }}
+                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                                >
+                                  <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                                </button>
+                              </PermissionGuard>
+                              <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+                                <button
+                                  onClick={() => {
+                                    setSelectedPhoneForNote(contact.contactValue)
+                                    setIsNoteModalOpen(true)
+                                  }}
+                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                                >
+                                  <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                                </button>
+                              </PermissionGuard>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex min-w-0 items-start self-stretch p-0">
+                        <div className="flex shrink-0 items-start gap-2.5">
+                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                            {t('pages.clients.detail.contactType')}
+                          </label>
+                        </div>
+                        <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                          {contact.contactType}
+                        </p>
+                      </div>
+                      <div className="flex min-w-0 items-start self-stretch p-0">
+                        <div className="flex shrink-0 items-start gap-2.5">
+                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                            {t('pages.clients.detail.comment')}
+                          </label>
+                        </div>
+                        <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                          {contact.comment}
+                        </p>
+                      </div>
+                      {index < client.recommenders.length - 1 && (
+                        <div className="mx-2 h-px self-stretch bg-gray-200"></div>
+                      )}
+                    </React.Fragment>
+                  ))}
+                  {client.recommenders.length === 0 && <p className="text-xs text-gray-500">-</p>}
+                </div>
+              )}
+
+              {/* Tab 4: Operators/Searchers */}
               {activeRightCardTab === 'operators' && (
                 <div className="flex w-full flex-col gap-4">
                   <div className="mx-3 flex min-h-[44px] items-center gap-3 self-stretch overflow-x-auto pt-4 pb-0 md:mx-6 md:gap-6 md:pt-6">
