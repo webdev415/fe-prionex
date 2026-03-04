@@ -58,6 +58,17 @@ export interface RestructuringPaymentEntry {
   amount?: string | null
 }
 
+export interface CreateRestructuringAgreementRequest {
+  debt_id?: number | null
+  connection_date?: string | null
+  restructuring_amount: number
+  num_payments: number
+  payments: Array<{
+    payment_date?: string | null
+    payment_amount?: number | null
+  }>
+}
+
 export interface RestructuringAgreementDetail {
   id: number
   contract_number?: string | null
@@ -324,6 +335,8 @@ export interface ClientProfileResponse {
     contact_type_name?: string | null
     is_phone?: boolean
     comment?: string | null
+    created_at?: string | null
+    added_by_user_name?: string | null
   }>
   addresses: Array<{
     id: number
@@ -345,6 +358,8 @@ export interface ClientProfileResponse {
     number: string
     type: string
     label?: string | null
+    created_at?: string | null
+    added_by_user_name?: string | null
   }>
   comments: Array<{
     id: number

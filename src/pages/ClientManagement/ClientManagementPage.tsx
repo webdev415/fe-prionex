@@ -579,10 +579,7 @@ export function ClientManagementPage() {
     const map = new Map<number, string>()
     if (operators) {
       for (const user of operators) {
-        map.set(
-          user.id,
-          [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' ')
-        )
+        map.set(user.id, user.full_name)
       }
     }
     return map

@@ -55,7 +55,7 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
   const userOptions = useMemo(() => {
     return operators.map((u) => ({
       id: u.id.toString(),
-      name: [u.first_name, u.last_name].filter(Boolean).join(' '),
+      name: u.full_name,
     }))
   }, [operators])
 

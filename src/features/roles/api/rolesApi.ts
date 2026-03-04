@@ -60,10 +60,22 @@ export async function deleteRole(roleId: number): Promise<void> {
  * Get users assigned to a role
  */
 export async function getRoleUsers(roleId: number): Promise<{
-  users: Array<{ id: number; username: string; first_name: string; last_name: string }>
+  users: Array<{
+    id: number
+    username: string
+    full_name: string
+    first_name: string
+    last_name: string
+  }>
 }> {
   const response = await api.get<{
-    users: Array<{ id: number; username: string; first_name: string; last_name: string }>
+    users: Array<{
+      id: number
+      username: string
+      full_name: string
+      first_name: string
+      last_name: string
+    }>
   }>(`/api/v1/admin/roles/${roleId}/users`)
   return response.data
 }

@@ -228,7 +228,7 @@ export function ActivityTimelinePage() {
       key: 'employee',
       header: t('pages.clients.activity.tableHeaders.employee'),
       align: 'left',
-      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
+      className: 'w-[200px] whitespace-nowrap',
     },
   ]
 
