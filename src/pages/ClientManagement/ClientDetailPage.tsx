@@ -1781,7 +1781,7 @@ export function ClientDetailPage() {
 
           {/* Right Column - Data + Comments Card with 6 horizontal top tabs */}
           <div className="client-panel-scroll flex w-full flex-1 flex-col items-start gap-5 self-stretch xl:max-h-[70vh] xl:w-[64%] xl:overflow-y-auto">
-            <div className="flex flex-1 flex-col items-start gap-0 self-stretch overflow-hidden rounded-lg bg-white/50 p-0">
+            <div className="flex min-h-0 flex-1 flex-col items-start gap-0 self-stretch overflow-y-auto rounded-lg bg-white/50 p-0">
               {/* Horizontal tab bar - 6 tabs at the top - scrollable on mobile */}
               <div className="relative mx-3 flex items-center gap-0 self-stretch border-b border-gray-200">
                 {/* Left Arrow Button */}
