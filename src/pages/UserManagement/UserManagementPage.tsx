@@ -180,13 +180,7 @@ export function UserManagementPage() {
     {
       key: 'fullName',
       header: t('pages.users.tableHeaders.fullName'),
-      render: (user) => (
-        <span>
-          {user.first_name && user.last_name
-            ? `${user.first_name} ${user.last_name}`
-            : user.first_name || user.last_name || '-'}
-        </span>
-      ),
+      render: (user) => <span>{user.full_name || '-'}</span>,
     },
     {
       key: 'email',
