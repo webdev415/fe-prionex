@@ -35,6 +35,7 @@ import { ViewSMSModal } from './components/ViewSMSModal'
 import { SendSMSModal } from './components/SendSMSModal'
 import { CallLogCard } from './components/CallLogCard'
 import { cn } from '@/lib/utils'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/Tooltip'
 // import {
 //   DropdownMenu,
 //   DropdownMenuContent,
@@ -287,11 +288,23 @@ export function ClientDetailPage() {
 
     // Build phones array from additional_phones (sourced from client_contacts types 1, 2, 29)
     const isValidPhone = (p: string | null | undefined): p is string => !!p && !/^0+$/.test(p)
-    const phones: Array<{ number: string; type: string }> = []
+    const phones: Array<{
+      number: string
+      type: string
+      created_at?: string | null
+      added_by_user_name?: string | null
+    }> = []
     if (profile.additional_phones && profile.additional_phones.length > 0) {
       profile.additional_phones
         .filter((p) => isValidPhone(p.number))
-        .forEach((p) => phones.push({ number: p.number, type: p.type }))
+        .forEach((p) =>
+          phones.push({
+            number: p.number,
+            type: p.type,
+            created_at: p.created_at,
+            added_by_user_name: p.added_by_user_name,
+          })
+        )
     } else if (isValidPhone(profile.phone_primary)) {
       // Fallback for backward compat
       phones.push({ number: profile.phone_primary, type: 'mobile' })
@@ -353,6 +366,8 @@ export function ClientDetailPage() {
         contactType: r.contact_type_name ?? '',
         isPhone: r.is_phone ?? false,
         comment: r.comment ?? '',
+        created_at: r.created_at,
+        added_by_user_name: r.added_by_user_name,
       })),
       addresses: (profile.addresses ?? []).map((a) => ({
         id: a.id,
@@ -1096,99 +1111,100 @@ export function ClientDetailPage() {
   ]
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Client Header */}
-      <div className="flex flex-col gap-4 self-stretch xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <div className="flex min-w-0 flex-row items-center gap-2">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="flex h-6 w-6 shrink-0 items-center justify-center"
-            >
-              <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
-            </button>
-            <h1 className="text-dark-500 truncate text-xl leading-[150%] font-light md:text-2xl">
-              {client.fullName}
-            </h1>
+    <TooltipProvider>
+      <div className="flex flex-col gap-4">
+        {/* Client Header */}
+        <div className="flex flex-col gap-4 self-stretch xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-row items-center gap-2">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="flex h-6 w-6 shrink-0 items-center justify-center"
+              >
+                <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
+              </button>
+              <h1 className="text-dark-500 truncate text-xl leading-[150%] font-light md:text-2xl">
+                {client.fullName}
+              </h1>
+            </div>
+            <div className="flex flex-row items-center gap-2">
+              <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0 text-sm">
+                {client.score} {t('pages.clients.activity.score')}
+              </span>
+              <PriorityBadge priority={client.priority as Priority} />
+            </div>
           </div>
-          <div className="flex flex-row items-center gap-2">
-            <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0 text-sm">
-              {client.score} {t('pages.clients.activity.score')}
-            </span>
-            <PriorityBadge priority={client.priority as Priority} />
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2 md:gap-3 xl:flex-nowrap">
-          <Button
-            size="md"
-            variant="outline"
-            className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
-            onClick={() => navigate(`/dashboard/clients/${id}/debt-summary`)}
-          >
-            {t('pages.clients.debtSummary.title')}
-          </Button>
-          <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+          <div className="flex shrink-0 flex-wrap items-center gap-2 md:gap-3 xl:flex-nowrap">
             <Button
               size="md"
               variant="outline"
+              className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
+              onClick={() => navigate(`/dashboard/clients/${id}/debt-summary`)}
+            >
+              {t('pages.clients.debtSummary.title')}
+            </Button>
+            <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+              <Button
+                size="md"
+                variant="outline"
+                leftIcon={<Icons.PencilEdit size={20} />}
+                className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
+                onClick={() => setIsNoteModalOpen(true)}
+              >
+                {t('pages.clients.activity.addNote')}
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_TASKS}>
+              <Button
+                size="md"
+                variant="outline"
+                leftIcon={<Icons.Clock01 size={20} />}
+                className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
+                onClick={() => setIsTaskModalOpen(true)}
+              >
+                {t('pages.clients.tasks.addTask', 'Add Task')}
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+              <Button
+                size="md"
+                leftIcon={<Icons.Headset size={20} />}
+                className="w-full flex-1 rounded-full xl:w-auto xl:flex-none"
+                disabled={!user?.is_agent || !user?.asterisk_extension}
+                onClick={() => {
+                  const phoneNumber = client.phones?.[0]?.number
+                  if (!phoneNumber) {
+                    toast.error('Client has no phone number')
+                    return
+                  }
+
+                  if (isCallActive()) {
+                    toast.warning(
+                      t('pages.clients.modals.callDialog.callInProgress') ||
+                        'Another call or recording is already in progress. Please finish or close it first.'
+                    )
+                    return
+                  }
+
+                  // Open modal in 'initial' state to let user select call type
+                  setSelectedPhoneForCall(phoneNumber)
+                  setOpenCallModal('call-dialog')
+                  setIsCallModalOpen(true)
+                }}
+              >
+                {t('pages.clients.activity.call')}
+              </Button>
+            </PermissionGuard>
+            <Button
+              size="md"
+              variant="primary"
               leftIcon={<Icons.PencilEdit size={20} />}
-              className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
-              onClick={() => setIsNoteModalOpen(true)}
-            >
-              {t('pages.clients.activity.addNote')}
-            </Button>
-          </PermissionGuard>
-          <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_TASKS}>
-            <Button
-              size="md"
-              variant="outline"
-              leftIcon={<Icons.Clock01 size={20} />}
-              className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
-              onClick={() => setIsTaskModalOpen(true)}
-            >
-              {t('pages.clients.tasks.addTask', 'Add Task')}
-            </Button>
-          </PermissionGuard>
-          <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
-            <Button
-              size="md"
-              leftIcon={<Icons.Headset size={20} />}
               className="w-full flex-1 rounded-full xl:w-auto xl:flex-none"
-              disabled={!user?.is_agent || !user?.asterisk_extension}
-              onClick={() => {
-                const phoneNumber = client.phones?.[0]?.number
-                if (!phoneNumber) {
-                  toast.error('Client has no phone number')
-                  return
-                }
-
-                if (isCallActive()) {
-                  toast.warning(
-                    t('pages.clients.modals.callDialog.callInProgress') ||
-                      'Another call or recording is already in progress. Please finish or close it first.'
-                  )
-                  return
-                }
-
-                // Open modal in 'initial' state to let user select call type
-                setSelectedPhoneForCall(phoneNumber)
-                setOpenCallModal('call-dialog')
-                setIsCallModalOpen(true)
-              }}
+              onClick={() => setIsEditModalOpen(true)}
             >
-              {t('pages.clients.activity.call')}
+              {t('pages.clients.activity.editClient')}
             </Button>
-          </PermissionGuard>
-          <Button
-            size="md"
-            variant="primary"
-            leftIcon={<Icons.PencilEdit size={20} />}
-            className="w-full flex-1 rounded-full xl:w-auto xl:flex-none"
-            onClick={() => setIsEditModalOpen(true)}
-          >
-            {t('pages.clients.activity.editClient')}
-          </Button>
-          {/* {canDelete && (
+            {/* {canDelete && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -1210,763 +1226,789 @@ export function ClientDetailPage() {
               </DropdownMenuContent>
             </DropdownMenu>
           )} */}
+          </div>
         </div>
-      </div>
-      <div className="flex flex-col items-start gap-4 self-stretch xl:flex-row xl:gap-5">
-        {/* Client Card */}
-        <div className="client-panel-scroll flex min-h-[44px] w-full flex-col items-start justify-start gap-0 rounded-lg bg-white/50 p-0 xl:max-h-[70vh] xl:w-[30%] xl:overflow-y-auto">
-          {/* Credit Details (top part of card) */}
-          <div className="flex flex-col items-start gap-3 self-stretch px-4 py-4 md:px-6 md:py-5">
-            <div className="flex flex-col gap-2 self-stretch">
-              <div className="flex items-center justify-between gap-2 self-stretch">
-                <div className="flex flex-1 flex-wrap items-center gap-2">
-                  {clientTags && clientTags.length > 0 ? (
-                    clientTags.map((tag) => (
-                      <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
-                    ))
-                  ) : (
-                    <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      {t('pages.clients.detail.noTagsAssigned')}
-                    </span>
-                  )}
+        <div className="flex flex-col items-start gap-4 self-stretch xl:flex-row xl:gap-5">
+          {/* Client Card */}
+          <div className="client-panel-scroll flex min-h-[44px] w-full flex-col items-start justify-start gap-0 rounded-lg bg-white/50 p-0 xl:max-h-[70vh] xl:w-[30%] xl:overflow-y-auto">
+            {/* Credit Details (top part of card) */}
+            <div className="flex flex-col items-start gap-3 self-stretch px-4 py-4 md:px-6 md:py-5">
+              <div className="flex flex-col gap-2 self-stretch">
+                <div className="flex items-center justify-between gap-2 self-stretch">
+                  <div className="flex flex-1 flex-wrap items-center gap-2">
+                    {clientTags && clientTags.length > 0 ? (
+                      clientTags.map((tag) => (
+                        <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
+                      ))
+                    ) : (
+                      <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.noTagsAssigned')}
+                      </span>
+                    )}
+                  </div>
+                  <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                    <button
+                      onClick={() => setIsTagModalOpen(true)}
+                      className="shrink-0 text-gray-500 transition-colors hover:text-gray-700"
+                      title="Manage tags"
+                      type="button"
+                    >
+                      <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
+                    </button>
+                  </PermissionGuard>
                 </div>
-                <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+              </div>
+              <div className="flex flex-col gap-1 self-stretch">
+                <div className="flex min-h-8 items-center self-stretch p-0">
+                  <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                    {t('pages.clients.detail.department')}
+                  </label>
+                  <p className="text-dark-500 ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                    {client.department || '-'}
+                  </p>
+                </div>
+                <div className="flex min-h-8 items-center self-stretch p-0">
+                  <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                    {t('pages.clients.filters.responsibleEmployee')}
+                  </label>
+                  <div className="ml-2 flex flex-1 items-center justify-end gap-1">
+                    {profile?.responsible_employee_id && (
+                      <p className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.responsibleEmployee}
+                      </p>
+                    )}
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                      <button
+                        onClick={() => setAssignRoleModalMode('employee')}
+                        className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                        title="Assign employee"
+                        type="button"
+                      >
+                        <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                      </button>
+                    </PermissionGuard>
+                  </div>
+                </div>
+                <div className="flex min-h-8 items-center self-stretch p-0">
+                  <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                    {t('pages.clients.filters.responsibleSearcher')}
+                  </label>
+                  <div className="ml-2 flex flex-1 items-center justify-end gap-1">
+                    {profile?.responsible_searcher_id && (
+                      <p className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.responsibleResearcher}
+                      </p>
+                    )}
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                      <button
+                        onClick={() => setAssignRoleModalMode('searcher')}
+                        className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                        title="Assign searcher"
+                        type="button"
+                      >
+                        <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                      </button>
+                    </PermissionGuard>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-row items-center justify-between gap-2 self-stretch p-0">
+                <div className="flex flex-1 shrink-0 items-center gap-2.5">
+                  <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                    {t('pages.clients.detail.phones')}
+                  </label>
+                </div>
+                <div className="flex w-full flex-1 flex-col items-start justify-center gap-2">
+                  {client.phones.map((phone, index) => (
+                    <div key={index} className="flex items-center gap-2 self-stretch md:gap-3">
+                      <div className="flex flex-1 items-center justify-end gap-0.5">
+                        <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                          {phone.number}
+                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
+                            >
+                              <Icons.Info size={14} strokeWidth={1.5} />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">
+                            {phone.added_by_user_name && (
+                              <div>
+                                {t('pages.clients.detail.addedBy')}: {phone.added_by_user_name}
+                              </div>
+                            )}
+                            {phone.created_at && (
+                              <div>
+                                {t('pages.clients.detail.addedDate')}:{' '}
+                                {new Date(phone.created_at).toLocaleDateString()}
+                              </div>
+                            )}
+                            {!phone.added_by_user_name && !phone.created_at && <div>-</div>}
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1 md:gap-2">
+                        <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+                          <button
+                            disabled={!user?.is_agent || !user?.asterisk_extension}
+                            onClick={() => {
+                              if (isCallActive()) {
+                                toast.warning(
+                                  t('pages.clients.modals.callDialog.callInProgress') ||
+                                    'Another call or recording is already in progress. Please finish or close it first.'
+                                )
+                                return
+                              }
+                              setSelectedPhoneForCall(phone.number)
+                              setOpenCallModal('call-dialog')
+                              setIsCallModalOpen(true)
+                            }}
+                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                          >
+                            <Icons.Headset size={16} className="flex-shrink-0" />
+                          </button>
+                        </PermissionGuard>
+                        <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                          <button
+                            onClick={() => {
+                              setSelectedPhoneForSMS(phone.number)
+                              setIsSendSMSModalOpen(true)
+                            }}
+                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                          >
+                            <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                          </button>
+                        </PermissionGuard>
+                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+                          <button
+                            onClick={() => {
+                              setSelectedPhoneForNote(phone.number)
+                              setIsNoteModalOpen(true)
+                            }}
+                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                          >
+                            <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                          </button>
+                        </PermissionGuard>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mx-2 flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
+
+            {/* Personal & Contact Details - 4 left tabs inside client card */}
+            <div className="flex flex-col items-start gap-4 self-stretch pr-0 md:flex-row md:items-center md:gap-6 md:pr-6">
+              {/* Vertical tab icons - horizontal scroll on mobile */}
+              <div className="relative flex min-h-[44px] w-full items-start gap-1 self-stretch rounded-bl-lg border-gray-200 p-4 md:my-2.5 md:w-auto md:flex-col md:border-r-1 md:border-b md:border-b-0 md:px-2.5 md:pb-0">
+                {/* Left Arrow Button - only show on mobile when scrolling */}
+                {showClientCardLeftArrow && (
                   <button
-                    onClick={() => setIsTagModalOpen(true)}
-                    className="shrink-0 text-gray-500 transition-colors hover:text-gray-700"
-                    title="Manage tags"
+                    onClick={() => scrollClientCardTabs('left')}
+                    className="absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
+                    aria-label="Scroll tabs left"
                     type="button"
                   >
-                    <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
+                    <Icons.ArrowLeft size={20} className="text-secondary-800" />
                   </button>
-                </PermissionGuard>
-              </div>
-            </div>
-            <div className="flex flex-col gap-1 self-stretch">
-              <div className="flex min-h-8 items-center self-stretch p-0">
-                <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                  {t('pages.clients.detail.department')}
-                </label>
-                <p className="text-dark-500 ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                  {client.department || '-'}
-                </p>
-              </div>
-              <div className="flex min-h-8 items-center self-stretch p-0">
-                <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                  {t('pages.clients.filters.responsibleEmployee')}
-                </label>
-                <div className="ml-2 flex flex-1 items-center justify-end gap-1">
-                  {profile?.responsible_employee_id && (
-                    <p className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.responsibleEmployee}
-                    </p>
-                  )}
-                  <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                    <button
-                      onClick={() => setAssignRoleModalMode('employee')}
-                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                      title="Assign employee"
-                      type="button"
-                    >
-                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                    </button>
-                  </PermissionGuard>
+                )}
+
+                {/* Right Arrow Button - only show on mobile when scrolling */}
+                {showClientCardRightArrow && (
+                  <button
+                    onClick={() => scrollClientCardTabs('right')}
+                    className="absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
+                    aria-label="Scroll tabs right"
+                    type="button"
+                  >
+                    <Icons.ArrowRight size={20} className="text-secondary-800" />
+                  </button>
+                )}
+
+                {/* Tab Container */}
+                <div
+                  ref={clientCardTabContainerRef}
+                  className="scrollbar-hide flex w-full items-start gap-1 self-stretch overflow-x-auto md:w-auto md:flex-col md:overflow-x-visible"
+                  style={{
+                    scrollbarWidth: 'none', // Firefox
+                    msOverflowStyle: 'none', // IE/Edge
+                  }}
+                >
+                  <button
+                    type="button"
+                    data-tab="personal"
+                    onClick={() => setActiveClientCardTab('personal')}
+                    title={t('pages.clients.detail.tabs.personal')}
+                    className={cn(
+                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      activeClientCardTab === 'personal'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        : 'md:border-transparent'
+                    )}
+                  >
+                    <Icons.UserAccount
+                      size={24}
+                      className={cn(
+                        'shrink-0',
+                        activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
+                      )}
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    data-tab="work"
+                    onClick={() => setActiveClientCardTab('work')}
+                    title={t('pages.clients.detail.tabs.work')}
+                    className={cn(
+                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      activeClientCardTab === 'work'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        : 'md:border-transparent'
+                    )}
+                  >
+                    <Icons.Briefcase01
+                      size={24}
+                      className={cn(
+                        'shrink-0',
+                        activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
+                      )}
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    data-tab="passport"
+                    onClick={() => setActiveClientCardTab('passport')}
+                    title={t('pages.clients.detail.tabs.passport')}
+                    className={cn(
+                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      activeClientCardTab === 'passport'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        : 'md:border-transparent'
+                    )}
+                  >
+                    <Icons.File
+                      size={24}
+                      className={cn(
+                        'shrink-0',
+                        activeClientCardTab === 'passport' ? 'text-secondary-800' : 'text-gray-700'
+                      )}
+                    />
+                  </button>
                 </div>
               </div>
-              <div className="flex min-h-8 items-center self-stretch p-0">
-                <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                  {t('pages.clients.filters.responsibleSearcher')}
-                </label>
-                <div className="ml-2 flex flex-1 items-center justify-end gap-1">
-                  {profile?.responsible_searcher_id && (
-                    <p className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.responsibleResearcher}
-                    </p>
-                  )}
-                  <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                    <button
-                      onClick={() => setAssignRoleModalMode('searcher')}
-                      className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
-                      title="Assign searcher"
-                      type="button"
-                    >
-                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                    </button>
-                  </PermissionGuard>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-row items-center justify-between gap-2 self-stretch p-0">
-              <div className="flex flex-1 shrink-0 items-center gap-2.5">
-                <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                  {t('pages.clients.detail.phones')}
-                </label>
-              </div>
-              <div className="flex w-full flex-1 flex-col items-start justify-center gap-2">
-                {client.phones.map((phone, index) => (
-                  <div key={index} className="flex items-center gap-2 self-stretch md:gap-3">
-                    <span className="text-dark-500 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {phone.number}
-                    </span>
-                    <div className="flex shrink-0 items-center gap-1 md:gap-2">
-                      <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
-                        <button
-                          disabled={!user?.is_agent || !user?.asterisk_extension}
-                          onClick={() => {
-                            if (isCallActive()) {
-                              toast.warning(
-                                t('pages.clients.modals.callDialog.callInProgress') ||
-                                  'Another call or recording is already in progress. Please finish or close it first.'
-                              )
-                              return
-                            }
-                            setSelectedPhoneForCall(phone.number)
-                            setOpenCallModal('call-dialog')
-                            setIsCallModalOpen(true)
-                          }}
-                          className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
-                        >
-                          <Icons.Headset size={16} className="flex-shrink-0" />
-                        </button>
-                      </PermissionGuard>
-                      <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
-                        <button
-                          onClick={() => {
-                            setSelectedPhoneForSMS(phone.number)
-                            setIsSendSMSModalOpen(true)
-                          }}
-                          className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                        >
-                          <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                        </button>
-                      </PermissionGuard>
-                      <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
-                        <button
-                          onClick={() => {
-                            setSelectedPhoneForNote(phone.number)
-                            setIsNoteModalOpen(true)
-                          }}
-                          className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                        >
-                          <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                        </button>
-                      </PermissionGuard>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
 
-          <div className="mx-2 flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
-
-          {/* Personal & Contact Details - 4 left tabs inside client card */}
-          <div className="flex flex-col items-start gap-4 self-stretch pr-0 md:flex-row md:items-center md:gap-6 md:pr-6">
-            {/* Vertical tab icons - horizontal scroll on mobile */}
-            <div className="relative flex min-h-[44px] w-full items-start gap-1 self-stretch rounded-bl-lg border-gray-200 p-4 md:my-2.5 md:w-auto md:flex-col md:border-r-1 md:border-b md:border-b-0 md:px-2.5 md:pb-0">
-              {/* Left Arrow Button - only show on mobile when scrolling */}
-              {showClientCardLeftArrow && (
-                <button
-                  onClick={() => scrollClientCardTabs('left')}
-                  className="absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
-                  aria-label="Scroll tabs left"
-                  type="button"
-                >
-                  <Icons.ArrowLeft size={20} className="text-secondary-800" />
-                </button>
-              )}
-
-              {/* Right Arrow Button - only show on mobile when scrolling */}
-              {showClientCardRightArrow && (
-                <button
-                  onClick={() => scrollClientCardTabs('right')}
-                  className="absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
-                  aria-label="Scroll tabs right"
-                  type="button"
-                >
-                  <Icons.ArrowRight size={20} className="text-secondary-800" />
-                </button>
-              )}
-
-              {/* Tab Container */}
-              <div
-                ref={clientCardTabContainerRef}
-                className="scrollbar-hide flex w-full items-start gap-1 self-stretch overflow-x-auto md:w-auto md:flex-col md:overflow-x-visible"
-                style={{
-                  scrollbarWidth: 'none', // Firefox
-                  msOverflowStyle: 'none', // IE/Edge
-                }}
-              >
-                <button
-                  type="button"
-                  data-tab="personal"
-                  onClick={() => setActiveClientCardTab('personal')}
-                  title={t('pages.clients.detail.tabs.personal')}
-                  className={cn(
-                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
-                    activeClientCardTab === 'personal'
-                      ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
-                      : 'md:border-transparent'
-                  )}
-                >
-                  <Icons.UserAccount
-                    size={24}
-                    className={cn(
-                      'shrink-0',
-                      activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
-                    )}
-                  />
-                </button>
-                <button
-                  type="button"
-                  data-tab="work"
-                  onClick={() => setActiveClientCardTab('work')}
-                  title={t('pages.clients.detail.tabs.work')}
-                  className={cn(
-                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
-                    activeClientCardTab === 'work'
-                      ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
-                      : 'md:border-transparent'
-                  )}
-                >
-                  <Icons.Briefcase01
-                    size={24}
-                    className={cn(
-                      'shrink-0',
-                      activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
-                    )}
-                  />
-                </button>
-                <button
-                  type="button"
-                  data-tab="passport"
-                  onClick={() => setActiveClientCardTab('passport')}
-                  title={t('pages.clients.detail.tabs.passport')}
-                  className={cn(
-                    'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
-                    activeClientCardTab === 'passport'
-                      ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
-                      : 'md:border-transparent'
-                  )}
-                >
-                  <Icons.File
-                    size={24}
-                    className={cn(
-                      'shrink-0',
-                      activeClientCardTab === 'passport' ? 'text-secondary-800' : 'text-gray-700'
-                    )}
-                  />
-                </button>
-              </div>
-            </div>
-
-            {/* Right side content for selected client card tab */}
-            <div className="flex w-full min-w-0 flex-col items-center gap-6 self-stretch overflow-hidden px-4 py-4 md:px-0">
-              {activeClientCardTab === 'personal' && (
-                <>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.tin')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.tin}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.dateOfBirth')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.dateOfBirth}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.age')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.age}
-                    </p>
-                  </div>
-                  <div className="mx-2 h-px self-stretch bg-gray-200"></div>
-                  {client.addresses.map((address) => (
-                    <React.Fragment key={address.id}>
-                      <div className="flex items-start self-stretch p-0">
-                        <div className="flex shrink-0 items-start gap-2.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {address.addressType === 'registration'
-                              ? t('pages.clients.detail.registrationAddress')
-                              : t('pages.clients.detail.personalAddress')}
-                          </label>
-                        </div>
-                        <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
-                          {address.fullAddress}
-                        </p>
+              {/* Right side content for selected client card tab */}
+              <div className="flex w-full min-w-0 flex-col items-center gap-6 self-stretch overflow-hidden px-4 py-4 md:px-0">
+                {activeClientCardTab === 'personal' && (
+                  <>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.tin')}
+                        </label>
                       </div>
-                    </React.Fragment>
-                  ))}
-                  {client.addresses.length === 0 && <p className="text-xs text-gray-500">-</p>}
-                  <div className="mx-2 h-px self-stretch bg-gray-200"></div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.maritalStatus')}
-                      </label>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.tin}
+                      </p>
                     </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.maritalStatus}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.numberOfFamilyMembers')}
-                      </label>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.dateOfBirth')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.dateOfBirth}
+                      </p>
                     </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.familyMembers}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.incomeLevel')}
-                      </label>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.age')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.age}
+                      </p>
                     </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.incomeLevel}
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {activeClientCardTab === 'passport' && (
-                <>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.documentType')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.documentType}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.passportSeries')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.passportSeries}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.passportNumber')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.passportNumber}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.issuedBy')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.issuedBy}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.issuedDate')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.issuedDate}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.expiresDate')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.expiresDate}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.gender')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.gender}
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {activeClientCardTab === 'work' && (
-                <>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.organizationName')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.work?.organizationName || '-'}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.position')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.work?.position || '-'}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.experience')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.work?.experience || '-'}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.managerFullName')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.work?.managerFullName || '-'}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.employmentType')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.work?.employmentType || '-'}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.workPhone')}
-                      </label>
-                    </div>
-                    <div className="flex flex-1 items-center justify-end gap-2 md:gap-3">
-                      <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.work?.workPhone || '-'}
-                      </span>
-                      {client.work?.workPhone && client.work.workPhone !== '-' && (
-                        <div className="flex shrink-0 items-center gap-1 md:gap-2">
-                          <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
-                            <button
-                              disabled={!user?.is_agent || !user?.asterisk_extension}
-                              onClick={() => {
-                                if (isCallActive()) {
-                                  toast.warning(
-                                    t('pages.clients.modals.callDialog.callInProgress') ||
-                                      'Another call or recording is already in progress. Please finish or close it first.'
-                                  )
-                                  return
-                                }
-                                setSelectedPhoneForCall(client.work?.workPhone || '')
-                                setOpenCallModal('call-dialog')
-                                setIsCallModalOpen(true)
-                              }}
-                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
-                            >
-                              <Icons.Headset size={16} className="flex-shrink-0" />
-                            </button>
-                          </PermissionGuard>
-                          <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
-                            <button
-                              onClick={() => {
-                                setSelectedPhoneForSMS(client.work?.workPhone || '')
-                                setIsSendSMSModalOpen(true)
-                              }}
-                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                            >
-                              <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                            </button>
-                          </PermissionGuard>
-                          <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
-                            <button
-                              onClick={() => {
-                                setSelectedPhoneForNote(client.work?.workPhone || '')
-                                setIsNoteModalOpen(true)
-                              }}
-                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                            >
-                              <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                            </button>
-                          </PermissionGuard>
+                    <div className="mx-2 h-px self-stretch bg-gray-200"></div>
+                    {client.addresses.map((address) => (
+                      <React.Fragment key={address.id}>
+                        <div className="flex items-start self-stretch p-0">
+                          <div className="flex shrink-0 items-start gap-2.5">
+                            <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                              {address.addressType === 'registration'
+                                ? t('pages.clients.detail.registrationAddress')
+                                : t('pages.clients.detail.personalAddress')}
+                            </label>
+                          </div>
+                          <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                            {address.fullAddress}
+                          </p>
                         </div>
-                      )}
+                      </React.Fragment>
+                    ))}
+                    {client.addresses.length === 0 && <p className="text-xs text-gray-500">-</p>}
+                    <div className="mx-2 h-px self-stretch bg-gray-200"></div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.maritalStatus')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.maritalStatus}
+                      </p>
                     </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.numberOfFamilyMembers')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.familyMembers}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.incomeLevel')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.incomeLevel}
+                      </p>
+                    </div>
+                  </>
+                )}
 
-        {/* Right Column - Data + Comments Card with 6 horizontal top tabs */}
-        <div className="client-panel-scroll flex w-full flex-1 flex-col items-start gap-5 self-stretch xl:max-h-[70vh] xl:w-[64%] xl:overflow-y-auto">
-          <div className="flex flex-1 flex-col items-start gap-0 self-stretch overflow-hidden rounded-lg bg-white/50 p-0">
-            {/* Horizontal tab bar - 6 tabs at the top - scrollable on mobile */}
-            <div className="relative mx-3 flex items-center gap-0 self-stretch border-b border-gray-200">
-              {/* Left Arrow Button */}
-              {showLeftArrow && (
-                <button
-                  onClick={() => scrollTabs('left')}
-                  className="absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100"
-                  aria-label="Scroll tabs left"
-                  type="button"
-                >
-                  <Icons.ArrowLeft size={20} className="text-secondary-800" />
-                </button>
-              )}
+                {activeClientCardTab === 'passport' && (
+                  <>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.documentType')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.documentType}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.passportSeries')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.passportSeries}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.passportNumber')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.passportNumber}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.issuedBy')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.issuedBy}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.issuedDate')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.issuedDate}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.expiresDate')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.expiresDate}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.gender')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.gender}
+                      </p>
+                    </div>
+                  </>
+                )}
 
-              {/* Right Arrow Button */}
-              {showRightArrow && (
-                <button
-                  onClick={() => scrollTabs('right')}
-                  className="absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100"
-                  aria-label="Scroll tabs right"
-                  type="button"
-                >
-                  <Icons.ArrowRight size={20} className="text-secondary-800" />
-                </button>
-              )}
-
-              {/* Tab Container */}
-              <div
-                ref={tabContainerRef}
-                className="scrollbar-hide flex items-center gap-0 self-stretch overflow-x-auto"
-                style={{
-                  scrollbarWidth: 'none', // Firefox
-                  msOverflowStyle: 'none', // IE/Edge
-                }}
-              >
-                {/* Tab 1: Loans */}
-                <button
-                  type="button"
-                  data-tab="loans"
-                  onClick={() => setActiveRightCardTab('loans')}
-                  className={cn(
-                    'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
-                    activeRightCardTab === 'loans'
-                      ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                      : 'hover:text-secondary-800 border-transparent text-gray-600'
-                  )}
-                >
-                  <Icons.Folder size={20} className="shrink-0 text-current" />
-                  <span className="text-xs font-medium whitespace-nowrap md:text-sm">
-                    {t('pages.clients.detail.tabs.loans')}
-                  </span>
-                </button>
-                {/* Tab 2: Payments */}
-                <button
-                  type="button"
-                  data-tab="payments"
-                  onClick={() => setActiveRightCardTab('payments')}
-                  className={cn(
-                    'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
-                    activeRightCardTab === 'payments'
-                      ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                      : 'hover:text-secondary-800 border-transparent text-gray-600'
-                  )}
-                >
-                  <Icons.Wallet01 size={20} className="shrink-0 text-current" />
-                  <span className="text-xs font-medium whitespace-nowrap md:text-sm">
-                    {t('pages.clients.detail.payments')}
-                  </span>
-                </button>
-                {/* Tab 3: Recommenders */}
-                <button
-                  type="button"
-                  data-tab="recommenders"
-                  onClick={() => setActiveRightCardTab('recommenders')}
-                  className={cn(
-                    'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
-                    activeRightCardTab === 'recommenders'
-                      ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                      : 'hover:text-secondary-800 border-transparent text-gray-600'
-                  )}
-                >
-                  <Icons.UserCheck01 size={20} className="shrink-0 text-current" />
-                  <span className="text-xs font-medium whitespace-nowrap md:text-sm">
-                    {t('pages.clients.detail.tabs.recommenders')}
-                  </span>
-                </button>
-                {/* Tab 4: Operators */}
-                <button
-                  type="button"
-                  data-tab="operators"
-                  onClick={() => setActiveRightCardTab('operators')}
-                  className={cn(
-                    'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
-                    activeRightCardTab === 'operators'
-                      ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                      : 'hover:text-secondary-800 border-transparent text-gray-600'
-                  )}
-                >
-                  <Icons.UserMultiple02 size={20} className="shrink-0 text-current" />
-                  <span className="text-xs font-medium whitespace-nowrap md:text-sm">
-                    {t('pages.clients.detail.operators')}
-                  </span>
-                </button>
-                {/* Tab 4: Call/SMS */}
-                <button
-                  type="button"
-                  data-tab="call-sms-history"
-                  onClick={() => setActiveRightCardTab('call-sms-history')}
-                  className={cn(
-                    'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
-                    activeRightCardTab === 'call-sms-history'
-                      ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                      : 'hover:text-secondary-800 border-transparent text-gray-600'
-                  )}
-                >
-                  <Icons.Clock01 size={20} className="shrink-0 text-current" />
-                  <span className="text-xs font-medium whitespace-nowrap md:text-sm">
-                    {t('pages.clients.detail.tabs.callSms')}
-                  </span>
-                </button>
-                {/* Tab 5: Tasks */}
-                <button
-                  type="button"
-                  data-tab="tasks"
-                  onClick={() => setActiveRightCardTab('tasks')}
-                  className={cn(
-                    'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
-                    activeRightCardTab === 'tasks'
-                      ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                      : 'hover:text-secondary-800 border-transparent text-gray-600'
-                  )}
-                >
-                  <Icons.CheckmarkSquare03 size={20} className="shrink-0 text-current" />
-                  <span className="text-xs font-medium whitespace-nowrap md:text-sm">
-                    {t('pages.clients.detail.tabs.tasks')}
-                  </span>
-                </button>
-                {/* Tab 6: Docs */}
-                <button
-                  type="button"
-                  data-tab="documents"
-                  onClick={() => setActiveRightCardTab('documents')}
-                  className={cn(
-                    'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
-                    activeRightCardTab === 'documents'
-                      ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                      : 'hover:text-secondary-800 border-transparent text-gray-600'
-                  )}
-                >
-                  <Icons.File size={20} className="shrink-0 text-current" />
-                  <span className="text-xs font-medium whitespace-nowrap md:text-sm">
-                    {t('pages.clients.detail.tabs.docs')}
-                  </span>
-                </button>
+                {activeClientCardTab === 'work' && (
+                  <>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.organizationName')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.work?.organizationName || '-'}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.position')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.work?.position || '-'}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.experience')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.work?.experience || '-'}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.managerFullName')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.work?.managerFullName || '-'}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.employmentType')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.work?.employmentType || '-'}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.workPhone')}
+                        </label>
+                      </div>
+                      <div className="flex flex-1 items-center justify-end gap-2 md:gap-3">
+                        <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                          {client.work?.workPhone || '-'}
+                        </span>
+                        {client.work?.workPhone && client.work.workPhone !== '-' && (
+                          <div className="flex shrink-0 items-center gap-1 md:gap-2">
+                            <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+                              <button
+                                disabled={!user?.is_agent || !user?.asterisk_extension}
+                                onClick={() => {
+                                  if (isCallActive()) {
+                                    toast.warning(
+                                      t('pages.clients.modals.callDialog.callInProgress') ||
+                                        'Another call or recording is already in progress. Please finish or close it first.'
+                                    )
+                                    return
+                                  }
+                                  setSelectedPhoneForCall(client.work?.workPhone || '')
+                                  setOpenCallModal('call-dialog')
+                                  setIsCallModalOpen(true)
+                                }}
+                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                              >
+                                <Icons.Headset size={16} className="flex-shrink-0" />
+                              </button>
+                            </PermissionGuard>
+                            <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                              <button
+                                onClick={() => {
+                                  setSelectedPhoneForSMS(client.work?.workPhone || '')
+                                  setIsSendSMSModalOpen(true)
+                                }}
+                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                              >
+                                <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                              </button>
+                            </PermissionGuard>
+                            <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+                              <button
+                                onClick={() => {
+                                  setSelectedPhoneForNote(client.work?.workPhone || '')
+                                  setIsNoteModalOpen(true)
+                                }}
+                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                              >
+                                <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                              </button>
+                            </PermissionGuard>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
+          </div>
 
-            {/* Content area for selected tab */}
-            <div className="flex w-full flex-col items-start gap-0 self-stretch p-0">
-              {/* Tab 1: Loans */}
-              {activeRightCardTab === 'loans' && (
-                <div className="flex w-full flex-col gap-0">
-                  {/* Secondary filters below primary tabs */}
-                  <div className="mx-3 flex flex-col items-center gap-3 self-stretch overflow-x-auto pt-4 pb-0 sm:flex-row md:mx-6 md:gap-6 md:pt-6">
-                    <button
-                      onClick={() => setActiveLoanTab('process')}
-                      className={cn(
-                        'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
-                        activeLoanTab === 'process'
-                          ? 'bg-secondary-800/10 text-secondary-800'
-                          : 'hover:text-secondary-800 text-gray-600'
-                      )}
-                    >
-                      {t('pages.clients.detail.loansInProcess')}
-                    </button>
-                    <button
-                      onClick={() => setActiveLoanTab('closed')}
-                      className={cn(
-                        'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
-                        activeLoanTab === 'closed'
-                          ? 'bg-secondary-800/10 text-secondary-800'
-                          : 'hover:text-secondary-800 text-gray-600'
-                      )}
-                    >
-                      {t('pages.clients.detail.closedLoans')}
-                    </button>
-                    <button
-                      onClick={() => setActiveLoanTab('rr')}
-                      className={cn(
-                        'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
-                        activeLoanTab === 'rr'
-                          ? 'bg-secondary-800/10 text-secondary-800'
-                          : 'hover:text-secondary-800 text-gray-600'
-                      )}
-                    >
-                      {t('pages.clients.detail.loansOnRR')}
-                    </button>
-                  </div>
-                  {/* Data table filtered by sub-tab */}
-                  <div className="flex flex-col items-start gap-2.5 self-stretch px-3 py-4 md:px-6">
-                    {activeLoanTab === 'rr' ? (
-                      isRrLoading ? (
+          {/* Right Column - Data + Comments Card with 6 horizontal top tabs */}
+          <div className="client-panel-scroll flex w-full flex-1 flex-col items-start gap-5 self-stretch xl:max-h-[70vh] xl:w-[64%] xl:overflow-y-auto">
+            <div className="flex flex-1 flex-col items-start gap-0 self-stretch overflow-hidden rounded-lg bg-white/50 p-0">
+              {/* Horizontal tab bar - 6 tabs at the top - scrollable on mobile */}
+              <div className="relative mx-3 flex items-center gap-0 self-stretch border-b border-gray-200">
+                {/* Left Arrow Button */}
+                {showLeftArrow && (
+                  <button
+                    onClick={() => scrollTabs('left')}
+                    className="absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100"
+                    aria-label="Scroll tabs left"
+                    type="button"
+                  >
+                    <Icons.ArrowLeft size={20} className="text-secondary-800" />
+                  </button>
+                )}
+
+                {/* Right Arrow Button */}
+                {showRightArrow && (
+                  <button
+                    onClick={() => scrollTabs('right')}
+                    className="absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100"
+                    aria-label="Scroll tabs right"
+                    type="button"
+                  >
+                    <Icons.ArrowRight size={20} className="text-secondary-800" />
+                  </button>
+                )}
+
+                {/* Tab Container */}
+                <div
+                  ref={tabContainerRef}
+                  className="scrollbar-hide flex items-center gap-0 self-stretch overflow-x-auto"
+                  style={{
+                    scrollbarWidth: 'none', // Firefox
+                    msOverflowStyle: 'none', // IE/Edge
+                  }}
+                >
+                  {/* Tab 1: Loans */}
+                  <button
+                    type="button"
+                    data-tab="loans"
+                    onClick={() => setActiveRightCardTab('loans')}
+                    className={cn(
+                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      activeRightCardTab === 'loans'
+                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                    )}
+                  >
+                    <Icons.Folder size={20} className="shrink-0 text-current" />
+                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                      {t('pages.clients.detail.tabs.loans')}
+                    </span>
+                  </button>
+                  {/* Tab 2: Payments */}
+                  <button
+                    type="button"
+                    data-tab="payments"
+                    onClick={() => setActiveRightCardTab('payments')}
+                    className={cn(
+                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      activeRightCardTab === 'payments'
+                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                    )}
+                  >
+                    <Icons.Wallet01 size={20} className="shrink-0 text-current" />
+                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                      {t('pages.clients.detail.payments')}
+                    </span>
+                  </button>
+                  {/* Tab 3: Recommenders */}
+                  <button
+                    type="button"
+                    data-tab="recommenders"
+                    onClick={() => setActiveRightCardTab('recommenders')}
+                    className={cn(
+                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      activeRightCardTab === 'recommenders'
+                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                    )}
+                  >
+                    <Icons.UserCheck01 size={20} className="shrink-0 text-current" />
+                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                      {t('pages.clients.detail.tabs.recommenders')}
+                    </span>
+                  </button>
+                  {/* Tab 4: Operators */}
+                  <button
+                    type="button"
+                    data-tab="operators"
+                    onClick={() => setActiveRightCardTab('operators')}
+                    className={cn(
+                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      activeRightCardTab === 'operators'
+                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                    )}
+                  >
+                    <Icons.UserMultiple02 size={20} className="shrink-0 text-current" />
+                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                      {t('pages.clients.detail.operators')}
+                    </span>
+                  </button>
+                  {/* Tab 4: Call/SMS */}
+                  <button
+                    type="button"
+                    data-tab="call-sms-history"
+                    onClick={() => setActiveRightCardTab('call-sms-history')}
+                    className={cn(
+                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      activeRightCardTab === 'call-sms-history'
+                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                    )}
+                  >
+                    <Icons.Clock01 size={20} className="shrink-0 text-current" />
+                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                      {t('pages.clients.detail.tabs.callSms')}
+                    </span>
+                  </button>
+                  {/* Tab 5: Tasks */}
+                  <button
+                    type="button"
+                    data-tab="tasks"
+                    onClick={() => setActiveRightCardTab('tasks')}
+                    className={cn(
+                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      activeRightCardTab === 'tasks'
+                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                    )}
+                  >
+                    <Icons.CheckmarkSquare03 size={20} className="shrink-0 text-current" />
+                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                      {t('pages.clients.detail.tabs.tasks')}
+                    </span>
+                  </button>
+                  {/* Tab 6: Docs */}
+                  <button
+                    type="button"
+                    data-tab="documents"
+                    onClick={() => setActiveRightCardTab('documents')}
+                    className={cn(
+                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      activeRightCardTab === 'documents'
+                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                    )}
+                  >
+                    <Icons.File size={20} className="shrink-0 text-current" />
+                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                      {t('pages.clients.detail.tabs.docs')}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Content area for selected tab */}
+              <div className="flex w-full flex-col items-start gap-0 self-stretch p-0">
+                {/* Tab 1: Loans */}
+                {activeRightCardTab === 'loans' && (
+                  <div className="flex w-full flex-col gap-0">
+                    {/* Secondary filters below primary tabs */}
+                    <div className="mx-3 flex flex-col items-center gap-3 self-stretch overflow-x-auto pt-4 pb-0 sm:flex-row md:mx-6 md:gap-6 md:pt-6">
+                      <button
+                        onClick={() => setActiveLoanTab('process')}
+                        className={cn(
+                          'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
+                          activeLoanTab === 'process'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:text-secondary-800 text-gray-600'
+                        )}
+                      >
+                        {t('pages.clients.detail.loansInProcess')}
+                      </button>
+                      <button
+                        onClick={() => setActiveLoanTab('closed')}
+                        className={cn(
+                          'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
+                          activeLoanTab === 'closed'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:text-secondary-800 text-gray-600'
+                        )}
+                      >
+                        {t('pages.clients.detail.closedLoans')}
+                      </button>
+                      <button
+                        onClick={() => setActiveLoanTab('rr')}
+                        className={cn(
+                          'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
+                          activeLoanTab === 'rr'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:text-secondary-800 text-gray-600'
+                        )}
+                      >
+                        {t('pages.clients.detail.loansOnRR')}
+                      </button>
+                    </div>
+                    {/* Data table filtered by sub-tab */}
+                    <div className="flex flex-col items-start gap-2.5 self-stretch px-3 py-4 md:px-6">
+                      {activeLoanTab === 'rr' ? (
+                        isRrLoading ? (
+                          <TableSkeleton columns={7} rows={3} />
+                        ) : (
+                          <DataTable
+                            columns={rrColumns}
+                            data={restructuringAgreements}
+                            className="w-full"
+                          />
+                        )
+                      ) : isLoansLoading ? (
                         <TableSkeleton columns={7} rows={3} />
                       ) : (
                         <DataTable
-                          columns={rrColumns}
-                          data={restructuringAgreements}
+                          columns={loanColumns}
+                          data={client.loans.filter((loan) => {
+                            if (activeLoanTab === 'process') return loan.status === 'active'
+                            if (activeLoanTab === 'closed') return loan.status === 'closed'
+                            return true
+                          })}
                           className="w-full"
                         />
-                      )
-                    ) : isLoansLoading ? (
-                      <TableSkeleton columns={7} rows={3} />
-                    ) : (
-                      <DataTable
-                        columns={loanColumns}
-                        data={client.loans.filter((loan) => {
-                          if (activeLoanTab === 'process') return loan.status === 'active'
-                          if (activeLoanTab === 'closed') return loan.status === 'closed'
-                          return true
-                        })}
-                        className="w-full"
-                      />
-                    )}
-                  </div>
-                  {/* Action buttons at the bottom */}
-                  <div className="flex flex-wrap items-center gap-2 self-stretch px-3 py-4 md:gap-3 md:px-6">
-                    {/* <Button
+                      )}
+                    </div>
+                    {/* Action buttons at the bottom */}
+                    <div className="flex flex-wrap items-center gap-2 self-stretch px-3 py-4 md:gap-3 md:px-6">
+                      {/* <Button
                       variant="secondary"
                       leftIcon={<Icons.MoneyRemove01 size={20} />}
                       className="rounded text-xs md:text-sm"
@@ -2014,514 +2056,367 @@ export function ClientDetailPage() {
                     >
                       {t('pages.clients.detail.makePayment')}
                     </Button> */}
-                    <Button
-                      variant="secondary"
-                      leftIcon={<Icons.Calculate size={20} />}
-                      className="rounded text-xs md:text-sm"
-                      size="sm"
-                      onClick={() => {
-                        setConnectRrForm({
-                          debtId: '',
-                          connectionDate: null,
-                          totalAmount: '',
-                          numPayments: 1,
-                          payments: [{ date: null, amount: '' }],
-                        })
-                        setConnectRrError(null)
-                        setIsConnectRrOpen(true)
-                      }}
-                    >
-                      {t('pages.clients.detail.connectRR')}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 2: Payments */}
-              {activeRightCardTab === 'payments' && (
-                <div className="flex w-full flex-col gap-4">
-                  <div className="mx-3 flex min-h-[44px] items-center gap-3 self-stretch overflow-x-auto pt-4 pb-0 md:mx-6 md:gap-6 md:pt-6">
-                    <button
-                      onClick={() => setActivePaymentTab('payments')}
-                      className={cn(
-                        'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
-                        activePaymentTab === 'payments'
-                          ? 'bg-secondary-800/10 text-secondary-800'
-                          : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
-                      )}
-                    >
-                      {t('pages.clients.detail.payments')}
-                    </button>
-                    <button
-                      onClick={() => setActivePaymentTab('writes-off')}
-                      className={cn(
-                        'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
-                        activePaymentTab === 'writes-off'
-                          ? 'bg-secondary-800/10 text-secondary-800'
-                          : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
-                      )}
-                    >
-                      {t('pages.clients.detail.writesOff')}
-                    </button>
-                    <button
-                      onClick={() => setActivePaymentTab('primary-creditor')}
-                      className={cn(
-                        'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
-                        activePaymentTab === 'primary-creditor'
-                          ? 'bg-secondary-800/10 text-secondary-800'
-                          : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
-                      )}
-                    >
-                      {t('pages.clients.detail.paymentToPrimaryCreditor')}
-                    </button>
-                  </div>
-                  <div className="flex flex-col items-start gap-2.5 self-stretch px-3 pb-4 md:px-6">
-                    {isPaymentsLoading ? (
-                      <TableSkeleton columns={7} rows={3} />
-                    ) : (
-                      <>
-                        {activePaymentTab === 'payments' && (
-                          <DataTable
-                            columns={paymentColumns}
-                            data={client.payments}
-                            className="w-full"
-                          />
-                        )}
-                        {activePaymentTab === 'writes-off' && (
-                          <DataTable
-                            columns={writeOffColumns}
-                            data={client.writesOffs}
-                            className="w-full"
-                          />
-                        )}
-                        {activePaymentTab === 'primary-creditor' && (
-                          <DataTable
-                            columns={primaryCreditorPaymentColumns}
-                            data={client.paymentsToPrimaryCreditor}
-                            className="w-full"
-                          />
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 3: Recommenders */}
-              {activeRightCardTab === 'recommenders' && (
-                <div className="flex flex-col items-start gap-4 self-stretch p-3 md:gap-5 md:p-6">
-                  {client.recommenders.map((contact, index) => (
-                    <React.Fragment key={contact.id}>
-                      <div className="flex min-w-0 items-start self-stretch p-0">
-                        <div className="flex shrink-0 items-start gap-2.5 pt-0.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.contactValue')}
-                          </label>
-                        </div>
-                        <div className="flex min-w-0 flex-1 items-start justify-end gap-2 md:gap-3">
-                          <span className="text-dark-500 min-w-0 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
-                            {contact.contactValue}
-                          </span>
-                          {contact.isPhone && contact.contactValue && (
-                            <div className="flex shrink-0 items-center gap-1 md:gap-2">
-                              <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
-                                <button
-                                  disabled={!user?.is_agent || !user?.asterisk_extension}
-                                  onClick={() => {
-                                    if (isCallActive()) {
-                                      toast.warning(
-                                        t('pages.clients.modals.callDialog.callInProgress') ||
-                                          'Another call or recording is already in progress. Please finish or close it first.'
-                                      )
-                                      return
-                                    }
-                                    setSelectedPhoneForCall(contact.contactValue)
-                                    setOpenCallModal('call-dialog')
-                                    setIsCallModalOpen(true)
-                                  }}
-                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
-                                >
-                                  <Icons.Headset size={16} className="flex-shrink-0" />
-                                </button>
-                              </PermissionGuard>
-                              <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
-                                <button
-                                  onClick={() => {
-                                    setSelectedPhoneForSMS(contact.contactValue)
-                                    setIsSendSMSModalOpen(true)
-                                  }}
-                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                                >
-                                  <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                                </button>
-                              </PermissionGuard>
-                              <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
-                                <button
-                                  onClick={() => {
-                                    setSelectedPhoneForNote(contact.contactValue)
-                                    setIsNoteModalOpen(true)
-                                  }}
-                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                                >
-                                  <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                                </button>
-                              </PermissionGuard>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex min-w-0 items-start self-stretch p-0">
-                        <div className="flex shrink-0 items-start gap-2.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.contactType')}
-                          </label>
-                        </div>
-                        <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
-                          {contact.contactType}
-                        </p>
-                      </div>
-                      <div className="flex min-w-0 items-start self-stretch p-0">
-                        <div className="flex shrink-0 items-start gap-2.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.comment')}
-                          </label>
-                        </div>
-                        <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
-                          {contact.comment}
-                        </p>
-                      </div>
-                      {index < client.recommenders.length - 1 && (
-                        <div className="mx-2 h-px self-stretch bg-gray-200"></div>
-                      )}
-                    </React.Fragment>
-                  ))}
-                  {client.recommenders.length === 0 && <p className="text-xs text-gray-500">-</p>}
-                </div>
-              )}
-
-              {/* Tab 4: Operators/Searchers */}
-              {activeRightCardTab === 'operators' && (
-                <div className="flex w-full flex-col gap-4">
-                  <div className="mx-3 flex min-h-[44px] items-center gap-3 self-stretch overflow-x-auto pt-4 pb-0 md:mx-6 md:gap-6 md:pt-6">
-                    <button
-                      onClick={() => setActiveOperatorTab('operators')}
-                      className={cn(
-                        'flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600 md:p-3',
-                        activeOperatorTab === 'operators'
-                          ? 'bg-secondary-800/10 text-secondary-800'
-                          : 'hover:bg-secondary-800/20 hover:text-secondary-800'
-                      )}
-                    >
-                      {t('pages.clients.detail.operators')}
-                    </button>
-                    <button
-                      onClick={() => setActiveOperatorTab('searchers')}
-                      className={cn(
-                        'flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600 md:p-3',
-                        activeOperatorTab === 'searchers'
-                          ? 'bg-secondary-800/10 text-secondary-800'
-                          : 'hover:bg-secondary-800/20 hover:text-secondary-800'
-                      )}
-                    >
-                      {t('pages.clients.detail.searchers')}
-                    </button>
-                  </div>
-                  <div className="flex flex-col items-start gap-2.5 self-stretch px-3 pb-4 md:px-6">
-                    {isOperatorsLoading ? (
-                      <TableSkeleton columns={5} rows={3} />
-                    ) : (
-                      <>
-                        {activeOperatorTab === 'operators' && (
-                          <DataTable
-                            columns={operatorColumns}
-                            data={client.operators}
-                            className="w-full"
-                          />
-                        )}
-                        {activeOperatorTab === 'searchers' && (
-                          <DataTable
-                            columns={searcherColumns}
-                            data={client.searchers}
-                            className="w-full"
-                          />
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 4: Call and SMS History */}
-              {activeRightCardTab === 'call-sms-history' && (
-                <div className="flex flex-1 flex-col items-start gap-4 self-stretch p-3 md:gap-5 md:p-6">
-                  <div className="flex h-auto flex-col items-start gap-3 self-stretch p-0 md:h-[41px] md:flex-row md:items-center md:gap-5">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                        {activeCallSmsTab === 'calls'
-                          ? t('pages.clients.detail.latestCalls')
-                          : activeCallSmsTab === 'sms'
-                            ? t('pages.clients.detail.latestSms')
-                            : t('pages.clients.detail.latestCallsAndSms')}
-                      </span>
-                    </div>
-                    <div className="flex w-full flex-1 items-center justify-between gap-1 rounded-lg bg-white/50 p-1 shadow-sm md:w-auto">
-                      <button
-                        onClick={() => setActiveCallSmsTab('all')}
-                        className={cn(
-                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
-                          activeCallSmsTab === 'all'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
-                        )}
-                      >
-                        {t('pages.clients.activity.all')}
-                      </button>
-                      <button
-                        onClick={() => setActiveCallSmsTab('calls')}
-                        className={cn(
-                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
-                          activeCallSmsTab === 'calls'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
-                        )}
-                      >
-                        {t('pages.clients.activity.calls')}
-                      </button>
-                      <button
-                        onClick={() => setActiveCallSmsTab('sms')}
-                        className={cn(
-                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
-                          activeCallSmsTab === 'sms'
-                            ? 'bg-secondary-800/10 text-secondary-800'
-                            : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
-                        )}
-                      >
-                        {t('pages.clients.activity.sms')}
-                      </button>
-                    </div>
-                    <div className="flex w-full flex-1 flex-col items-start gap-2.5 md:w-auto md:flex-col md:items-end">
                       <Button
-                        leftIcon={<Icons.Download size={20} />}
-                        className="bg-secondary-800 flex w-full flex-row items-center gap-1 rounded px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] text-white md:w-auto md:px-4 md:py-2.5"
+                        variant="secondary"
+                        leftIcon={<Icons.Calculate size={20} />}
+                        className="rounded text-xs md:text-sm"
                         size="sm"
+                        onClick={() => {
+                          setConnectRrForm({
+                            debtId: '',
+                            connectionDate: null,
+                            totalAmount: '',
+                            numPayments: 1,
+                            payments: [{ date: null, amount: '' }],
+                          })
+                          setConnectRrError(null)
+                          setIsConnectRrOpen(true)
+                        }}
                       >
-                        {t('pages.clients.detail.exportCSV')}
+                        {t('pages.clients.detail.connectRR')}
                       </Button>
                     </div>
                   </div>
-                  {isCallSmsLoading ? (
-                    <div className="flex w-full flex-col gap-4">
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-                        {Array.from({ length: 6 }).map((_, i) => (
-                          <div key={i} className="h-24 animate-pulse rounded-lg bg-gray-200" />
-                        ))}
+                )}
+
+                {/* Tab 2: Payments */}
+                {activeRightCardTab === 'payments' && (
+                  <div className="flex w-full flex-col gap-4">
+                    <div className="mx-3 flex min-h-[44px] items-center gap-3 self-stretch overflow-x-auto pt-4 pb-0 md:mx-6 md:gap-6 md:pt-6">
+                      <button
+                        onClick={() => setActivePaymentTab('payments')}
+                        className={cn(
+                          'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
+                          activePaymentTab === 'payments'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
+                        )}
+                      >
+                        {t('pages.clients.detail.payments')}
+                      </button>
+                      <button
+                        onClick={() => setActivePaymentTab('writes-off')}
+                        className={cn(
+                          'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
+                          activePaymentTab === 'writes-off'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
+                        )}
+                      >
+                        {t('pages.clients.detail.writesOff')}
+                      </button>
+                      <button
+                        onClick={() => setActivePaymentTab('primary-creditor')}
+                        className={cn(
+                          'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
+                          activePaymentTab === 'primary-creditor'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
+                        )}
+                      >
+                        {t('pages.clients.detail.paymentToPrimaryCreditor')}
+                      </button>
+                    </div>
+                    <div className="flex flex-col items-start gap-2.5 self-stretch px-3 pb-4 md:px-6">
+                      {isPaymentsLoading ? (
+                        <TableSkeleton columns={7} rows={3} />
+                      ) : (
+                        <>
+                          {activePaymentTab === 'payments' && (
+                            <DataTable
+                              columns={paymentColumns}
+                              data={client.payments}
+                              className="w-full"
+                            />
+                          )}
+                          {activePaymentTab === 'writes-off' && (
+                            <DataTable
+                              columns={writeOffColumns}
+                              data={client.writesOffs}
+                              className="w-full"
+                            />
+                          )}
+                          {activePaymentTab === 'primary-creditor' && (
+                            <DataTable
+                              columns={primaryCreditorPaymentColumns}
+                              data={client.paymentsToPrimaryCreditor}
+                              className="w-full"
+                            />
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab 3: Recommenders */}
+                {activeRightCardTab === 'recommenders' && (
+                  <div className="flex flex-col items-start gap-4 self-stretch p-3 md:gap-5 md:p-6">
+                    {client.recommenders.map((contact, index) => (
+                      <React.Fragment key={contact.id}>
+                        <div className="flex min-w-0 items-start self-stretch p-0">
+                          <div className="flex shrink-0 items-start gap-2.5 pt-0.5">
+                            <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                              {t('pages.clients.detail.contactValue')}
+                            </label>
+                          </div>
+                          <div className="flex min-w-0 flex-1 items-center justify-end gap-2 md:gap-3">
+                            <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5">
+                              <span className="text-dark-500 min-w-0 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                                {contact.contactValue}
+                              </span>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
+                                  >
+                                    <Icons.Info size={14} strokeWidth={1.5} />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs">
+                                  {contact.added_by_user_name && (
+                                    <div>
+                                      {t('pages.clients.detail.addedBy')}:{' '}
+                                      {contact.added_by_user_name}
+                                    </div>
+                                  )}
+                                  {contact.created_at && (
+                                    <div>
+                                      {t('pages.clients.detail.addedDate')}:{' '}
+                                      {new Date(contact.created_at).toLocaleDateString()}
+                                    </div>
+                                  )}
+                                  {!contact.added_by_user_name && !contact.created_at && (
+                                    <div>-</div>
+                                  )}
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                            {contact.isPhone && contact.contactValue && (
+                              <div className="flex shrink-0 items-center gap-1 md:gap-2">
+                                <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+                                  <button
+                                    disabled={!user?.is_agent || !user?.asterisk_extension}
+                                    onClick={() => {
+                                      if (isCallActive()) {
+                                        toast.warning(
+                                          t('pages.clients.modals.callDialog.callInProgress') ||
+                                            'Another call or recording is already in progress. Please finish or close it first.'
+                                        )
+                                        return
+                                      }
+                                      setSelectedPhoneForCall(contact.contactValue)
+                                      setOpenCallModal('call-dialog')
+                                      setIsCallModalOpen(true)
+                                    }}
+                                    className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                                  >
+                                    <Icons.Headset size={16} className="flex-shrink-0" />
+                                  </button>
+                                </PermissionGuard>
+                                <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedPhoneForSMS(contact.contactValue)
+                                      setIsSendSMSModalOpen(true)
+                                    }}
+                                    className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                                  >
+                                    <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                                  </button>
+                                </PermissionGuard>
+                                <PermissionGuard
+                                  permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}
+                                >
+                                  <button
+                                    onClick={() => {
+                                      setSelectedPhoneForNote(contact.contactValue)
+                                      setIsNoteModalOpen(true)
+                                    }}
+                                    className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                                  >
+                                    <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                                  </button>
+                                </PermissionGuard>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex min-w-0 items-start self-stretch p-0">
+                          <div className="flex shrink-0 items-start gap-2.5">
+                            <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                              {t('pages.clients.detail.contactType')}
+                            </label>
+                          </div>
+                          <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                            {contact.contactType}
+                          </p>
+                        </div>
+                        <div className="flex min-w-0 items-start self-stretch p-0">
+                          <div className="flex shrink-0 items-start gap-2.5">
+                            <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                              {t('pages.clients.detail.comment')}
+                            </label>
+                          </div>
+                          <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                            {contact.comment}
+                          </p>
+                        </div>
+                        {index < client.recommenders.length - 1 && (
+                          <div className="mx-2 h-px self-stretch bg-gray-200"></div>
+                        )}
+                      </React.Fragment>
+                    ))}
+                    {client.recommenders.length === 0 && <p className="text-xs text-gray-500">-</p>}
+                  </div>
+                )}
+
+                {/* Tab 4: Operators/Searchers */}
+                {activeRightCardTab === 'operators' && (
+                  <div className="flex w-full flex-col gap-4">
+                    <div className="mx-3 flex min-h-[44px] items-center gap-3 self-stretch overflow-x-auto pt-4 pb-0 md:mx-6 md:gap-6 md:pt-6">
+                      <button
+                        onClick={() => setActiveOperatorTab('operators')}
+                        className={cn(
+                          'flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600 md:p-3',
+                          activeOperatorTab === 'operators'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:bg-secondary-800/20 hover:text-secondary-800'
+                        )}
+                      >
+                        {t('pages.clients.detail.operators')}
+                      </button>
+                      <button
+                        onClick={() => setActiveOperatorTab('searchers')}
+                        className={cn(
+                          'flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600 md:p-3',
+                          activeOperatorTab === 'searchers'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:bg-secondary-800/20 hover:text-secondary-800'
+                        )}
+                      >
+                        {t('pages.clients.detail.searchers')}
+                      </button>
+                    </div>
+                    <div className="flex flex-col items-start gap-2.5 self-stretch px-3 pb-4 md:px-6">
+                      {isOperatorsLoading ? (
+                        <TableSkeleton columns={5} rows={3} />
+                      ) : (
+                        <>
+                          {activeOperatorTab === 'operators' && (
+                            <DataTable
+                              columns={operatorColumns}
+                              data={client.operators}
+                              className="w-full"
+                            />
+                          )}
+                          {activeOperatorTab === 'searchers' && (
+                            <DataTable
+                              columns={searcherColumns}
+                              data={client.searchers}
+                              className="w-full"
+                            />
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab 4: Call and SMS History */}
+                {activeRightCardTab === 'call-sms-history' && (
+                  <div className="flex flex-1 flex-col items-start gap-4 self-stretch p-3 md:gap-5 md:p-6">
+                    <div className="flex h-auto flex-col items-start gap-3 self-stretch p-0 md:h-[41px] md:flex-row md:items-center md:gap-5">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                          {activeCallSmsTab === 'calls'
+                            ? t('pages.clients.detail.latestCalls')
+                            : activeCallSmsTab === 'sms'
+                              ? t('pages.clients.detail.latestSms')
+                              : t('pages.clients.detail.latestCallsAndSms')}
+                        </span>
+                      </div>
+                      <div className="flex w-full flex-1 items-center justify-between gap-1 rounded-lg bg-white/50 p-1 shadow-sm md:w-auto">
+                        <button
+                          onClick={() => setActiveCallSmsTab('all')}
+                          className={cn(
+                            'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
+                            activeCallSmsTab === 'all'
+                              ? 'bg-secondary-800/10 text-secondary-800'
+                              : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
+                          )}
+                        >
+                          {t('pages.clients.activity.all')}
+                        </button>
+                        <button
+                          onClick={() => setActiveCallSmsTab('calls')}
+                          className={cn(
+                            'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
+                            activeCallSmsTab === 'calls'
+                              ? 'bg-secondary-800/10 text-secondary-800'
+                              : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
+                          )}
+                        >
+                          {t('pages.clients.activity.calls')}
+                        </button>
+                        <button
+                          onClick={() => setActiveCallSmsTab('sms')}
+                          className={cn(
+                            'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
+                            activeCallSmsTab === 'sms'
+                              ? 'bg-secondary-800/10 text-secondary-800'
+                              : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
+                          )}
+                        >
+                          {t('pages.clients.activity.sms')}
+                        </button>
+                      </div>
+                      <div className="flex w-full flex-1 flex-col items-start gap-2.5 md:w-auto md:flex-col md:items-end">
+                        <Button
+                          leftIcon={<Icons.Download size={20} />}
+                          className="bg-secondary-800 flex w-full flex-row items-center gap-1 rounded px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] text-white md:w-auto md:px-4 md:py-2.5"
+                          size="sm"
+                        >
+                          {t('pages.clients.detail.exportCSV')}
+                        </Button>
                       </div>
                     </div>
-                  ) : (
-                    <>
-                      {activeCallSmsTab === 'all' && (
-                        <div className="flex flex-col items-start gap-6 self-stretch">
-                          {/* Date-grouped Calls and SMS */}
-                          {(() => {
-                            // Combine calls and SMS, group by date
-                            const allItems = [
-                              ...client.callSmsHistory.calls.map((item) => ({
-                                ...item,
-                                itemType: 'call' as const,
-                              })),
-                              ...client.callSmsHistory.sms.map((item) => ({
-                                ...item,
-                                itemType: 'sms' as const,
-                              })),
-                            ]
-
-                            const grouped = allItems.reduce(
-                              (acc, item) => {
-                                // Use original UTC timestamp (sent_at for SMS, initiated_at for calls) instead of date string
-                                const timestamp =
-                                  item.itemType === 'sms'
-                                    ? (item as unknown as ExtendedSMSItem & { itemType: 'sms' })
-                                        .sent_at || item.date
-                                    : (item as unknown as ExtendedCallItem & { itemType: 'call' })
-                                        .initiated_at || item.date
-                                const date = new Date(String(timestamp)).toLocaleDateString(
-                                  'en-US',
-                                  {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric',
-                                    timeZone: userTimezone || undefined,
-                                  }
-                                )
-                                if (!acc[date]) acc[date] = { calls: [], sms: [] }
-                                if (item.itemType === 'call') {
-                                  acc[date].calls.push(
-                                    item as unknown as ExtendedCallItem & { itemType: 'call' }
-                                  )
-                                } else {
-                                  acc[date].sms.push(
-                                    item as unknown as ExtendedSMSItem & { itemType: 'sms' }
-                                  )
-                                }
-                                return acc
-                              },
-                              {} as Record<
-                                string,
-                                {
-                                  calls: (ExtendedCallItem & { itemType: 'call' })[]
-                                  sms: (ExtendedSMSItem & { itemType: 'sms' })[]
-                                }
-                              >
-                            )
-
-                            return Object.entries(grouped)
-                              .sort(
-                                ([a], [b]) =>
-                                  new Date(b as string).getTime() - new Date(a as string).getTime()
-                              )
-                              .map(([date, items]) => (
-                                <div key={date} className="w-full space-y-4">
-                                  <h3 className="text-dark-500 text-sm font-semibold md:text-base">
-                                    {date}
-                                  </h3>
-                                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-                                    {/* Calls for this date */}
-                                    {items.calls.map((call) => (
-                                      <CallLogCard
-                                        key={`call-${call.id}`}
-                                        clientName={client.fullName}
-                                        title={`${t('pages.clients.detail.play')} (${call.duration})`}
-                                        time={call.time}
-                                        date={call.date}
-                                        duration={call.duration}
-                                        status={call.status}
-                                        type={call.type}
-                                        phone={call.phone}
-                                        line={call.line}
-                                        operator={call.operator}
-                                        call_id={
-                                          'call_id' in call ? (call.call_id as string) : undefined
-                                        }
-                                        recording_path={
-                                          'recording_path' in call
-                                            ? (call.recording_path as string | null)
-                                            : null
-                                        }
-                                        icon={
-                                          <Icons.Play size={24} className="text-secondary-800" />
-                                        }
-                                        setSelectedCallData={setSelectedCallData}
-                                        setIsCallRecordingModalOpen={setIsCallRecordingModalOpen}
-                                      />
-                                    ))}
-                                    {/* SMS for this date */}
-                                    {items.sms.map((sms) => (
-                                      <CallLogCard
-                                        key={`sms-${sms.id}`}
-                                        clientName={client.fullName}
-                                        title={t('pages.clients.detail.viewSms')}
-                                        time={sms.time}
-                                        date={sms.date}
-                                        status={sms.status}
-                                        template={sms.template}
-                                        message={sms.message}
-                                        operator={sms.operator}
-                                        phone={sms.phone}
-                                        sent_at={sms.sent_at}
-                                        delivered_at={sms.delivered_at}
-                                        icon={
-                                          <Icons.Chat size={24} className="text-secondary-800" />
-                                        }
-                                        setSelectedSMSData={setSelectedSMSData}
-                                        setIsViewSMSModalOpen={setIsViewSMSModalOpen}
-                                      />
-                                    ))}
-                                  </div>
-                                </div>
-                              ))
-                          })()}
+                    {isCallSmsLoading ? (
+                      <div className="flex w-full flex-col gap-4">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+                          {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="h-24 animate-pulse rounded-lg bg-gray-200" />
+                          ))}
                         </div>
-                      )}
-                      {activeCallSmsTab === 'calls' && (
-                        <div className="flex flex-col items-start gap-4 self-stretch">
-                          {/* Summary Statistics */}
-                          <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
-                            <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                                  <Icons.Call02 size={24} className="text-gray-700" />
-                                </div>
-                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                                  {t('pages.clients.detail.totalCalls')}
-                                </div>
-                              </div>
-                              <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                                {client.callSmsHistory.calls.length}
-                              </div>
-                            </div>
-                            <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                                  <Icons.CallDone02 size={24} className="text-gray-700" />
-                                </div>
-                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                                  {t('pages.clients.statuses.answered')}
-                                </div>
-                              </div>
-                              <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                                {(() => {
-                                  const answered = client.callSmsHistory.calls.filter(
-                                    (c) => c.status === 'COMPLETED'
-                                  ).length
-                                  const total = client.callSmsHistory.calls.length
-                                  const percentage =
-                                    total > 0 ? Math.round((answered / total) * 100) : 0
-                                  return `${answered} (${percentage}%)`
-                                })()}
-                              </div>
-                            </div>
-                            <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                                  <Icons.Clock01 size={24} className="text-gray-700" />
-                                </div>
-                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                                  {t('pages.clients.detail.avgDuration')}
-                                </div>
-                              </div>
-                              <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                                {(() => {
-                                  const durations = client.callSmsHistory.calls
-                                    .filter((c) => c.duration && c.duration !== '-')
-                                    .map((c) => {
-                                      const match = c.duration?.match(/(\d+)m (\d+)s/)
-                                      if (match) {
-                                        return parseInt(match[1]) * 60 + parseInt(match[2])
-                                      }
-                                      return 0
-                                    })
-                                  if (durations.length === 0) return '-'
-                                  const avg = Math.round(
-                                    durations.reduce((a, b) => a + b, 0) / durations.length
-                                  )
-                                  const minutes = Math.floor(avg / 60)
-                                  const seconds = avg % 60
-                                  return `${minutes}m ${seconds}s`
-                                })()}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Date-grouped Calls */}
-                          <div className="w-full space-y-6">
+                      </div>
+                    ) : (
+                      <>
+                        {activeCallSmsTab === 'all' && (
+                          <div className="flex flex-col items-start gap-6 self-stretch">
+                            {/* Date-grouped Calls and SMS */}
                             {(() => {
-                              const groupedCalls = client.callSmsHistory.calls.reduce(
-                                (acc, call) => {
-                                  // Use initiated_at (full UTC timestamp) instead of date string for correct timezone conversion
+                              // Combine calls and SMS, group by date
+                              const allItems = [
+                                ...client.callSmsHistory.calls.map((item) => ({
+                                  ...item,
+                                  itemType: 'call' as const,
+                                })),
+                                ...client.callSmsHistory.sms.map((item) => ({
+                                  ...item,
+                                  itemType: 'sms' as const,
+                                })),
+                              ]
+
+                              const grouped = allItems.reduce(
+                                (acc, item) => {
+                                  // Use original UTC timestamp (sent_at for SMS, initiated_at for calls) instead of date string
                                   const timestamp =
-                                    'initiated_at' in call && call.initiated_at
-                                      ? call.initiated_at
-                                      : call.date
+                                    item.itemType === 'sms'
+                                      ? (item as unknown as ExtendedSMSItem & { itemType: 'sms' })
+                                          .sent_at || item.date
+                                      : (item as unknown as ExtendedCallItem & { itemType: 'call' })
+                                          .initiated_at || item.date
                                   const date = new Date(String(timestamp)).toLocaleDateString(
                                     'en-US',
                                     {
@@ -2531,28 +2426,43 @@ export function ClientDetailPage() {
                                       timeZone: userTimezone || undefined,
                                     }
                                   )
-                                  if (!acc[date]) acc[date] = []
-                                  acc[date].push(call as unknown as ExtendedCallItem)
+                                  if (!acc[date]) acc[date] = { calls: [], sms: [] }
+                                  if (item.itemType === 'call') {
+                                    acc[date].calls.push(
+                                      item as unknown as ExtendedCallItem & { itemType: 'call' }
+                                    )
+                                  } else {
+                                    acc[date].sms.push(
+                                      item as unknown as ExtendedSMSItem & { itemType: 'sms' }
+                                    )
+                                  }
                                   return acc
                                 },
-                                {} as Record<string, ExtendedCallItem[]>
+                                {} as Record<
+                                  string,
+                                  {
+                                    calls: (ExtendedCallItem & { itemType: 'call' })[]
+                                    sms: (ExtendedSMSItem & { itemType: 'sms' })[]
+                                  }
+                                >
                               )
 
-                              return Object.entries(groupedCalls)
+                              return Object.entries(grouped)
                                 .sort(
                                   ([a], [b]) =>
                                     new Date(b as string).getTime() -
                                     new Date(a as string).getTime()
                                 )
-                                .map(([date, calls]) => (
-                                  <div key={date} className="space-y-4">
+                                .map(([date, items]) => (
+                                  <div key={date} className="w-full space-y-4">
                                     <h3 className="text-dark-500 text-sm font-semibold md:text-base">
                                       {date}
                                     </h3>
                                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-                                      {calls.map((call) => (
+                                      {/* Calls for this date */}
+                                      {items.calls.map((call) => (
                                         <CallLogCard
-                                          key={call.id}
+                                          key={`call-${call.id}`}
                                           clientName={client.fullName}
                                           title={`${t('pages.clients.detail.play')} (${call.duration})`}
                                           time={call.time}
@@ -2572,104 +2482,16 @@ export function ClientDetailPage() {
                                               : null
                                           }
                                           icon={
-                                            <Icons.PlayCircle02
-                                              size={20}
-                                              className="text-secondary-800"
-                                            />
+                                            <Icons.Play size={24} className="text-secondary-800" />
                                           }
                                           setSelectedCallData={setSelectedCallData}
                                           setIsCallRecordingModalOpen={setIsCallRecordingModalOpen}
                                         />
                                       ))}
-                                    </div>
-                                  </div>
-                                ))
-                            })()}
-                          </div>
-                        </div>
-                      )}
-                      {activeCallSmsTab === 'sms' && (
-                        <div className="flex flex-col items-start gap-4 self-stretch">
-                          {/* Summary Statistics */}
-                          <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
-                            <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
-                              <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                                {t('pages.clients.detail.totalCost')}
-                              </div>
-
-                              <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                                {(() => {
-                                  const totalCost = client.callSmsHistory.sms.reduce(
-                                    (sum, s) => sum + (s.cost || 0),
-                                    0
-                                  )
-                                  return `₴${totalCost.toFixed(2)} (${client.callSmsHistory.sms.length} ${t('pages.clients.modals.viewSMS.smsParts')})`
-                                })()}
-                              </div>
-                            </div>
-                            <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
-                              <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                                {t('pages.clients.detail.deliveryRate')}
-                              </div>
-
-                              <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                                {(() => {
-                                  const delivered = client.callSmsHistory.sms.filter(
-                                    (s) => s.status === 'Delivered'
-                                  ).length
-                                  const failed = client.callSmsHistory.sms.filter(
-                                    (s) => (s.status as string) === 'Failed'
-                                  ).length
-                                  const pending = client.callSmsHistory.sms.filter(
-                                    (s) => (s.status as string) === 'Pending'
-                                  ).length
-                                  const total = client.callSmsHistory.sms.length
-                                  const rate = total > 0 ? Math.round((delivered / total) * 100) : 0
-                                  return `${rate}% (${delivered} ${t('pages.clients.detail.delivered')}, ${failed} ${t('pages.clients.detail.failed')}, ${pending} ${t('pages.clients.detail.pending')})`
-                                })()}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Date-grouped SMS */}
-                          <div className="w-full space-y-6">
-                            {(() => {
-                              const groupedSms = client.callSmsHistory.sms.reduce(
-                                (acc, sms) => {
-                                  // Use sent_at (full UTC timestamp) instead of date string for correct timezone conversion
-                                  const timestamp =
-                                    'sent_at' in sms && sms.sent_at ? sms.sent_at : sms.date
-                                  const date = new Date(String(timestamp)).toLocaleDateString(
-                                    'en-US',
-                                    {
-                                      year: 'numeric',
-                                      month: 'long',
-                                      day: 'numeric',
-                                      timeZone: userTimezone || undefined,
-                                    }
-                                  )
-                                  if (!acc[date]) acc[date] = []
-                                  acc[date].push(sms as unknown as ExtendedSMSItem)
-                                  return acc
-                                },
-                                {} as Record<string, ExtendedSMSItem[]>
-                              )
-
-                              return Object.entries(groupedSms)
-                                .sort(
-                                  ([a], [b]) =>
-                                    new Date(b as string).getTime() -
-                                    new Date(a as string).getTime()
-                                )
-                                .map(([date, smsList]) => (
-                                  <div key={date} className="space-y-4">
-                                    <h3 className="text-dark-500 text-sm font-semibold md:text-base">
-                                      {date}
-                                    </h3>
-                                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-                                      {smsList.map((sms) => (
+                                      {/* SMS for this date */}
+                                      {items.sms.map((sms) => (
                                         <CallLogCard
-                                          key={sms.id}
+                                          key={`sms-${sms.id}`}
                                           clientName={client.fullName}
                                           title={t('pages.clients.detail.viewSms')}
                                           time={sms.time}
@@ -2682,10 +2504,7 @@ export function ClientDetailPage() {
                                           sent_at={sms.sent_at}
                                           delivered_at={sms.delivered_at}
                                           icon={
-                                            <Icons.ChatFeedback01
-                                              size={20}
-                                              className="text-secondary-800"
-                                            />
+                                            <Icons.Chat size={24} className="text-secondary-800" />
                                           }
                                           setSelectedSMSData={setSelectedSMSData}
                                           setIsViewSMSModalOpen={setIsViewSMSModalOpen}
@@ -2696,295 +2515,555 @@ export function ClientDetailPage() {
                                 ))
                             })()}
                           </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
+                        )}
+                        {activeCallSmsTab === 'calls' && (
+                          <div className="flex flex-col items-start gap-4 self-stretch">
+                            {/* Summary Statistics */}
+                            <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
+                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
+                                    <Icons.Call02 size={24} className="text-gray-700" />
+                                  </div>
+                                  <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                    {t('pages.clients.detail.totalCalls')}
+                                  </div>
+                                </div>
+                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                  {client.callSmsHistory.calls.length}
+                                </div>
+                              </div>
+                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
+                                    <Icons.CallDone02 size={24} className="text-gray-700" />
+                                  </div>
+                                  <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                    {t('pages.clients.statuses.answered')}
+                                  </div>
+                                </div>
+                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                  {(() => {
+                                    const answered = client.callSmsHistory.calls.filter(
+                                      (c) => c.status === 'COMPLETED'
+                                    ).length
+                                    const total = client.callSmsHistory.calls.length
+                                    const percentage =
+                                      total > 0 ? Math.round((answered / total) * 100) : 0
+                                    return `${answered} (${percentage}%)`
+                                  })()}
+                                </div>
+                              </div>
+                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
+                                    <Icons.Clock01 size={24} className="text-gray-700" />
+                                  </div>
+                                  <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                    {t('pages.clients.detail.avgDuration')}
+                                  </div>
+                                </div>
+                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                  {(() => {
+                                    const durations = client.callSmsHistory.calls
+                                      .filter((c) => c.duration && c.duration !== '-')
+                                      .map((c) => {
+                                        const match = c.duration?.match(/(\d+)m (\d+)s/)
+                                        if (match) {
+                                          return parseInt(match[1]) * 60 + parseInt(match[2])
+                                        }
+                                        return 0
+                                      })
+                                    if (durations.length === 0) return '-'
+                                    const avg = Math.round(
+                                      durations.reduce((a, b) => a + b, 0) / durations.length
+                                    )
+                                    const minutes = Math.floor(avg / 60)
+                                    const seconds = avg % 60
+                                    return `${minutes}m ${seconds}s`
+                                  })()}
+                                </div>
+                              </div>
+                            </div>
 
-              {/* Tab 5: Tasks */}
-              {activeRightCardTab === 'tasks' && (
-                <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-3 md:p-6">
-                  {isTasksLoading ? (
-                    <TableSkeleton columns={5} rows={3} />
-                  ) : (
-                    <DataTable columns={taskColumns} data={client.tasks} className="w-full" />
-                  )}
-                </div>
-              )}
+                            {/* Date-grouped Calls */}
+                            <div className="w-full space-y-6">
+                              {(() => {
+                                const groupedCalls = client.callSmsHistory.calls.reduce(
+                                  (acc, call) => {
+                                    // Use initiated_at (full UTC timestamp) instead of date string for correct timezone conversion
+                                    const timestamp =
+                                      'initiated_at' in call && call.initiated_at
+                                        ? call.initiated_at
+                                        : call.date
+                                    const date = new Date(String(timestamp)).toLocaleDateString(
+                                      'en-US',
+                                      {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                        timeZone: userTimezone || undefined,
+                                      }
+                                    )
+                                    if (!acc[date]) acc[date] = []
+                                    acc[date].push(call as unknown as ExtendedCallItem)
+                                    return acc
+                                  },
+                                  {} as Record<string, ExtendedCallItem[]>
+                                )
 
-              {/* Tab 6: Documents (no backend infrastructure yet - shows empty) */}
-              {activeRightCardTab === 'documents' && (
-                <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-3 md:p-6">
-                  {isDocumentsLoading ? (
-                    <TableSkeleton columns={4} rows={3} />
-                  ) : (
-                    <DataTable
-                      columns={documentColumns}
-                      data={client.documents}
-                      className="w-full"
-                    />
-                  )}
-                </div>
-              )}
+                                return Object.entries(groupedCalls)
+                                  .sort(
+                                    ([a], [b]) =>
+                                      new Date(b as string).getTime() -
+                                      new Date(a as string).getTime()
+                                  )
+                                  .map(([date, calls]) => (
+                                    <div key={date} className="space-y-4">
+                                      <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                        {date}
+                                      </h3>
+                                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+                                        {calls.map((call) => (
+                                          <CallLogCard
+                                            key={call.id}
+                                            clientName={client.fullName}
+                                            title={`${t('pages.clients.detail.play')} (${call.duration})`}
+                                            time={call.time}
+                                            date={call.date}
+                                            duration={call.duration}
+                                            status={call.status}
+                                            type={call.type}
+                                            phone={call.phone}
+                                            line={call.line}
+                                            operator={call.operator}
+                                            call_id={
+                                              'call_id' in call
+                                                ? (call.call_id as string)
+                                                : undefined
+                                            }
+                                            recording_path={
+                                              'recording_path' in call
+                                                ? (call.recording_path as string | null)
+                                                : null
+                                            }
+                                            icon={
+                                              <Icons.PlayCircle02
+                                                size={20}
+                                                className="text-secondary-800"
+                                              />
+                                            }
+                                            setSelectedCallData={setSelectedCallData}
+                                            setIsCallRecordingModalOpen={
+                                              setIsCallRecordingModalOpen
+                                            }
+                                          />
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))
+                              })()}
+                            </div>
+                          </div>
+                        )}
+                        {activeCallSmsTab === 'sms' && (
+                          <div className="flex flex-col items-start gap-4 self-stretch">
+                            {/* Summary Statistics */}
+                            <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
+                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
+                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                  {t('pages.clients.detail.totalCost')}
+                                </div>
+
+                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                  {(() => {
+                                    const totalCost = client.callSmsHistory.sms.reduce(
+                                      (sum, s) => sum + (s.cost || 0),
+                                      0
+                                    )
+                                    return `₴${totalCost.toFixed(2)} (${client.callSmsHistory.sms.length} ${t('pages.clients.modals.viewSMS.smsParts')})`
+                                  })()}
+                                </div>
+                              </div>
+                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
+                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                  {t('pages.clients.detail.deliveryRate')}
+                                </div>
+
+                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                  {(() => {
+                                    const delivered = client.callSmsHistory.sms.filter(
+                                      (s) => s.status === 'Delivered'
+                                    ).length
+                                    const failed = client.callSmsHistory.sms.filter(
+                                      (s) => (s.status as string) === 'Failed'
+                                    ).length
+                                    const pending = client.callSmsHistory.sms.filter(
+                                      (s) => (s.status as string) === 'Pending'
+                                    ).length
+                                    const total = client.callSmsHistory.sms.length
+                                    const rate =
+                                      total > 0 ? Math.round((delivered / total) * 100) : 0
+                                    return `${rate}% (${delivered} ${t('pages.clients.detail.delivered')}, ${failed} ${t('pages.clients.detail.failed')}, ${pending} ${t('pages.clients.detail.pending')})`
+                                  })()}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Date-grouped SMS */}
+                            <div className="w-full space-y-6">
+                              {(() => {
+                                const groupedSms = client.callSmsHistory.sms.reduce(
+                                  (acc, sms) => {
+                                    // Use sent_at (full UTC timestamp) instead of date string for correct timezone conversion
+                                    const timestamp =
+                                      'sent_at' in sms && sms.sent_at ? sms.sent_at : sms.date
+                                    const date = new Date(String(timestamp)).toLocaleDateString(
+                                      'en-US',
+                                      {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                        timeZone: userTimezone || undefined,
+                                      }
+                                    )
+                                    if (!acc[date]) acc[date] = []
+                                    acc[date].push(sms as unknown as ExtendedSMSItem)
+                                    return acc
+                                  },
+                                  {} as Record<string, ExtendedSMSItem[]>
+                                )
+
+                                return Object.entries(groupedSms)
+                                  .sort(
+                                    ([a], [b]) =>
+                                      new Date(b as string).getTime() -
+                                      new Date(a as string).getTime()
+                                  )
+                                  .map(([date, smsList]) => (
+                                    <div key={date} className="space-y-4">
+                                      <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                        {date}
+                                      </h3>
+                                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+                                        {smsList.map((sms) => (
+                                          <CallLogCard
+                                            key={sms.id}
+                                            clientName={client.fullName}
+                                            title={t('pages.clients.detail.viewSms')}
+                                            time={sms.time}
+                                            date={sms.date}
+                                            status={sms.status}
+                                            template={sms.template}
+                                            message={sms.message}
+                                            operator={sms.operator}
+                                            phone={sms.phone}
+                                            sent_at={sms.sent_at}
+                                            delivered_at={sms.delivered_at}
+                                            icon={
+                                              <Icons.ChatFeedback01
+                                                size={20}
+                                                className="text-secondary-800"
+                                              />
+                                            }
+                                            setSelectedSMSData={setSelectedSMSData}
+                                            setIsViewSMSModalOpen={setIsViewSMSModalOpen}
+                                          />
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))
+                              })()}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab 5: Tasks */}
+                {activeRightCardTab === 'tasks' && (
+                  <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-3 md:p-6">
+                    {isTasksLoading ? (
+                      <TableSkeleton columns={5} rows={3} />
+                    ) : (
+                      <DataTable columns={taskColumns} data={client.tasks} className="w-full" />
+                    )}
+                  </div>
+                )}
+
+                {/* Tab 6: Documents (no backend infrastructure yet - shows empty) */}
+                {activeRightCardTab === 'documents' && (
+                  <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-3 md:p-6">
+                    {isDocumentsLoading ? (
+                      <TableSkeleton columns={4} rows={3} />
+                    ) : (
+                      <DataTable
+                        columns={documentColumns}
+                        data={client.documents}
+                        className="w-full"
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Comments / Activity Section - Merged per Marina's request */}
-      <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-3 md:p-6">
-        {/* Header with tabs and View All */}
-        <div className="flex w-full flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-          {/* Tabs */}
-          <div className="flex items-center rounded-lg border border-white bg-white p-1 shadow-sm">
-            <button
-              onClick={() => setActiveCommentTab('comments')}
-              className={cn(
-                'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                activeCommentTab === 'comments'
-                  ? 'bg-secondary-800 text-white'
-                  : 'hover:bg-primary-200/10 hover:text-secondary-800'
-              )}
-            >
-              {t('pages.clients.detail.comments')}
-            </button>
-            <button
-              onClick={() => setActiveCommentTab('primary')}
-              className={cn(
-                'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                activeCommentTab === 'primary'
-                  ? 'bg-secondary-800 text-white'
-                  : 'hover:bg-primary-200/10 hover:text-secondary-800'
-              )}
-            >
-              {t('pages.clients.detail.commentsFromPrimaryCreditor')}
-            </button>
-            <button
-              onClick={() => setActiveCommentTab('dial-history')}
-              className={cn(
-                'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                activeCommentTab === 'dial-history'
-                  ? 'bg-secondary-800 text-white'
-                  : 'hover:bg-primary-200/10 hover:text-secondary-800'
-              )}
-            >
-              {t('pages.clients.detail.dialHistory')}
-            </button>
-          </div>
-          {/* View All link */}
-          <LinkButton
-            variant="regular-secondary"
-            size="xs"
-            onClick={() => navigate(`/dashboard/clients/${client.id}/activity`)}
-            rightIcon={<Icons.ArrowRight size={18} />}
-          >
-            {t('pages.clients.detail.viewAll')}
-          </LinkButton>
-        </div>
-
-        {/* Content based on active tab */}
-        {activeCommentTab === 'comments' &&
-          (isActivitiesLoading ? (
-            <TableSkeleton columns={9} rows={3} className="w-full" />
-          ) : client.activities.length === 0 ? (
-            <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
-              <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
-                <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-                <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
-                  {t('pages.clients.detail.noHistoryYet')}
-                </p>
-              </div>
-              <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
-                {t('pages.clients.detail.startByCallingSendingSMSOrAddingNote')}
-              </p>
+        {/* Comments / Activity Section - Merged per Marina's request */}
+        <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-3 md:p-6">
+          {/* Header with tabs and View All */}
+          <div className="flex w-full flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+            {/* Tabs */}
+            <div className="flex items-center rounded-lg border border-white bg-white p-1 shadow-sm">
               <button
-                onClick={() => setIsNoteModalOpen(true)}
-                className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-                aria-label={t('pages.clients.detail.addFirstNote')}
+                onClick={() => setActiveCommentTab('comments')}
+                className={cn(
+                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  activeCommentTab === 'comments'
+                    ? 'bg-secondary-800 text-white'
+                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                )}
               >
-                <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-                  <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
-                </div>
-                <span className="px-4 py-3 text-sm font-medium text-white">
-                  {t('pages.clients.detail.addFirstNote')}
-                </span>
+                {t('pages.clients.detail.comments')}
+              </button>
+              <button
+                onClick={() => setActiveCommentTab('primary')}
+                className={cn(
+                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  activeCommentTab === 'primary'
+                    ? 'bg-secondary-800 text-white'
+                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                )}
+              >
+                {t('pages.clients.detail.commentsFromPrimaryCreditor')}
+              </button>
+              <button
+                onClick={() => setActiveCommentTab('dial-history')}
+                className={cn(
+                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  activeCommentTab === 'dial-history'
+                    ? 'bg-secondary-800 text-white'
+                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                )}
+              >
+                {t('pages.clients.detail.dialHistory')}
               </button>
             </div>
-          ) : (
-            <DataTable
-              columns={activityColumns}
-              data={client.activities.slice(0, 10)}
-              className="w-full"
-              tableClassName="table-fixed w-full"
-            />
-          ))}
+            {/* View All link */}
+            <LinkButton
+              variant="regular-secondary"
+              size="xs"
+              onClick={() => navigate(`/dashboard/clients/${client.id}/activity`)}
+              rightIcon={<Icons.ArrowRight size={18} />}
+            >
+              {t('pages.clients.detail.viewAll')}
+            </LinkButton>
+          </div>
 
-        {activeCommentTab === 'primary' &&
-          (isProfileLoading ? (
-            <TableSkeleton columns={1} rows={3} className="w-full" />
-          ) : !profile?.sale_notes?.trim() ? (
-            <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
-              <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
-                <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-                <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
-                  {t('pages.clients.detail.noPrimaryCreditorComments')}
+          {/* Content based on active tab */}
+          {activeCommentTab === 'comments' &&
+            (isActivitiesLoading ? (
+              <TableSkeleton columns={9} rows={3} className="w-full" />
+            ) : client.activities.length === 0 ? (
+              <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
+                <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
+                  <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
+                  <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                    {t('pages.clients.detail.noHistoryYet')}
+                  </p>
+                </div>
+                <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
+                  {t('pages.clients.detail.startByCallingSendingSMSOrAddingNote')}
+                </p>
+                <button
+                  onClick={() => setIsNoteModalOpen(true)}
+                  className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+                  aria-label={t('pages.clients.detail.addFirstNote')}
+                >
+                  <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
+                    <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+                  </div>
+                  <span className="px-4 py-3 text-sm font-medium text-white">
+                    {t('pages.clients.detail.addFirstNote')}
+                  </span>
+                </button>
+              </div>
+            ) : (
+              <DataTable
+                columns={activityColumns}
+                data={client.activities.slice(0, 10)}
+                className="w-full"
+                tableClassName="table-fixed w-full"
+              />
+            ))}
+
+          {activeCommentTab === 'primary' &&
+            (isProfileLoading ? (
+              <TableSkeleton columns={1} rows={3} className="w-full" />
+            ) : !profile?.sale_notes?.trim() ? (
+              <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
+                <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
+                  <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
+                  <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                    {t('pages.clients.detail.noPrimaryCreditorComments')}
+                  </p>
+                </div>
+                <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
+                  {t('pages.clients.detail.primaryCreditorCommentsDescription')}
                 </p>
               </div>
-              <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
-                {t('pages.clients.detail.primaryCreditorCommentsDescription')}
-              </p>
-            </div>
-          ) : (
-            <div className="w-full p-4">
-              <p className="text-dark-500 text-sm leading-relaxed break-words whitespace-pre-wrap">
-                {profile.sale_notes}
-              </p>
-            </div>
-          ))}
-
-        {activeCommentTab === 'dial-history' &&
-          (isDialHistoryLoading ? (
-            <TableSkeleton columns={4} rows={3} className="w-full" />
-          ) : dialHistory.length === 0 ? (
-            <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
-              <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
-                <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-                <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
-                  {t('pages.clients.detail.noDialHistory')}
+            ) : (
+              <div className="w-full p-4">
+                <p className="text-dark-500 text-sm leading-relaxed break-words whitespace-pre-wrap">
+                  {profile.sale_notes}
                 </p>
               </div>
-            </div>
-          ) : (
-            <DataTable columns={dialHistoryColumns} data={dialHistory} className="w-full" />
-          ))}
-      </div>
+            ))}
 
-      {/* Add Note Modal */}
-      <AddNoteModal
-        open={isNoteModalOpen}
-        onClose={() => {
-          setIsNoteModalOpen(false)
-          setSelectedPhoneForNote('')
-        }}
-        phoneNumber={selectedPhoneForNote || client.phones?.[0]?.number || ''}
-        clientId={clientId}
-        onSave={(data) => {
-          createNote({
-            clientId,
-            data,
-          })
-          setIsNoteModalOpen(false)
-        }}
-      />
+          {activeCommentTab === 'dial-history' &&
+            (isDialHistoryLoading ? (
+              <TableSkeleton columns={4} rows={3} className="w-full" />
+            ) : dialHistory.length === 0 ? (
+              <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
+                <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
+                  <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
+                  <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                    {t('pages.clients.detail.noDialHistory')}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <DataTable columns={dialHistoryColumns} data={dialHistory} className="w-full" />
+            ))}
+        </div>
 
-      {/* Add Task Modal */}
-      {isTaskModalOpen && (
-        <AddTaskModal
-          open={isTaskModalOpen}
+        {/* Add Note Modal */}
+        <AddNoteModal
+          open={isNoteModalOpen}
+          onClose={() => {
+            setIsNoteModalOpen(false)
+            setSelectedPhoneForNote('')
+          }}
+          phoneNumber={selectedPhoneForNote || client.phones?.[0]?.number || ''}
           clientId={clientId}
-          onClose={() => setIsTaskModalOpen(false)}
+          onSave={(data) => {
+            createNote({
+              clientId,
+              data,
+            })
+            setIsNoteModalOpen(false)
+          }}
         />
-      )}
 
-      {/* Call Dialog Modal */}
-      <CallDialogModal
-        open={isCallModalOpen}
-        onClose={() => {
-          setOpenCallModal(null)
-          setIsCallModalOpen(false)
-          setCurrentCallId(null)
-          setSelectedPhoneForCall('')
-          handleClearCallError()
-        }}
-        clientName={client.fullName}
-        phoneNumber={selectedPhoneForCall || client.phones?.[0]?.number || ''}
-        callId={currentCallId}
-        initialState="initial"
-        error={callError}
-        isLoading={isOriginatingCall}
-        onCallStart={(_callType: CallType) => {
-          const phoneNumber = selectedPhoneForCall || client.phones?.[0]?.number
-          if (!phoneNumber) {
-            setCallError('Client has no phone number')
-            return
-          }
+        {/* Add Task Modal */}
+        {isTaskModalOpen && (
+          <AddTaskModal
+            open={isTaskModalOpen}
+            clientId={clientId}
+            onClose={() => setIsTaskModalOpen(false)}
+          />
+        )}
 
-          handleOriginateCall(phoneNumber, client.fullName, client.id.toString())
-        }}
-        onCallEnd={(duration: number, status: CallStatus) => {
-          console.log('Call ended:', { duration, status })
-          setOpenCallModal(null)
-          setCurrentCallId(null)
-        }}
-        onRetry={() => {
-          handleClearCallError()
-        }}
-      />
-
-      {/* Call Recording Modal */}
-      {selectedCallData && (
-        <CallRecordingModal
-          open={isCallRecordingModalOpen}
+        {/* Call Dialog Modal */}
+        <CallDialogModal
+          open={isCallModalOpen}
           onClose={() => {
             setOpenCallModal(null)
-            setIsCallRecordingModalOpen(false)
-            setSelectedCallData(null)
+            setIsCallModalOpen(false)
+            setCurrentCallId(null)
+            setSelectedPhoneForCall('')
+            handleClearCallError()
           }}
-          callData={selectedCallData}
-        />
-      )}
+          clientName={client.fullName}
+          phoneNumber={selectedPhoneForCall || client.phones?.[0]?.number || ''}
+          callId={currentCallId}
+          initialState="initial"
+          error={callError}
+          isLoading={isOriginatingCall}
+          onCallStart={(_callType: CallType) => {
+            const phoneNumber = selectedPhoneForCall || client.phones?.[0]?.number
+            if (!phoneNumber) {
+              setCallError('Client has no phone number')
+              return
+            }
 
-      {/* View SMS Modal */}
-      {selectedSMSData && (
-        <ViewSMSModal
-          open={isViewSMSModalOpen}
+            handleOriginateCall(phoneNumber, client.fullName, client.id.toString())
+          }}
+          onCallEnd={(duration: number, status: CallStatus) => {
+            console.log('Call ended:', { duration, status })
+            setOpenCallModal(null)
+            setCurrentCallId(null)
+          }}
+          onRetry={() => {
+            handleClearCallError()
+          }}
+        />
+
+        {/* Call Recording Modal */}
+        {selectedCallData && (
+          <CallRecordingModal
+            open={isCallRecordingModalOpen}
+            onClose={() => {
+              setOpenCallModal(null)
+              setIsCallRecordingModalOpen(false)
+              setSelectedCallData(null)
+            }}
+            callData={selectedCallData}
+          />
+        )}
+
+        {/* View SMS Modal */}
+        {selectedSMSData && (
+          <ViewSMSModal
+            open={isViewSMSModalOpen}
+            onClose={() => {
+              setIsViewSMSModalOpen(false)
+              setSelectedSMSData(null)
+            }}
+            smsData={selectedSMSData}
+          />
+        )}
+
+        {/* Send SMS Modal */}
+        <SendSMSModal
+          open={isSendSMSModalOpen}
           onClose={() => {
-            setIsViewSMSModalOpen(false)
-            setSelectedSMSData(null)
+            setIsSendSMSModalOpen(false)
+            setSelectedPhoneForSMS('')
           }}
-          smsData={selectedSMSData}
+          clientId={clientId}
+          clientName={client.fullName}
+          phoneNumber={selectedPhoneForSMS || client.phones?.[0]?.number || ''}
+          loans={client.loans?.map((l) => ({
+            id: l.id,
+            loanNumber: l.loanNumber,
+            totalToRepay: l.remainingDebtAmount,
+          }))}
+          onSent={() => {
+            // SMS sent successfully - history will refresh automatically via query invalidation
+          }}
         />
-      )}
 
-      {/* Send SMS Modal */}
-      <SendSMSModal
-        open={isSendSMSModalOpen}
-        onClose={() => {
-          setIsSendSMSModalOpen(false)
-          setSelectedPhoneForSMS('')
-        }}
-        clientId={clientId}
-        clientName={client.fullName}
-        phoneNumber={selectedPhoneForSMS || client.phones?.[0]?.number || ''}
-        loans={client.loans?.map((l) => ({
-          id: l.id,
-          loanNumber: l.loanNumber,
-          totalToRepay: l.remainingDebtAmount,
-        }))}
-        onSent={() => {
-          // SMS sent successfully - history will refresh automatically via query invalidation
-        }}
-      />
+        {/* Tag Selector Modal */}
+        <TagSelectorModal
+          open={isTagModalOpen}
+          clientId={clientId}
+          clientName={client.fullName}
+          projectId={1}
+          onClose={() => setIsTagModalOpen(false)}
+        />
 
-      {/* Tag Selector Modal */}
-      <TagSelectorModal
-        open={isTagModalOpen}
-        clientId={clientId}
-        clientName={client.fullName}
-        projectId={1}
-        onClose={() => setIsTagModalOpen(false)}
-      />
+        {/* Edit Client Modal */}
+        <EditClientModal
+          open={isEditModalOpen}
+          clientId={clientId}
+          onClose={() => setIsEditModalOpen(false)}
+        />
 
-      {/* Edit Client Modal */}
-      <EditClientModal
-        open={isEditModalOpen}
-        clientId={clientId}
-        onClose={() => setIsEditModalOpen(false)}
-      />
-
-      {/* Delete Client Modal
+        {/* Delete Client Modal
       <DeleteClientModal
         open={isDeleteModalOpen}
         client={{
@@ -3002,378 +3081,379 @@ export function ClientDetailPage() {
         }}
       /> */}
 
-      {/* Assign Role Modal (Employee / Searcher) */}
-      {assignRoleModalMode && (
-        <AssignRoleModal
-          open={true}
-          mode={assignRoleModalMode}
-          currentUserId={
-            assignRoleModalMode === 'employee'
-              ? (profile?.responsible_employee_id ?? null)
-              : (profile?.responsible_searcher_id ?? null)
-          }
-          onClose={() => setAssignRoleModalMode(null)}
-          onAssign={({ userId, reason }) => {
-            assignClientMutation.mutate(
-              {
-                clientId,
-                data: {
-                  responsible_employee_id:
-                    assignRoleModalMode === 'employee' ? parseInt(userId) : undefined,
-                  responsible_searcher_id:
-                    assignRoleModalMode === 'searcher' ? parseInt(userId) : undefined,
-                  assignment_reason: reason,
-                },
-              },
-              {
-                onSuccess: () => setAssignRoleModalMode(null),
-              }
-            )
-          }}
-        />
-      )}
-
-      {/* RR Detail Modal */}
-      <Modal open={!!selectedRaId} onClose={() => setSelectedRaId(null)} maxWidth="lg">
-        <ModalHeader
-          icon={
-            <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
-              <Icons.Calculate size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
-            </div>
-          }
-          title={t('pages.clients.detail.rrDetail')}
-        />
-        <ModalContent>
-          {rrDetail ? (
-            <div className="flex flex-col gap-4">
-              {/* Two fields per row */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-                <div className="flex flex-col gap-1">
-                  <span className="text-dark-500 text-xs font-light sm:text-sm">
-                    {t('pages.clients.detail.rrLoanNumber')}
-                  </span>
-                  <span className="text-dark-500 text-xs font-medium sm:text-sm">
-                    {rrDetail.contract_number ?? '-'}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-dark-500 text-xs font-light sm:text-sm">
-                    {t('pages.clients.detail.rrClientNumber')}
-                  </span>
-                  <span className="text-dark-500 text-xs font-medium sm:text-sm">
-                    {rrDetail.client_id ?? '-'}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-dark-500 text-xs font-light sm:text-sm">
-                    {t('pages.clients.detail.rrRestructuringAmount')}
-                  </span>
-                  <span className="text-dark-500 text-xs font-medium sm:text-sm">
-                    ₴ {formatCurrency(Number(rrDetail.restructuring_amount ?? 0))}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-dark-500 text-xs font-light sm:text-sm">
-                    {t('pages.clients.detail.rrFirstPaymentDate')}
-                  </span>
-                  <span className="text-dark-500 text-xs font-medium sm:text-sm">
-                    {rrDetail.first_payment_date ?? '-'}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-dark-500 text-xs font-light sm:text-sm">
-                    {t('pages.clients.detail.rrFirstPaymentAmount')}
-                  </span>
-                  <span className="text-dark-500 text-xs font-medium sm:text-sm">
-                    ₴ {formatCurrency(Number(rrDetail.first_payment_amount ?? 0))}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="text-dark-500 text-xs font-light sm:text-sm">
-                    {t('pages.clients.detail.rrResponsibleEmployee')}
-                  </span>
-                  <span className="text-dark-500 text-xs font-medium sm:text-sm">
-                    {rrDetail.responsible_user_name ?? '-'}
-                  </span>
-                </div>
-              </div>
-              {/* Payment schedule with vertical scroll */}
-              {rrDetail.payments.length > 0 && (
-                <div className="pt-2">
-                  <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
-                    {t('pages.clients.detail.rrPaymentSchedule')}
-                  </h3>
-                  <div className="max-h-48 overflow-y-auto">
-                    <DataTable<RestructuringPaymentEntry & { id: number }>
-                      columns={[
-                        {
-                          key: 'date',
-                          header: t('pages.clients.detail.rrPaymentDate'),
-                          render: (p) => p.date ?? '-',
-                        },
-                        {
-                          key: 'amount',
-                          header: t('pages.clients.detail.rrPaymentAmount'),
-                          align: 'right',
-                          render: (p) => `₴ ${formatCurrency(Number(p.amount ?? 0))}`,
-                        },
-                      ]}
-                      data={rrDetail.payments.map((p, idx) => ({ ...p, id: idx }))}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex justify-center py-8">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
-            </div>
-          )}
-        </ModalContent>
-        <ModalFooter>
-          <Button
-            variant="cancel"
-            size="sm"
-            onClick={() => setSelectedRaId(null)}
-            className="w-full rounded-md sm:w-auto"
-          >
-            {t('actions.close')}
-          </Button>
-        </ModalFooter>
-      </Modal>
-
-      {/* Connect RR Modal */}
-      <Modal open={isConnectRrOpen} onClose={() => setIsConnectRrOpen(false)} maxWidth="lg">
-        <ModalHeader
-          icon={
-            <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
-              <Icons.Calculate size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
-            </div>
-          }
-          title={t('pages.clients.detail.connectRR')}
-        />
-        <ModalContent>
-          <div className="flex flex-col gap-4">
-            {/* Loan Selection */}
-            <div>
-              <label className="text-dark-500 mb-1 block text-sm font-medium">
-                {t('pages.clients.detail.rrSelectLoan')} *
-              </label>
-              <Select
-                value={connectRrForm.debtId}
-                onValueChange={(val) => setConnectRrForm((prev) => ({ ...prev, debtId: val }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('pages.clients.detail.rrSelectLoanPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {loans.map((loan) => (
-                    <SelectItem key={loan.id} value={String(loan.id)}>
-                      {loan.contract_number} — {loan.seller_company}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {/* Connection Date & Total RR Amount */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-              <DateSelect
-                label={`${t('pages.clients.detail.rrConnectionDate')} *`}
-                value={connectRrForm.connectionDate}
-                onChange={({ value }) =>
-                  setConnectRrForm((prev) => ({ ...prev, connectionDate: value }))
-                }
-                placeholder={t('pages.clients.detail.rrConnectionDate')}
-              />
-              <Input
-                label={`${t('pages.clients.detail.rrRestructuringAmount')} *`}
-                type="number"
-                min={0}
-                step={0.01}
-                value={connectRrForm.totalAmount}
-                onChange={(e) =>
-                  setConnectRrForm((prev) => ({ ...prev, totalAmount: e.target.value }))
-                }
-                placeholder="0.00"
-              />
-            </div>
-            {/* Number of Payments */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-              <Input
-                label={`${t('pages.clients.detail.rrNumPayments')} *`}
-                type="number"
-                min={1}
-                max={12}
-                value={connectRrForm.numPayments}
-                onChange={(e) => {
-                  const num = Math.max(1, Math.min(12, Number(e.target.value) || 1))
-                  setConnectRrForm((prev) => {
-                    const payments = [...prev.payments]
-                    while (payments.length < num) payments.push({ date: null, amount: '' })
-                    return { ...prev, numPayments: num, payments: payments.slice(0, num) }
-                  })
-                }}
-              />
-            </div>
-            {/* Payment Schedule */}
-            <div className="pt-2">
-              <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
-                {t('pages.clients.detail.rrPaymentSchedule')}
-              </h3>
-              <div className="flex flex-col gap-3">
-                {connectRrForm.payments.map((payment, idx) => (
-                  <div key={idx} className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-                    <DateSelect
-                      label={`${t('pages.clients.detail.rrPaymentDate')} ${idx + 1} *`}
-                      value={payment.date}
-                      onChange={({ value }) => {
-                        setConnectRrForm((prev) => {
-                          const payments = [...prev.payments]
-                          payments[idx] = { ...payments[idx], date: value }
-                          return { ...prev, payments }
-                        })
-                      }}
-                      placeholder={t('pages.clients.detail.rrPaymentDate')}
-                    />
-                    <Input
-                      label={`${t('pages.clients.detail.rrPaymentAmount')} ${idx + 1} *`}
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={payment.amount}
-                      onChange={(e) => {
-                        setConnectRrForm((prev) => {
-                          const payments = [...prev.payments]
-                          payments[idx] = { ...payments[idx], amount: e.target.value }
-                          return { ...prev, payments }
-                        })
-                      }}
-                      placeholder="0.00"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          {connectRrError && (
-            <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
-              {connectRrError}
-            </div>
-          )}
-        </ModalContent>
-        <ModalFooter>
-          <Button
-            variant="cancel"
-            size="sm"
-            onClick={() => setIsConnectRrOpen(false)}
-            className="w-full rounded-md sm:w-auto"
-          >
-            {t('actions.cancel')}
-          </Button>
-          <Button
-            variant="primary"
-            size="sm"
-            disabled={isCreatingRr}
-            onClick={() => {
-              const d = 'pages.clients.detail'
-              setConnectRrError(null)
-              // Validation
-              if (!connectRrForm.debtId) {
-                setConnectRrError(t(`${d}.rrValidationLoanRequired`))
-                return
-              }
-              if (!connectRrForm.connectionDate) {
-                setConnectRrError(t(`${d}.rrValidationConnectionDateRequired`))
-                return
-              }
-              if (!connectRrForm.totalAmount || parseFloat(connectRrForm.totalAmount) <= 0) {
-                setConnectRrError(t(`${d}.rrValidationAmountRequired`))
-                return
-              }
-              for (let i = 0; i < connectRrForm.payments.length; i++) {
-                if (!connectRrForm.payments[i].date) {
-                  setConnectRrError(t(`${d}.rrValidationPaymentDateRequired`, { num: i + 1 }))
-                  return
-                }
-                if (
-                  !connectRrForm.payments[i].amount ||
-                  parseFloat(connectRrForm.payments[i].amount) <= 0
-                ) {
-                  setConnectRrError(t(`${d}.rrValidationPaymentAmountRequired`, { num: i + 1 }))
-                  return
-                }
-              }
-              const totalAmount = parseFloat(connectRrForm.totalAmount)
-              const paymentsSum = connectRrForm.payments.reduce(
-                (sum, p) => sum + (parseFloat(p.amount) || 0),
-                0
-              )
-              if (Math.abs(paymentsSum - totalAmount) > 0.01) {
-                setConnectRrError(
-                  t(`${d}.rrValidationSumMismatch`, {
-                    sum: paymentsSum.toFixed(2),
-                    total: totalAmount.toFixed(2),
-                  })
-                )
-                return
-              }
-
-              const formatDate = (dt: Date | null) => {
-                if (!dt) return null
-                const y = dt.getFullYear()
-                const m = String(dt.getMonth() + 1).padStart(2, '0')
-                const day = String(dt.getDate()).padStart(2, '0')
-                return `${y}-${m}-${day}`
-              }
-              createRr(
+        {/* Assign Role Modal (Employee / Searcher) */}
+        {assignRoleModalMode && (
+          <AssignRoleModal
+            open={true}
+            mode={assignRoleModalMode}
+            currentUserId={
+              assignRoleModalMode === 'employee'
+                ? (profile?.responsible_employee_id ?? null)
+                : (profile?.responsible_searcher_id ?? null)
+            }
+            onClose={() => setAssignRoleModalMode(null)}
+            onAssign={({ userId, reason }) => {
+              assignClientMutation.mutate(
                 {
                   clientId,
                   data: {
-                    debt_id: parseInt(connectRrForm.debtId),
-                    connection_date: formatDate(connectRrForm.connectionDate),
-                    restructuring_amount: totalAmount,
-                    num_payments: connectRrForm.numPayments,
-                    payments: connectRrForm.payments.map((p) => ({
-                      payment_date: formatDate(p.date),
-                      payment_amount: parseFloat(p.amount),
-                    })),
+                    responsible_employee_id:
+                      assignRoleModalMode === 'employee' ? parseInt(userId) : undefined,
+                    responsible_searcher_id:
+                      assignRoleModalMode === 'searcher' ? parseInt(userId) : undefined,
+                    assignment_reason: reason,
                   },
                 },
                 {
-                  onSuccess: () => {
-                    toast.success(t(`${d}.connectRRSuccess`))
-                    setIsConnectRrOpen(false)
-                  },
-                  onError: (error) => {
-                    const detail = (
-                      error as import('axios').AxiosError<{
-                        detail?: string | Array<{ msg?: string }>
-                      }>
-                    )?.response?.data?.detail
-                    let message = t(
-                      `${d}.connectRRError`,
-                      t('errors.somethingWentWrong', 'Something went wrong')
-                    )
-                    if (typeof detail === 'string') {
-                      message = detail
-                    } else if (Array.isArray(detail) && detail.length > 0) {
-                      message = detail
-                        .map((e) => e.msg || '')
-                        .filter(Boolean)
-                        .join('; ')
-                    }
-                    setConnectRrError(message)
-                  },
+                  onSuccess: () => setAssignRoleModalMode(null),
                 }
               )
             }}
-            className="w-full rounded-md sm:w-auto"
-          >
-            {isCreatingRr ? '...' : t('pages.clients.detail.connectRR')}
-          </Button>
-        </ModalFooter>
-      </Modal>
-    </div>
+          />
+        )}
+
+        {/* RR Detail Modal */}
+        <Modal open={!!selectedRaId} onClose={() => setSelectedRaId(null)} maxWidth="lg">
+          <ModalHeader
+            icon={
+              <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+                <Icons.Calculate size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+              </div>
+            }
+            title={t('pages.clients.detail.rrDetail')}
+          />
+          <ModalContent>
+            {rrDetail ? (
+              <div className="flex flex-col gap-4">
+                {/* Two fields per row */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                      {t('pages.clients.detail.rrLoanNumber')}
+                    </span>
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                      {rrDetail.contract_number ?? '-'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                      {t('pages.clients.detail.rrClientNumber')}
+                    </span>
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                      {rrDetail.client_id ?? '-'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                      {t('pages.clients.detail.rrRestructuringAmount')}
+                    </span>
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                      ₴ {formatCurrency(Number(rrDetail.restructuring_amount ?? 0))}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                      {t('pages.clients.detail.rrFirstPaymentDate')}
+                    </span>
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                      {rrDetail.first_payment_date ?? '-'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                      {t('pages.clients.detail.rrFirstPaymentAmount')}
+                    </span>
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                      ₴ {formatCurrency(Number(rrDetail.first_payment_amount ?? 0))}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                      {t('pages.clients.detail.rrResponsibleEmployee')}
+                    </span>
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                      {rrDetail.responsible_user_name ?? '-'}
+                    </span>
+                  </div>
+                </div>
+                {/* Payment schedule with vertical scroll */}
+                {rrDetail.payments.length > 0 && (
+                  <div className="pt-2">
+                    <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                      {t('pages.clients.detail.rrPaymentSchedule')}
+                    </h3>
+                    <div className="max-h-48 overflow-y-auto">
+                      <DataTable<RestructuringPaymentEntry & { id: number }>
+                        columns={[
+                          {
+                            key: 'date',
+                            header: t('pages.clients.detail.rrPaymentDate'),
+                            render: (p) => p.date ?? '-',
+                          },
+                          {
+                            key: 'amount',
+                            header: t('pages.clients.detail.rrPaymentAmount'),
+                            align: 'right',
+                            render: (p) => `₴ ${formatCurrency(Number(p.amount ?? 0))}`,
+                          },
+                        ]}
+                        data={rrDetail.payments.map((p, idx) => ({ ...p, id: idx }))}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex justify-center py-8">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+              </div>
+            )}
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              variant="cancel"
+              size="sm"
+              onClick={() => setSelectedRaId(null)}
+              className="w-full rounded-md sm:w-auto"
+            >
+              {t('actions.close')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Connect RR Modal */}
+        <Modal open={isConnectRrOpen} onClose={() => setIsConnectRrOpen(false)} maxWidth="lg">
+          <ModalHeader
+            icon={
+              <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+                <Icons.Calculate size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+              </div>
+            }
+            title={t('pages.clients.detail.connectRR')}
+          />
+          <ModalContent>
+            <div className="flex flex-col gap-4">
+              {/* Loan Selection */}
+              <div>
+                <label className="text-dark-500 mb-1 block text-sm font-medium">
+                  {t('pages.clients.detail.rrSelectLoan')} *
+                </label>
+                <Select
+                  value={connectRrForm.debtId}
+                  onValueChange={(val) => setConnectRrForm((prev) => ({ ...prev, debtId: val }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('pages.clients.detail.rrSelectLoanPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {loans.map((loan) => (
+                      <SelectItem key={loan.id} value={String(loan.id)}>
+                        {loan.contract_number} — {loan.seller_company}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* Connection Date & Total RR Amount */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                <DateSelect
+                  label={`${t('pages.clients.detail.rrConnectionDate')} *`}
+                  value={connectRrForm.connectionDate}
+                  onChange={({ value }) =>
+                    setConnectRrForm((prev) => ({ ...prev, connectionDate: value }))
+                  }
+                  placeholder={t('pages.clients.detail.rrConnectionDate')}
+                />
+                <Input
+                  label={`${t('pages.clients.detail.rrRestructuringAmount')} *`}
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={connectRrForm.totalAmount}
+                  onChange={(e) =>
+                    setConnectRrForm((prev) => ({ ...prev, totalAmount: e.target.value }))
+                  }
+                  placeholder="0.00"
+                />
+              </div>
+              {/* Number of Payments */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                <Input
+                  label={`${t('pages.clients.detail.rrNumPayments')} *`}
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={connectRrForm.numPayments}
+                  onChange={(e) => {
+                    const num = Math.max(1, Math.min(12, Number(e.target.value) || 1))
+                    setConnectRrForm((prev) => {
+                      const payments = [...prev.payments]
+                      while (payments.length < num) payments.push({ date: null, amount: '' })
+                      return { ...prev, numPayments: num, payments: payments.slice(0, num) }
+                    })
+                  }}
+                />
+              </div>
+              {/* Payment Schedule */}
+              <div className="pt-2">
+                <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                  {t('pages.clients.detail.rrPaymentSchedule')}
+                </h3>
+                <div className="flex flex-col gap-3">
+                  {connectRrForm.payments.map((payment, idx) => (
+                    <div key={idx} className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                      <DateSelect
+                        label={`${t('pages.clients.detail.rrPaymentDate')} ${idx + 1} *`}
+                        value={payment.date}
+                        onChange={({ value }) => {
+                          setConnectRrForm((prev) => {
+                            const payments = [...prev.payments]
+                            payments[idx] = { ...payments[idx], date: value }
+                            return { ...prev, payments }
+                          })
+                        }}
+                        placeholder={t('pages.clients.detail.rrPaymentDate')}
+                      />
+                      <Input
+                        label={`${t('pages.clients.detail.rrPaymentAmount')} ${idx + 1} *`}
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={payment.amount}
+                        onChange={(e) => {
+                          setConnectRrForm((prev) => {
+                            const payments = [...prev.payments]
+                            payments[idx] = { ...payments[idx], amount: e.target.value }
+                            return { ...prev, payments }
+                          })
+                        }}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {connectRrError && (
+              <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+                {connectRrError}
+              </div>
+            )}
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              variant="cancel"
+              size="sm"
+              onClick={() => setIsConnectRrOpen(false)}
+              className="w-full rounded-md sm:w-auto"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={isCreatingRr}
+              onClick={() => {
+                const d = 'pages.clients.detail'
+                setConnectRrError(null)
+                // Validation
+                if (!connectRrForm.debtId) {
+                  setConnectRrError(t(`${d}.rrValidationLoanRequired`))
+                  return
+                }
+                if (!connectRrForm.connectionDate) {
+                  setConnectRrError(t(`${d}.rrValidationConnectionDateRequired`))
+                  return
+                }
+                if (!connectRrForm.totalAmount || parseFloat(connectRrForm.totalAmount) <= 0) {
+                  setConnectRrError(t(`${d}.rrValidationAmountRequired`))
+                  return
+                }
+                for (let i = 0; i < connectRrForm.payments.length; i++) {
+                  if (!connectRrForm.payments[i].date) {
+                    setConnectRrError(t(`${d}.rrValidationPaymentDateRequired`, { num: i + 1 }))
+                    return
+                  }
+                  if (
+                    !connectRrForm.payments[i].amount ||
+                    parseFloat(connectRrForm.payments[i].amount) <= 0
+                  ) {
+                    setConnectRrError(t(`${d}.rrValidationPaymentAmountRequired`, { num: i + 1 }))
+                    return
+                  }
+                }
+                const totalAmount = parseFloat(connectRrForm.totalAmount)
+                const paymentsSum = connectRrForm.payments.reduce(
+                  (sum, p) => sum + (parseFloat(p.amount) || 0),
+                  0
+                )
+                if (Math.abs(paymentsSum - totalAmount) > 0.01) {
+                  setConnectRrError(
+                    t(`${d}.rrValidationSumMismatch`, {
+                      sum: paymentsSum.toFixed(2),
+                      total: totalAmount.toFixed(2),
+                    })
+                  )
+                  return
+                }
+
+                const formatDate = (dt: Date | null) => {
+                  if (!dt) return null
+                  const y = dt.getFullYear()
+                  const m = String(dt.getMonth() + 1).padStart(2, '0')
+                  const day = String(dt.getDate()).padStart(2, '0')
+                  return `${y}-${m}-${day}`
+                }
+                createRr(
+                  {
+                    clientId,
+                    data: {
+                      debt_id: parseInt(connectRrForm.debtId),
+                      connection_date: formatDate(connectRrForm.connectionDate),
+                      restructuring_amount: totalAmount,
+                      num_payments: connectRrForm.numPayments,
+                      payments: connectRrForm.payments.map((p) => ({
+                        payment_date: formatDate(p.date),
+                        payment_amount: parseFloat(p.amount),
+                      })),
+                    },
+                  },
+                  {
+                    onSuccess: () => {
+                      toast.success(t(`${d}.connectRRSuccess`))
+                      setIsConnectRrOpen(false)
+                    },
+                    onError: (error) => {
+                      const detail = (
+                        error as import('axios').AxiosError<{
+                          detail?: string | Array<{ msg?: string }>
+                        }>
+                      )?.response?.data?.detail
+                      let message = t(
+                        `${d}.connectRRError`,
+                        t('errors.somethingWentWrong', 'Something went wrong')
+                      )
+                      if (typeof detail === 'string') {
+                        message = detail
+                      } else if (Array.isArray(detail) && detail.length > 0) {
+                        message = detail
+                          .map((e) => e.msg || '')
+                          .filter(Boolean)
+                          .join('; ')
+                      }
+                      setConnectRrError(message)
+                    },
+                  }
+                )
+              }}
+              className="w-full rounded-md sm:w-auto"
+            >
+              {isCreatingRr ? '...' : t('pages.clients.detail.connectRR')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+      </div>
+    </TooltipProvider>
   )
 }
 

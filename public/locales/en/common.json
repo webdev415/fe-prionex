@@ -892,6 +892,8 @@
         "phoneNumber": "Phone number",
         "contactValue": "Contact",
         "contactType": "Contact type",
+        "addedBy": "Added by",
+        "addedDate": "Date",
         "comment": "Comment",
         "registrationAddress": "Registration address",
         "personalAddress": "Personal address",

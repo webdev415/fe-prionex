@@ -783,6 +783,8 @@
         "phoneNumber": "Номер телефону",
         "contactValue": "Контакт",
         "contactType": "Тип контакту",
+        "addedBy": "Додав",
+        "addedDate": "Дата",
         "comment": "Коментар",
         "registrationAddress": "Адреса реєстрації",
         "personalAddress": "Особиста адреса",
