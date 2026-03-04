@@ -41,6 +41,7 @@ import {
 import { mockClientDetail } from './mockClientDetails'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { useHasPermission } from '@/hooks/usePermissions'
 
 // Types
 interface Payment {
@@ -152,6 +153,7 @@ export function DebtSummaryPage() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
   const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null)
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
+  const canVerifyPayment = useHasPermission(PERMISSIONS.CLIENTS.VERIFY_PAYMENT)
 
   // Payment mutations (must be declared before any conditional returns)
   const { mutate: recordPaymentMutation } = useRecordPayment()
@@ -1371,7 +1373,9 @@ export function DebtSummaryPage() {
                               <div className="flex items-center justify-center gap-1 sm:gap-2">
                                 {payment.status === 'Pending' &&
                                   isPaymentLessThan7DaysOld(payment.date) && (
-                                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT_DEBT}>
+                                    <PermissionGuard
+                                      permission={PERMISSIONS.CLIENTS.VERIFY_PAYMENT}
+                                    >
                                       <LinkButton
                                         variant="regular-secondary"
                                         size="xs"
@@ -1386,6 +1390,23 @@ export function DebtSummaryPage() {
                                       </LinkButton>
                                     </PermissionGuard>
                                   )}
+                                {(payment.status === 'Pending' ||
+                                  payment.status === 'Verified') && (
+                                  <PermissionGuard permission={PERMISSIONS.CLIENTS.VERIFY_PAYMENT}>
+                                    <LinkButton
+                                      variant="regular-secondary"
+                                      size="xs"
+                                      leftIcon={<Icons.Close size={14} />}
+                                      onClick={() => {
+                                        setSelectedPayment(payment)
+                                        setIsCancelModalOpen(true)
+                                      }}
+                                      className="text-xs"
+                                    >
+                                      <span>{t('pages.clients.debtSummary.actions.cancel')}</span>
+                                    </LinkButton>
+                                  </PermissionGuard>
+                                )}
                                 {(payment.status === 'Verified' ||
                                   payment.status === 'Cancelled' ||
                                   (payment.status === 'Pending' &&
@@ -1462,6 +1483,7 @@ export function DebtSummaryPage() {
           currentDebt={debtSummary.totalDebt}
           debts={apiClient?.debts}
           onSave={handleRecordPayment}
+          canVerify={canVerifyPayment}
         />
       )}
 
@@ -1624,7 +1646,7 @@ export function DebtSummaryPage() {
       )}
 
       {/* Cancel Payment Modal */}
-      <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT_DEBT}>
+      <PermissionGuard permission={PERMISSIONS.CLIENTS.VERIFY_PAYMENT}>
         {selectedPayment && debtSummary && isCancelModalOpen && (
           <CancelPaymentModal
             open={isCancelModalOpen}
@@ -1658,7 +1680,7 @@ export function DebtSummaryPage() {
 
               cancelPaymentMutation(
                 {
-                  paymentId: backendPayment.payment_number || backendPayment.id.toString(),
+                  paymentId: backendPayment.id.toString(),
                   request: {
                     cancellation_reason: data.reason,
                   },

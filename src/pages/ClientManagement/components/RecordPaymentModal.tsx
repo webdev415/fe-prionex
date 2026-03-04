@@ -40,6 +40,8 @@ export interface RecordPaymentModalProps {
   customerName: string
   currentDebt: number
   debts?: DebtDetail[]
+  /** Whether user has verify_payment permission. When false, hides Verified radio and Save & Verify button. */
+  canVerify?: boolean
   onSave: (data: {
     amount: number
     date: Date
@@ -60,6 +62,7 @@ export function RecordPaymentModal({
   customerName,
   currentDebt,
   debts,
+  canVerify = true,
   onSave,
 }: RecordPaymentModalProps) {
   const { t, i18n } = useTranslation('common')
@@ -73,7 +76,7 @@ export function RecordPaymentModal({
       maximumFractionDigits: 2,
     })}`
   }
-  const [paymentAmount, setPaymentAmount] = useState<string>('10000.00')
+  const [paymentAmount, setPaymentAmount] = useState<string>('')
   const [paymentDate, setPaymentDate] = useState<Date | null>(getTodayAtMidnight)
   const [paymentMethod, setPaymentMethod] = useState<
     'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
@@ -249,7 +252,7 @@ export function RecordPaymentModal({
     })
 
     // Reset form
-    setPaymentAmount('10000.00')
+    setPaymentAmount('')
     setPaymentDate(getTodayAtMidnight())
     setPaymentMethod('Bank Transfer')
     setPaymentStatus('Pending Verification')
@@ -267,7 +270,7 @@ export function RecordPaymentModal({
 
   const handleClose = () => {
     // Reset form on close
-    setPaymentAmount('10000.00')
+    setPaymentAmount('')
     setPaymentDate(getTodayAtMidnight())
     setPaymentMethod('Bank Transfer')
     setPaymentStatus('Pending Verification')
@@ -617,52 +620,56 @@ export function RecordPaymentModal({
                         {t('pages.clients.modals.recordPayment.pendingVerification')}
                       </Label>
                     </div>
-                    <div className="flex flex-1 flex-col items-start gap-2">
-                      <div className="flex items-center gap-1">
-                        <RadioItem value="Verified" id="status-verified" />
-                        <Label
-                          htmlFor="status-verified"
-                          className="text-dark-500 cursor-pointer text-sm font-light"
-                        >
-                          {t('pages.clients.modals.recordPayment.verified')}
-                        </Label>
+                    {canVerify && (
+                      <div className="flex flex-1 flex-col items-start gap-2">
+                        <div className="flex items-center gap-1">
+                          <RadioItem value="Verified" id="status-verified" />
+                          <Label
+                            htmlFor="status-verified"
+                            className="text-dark-500 cursor-pointer text-sm font-light"
+                          >
+                            {t('pages.clients.modals.recordPayment.verified')}
+                          </Label>
+                        </div>
+                        <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.modals.recordPayment.requiresSupervisorPermission')}
+                        </span>
                       </div>
-                      <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.modals.recordPayment.requiresSupervisorPermission')}
-                      </span>
-                    </div>
+                    )}
                   </RadioGroup>
                 </div>
 
-                {/* Checkboxes */}
-                <div className="flex flex-col items-start gap-3 self-stretch">
-                  <div className="flex items-center gap-1 self-stretch">
-                    <Checkbox
-                      checked={generateReceipt}
-                      onCheckedChange={(checked) => setGenerateReceipt(checked === true)}
-                      id="generate-receipt"
-                    />
-                    <Label
-                      htmlFor="generate-receipt"
-                      className="flex flex-1 cursor-pointer flex-col justify-center self-stretch text-sm font-light text-gray-950"
-                    >
-                      {t('pages.clients.modals.recordPayment.generateReceiptAutomatically')}
-                    </Label>
+                {/* Checkboxes — only relevant when saving as Verified */}
+                {paymentStatus === 'Verified' && (
+                  <div className="flex flex-col items-start gap-3 self-stretch">
+                    <div className="flex items-center gap-1 self-stretch">
+                      <Checkbox
+                        checked={generateReceipt}
+                        onCheckedChange={(checked) => setGenerateReceipt(checked === true)}
+                        id="generate-receipt"
+                      />
+                      <Label
+                        htmlFor="generate-receipt"
+                        className="flex flex-1 cursor-pointer flex-col justify-center self-stretch text-sm font-light text-gray-950"
+                      >
+                        {t('pages.clients.modals.recordPayment.generateReceiptAutomatically')}
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-1 self-stretch">
+                      <Checkbox
+                        checked={updateBalance}
+                        onCheckedChange={(checked) => setUpdateBalance(checked === true)}
+                        id="update-balance"
+                      />
+                      <Label
+                        htmlFor="update-balance"
+                        className="flex flex-1 cursor-pointer flex-col justify-center self-stretch text-sm font-light text-gray-950"
+                      >
+                        {t('pages.clients.modals.recordPayment.updateDebtBalanceImmediately')}
+                      </Label>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 self-stretch">
-                    <Checkbox
-                      checked={updateBalance}
-                      onCheckedChange={(checked) => setUpdateBalance(checked === true)}
-                      id="update-balance"
-                    />
-                    <Label
-                      htmlFor="update-balance"
-                      className="flex flex-1 cursor-pointer flex-col justify-center self-stretch text-sm font-light text-gray-950"
-                    >
-                      {t('pages.clients.modals.recordPayment.updateDebtBalanceImmediately')}
-                    </Label>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -671,7 +678,7 @@ export function RecordPaymentModal({
       <ModalFooter className="flex flex-col items-start gap-4 self-stretch border-none">
         <div className="flex w-full flex-col items-stretch gap-3 gap-6 self-stretch sm:flex-row">
           <Button
-            variant="secondary"
+            variant={canVerify ? 'secondary' : 'primary'}
             leftIcon={<Icons.Clock04 size={18} />}
             onClick={() => handleSave('Pending Verification')}
             className="h-12 w-full rounded-md sm:w-auto"
@@ -679,15 +686,17 @@ export function RecordPaymentModal({
           >
             {t('pages.clients.modals.recordPayment.saveAsPending')}
           </Button>
-          <Button
-            variant="primary"
-            leftIcon={<Icons.CheckmarkSquare03 size={18} />}
-            onClick={() => handleSave('Verified')}
-            className="h-12 w-full rounded-md sm:w-auto"
-            disabled={hasValidationErrors}
-          >
-            {t('pages.clients.modals.recordPayment.saveAndVerify')}
-          </Button>
+          {canVerify && (
+            <Button
+              variant="primary"
+              leftIcon={<Icons.CheckmarkSquare03 size={18} />}
+              onClick={() => handleSave('Verified')}
+              className="h-12 w-full rounded-md sm:w-auto"
+              disabled={hasValidationErrors}
+            >
+              {t('pages.clients.modals.recordPayment.saveAndVerify')}
+            </Button>
+          )}
         </div>
 
         <Button
