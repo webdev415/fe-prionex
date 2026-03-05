@@ -30,6 +30,7 @@ export interface OriginateCallRequest {
   campaign_id?: string
   client_id?: number
   metadata?: Record<string, unknown>
+  context?: string
 }
 
 export interface OriginateCallResponse {

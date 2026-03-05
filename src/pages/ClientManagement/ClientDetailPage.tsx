@@ -65,9 +65,7 @@ import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
 import { useCallStore } from '@/stores/callStore'
 import { useClientTags } from '@/features/tags/hooks/useTags'
 import { TagSelectorModal } from './components/TagSelectorModal'
-import { useAuth } from '@/features/auth/hooks/useAuth'
-import { useOriginateCall } from '@/features/calls/hooks/useCall'
-import { useCallWebSocket } from '@/features/calls/hooks/useCallWebSocket'
+import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import { useAuthStore } from '@/stores/authStore'
 import { useUserDepartment } from '@/features/users'
 import { PermissionGuard } from '@/components/auth'
@@ -150,74 +148,20 @@ export function ClientDetailPage() {
     'comments'
   )
 
-  // Get current user for call integration
-  const { user } = useAuth()
+  // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
-  const { mutate: originateCall, isPending: isOriginatingCall } = useOriginateCall()
-
-  // Track call error state for displaying in modal
-  const [callError, setCallError] = useState<string | null>(null)
-
-  // Enable WebSocket for real-time call updates
-  useCallWebSocket(user?.asterisk_extension || null)
-
-  // Clear call error when modal opens
-  const handleClearCallError = () => {
-    setCallError(null)
-  }
-
-  // Handle call origination with custom success handler
-  const handleOriginateCall = (phoneNumber: string, clientName: string, clientId: string) => {
-    if (!user?.asterisk_extension) {
-      setCallError('Your account is not configured for calling. Please contact administrator.')
-      return
-    }
-
-    // Clear any previous error
-    setCallError(null)
-
-    originateCall(
-      {
-        agent_extension: user.asterisk_extension,
-        customer_number: phoneNumber,
-        caller_id_name: 'CRM Call',
-        client_id: Number(clientId),
-        campaign_id: user.active_project_id ?? undefined,
-        metadata: {
-          client_name: clientName,
-        },
-      },
-      {
-        onSuccess: (data) => {
-          // Store the call ID to track this call with backend
-          setCurrentCallId(data.call_id)
-          // Modal is already open and will transition to 'dialing' state
-          // No need to re-open it
-        },
-        onError: (err: unknown) => {
-          // Extract error message from response
-          let message: string | undefined
-          if (err && typeof err === 'object' && 'response' in err) {
-            const response = (
-              err as { response?: { data?: { message?: string; detail?: unknown } } }
-            ).response
-            const data = response?.data
-            if (data?.message) {
-              message = data.message
-            } else if (data?.detail) {
-              // detail can be a string or an object with message property
-              if (typeof data.detail === 'string') {
-                message = data.detail
-              } else if (typeof data.detail === 'object' && data.detail !== null) {
-                message = (data.detail as { message?: string }).message
-              }
-            }
-          }
-          setCallError(message || 'Failed to initiate call. Please try again.')
-        },
-      }
-    )
-  }
+  const {
+    user,
+    isCallModalOpen,
+    setIsCallModalOpen,
+    currentCallId,
+    callError,
+    isOriginatingCall,
+    handleOriginateCall,
+    handleClearCallError,
+    handleCloseCallModal,
+    handleCallEnd,
+  } = useCallOrigination()
 
   // Client detail: one profile + section endpoints
   const clientId = id ? Number(id) : 0
@@ -495,8 +439,7 @@ export function ClientDetailPage() {
   // Tags are now fetched from useClientTags hook instead of local state
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
-  const [isCallModalOpen, setIsCallModalOpen] = useState(false)
-  const [currentCallId, setCurrentCallId] = useState<string | null>(null)
+  // isCallModalOpen, currentCallId managed by useCallOrigination hook
   const [isCallRecordingModalOpen, setIsCallRecordingModalOpen] = useState(false)
   const [isTagModalOpen, setIsTagModalOpen] = useState(false)
   // const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -2971,11 +2914,8 @@ export function ClientDetailPage() {
         <CallDialogModal
           open={isCallModalOpen}
           onClose={() => {
-            setOpenCallModal(null)
-            setIsCallModalOpen(false)
-            setCurrentCallId(null)
+            handleCloseCallModal()
             setSelectedPhoneForCall('')
-            handleClearCallError()
           }}
           clientName={client.fullName}
           phoneNumber={selectedPhoneForCall || client.phones?.[0]?.number || ''}
@@ -2983,23 +2923,15 @@ export function ClientDetailPage() {
           initialState="initial"
           error={callError}
           isLoading={isOriginatingCall}
-          onCallStart={(_callType: CallType) => {
+          onCallStart={(callType: CallType) => {
             const phoneNumber = selectedPhoneForCall || client.phones?.[0]?.number
-            if (!phoneNumber) {
-              setCallError('Client has no phone number')
-              return
-            }
-
-            handleOriginateCall(phoneNumber, client.fullName, client.id.toString())
+            if (!phoneNumber) return
+            handleOriginateCall(phoneNumber, client.fullName, client.id.toString(), callType)
           }}
-          onCallEnd={(duration: number, status: CallStatus) => {
-            console.log('Call ended:', { duration, status })
-            setOpenCallModal(null)
-            setCurrentCallId(null)
+          onCallEnd={(_duration: number, _status: CallStatus) => {
+            handleCallEnd()
           }}
-          onRetry={() => {
-            handleClearCallError()
-          }}
+          onRetry={handleClearCallError}
         />
 
         {/* Call Recording Modal */}

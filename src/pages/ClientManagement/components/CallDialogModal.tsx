@@ -531,13 +531,11 @@ export function CallDialogModal({
                     </label>
                     <label
                       className={cn(
-                        'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors sm:px-4',
-                        callType === 'spam-calls'
-                          ? 'border-primary-300 bg-primary-100'
-                          : 'border-gray-300 bg-white hover:border-gray-400'
+                        'flex items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors sm:px-4',
+                        'cursor-not-allowed border-gray-200 bg-gray-50 opacity-50'
                       )}
                     >
-                      <RadioItem value="spam-calls" id="spam-calls" />
+                      <RadioItem value="spam-calls" id="spam-calls" disabled />
                       <span className="text-dark-500 text-xs font-light sm:text-sm">
                         {t('pages.clients.modals.callDialog.spamCalls')}
                       </span>
