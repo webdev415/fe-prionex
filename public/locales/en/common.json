@@ -1515,6 +1515,7 @@
         },
         "actions": {
           "verify": "Verify",
+          "cancel": "Cancel",
           "viewDetails": "View Details"
         },
         "summary": {

@@ -1406,6 +1406,7 @@
         },
         "actions": {
           "verify": "Підтвердити",
+          "cancel": "Скасувати",
           "viewDetails": "Переглянути деталі"
         },
         "summary": {
