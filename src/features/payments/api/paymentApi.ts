@@ -16,6 +16,7 @@ import type {
   ClientPaymentHistoryResponse,
   PaymentStatsParams,
   PaymentStatsResponse,
+  PendingPaymentResponse,
   ReceiptResponse,
 } from './types'
 
@@ -142,6 +143,18 @@ export async function exportPaymentsCSV(params: PaymentListParams = {}): Promise
   const response = await api.get(`${BASE_URL}/export`, {
     params,
     responseType: 'blob',
+  })
+  return response.data
+}
+
+/**
+ * Get pending verification payments (bell notifications)
+ */
+export async function getPendingVerificationPayments(
+  params: { days?: number } = {}
+): Promise<PendingPaymentResponse> {
+  const response = await api.get<PendingPaymentResponse>(`${BASE_URL}/pending-verifications`, {
+    params,
   })
   return response.data
 }

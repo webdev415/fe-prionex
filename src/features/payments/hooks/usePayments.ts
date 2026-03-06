@@ -4,16 +4,20 @@
  */
 
 import { useQuery } from '@tanstack/react-query'
+import { useHasPermission } from '@/hooks/usePermissions'
+import { PERMISSIONS } from '@/constants/permissions'
 import {
   getPayment,
   getPayments,
   getClientPaymentHistory,
   getPaymentStats,
+  getPendingVerificationPayments,
 } from '../api/paymentApi'
 import type {
   PaymentListParams,
   ClientPaymentHistoryParams,
   PaymentStatsParams,
+  PendingPaymentResponse,
 } from '../api/types'
 
 /**
@@ -58,5 +62,21 @@ export function usePaymentStats(params: PaymentStatsParams = {}) {
   return useQuery({
     queryKey: ['payment-stats', params],
     queryFn: () => getPaymentStats(params),
+  })
+}
+
+/**
+ * Get pending verification payments (bell notifications)
+ * Only fires if user has edit_client_debt — Operators see pending payments,
+ * Supervisors do NOT. Admins also see it (superuser).
+ */
+export function usePendingVerificationPayments(params: { days?: number } = {}) {
+  const canViewPending = useHasPermission(PERMISSIONS.CLIENTS.EDIT_DEBT)
+  return useQuery<PendingPaymentResponse>({
+    queryKey: ['payments', 'pending-verifications', params],
+    queryFn: () => getPendingVerificationPayments(params),
+    enabled: canViewPending,
+    refetchInterval: canViewPending ? 60_000 : false,
+    staleTime: 30_000,
   })
 }

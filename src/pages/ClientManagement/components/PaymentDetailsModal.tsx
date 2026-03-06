@@ -110,6 +110,10 @@ export function PaymentDetailsModal({
   const canEditOrCancel =
     payment.status === 'Pending' && isPaymentLessThan7DaysOld(payment.paymentDate)
 
+  const canCancel =
+    (payment.status === 'Pending' || payment.status === 'Verified') &&
+    isPaymentLessThan7DaysOld(payment.paymentDate)
+
   const handleEditPayment = () => {
     // Trigger parent to close PaymentDetailsModal and open EditPaymentModal
     onEditPayment()
@@ -149,25 +153,29 @@ export function PaymentDetailsModal({
           className="pb-6"
         />
         <ModalContent className="max-h-[calc(90vh-300px)] sm:max-h-[calc(90vh-250px)]">
-          {/* Action Buttons - Only show for Pending status when payment is < 7 days old */}
-          {canEditOrCancel && (
+          {/* Action Buttons */}
+          {(canCancel || canEditOrCancel) && (
             <div className="mb-4 flex flex-col items-stretch gap-3 self-stretch sm:flex-row sm:gap-5">
-              <Button
-                variant="secondary"
-                leftIcon={<Icons.CancelCircle size={18} className="sm:size-5" />}
-                onClick={handleCancelPayment}
-                className="h-12 w-full flex-1 rounded-md sm:w-auto"
-              >
-                {t('pages.clients.modals.paymentDetails.cancelPayment')}
-              </Button>
-              <Button
-                variant="primary"
-                leftIcon={<Icons.PencilEdit size={18} className="sm:size-5" />}
-                onClick={handleEditPayment}
-                className="h-12 w-full flex-1 rounded-md sm:w-auto"
-              >
-                {t('pages.clients.modals.paymentDetails.editPayment')}
-              </Button>
+              {canCancel && (
+                <Button
+                  variant="secondary"
+                  leftIcon={<Icons.CancelCircle size={18} className="sm:size-5" />}
+                  onClick={handleCancelPayment}
+                  className="h-12 w-full flex-1 rounded-md sm:w-auto"
+                >
+                  {t('pages.clients.modals.paymentDetails.cancelPayment')}
+                </Button>
+              )}
+              {canEditOrCancel && (
+                <Button
+                  variant="primary"
+                  leftIcon={<Icons.PencilEdit size={18} className="sm:size-5" />}
+                  onClick={handleEditPayment}
+                  className="h-12 w-full flex-1 rounded-md sm:w-auto"
+                >
+                  {t('pages.clients.modals.paymentDetails.editPayment')}
+                </Button>
+              )}
             </div>
           )}
 
