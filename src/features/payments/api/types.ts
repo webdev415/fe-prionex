@@ -169,3 +169,19 @@ export interface ReceiptResponse {
   file_path?: string
   file_size?: number
 }
+
+export interface PendingPaymentItem {
+  id: number
+  payment_number: string
+  client_id: number
+  client_name?: string | null
+  amount: string
+  payment_method: PaymentMethod
+  payment_date: string
+  recorded_at: string
+  days_pending: number
+}
+
+export interface PendingPaymentResponse {
+  items: PendingPaymentItem[]
+}
