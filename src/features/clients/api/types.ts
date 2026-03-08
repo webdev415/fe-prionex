@@ -669,8 +669,6 @@ export interface DialHistoryRecord {
   client_id: number
   project_id: number
   phone?: string | null
-  should_dial?: number | null
-  number_k?: string | null
   interaction_date?: string | null
   created_at: string
 }

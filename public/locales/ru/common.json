@@ -703,8 +703,7 @@
           "promisedAmount": "Обещанная сумма",
           "promisedDate": "Обещанная дата",
           "comment": "Комментарий",
-          "employee": "Сотрудник",
-          "shouldDial": "Набирать"
+          "employee": "Сотрудник"
         }
       },
       "editModal": {
@@ -874,8 +873,8 @@
         "addFirstNote": "Добавить первую заметку",
         "noPrimaryCreditorComments": "Нет комментариев от первичного кредитора",
         "primaryCreditorCommentsDescription": "Исторические данные о взаимодействии от продавца долга появятся здесь, когда будут доступны.",
-        "dialHistory": "История набора",
-        "noDialHistory": "История набора отсутствует",
+        "spamCallHistory": "История спам-звонков",
+        "noSpamCallHistory": "История спам-звонков отсутствует",
         "totalCost": "Общая стоимость",
         "deliveryRate": "Уровень доставки",
         "delivered": "доставлено",
@@ -988,6 +987,7 @@
           "whiteLine": "Белая линия",
           "grayLine": "Серая линия",
           "spamCalls": "Спам звонки",
+          "markAsSpam": "Отметить как спам",
           "callNow": "Позвонить сейчас",
           "calling": "Звонит...",
           "connected": "Подключено",

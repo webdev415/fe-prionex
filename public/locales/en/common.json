@@ -809,8 +809,7 @@
           "promisedAmount": "Promised Amount",
           "promisedDate": "Promised Date",
           "comment": "Comment",
-          "employee": "Employee",
-          "shouldDial": "Should Dial"
+          "employee": "Employee"
         }
       },
       "editModal": {
@@ -994,8 +993,8 @@
         "addFirstNote": "Add first note",
         "noPrimaryCreditorComments": "No comments from primary creditor",
         "primaryCreditorCommentsDescription": "Historical interaction data from the debt seller will appear here when available.",
-        "dialHistory": "Dial History",
-        "noDialHistory": "No dial history",
+        "spamCallHistory": "Spam Call History",
+        "noSpamCallHistory": "No spam call history",
         "totalCost": "Total Cost",
         "deliveryRate": "Delivery Rate",
         "delivered": "delivered",
@@ -1109,6 +1108,7 @@
           "whiteLine": "White Line",
           "grayLine": "Gray Line",
           "spamCalls": "Spam calls",
+          "markAsSpam": "Mark as Spam",
           "callNow": "Call Now",
           "calling": "Calling...",
           "connected": "Connected",

@@ -11,6 +11,7 @@ import type {
   InteractionSubtypeResponse,
   InteractionResultResponse,
   DialHistoryListResponse,
+  DialHistoryRecord,
 } from './types'
 
 /**
@@ -96,15 +97,26 @@ export async function getInteractionResults(): Promise<InteractionResultResponse
 }
 
 /**
- * List dial history for a client
+ * List spam call history for a client
  */
 export async function getClientDialHistory(
   clientId: number,
   params: { skip?: number; limit?: number } = {}
 ): Promise<DialHistoryListResponse> {
   const response = await api.get<DialHistoryListResponse>(
-    `/api/v1/clients/${clientId}/dial-history`,
+    `/api/v1/clients/${clientId}/spam-call-history`,
     { params }
+  )
+  return response.data
+}
+
+export async function addSpamCallHistory(
+  clientId: number,
+  phone: string
+): Promise<DialHistoryRecord> {
+  const response = await api.post<DialHistoryRecord>(
+    `/api/v1/clients/${clientId}/spam-call-history`,
+    { phone }
   )
   return response.data
 }
@@ -116,4 +128,5 @@ export const interactionApi = {
   getInteractionSubtypes,
   getInteractionResults,
   getClientDialHistory,
+  addSpamCallHistory,
 }

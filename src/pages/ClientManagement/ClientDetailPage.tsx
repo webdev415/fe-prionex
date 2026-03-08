@@ -53,6 +53,7 @@ import {
   useClientDocuments,
   useClientActivities,
   useClientDialHistory,
+  useAddSpamCallHistory,
   useAssignClient,
   useClientRestructuringAgreements,
   useRestructuringAgreementDetail,
@@ -211,6 +212,7 @@ export function ClientDetailPage() {
     clientId,
     isValidClientId
   )
+  const { mutate: addSpamCall } = useAddSpamCallHistory(clientId)
   // Fetch client tags from API (real)
   const { data: clientTags } = useClientTags(clientId)
 
@@ -839,19 +841,6 @@ export function ClientDetailPage() {
       header: t('pages.clients.activity.tableHeaders.phone'),
       align: 'left',
       className: 'w-[120px]',
-    },
-    {
-      key: 'number_k',
-      header: t('pages.clients.activity.tableHeaders.loanNumber'),
-      align: 'left',
-      className: 'w-[140px]',
-    },
-    {
-      key: 'should_dial',
-      header: t('pages.clients.activity.tableHeaders.shouldDial'),
-      align: 'center',
-      className: 'w-[90px]',
-      render: (row) => (row.should_dial === 1 ? 'Yes' : row.should_dial === 2 ? 'No' : '-'),
     },
   ]
 
@@ -2792,7 +2781,7 @@ export function ClientDetailPage() {
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
               >
-                {t('pages.clients.detail.dialHistory')}
+                {t('pages.clients.detail.spamCallHistory')}
               </button>
             </div>
             {/* View All link */}
@@ -2868,13 +2857,13 @@ export function ClientDetailPage() {
 
           {activeCommentTab === 'dial-history' &&
             (isDialHistoryLoading ? (
-              <TableSkeleton columns={4} rows={3} className="w-full" />
+              <TableSkeleton columns={2} rows={3} className="w-full" />
             ) : dialHistory.length === 0 ? (
               <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
                   <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
                   <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
-                    {t('pages.clients.detail.noDialHistory')}
+                    {t('pages.clients.detail.noSpamCallHistory')}
                   </p>
                 </div>
               </div>
@@ -2932,6 +2921,7 @@ export function ClientDetailPage() {
             handleCallEnd()
           }}
           onRetry={handleClearCallError}
+          onSpamCall={(phone) => addSpamCall(phone)}
         />
 
         {/* Call Recording Modal */}

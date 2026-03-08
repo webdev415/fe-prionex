@@ -40,6 +40,7 @@ export interface CallDialogModalProps {
   onReject?: () => void
   onMinimize?: () => void
   onRetry?: () => void // Callback to retry failed call
+  onSpamCall?: (phone: string) => void // Callback to add phone to spam call history
   // For incoming call
   loans?: Array<{
     id: string
@@ -77,6 +78,7 @@ export function CallDialogModal({
   onReject,
   onMinimize,
   onRetry,
+  onSpamCall,
   loans = [],
 }: CallDialogModalProps) {
   const { t } = useTranslation('common')
@@ -531,11 +533,13 @@ export function CallDialogModal({
                     </label>
                     <label
                       className={cn(
-                        'flex items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors sm:px-4',
-                        'cursor-not-allowed border-gray-200 bg-gray-50 opacity-50'
+                        'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors sm:px-4',
+                        callType === 'spam-calls'
+                          ? 'border-primary-300 bg-primary-100'
+                          : 'border-gray-300 bg-white hover:border-gray-400'
                       )}
                     >
-                      <RadioItem value="spam-calls" id="spam-calls" disabled />
+                      <RadioItem value="spam-calls" id="spam-calls" />
                       <span className="text-dark-500 text-xs font-light sm:text-sm">
                         {t('pages.clients.modals.callDialog.spamCalls')}
                       </span>
@@ -553,16 +557,33 @@ export function CallDialogModal({
               >
                 {t('actions.cancel')}
               </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleCallNow}
-                className="w-full rounded-md"
-                leftIcon={isLoading ? undefined : <Icons.Headset size={18} className="sm:size-5" />}
-                disabled={isLoading}
-              >
-                {isLoading ? t('status.loading') : t('pages.clients.modals.callDialog.callNow')}
-              </Button>
+              {callType === 'spam-calls' ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    if (onSpamCall) onSpamCall(phoneNumber)
+                    handleClose()
+                  }}
+                  className="w-full rounded-md"
+                  leftIcon={<Icons.Cancel01 size={18} className="sm:size-5" />}
+                >
+                  {t('pages.clients.modals.callDialog.markAsSpam')}
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleCallNow}
+                  className="w-full rounded-md"
+                  leftIcon={
+                    isLoading ? undefined : <Icons.Headset size={18} className="sm:size-5" />
+                  }
+                  disabled={isLoading}
+                >
+                  {isLoading ? t('status.loading') : t('pages.clients.modals.callDialog.callNow')}
+                </Button>
+              )}
             </ModalFooter>
           </>
         )}

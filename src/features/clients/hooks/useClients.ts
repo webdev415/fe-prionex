@@ -449,6 +449,24 @@ export function useClientActivities(clientId: number, enabled = true) {
 }
 
 /**
+ * Add a phone number to spam call history for a client.
+ */
+export function useAddSpamCallHistory(clientId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (phone: string) => interactionApi.addSpamCallHistory(clientId, phone),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.dialHistory(clientId) })
+      toast.success('Phone number added to spam call history')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error.response?.data?.detail || 'Failed to add to spam call history'
+      toast.error(message)
+    },
+  })
+}
+
+/**
  * Get dial history for a client.
  */
 export function useClientDialHistory(clientId: number, enabled = true) {
