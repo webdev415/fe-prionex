@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
+import { formatDate } from '@/lib/formatters'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
@@ -405,13 +406,14 @@ export function ClientDetailPage() {
       // Activities mapped from InteractionResponse to UI shape
       activities: (activities ?? []).map((a) => ({
         id: a.id,
-        date: a.interaction_date ? new Date(a.interaction_date).toLocaleDateString() : '-',
-        number: a.number_k ?? '-',
+        date: formatDate(a.interaction_date),
         type: a.type_name ?? '-',
         subtype: a.subtype_name ?? '-',
+        contactType: a.contact_type_name ?? '-',
         result: a.result_name ?? a.status,
         promisedAmount: a.promise_to_pay_amount ? Number(a.promise_to_pay_amount) : 0,
-        promisedDate: a.promise_to_pay_date ?? '-',
+        promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
+        callbackDate: formatDate(a.next_action_date ?? undefined),
         comment: a.summary ?? a.notes ?? '-',
         employee: a.user_name ?? '-',
       })),
@@ -771,12 +773,6 @@ export function ClientDetailPage() {
       className: 'w-[90px] overflow-hidden whitespace-normal',
     },
     {
-      key: 'number',
-      header: t('pages.clients.activity.tableHeaders.loanNumber'),
-      align: 'left',
-      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
-    },
-    {
       key: 'type',
       header: t('pages.clients.activity.tableHeaders.type'),
       align: 'left',
@@ -784,15 +780,21 @@ export function ClientDetailPage() {
     },
     {
       key: 'subtype',
-      header: t('pages.clients.activity.tableHeaders.subtype'),
+      header: t('pages.clients.activity.tableHeaders.channel', 'Channel'),
       align: 'left',
       className: 'w-[100px] overflow-hidden whitespace-normal break-words',
+    },
+    {
+      key: 'contactType',
+      header: t('pages.clients.activity.tableHeaders.contactType', 'Contact Type'),
+      align: 'left',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'result',
       header: t('pages.clients.activity.tableHeaders.result'),
       align: 'left',
-      className: 'w-[100px] overflow-hidden whitespace-normal break-words',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'promisedAmount',
@@ -809,10 +811,16 @@ export function ClientDetailPage() {
       className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
+      key: 'callbackDate',
+      header: t('pages.clients.activity.tableHeaders.callbackDate', 'Callback Date'),
+      align: 'left',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
+    },
+    {
       key: 'comment',
       header: t('pages.clients.activity.tableHeaders.comment'),
       align: 'left',
-      className: 'whitespace-normal break-words',
+      className: 'min-w-[300px] max-w-[500px] whitespace-normal break-words',
       render: (activity) => (
         <div className="py-1 text-sm leading-tight break-words whitespace-normal">
           {activity.comment || '-'}
@@ -2824,12 +2832,14 @@ export function ClientDetailPage() {
                 </button>
               </div>
             ) : (
-              <DataTable
-                columns={activityColumns}
-                data={client.activities.slice(0, 10)}
-                className="w-full"
-                tableClassName="table-fixed w-full"
-              />
+              <div className="w-full overflow-x-auto">
+                <DataTable
+                  columns={activityColumns}
+                  data={client.activities.slice(0, 10)}
+                  className="w-full"
+                  tableClassName="w-max min-w-full"
+                />
+              </div>
             ))}
 
           {activeCommentTab === 'primary' &&

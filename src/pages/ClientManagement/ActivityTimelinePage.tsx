@@ -25,6 +25,7 @@ import { PriorityBadge } from './components/PriorityBadge'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
+import { formatDate } from '@/lib/formatters'
 import { useCallStore } from '@/stores/callStore'
 import { useClientProfile, useClientActivities } from '@/features/clients/hooks/useClients'
 import { useCreateNoteInteraction } from '@/features/clients/hooks/useNoteInteraction'
@@ -91,15 +92,16 @@ export function ActivityTimelinePage() {
   const activitiesState = useMemo(() => {
     return activities.map((a) => ({
       id: a.id,
-      date: a.interaction_date ? new Date(a.interaction_date).toLocaleDateString() : '-',
+      date: formatDate(a.interaction_date),
       dateISO: a.interaction_date ?? '', // Keep ISO date for filtering
-      number: a.number_k ?? '-',
       type_id: a.type_id,
       type: a.type_name ?? '-',
       subtype: a.subtype_name ?? '-',
+      contactType: a.contact_type_name ?? '-',
       result: a.result_name ?? a.status ?? '-',
       promisedAmount: a.promise_to_pay_amount ? parseFloat(a.promise_to_pay_amount) : 0,
-      promisedDate: a.promise_to_pay_date ?? '-',
+      promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
+      callbackDate: formatDate(a.next_action_date ?? undefined),
       comment: a.summary ?? a.notes ?? '-',
       employee: a.user_name ?? '-',
     }))
@@ -176,12 +178,6 @@ export function ActivityTimelinePage() {
       className: 'w-[90px] overflow-hidden whitespace-normal',
     },
     {
-      key: 'number',
-      header: t('pages.clients.activity.tableHeaders.loanNumber', 'Loan Number'),
-      align: 'left',
-      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
-    },
-    {
       key: 'type',
       header: t('pages.clients.activity.tableHeaders.type', 'Type'),
       align: 'left',
@@ -189,15 +185,21 @@ export function ActivityTimelinePage() {
     },
     {
       key: 'subtype',
-      header: t('pages.clients.activity.tableHeaders.subtype', 'Subtype'),
+      header: t('pages.clients.activity.tableHeaders.channel', 'Channel'),
       align: 'left',
       className: 'w-[100px] overflow-hidden whitespace-normal break-words',
+    },
+    {
+      key: 'contactType',
+      header: t('pages.clients.activity.tableHeaders.contactType', 'Contact Type'),
+      align: 'left',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'result',
       header: t('pages.clients.activity.tableHeaders.result'),
       align: 'left',
-      className: 'w-[100px] overflow-hidden whitespace-normal break-words',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'promisedAmount',
@@ -214,10 +216,16 @@ export function ActivityTimelinePage() {
       className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
+      key: 'callbackDate',
+      header: t('pages.clients.activity.tableHeaders.callbackDate', 'Callback Date'),
+      align: 'left',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
+    },
+    {
       key: 'comment',
       header: t('pages.clients.activity.tableHeaders.comment'),
       align: 'left',
-      className: 'whitespace-normal break-words',
+      className: 'min-w-[300px] max-w-[500px] whitespace-normal break-words',
       render: (activity) => (
         <div className="py-1 text-sm leading-tight break-words whitespace-normal">
           {activity.comment || '-'}
@@ -379,12 +387,14 @@ export function ActivityTimelinePage() {
             )}
           </div>
         ) : (
-          <DataTable
-            columns={activityColumns}
-            data={paginatedActivities}
-            className="w-full"
-            tableClassName="table-fixed w-full"
-          />
+          <div className="w-full overflow-x-auto">
+            <DataTable
+              columns={activityColumns}
+              data={paginatedActivities}
+              className="w-full"
+              tableClassName="w-max min-w-full"
+            />
+          </div>
         )}
       </div>
 

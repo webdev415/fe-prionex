@@ -9,6 +9,7 @@ import type {
   InteractionResponse,
   InteractionTypeResponse,
   InteractionSubtypeResponse,
+  InteractionContactTypeResponse,
   InteractionResultResponse,
   DialHistoryListResponse,
   DialHistoryRecord,
@@ -37,23 +38,25 @@ export async function getClientInteractions(
 }
 
 /**
- * Create a new interaction
+ * Create a new interaction.
+ * direction and channel are auto-derived by the backend from type_id and subtype_id.
  */
 export async function createInteraction(data: {
   client_id: number
   type_id: number
-  direction: string
-  channel: string
-  debt_id?: number
   subtype_id?: number
+  contact_type_id?: number
   result_id?: number
+  debt_id?: number
   interaction_date?: string
   phone_used?: string
   contact_person?: string
+  contact_relationship?: string
   summary?: string
   notes?: string
   promise_to_pay_date?: string
   promise_to_pay_amount?: number
+  next_action_date?: string
   follow_up_required?: boolean
   follow_up_date?: string
   related_call_id?: number
@@ -69,7 +72,7 @@ export async function createInteraction(data: {
 }
 
 /**
- * List interaction types for dropdowns
+ * List interaction types (Incoming, Outgoing, Searching)
  */
 export async function getInteractionTypes(): Promise<InteractionTypeResponse[]> {
   const response = await api.get<InteractionTypeResponse[]>('/api/v1/interaction-types')
@@ -77,22 +80,36 @@ export async function getInteractionTypes(): Promise<InteractionTypeResponse[]> 
 }
 
 /**
- * List interaction subtypes for dropdowns
+ * List communication channels (Call, Messenger, Mail, Chat)
  */
-export async function getInteractionSubtypes(
-  typeId?: number
-): Promise<InteractionSubtypeResponse[]> {
-  const response = await api.get<InteractionSubtypeResponse[]>('/api/v1/interaction-subtypes', {
-    params: typeId !== undefined ? { type_id: typeId } : undefined,
-  })
+export async function getInteractionSubtypes(): Promise<InteractionSubtypeResponse[]> {
+  const response = await api.get<InteractionSubtypeResponse[]>('/api/v1/interaction-subtypes')
   return response.data
 }
 
 /**
- * List interaction results for dropdowns
+ * List contact types (Client, 3rd Person, Relative)
  */
-export async function getInteractionResults(): Promise<InteractionResultResponse[]> {
-  const response = await api.get<InteractionResultResponse[]>('/api/v1/interaction-results')
+export async function getInteractionContactTypes(): Promise<InteractionContactTypeResponse[]> {
+  const response = await api.get<InteractionContactTypeResponse[]>(
+    '/api/v1/interaction-contact-types'
+  )
+  return response.data
+}
+
+/**
+ * List results.
+ * When type_id is provided, returns only results allowed by interaction_result_rules
+ * for the given type + channel + contact_type combination.
+ */
+export async function getInteractionResults(params?: {
+  type_id?: number
+  channel_id?: number
+  contact_type_id?: number
+}): Promise<InteractionResultResponse[]> {
+  const response = await api.get<InteractionResultResponse[]>('/api/v1/interaction-results', {
+    params,
+  })
   return response.data
 }
 
@@ -126,6 +143,7 @@ export const interactionApi = {
   createInteraction,
   getInteractionTypes,
   getInteractionSubtypes,
+  getInteractionContactTypes,
   getInteractionResults,
   getClientDialHistory,
   addSpamCallHistory,
