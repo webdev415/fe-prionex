@@ -270,7 +270,7 @@ export function ActivityTimelinePage() {
               size="md"
               variant="outline"
               leftIcon={<Icons.PencilEdit size={20} />}
-              className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
+              className="flex w-full flex-row rounded-full text-xs font-medium md:w-auto md:text-sm"
               onClick={() => setIsNoteModalOpen(true)}
             >
               {t('pages.clients.activity.addNote')}
@@ -280,7 +280,7 @@ export function ActivityTimelinePage() {
             <Button
               size="md"
               leftIcon={<Icons.Headset size={20} />}
-              className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
+              className="flex w-full flex-row rounded-full text-xs font-medium md:w-auto md:text-sm"
               disabled={!user?.is_agent || !user?.asterisk_extension}
               onClick={() => {
                 if (isCallActive()) {
@@ -295,16 +295,6 @@ export function ActivityTimelinePage() {
               }}
             >
               {t('pages.clients.activity.call')}
-            </Button>
-          </PermissionGuard>
-          <PermissionGuard permission={PERMISSIONS.CLIENTS.DELETE}>
-            <Button
-              size="md"
-              variant="secondary"
-              leftIcon={<Icons.RemoveMale size={20} />}
-              className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
-            >
-              {t('pages.clients.activity.deleteClient')}
             </Button>
           </PermissionGuard>
         </div>

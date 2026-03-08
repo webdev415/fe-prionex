@@ -1,6 +1,6 @@
 /**
  * Interaction API Service
- * Calls interaction service through Kong gateway
+ * Calls client service through Kong gateway
  */
 
 import api from '@/lib/api'
@@ -13,8 +13,6 @@ import type {
   DialHistoryListResponse,
 } from './types'
 
-const BASE_URL = '/api/v1/interactions'
-
 /**
  * List interactions for a client
  */
@@ -26,13 +24,14 @@ export async function getClientInteractions(
     type_id?: number
     date_from?: string
     date_to?: string
-    skip?: number
-    limit?: number
+    page?: number
+    page_size?: number
   } = {}
 ): Promise<InteractionListResponse> {
-  const response = await api.get<InteractionListResponse>(`${BASE_URL}/client/${clientId}`, {
-    params,
-  })
+  const response = await api.get<InteractionListResponse>(
+    `/api/v1/clients/${clientId}/interactions`,
+    { params }
+  )
   return response.data
 }
 
@@ -60,19 +59,19 @@ export async function createInteraction(data: {
   related_sms_id?: number
   related_payment_id?: number
 }): Promise<InteractionResponse> {
-  const response = await api.post<InteractionResponse>(BASE_URL + '/', data)
+  const { client_id, ...body } = data
+  const response = await api.post<InteractionResponse>(
+    `/api/v1/clients/${client_id}/interactions`,
+    body
+  )
   return response.data
 }
 
 /**
  * List interaction types for dropdowns
  */
-export async function getInteractionTypes(
-  activeOnly = true
-): Promise<{ types: InteractionTypeResponse[] }> {
-  const response = await api.get<{ types: InteractionTypeResponse[] }>(`${BASE_URL}/types`, {
-    params: { active_only: activeOnly },
-  })
+export async function getInteractionTypes(): Promise<InteractionTypeResponse[]> {
+  const response = await api.get<InteractionTypeResponse[]>('/api/v1/interaction-types')
   return response.data
 }
 
@@ -80,25 +79,19 @@ export async function getInteractionTypes(
  * List interaction subtypes for dropdowns
  */
 export async function getInteractionSubtypes(
-  typeId?: number,
-  activeOnly = true
-): Promise<{ subtypes: InteractionSubtypeResponse[] }> {
-  const response = await api.get<{ subtypes: InteractionSubtypeResponse[] }>(
-    `${BASE_URL}/subtypes`,
-    { params: { type_id: typeId, active_only: activeOnly } }
-  )
+  typeId?: number
+): Promise<InteractionSubtypeResponse[]> {
+  const response = await api.get<InteractionSubtypeResponse[]>('/api/v1/interaction-subtypes', {
+    params: typeId !== undefined ? { type_id: typeId } : undefined,
+  })
   return response.data
 }
 
 /**
  * List interaction results for dropdowns
  */
-export async function getInteractionResults(
-  activeOnly = true
-): Promise<{ results: InteractionResultResponse[] }> {
-  const response = await api.get<{ results: InteractionResultResponse[] }>(`${BASE_URL}/results`, {
-    params: { active_only: activeOnly },
-  })
+export async function getInteractionResults(): Promise<InteractionResultResponse[]> {
+  const response = await api.get<InteractionResultResponse[]>('/api/v1/interaction-results')
   return response.data
 }
 
@@ -110,7 +103,7 @@ export async function getClientDialHistory(
   params: { skip?: number; limit?: number } = {}
 ): Promise<DialHistoryListResponse> {
   const response = await api.get<DialHistoryListResponse>(
-    `${BASE_URL}/dial-history/client/${clientId}`,
+    `/api/v1/clients/${clientId}/dial-history`,
     { params }
   )
   return response.data

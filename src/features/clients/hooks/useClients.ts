@@ -436,7 +436,7 @@ export function useClientDocuments(clientId: number, enabled = true) {
 }
 
 /**
- * Get client activities (interaction timeline). Calls GET /interactions/client/{id}
+ * Get client activities (interaction timeline). Calls GET /clients/{id}/interactions
  */
 export function useClientActivities(clientId: number, enabled = true) {
   return useQuery({
@@ -444,7 +444,7 @@ export function useClientActivities(clientId: number, enabled = true) {
     queryFn: () => interactionApi.getClientInteractions(clientId),
     enabled: enabled && clientId > 0,
     staleTime: 30000,
-    select: (data) => data.interactions ?? [],
+    select: (data) => data.items ?? [],
   })
 }
 

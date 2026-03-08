@@ -19,9 +19,8 @@ import type { InteractionTypeResponse } from '../api/types'
 export function useInteractionTypes() {
   return useQuery({
     queryKey: ['interaction-types'],
-    queryFn: () => interactionApi.getInteractionTypes(true),
+    queryFn: () => interactionApi.getInteractionTypes(),
     staleTime: 300000,
-    select: (data) => data.types ?? [],
   })
 }
 
@@ -32,9 +31,8 @@ export function useInteractionTypes() {
 export function useInteractionSubtypes() {
   return useQuery({
     queryKey: ['interaction-subtypes'],
-    queryFn: () => interactionApi.getInteractionSubtypes(undefined, true),
+    queryFn: () => interactionApi.getInteractionSubtypes(),
     staleTime: 300000,
-    select: (data) => data.subtypes ?? [],
   })
 }
 
@@ -44,9 +42,8 @@ export function useInteractionSubtypes() {
 export function useInteractionResults() {
   return useQuery({
     queryKey: ['interaction-results'],
-    queryFn: () => interactionApi.getInteractionResults(true),
+    queryFn: () => interactionApi.getInteractionResults(),
     staleTime: 300000,
-    select: (data) => data.results ?? [],
   })
 }
 

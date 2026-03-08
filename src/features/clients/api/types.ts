@@ -657,10 +657,10 @@ export interface InteractionResponse {
 }
 
 export interface InteractionListResponse {
-  interactions: InteractionResponse[]
+  items: InteractionResponse[]
   total: number
-  skip: number
-  limit: number
+  page: number
+  page_size: number
 }
 
 export interface DialHistoryRecord {
