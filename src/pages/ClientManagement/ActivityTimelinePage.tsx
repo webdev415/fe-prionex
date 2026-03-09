@@ -27,7 +27,7 @@ import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
 import { formatDate } from '@/lib/formatters'
 import { useCallStore } from '@/stores/callStore'
-import { useClientProfile, useClientActivities } from '@/features/clients/hooks/useClients'
+import { useClientProfile, useClientActivitiesPaginated } from '@/features/clients/hooks/useClients'
 import { useCreateNoteInteraction } from '@/features/clients/hooks/useNoteInteraction'
 import { useInteractionTypes } from '@/features/clients/hooks/useNoteInteraction'
 import { PermissionGuard } from '@/components/auth'
@@ -44,10 +44,6 @@ export function ActivityTimelinePage() {
 
   // Fetch real data from API
   const { data: profile, isLoading: isProfileLoading } = useClientProfile(clientId, clientId > 0)
-  const { data: activities = [], isLoading: isActivitiesLoading } = useClientActivities(
-    clientId,
-    clientId > 0
-  )
 
   // Build client object from profile
   const client = useMemo(() => {
@@ -77,8 +73,39 @@ export function ActivityTimelinePage() {
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
 
+  // Build API params from filter/pagination state
+  const apiParams = useMemo(() => {
+    const params: {
+      page?: number
+      page_size?: number
+      type_id?: number
+      date_from?: string
+      date_to?: string
+    } = {
+      page: currentPage,
+      page_size: rowsPerPage,
+    }
+    if (selectedTypeId !== 'all') {
+      params.type_id = Number(selectedTypeId)
+    }
+    if (dateFrom) {
+      params.date_from = dateFrom.toISOString().split('T')[0]
+    }
+    if (dateTo) {
+      params.date_to = dateTo.toISOString().split('T')[0]
+    }
+    return params
+  }, [currentPage, rowsPerPage, selectedTypeId, dateFrom, dateTo])
+
   // Fetch interaction types for the filter dropdown
   const { data: interactionTypes } = useInteractionTypes()
+
+  // Fetch activities with server-side pagination
+  const { data: activitiesResponse, isLoading: isActivitiesLoading } = useClientActivitiesPaginated(
+    clientId,
+    apiParams,
+    clientId > 0
+  )
 
   const { mutate: createNote } = useCreateNoteInteraction()
 
@@ -90,10 +117,10 @@ export function ActivityTimelinePage() {
 
   // Map activities from API to display format
   const activitiesState = useMemo(() => {
-    return activities.map((a) => ({
+    const items = activitiesResponse?.items ?? []
+    return items.map((a) => ({
       id: a.id,
       date: formatDate(a.interaction_date),
-      dateISO: a.interaction_date ?? '', // Keep ISO date for filtering
       type_id: a.type_id,
       type: a.type_name ?? '-',
       subtype: a.subtype_name ?? '-',
@@ -105,7 +132,10 @@ export function ActivityTimelinePage() {
       comment: a.summary ?? a.notes ?? '-',
       employee: a.user_name ?? '-',
     }))
-  }, [activities])
+  }, [activitiesResponse])
+
+  const totalCount = activitiesResponse?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage))
 
   const formatCurrencyWithDecimals = (amount: number) => {
     return new Intl.NumberFormat('uk-UA', {
@@ -116,52 +146,6 @@ export function ActivityTimelinePage() {
       .format(amount)
       .replace(/,/g, ' ')
   }
-
-  // Filter activities based on type and date range
-  const filteredActivities = useMemo(() => {
-    let result = [...(activitiesState || [])]
-
-    // Filter by interaction type
-    if (selectedTypeId !== 'all') {
-      const typeId = Number(selectedTypeId)
-      result = result.filter((activity) => activity.type_id === typeId)
-    }
-
-    // Filter by date range using ISO date
-    if (dateFrom || dateTo) {
-      result = result.filter((activity) => {
-        if (!activity.dateISO) return true
-        const activityDate = new Date(activity.dateISO)
-        activityDate.setHours(0, 0, 0, 0)
-
-        if (dateFrom) {
-          const fromDate = new Date(dateFrom)
-          fromDate.setHours(0, 0, 0, 0)
-          if (activityDate < fromDate) return false
-        }
-        if (dateTo) {
-          const toDate = new Date(dateTo)
-          toDate.setHours(23, 59, 59, 999)
-          if (activityDate > toDate) return false
-        }
-        return true
-      })
-    }
-
-    return result
-  }, [activitiesState, selectedTypeId, dateFrom, dateTo])
-
-  // Calculate total pages (minimum 1 to avoid division issues)
-  const totalPages = Math.max(1, Math.ceil(filteredActivities.length / rowsPerPage))
-
-  // Paginate activities
-  const paginatedActivities = useMemo(() => {
-    // Ensure current page doesn't exceed total pages
-    const safePage = Math.min(currentPage, totalPages)
-    const start = (safePage - 1) * rowsPerPage
-    const end = start + rowsPerPage
-    return filteredActivities.slice(start, end)
-  }, [filteredActivities, currentPage, totalPages, rowsPerPage])
 
   const handleClearFilters = () => {
     setSelectedTypeId('all')
@@ -344,14 +328,20 @@ export function ActivityTimelinePage() {
             <div className="flex flex-1 items-center gap-2">
               <DateSelect
                 value={dateFrom}
-                onChange={({ value }) => setDateFrom(value)}
+                onChange={({ value }) => {
+                  setDateFrom(value)
+                  setCurrentPage(1)
+                }}
                 placeholder={t('pages.clients.activity.fromDate')}
                 format="yyyy-MM-dd"
               />
               <span className="text-dark-500 shrink-0">-</span>
               <DateSelect
                 value={dateTo}
-                onChange={({ value }) => setDateTo(value)}
+                onChange={({ value }) => {
+                  setDateTo(value)
+                  setCurrentPage(1)
+                }}
                 placeholder={t('pages.clients.activity.toDate')}
                 format="yyyy-MM-dd"
               />
@@ -370,7 +360,7 @@ export function ActivityTimelinePage() {
           </div>
         </div>
         {/* Activity Table or Empty State */}
-        {filteredActivities.length === 0 ? (
+        {activitiesState.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 self-stretch md:gap-6">
             <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
             <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
@@ -390,7 +380,7 @@ export function ActivityTimelinePage() {
           <div className="w-full overflow-x-auto">
             <DataTable
               columns={activityColumns}
-              data={paginatedActivities}
+              data={activitiesState}
               className="w-full"
               tableClassName="w-max min-w-full"
             />
@@ -398,7 +388,7 @@ export function ActivityTimelinePage() {
         )}
       </div>
 
-      {filteredActivities.length > 0 && (
+      {activitiesState.length > 0 && (
         <div className="flex w-full items-center justify-center">
           <Pagination
             currentPage={currentPage}

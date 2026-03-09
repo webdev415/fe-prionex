@@ -436,7 +436,8 @@ export function useClientDocuments(clientId: number, enabled = true) {
 }
 
 /**
- * Get client activities (interaction timeline). Calls GET /clients/{id}/interactions
+ * Get client activities (interaction timeline). Calls GET /clients/{id}/interactions.
+ * Returns only items (first page) — used by ClientDetailPage preview.
  */
 export function useClientActivities(clientId: number, enabled = true) {
   return useQuery({
@@ -445,6 +446,30 @@ export function useClientActivities(clientId: number, enabled = true) {
     enabled: enabled && clientId > 0,
     staleTime: 30000,
     select: (data) => data.items ?? [],
+  })
+}
+
+/**
+ * Get client activities with server-side pagination and filtering.
+ * Returns full response { items, total, page, page_size }.
+ * Used by ActivityTimelinePage.
+ */
+export function useClientActivitiesPaginated(
+  clientId: number,
+  params: {
+    page?: number
+    page_size?: number
+    type_id?: number
+    date_from?: string
+    date_to?: string
+  } = {},
+  enabled = true
+) {
+  return useQuery({
+    queryKey: [...clientKeys.activities(clientId), 'paginated', params] as const,
+    queryFn: () => interactionApi.getClientInteractions(clientId, params),
+    enabled: enabled && clientId > 0,
+    staleTime: 30000,
   })
 }
 

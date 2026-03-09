@@ -222,6 +222,14 @@ export interface GetClientsParams {
   dpd_min?: number
   dpd_max?: number
 
+  // Filter: Promise-to-pay Date
+  promise_date_from?: string // YYYY-MM-DD format
+  promise_date_to?: string // YYYY-MM-DD format
+
+  // Filter: Callback/Next-action Date
+  callback_date_from?: string // YYYY-MM-DD format
+  callback_date_to?: string // YYYY-MM-DD format
+
   // Filter: Status
   status?: string // Comma-separated statuses (e.g., "active,new")
 }
