@@ -784,6 +784,7 @@
         "contactType": "Тип контакту",
         "addedBy": "Додав",
         "addedDate": "Дата",
+        "phoneType": "Тип",
         "comment": "Коментар",
         "registrationAddress": "Адреса реєстрації",
         "personalAddress": "Особиста адреса",
@@ -1090,6 +1091,8 @@
           "templateVariables": "Змінні шаблону",
           "sending": "Відправка...",
           "smsSentSuccessfully": "SMS успішно відправлено",
+          "smsFailedToSend": "Не вдалося відправити SMS. Перевірте налаштування провайдера або спробуйте ще раз.",
+          "smsFailedDuplicate": "Дублюване повідомлення відхилено провайдером. Змініть текст і спробуйте ще раз.",
           "sendSMS": "Відправити SMS"
         },
         "viewSMS": {

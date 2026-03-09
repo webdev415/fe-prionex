@@ -302,6 +302,7 @@ export function SendSMSModal({
         selectedTemplateId && !messageEdited
           ? {
               client_id: clientId,
+              to_number: phoneNumber || undefined,
               template_id: selectedTemplateId,
               variables: {
                 client_name: variableValues.client_name,
@@ -316,11 +317,13 @@ export function SendSMSModal({
             ? {
                 // If template was selected but edited, send as custom message but include template_id to preserve template_name
                 client_id: clientId,
+                to_number: phoneNumber || undefined,
                 custom_message: displayMessage,
                 template_id: selectedTemplateId, // Include template_id so backend can save template_name
               }
             : {
                 client_id: clientId,
+                to_number: phoneNumber || undefined,
                 custom_message: displayMessage,
               }
 
@@ -328,9 +331,14 @@ export function SendSMSModal({
 
       // Check the status field in response
       if (response.status === 'failed') {
+        const isDuplicate =
+          response.error_message?.toUpperCase().includes('DUPLICATE') ||
+          response.error_code?.toUpperCase().includes('DUPLICATE')
+
         toast.error(
-          t('pages.clients.modals.sendSMS.smsFailedToSend') ||
-            'SMS failed to send. Please check your SMS provider configuration or try again later.'
+          isDuplicate
+            ? t('pages.clients.modals.sendSMS.smsFailedDuplicate')
+            : t('pages.clients.modals.sendSMS.smsFailedToSend')
         )
         // Don't close modal - let user try again or check configuration
         return
