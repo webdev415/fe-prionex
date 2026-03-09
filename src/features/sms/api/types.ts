@@ -30,6 +30,8 @@ export interface SendSMSResponse {
   sent_at?: string
   template_id?: number
   rendered_message?: string
+  error_code?: string
+  error_message?: string
 }
 
 /**

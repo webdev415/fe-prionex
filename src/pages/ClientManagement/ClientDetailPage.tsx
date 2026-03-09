@@ -132,6 +132,10 @@ export function ClientDetailPage() {
   const { isCallActive, setOpenCallModal } = useCallStore()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+
+  // Returns true if the value looks like a Ukrainian phone number,
+  // regardless of the contact type's isPhone flag
+  const looksLikePhone = (value: string) => /^(\+?38)?0\d{9}$/.test(value.replace(/[\s\-().]/g, ''))
   const [activeLoanTab, setActiveLoanTab] = useState<'process' | 'closed' | 'rr'>('process')
   const [selectedRaId, setSelectedRaId] = useState<number | null>(null)
   const [isConnectRrOpen, setIsConnectRrOpen] = useState(false)
@@ -1275,6 +1279,18 @@ export function ClientDetailPage() {
                             </button>
                           </TooltipTrigger>
                           <TooltipContent side="top" className="text-xs">
+                            {phone.type && (
+                              <div>
+                                {t('pages.clients.detail.phoneType')}:{' '}
+                                {phone.type === 'mobile'
+                                  ? t('pages.clients.editModal.phoneMobile')
+                                  : phone.type === 'home'
+                                    ? t('pages.clients.editModal.phoneHome')
+                                    : phone.type === 'register'
+                                      ? t('pages.clients.editModal.phoneRegister')
+                                      : phone.type}
+                              </div>
+                            )}
                             {phone.added_by_user_name && (
                               <div>
                                 {t('pages.clients.detail.addedBy')}: {phone.added_by_user_name}
@@ -2091,124 +2107,137 @@ export function ClientDetailPage() {
 
                 {/* Tab 3: Recommenders */}
                 {activeRightCardTab === 'recommenders' && (
-                  <div className="flex flex-col items-start gap-4 self-stretch p-3 md:gap-5 md:p-6">
-                    {client.recommenders.map((contact, index) => (
-                      <React.Fragment key={contact.id}>
-                        <div className="flex min-w-0 items-start self-stretch p-0">
-                          <div className="flex shrink-0 items-start gap-2.5 pt-0.5">
-                            <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                  <div className="self-stretch overflow-x-auto p-3 md:p-6">
+                    {client.recommenders.length === 0 ? (
+                      <p className="text-xs text-gray-500">-</p>
+                    ) : (
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
                               {t('pages.clients.detail.contactValue')}
-                            </label>
-                          </div>
-                          <div className="flex min-w-0 flex-1 items-center justify-end gap-2 md:gap-3">
-                            <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5">
-                              <span className="text-dark-500 min-w-0 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
-                                {contact.contactValue}
-                              </span>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
-                                  >
-                                    <Icons.Info size={14} strokeWidth={1.5} />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="text-xs">
-                                  {contact.added_by_user_name && (
-                                    <div>
-                                      {t('pages.clients.detail.addedBy')}:{' '}
-                                      {contact.added_by_user_name}
-                                    </div>
-                                  )}
-                                  {contact.created_at && (
-                                    <div>
-                                      {t('pages.clients.detail.addedDate')}:{' '}
-                                      {new Date(contact.created_at).toLocaleDateString()}
-                                    </div>
-                                  )}
-                                  {!contact.added_by_user_name && !contact.created_at && (
-                                    <div>-</div>
-                                  )}
-                                </TooltipContent>
-                              </Tooltip>
-                            </div>
-                            {contact.isPhone && contact.contactValue && (
-                              <div className="flex shrink-0 items-center gap-1 md:gap-2">
-                                <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
-                                  <button
-                                    disabled={!user?.is_agent || !user?.asterisk_extension}
-                                    onClick={() => {
-                                      if (isCallActive()) {
-                                        toast.warning(
-                                          t('pages.clients.modals.callDialog.callInProgress') ||
-                                            'Another call or recording is already in progress. Please finish or close it first.'
-                                        )
-                                        return
-                                      }
-                                      setSelectedPhoneForCall(contact.contactValue)
-                                      setOpenCallModal('call-dialog')
-                                      setIsCallModalOpen(true)
-                                    }}
-                                    className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
-                                  >
-                                    <Icons.Headset size={16} className="flex-shrink-0" />
-                                  </button>
-                                </PermissionGuard>
-                                <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
-                                  <button
-                                    onClick={() => {
-                                      setSelectedPhoneForSMS(contact.contactValue)
-                                      setIsSendSMSModalOpen(true)
-                                    }}
-                                    className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                                  >
-                                    <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                                  </button>
-                                </PermissionGuard>
-                                <PermissionGuard
-                                  permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}
-                                >
-                                  <button
-                                    onClick={() => {
-                                      setSelectedPhoneForNote(contact.contactValue)
-                                      setIsNoteModalOpen(true)
-                                    }}
-                                    className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                                  >
-                                    <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                                  </button>
-                                </PermissionGuard>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex min-w-0 items-start self-stretch p-0">
-                          <div className="flex shrink-0 items-start gap-2.5">
-                            <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                            </th>
+                            <th className="pb-2"></th>
+                            <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
                               {t('pages.clients.detail.contactType')}
-                            </label>
-                          </div>
-                          <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
-                            {contact.contactType}
-                          </p>
-                        </div>
-                        <div className="flex min-w-0 items-start self-stretch p-0">
-                          <div className="flex shrink-0 items-start gap-2.5">
-                            <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                            </th>
+                            <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
                               {t('pages.clients.detail.comment')}
-                            </label>
-                          </div>
-                          <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
-                            {contact.comment}
-                          </p>
-                        </div>
-                        {index < client.recommenders.length - 1 && (
-                          <div className="mx-2 h-px self-stretch bg-gray-200"></div>
-                        )}
-                      </React.Fragment>
-                    ))}
-                    {client.recommenders.length === 0 && <p className="text-xs text-gray-500">-</p>}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {client.recommenders.map((contact) => (
+                            <tr key={contact.id} className="border-b border-gray-100 last:border-0">
+                              <td className="py-2 pr-3">
+                                <div className="flex items-center gap-0.5">
+                                  <span className="text-dark-500 font-medium tracking-[-0.24px] break-all">
+                                    {contact.contactValue}
+                                  </span>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
+                                      >
+                                        <Icons.Info size={14} strokeWidth={1.5} />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="text-xs">
+                                      {contact.added_by_user_name && (
+                                        <div>
+                                          {t('pages.clients.detail.addedBy')}:{' '}
+                                          {contact.added_by_user_name}
+                                        </div>
+                                      )}
+                                      {contact.created_at && (
+                                        <div>
+                                          {t('pages.clients.detail.addedDate')}:{' '}
+                                          {new Date(contact.created_at).toLocaleDateString()}
+                                        </div>
+                                      )}
+                                      {!contact.added_by_user_name && !contact.created_at && (
+                                        <div>-</div>
+                                      )}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </td>
+                              <td className="py-2 pr-3">
+                                {(contact.isPhone || looksLikePhone(contact.contactValue)) &&
+                                  contact.contactValue && (
+                                    <div className="flex items-center gap-1 md:gap-2">
+                                      <PermissionGuard
+                                        permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}
+                                      >
+                                        <button
+                                          disabled={!user?.is_agent || !user?.asterisk_extension}
+                                          onClick={() => {
+                                            if (isCallActive()) {
+                                              toast.warning(
+                                                t(
+                                                  'pages.clients.modals.callDialog.callInProgress'
+                                                ) ||
+                                                  'Another call or recording is already in progress. Please finish or close it first.'
+                                              )
+                                              return
+                                            }
+                                            setSelectedPhoneForCall(contact.contactValue)
+                                            setOpenCallModal('call-dialog')
+                                            setIsCallModalOpen(true)
+                                          }}
+                                          className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                                        >
+                                          <Icons.Headset size={16} className="flex-shrink-0" />
+                                        </button>
+                                      </PermissionGuard>
+                                      <PermissionGuard
+                                        permission={PERMISSIONS.COMMUNICATION.SEND_SMS}
+                                      >
+                                        <button
+                                          onClick={() => {
+                                            setSelectedPhoneForSMS(contact.contactValue)
+                                            setIsSendSMSModalOpen(true)
+                                          }}
+                                          className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
+                                        >
+                                          <Icons.ChatFeedback01
+                                            size={16}
+                                            className="flex-shrink-0"
+                                          />
+                                        </button>
+                                      </PermissionGuard>
+                                      <PermissionGuard
+                                        permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}
+                                      >
+                                        <button
+                                          onClick={() => {
+                                            setSelectedPhoneForNote(contact.contactValue)
+                                            setIsNoteModalOpen(true)
+                                          }}
+                                          className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
+                                        >
+                                          <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                                        </button>
+                                      </PermissionGuard>
+                                    </div>
+                                  )}
+                              </td>
+                              <td className="py-2 pr-3">
+                                <span className="text-dark-500 font-medium tracking-[-0.24px]">
+                                  {contact.contactType}
+                                </span>
+                              </td>
+                              <td className="py-2 pr-3">
+                                <span className="text-dark-500 font-medium tracking-[-0.24px]">
+                                  {contact.comment}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 )}
 

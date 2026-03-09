@@ -893,6 +893,7 @@
         "contactType": "Contact type",
         "addedBy": "Added by",
         "addedDate": "Date",
+        "phoneType": "Type",
         "comment": "Comment",
         "registrationAddress": "Registration address",
         "personalAddress": "Personal address",
@@ -1199,6 +1200,8 @@
           "templateVariables": "Template Variables",
           "sending": "Sending...",
           "smsSentSuccessfully": "SMS sent successfully",
+          "smsFailedToSend": "Failed to send SMS. Please check SMS provider configuration or try again later.",
+          "smsFailedDuplicate": "Duplicate message rejected by provider. Please change the message text and try again.",
           "sendSMS": "Send SMS"
         },
         "viewSMS": {

@@ -786,6 +786,7 @@
         "contactType": "Тип контакта",
         "addedBy": "Добавил",
         "addedDate": "Дата",
+        "phoneType": "Тип",
         "comment": "Комментарий",
         "registrationAddress": "Адрес регистрации",
         "personalAddress": "Личный адрес",
@@ -1075,6 +1076,8 @@
           "templateVariables": "Переменные шаблона",
           "sending": "Отправка...",
           "smsSentSuccessfully": "SMS успешно отправлено",
+          "smsFailedToSend": "Не удалось отправить SMS. Проверьте настройки провайдера или повторите попытку.",
+          "smsFailedDuplicate": "Дублирующее сообщение отклонено провайдером. Измените текст и попробуйте снова.",
           "sendSMS": "Отправить SMS"
         },
         "viewSMS": {
