@@ -700,8 +700,7 @@
           "promisedAmount": "Обіцяна сума",
           "promisedDate": "Обіцяна дата",
           "comment": "Коментар",
-          "employee": "Співробітник",
-          "shouldDial": "Дзвонити"
+          "employee": "Співробітник"
         }
       },
       "editModal": {
@@ -885,8 +884,8 @@
         "addFirstNote": "Додати першу примітку",
         "noPrimaryCreditorComments": "Немає коментарів від первинного кредитора",
         "primaryCreditorCommentsDescription": "Історичні дані про взаємодію від продавця боргу з'являться тут, коли будуть доступні.",
-        "dialHistory": "Історія набору",
-        "noDialHistory": "Історія набору відсутня",
+        "spamCallHistory": "Історія спам-дзвінків",
+        "noSpamCallHistory": "Історія спам-дзвінків відсутня",
         "totalCost": "Загальна вартість",
         "deliveryRate": "Рівень доставки",
         "delivered": "доставлено",
@@ -1000,6 +999,7 @@
           "whiteLine": "Біла лінія",
           "grayLine": "Сіра лінія",
           "spamCalls": "Спам дзвінки",
+          "markAsSpam": "Позначити як спам",
           "callNow": "Зателефонувати зараз",
           "calling": "Дзвонить...",
           "connected": "Підключено",

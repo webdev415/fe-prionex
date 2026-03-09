@@ -127,6 +127,14 @@ export interface ClientFilters {
   dateOfSaleFrom?: string
   dateOfSaleTo?: string
 
+  // Promise Date Filter
+  promiseDateFrom?: string
+  promiseDateTo?: string
+
+  // Callback Date Filter
+  callbackDateFrom?: string
+  callbackDateTo?: string
+
   // Portfolio/Sellers Filter (now stores IDs only)
   portfolio?: number[]
 
@@ -191,6 +199,16 @@ export function ClientManagementPage() {
   const [totalDebtRangeToFilter, setTotalDebtRangeToFilter] = useURLState<number>('totalDebtMax', 0)
   const [dpdRangeFromFilter, setDpdRangeFromFilter] = useURLState<number>('dpdMin', 0)
   const [dpdRangeToFilter, setDpdRangeToFilter] = useURLState<number>('dpdMax', 0)
+  const [promiseDateFromFilter, setPromiseDateFromFilter] = useURLState<string>(
+    'promiseDateFrom',
+    ''
+  )
+  const [promiseDateToFilter, setPromiseDateToFilter] = useURLState<string>('promiseDateTo', '')
+  const [callbackDateFromFilter, setCallbackDateFromFilter] = useURLState<string>(
+    'callbackDateFrom',
+    ''
+  )
+  const [callbackDateToFilter, setCallbackDateToFilter] = useURLState<string>('callbackDateTo', '')
 
   // Compute filters object from URL state
   const filters: ClientFilters = useMemo(
@@ -211,6 +229,10 @@ export function ClientManagementPage() {
       totalDebtRangeTo: totalDebtRangeToFilter || undefined,
       dpdRangeFrom: dpdRangeFromFilter || undefined,
       dpdRangeTo: dpdRangeToFilter || undefined,
+      promiseDateFrom: promiseDateFromFilter || undefined,
+      promiseDateTo: promiseDateToFilter || undefined,
+      callbackDateFrom: callbackDateFromFilter || undefined,
+      callbackDateTo: callbackDateToFilter || undefined,
     }),
     [
       portfolioFilter,
@@ -229,6 +251,10 @@ export function ClientManagementPage() {
       totalDebtRangeToFilter,
       dpdRangeFromFilter,
       dpdRangeToFilter,
+      promiseDateFromFilter,
+      promiseDateToFilter,
+      callbackDateFromFilter,
+      callbackDateToFilter,
     ]
   )
 
@@ -280,6 +306,10 @@ export function ClientManagementPage() {
       totalDebtRangeToFilter,
       dpdRangeFromFilter,
       dpdRangeToFilter,
+      promiseDateFromFilter,
+      promiseDateToFilter,
+      callbackDateFromFilter,
+      callbackDateToFilter,
       searchQuery,
       searchType,
     }
@@ -296,6 +326,10 @@ export function ClientManagementPage() {
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
+      promiseDateFromFilter !== '' ||
+      promiseDateToFilter !== '' ||
+      callbackDateFromFilter !== '' ||
+      callbackDateToFilter !== '' ||
       debtRangeFromFilter > 0 ||
       debtRangeToFilter > 0 ||
       principalRangeFromFilter > 0 ||
@@ -335,6 +369,10 @@ export function ClientManagementPage() {
     totalDebtRangeToFilter,
     dpdRangeFromFilter,
     dpdRangeToFilter,
+    promiseDateFromFilter,
+    promiseDateToFilter,
+    callbackDateFromFilter,
+    callbackDateToFilter,
     searchQuery,
     searchType,
   ])
@@ -387,6 +425,11 @@ export function ClientManagementPage() {
               setTotalDebtRangeToFilter(parsed.totalDebtRangeToFilter)
             if (parsed.dpdRangeFromFilter) setDpdRangeFromFilter(parsed.dpdRangeFromFilter)
             if (parsed.dpdRangeToFilter) setDpdRangeToFilter(parsed.dpdRangeToFilter)
+            if (parsed.promiseDateFromFilter) setPromiseDateFromFilter(parsed.promiseDateFromFilter)
+            if (parsed.promiseDateToFilter) setPromiseDateToFilter(parsed.promiseDateToFilter)
+            if (parsed.callbackDateFromFilter)
+              setCallbackDateFromFilter(parsed.callbackDateFromFilter)
+            if (parsed.callbackDateToFilter) setCallbackDateToFilter(parsed.callbackDateToFilter)
             if (parsed.currentPage) setCurrentPage(parsed.currentPage)
             if (parsed.rowsPerPage) setRowsPerPage(parsed.rowsPerPage)
             if (parsed.sortBy) setSortBy(parsed.sortBy)
@@ -542,7 +585,23 @@ export function ClientManagementPage() {
       params.priorities = priorityValues
     }
 
-    // FILTER 11: Search (from global header search)
+    // FILTER 11: Promise Date Range
+    if (filters.promiseDateFrom) {
+      params.promise_date_from = filters.promiseDateFrom
+    }
+    if (filters.promiseDateTo) {
+      params.promise_date_to = filters.promiseDateTo
+    }
+
+    // FILTER 12: Callback Date Range
+    if (filters.callbackDateFrom) {
+      params.callback_date_from = filters.callbackDateFrom
+    }
+    if (filters.callbackDateTo) {
+      params.callback_date_to = filters.callbackDateTo
+    }
+
+    // FILTER 13: Search (from global header search)
     if (searchQuery.trim()) {
       params.q = searchQuery.trim()
       params.search_type = searchType
@@ -603,6 +662,8 @@ export function ClientManagementPage() {
     // DPD Range not yet implemented (days past due not calculated)
     // if (filters.dpdRangeFrom || filters.dpdRangeTo) count++
     if (filters.dateOfSaleFrom || filters.dateOfSaleTo) count++
+    if (filters.promiseDateFrom || filters.promiseDateTo) count++
+    if (filters.callbackDateFrom || filters.callbackDateTo) count++
     if (filters.portfolio && filters.portfolio.length > 0) count++
     if (filters.tagIds && filters.tagIds.length > 0) count++
     if (filters.status && filters.status.length > 0) count++
@@ -927,6 +988,18 @@ export function ClientManagementPage() {
     if (newFilters.dpdRangeTo !== dpdRangeToFilter) {
       setDpdRangeToFilter(newFilters.dpdRangeTo || 0)
     }
+    if (newFilters.promiseDateFrom !== promiseDateFromFilter) {
+      setPromiseDateFromFilter(newFilters.promiseDateFrom || '')
+    }
+    if (newFilters.promiseDateTo !== promiseDateToFilter) {
+      setPromiseDateToFilter(newFilters.promiseDateTo || '')
+    }
+    if (newFilters.callbackDateFrom !== callbackDateFromFilter) {
+      setCallbackDateFromFilter(newFilters.callbackDateFrom || '')
+    }
+    if (newFilters.callbackDateTo !== callbackDateToFilter) {
+      setCallbackDateToFilter(newFilters.callbackDateTo || '')
+    }
 
     // Reset to page 1 when filters change
     setCurrentPage(1)
@@ -951,6 +1024,10 @@ export function ClientManagementPage() {
     setTotalDebtRangeToFilter(0)
     setDpdRangeFromFilter(0)
     setDpdRangeToFilter(0)
+    setPromiseDateFromFilter('')
+    setPromiseDateToFilter('')
+    setCallbackDateFromFilter('')
+    setCallbackDateToFilter('')
 
     // Reset to first page
     setCurrentPage(1)

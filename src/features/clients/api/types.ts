@@ -222,6 +222,14 @@ export interface GetClientsParams {
   dpd_min?: number
   dpd_max?: number
 
+  // Filter: Promise-to-pay Date
+  promise_date_from?: string // YYYY-MM-DD format
+  promise_date_to?: string // YYYY-MM-DD format
+
+  // Filter: Callback/Next-action Date
+  callback_date_from?: string // YYYY-MM-DD format
+  callback_date_to?: string // YYYY-MM-DD format
+
   // Filter: Status
   status?: string // Comma-separated statuses (e.g., "active,new")
 }
@@ -609,8 +617,8 @@ export interface InteractionResponse {
   type_id?: number | null
   subtype_id?: number | null
   result_id?: number | null
-  direction: string
-  channel: string
+  direction?: string | null
+  channel?: string | null
   status: string
   interaction_date: string
   duration_seconds?: number | null
@@ -644,11 +652,14 @@ export interface InteractionResponse {
   created_at: string
   updated_at?: string | null
   is_deleted?: boolean
+  contact_type_id?: number | null
   // Resolved reference names
   type_name?: string | null
   type_code?: string | null
   subtype_name?: string | null
   subtype_code?: string | null
+  contact_type_name?: string | null
+  contact_type_code?: string | null
   result_name?: string | null
   result_code?: string | null
   result_is_positive?: boolean | null
@@ -657,10 +668,10 @@ export interface InteractionResponse {
 }
 
 export interface InteractionListResponse {
-  interactions: InteractionResponse[]
+  items: InteractionResponse[]
   total: number
-  skip: number
-  limit: number
+  page: number
+  page_size: number
 }
 
 export interface DialHistoryRecord {
@@ -669,8 +680,6 @@ export interface DialHistoryRecord {
   client_id: number
   project_id: number
   phone?: string | null
-  should_dial?: number | null
-  number_k?: string | null
   interaction_date?: string | null
   created_at: string
 }
@@ -686,47 +695,43 @@ export interface InteractionTypeResponse {
   id: number
   code: string
   name: string
-  description?: string | null
   is_active: boolean
   sort_order: number
-  direction?: string | null
-  category?: string | null
-  icon?: string | null
-  color?: string | null
-  name_uk?: string | null
-  name_en?: string | null
-  name_ru?: string | null
 }
 
 export interface InteractionSubtypeResponse {
   id: number
-  type_id: number
+  type_id?: number | null
   code: string
   name: string
   description?: string | null
   is_active: boolean
   sort_order: number
-  name_uk?: string | null
-  name_en?: string | null
-  name_ru?: string | null
+}
+
+export interface InteractionContactTypeResponse {
+  id: number
+  code: string
+  name: string
+  description?: string | null
+  is_active: boolean
+  sort_order: number
 }
 
 export interface InteractionResultResponse {
   id: number
   code: string
   name: string
-  category?: string | null
   result_category?: string | null
-  is_positive: boolean
+  is_positive?: boolean | null
   requires_followup: boolean
-  requires_promise_date: boolean
-  requires_promise_amount: boolean
-  creates_task: boolean
+  requires_promise_date?: boolean | null
+  requires_promise_amount?: boolean | null
+  creates_task?: boolean | null
+  positive_score?: number | null
+  negative_score?: number | null
   is_active: boolean
   sort_order: number
-  name_uk?: string | null
-  name_en?: string | null
-  name_ru?: string | null
 }
 
 // --- Call/SMS Response Types ---

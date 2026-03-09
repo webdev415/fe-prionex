@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
+import { formatDate } from '@/lib/formatters'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
@@ -53,6 +54,7 @@ import {
   useClientDocuments,
   useClientActivities,
   useClientDialHistory,
+  useAddSpamCallHistory,
   useAssignClient,
   useClientRestructuringAgreements,
   useRestructuringAgreementDetail,
@@ -211,6 +213,7 @@ export function ClientDetailPage() {
     clientId,
     isValidClientId
   )
+  const { mutate: addSpamCall } = useAddSpamCallHistory(clientId)
   // Fetch client tags from API (real)
   const { data: clientTags } = useClientTags(clientId)
 
@@ -403,13 +406,14 @@ export function ClientDetailPage() {
       // Activities mapped from InteractionResponse to UI shape
       activities: (activities ?? []).map((a) => ({
         id: a.id,
-        date: a.interaction_date ? new Date(a.interaction_date).toLocaleDateString() : '-',
-        number: a.number_k ?? '-',
+        date: formatDate(a.interaction_date),
         type: a.type_name ?? '-',
         subtype: a.subtype_name ?? '-',
+        contactType: a.contact_type_name ?? '-',
         result: a.result_name ?? a.status,
         promisedAmount: a.promise_to_pay_amount ? Number(a.promise_to_pay_amount) : 0,
-        promisedDate: a.promise_to_pay_date ?? '-',
+        promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
+        callbackDate: formatDate(a.next_action_date ?? undefined),
         comment: a.summary ?? a.notes ?? '-',
         employee: a.user_name ?? '-',
       })),
@@ -769,12 +773,6 @@ export function ClientDetailPage() {
       className: 'w-[90px] overflow-hidden whitespace-normal',
     },
     {
-      key: 'number',
-      header: t('pages.clients.activity.tableHeaders.loanNumber'),
-      align: 'left',
-      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
-    },
-    {
       key: 'type',
       header: t('pages.clients.activity.tableHeaders.type'),
       align: 'left',
@@ -782,15 +780,21 @@ export function ClientDetailPage() {
     },
     {
       key: 'subtype',
-      header: t('pages.clients.activity.tableHeaders.subtype'),
+      header: t('pages.clients.activity.tableHeaders.channel', 'Channel'),
       align: 'left',
       className: 'w-[100px] overflow-hidden whitespace-normal break-words',
+    },
+    {
+      key: 'contactType',
+      header: t('pages.clients.activity.tableHeaders.contactType', 'Contact Type'),
+      align: 'left',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'result',
       header: t('pages.clients.activity.tableHeaders.result'),
       align: 'left',
-      className: 'w-[100px] overflow-hidden whitespace-normal break-words',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'promisedAmount',
@@ -807,10 +811,16 @@ export function ClientDetailPage() {
       className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
+      key: 'callbackDate',
+      header: t('pages.clients.activity.tableHeaders.callbackDate', 'Callback Date'),
+      align: 'left',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
+    },
+    {
       key: 'comment',
       header: t('pages.clients.activity.tableHeaders.comment'),
       align: 'left',
-      className: 'whitespace-normal break-words',
+      className: 'min-w-[300px] max-w-[500px] whitespace-normal break-words',
       render: (activity) => (
         <div className="py-1 text-sm leading-tight break-words whitespace-normal">
           {activity.comment || '-'}
@@ -839,19 +849,6 @@ export function ClientDetailPage() {
       header: t('pages.clients.activity.tableHeaders.phone'),
       align: 'left',
       className: 'w-[120px]',
-    },
-    {
-      key: 'number_k',
-      header: t('pages.clients.activity.tableHeaders.loanNumber'),
-      align: 'left',
-      className: 'w-[140px]',
-    },
-    {
-      key: 'should_dial',
-      header: t('pages.clients.activity.tableHeaders.shouldDial'),
-      align: 'center',
-      className: 'w-[90px]',
-      render: (row) => (row.should_dial === 1 ? 'Yes' : row.should_dial === 2 ? 'No' : '-'),
     },
   ]
 
@@ -2792,7 +2789,7 @@ export function ClientDetailPage() {
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
               >
-                {t('pages.clients.detail.dialHistory')}
+                {t('pages.clients.detail.spamCallHistory')}
               </button>
             </div>
             {/* View All link */}
@@ -2835,12 +2832,14 @@ export function ClientDetailPage() {
                 </button>
               </div>
             ) : (
-              <DataTable
-                columns={activityColumns}
-                data={client.activities.slice(0, 10)}
-                className="w-full"
-                tableClassName="table-fixed w-full"
-              />
+              <div className="w-full overflow-x-auto">
+                <DataTable
+                  columns={activityColumns}
+                  data={client.activities.slice(0, 10)}
+                  className="w-full"
+                  tableClassName="w-max min-w-full"
+                />
+              </div>
             ))}
 
           {activeCommentTab === 'primary' &&
@@ -2868,13 +2867,13 @@ export function ClientDetailPage() {
 
           {activeCommentTab === 'dial-history' &&
             (isDialHistoryLoading ? (
-              <TableSkeleton columns={4} rows={3} className="w-full" />
+              <TableSkeleton columns={2} rows={3} className="w-full" />
             ) : dialHistory.length === 0 ? (
               <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
                   <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
                   <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
-                    {t('pages.clients.detail.noDialHistory')}
+                    {t('pages.clients.detail.noSpamCallHistory')}
                   </p>
                 </div>
               </div>
@@ -2932,6 +2931,7 @@ export function ClientDetailPage() {
             handleCallEnd()
           }}
           onRetry={handleClearCallError}
+          onSpamCall={(phone) => addSpamCall(phone)}
         />
 
         {/* Call Recording Modal */}

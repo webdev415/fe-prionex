@@ -25,8 +25,9 @@ import { PriorityBadge } from './components/PriorityBadge'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
+import { formatDate } from '@/lib/formatters'
 import { useCallStore } from '@/stores/callStore'
-import { useClientProfile, useClientActivities } from '@/features/clients/hooks/useClients'
+import { useClientProfile, useClientActivitiesPaginated } from '@/features/clients/hooks/useClients'
 import { useCreateNoteInteraction } from '@/features/clients/hooks/useNoteInteraction'
 import { useInteractionTypes } from '@/features/clients/hooks/useNoteInteraction'
 import { PermissionGuard } from '@/components/auth'
@@ -43,10 +44,6 @@ export function ActivityTimelinePage() {
 
   // Fetch real data from API
   const { data: profile, isLoading: isProfileLoading } = useClientProfile(clientId, clientId > 0)
-  const { data: activities = [], isLoading: isActivitiesLoading } = useClientActivities(
-    clientId,
-    clientId > 0
-  )
 
   // Build client object from profile
   const client = useMemo(() => {
@@ -76,8 +73,39 @@ export function ActivityTimelinePage() {
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
 
+  // Build API params from filter/pagination state
+  const apiParams = useMemo(() => {
+    const params: {
+      page?: number
+      page_size?: number
+      type_id?: number
+      date_from?: string
+      date_to?: string
+    } = {
+      page: currentPage,
+      page_size: rowsPerPage,
+    }
+    if (selectedTypeId !== 'all') {
+      params.type_id = Number(selectedTypeId)
+    }
+    if (dateFrom) {
+      params.date_from = dateFrom.toISOString().split('T')[0]
+    }
+    if (dateTo) {
+      params.date_to = dateTo.toISOString().split('T')[0]
+    }
+    return params
+  }, [currentPage, rowsPerPage, selectedTypeId, dateFrom, dateTo])
+
   // Fetch interaction types for the filter dropdown
   const { data: interactionTypes } = useInteractionTypes()
+
+  // Fetch activities with server-side pagination
+  const { data: activitiesResponse, isLoading: isActivitiesLoading } = useClientActivitiesPaginated(
+    clientId,
+    apiParams,
+    clientId > 0
+  )
 
   const { mutate: createNote } = useCreateNoteInteraction()
 
@@ -89,21 +117,25 @@ export function ActivityTimelinePage() {
 
   // Map activities from API to display format
   const activitiesState = useMemo(() => {
-    return activities.map((a) => ({
+    const items = activitiesResponse?.items ?? []
+    return items.map((a) => ({
       id: a.id,
-      date: a.interaction_date ? new Date(a.interaction_date).toLocaleDateString() : '-',
-      dateISO: a.interaction_date ?? '', // Keep ISO date for filtering
-      number: a.number_k ?? '-',
+      date: formatDate(a.interaction_date),
       type_id: a.type_id,
       type: a.type_name ?? '-',
       subtype: a.subtype_name ?? '-',
+      contactType: a.contact_type_name ?? '-',
       result: a.result_name ?? a.status ?? '-',
       promisedAmount: a.promise_to_pay_amount ? parseFloat(a.promise_to_pay_amount) : 0,
-      promisedDate: a.promise_to_pay_date ?? '-',
+      promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
+      callbackDate: formatDate(a.next_action_date ?? undefined),
       comment: a.summary ?? a.notes ?? '-',
       employee: a.user_name ?? '-',
     }))
-  }, [activities])
+  }, [activitiesResponse])
+
+  const totalCount = activitiesResponse?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage))
 
   const formatCurrencyWithDecimals = (amount: number) => {
     return new Intl.NumberFormat('uk-UA', {
@@ -114,52 +146,6 @@ export function ActivityTimelinePage() {
       .format(amount)
       .replace(/,/g, ' ')
   }
-
-  // Filter activities based on type and date range
-  const filteredActivities = useMemo(() => {
-    let result = [...(activitiesState || [])]
-
-    // Filter by interaction type
-    if (selectedTypeId !== 'all') {
-      const typeId = Number(selectedTypeId)
-      result = result.filter((activity) => activity.type_id === typeId)
-    }
-
-    // Filter by date range using ISO date
-    if (dateFrom || dateTo) {
-      result = result.filter((activity) => {
-        if (!activity.dateISO) return true
-        const activityDate = new Date(activity.dateISO)
-        activityDate.setHours(0, 0, 0, 0)
-
-        if (dateFrom) {
-          const fromDate = new Date(dateFrom)
-          fromDate.setHours(0, 0, 0, 0)
-          if (activityDate < fromDate) return false
-        }
-        if (dateTo) {
-          const toDate = new Date(dateTo)
-          toDate.setHours(23, 59, 59, 999)
-          if (activityDate > toDate) return false
-        }
-        return true
-      })
-    }
-
-    return result
-  }, [activitiesState, selectedTypeId, dateFrom, dateTo])
-
-  // Calculate total pages (minimum 1 to avoid division issues)
-  const totalPages = Math.max(1, Math.ceil(filteredActivities.length / rowsPerPage))
-
-  // Paginate activities
-  const paginatedActivities = useMemo(() => {
-    // Ensure current page doesn't exceed total pages
-    const safePage = Math.min(currentPage, totalPages)
-    const start = (safePage - 1) * rowsPerPage
-    const end = start + rowsPerPage
-    return filteredActivities.slice(start, end)
-  }, [filteredActivities, currentPage, totalPages, rowsPerPage])
 
   const handleClearFilters = () => {
     setSelectedTypeId('all')
@@ -176,12 +162,6 @@ export function ActivityTimelinePage() {
       className: 'w-[90px] overflow-hidden whitespace-normal',
     },
     {
-      key: 'number',
-      header: t('pages.clients.activity.tableHeaders.loanNumber', 'Loan Number'),
-      align: 'left',
-      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
-    },
-    {
       key: 'type',
       header: t('pages.clients.activity.tableHeaders.type', 'Type'),
       align: 'left',
@@ -189,15 +169,21 @@ export function ActivityTimelinePage() {
     },
     {
       key: 'subtype',
-      header: t('pages.clients.activity.tableHeaders.subtype', 'Subtype'),
+      header: t('pages.clients.activity.tableHeaders.channel', 'Channel'),
       align: 'left',
       className: 'w-[100px] overflow-hidden whitespace-normal break-words',
+    },
+    {
+      key: 'contactType',
+      header: t('pages.clients.activity.tableHeaders.contactType', 'Contact Type'),
+      align: 'left',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'result',
       header: t('pages.clients.activity.tableHeaders.result'),
       align: 'left',
-      className: 'w-[100px] overflow-hidden whitespace-normal break-words',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'promisedAmount',
@@ -214,10 +200,16 @@ export function ActivityTimelinePage() {
       className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
+      key: 'callbackDate',
+      header: t('pages.clients.activity.tableHeaders.callbackDate', 'Callback Date'),
+      align: 'left',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
+    },
+    {
       key: 'comment',
       header: t('pages.clients.activity.tableHeaders.comment'),
       align: 'left',
-      className: 'whitespace-normal break-words',
+      className: 'min-w-[300px] max-w-[500px] whitespace-normal break-words',
       render: (activity) => (
         <div className="py-1 text-sm leading-tight break-words whitespace-normal">
           {activity.comment || '-'}
@@ -270,7 +262,7 @@ export function ActivityTimelinePage() {
               size="md"
               variant="outline"
               leftIcon={<Icons.PencilEdit size={20} />}
-              className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
+              className="flex w-full flex-row rounded-full text-xs font-medium md:w-auto md:text-sm"
               onClick={() => setIsNoteModalOpen(true)}
             >
               {t('pages.clients.activity.addNote')}
@@ -280,7 +272,7 @@ export function ActivityTimelinePage() {
             <Button
               size="md"
               leftIcon={<Icons.Headset size={20} />}
-              className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
+              className="flex w-full flex-row rounded-full text-xs font-medium md:w-auto md:text-sm"
               disabled={!user?.is_agent || !user?.asterisk_extension}
               onClick={() => {
                 if (isCallActive()) {
@@ -295,16 +287,6 @@ export function ActivityTimelinePage() {
               }}
             >
               {t('pages.clients.activity.call')}
-            </Button>
-          </PermissionGuard>
-          <PermissionGuard permission={PERMISSIONS.CLIENTS.DELETE}>
-            <Button
-              size="md"
-              variant="secondary"
-              leftIcon={<Icons.RemoveMale size={20} />}
-              className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm"
-            >
-              {t('pages.clients.activity.deleteClient')}
             </Button>
           </PermissionGuard>
         </div>
@@ -346,14 +328,20 @@ export function ActivityTimelinePage() {
             <div className="flex flex-1 items-center gap-2">
               <DateSelect
                 value={dateFrom}
-                onChange={({ value }) => setDateFrom(value)}
+                onChange={({ value }) => {
+                  setDateFrom(value)
+                  setCurrentPage(1)
+                }}
                 placeholder={t('pages.clients.activity.fromDate')}
                 format="yyyy-MM-dd"
               />
               <span className="text-dark-500 shrink-0">-</span>
               <DateSelect
                 value={dateTo}
-                onChange={({ value }) => setDateTo(value)}
+                onChange={({ value }) => {
+                  setDateTo(value)
+                  setCurrentPage(1)
+                }}
                 placeholder={t('pages.clients.activity.toDate')}
                 format="yyyy-MM-dd"
               />
@@ -372,7 +360,7 @@ export function ActivityTimelinePage() {
           </div>
         </div>
         {/* Activity Table or Empty State */}
-        {filteredActivities.length === 0 ? (
+        {activitiesState.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 self-stretch md:gap-6">
             <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
             <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
@@ -389,16 +377,18 @@ export function ActivityTimelinePage() {
             )}
           </div>
         ) : (
-          <DataTable
-            columns={activityColumns}
-            data={paginatedActivities}
-            className="w-full"
-            tableClassName="table-fixed w-full"
-          />
+          <div className="w-full overflow-x-auto">
+            <DataTable
+              columns={activityColumns}
+              data={activitiesState}
+              className="w-full"
+              tableClassName="w-max min-w-full"
+            />
+          </div>
         )}
       </div>
 
-      {filteredActivities.length > 0 && (
+      {activitiesState.length > 0 && (
         <div className="flex w-full items-center justify-center">
           <Pagination
             currentPage={currentPage}

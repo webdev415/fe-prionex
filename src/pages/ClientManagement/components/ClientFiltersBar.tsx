@@ -130,7 +130,16 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     }))
   }, [operators])
 
-  const handleDateChange = (field: 'dateOfSaleFrom' | 'dateOfSaleTo', date: Date | null) => {
+  const handleDateChange = (
+    field:
+      | 'dateOfSaleFrom'
+      | 'dateOfSaleTo'
+      | 'promiseDateFrom'
+      | 'promiseDateTo'
+      | 'callbackDateFrom'
+      | 'callbackDateTo',
+    date: Date | null
+  ) => {
     onFilterChange({
       ...filters,
       [field]: date ? date.toISOString().split('T')[0] : undefined,
@@ -311,7 +320,62 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             </div>
           </div>
 
-          {/* Third Row: Portfolio & Status */}
+          {/* Third Row: Promise Date & Callback Date */}
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
+            {/* Promise Date */}
+            <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
+                {t('pages.clients.filters.promiseDate', 'Promise date')}
+              </label>
+              <div className="flex w-full flex-1 items-center gap-2">
+                <DateSelect
+                  value={filters.promiseDateFrom || null}
+                  onChange={({ value }) => handleDateChange('promiseDateFrom', value)}
+                  placeholder="Min"
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                  -
+                </span>
+                <DateSelect
+                  value={filters.promiseDateTo || null}
+                  onChange={({ value }) => handleDateChange('promiseDateTo', value)}
+                  placeholder="Max"
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+              </div>
+            </div>
+
+            {/* Callback Date */}
+            <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
+                {t('pages.clients.filters.callbackDate', 'Callback date')}
+              </label>
+              <div className="flex w-full flex-1 items-center gap-2">
+                <DateSelect
+                  value={filters.callbackDateFrom || null}
+                  onChange={({ value }) => handleDateChange('callbackDateFrom', value)}
+                  placeholder="Min"
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                  -
+                </span>
+                <DateSelect
+                  value={filters.callbackDateTo || null}
+                  onChange={({ value }) => handleDateChange('callbackDateTo', value)}
+                  placeholder="Max"
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Fourth Row: Portfolio & Status */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             {/* Portfolio */}
             <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
