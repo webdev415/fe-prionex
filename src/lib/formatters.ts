@@ -5,20 +5,27 @@ import i18n from './i18n'
  */
 
 /**
+ * Helper: format a Date object to DD-MM-YYYY
+ */
+function toDMY(d: Date): string {
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const year = d.getFullYear()
+  return `${day}-${month}-${year}`
+}
+
+/**
  * Format period display (start - end dates)
  */
 export function formatPeriod(startDate?: string, endDate?: string): string {
   if (!startDate && !endDate) return '—'
 
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr)
-    return d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' })
-  }
+  const fmt = (dateStr: string) => toDMY(new Date(dateStr))
 
   if (startDate && endDate) {
-    return `${formatDate(startDate)} - ${formatDate(endDate)}`
+    return `${fmt(startDate)} - ${fmt(endDate)}`
   }
-  return startDate ? `From ${formatDate(startDate)}` : `Until ${formatDate(endDate!)}`
+  return startDate ? `From ${fmt(startDate)}` : `Until ${fmt(endDate!)}`
 }
 
 /**
@@ -67,31 +74,25 @@ export function formatNumber(num?: number): string {
 }
 
 /**
- * Format date for display (MM/DD/YYYY)
+ * Format date for display → DD-MM-YYYY
  */
 export function formatDate(dateStr?: string): string {
   if (!dateStr) return '—'
   const d = new Date(dateStr)
-  return d.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
+  if (isNaN(d.getTime())) return '—'
+  return toDMY(d)
 }
 
 /**
- * Format datetime for display
+ * Format datetime for display → DD-MM-YYYY HH:MM
  */
 export function formatDateTime(dateStr?: string): string {
   if (!dateStr) return '—'
   const d = new Date(dateStr)
-  return d.toLocaleString('en-US', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  if (isNaN(d.getTime())) return '—'
+  const hour = String(d.getHours()).padStart(2, '0')
+  const minute = String(d.getMinutes()).padStart(2, '0')
+  return `${toDMY(d)} ${hour}:${minute}`
 }
 /**
  * Truncate text with ellipsis
@@ -234,7 +235,7 @@ export function formatAuditLogDetailTimestamp(timestamp: string, timezone?: stri
 
 /**
  * Convert UTC datetime to user's timezone
- * Returns formatted string: "MM/DD/YYYY, HH:MM:SS AM/PM"
+ * Returns formatted string: "DD-MM-YYYY HH:MM:SS"
  * If no timezone provided, defaults to UTC to ensure consistent behavior
  */
 export function convertUTCToUserTimezone(utcDateTimeStr: string, timezone?: string): string {
@@ -246,7 +247,6 @@ export function convertUTCToUserTimezone(utcDateTimeStr: string, timezone?: stri
     // So we need to append "Z" to force it to be interpreted as UTC
     let dateStr = utcDateTimeStr
     if (!dateStr.endsWith('Z') && !dateStr.includes('+') && !dateStr.includes('T00:00:00')) {
-      // Only append Z if it's a datetime string (has time component) and doesn't already have timezone info
       if (dateStr.includes('T') || dateStr.includes(' ')) {
         dateStr = dateStr.replace(' ', 'T') + 'Z'
       }
@@ -254,19 +254,21 @@ export function convertUTCToUserTimezone(utcDateTimeStr: string, timezone?: stri
 
     const date = new Date(dateStr)
 
-    const options: Intl.DateTimeFormatOptions = {
+    // Use Intl.DateTimeFormat only to extract numeric parts in the target timezone
+    const tz = timezone || 'UTC'
+    const parts = new Intl.DateTimeFormat('en-GB', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      hour12: true,
-      // Always set timezone - use provided timezone or default to UTC
-      timeZone: timezone || 'UTC',
-    }
+      hour12: false,
+      timeZone: tz,
+    }).formatToParts(date)
 
-    return new Intl.DateTimeFormat('en-US', options).format(date)
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
+    return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}:${get('second')}`
   } catch {
     return '—'
   }

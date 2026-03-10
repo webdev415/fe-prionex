@@ -910,6 +910,7 @@
         },
         "tableHeaders": {
           "loanNumber": "Loan Number",
+          "issueDate": "Issue Date",
           "counterparty": "Counterparty",
           "saleDate": "Sale Date",
           "principalAmount": "Principal Amount",

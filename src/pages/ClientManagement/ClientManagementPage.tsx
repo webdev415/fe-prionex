@@ -18,6 +18,7 @@ import { TooltipProvider } from '@/components/ui/Tooltip'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
+import { formatDate } from '@/lib/formatters'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { BulkTagModal } from './components/BulkTagModal'
 import { ClientManagementPageSkeleton } from './components/ClientManagementPageSkeleton'
@@ -88,7 +89,7 @@ const mapAPIClientToDisplay = (
     // phone_primary is now resolved from contacts by backend
     phoneNumber:
       client.phone_primary && !/^0+$/.test(client.phone_primary) ? client.phone_primary : '-',
-    createdDate: client.created_at ? new Date(client.created_at).toLocaleDateString('uk-UA') : '-',
+    createdDate: client.created_at ? formatDate(client.created_at) : '-',
     creditor: client.primary_creditor || '-',
     debt: client.total_debt || '0',
     priority:

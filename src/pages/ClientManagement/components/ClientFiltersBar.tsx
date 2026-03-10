@@ -20,8 +20,7 @@ import { Icons } from '@/lib/icons'
 import { PortfolioDropdown } from './PortfolioDropdown'
 import { TagsDropdown } from './TagsDropdown'
 import { useSellers } from '@/features/sellers/hooks/useSellers'
-import { useOperators } from '@/features/users/hooks/useUsers'
-import { useAuthStore } from '@/stores/authStore'
+import { useUsers } from '@/features/users/hooks/useUsers'
 import { useTags } from '@/features/tags/hooks/useTags'
 import type { ClientFilters } from '../ClientManagementPage'
 
@@ -117,29 +116,22 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     }))
   }, [sellersResponse])
 
-  // Fetch active users for employee and searcher dropdowns (project-scoped, no admin role needed)
-  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
-  const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
+  // Fetch active users for employee and searcher dropdowns
+  const { data: usersResponse } = useUsers({
+    status: 'active',
+    page_size: 100,
+  })
 
   // Map users to dropdown options (full name format)
   const userOptions = useMemo(() => {
-    if (!operators) return []
-    return operators.map((user) => ({
+    if (!usersResponse?.users) return []
+    return usersResponse.users.map((user) => ({
       id: user.id.toString(),
-      name: user.full_name,
+      name: [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' '),
     }))
-  }, [operators])
+  }, [usersResponse])
 
-  const handleDateChange = (
-    field:
-      | 'dateOfSaleFrom'
-      | 'dateOfSaleTo'
-      | 'promiseDateFrom'
-      | 'promiseDateTo'
-      | 'callbackDateFrom'
-      | 'callbackDateTo',
-    date: Date | null
-  ) => {
+  const handleDateChange = (field: 'dateOfSaleFrom' | 'dateOfSaleTo', date: Date | null) => {
     onFilterChange({
       ...filters,
       [field]: date ? date.toISOString().split('T')[0] : undefined,
@@ -320,62 +312,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             </div>
           </div>
 
-          {/* Third Row: Promise Date & Callback Date */}
-          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
-            {/* Promise Date */}
-            <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
-                {t('pages.clients.filters.promiseDate', 'Promise date')}
-              </label>
-              <div className="flex w-full flex-1 items-center gap-2">
-                <DateSelect
-                  value={filters.promiseDateFrom || null}
-                  onChange={({ value }) => handleDateChange('promiseDateFrom', value)}
-                  placeholder="Min"
-                  format="yyyy-MM-dd"
-                  className="flex flex-1 flex-col gap-2"
-                />
-                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
-                  -
-                </span>
-                <DateSelect
-                  value={filters.promiseDateTo || null}
-                  onChange={({ value }) => handleDateChange('promiseDateTo', value)}
-                  placeholder="Max"
-                  format="yyyy-MM-dd"
-                  className="flex flex-1 flex-col gap-2"
-                />
-              </div>
-            </div>
-
-            {/* Callback Date */}
-            <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
-              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
-                {t('pages.clients.filters.callbackDate', 'Callback date')}
-              </label>
-              <div className="flex w-full flex-1 items-center gap-2">
-                <DateSelect
-                  value={filters.callbackDateFrom || null}
-                  onChange={({ value }) => handleDateChange('callbackDateFrom', value)}
-                  placeholder="Min"
-                  format="yyyy-MM-dd"
-                  className="flex flex-1 flex-col gap-2"
-                />
-                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
-                  -
-                </span>
-                <DateSelect
-                  value={filters.callbackDateTo || null}
-                  onChange={({ value }) => handleDateChange('callbackDateTo', value)}
-                  placeholder="Max"
-                  format="yyyy-MM-dd"
-                  className="flex flex-1 flex-col gap-2"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Fourth Row: Portfolio & Status */}
+          {/* Third Row: Portfolio & Status */}
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             {/* Portfolio */}
             <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
@@ -563,7 +500,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   <SelectTrigger>
                     <SelectValue placeholder={t('pages.clients.filters.selectEmployee')} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent searchable>
                     <SelectItem value="none">
                       {t('pages.clients.filters.selectEmployee')}
                     </SelectItem>
@@ -601,7 +538,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   <SelectTrigger>
                     <SelectValue placeholder={t('pages.clients.filters.selectSearcher')} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent searchable>
                     <SelectItem value="none">
                       {t('pages.clients.filters.selectSearcher')}
                     </SelectItem>

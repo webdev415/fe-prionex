@@ -3,6 +3,9 @@ import * as SelectPrimitive from '@radix-ui/react-select'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 
+// Context to pass the search query down to SelectItem
+const SelectSearchContext = React.createContext<string>('')
+
 const Select = SelectPrimitive.Root
 
 const SelectGroup = SelectPrimitive.Group
@@ -72,34 +75,79 @@ SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayNam
 
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = 'popper', ...props }, ref) => (
-  <SelectPrimitive.Portal>
-    <SelectPrimitive.Content
-      ref={ref}
-      className={cn(
-        'text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 max-h-[--radix-select-content-available-height] min-w-[8rem] origin-[--radix-select-content-transform-origin] overflow-x-hidden overflow-y-auto rounded-md border bg-white shadow-md',
-        position === 'popper' &&
-          'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
-        className
-      )}
-      position={position}
-      {...props}
-    >
-      <SelectScrollUpButton />
-      <SelectPrimitive.Viewport
-        className={cn(
-          'p-1',
-          position === 'popper' &&
-            'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]'
-        )}
-      >
-        {children}
-      </SelectPrimitive.Viewport>
-      <SelectScrollDownButton />
-    </SelectPrimitive.Content>
-  </SelectPrimitive.Portal>
-))
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> & {
+    searchable?: boolean
+    searchPlaceholder?: string
+  }
+>(
+  (
+    {
+      className,
+      children,
+      position = 'popper',
+      searchable,
+      searchPlaceholder = 'Search...',
+      ...props
+    },
+    ref
+  ) => {
+    const [query, setQuery] = React.useState('')
+
+    // Reset search when dropdown closes
+    const handleOpenChange = React.useCallback(() => {
+      setQuery('')
+    }, [])
+
+    return (
+      <SelectPrimitive.Portal>
+        <SelectPrimitive.Content
+          ref={ref}
+          className={cn(
+            'text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 min-w-[8rem] origin-[--radix-select-content-transform-origin] rounded-md border bg-white shadow-md',
+            position === 'popper' &&
+              'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
+            className
+          )}
+          position={position}
+          onCloseAutoFocus={handleOpenChange}
+          {...props}
+        >
+          {searchable && (
+            <div className="flex items-center border-b border-gray-200 px-2 py-1.5">
+              <Icons.Search size={14} className="mr-2 shrink-0 text-gray-400" />
+              <input
+                className="text-dark-500 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-400"
+                placeholder={searchPlaceholder}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                // Prevent Radix from intercepting key events and navigating items
+                onKeyDown={(e) => e.stopPropagation()}
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery('')}
+                  className="ml-1 shrink-0 text-gray-400 hover:text-gray-600"
+                >
+                  <Icons.Cancel01 size={12} />
+                </button>
+              )}
+            </div>
+          )}
+          <SelectPrimitive.Viewport
+            className={cn(
+              position === 'popper' && 'w-full min-w-[var(--radix-select-trigger-width)]'
+            )}
+            style={{ overflow: 'visible', maxHeight: 'none' }}
+          >
+            <SelectSearchContext.Provider value={query}>
+              <div className="select-scrollbar max-h-64 overflow-y-scroll p-1">{children}</div>
+            </SelectSearchContext.Provider>
+          </SelectPrimitive.Viewport>
+        </SelectPrimitive.Content>
+      </SelectPrimitive.Portal>
+    )
+  }
+)
 SelectContent.displayName = SelectPrimitive.Content.displayName
 
 const SelectLabel = React.forwardRef<
@@ -117,23 +165,35 @@ SelectLabel.displayName = SelectPrimitive.Label.displayName
 const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, ...props }, ref) => (
-  <SelectPrimitive.Item
-    ref={ref}
-    className={cn(
-      'text-dark-500 relative flex w-full cursor-default items-center rounded-sm py-1.5 pr-8 pl-2 text-sm font-light outline-none select-none focus:bg-gray-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-      className
-    )}
-    {...props}
-  >
-    <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
-      <SelectPrimitive.ItemIndicator>
-        <Icons.Checkmark size={16} />
-      </SelectPrimitive.ItemIndicator>
-    </span>
-    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-  </SelectPrimitive.Item>
-))
+>(({ className, children, ...props }, ref) => {
+  const query = React.useContext(SelectSearchContext)
+
+  // Filter: hide item if search query doesn't match the text content
+  if (query) {
+    const text = typeof children === 'string' ? children : ''
+    if (!text.toLowerCase().includes(query.toLowerCase())) {
+      return null
+    }
+  }
+
+  return (
+    <SelectPrimitive.Item
+      ref={ref}
+      className={cn(
+        'text-dark-500 relative flex w-full cursor-default items-center rounded-sm py-1.5 pr-8 pl-2 text-sm font-light outline-none select-none focus:bg-gray-100 data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
+        className
+      )}
+      {...props}
+    >
+      <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
+        <SelectPrimitive.ItemIndicator>
+          <Icons.Checkmark size={16} />
+        </SelectPrimitive.ItemIndicator>
+      </span>
+      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+    </SelectPrimitive.Item>
+  )
+})
 SelectItem.displayName = SelectPrimitive.Item.displayName
 
 const SelectSeparator = React.forwardRef<

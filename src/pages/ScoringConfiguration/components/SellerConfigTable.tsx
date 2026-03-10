@@ -13,6 +13,7 @@ import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/M
 import { Icons } from '@/lib/icons'
 import { configApi, type SellerConfig } from '@/features/clients/api/configApi'
 import { PermissionGuard } from '@/components/auth'
+import { formatDate } from '@/lib/formatters'
 import { PERMISSIONS } from '@/constants/permissions'
 
 interface SellerConfigTableProps {
@@ -108,7 +109,7 @@ export function SellerConfigTable({ configs, onEdit, onDelete }: SellerConfigTab
         align: 'center',
         render: (item) => (
           <span className="text-dark-400 text-sm">
-            {item.updated_at ? new Date(item.updated_at).toLocaleDateString() : '-'}
+            {item.updated_at ? formatDate(item.updated_at) : '-'}
           </span>
         ),
       },

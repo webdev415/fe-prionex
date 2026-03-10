@@ -25,6 +25,7 @@ import { useClient } from '@/features/clients/hooks/useClients'
 import { authApi } from '@/features/auth/api/authApi'
 import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@/lib/errors'
+import { formatDate } from '@/lib/formatters'
 
 export interface SendSMSModalProps {
   open: boolean
@@ -200,11 +201,7 @@ export function SendSMSModal({
         try {
           const date = new Date(firstDebt.debt_close_date)
           if (!isNaN(date.getTime())) {
-            dueDate = date.toLocaleDateString('uk-UA', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-            })
+            dueDate = formatDate(firstDebt.debt_close_date)
           } else {
             console.warn('Invalid debt_close_date:', firstDebt.debt_close_date)
           }
@@ -220,11 +217,7 @@ export function SendSMSModal({
           if (!isNaN(startDate.getTime())) {
             const dueDateObj = new Date(startDate)
             dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
-            dueDate = dueDateObj.toLocaleDateString('uk-UA', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-            })
+            dueDate = formatDate(dueDateObj.toISOString())
           } else {
             console.warn('Invalid debt_start_date:', firstDebt.debt_start_date)
           }
@@ -240,11 +233,7 @@ export function SendSMSModal({
           if (!isNaN(purchaseDate.getTime())) {
             const dueDateObj = new Date(purchaseDate)
             dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
-            dueDate = dueDateObj.toLocaleDateString('uk-UA', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-            })
+            dueDate = formatDate(dueDateObj.toISOString())
           } else {
             console.warn('Invalid purchase_date:', firstDebt.purchase_date)
           }

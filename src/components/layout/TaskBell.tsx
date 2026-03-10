@@ -22,19 +22,22 @@ import { cn } from '@/lib/utils'
 
 function formatDateTime(isoDate: string, timezone?: string): string {
   try {
-    // Backend sends naive UTC datetimes without "Z". Append it so the browser
-    // parses the string as UTC instead of local time.
     let dateStr = isoDate
     if (!dateStr.endsWith('Z') && !dateStr.includes('+')) {
       dateStr = dateStr.replace(' ', 'T') + 'Z'
     }
-    return new Intl.DateTimeFormat(undefined, {
-      month: 'short',
-      day: 'numeric',
+    const tz = timezone ?? 'UTC'
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: timezone ?? 'UTC',
-    }).format(new Date(dateStr))
+      hour12: false,
+      timeZone: tz,
+    }).formatToParts(new Date(dateStr))
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
+    return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}`
   } catch {
     return isoDate
   }

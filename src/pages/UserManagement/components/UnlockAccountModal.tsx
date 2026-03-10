@@ -16,6 +16,7 @@ import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { LockedIcon } from '@hugeicons/core-free-icons'
+import { formatDateTime } from '@/lib/formatters'
 
 interface UnlockAccountModalProps {
   open: boolean
@@ -93,13 +94,7 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
                 {t('pages.users.modals.unlock.lockedAt')}
               </span>
               <span className="text-dark-500 text-sm font-medium break-words sm:text-base">
-                {lockedAt.toLocaleString(undefined, {
-                  year: 'numeric',
-                  month: 'short',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                {formatDateTime(lockedAt.toISOString())}
               </span>
             </p>
           )}
@@ -109,13 +104,7 @@ export function UnlockAccountModal({ open, user, onClose }: UnlockAccountModalPr
                 {t('pages.users.modals.unlock.autoUnlockAt')}
               </span>
               <span className="text-dark-500 text-sm font-medium break-words sm:text-base">
-                {autoUnlockAt.toLocaleString(undefined, {
-                  year: 'numeric',
-                  month: 'short',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                {formatDateTime(autoUnlockAt.toISOString())}
               </span>
               {remainingMinutes !== null && remainingMinutes > 0 && (
                 <span className="text-dark-500 text-xs font-light sm:text-sm">{`(${remainingMinutes} ${t('pages.users.modals.unlock.minRemaining')})`}</span>

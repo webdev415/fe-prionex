@@ -901,6 +901,7 @@
         },
         "tableHeaders": {
           "loanNumber": "Номер займа",
+          "issueDate": "Дата выдачи",
           "counterparty": "Контрагент",
           "saleDate": "Дата продажи",
           "loanAmount": "Сумма займа",

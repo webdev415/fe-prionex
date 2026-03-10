@@ -883,6 +883,7 @@
         },
         "tableHeaders": {
           "loanNumber": "Номер позики",
+          "issueDate": "Дата видачі",
           "counterparty": "Контрагент",
           "saleDate": "Дата продажу",
           "principalAmount": "Сума основного боргу",

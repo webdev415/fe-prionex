@@ -128,7 +128,7 @@ const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
 // Client data loaded via useClientProfile + section-specific hooks (real API endpoints)
 
 export function ClientDetailPage() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const { isCallActive, setOpenCallModal } = useCallStore()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -328,7 +328,7 @@ export function ClientDetailPage() {
       // Comments mapped
       comments: (profile.comments ?? []).map((c) => ({
         id: c.id,
-        date: c.created_at ? new Date(c.created_at).toLocaleDateString() : '-',
+        date: formatDate(c.created_at ?? undefined),
         text: c.content,
         author: c.created_by_name ?? `User #${c.created_by}`,
       })),
@@ -337,8 +337,9 @@ export function ClientDetailPage() {
       loans: (loans ?? []).map((d) => ({
         id: d.id,
         loanNumber: d.contract_number,
+        issueDate: formatDate(d.credit_issued_date ?? undefined),
         counterparty: d.seller_company,
-        saleDate: d.purchase_date ?? '-',
+        saleDate: formatDate(d.purchase_date ?? undefined),
         principalAmount: Number(d.principal_amount ?? 0),
         principalDebt: Number(d.principal_debt ?? d.principal_amount ?? 0),
         remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
@@ -351,7 +352,7 @@ export function ClientDetailPage() {
         loanNumber: p.debt_contract_number ?? p.payment_number,
         counterparty: p.seller_name ?? '-',
         saleDate: '-',
-        paymentDate: p.payment_date,
+        paymentDate: formatDate(p.payment_date ?? undefined),
         amount: Number(p.amount),
         paymentMethod: p.payment_method,
         status: p.status,
@@ -363,8 +364,8 @@ export function ClientDetailPage() {
         id: w.id,
         loanNumber: w.contract_number ?? '-',
         counterparty: w.seller_name ?? '-',
-        saleDate: w.purchase_date ?? '-',
-        writeOffDate: w.writeoff_date ?? '-',
+        saleDate: formatDate(w.purchase_date ?? undefined),
+        writeOffDate: formatDate(w.writeoff_date ?? undefined),
         amount: Number(w.amount || 0),
         writeOffMethod: w.writeoff_type ?? '-',
         employee: w.submitted_by_name ?? '-',
@@ -385,23 +386,23 @@ export function ClientDetailPage() {
       tasks: (tasks ?? []).map((t) => ({
         id: t.id,
         loanNumber: '-',
-        creationDate: t.created_at ? new Date(t.created_at).toLocaleDateString() : '-',
+        creationDate: formatDate(t.created_at ?? undefined),
         whoCreated: t.created_by_name ?? '-',
         description: t.title + (t.description ? `: ${t.description}` : ''),
-        reminderDate: t.due_date ? new Date(t.due_date).toLocaleDateString() : '-',
+        reminderDate: formatDate(t.due_date ?? undefined),
         reminderRecipient: t.assigned_to_username ?? '-',
       })),
       // Operators/searchers from assignment history
       operators: (operatorsSection?.operators ?? []).map((o) => ({
         id: o.id,
-        date: o.assigned_at ? new Date(o.assigned_at).toLocaleDateString() : '-',
+        date: formatDate(o.assigned_at ?? undefined),
         whoAppointed: o.assigned_by_name ?? '-',
         whoIsResponsible: o.new_employee_name ?? '-',
         note: o.assignment_reason ?? '-',
       })),
       searchers: (operatorsSection?.searchers ?? []).map((s) => ({
         id: s.id,
-        date: s.assigned_at ? new Date(s.assigned_at).toLocaleDateString() : '-',
+        date: formatDate(s.assigned_at ?? undefined),
         whoAppointed: s.assigned_by_name ?? '-',
         whoIsResponsible: s.new_searcher_name ?? '-',
         note: s.assignment_reason ?? '-',
@@ -687,6 +688,7 @@ export function ClientDetailPage() {
 
   const loanColumns: Column<(typeof client.loans)[0]>[] = [
     { key: 'loanNumber', header: t('pages.clients.detail.tableHeaders.loanNumber'), align: 'left' },
+    { key: 'issueDate', header: t('pages.clients.detail.tableHeaders.issueDate'), align: 'left' },
     {
       key: 'counterparty',
       header: t('pages.clients.detail.tableHeaders.counterparty'),
@@ -735,6 +737,7 @@ export function ClientDetailPage() {
       key: 'purchase_date',
       header: t('pages.clients.detail.tableHeaders.saleDate'),
       align: 'left',
+      render: (row) => formatDate(row.purchase_date ?? undefined),
     },
     {
       key: 'restructuring_amount',
@@ -746,6 +749,7 @@ export function ClientDetailPage() {
       key: 'first_payment_date',
       header: t('pages.clients.detail.tableHeaders.rrConnectionDate'),
       align: 'left',
+      render: (row) => formatDate(row.first_payment_date ?? undefined),
     },
     {
       key: 'remaining_debt_amount',
@@ -845,8 +849,7 @@ export function ClientDetailPage() {
       header: t('pages.clients.activity.tableHeaders.date'),
       align: 'left',
       className: 'w-[100px]',
-      render: (row) =>
-        row.interaction_date ? new Date(row.interaction_date).toLocaleDateString() : '-',
+      render: (row) => formatDate(row.interaction_date ?? undefined),
     },
     {
       key: 'phone',
@@ -1299,7 +1302,7 @@ export function ClientDetailPage() {
                             {phone.created_at && (
                               <div>
                                 {t('pages.clients.detail.addedDate')}:{' '}
-                                {new Date(phone.created_at).toLocaleDateString()}
+                                {formatDate(phone.created_at ?? undefined)}
                               </div>
                             )}
                             {!phone.added_by_user_name && !phone.created_at && <div>-</div>}
@@ -2153,7 +2156,7 @@ export function ClientDetailPage() {
                                       {contact.created_at && (
                                         <div>
                                           {t('pages.clients.detail.addedDate')}:{' '}
-                                          {new Date(contact.created_at).toLocaleDateString()}
+                                          {formatDate(contact.created_at ?? undefined)}
                                         </div>
                                       )}
                                       {!contact.added_by_user_name && !contact.created_at && (
@@ -2386,12 +2389,18 @@ export function ClientDetailPage() {
                                           .sent_at || item.date
                                       : (item as unknown as ExtendedCallItem & { itemType: 'call' })
                                           .initiated_at || item.date
+                                  const locale =
+                                    i18n.language === 'uk'
+                                      ? 'uk-UA'
+                                      : i18n.language === 'ru'
+                                        ? 'ru-RU'
+                                        : 'en-GB'
                                   const date = new Date(String(timestamp)).toLocaleDateString(
-                                    'en-US',
+                                    locale,
                                     {
                                       year: 'numeric',
-                                      month: 'long',
-                                      day: 'numeric',
+                                      month: '2-digit',
+                                      day: '2-digit',
                                       timeZone: userTimezone || undefined,
                                     }
                                   )
@@ -2565,12 +2574,18 @@ export function ClientDetailPage() {
                                       'initiated_at' in call && call.initiated_at
                                         ? call.initiated_at
                                         : call.date
+                                    const locale =
+                                      i18n.language === 'uk'
+                                        ? 'uk-UA'
+                                        : i18n.language === 'ru'
+                                          ? 'ru-RU'
+                                          : 'en-GB'
                                     const date = new Date(String(timestamp)).toLocaleDateString(
-                                      'en-US',
+                                      locale,
                                       {
                                         year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric',
+                                        month: '2-digit',
+                                        day: '2-digit',
                                         timeZone: userTimezone || undefined,
                                       }
                                     )
@@ -2687,12 +2702,18 @@ export function ClientDetailPage() {
                                     // Use sent_at (full UTC timestamp) instead of date string for correct timezone conversion
                                     const timestamp =
                                       'sent_at' in sms && sms.sent_at ? sms.sent_at : sms.date
+                                    const locale =
+                                      i18n.language === 'uk'
+                                        ? 'uk-UA'
+                                        : i18n.language === 'ru'
+                                          ? 'ru-RU'
+                                          : 'en-GB'
                                     const date = new Date(String(timestamp)).toLocaleDateString(
-                                      'en-US',
+                                      locale,
                                       {
                                         year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric',
+                                        month: '2-digit',
+                                        day: '2-digit',
                                         timeZone: userTimezone || undefined,
                                       }
                                     )

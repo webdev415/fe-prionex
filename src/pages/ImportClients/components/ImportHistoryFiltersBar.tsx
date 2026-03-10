@@ -257,7 +257,7 @@ export function ImportHistoryFiltersBar({
                       <SelectTrigger className="h-8 w-full border border-gray-200 bg-white text-xs">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-white">
+                      <SelectContent className="bg-white" searchable>
                         <SelectItem value="all">
                           {t('pages.imports.history.filters.allUsers')}
                         </SelectItem>
@@ -343,7 +343,7 @@ export function ImportHistoryFiltersBar({
                   <SelectTrigger className="h-auto border-0 bg-transparent p-0 text-[11px] font-medium shadow-none focus:ring-0">
                     <SelectValue placeholder={t('pages.imports.history.filters.uploadedBy')} />
                   </SelectTrigger>
-                  <SelectContent className="bg-white">
+                  <SelectContent className="bg-white" searchable>
                     <SelectItem value="all">
                       {t('pages.imports.history.filters.allUsers')}
                     </SelectItem>

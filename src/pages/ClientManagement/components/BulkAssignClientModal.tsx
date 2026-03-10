@@ -246,7 +246,7 @@ export function BulkAssignClientModal({
                         placeholder={t('pages.clients.modals.bulkAssignClient.selectEmployee')}
                       />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent searchable>
                       {userOptions.length === 0 ? (
                         <div className="px-2 py-6 text-center text-sm text-gray-500">
                           {t('pages.clients.modals.assignClient.noUsersAvailable')}
@@ -279,7 +279,7 @@ export function BulkAssignClientModal({
                         placeholder={t('pages.clients.modals.bulkAssignClient.selectSearcher')}
                       />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent searchable>
                       {userOptions.length === 0 ? (
                         <div className="px-2 py-6 text-center text-sm text-gray-500">
                           {t('pages.clients.modals.assignClient.noUsersAvailable')}

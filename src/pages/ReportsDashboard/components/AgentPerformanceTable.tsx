@@ -330,7 +330,7 @@ export function AgentPerformanceTable({
               <SelectTrigger className="w-full" id="responsible-operator">
                 <SelectValue placeholder={t('pages.reports.filters.selectEmployee')} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent searchable>
                 <SelectItem value="all">
                   {t('pages.reports.filters.allOperators', 'All Operators')}
                 </SelectItem>
