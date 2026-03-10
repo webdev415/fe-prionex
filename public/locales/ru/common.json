@@ -15,6 +15,7 @@
     "users": "Пользователи",
     "sellers": "Продавцы",
     "roles": "Роли",
+    "departments": "Отделы",
     "smsTemplates": "SMS Шаблоны",
       "transactions": "Транзакции",
       "auditLogs": "Журнал аудита",
@@ -37,12 +38,15 @@
   },
   "actions": {
     "save": "Сохранить",
+    "saving": "Сохранение...",
     "cancel": "Отмена",
     "delete": "Удалить",
     "edit": "Редактировать",
     "create": "Создать",
+    "creating": "Создание...",
     "submit": "Отправить",
     "confirm": "Подтвердить",
+    "back": "Назад",
     "next": "Далее",
     "close": "Закрыть",
     "logout": "Выйти",
@@ -193,6 +197,9 @@
         "phone": "Телефон",
         "language": "Язык",
         "timezone": "Часовой пояс",
+        "asteriskExtension": "Внутренний номер Asterisk",
+        "agentStatus": "Статус агента",
+        "isAgent": "Является агентом",
         "assignProjects": "Назначить проекты",
         "rolePerProject": "Роль на проект",
         "notAssigned": "Не назначено",
@@ -213,12 +220,21 @@
           "passwordsDontMatch": "Пароли не совпадают",
           "selectAtLeastOneProject": "Пожалуйста, выберите хотя бы один проект",
           "assignRoleForEachProject": "Пожалуйста, назначьте роль для каждого выбранного проекта"
+        },
+        "helpers": {
+          "asteriskExtension": "3-10 значный номер внутренней линии для телефонной системы Asterisk (например, 1001, 1002)"
         }
       },
       "editForm": {
         "errorUpdating": "Ошибка обновления пользователя",
         "failedToUpdate": "Не удалось обновить пользователя",
         "usernameCannotBeChanged": "Имя пользователя нельзя изменить"
+      },
+      "agentStatuses": {
+        "online": "Онлайн",
+        "offline": "Офлайн",
+        "busy": "Занят",
+        "onCall": "На звонке"
       }
     },
     "projects": {
@@ -411,15 +427,83 @@
       "forms": {
         "roleName": "Название роли",
         "description": "Описание",
+        "department": "Отдел",
+        "departmentHint": "Назначить эту роль конкретному отделу (необязательно, только для пользовательских ролей)",
+        "departmentNotAvailableForDefault": "Роли по умолчанию не могут быть назначены отделам",
         "permissions": "Разрешения",
         "loadingPermissions": "Загрузка разрешений...",
         "placeholders": {
           "roleName": "Введите название роли",
-          "description": "Опишите эту роль"
+          "description": "Опишите эту роль",
+          "noDepartment": "Без отдела"
         },
         "errors": {
           "failedToCreate": "Не удалось создать роль. Пожалуйста, попробуйте снова."
         }
+      }
+    },
+    "departments": {
+      "title": "Управление отделами",
+      "newDepartment": "Новый отдел",
+      "selectProject": "Выберите проект",
+      "project": "Проект:",
+      "noActiveProjects": "Активные проекты не найдены. Сначала создайте проект.",
+      "errorLoading": "Ошибка загрузки отделов",
+      "allDepartments": "Все отделы",
+      "noDepartments": "Отделы не найдены",
+      "tableHeaders": {
+        "name": "Название",
+        "description": "Описание",
+        "assignedRoles": "Назначенные роли",
+        "actions": "Действия"
+      },
+      "actions": {
+        "view": "Просмотреть",
+        "edit": "Редактировать",
+        "delete": "Удалить"
+      },
+      "modals": {
+        "create": {
+          "title": "Создать отдел"
+        },
+        "edit": {
+          "title": "Редактировать отдел",
+          "failedToLoad": "Не удалось загрузить данные отдела. Попробуйте снова."
+        },
+        "view": {
+          "title": "Просмотреть отдел",
+          "failedToLoad": "Не удалось загрузить данные отдела. Попробуйте снова."
+        },
+        "archive": {
+          "title": "Архивировать отдел: {{departmentName}}",
+          "defaultTitle": "Архивировать отдел",
+          "confirmMessage": "Вы уверены, что хотите архивировать отдел \"{{departmentName}}\"?",
+          "hasAssignedRoles": "В этом отделе {{count}} назначенных роли. Архивирование отменит их назначение.",
+          "archiving": "Архивирование...",
+          "archiveDepartment": "Архивировать отдел",
+          "failedToArchive": "Не удалось архивировать отдел. Попробуйте снова.",
+          "failedToLoad": "Не удалось загрузить данные отдела. Попробуйте снова.",
+          "departmentNotFound": "Отдел не найден"
+        }
+      },
+      "forms": {
+        "name": "Название",
+        "description": "Описание",
+        "project": "Проект",
+        "assignedRoles": "Назначенные роли",
+        "status": "Статус",
+        "placeholders": {
+          "name": "Введите название отдела",
+          "description": "Опишите этот отдел"
+        },
+        "errors": {
+          "failedToCreate": "Не удалось создать отдел. Попробуйте снова.",
+          "failedToUpdate": "Не удалось обновить отдел. Попробуйте снова."
+        }
+      },
+      "status": {
+        "active": "Активный",
+        "inactive": "Неактивный"
       }
     },
     "imports": {
@@ -460,9 +544,12 @@
           "selectPurchaseDate": "Выберите дату покупки",
           "placeholderText": "Текст-заполнитель",
           "enterSellerCreditor": "Введите название продавца/кредитора",
-          "loadingProjects": "Загрузка проектов..."
+          "selectSellerCreditor": "Выберите продавца/кредитора",
+          "loadingProjects": "Загрузка проектов...",
+          "loadingSellers": "Загрузка продавцов..."
         },
-        "noProjectsAvailable": "Нет доступных проектов"
+        "noProjectsAvailable": "Нет доступных проектов",
+        "noSellersAvailable": "Нет доступных продавцов"
       },
       "step2": {
         "simple": {
@@ -614,6 +701,8 @@
       "noClientsFound": "Клиенты не найдены",
       "assign": "Назначить",
       "bulkAssign": "Массовое назначение",
+      "bulkActions": "Массовые действия",
+      "manageTags": "Управление тегами",
       "errorLoading": "Не удалось загрузить клиентов",
       "errorOccurred": "Произошла ошибка",
       "tableHeaders": {
@@ -656,6 +745,9 @@
         "responsibleSearcher": "Ответственный поисковик",
         "selectEmployee": "Выберите сотрудника",
         "selectSearcher": "Выберите поисковика",
+        "unassignedOnly": "Только без назначения",
+        "tags": "Теги",
+        "noUsersAvailable": "Нет доступных пользователей",
         "more": "больше",
         "days": "дней"
       },
@@ -672,6 +764,11 @@
         "delivered": "Доставлено",
         "failed": "Не удалось",
         "pending": "Ожидается"
+      },
+      "bulkActions": {
+        "assignEmployee": "Назначить сотрудника",
+        "addTags": "Добавить теги",
+        "removeTags": "Удалить теги"
       },
       "activity": {
         "score": "Оценка",
@@ -721,6 +818,7 @@
         "phoneMobile": "Мобильный телефон",
         "phoneHome": "Домашний телефон",
         "phoneRegister": "Регистрационный телефон",
+        "phoneSecondary": "Дополнительный телефон",
         "addAddress": "Добавить адрес",
         "addContact": "Добавить контакт",
         "addressType": "Тип адреса",
@@ -804,6 +902,11 @@
           "saleDate": "Дата продажи",
           "loanAmount": "Сумма займа",
           "principalDebt": "Основная задолженность",
+          "principalAmount": "Основная сумма",
+          "remainingDebtAmount": "Остаток долга",
+          "rrAmount": "Сумма РР",
+          "rrConnectionDate": "Дата подключения РР",
+          "totalToReturn": "Итого к возврату",
           "totalToBeRepaid": "Всего к возврату",
           "paymentDate": "Дата платежа",
           "amount": "Сумма",
@@ -825,7 +928,8 @@
           "documentName": "Название",
           "documentType": "Тип",
           "uploadDate": "Дата загрузки",
-          "documentSize": "Размер"
+          "documentSize": "Размер",
+          "actions": "Действия"
         },
         "loansInProcess": "Займы в процессе",
         "closedLoans": "Закрытые займы",
@@ -835,6 +939,30 @@
         "closeLoan": "Закрыть займ",
         "sendToUBCI": "Отправить в UBCI",
         "rrCalculator": "RR Калькулятор",
+        "rrDetail": "Детали соглашения о реструктуризации",
+        "rrLoanNumber": "Номер займа",
+        "rrClientNumber": "Номер клиента",
+        "rrRestructuringAmount": "Сумма реструктуризации",
+        "rrNumPayments": "Количество платежей",
+        "rrMonthlyPayment": "Ежемесячный платеж",
+        "rrResponsibleEmployee": "Ответственный сотрудник",
+        "rrFirstPaymentDate": "Дата первого взноса",
+        "rrFirstPaymentAmount": "Сумма первого взноса",
+        "rrPaymentSchedule": "График платежей",
+        "rrPaymentDate": "Дата",
+        "rrPaymentAmount": "Сумма",
+        "rrConnectionDate": "Дата подключения",
+        "connectRR": "Подключить РР",
+        "connectRRSuccess": "Реструктуризация успешно подключена",
+        "rrSelectLoan": "Кредит",
+        "rrSelectLoanPlaceholder": "Выберите кредит...",
+        "rrValidationLoanRequired": "Пожалуйста, выберите кредит",
+        "rrValidationAmountRequired": "Общая сумма реструктуризации обязательна",
+        "rrValidationConnectionDateRequired": "Дата подключения обязательна",
+        "rrValidationPaymentDateRequired": "Дата платежа {{num}} обязательна",
+        "rrValidationPaymentAmountRequired": "Сумма платежа {{num}} обязательна",
+        "rrValidationSumMismatch": "Сумма платежей ({{sum}}) должна равняться общей сумме ({{total}})",
+        "viewDetail": "Просмотреть",
         "makePayment": "Сделать платеж",
         "payments": "Платежи",
         "writesOff": "Списания",
@@ -911,6 +1039,7 @@
           "notes": "Примечания (необязательно)",
           "selectEmployee": "Выберите сотрудника...",
           "selectSearcher": "Выберите поисковика...",
+          "noUsersAvailable": "Нет доступных пользователей",
           "enterAdditionalNotes": "Введите дополнительные примечания...",
           "warningMessage": "Примечание: Должно быть выбрано хотя бы одно назначение (Сотрудник или Поисковик).",
           "assignClient": "Назначить клиента",
@@ -972,6 +1101,9 @@
           "calling": "Звонит...",
           "connected": "Подключено",
           "callEnded": "Звонок завершен",
+          "callFailed": "Звонок не удался",
+          "callFailedMessage": "Не удалось подключить звонок. Пожалуйста, попробуйте снова.",
+          "tryAgain": "Попробовать снова",
           "elapsedTime": "Прошло времени",
           "talkTime": "Время разговора",
           "dialing": "Набор номера...",
@@ -1097,6 +1229,24 @@
           "noPortfoliosFound": "Портфели не найдены",
           "clear": "Очистить",
           "apply": "Применить"
+        },
+        "tagsDropdown": {
+          "searchTags": "Поиск тегов...",
+          "noTagsFound": "Теги не найдены",
+          "clear": "Очистить",
+          "apply": "Применить"
+        },
+        "bulkTag": {
+          "addTags": "Добавить теги",
+          "removeTags": "Удалить теги",
+          "clients": "клиент(ов)",
+          "searchTags": "Поиск тегов...",
+          "loadingTags": "Загрузка тегов...",
+          "noTagsFound": "Теги не найдены",
+          "tagsSelected": "тег(ов) выбрано",
+          "selectAtLeastOneTag": "Пожалуйста, выберите хотя бы один тег",
+          "cancel": "Отмена",
+          "processing": "Обработка..."
         },
         "recordPayment": {
           "title": "Записать платеж",
@@ -1536,6 +1686,11 @@
         }
       },
       "tableHeaders": {
+        "sellerCode": "Код продавца",
+        "sellerName": "Название продавца",
+        "sellerType": "Тип продавца",
+        "status": "Статус",
+        "companyEmail": "Электронная почта компании",
         "companyName": "Название компании",
         "website": "Веб-сайт компании",
         "email": "Электронная почта компании",
@@ -1544,6 +1699,10 @@
         "clients": "Клиенты",
         "actions": "Действия"
       },
+      "status": {
+        "active": "Активный",
+        "inactive": "Неактивный"
+      },
       "actions": {
         "edit": "Редактировать",
         "delete": "Удалить"
@@ -1551,10 +1710,16 @@
       "modals": {
         "create": {
           "title": "Создать нового продавца",
+          "basicInformation": "Основная информация",
+          "contactInformation": "Контактная информация",
           "companyInformation": "Информация о компании",
           "contactPerson": "Контактное лицо",
           "address": "Адрес",
           "optional": "Необязательно",
+          "sellerCode": "Код продавца",
+          "sellerName": "Название продавца",
+          "sellerType": "Тип продавца",
+          "contactEmail": "Контактный email",
           "companyName": "Название компании *",
           "taxId": "Налоговый номер / Регистрационный номер бизнеса",
           "website": "Веб-сайт",
@@ -1570,6 +1735,12 @@
           "saveSeller": "Сохранить продавца",
           "saving": "Сохранение...",
           "placeholders": {
+            "sellerCode": "напр., BANK_ABC_2024",
+            "sellerName": "Введите название компании продавца",
+            "sellerType": "Выберите тип продавца",
+            "contactEmail": "Введите контактный email",
+            "address": "Введите адрес",
+            "contactPerson": "Введите имя контактного лица",
             "companyName": "Введите название компании",
             "taxId": "Введите налоговый номер или регистрационный номер бизнеса",
             "website": "Введите URL веб-сайта",
@@ -1584,16 +1755,27 @@
             "notes": "Введите любые дополнительные примечания"
           },
           "errors": {
+            "sellerCodeRequired": "Код продавца является обязательным",
+            "sellerNameRequired": "Название продавца является обязательным",
+            "sellerTypeRequired": "Тип продавца является обязательным",
             "companyNameRequired": "Название компании является обязательным",
             "invalidEmail": "Пожалуйста, введите действительный адрес электронной почты"
           }
         },
         "edit": {
           "title": "Редактировать продавца",
+          "basicInformation": "Основная информация",
+          "contactInformation": "Контактная информация",
           "companyInformation": "Информация о компании",
           "contactPerson": "Контактное лицо",
           "address": "Адрес",
           "optional": "Необязательно",
+          "sellerCode": "Код продавца",
+          "sellerCodeReadOnly": "Код продавца нельзя изменить после создания",
+          "sellerName": "Название продавца",
+          "sellerType": "Тип продавца",
+          "contactEmail": "Контактный email",
+          "saveChanges": "Сохранить изменения",
           "companyName": "Название компании *",
           "taxId": "Налоговый номер / Регистрационный номер бизнеса",
           "website": "Веб-сайт",
@@ -1611,6 +1793,11 @@
           "loadingSellerData": "Загрузка данных продавца...",
           "sellerNotFound": "Продавец не найден",
           "placeholders": {
+            "sellerName": "Введите название компании продавца",
+            "sellerType": "Выберите тип продавца",
+            "contactEmail": "Введите контактный email",
+            "address": "Введите адрес",
+            "contactPerson": "Введите имя контактного лица",
             "companyName": "Введите название компании",
             "taxId": "Введите налоговый номер или регистрационный номер бизнеса",
             "website": "Введите URL веб-сайта",
@@ -1625,6 +1812,8 @@
             "notes": "Введите любые дополнительные примечания"
           },
           "errors": {
+            "sellerNameRequired": "Название продавца является обязательным",
+            "sellerTypeRequired": "Тип продавца является обязательным",
             "companyNameRequired": "Название компании является обязательным",
             "invalidEmail": "Пожалуйста, введите действительный адрес электронной почты"
           }
@@ -1655,7 +1844,15 @@
       "currentPasswordRequired": "Текущий пароль обязателен",
       "newPasswordRequired": "Новый пароль обязателен",
       "changePassword": "Изменить пароль",
-      "changing": "Изменение..."
+      "changing": "Изменение...",
+      "callSettings": "Настройки звонков",
+      "extensionHelperText": "Номер внутренней линии управляется системным администратором",
+      "agentStatus": {
+        "online": "Онлайн",
+        "offline": "Офлайн",
+        "busy": "Занят",
+        "onCall": "На звонке"
+      }
     },
     "reports": {
       "title": "Панель отчетов",
@@ -1723,7 +1920,11 @@
         "of": "из",
         "outcomes": "Результаты звонков",
         "bestPerformer": "Лучший результат",
-        "needsImprovement": "Требуется улучшение"
+        "needsImprovement": "Требуется улучшение",
+        "answered": "Ответил",
+        "noAnswer": "Нет ответа",
+        "busy": "Занято",
+        "failed": "Не удалось"
       },
       "smsModal": {
         "title": "Отправлено SMS",

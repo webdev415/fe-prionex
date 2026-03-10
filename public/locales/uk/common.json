@@ -15,6 +15,7 @@
     "users": "Користувачі",
     "sellers": "Продавці",
     "roles": "Ролі",
+    "departments": "Відділи",
     "smsTemplates": "SMS Шаблони",
       "transactions": "Транзакції",
       "auditLogs": "Журнал аудиту",
@@ -37,10 +38,12 @@
   },
   "actions": {
     "save": "Зберегти",
+    "saving": "Збереження...",
     "cancel": "Скасувати",
     "delete": "Видалити",
     "edit": "Редагувати",
     "create": "Створити",
+    "creating": "Створення...",
     "submit": "Надіслати",
     "confirm": "Підтвердити",
     "back": "Назад",
@@ -407,15 +410,83 @@
       "forms": {
         "roleName": "Назва ролі",
         "description": "Опис",
+        "department": "Відділ",
+        "departmentHint": "Призначити цю роль конкретному відділу (необов'язково, лише для користувацьких ролей)",
+        "departmentNotAvailableForDefault": "Ролі за замовчуванням не можуть бути призначені відділам",
         "permissions": "Дозволи",
         "loadingPermissions": "Завантаження дозволів...",
         "placeholders": {
           "roleName": "Введіть назву ролі",
-          "description": "Опишіть цю роль"
+          "description": "Опишіть цю роль",
+          "noDepartment": "Без відділу"
         },
         "errors": {
           "failedToCreate": "Не вдалося створити роль. Будь ласка, спробуйте ще раз."
         }
+      }
+    },
+    "departments": {
+      "title": "Управління відділами",
+      "newDepartment": "Новий відділ",
+      "selectProject": "Виберіть проект",
+      "project": "Проект:",
+      "noActiveProjects": "Активних проектів не знайдено. Спочатку створіть проект.",
+      "errorLoading": "Помилка завантаження відділів",
+      "allDepartments": "Всі відділи",
+      "noDepartments": "Відділів не знайдено",
+      "tableHeaders": {
+        "name": "Назва",
+        "description": "Опис",
+        "assignedRoles": "Призначені ролі",
+        "actions": "Дії"
+      },
+      "actions": {
+        "view": "Переглянути",
+        "edit": "Редагувати",
+        "delete": "Видалити"
+      },
+      "modals": {
+        "create": {
+          "title": "Створити відділ"
+        },
+        "edit": {
+          "title": "Редагувати відділ",
+          "failedToLoad": "Не вдалося завантажити дані відділу. Спробуйте ще раз."
+        },
+        "view": {
+          "title": "Переглянути відділ",
+          "failedToLoad": "Не вдалося завантажити дані відділу. Спробуйте ще раз."
+        },
+        "archive": {
+          "title": "Архівувати відділ: {{departmentName}}",
+          "defaultTitle": "Архівувати відділ",
+          "confirmMessage": "Ви впевнені, що хочете архівувати відділ \"{{departmentName}}\"?",
+          "hasAssignedRoles": "Цей відділ має {{count}} призначених ролей. Архівування скасує їх призначення.",
+          "archiving": "Архівування...",
+          "archiveDepartment": "Архівувати відділ",
+          "failedToArchive": "Не вдалося архівувати відділ. Спробуйте ще раз.",
+          "failedToLoad": "Не вдалося завантажити дані відділу. Спробуйте ще раз.",
+          "departmentNotFound": "Відділ не знайдено"
+        }
+      },
+      "forms": {
+        "name": "Назва",
+        "description": "Опис",
+        "project": "Проект",
+        "assignedRoles": "Призначені ролі",
+        "status": "Статус",
+        "placeholders": {
+          "name": "Введіть назву відділу",
+          "description": "Опишіть цей відділ"
+        },
+        "errors": {
+          "failedToCreate": "Не вдалося створити відділ. Спробуйте ще раз.",
+          "failedToUpdate": "Не вдалося оновити відділ. Спробуйте ще раз."
+        }
+      },
+      "status": {
+        "active": "Активний",
+        "inactive": "Неактивний"
       }
     },
     "imports": {
@@ -456,9 +527,12 @@
           "selectPurchaseDate": "Виберіть дату покупки",
           "placeholderText": "Текст-заповнювач",
           "enterSellerCreditor": "Введіть назву продавця/кредитора",
-          "loadingProjects": "Завантаження проєктів..."
+          "selectSellerCreditor": "Виберіть продавця/кредитора",
+          "loadingProjects": "Завантаження проєктів...",
+          "loadingSellers": "Завантаження продавців..."
         },
-        "noProjectsAvailable": "Немає доступних проєктів"
+        "noProjectsAvailable": "Немає доступних проєктів",
+        "noSellersAvailable": "Немає доступних продавців"
       },
       "step2": {
         "simple": {
@@ -610,6 +684,12 @@
       "noClientsFound": "Клієнтів не знайдено",
       "assign": "Призначити",
       "bulkAssign": "Масове призначення",
+      "manageTags": "Управління тегами",
+      "bulkActions": {
+        "assignEmployee": "Призначити співробітника",
+        "addTags": "Додати теги",
+        "removeTags": "Видалити теги"
+      },
       "errorLoading": "Не вдалося завантажити клієнтів",
       "errorOccurred": "Сталася помилка",
       "tableHeaders": {
@@ -653,6 +733,8 @@
         "selectEmployee": "Виберіть співробітника",
         "selectSearcher": "Виберіть пошуковика",
         "unassignedOnly": "Тільки непризначені",
+        "tags": "Теги",
+        "noUsersAvailable": "Немає доступних користувачів",
         "more": "більше",
         "days": "днів"
       },
@@ -1556,6 +1638,11 @@
         }
       },
       "tableHeaders": {
+        "sellerCode": "Код продавця",
+        "sellerName": "Назва продавця",
+        "sellerType": "Тип продавця",
+        "status": "Статус",
+        "companyEmail": "Електронна пошта компанії",
         "companyName": "Назва компанії",
         "website": "Веб-сайт компанії",
         "email": "Електронна пошта компанії",
@@ -1564,6 +1651,10 @@
         "clients": "Клієнти",
         "actions": "Дії"
       },
+      "status": {
+        "active": "Активний",
+        "inactive": "Неактивний"
+      },
       "actions": {
         "edit": "Редагувати",
         "delete": "Видалити"
@@ -1571,10 +1662,16 @@
       "modals": {
         "create": {
           "title": "Створити нового продавця",
+          "basicInformation": "Основна інформація",
+          "contactInformation": "Контактна інформація",
           "companyInformation": "Інформація про компанію",
           "contactPerson": "Контактна особа",
           "address": "Адреса",
           "optional": "Необов'язково",
+          "sellerCode": "Код продавця",
+          "sellerName": "Назва продавця",
+          "sellerType": "Тип продавця",
+          "contactEmail": "Контактний email",
           "companyName": "Назва компанії *",
           "taxId": "Податковий номер / Реєстраційний номер бізнесу",
           "website": "Веб-сайт",
@@ -1590,6 +1687,12 @@
           "saveSeller": "Зберегти продавця",
           "saving": "Збереження...",
           "placeholders": {
+            "sellerCode": "напр., BANK_ABC_2024",
+            "sellerName": "Введіть назву компанії продавця",
+            "sellerType": "Виберіть тип продавця",
+            "contactEmail": "Введіть контактний email",
+            "address": "Введіть адресу",
+            "contactPerson": "Введіть ім'я контактної особи",
             "companyName": "Введіть назву компанії",
             "taxId": "Введіть податковий номер або реєстраційний номер бізнесу",
             "website": "Введіть URL веб-сайту",
@@ -1604,16 +1707,27 @@
             "notes": "Введіть будь-які додаткові примітки"
           },
           "errors": {
+            "sellerCodeRequired": "Код продавця є обов'язковим",
+            "sellerNameRequired": "Назва продавця є обов'язковою",
+            "sellerTypeRequired": "Тип продавця є обов'язковим",
             "companyNameRequired": "Назва компанії є обов'язковою",
             "invalidEmail": "Будь ласка, введіть дійсну адресу електронної пошти"
           }
         },
         "edit": {
           "title": "Редагувати продавця",
+          "basicInformation": "Основна інформація",
+          "contactInformation": "Контактна інформація",
           "companyInformation": "Інформація про компанію",
           "contactPerson": "Контактна особа",
           "address": "Адреса",
           "optional": "Необов'язково",
+          "sellerCode": "Код продавця",
+          "sellerCodeReadOnly": "Код продавця не можна змінити після створення",
+          "sellerName": "Назва продавця",
+          "sellerType": "Тип продавця",
+          "contactEmail": "Контактний email",
+          "saveChanges": "Зберегти зміни",
           "companyName": "Назва компанії *",
           "taxId": "Податковий номер / Реєстраційний номер бізнесу",
           "website": "Веб-сайт",
@@ -1631,6 +1745,11 @@
           "loadingSellerData": "Завантаження даних продавця...",
           "sellerNotFound": "Продавець не знайдено",
           "placeholders": {
+            "sellerName": "Введіть назву компанії продавця",
+            "sellerType": "Виберіть тип продавця",
+            "contactEmail": "Введіть контактний email",
+            "address": "Введіть адресу",
+            "contactPerson": "Введіть ім'я контактної особи",
             "companyName": "Введіть назву компанії",
             "taxId": "Введіть податковий номер або реєстраційний номер бізнесу",
             "website": "Введіть URL веб-сайту",
@@ -1645,6 +1764,8 @@
             "notes": "Введіть будь-які додаткові примітки"
           },
           "errors": {
+            "sellerNameRequired": "Назва продавця є обов'язковою",
+            "sellerTypeRequired": "Тип продавця є обов'язковим",
             "companyNameRequired": "Назва компанії є обов'язковою",
             "invalidEmail": "Будь ласка, введіть дійсну адресу електронної пошти"
           }
@@ -1751,7 +1872,11 @@
         "of": "з",
         "outcomes": "Результати дзвінків",
         "bestPerformer": "Найкращий результат",
-        "needsImprovement": "Потрібне покращення"
+        "needsImprovement": "Потрібне покращення",
+        "answered": "Відповів",
+        "noAnswer": "Немає відповіді",
+        "busy": "Зайнятий",
+        "failed": "Не вдалося"
       },
       "smsModal": {
         "title": "Відправлено SMS",
