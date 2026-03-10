@@ -23,6 +23,7 @@ import {
   type ConfigHistoryEntry,
   type ConfigHistoryListResponse,
 } from '@/features/clients/api/configApi'
+import { formatDateTime } from '@/lib/formatters'
 
 interface ConfigHistoryViewerProps {
   sellers: Array<{ id: number; name: string }>
@@ -250,7 +251,7 @@ export function ConfigHistoryViewer({ sellers }: ConfigHistoryViewerProps) {
                       : {entry.changed_by_username}
                     </div>
                     <div className="text-dark-400 mb-2 text-xs">
-                      {new Date(entry.changed_at).toLocaleString()}
+                      {formatDateTime(entry.changed_at)}
                     </div>
 
                     {entry.change_reason && (

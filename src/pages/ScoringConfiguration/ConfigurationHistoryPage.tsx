@@ -12,6 +12,7 @@ import { useURLState, useAutoPersistedState } from '@/hooks'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
+import { formatDateTime } from '@/lib/formatters'
 // import { Button } from '@/components/ui/Button' // Commented out: not used after export feature removal
 import { LinkButton } from '@/components/ui/LinkButton'
 import { DoubleButton } from '@/components/ui/DoubleButton'
@@ -209,13 +210,7 @@ export function ConfigurationHistoryPage() {
 
   // Format timestamp
   const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString('en-US', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+    return formatDateTime(timestamp)
   }
 
   // Define table columns - recalculate when language changes

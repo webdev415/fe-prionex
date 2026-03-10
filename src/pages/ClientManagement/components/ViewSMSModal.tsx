@@ -30,60 +30,27 @@ export interface ViewSMSModalProps {
 const formatDateTime = (
   utcDateTimeStr: string,
   userTimezone?: string,
-  t?: (key: string) => string
+  _t?: (key: string) => string
 ): string => {
-  if (!utcDateTimeStr || !t) return '—'
+  if (!utcDateTimeStr) return '—'
 
   try {
     const date = new Date(utcDateTimeStr)
     if (isNaN(date.getTime())) return utcDateTimeStr
 
-    // Use Intl.DateTimeFormat with user's timezone
-    const options: Intl.DateTimeFormatOptions = {
+    const parts = new Intl.DateTimeFormat('en-GB', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      hour12: true,
-      timeZone: userTimezone || undefined, // Use user's timezone or browser default
-    }
+      hour12: false,
+      timeZone: userTimezone || undefined,
+    }).formatToParts(date)
 
-    const formatter = new Intl.DateTimeFormat('en-US', options)
-    const parts = formatter.formatToParts(date)
-
-    // Extract parts
-    const month = parts.find((p) => p.type === 'month')?.value || ''
-    const day = parts.find((p) => p.type === 'day')?.value || ''
-    const year = parts.find((p) => p.type === 'year')?.value || ''
-    const hour = parts.find((p) => p.type === 'hour')?.value || ''
-    const minute = parts.find((p) => p.type === 'minute')?.value || ''
-    const dayPeriod = parts.find((p) => p.type === 'dayPeriod')?.value || 'AM'
-
-    // Translate month names
-    const monthNames = [
-      t('pages.clients.modals.viewSMS.months.jan'),
-      t('pages.clients.modals.viewSMS.months.feb'),
-      t('pages.clients.modals.viewSMS.months.mar'),
-      t('pages.clients.modals.viewSMS.months.apr'),
-      t('pages.clients.modals.viewSMS.months.may'),
-      t('pages.clients.modals.viewSMS.months.jun'),
-      t('pages.clients.modals.viewSMS.months.jul'),
-      t('pages.clients.modals.viewSMS.months.aug'),
-      t('pages.clients.modals.viewSMS.months.sep'),
-      t('pages.clients.modals.viewSMS.months.oct'),
-      t('pages.clients.modals.viewSMS.months.nov'),
-      t('pages.clients.modals.viewSMS.months.dec'),
-    ]
-
-    const monthName = monthNames[parseInt(month, 10) - 1]
-    const ampmText =
-      dayPeriod.toUpperCase() === 'AM'
-        ? t('pages.clients.modals.viewSMS.time.am')
-        : t('pages.clients.modals.viewSMS.time.pm')
-
-    return `${monthName} ${day}, ${year} ${hour}:${minute}:00 ${ampmText}`
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
+    return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}:${get('second')}`
   } catch (error) {
     console.error('Error formatting datetime:', error, utcDateTimeStr)
     return utcDateTimeStr

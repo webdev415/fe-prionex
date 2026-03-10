@@ -104,17 +104,15 @@ export function SMSSentDetailModal({
   isLoading = false,
   error = null,
 }: SMSSentDetailModalProps) {
-  const { t, i18n } = useTranslation('common')
+  const { t } = useTranslation('common')
 
   const maxByOperator = data?.byOperator ? Math.max(...data.byOperator.map((o) => o.smsSent), 1) : 1
 
   const formatDate = () => {
-    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    return new Date().toLocaleDateString(locale, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
+    const now = new Date()
+    const day = String(now.getDate()).padStart(2, '0')
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    return `${day}-${month}-${now.getFullYear()}`
   }
 
   const getPeriodLabel = () => {
