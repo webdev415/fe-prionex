@@ -84,7 +84,7 @@ export function BulkAssignClientModal({
     if (!operators) return []
     return operators.map((user) => ({
       id: user.id.toString(),
-      name: [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' '),
+      name: user.full_name,
     }))
   }, [operators])
 

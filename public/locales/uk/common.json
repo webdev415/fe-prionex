@@ -29,6 +29,7 @@
     "phoneNumber": "Номер телефону",
     "fullName": "Повне ім'я",
     "tin": "ІПН",
+    "contractNumber": "Номер договору",
     "error": "Не вдалося виконати пошук клієнтів. Будь ласка, спробуйте ще раз.",
     "searching": "Пошук...",
     "noResults": "Клієнтів за запитом «{{query}}» не знайдено.",
@@ -781,8 +782,7 @@
           "promisedAmount": "Обіцяна сума",
           "promisedDate": "Обіцяна дата",
           "comment": "Коментар",
-          "employee": "Співробітник",
-          "shouldDial": "Дзвонити"
+          "employee": "Співробітник"
         }
       },
       "editModal": {
@@ -864,6 +864,9 @@
         "phoneNumber": "Номер телефону",
         "contactValue": "Контакт",
         "contactType": "Тип контакту",
+        "addedBy": "Додав",
+        "addedDate": "Дата",
+        "phoneType": "Тип",
         "comment": "Коментар",
         "registrationAddress": "Адреса реєстрації",
         "personalAddress": "Особиста адреса",
@@ -932,6 +935,17 @@
         "rrPaymentSchedule": "Графік платежів",
         "rrPaymentDate": "Дата",
         "rrPaymentAmount": "Сума",
+        "rrConnectionDate": "Дата підключення",
+        "connectRR": "Підключити РР",
+        "connectRRSuccess": "Реструктуризацію успішно підключено",
+        "rrSelectLoan": "Кредит",
+        "rrSelectLoanPlaceholder": "Оберіть кредит...",
+        "rrValidationLoanRequired": "Будь ласка, оберіть кредит",
+        "rrValidationAmountRequired": "Загальна сума реструктуризації обов'язкова",
+        "rrValidationConnectionDateRequired": "Дата підключення обов'язкова",
+        "rrValidationPaymentDateRequired": "Дата платежу {{num}} обов'язкова",
+        "rrValidationPaymentAmountRequired": "Сума платежу {{num}} обов'язкова",
+        "rrValidationSumMismatch": "Сума платежів ({{sum}}) повинна дорівнювати загальній сумі ({{total}})",
         "viewDetail": "Переглянути",
         "makePayment": "Зробити платіж",
         "payments": "Платежі",
@@ -953,8 +967,8 @@
         "addFirstNote": "Додати першу примітку",
         "noPrimaryCreditorComments": "Немає коментарів від первинного кредитора",
         "primaryCreditorCommentsDescription": "Історичні дані про взаємодію від продавця боргу з'являться тут, коли будуть доступні.",
-        "dialHistory": "Історія набору",
-        "noDialHistory": "Історія набору відсутня",
+        "spamCallHistory": "Історія спам-дзвінків",
+        "noSpamCallHistory": "Історія спам-дзвінків відсутня",
         "totalCost": "Загальна вартість",
         "deliveryRate": "Рівень доставки",
         "delivered": "доставлено",
@@ -971,6 +985,7 @@
           "work": "Робота",
           "recommenders": "Поручителі",
           "addresses": "Адреси",
+          "passport": "Паспорт",
           "loans": "Позики",
           "tasks": "Завдання",
           "docs": "Документи",
@@ -1067,6 +1082,7 @@
           "whiteLine": "Біла лінія",
           "grayLine": "Сіра лінія",
           "spamCalls": "Спам дзвінки",
+          "markAsSpam": "Позначити як спам",
           "callNow": "Зателефонувати зараз",
           "calling": "Дзвонить...",
           "connected": "Підключено",
@@ -1157,6 +1173,8 @@
           "templateVariables": "Змінні шаблону",
           "sending": "Відправка...",
           "smsSentSuccessfully": "SMS успішно відправлено",
+          "smsFailedToSend": "Не вдалося відправити SMS. Перевірте налаштування провайдера або спробуйте ще раз.",
+          "smsFailedDuplicate": "Дублюване повідомлення відхилено провайдером. Змініть текст і спробуйте ще раз.",
           "sendSMS": "Відправити SMS"
         },
         "viewSMS": {
@@ -1473,6 +1491,7 @@
         },
         "actions": {
           "verify": "Підтвердити",
+          "cancel": "Скасувати",
           "viewDetails": "Переглянути деталі"
         },
         "summary": {

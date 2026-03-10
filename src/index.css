@@ -255,6 +255,26 @@
     scrollbar-color: #c8c8c8 transparent;
   }
 
+  /* Client Detail Panel Scrollbar */
+  .client-panel-scroll::-webkit-scrollbar {
+    width: 5px;
+  }
+  .client-panel-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .client-panel-scroll::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border-radius: 3px;
+  }
+  .client-panel-scroll::-webkit-scrollbar-thumb:hover {
+    background: #adadad;
+  }
+  /* Firefox */
+  .client-panel-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #d4d4d4 transparent;
+  }
+
   /* Data Table Scrollbar */
   .data-table-scroll::-webkit-scrollbar {
     height: 8px;

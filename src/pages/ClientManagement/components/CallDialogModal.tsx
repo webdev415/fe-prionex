@@ -40,6 +40,7 @@ export interface CallDialogModalProps {
   onReject?: () => void
   onMinimize?: () => void
   onRetry?: () => void // Callback to retry failed call
+  onSpamCall?: (phone: string) => void // Callback to add phone to spam call history
   // For incoming call
   loans?: Array<{
     id: string
@@ -77,6 +78,7 @@ export function CallDialogModal({
   onReject,
   onMinimize,
   onRetry,
+  onSpamCall,
   loans = [],
 }: CallDialogModalProps) {
   const { t } = useTranslation('common')
@@ -555,16 +557,33 @@ export function CallDialogModal({
               >
                 {t('actions.cancel')}
               </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleCallNow}
-                className="w-full rounded-md"
-                leftIcon={isLoading ? undefined : <Icons.Headset size={18} className="sm:size-5" />}
-                disabled={isLoading}
-              >
-                {isLoading ? t('status.loading') : t('pages.clients.modals.callDialog.callNow')}
-              </Button>
+              {callType === 'spam-calls' ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    if (onSpamCall) onSpamCall(phoneNumber)
+                    handleClose()
+                  }}
+                  className="w-full rounded-md"
+                  leftIcon={<Icons.Cancel01 size={18} className="sm:size-5" />}
+                >
+                  {t('pages.clients.modals.callDialog.markAsSpam')}
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleCallNow}
+                  className="w-full rounded-md"
+                  leftIcon={
+                    isLoading ? undefined : <Icons.Headset size={18} className="sm:size-5" />
+                  }
+                  disabled={isLoading}
+                >
+                  {isLoading ? t('status.loading') : t('pages.clients.modals.callDialog.callNow')}
+                </Button>
+              )}
             </ModalFooter>
           </>
         )}

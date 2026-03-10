@@ -29,6 +29,7 @@
     "phoneNumber": "Phone number",
     "fullName": "Full name",
     "tin": "TIN",
+    "contractNumber": "Contract number",
     "error": "Could not search clients. Please try again.",
     "searching": "Searching...",
     "noResults": "No clients found for '{{query}}'.",
@@ -808,8 +809,7 @@
           "promisedAmount": "Promised Amount",
           "promisedDate": "Promised Date",
           "comment": "Comment",
-          "employee": "Employee",
-          "shouldDial": "Should Dial"
+          "employee": "Employee"
         }
       },
       "editModal": {
@@ -891,6 +891,9 @@
         "phoneNumber": "Phone number",
         "contactValue": "Contact",
         "contactType": "Contact type",
+        "addedBy": "Added by",
+        "addedDate": "Date",
+        "phoneType": "Type",
         "comment": "Comment",
         "registrationAddress": "Registration address",
         "personalAddress": "Personal address",
@@ -959,6 +962,17 @@
         "rrPaymentSchedule": "Payment Schedule",
         "rrPaymentDate": "Date",
         "rrPaymentAmount": "Amount",
+        "rrConnectionDate": "Connection Date",
+        "connectRR": "Connect RR",
+        "connectRRSuccess": "Restructuring agreement connected successfully",
+        "rrSelectLoan": "Loan",
+        "rrSelectLoanPlaceholder": "Select a loan...",
+        "rrValidationLoanRequired": "Please select a loan",
+        "rrValidationAmountRequired": "Total restructuring amount is required",
+        "rrValidationConnectionDateRequired": "Connection date is required",
+        "rrValidationPaymentDateRequired": "Payment date {{num}} is required",
+        "rrValidationPaymentAmountRequired": "Payment amount {{num}} is required",
+        "rrValidationSumMismatch": "Sum of payments ({{sum}}) must equal total amount ({{total}})",
         "viewDetail": "View",
         "makePayment": "Make Payment",
         "payments": "Payments",
@@ -980,8 +994,8 @@
         "addFirstNote": "Add first note",
         "noPrimaryCreditorComments": "No comments from primary creditor",
         "primaryCreditorCommentsDescription": "Historical interaction data from the debt seller will appear here when available.",
-        "dialHistory": "Dial History",
-        "noDialHistory": "No dial history",
+        "spamCallHistory": "Spam Call History",
+        "noSpamCallHistory": "No spam call history",
         "totalCost": "Total Cost",
         "deliveryRate": "Delivery Rate",
         "delivered": "delivered",
@@ -998,6 +1012,7 @@
           "work": "Work",
           "recommenders": "Recommenders",
           "addresses": "Addresses",
+          "passport": "Passport",
           "loans": "Loans",
           "tasks": "Tasks",
           "docs": "Docs",
@@ -1094,6 +1109,7 @@
           "whiteLine": "White Line",
           "grayLine": "Gray Line",
           "spamCalls": "Spam calls",
+          "markAsSpam": "Mark as Spam",
           "callNow": "Call Now",
           "calling": "Calling...",
           "connected": "Connected",
@@ -1184,6 +1200,8 @@
           "templateVariables": "Template Variables",
           "sending": "Sending...",
           "smsSentSuccessfully": "SMS sent successfully",
+          "smsFailedToSend": "Failed to send SMS. Please check SMS provider configuration or try again later.",
+          "smsFailedDuplicate": "Duplicate message rejected by provider. Please change the message text and try again.",
           "sendSMS": "Send SMS"
         },
         "viewSMS": {
@@ -1500,6 +1518,7 @@
         },
         "actions": {
           "verify": "Verify",
+          "cancel": "Cancel",
           "viewDetails": "View Details"
         },
         "summary": {

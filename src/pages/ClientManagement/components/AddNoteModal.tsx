@@ -1,9 +1,14 @@
 /**
  * Add Interaction Modal Component
  *
- * Modal for creating interaction records from the client detail page.
- * Fetches types, subtypes, and results from the interaction service.
- * Shows conditional promise fields based on the selected result.
+ * 4-step sequential form:
+ *   Step 1 — Type:         Incoming | Outgoing | Searching
+ *   Step 2 — Channel:      Call | Messenger | Mail | Chat  (skipped for Searching)
+ *   Step 3 — Contact Type: Client | 3rd Person | Relative  (skipped for Searching;
+ *                          auto-set to Relative for Mail/Chat channels)
+ *   Step 4 — Result:       filtered by interaction_result_rules for the combination
+ *
+ * Each step clears all downstream selections when changed.
  */
 
 import { useState, useMemo } from 'react'
@@ -18,10 +23,12 @@ import {
   SelectValue,
 } from '../../../components/ui/Select'
 import { Icons } from '@/lib/icons'
+import { DateSelect } from '@/components/ui/DateSelect'
 import { toast } from 'sonner'
 import {
   useInteractionTypes,
   useInteractionSubtypes,
+  useInteractionContactTypes,
   useInteractionResults,
 } from '@/features/clients/hooks/useNoteInteraction'
 
@@ -35,11 +42,13 @@ export interface AddNoteModalProps {
 
 export interface InteractionCreateData {
   type_id: number
-  subtype_id: number
+  subtype_id?: number
+  contact_type_id?: number
   result_id?: number
   summary: string
   promise_to_pay_date?: string
   promise_to_pay_amount?: number
+  next_action_date?: string
 }
 
 // Keep old name as alias for backwards compatibility
@@ -47,43 +56,110 @@ export type NoteCreateData = InteractionCreateData
 
 const MAX_NOTE_LENGTH = 2000
 
+// Channel codes that restrict contact type to Relative only
+const RELATIVE_ONLY_CHANNELS = new Set(['MAIL', 'CHAT'])
+
 export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModalProps) {
   const { t } = useTranslation('common')
 
   const [typeId, setTypeId] = useState<number | undefined>(undefined)
   const [subtypeId, setSubtypeId] = useState<number | undefined>(undefined)
+  const [contactTypeId, setContactTypeId] = useState<number | undefined>(undefined)
   const [resultId, setResultId] = useState<number | undefined>(undefined)
   const [note, setNote] = useState<string>('')
   const [promiseDate, setPromiseDate] = useState<string>('')
   const [promiseAmount, setPromiseAmount] = useState<string>('')
+  const [callbackDate, setCallbackDate] = useState<string>('')
 
   const { data: types, isLoading: isLoadingTypes } = useInteractionTypes()
-  const { data: subtypes, isLoading: isLoadingSubtypes } = useInteractionSubtypes()
-  const { data: results, isLoading: isLoadingResults } = useInteractionResults()
+  const { data: channels, isLoading: isLoadingChannels } = useInteractionSubtypes()
+  const { data: contactTypes, isLoading: isLoadingContactTypes } = useInteractionContactTypes()
+  const { data: results, isLoading: isLoadingResults } = useInteractionResults(
+    typeId !== undefined ? { typeId, channelId: subtypeId, contactTypeId } : undefined
+  )
 
+  // Derived flags from selected lookups
+  const selectedType = useMemo(() => types?.find((t) => t.id === typeId), [types, typeId])
+  const selectedChannel = useMemo(
+    () => channels?.find((c) => c.id === subtypeId),
+    [channels, subtypeId]
+  )
   const selectedResult = useMemo(() => results?.find((r) => r.id === resultId), [results, resultId])
+
+  const isSearching = selectedType?.code === 'SEARCHING'
+  const isRelativeOnlyChannel =
+    selectedChannel !== undefined && RELATIVE_ONLY_CHANNELS.has(selectedChannel.code)
+
+  // For Mail/Chat: only Relative is valid — hide the dropdown and use the Relative id
+  const relativeContactType = useMemo(
+    () => contactTypes?.find((ct) => ct.code === 'RELATIVE'),
+    [contactTypes]
+  )
+
+  const showChannelStep = !isSearching
+  const showContactTypeStep = !isSearching && !isRelativeOnlyChannel
+  // When Mail/Chat is selected, contact type is fixed to Relative — resolve its id
+  const resolvedContactTypeId = isRelativeOnlyChannel ? relativeContactType?.id : contactTypeId
 
   const showPromiseDate = selectedResult?.requires_promise_date === true
   const showPromiseAmount = selectedResult?.requires_promise_amount === true
+  const showCallbackDate = selectedResult?.code === 'callback_by_appointment'
+
+  // --- Step handlers (each clears downstream) ---
+
+  const handleTypeChange = (value: string) => {
+    setTypeId(Number(value))
+    setSubtypeId(undefined)
+    setContactTypeId(undefined)
+    setResultId(undefined)
+  }
+
+  const handleChannelChange = (value: string) => {
+    setSubtypeId(Number(value))
+    setContactTypeId(undefined)
+    setResultId(undefined)
+  }
+
+  const handleContactTypeChange = (value: string) => {
+    setContactTypeId(Number(value))
+    setResultId(undefined)
+  }
+
+  const handleResultChange = (value: string) => {
+    setResultId(Number(value))
+    setPromiseDate('')
+    setPromiseAmount('')
+    setCallbackDate('')
+  }
+
+  // --- Validation & submit ---
 
   const handleSave = () => {
     if (!typeId) {
       toast.error(t('pages.clients.modals.addNote.selectType', 'Please select a type'))
       return
     }
-    if (!subtypeId) {
-      toast.error(t('pages.clients.modals.addNote.selectSubtype', 'Please select a subtype'))
+    if (!isSearching && !subtypeId) {
+      toast.error(t('pages.clients.modals.addNote.selectChannel', 'Please select a channel'))
+      return
+    }
+    if (!isSearching && !isRelativeOnlyChannel && !contactTypeId) {
+      toast.error(
+        t('pages.clients.modals.addNote.selectContactType', 'Please select a contact type')
+      )
       return
     }
 
     const data: InteractionCreateData = {
       type_id: typeId,
-      subtype_id: subtypeId,
+      subtype_id: isSearching ? undefined : subtypeId,
+      contact_type_id: isSearching ? undefined : resolvedContactTypeId,
       result_id: resultId,
       summary: note,
       promise_to_pay_date: showPromiseDate && promiseDate ? promiseDate : undefined,
       promise_to_pay_amount:
         showPromiseAmount && promiseAmount ? parseFloat(promiseAmount) : undefined,
+      next_action_date: showCallbackDate && callbackDate ? callbackDate : undefined,
     }
 
     onSave(data)
@@ -94,10 +170,12 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
   const resetForm = () => {
     setTypeId(undefined)
     setSubtypeId(undefined)
+    setContactTypeId(undefined)
     setResultId(undefined)
     setNote('')
     setPromiseDate('')
     setPromiseAmount('')
+    setCallbackDate('')
   }
 
   const handleClose = () => {
@@ -105,7 +183,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
     onClose()
   }
 
-  const isLoading = isLoadingTypes || isLoadingSubtypes || isLoadingResults
+  const isLoading = isLoadingTypes || isLoadingChannels || isLoadingContactTypes
 
   return (
     <Modal open={open} onClose={handleClose} maxWidth="xl">
@@ -135,7 +213,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
             </button>
           </div>
 
-          {/* Type Dropdown */}
+          {/* Step 1 — Type */}
           <div className="flex flex-col gap-2">
             <label
               className="text-dark-500 text-xs font-light sm:text-sm"
@@ -146,10 +224,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
             {isLoadingTypes ? (
               <div className="text-xs text-gray-500">Loading...</div>
             ) : (
-              <Select
-                value={typeId?.toString()}
-                onValueChange={(value) => setTypeId(Number(value))}
-              >
+              <Select value={typeId?.toString()} onValueChange={handleTypeChange}>
                 <SelectTrigger className="w-full" id="interaction-type" aria-label="Type">
                   <SelectValue
                     placeholder={t(
@@ -169,88 +244,128 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
             )}
           </div>
 
-          {/* Subtype Dropdown */}
-          <div className="flex flex-col gap-2">
-            <label
-              className="text-dark-500 text-xs font-light sm:text-sm"
-              htmlFor="interaction-subtype"
-            >
-              {t('pages.clients.modals.addNote.subtype', 'Subtype')}:
-            </label>
-            {isLoadingSubtypes ? (
-              <div className="text-xs text-gray-500">Loading...</div>
-            ) : (
-              <Select
-                value={subtypeId?.toString()}
-                onValueChange={(value) => setSubtypeId(Number(value))}
-              >
-                <SelectTrigger className="w-full" id="interaction-subtype" aria-label="Subtype">
-                  <SelectValue
-                    placeholder={t('pages.clients.modals.addNote.selectSubtype', 'Select subtype')}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {subtypes?.map((subtype) => (
-                    <SelectItem key={subtype.id} value={subtype.id.toString()}>
-                      {subtype.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-
-          {/* Result Dropdown (optional) */}
-          <div className="flex flex-col gap-2">
-            <label
-              className="text-dark-500 text-xs font-light sm:text-sm"
-              htmlFor="interaction-result"
-            >
-              {t('pages.clients.modals.addNote.result', 'Result')}:
-            </label>
-            {isLoadingResults ? (
-              <div className="text-xs text-gray-500">Loading...</div>
-            ) : (
-              <Select
-                value={resultId?.toString()}
-                onValueChange={(value) => setResultId(Number(value))}
-              >
-                <SelectTrigger className="w-full" id="interaction-result" aria-label="Result">
-                  <SelectValue
-                    placeholder={t(
-                      'pages.clients.modals.addNote.selectResult',
-                      'Select result (optional)'
-                    )}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {results?.map((result) => (
-                    <SelectItem key={result.id} value={result.id.toString()}>
-                      {result.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-
-          {/* Promise to Pay Date (conditional) */}
-          {showPromiseDate && (
+          {/* Step 2 — Communication Channel (hidden for Searching) */}
+          {typeId !== undefined && showChannelStep && (
             <div className="flex flex-col gap-2">
-              <label className="text-dark-500 text-xs font-light sm:text-sm" htmlFor="promise-date">
-                {t('pages.clients.modals.addNote.promiseDate', 'Promise date')}:
+              <label
+                className="text-dark-500 text-xs font-light sm:text-sm"
+                htmlFor="interaction-channel"
+              >
+                {t('pages.clients.modals.addNote.channel', 'Communication channel')}:
               </label>
-              <input
-                type="date"
-                id="promise-date"
-                value={promiseDate}
-                onChange={(e) => setPromiseDate(e.target.value)}
-                className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none sm:text-sm"
-              />
+              {isLoadingChannels ? (
+                <div className="text-xs text-gray-500">Loading...</div>
+              ) : (
+                <Select value={subtypeId?.toString()} onValueChange={handleChannelChange}>
+                  <SelectTrigger className="w-full" id="interaction-channel" aria-label="Channel">
+                    <SelectValue
+                      placeholder={t(
+                        'pages.clients.modals.addNote.selectChannel',
+                        'Select channel'
+                      )}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {channels?.map((channel) => (
+                      <SelectItem key={channel.id} value={channel.id.toString()}>
+                        {channel.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           )}
 
-          {/* Promise to Pay Amount (conditional) */}
+          {/* Step 3 — Contact Type (hidden for Searching; auto-set for Mail/Chat) */}
+          {subtypeId !== undefined && showContactTypeStep && (
+            <div className="flex flex-col gap-2">
+              <label
+                className="text-dark-500 text-xs font-light sm:text-sm"
+                htmlFor="interaction-contact-type"
+              >
+                {t('pages.clients.modals.addNote.contactType', 'Contact type')}:
+              </label>
+              {isLoadingContactTypes ? (
+                <div className="text-xs text-gray-500">Loading...</div>
+              ) : (
+                <Select value={contactTypeId?.toString()} onValueChange={handleContactTypeChange}>
+                  <SelectTrigger
+                    className="w-full"
+                    id="interaction-contact-type"
+                    aria-label="Contact type"
+                  >
+                    <SelectValue
+                      placeholder={t(
+                        'pages.clients.modals.addNote.selectContactType',
+                        'Select contact type'
+                      )}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contactTypes?.map((ct) => (
+                      <SelectItem key={ct.id} value={ct.id.toString()}>
+                        {ct.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+
+          {/* Step 4 — Result (shown once upstream steps are complete) */}
+          {(isSearching
+            ? typeId !== undefined
+            : isRelativeOnlyChannel
+              ? subtypeId !== undefined
+              : contactTypeId !== undefined) && (
+            <div className="flex flex-col gap-2">
+              <label
+                className="text-dark-500 text-xs font-light sm:text-sm"
+                htmlFor="interaction-result"
+              >
+                {t('pages.clients.modals.addNote.result', 'Result')}:
+              </label>
+              {isLoadingResults ? (
+                <div className="text-xs text-gray-500">Loading...</div>
+              ) : (
+                <Select value={resultId?.toString()} onValueChange={handleResultChange}>
+                  <SelectTrigger className="w-full" id="interaction-result" aria-label="Result">
+                    <SelectValue
+                      placeholder={t(
+                        'pages.clients.modals.addNote.selectResult',
+                        'Select result (optional)'
+                      )}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {results?.map((result) => (
+                      <SelectItem key={result.id} value={result.id.toString()}>
+                        {result.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+
+          {/* Promise to Pay Date (conditional on result flag) */}
+          {showPromiseDate && (
+            <DateSelect
+              label={`${t('pages.clients.modals.addNote.promiseDate', 'Promise date')}:`}
+              id="promise-date"
+              value={promiseDate || null}
+              onChange={({ value }) =>
+                setPromiseDate(value ? value.toISOString().slice(0, 10) : '')
+              }
+              placeholder={t('pages.clients.modals.addNote.selectDate', 'Select date')}
+              format="dd/MM/yyyy"
+            />
+          )}
+
+          {/* Promise to Pay Amount (conditional on result flag) */}
           {showPromiseAmount && (
             <div className="flex flex-col gap-2">
               <label
@@ -270,6 +385,20 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                 className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none sm:text-sm"
               />
             </div>
+          )}
+
+          {/* Callback Date (conditional on result requires_followup flag) */}
+          {showCallbackDate && (
+            <DateSelect
+              label={`${t('pages.clients.modals.addNote.callbackDate', 'Callback date')}:`}
+              id="callback-date"
+              value={callbackDate || null}
+              onChange={({ value }) =>
+                setCallbackDate(value ? value.toISOString().slice(0, 10) : '')
+              }
+              placeholder={t('pages.clients.modals.addNote.selectDate', 'Select date')}
+              format="dd/MM/yyyy"
+            />
           )}
 
           {/* Note Textarea */}

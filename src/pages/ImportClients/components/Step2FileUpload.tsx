@@ -219,8 +219,6 @@ export function Step2FileUpload({
       'clients_last_name*',
       'clients_middle_name',
       'clients_date_of_birth',
-      'clients_phone_primary',
-      'clients_phone_secondary',
       'clients_email',
       'clients_tax_id*',
       'clients_marital_status',

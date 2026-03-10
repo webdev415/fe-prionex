@@ -144,9 +144,7 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                       <Checkbox checked={true} disabled />
                       <span className="text-sm font-light text-gray-950">
                         {user.username}
-                        {user.first_name || user.last_name
-                          ? ` (${[user.first_name, user.last_name].filter(Boolean).join(' ')})`
-                          : ''}
+                        {user.full_name ? ` (${user.full_name})` : ''}
                       </span>
                     </div>
                   ))}
