@@ -27,6 +27,30 @@ import { getClientById } from '@/features/clients/api/clientApi'
 import { getSeller } from '@/features/sellers/api/sellersApi'
 
 /**
+ * Safely extract a human-readable string from any API error.
+ * Handles FastAPI 422 Pydantic arrays, plain strings, and fallback.
+ */
+function extractErrorMessage(error: unknown, fallback: string): string {
+  if (!error || typeof error !== 'object' || !('response' in error)) return fallback
+  const data = (error as { response?: { data?: unknown } }).response?.data
+  if (!data || typeof data !== 'object') return fallback
+  const d = data as Record<string, unknown>
+  // Plain string detail
+  if (typeof d.detail === 'string') return d.detail
+  // Pydantic 422: detail is an array of {msg, loc, ...}
+  if (Array.isArray(d.detail)) {
+    return (
+      d.detail
+        .map((e) => (e && typeof e === 'object' && 'msg' in e ? String(e.msg) : ''))
+        .filter(Boolean)
+        .join('; ') || fallback
+    )
+  }
+  if (typeof d.message === 'string') return d.message
+  return fallback
+}
+
+/**
  * Record a new payment
  */
 export function useRecordPayment() {
@@ -46,15 +70,7 @@ export function useRecordPayment() {
       toast.success('Payment recorded successfully')
     },
     onError: (error: unknown) => {
-      const message =
-        error && typeof error === 'object' && 'response' in error
-          ? (error as { response?: { data?: { detail?: string; message?: string } } }).response
-              ?.data?.detail ||
-            (error as { response?: { data?: { detail?: string; message?: string } } }).response
-              ?.data?.message ||
-            'Failed to record payment'
-          : 'Failed to record payment'
-      toast.error(message)
+      toast.error(extractErrorMessage(error, 'Failed to record payment'))
     },
   })
 }
@@ -86,15 +102,7 @@ export function useVerifyPayment() {
       toast.success('Payment verified successfully')
     },
     onError: (error: unknown) => {
-      const message =
-        error && typeof error === 'object' && 'response' in error
-          ? (error as { response?: { data?: { detail?: string; message?: string } } }).response
-              ?.data?.detail ||
-            (error as { response?: { data?: { detail?: string; message?: string } } }).response
-              ?.data?.message ||
-            'Failed to verify payment'
-          : 'Failed to verify payment'
-      toast.error(message)
+      toast.error(extractErrorMessage(error, 'Failed to verify payment'))
     },
   })
 }
@@ -126,15 +134,7 @@ export function useCancelPayment() {
       toast.success('Payment cancelled successfully')
     },
     onError: (error: unknown) => {
-      const message =
-        error && typeof error === 'object' && 'response' in error
-          ? (error as { response?: { data?: { detail?: string; message?: string } } }).response
-              ?.data?.detail ||
-            (error as { response?: { data?: { detail?: string; message?: string } } }).response
-              ?.data?.message ||
-            'Failed to cancel payment'
-          : 'Failed to cancel payment'
-      toast.error(message)
+      toast.error(extractErrorMessage(error, 'Failed to cancel payment'))
     },
   })
 }
@@ -161,15 +161,7 @@ export function useEditPayment() {
       toast.success('Payment updated successfully')
     },
     onError: (error: unknown) => {
-      const message =
-        error && typeof error === 'object' && 'response' in error
-          ? (error as { response?: { data?: { detail?: string; message?: string } } }).response
-              ?.data?.detail ||
-            (error as { response?: { data?: { detail?: string; message?: string } } }).response
-              ?.data?.message ||
-            'Failed to update payment'
-          : 'Failed to update payment'
-      toast.error(message)
+      toast.error(extractErrorMessage(error, 'Failed to update payment'))
     },
   })
 }
@@ -378,15 +370,7 @@ export function useGenerateReceipt() {
       }
     },
     onError: (error: unknown) => {
-      const message =
-        error && typeof error === 'object' && 'response' in error
-          ? (error as { response?: { data?: { detail?: string; message?: string } } }).response
-              ?.data?.detail ||
-            (error as { response?: { data?: { detail?: string; message?: string } } }).response
-              ?.data?.message ||
-            'Failed to generate receipt'
-          : 'Failed to generate receipt'
-      toast.error(message)
+      toast.error(extractErrorMessage(error, 'Failed to generate receipt'))
     },
   })
 }
@@ -411,15 +395,7 @@ export function useExportPaymentsCSV() {
       toast.success('Payments exported successfully')
     },
     onError: (error: unknown) => {
-      const message =
-        error && typeof error === 'object' && 'response' in error
-          ? (error as { response?: { data?: { detail?: string; message?: string } } }).response
-              ?.data?.detail ||
-            (error as { response?: { data?: { detail?: string; message?: string } } }).response
-              ?.data?.message ||
-            'Failed to export payments'
-          : 'Failed to export payments'
-      toast.error(message)
+      toast.error(extractErrorMessage(error, 'Failed to export payments'))
     },
   })
 }

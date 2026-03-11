@@ -478,7 +478,7 @@ export function PaymentHistoryPage() {
   const handleSaveEditPayment = (data: {
     amount: number
     date: Date
-    method: 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
+    method: 'Bank Transfer' | 'Online Gateway' | 'Card'
     referenceNumber?: string
     last4Digits?: string
     paymentMethodDetails?: string
@@ -1303,17 +1303,11 @@ export function PaymentHistoryPage() {
                       <SelectItem value="Bank Transfer">
                         {t('pages.clients.modals.recordPayment.bankTransfer')}
                       </SelectItem>
-                      <SelectItem value="Online Gateway" disabled>
+                      <SelectItem value="Online Gateway">
                         {t('pages.clients.modals.recordPayment.onlineGateway')}
                       </SelectItem>
-                      <SelectItem value="Cash" disabled>
-                        {t('pages.clients.modals.recordPayment.cash')}
-                      </SelectItem>
-                      <SelectItem value="Card">
+                      <SelectItem value="Card" disabled>
                         {t('pages.clients.modals.recordPayment.card')}
-                      </SelectItem>
-                      <SelectItem value="Other">
-                        {t('pages.clients.modals.recordPayment.other')}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -1449,7 +1443,7 @@ export function PaymentHistoryPage() {
                               {(() => {
                                 // Payment method is already in frontend format
                                 const methodTranslations: Record<
-                                  'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other',
+                                  'Bank Transfer' | 'Online Gateway' | 'Card',
                                   string
                                 > = {
                                   'Bank Transfer': t(
@@ -1458,9 +1452,7 @@ export function PaymentHistoryPage() {
                                   'Online Gateway': t(
                                     'pages.clients.modals.recordPayment.onlineGateway'
                                   ),
-                                  Cash: t('pages.clients.modals.recordPayment.cash'),
                                   Card: t('pages.clients.modals.recordPayment.card'),
-                                  Other: t('pages.clients.modals.recordPayment.other'),
                                 }
                                 return (
                                   methodTranslations[

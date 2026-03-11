@@ -36,7 +36,7 @@ export interface EditPaymentModalProps {
   onSave: (data: {
     amount: number
     date: Date
-    method: 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
+    method: 'Bank Transfer' | 'Online Gateway' | 'Card'
     referenceNumber?: string
     last4Digits?: string
     paymentMethodDetails?: string
@@ -87,25 +87,19 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
   // Normalize payment method from old format to new format
   const normalizeMethod = (
     method: 'Bank Transfer' | 'Card Payment' | 'Other' | 'Online Gateway' | 'Cash' | 'Card'
-  ): 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other' => {
-    if (method === 'Card Payment' || method === 'Card') return 'Card'
-    if (method === 'Bank Transfer') return 'Bank Transfer'
+  ): 'Bank Transfer' | 'Online Gateway' | 'Card' => {
+    if (method === 'Card Payment' || method === 'Card') return 'Bank Transfer' // Card disabled, fall back
     if (method === 'Online Gateway') return 'Online Gateway'
-    if (method === 'Cash') return 'Cash'
-    return 'Other'
+    return 'Bank Transfer'
   }
 
-  const [paymentMethod, setPaymentMethod] = useState<
-    'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
-  >(normalizeMethod(payment.method))
-  const [referenceNumber, setReferenceNumber] = useState<string>(
-    payment.referenceNumber || payment.reference || ''
+  const [paymentMethod, setPaymentMethod] = useState<'Bank Transfer' | 'Online Gateway' | 'Card'>(
+    normalizeMethod(payment.method)
   )
   const [last4Digits, setLast4Digits] = useState<string>(payment.last4Digits || '')
   const [paymentMethodDetails, setPaymentMethodDetails] = useState<string>(
     payment.paymentMethodDetails || ''
   )
-  const [referenceNumberError, setReferenceNumberError] = useState<string | null>(null)
   const [last4DigitsError, setLast4DigitsError] = useState<string | null>(null)
   const [amountError, setAmountError] = useState<string | null>(null)
 
@@ -122,56 +116,18 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
   oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
   oneYearAgo.setHours(0, 0, 0, 0) // Start of day one year ago
 
-  // Validate reference number when Bank Transfer is selected
-  const handleReferenceNumberChange = (value: string) => {
-    setReferenceNumber(value)
-    if (paymentMethod === 'Bank Transfer' && !value.trim()) {
-      setReferenceNumberError(t('pages.clients.modals.recordPayment.referenceNumberRequired'))
-    } else {
-      setReferenceNumberError(null)
-    }
-  }
-
-  // Validate last 4 digits when Card is selected
-  const handleLast4DigitsChange = (value: string) => {
-    // Only allow numeric characters
-    const numericValue = value.replace(/\D/g, '')
-    // Limit to 4 digits
-    const limitedValue = numericValue.slice(0, 4)
-    setLast4Digits(limitedValue)
-
-    if (paymentMethod === 'Card') {
-      if (!limitedValue) {
-        setLast4DigitsError(t('pages.clients.modals.recordPayment.last4DigitsRequired'))
-      } else if (limitedValue.length !== 4) {
-        setLast4DigitsError(t('pages.clients.modals.recordPayment.last4DigitsMustBe4'))
-      } else {
-        setLast4DigitsError(null)
-      }
-    }
-  }
-
   // Handle payment method change - clear related fields
   const handlePaymentMethodChange = (value: string) => {
-    const newMethod = value as 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
+    const newMethod = value as 'Bank Transfer' | 'Online Gateway' | 'Card'
     setPaymentMethod(newMethod)
 
-    // Clear errors and fields when switching methods
-    if (newMethod !== 'Bank Transfer') {
-      setReferenceNumber('')
-      setReferenceNumberError(null)
-    }
+    // Clear card fields when switching away from Card
     if (newMethod !== 'Card') {
       setLast4Digits('')
       setLast4DigitsError(null)
     }
 
-    // Re-validate if switching to a method that requires validation
-    if (newMethod === 'Bank Transfer') {
-      if (!referenceNumber.trim()) {
-        setReferenceNumberError(t('pages.clients.modals.recordPayment.referenceNumberRequired'))
-      }
-    }
+    // Re-validate if switching to Card
     if (newMethod === 'Card') {
       if (!last4Digits) {
         setLast4DigitsError(t('pages.clients.modals.recordPayment.last4DigitsRequired'))
@@ -212,12 +168,10 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
   // Check if there are validation errors
   const hasValidationErrors =
     !!amountError ||
-    !!referenceNumberError ||
     !!last4DigitsError ||
     !paymentDate ||
     amountValue < minAmount ||
     amountValue > maxAmount ||
-    (paymentMethod === 'Bank Transfer' && !referenceNumber.trim()) ||
     (paymentMethod === 'Card' && last4Digits.length !== 4)
 
   const handleSave = () => {
@@ -234,7 +188,6 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
       amount: amountValue,
       date: paymentDate,
       method: paymentMethod,
-      referenceNumber: paymentMethod === 'Bank Transfer' ? referenceNumber : undefined,
       last4Digits: paymentMethod === 'Card' ? last4Digits : undefined,
       paymentMethodDetails: paymentMethodDetails || undefined,
     })
@@ -243,10 +196,8 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
     setPaymentAmount(payment.amount.toString())
     setPaymentDate(originalDate)
     setPaymentMethod(normalizeMethod(payment.method))
-    setReferenceNumber(payment.referenceNumber || payment.reference || '')
     setLast4Digits(payment.last4Digits || '')
     setPaymentMethodDetails(payment.paymentMethodDetails || '')
-    setReferenceNumberError(null)
     setLast4DigitsError(null)
     setAmountError(null)
     onClose()
@@ -257,10 +208,8 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
     setPaymentAmount(payment.amount.toString())
     setPaymentDate(originalDate)
     setPaymentMethod(normalizeMethod(payment.method))
-    setReferenceNumber(payment.referenceNumber || payment.reference || '')
     setLast4Digits(payment.last4Digits || '')
     setPaymentMethodDetails(payment.paymentMethodDetails || '')
-    setReferenceNumberError(null)
     setLast4DigitsError(null)
     setAmountError(null)
     onClose()
@@ -439,79 +388,25 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                   </Label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <RadioItem value="Online Gateway" id="method-online" disabled />
+                  <RadioItem value="Online Gateway" id="method-online" />
                   <Label
                     htmlFor="method-online"
-                    className="text-dark-500 cursor-not-allowed text-xs font-light opacity-50 sm:text-sm"
+                    className="text-dark-500 cursor-pointer text-xs font-light sm:text-sm"
                   >
                     {t('pages.clients.modals.recordPayment.onlineGateway')}
                   </Label>
                 </div>
                 <div className="flex items-center gap-2">
-                  <RadioItem value="Cash" id="method-cash" disabled />
-                  <Label
-                    htmlFor="method-cash"
-                    className="text-dark-500 cursor-not-allowed text-xs font-light opacity-50 sm:text-sm"
-                  >
-                    {t('pages.clients.modals.recordPayment.cash')}
-                  </Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <RadioItem value="Card" id="method-card" />
+                  <RadioItem value="Card" id="method-card" disabled />
                   <Label
                     htmlFor="method-card"
-                    className="text-dark-500 cursor-pointer text-xs font-light sm:text-sm"
+                    className="text-dark-500 cursor-not-allowed text-xs font-light opacity-50 sm:text-sm"
                   >
                     {t('pages.clients.modals.recordPayment.card')}
                   </Label>
                 </div>
-                <div className="flex items-center gap-2">
-                  <RadioItem value="Other" id="method-other" />
-                  <Label
-                    htmlFor="method-other"
-                    className="text-dark-500 cursor-pointer text-xs font-light sm:text-sm"
-                  >
-                    {t('pages.clients.modals.recordPayment.other')}
-                  </Label>
-                </div>
               </RadioGroup>
             </div>
-
-            {/* Conditional Fields Based on Payment Method */}
-            {paymentMethod === 'Bank Transfer' && (
-              <div className="flex flex-col items-start gap-2 self-stretch">
-                <Label required className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                  {t('pages.clients.modals.recordPayment.referenceNumber')}
-                </Label>
-                <Input
-                  type="text"
-                  value={referenceNumber}
-                  onChange={(e) => handleReferenceNumberChange(e.target.value)}
-                  placeholder={t('pages.clients.modals.recordPayment.referenceNumberPlaceholder')}
-                  inputSize="md"
-                  className="rounded-md"
-                  error={referenceNumberError || undefined}
-                />
-              </div>
-            )}
-
-            {paymentMethod === 'Card' && (
-              <div className="flex flex-col items-start gap-2 self-stretch">
-                <Label required className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                  {t('pages.clients.modals.recordPayment.last4Digits')}
-                </Label>
-                <Input
-                  type="text"
-                  value={last4Digits}
-                  onChange={(e) => handleLast4DigitsChange(e.target.value)}
-                  placeholder={t('pages.clients.modals.recordPayment.last4DigitsPlaceholder')}
-                  inputSize="md"
-                  className="rounded-md"
-                  error={last4DigitsError || undefined}
-                  maxLength={4}
-                />
-              </div>
-            )}
 
             {/* Payment Method Details - Shown for all payment methods */}
             <div className="flex flex-col items-start gap-2 self-stretch">
