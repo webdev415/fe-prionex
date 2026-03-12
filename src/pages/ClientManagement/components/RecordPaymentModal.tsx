@@ -45,7 +45,7 @@ export interface RecordPaymentModalProps {
   onSave: (data: {
     amount: number
     date: Date
-    method: 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
+    method: 'Bank Transfer' | 'Online Gateway' | 'Card'
     status: 'Pending Verification' | 'Verified'
     generateReceipt: boolean
     updateBalance: boolean
@@ -78,19 +78,17 @@ export function RecordPaymentModal({
   }
   const [paymentAmount, setPaymentAmount] = useState<string>('')
   const [paymentDate, setPaymentDate] = useState<Date | null>(getTodayAtMidnight)
-  const [paymentMethod, setPaymentMethod] = useState<
-    'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
-  >('Bank Transfer')
+  const [paymentMethod, setPaymentMethod] = useState<'Bank Transfer' | 'Online Gateway' | 'Card'>(
+    'Bank Transfer'
+  )
   const [paymentStatus, setPaymentStatus] = useState<'Pending Verification' | 'Verified'>(
     'Pending Verification'
   )
   const [generateReceipt, setGenerateReceipt] = useState(true)
   const [updateBalance, setUpdateBalance] = useState(false)
   const [amountError, setAmountError] = useState<string | null>(null)
-  const [referenceNumber, setReferenceNumber] = useState<string>('')
   const [last4Digits, setLast4Digits] = useState<string>('')
   const [paymentMethodDetails, setPaymentMethodDetails] = useState<string>('')
-  const [referenceNumberError, setReferenceNumberError] = useState<string | null>(null)
   const [last4DigitsError, setLast4DigitsError] = useState<string | null>(null)
 
   const activeDebts = useMemo(
@@ -115,59 +113,19 @@ export function RecordPaymentModal({
   today.setHours(23, 59, 59, 999) // End of today
   const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())
 
-  // Validate reference number when Bank Transfer is selected
-  const handleReferenceNumberChange = (value: string) => {
-    setReferenceNumber(value)
-    if (paymentMethod === 'Bank Transfer' && !value.trim()) {
-      setReferenceNumberError(t('pages.clients.modals.recordPayment.referenceNumberRequired'))
-    } else {
-      setReferenceNumberError(null)
-    }
-  }
-
-  // Validate last 4 digits when Card is selected
-  const handleLast4DigitsChange = (value: string) => {
-    // Only allow numeric characters
-    const numericValue = value.replace(/\D/g, '')
-    // Limit to 4 digits
-    const limitedValue = numericValue.slice(0, 4)
-    setLast4Digits(limitedValue)
-
-    if (paymentMethod === 'Card') {
-      if (!limitedValue) {
-        setLast4DigitsError(t('pages.clients.modals.recordPayment.last4DigitsRequired'))
-      } else if (limitedValue.length !== 4) {
-        setLast4DigitsError(t('pages.clients.modals.recordPayment.last4DigitsMustBe4'))
-      } else {
-        setLast4DigitsError(null)
-      }
-    }
-  }
-
   // Handle payment method change - clear related fields
   const handlePaymentMethodChange = (value: string) => {
-    const newMethod = value as 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
+    const newMethod = value as 'Bank Transfer' | 'Online Gateway' | 'Card'
     setPaymentMethod(newMethod)
 
-    // Clear errors and fields when switching methods
-    if (newMethod !== 'Bank Transfer') {
-      setReferenceNumber('')
-      setReferenceNumberError(null)
-    }
+    // Clear card fields when switching away from Card
     if (newMethod !== 'Card') {
       setLast4Digits('')
       setLast4DigitsError(null)
     }
 
-    // Re-validate if switching to a method that requires validation
-    if (newMethod === 'Bank Transfer') {
-      // Validate reference number if it exists, or set error if empty
-      if (!referenceNumber.trim()) {
-        setReferenceNumberError(t('pages.clients.modals.recordPayment.referenceNumberRequired'))
-      }
-    }
+    // Re-validate if switching to Card
     if (newMethod === 'Card') {
-      // Validate last 4 digits if they exist, or set error if empty
       if (!last4Digits) {
         setLast4DigitsError(t('pages.clients.modals.recordPayment.last4DigitsRequired'))
       } else if (last4Digits.length !== 4) {
@@ -179,13 +137,11 @@ export function RecordPaymentModal({
   // Check if there are validation errors
   const hasValidationErrors =
     !!amountError ||
-    !!referenceNumberError ||
     !!last4DigitsError ||
     !paymentDate ||
     amountValue < 0 ||
     amountValue < minAmount ||
     amountValue > maxAmount ||
-    (paymentMethod === 'Bank Transfer' && !referenceNumber.trim()) ||
     (paymentMethod === 'Card' && last4Digits.length !== 4) ||
     (activeDebts.length > 1 && !selectedDebtId)
 
@@ -245,7 +201,6 @@ export function RecordPaymentModal({
       status,
       generateReceipt,
       updateBalance,
-      referenceNumber: paymentMethod === 'Bank Transfer' ? referenceNumber.trim() : undefined,
       last4Digits: paymentMethod === 'Card' ? last4Digits : undefined,
       paymentMethodDetails: paymentMethodDetails.trim() || undefined,
       debtId: selectedDebtId ?? undefined,
@@ -259,10 +214,8 @@ export function RecordPaymentModal({
     setGenerateReceipt(true)
     setUpdateBalance(false)
     setAmountError(null)
-    setReferenceNumber('')
     setLast4Digits('')
     setPaymentMethodDetails('')
-    setReferenceNumberError(null)
     setLast4DigitsError(null)
     setSelectedDebtId(activeDebts[0]?.id ?? null)
     onClose()
@@ -277,10 +230,8 @@ export function RecordPaymentModal({
     setGenerateReceipt(true)
     setUpdateBalance(false)
     setAmountError(null)
-    setReferenceNumber('')
     setLast4Digits('')
     setPaymentMethodDetails('')
-    setReferenceNumberError(null)
     setLast4DigitsError(null)
     setSelectedDebtId(activeDebts[0]?.id ?? null)
     onClose()
@@ -416,79 +367,25 @@ export function RecordPaymentModal({
                     </Label>
                   </div>
                   <div className="flex items-center gap-2">
-                    <RadioItem value="Online Gateway" id="method-online" disabled />
+                    <RadioItem value="Online Gateway" id="method-online" />
                     <Label
                       htmlFor="method-online"
-                      className="text-dark-500 cursor-not-allowed text-sm font-light opacity-50"
+                      className="text-dark-500 cursor-pointer text-sm font-light"
                     >
                       {t('pages.clients.modals.recordPayment.onlineGateway')}
                     </Label>
                   </div>
                   <div className="flex items-center gap-2">
-                    <RadioItem value="Cash" id="method-cash" disabled />
-                    <Label
-                      htmlFor="method-cash"
-                      className="text-dark-500 cursor-not-allowed text-sm font-light opacity-50"
-                    >
-                      {t('pages.clients.modals.recordPayment.cash')}
-                    </Label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <RadioItem value="Card" id="method-card" />
+                    <RadioItem value="Card" id="method-card" disabled />
                     <Label
                       htmlFor="method-card"
-                      className="text-dark-500 cursor-pointer text-sm font-light"
+                      className="text-dark-500 cursor-not-allowed text-sm font-light opacity-50"
                     >
                       {t('pages.clients.modals.recordPayment.card')}
                     </Label>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <RadioItem value="Other" id="method-other" />
-                    <Label
-                      htmlFor="method-other"
-                      className="text-dark-500 cursor-pointer text-sm font-light"
-                    >
-                      {t('pages.clients.modals.recordPayment.other')}
-                    </Label>
-                  </div>
                 </RadioGroup>
               </div>
-
-              {/* Conditional Fields Based on Payment Method */}
-              {paymentMethod === 'Bank Transfer' && (
-                <div className="flex flex-col items-start gap-2 self-stretch">
-                  <Label required className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                    {t('pages.clients.modals.recordPayment.referenceNumber')}
-                  </Label>
-                  <Input
-                    type="text"
-                    value={referenceNumber}
-                    onChange={(e) => handleReferenceNumberChange(e.target.value)}
-                    placeholder={t('pages.clients.modals.recordPayment.referenceNumberPlaceholder')}
-                    inputSize="md"
-                    className="rounded-md"
-                    error={referenceNumberError || undefined}
-                  />
-                </div>
-              )}
-
-              {paymentMethod === 'Card' && (
-                <div className="flex flex-col items-start gap-2 self-stretch">
-                  <Label required className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                    {t('pages.clients.modals.recordPayment.last4Digits')}
-                  </Label>
-                  <Input
-                    type="text"
-                    value={last4Digits}
-                    onChange={(e) => handleLast4DigitsChange(e.target.value)}
-                    placeholder={t('pages.clients.modals.recordPayment.last4DigitsPlaceholder')}
-                    inputSize="md"
-                    className="rounded-md"
-                    error={last4DigitsError || undefined}
-                    maxLength={4}
-                  />
-                </div>
-              )}
 
               {/* Payment Method Details - Shown for all payment methods */}
               <div className="flex flex-col items-start gap-2 self-stretch">
