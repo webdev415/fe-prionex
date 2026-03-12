@@ -10,6 +10,7 @@
     "profile": "Профіль",
     "logout": "Вийти",
     "activity": "Активність",
+    "import": "Імпорт",
     "importClients": "Імпорт клієнтів",
     "projects": "Проєкти",
     "users": "Користувачі",
@@ -18,6 +19,8 @@
     "departments": "Відділи",
     "smsTemplates": "SMS Шаблони",
       "transactions": "Транзакції",
+      "operations": "Операції",
+      "bulkOperatorAssignment": "Масове призначення операторів",
       "auditLogs": "Журнал аудиту",
       "reports": "Звіти",
     "scoringConfiguration": "Конфігурація оцінки",
@@ -589,9 +592,15 @@
         "tableHeaders": {
           "dateTime": "Дата/Час",
           "fileName": "Ім'я файлу",
+          "type": "Тип",
           "status": "Статус",
           "errors": "Помилки",
           "actions": "Дії"
+        },
+        "importTypes": {
+          "simple": "Простий",
+          "vendor": "Вивантаження продавця",
+          "operatorAssignment": "Призначення операторів"
         },
         "uploadedBy": "Завантажено:",
         "view": "Перегляд",
@@ -615,7 +624,9 @@
           "status": "Статус",
           "allStatuses": "Всі статуси",
           "uploadedBy": "Завантажено",
-          "allUsers": "Всі користувачі"
+          "allUsers": "Всі користувачі",
+          "importType": "Тип",
+          "allTypes": "Всі типи"
         }
       },
       "details": {
@@ -673,6 +684,53 @@
         "messages": {
           "importFailed": "Імпорт не вдався через системну помилку. Рядки не були оброблені.",
           "someRowsFailed": "Деякі рядки не вдалися. Завантажте звіт про помилки для деталей."
+        }
+      },
+      "operatorAssignment": {
+        "title": "Масове призначення операторів",
+        "viewHistory": "Історія",
+        "preview": {
+          "title": "Попередній перегляд",
+          "previewRows": "Попередній перегляд (перші {{count}} рядків)",
+          "errors": "Помилки ({{count}})",
+          "readyToAssign": "Готово до призначення",
+          "noChange": "Без змін",
+          "invalid": "Недійсний",
+          "uniqueOperators": "Унікальні оператори",
+          "columns": {
+            "rowNumber": "#",
+            "client": "Клієнт",
+            "currentOperator": "Поточний оператор",
+            "newOperator": "Новий оператор",
+            "status": "Статус",
+            "note": "Примітка"
+          },
+          "statuses": {
+            "ready": "Готово",
+            "noChange": "Без змін",
+            "warning": "Попередження",
+            "error": "Помилка"
+          },
+          "assignmentReason": "Причина призначення (необов'язково)",
+          "assignmentReasonPlaceholder": "напр., Перерозподіл портфеля березень 2026",
+          "cancel": "Скасувати",
+          "confirm": "Підтвердити та призначити {{count}} клієнтів",
+          "starting": "Запуск..."
+        },
+        "progress": {
+          "assignmentComplete": "Призначення завершено",
+          "assignmentFailed": "Призначення не вдалося",
+          "assignmentCancelled": "Призначення скасовано",
+          "processing": "Обробка призначень...",
+          "progress": "Прогрес",
+          "totalRecords": "Всього записів",
+          "successful": "Успішно",
+          "failed": "Не вдалося",
+          "processingTime": "Час обробки: {{time}}",
+          "cancel": "Скасувати",
+          "downloadErrors": "Завантажити помилки",
+          "startNewImport": "Новий імпорт",
+          "jobStarted": "Призначення операторів запущено"
         }
       }
     },

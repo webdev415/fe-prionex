@@ -10,6 +10,7 @@
     "profile": "Профиль",
     "logout": "Выйти",
     "activity": "Активность",
+    "import": "Импорт",
     "importClients": "Импорт клиентов",
     "projects": "Проекты",
     "users": "Пользователи",
@@ -18,6 +19,8 @@
     "departments": "Отделы",
     "smsTemplates": "SMS Шаблоны",
       "transactions": "Транзакции",
+      "operations": "Операции",
+      "bulkOperatorAssignment": "Массовое назначение операторов",
       "auditLogs": "Журнал аудита",
       "reports": "Отчеты",
     "scoringConfiguration": "Конфигурация оценки",
@@ -606,9 +609,15 @@
         "tableHeaders": {
           "dateTime": "Дата/Время",
           "fileName": "Имя файла",
+          "type": "Тип",
           "status": "Статус",
           "errors": "Ошибки",
           "actions": "Действия"
+        },
+        "importTypes": {
+          "simple": "Простой",
+          "vendor": "Выгрузка продавца",
+          "operatorAssignment": "Назначение операторов"
         },
         "uploadedBy": "Загружено:",
         "view": "Просмотр",
@@ -632,7 +641,9 @@
           "status": "Статус",
           "allStatuses": "Все статусы",
           "uploadedBy": "Загружено",
-          "allUsers": "Все пользователи"
+          "allUsers": "Все пользователи",
+          "importType": "Тип",
+          "allTypes": "Все типы"
         }
       },
       "details": {
@@ -690,6 +701,53 @@
         "messages": {
           "importFailed": "Импорт не удался из-за системной ошибки. Строки не были обработаны.",
           "someRowsFailed": "Некоторые строки не удались. Скачайте отчет об ошибках для деталей."
+        }
+      },
+      "operatorAssignment": {
+        "title": "Массовое назначение операторов",
+        "viewHistory": "История",
+        "preview": {
+          "title": "Предварительный просмотр",
+          "previewRows": "Предпросмотр (первые {{count}} строк)",
+          "errors": "Ошибки ({{count}})",
+          "readyToAssign": "Готово к назначению",
+          "noChange": "Без изменений",
+          "invalid": "Недействительно",
+          "uniqueOperators": "Уникальные операторы",
+          "columns": {
+            "rowNumber": "#",
+            "client": "Клиент",
+            "currentOperator": "Текущий оператор",
+            "newOperator": "Новый оператор",
+            "status": "Статус",
+            "note": "Примечание"
+          },
+          "statuses": {
+            "ready": "Готово",
+            "noChange": "Без изменений",
+            "warning": "Предупреждение",
+            "error": "Ошибка"
+          },
+          "assignmentReason": "Причина назначения (необязательно)",
+          "assignmentReasonPlaceholder": "напр., Перераспределение портфеля март 2026",
+          "cancel": "Отмена",
+          "confirm": "Подтвердить и назначить {{count}} клиентов",
+          "starting": "Запуск..."
+        },
+        "progress": {
+          "assignmentComplete": "Назначение завершено",
+          "assignmentFailed": "Назначение не удалось",
+          "assignmentCancelled": "Назначение отменено",
+          "processing": "Обработка назначений...",
+          "progress": "Прогресс",
+          "totalRecords": "Всего записей",
+          "successful": "Успешно",
+          "failed": "Не удалось",
+          "processingTime": "Время обработки: {{time}}",
+          "cancel": "Отмена",
+          "downloadErrors": "Скачать ошибки",
+          "startNewImport": "Новый импорт",
+          "jobStarted": "Назначение операторов запущено"
         }
       }
     },

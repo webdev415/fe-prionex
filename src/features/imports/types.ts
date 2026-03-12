@@ -8,7 +8,7 @@
 export type ImportJobStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled'
 
 // Import Type
-export type ImportType = 'simple' | 'vendor'
+export type ImportType = 'simple' | 'vendor' | 'operator_assignment'
 
 // Import Job (from GET /api/import/jobs)
 export interface ImportJob {
@@ -73,6 +73,7 @@ export interface ImportJobsListParams {
   date_from?: string // ISO date string
   date_to?: string // ISO date string
   exclude_status?: ImportJobStatus[] // Exclude jobs with these statuses
+  import_type?: ImportType // Filter by import type
 }
 
 // Upload Import Request

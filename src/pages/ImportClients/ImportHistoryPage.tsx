@@ -33,6 +33,7 @@ export interface ImportHistoryItem {
   uploadedBy: string
   status: 'done' | 'failed' | 'in_progress' | 'pending' | 'cancelled'
   errors: number
+  importType: string
 }
 
 // Helper to convert API ImportJob to ImportHistoryItem
@@ -56,6 +57,7 @@ function mapImportJobToHistoryItem(job: ImportJob): ImportHistoryItem {
                 ? 'cancelled'
                 : 'done', // Default fallback
     errors: job.errors_count,
+    importType: job.import_type || 'simple',
   }
 }
 
@@ -69,7 +71,7 @@ function ImportStatusBadge({
 
   if (status === 'done') {
     return (
-      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-[#204E4D] px-3 text-xs font-medium text-white">
+      <span className="bg-secondary-800 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
         <span className="h-2 w-2 rounded-full bg-white" />
         {t('pages.imports.history.statuses.done')}
       </span>
@@ -111,6 +113,36 @@ function ImportStatusBadge({
   )
 }
 
+// Import Type Badge Component
+function ImportTypeBadge({ importType }: { importType: string }) {
+  const { t } = useTranslation('common')
+
+  const config: Record<string, { label: string; className: string }> = {
+    simple: {
+      label: t('pages.imports.history.importTypes.simple', 'Simple'),
+      className: 'bg-primary-300 text-dark-500',
+    },
+    vendor: {
+      label: t('pages.imports.history.importTypes.vendor', 'Vendor Dump'),
+      className: 'bg-secondary-800 text-white',
+    },
+    operator_assignment: {
+      label: t('pages.imports.history.importTypes.operatorAssignment', 'Operator Assignment'),
+      className: 'bg-primary-700 text-white',
+    },
+  }
+
+  const cfg = config[importType] || config.simple
+
+  return (
+    <span
+      className={`inline-flex h-[28px] items-center rounded-full px-2.5 text-[11px] font-medium ${cfg.className}`}
+    >
+      {cfg.label}
+    </span>
+  )
+}
+
 export function ImportHistoryPage() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
@@ -129,6 +161,7 @@ export function ImportHistoryPage() {
   const [dateRangeFilter, setDateRangeFilter] = useURLState<string>('date_range', '')
   const [statusFilter, setStatusFilter] = useURLState<string>('status', '')
   const [uploadedByFilter, setUploadedByFilter] = useURLState<string>('uploaded_by', '')
+  const [importTypeFilter, setImportTypeFilter] = useURLState<string>('import_type', '')
 
   // Add persistence for state
   useAutoPersistedState(
@@ -142,6 +175,7 @@ export function ImportHistoryPage() {
       dateRangeFilter,
       statusFilter,
       uploadedByFilter,
+      importTypeFilter,
     },
     {
       currentPage: setCurrentPage,
@@ -152,6 +186,7 @@ export function ImportHistoryPage() {
       dateRangeFilter: setDateRangeFilter,
       statusFilter: setStatusFilter,
       uploadedByFilter: setUploadedByFilter,
+      importTypeFilter: setImportTypeFilter,
     }
   )
 
@@ -162,8 +197,9 @@ export function ImportHistoryPage() {
       dateRange: dateRangeFilter || undefined,
       status: statusFilter || undefined,
       uploadedBy: uploadedByFilter || undefined,
+      importType: importTypeFilter || undefined,
     }),
-    [searchFilenameFilter, dateRangeFilter, statusFilter, uploadedByFilter]
+    [searchFilenameFilter, dateRangeFilter, statusFilter, uploadedByFilter, importTypeFilter]
   )
 
   // Reconstruct sortConfig from URL state
@@ -194,6 +230,10 @@ export function ImportHistoryPage() {
 
     if (filters.searchFilename) {
       params.search = filters.searchFilename
+    }
+
+    if (filters.importType && filters.importType !== 'all') {
+      params.import_type = filters.importType as ImportJobsListParams['import_type']
     }
 
     // Only allow filtering by 'completed', 'failed', or 'cancelled' status
@@ -316,6 +356,10 @@ export function ImportHistoryPage() {
             aValue = a.status
             bValue = b.status
             break
+          case 'importType':
+            aValue = a.importType
+            bValue = b.importType
+            break
           case 'errors':
             aValue = a.errors
             bValue = b.errors
@@ -352,7 +396,8 @@ export function ImportHistoryPage() {
       prevFilters.searchFilename !== filters.searchFilename ||
       prevFilters.dateRange !== filters.dateRange ||
       prevFilters.status !== filters.status ||
-      prevFilters.uploadedBy !== filters.uploadedBy
+      prevFilters.uploadedBy !== filters.uploadedBy ||
+      prevFilters.importType !== filters.importType
 
     if (filtersChanged) {
       prevFiltersRef.current = filters
@@ -366,6 +411,7 @@ export function ImportHistoryPage() {
     filters.dateRange,
     filters.status,
     filters.uploadedBy,
+    filters.importType,
     filters,
     setCurrentPage,
   ])
@@ -419,9 +465,16 @@ export function ImportHistoryPage() {
       setDateRangeFilter(newFilters.dateRange || '')
       setStatusFilter(newFilters.status || '')
       setUploadedByFilter(newFilters.uploadedBy || '')
+      setImportTypeFilter(newFilters.importType || '')
       // Page reset is handled by useEffect above
     },
-    [setSearchFilenameFilter, setDateRangeFilter, setStatusFilter, setUploadedByFilter]
+    [
+      setSearchFilenameFilter,
+      setDateRangeFilter,
+      setStatusFilter,
+      setUploadedByFilter,
+      setImportTypeFilter,
+    ]
   )
 
   const handleClearFilters = useCallback(() => {
@@ -430,12 +483,14 @@ export function ImportHistoryPage() {
       dateRange: undefined,
       status: undefined,
       uploadedBy: undefined,
+      importType: undefined,
     }
     // Update individual URL state for each filter field
     setSearchFilenameFilter('')
     setDateRangeFilter('')
     setStatusFilter('')
     setUploadedByFilter('')
+    setImportTypeFilter('')
     setCurrentPage(1)
     // Explicitly trigger filter change to ensure child component syncs
     handleFilterChange(clearedFilters)
@@ -445,6 +500,7 @@ export function ImportHistoryPage() {
     setDateRangeFilter,
     setStatusFilter,
     setUploadedByFilter,
+    setImportTypeFilter,
     setCurrentPage,
   ])
 
@@ -458,7 +514,8 @@ export function ImportHistoryPage() {
       filters.searchFilename ||
       (filters.dateRange && filters.dateRange !== 'all') ||
       (filters.status && filters.status !== 'all') ||
-      (filters.uploadedBy && filters.uploadedBy !== 'all')
+      (filters.uploadedBy && filters.uploadedBy !== 'all') ||
+      (filters.importType && filters.importType !== 'all')
     )
   }, [filters])
 
@@ -489,6 +546,12 @@ export function ImportHistoryPage() {
           </span>
         </div>
       ),
+    },
+    {
+      key: 'importType',
+      header: t('pages.imports.history.tableHeaders.type', 'Type'),
+      sortable: true,
+      render: (item) => <ImportTypeBadge importType={item.importType} />,
     },
     {
       key: 'status',

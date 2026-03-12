@@ -28,6 +28,7 @@ import { ConfigurationHistoryPage } from '@/pages/ScoringConfiguration/Configura
 import { AuditLogsPage } from '@/pages/AuditLogs'
 import { TagsPage } from '@/pages/Tags/TagsPage'
 import { ProfileSettingsPage } from '@/pages/ProfileSettings/ProfileSettingsPage'
+import { BulkOperatorAssignmentPage } from '@/pages/Operations'
 
 export const router = createBrowserRouter([
   {
@@ -220,6 +221,19 @@ export const router = createBrowserRouter([
         <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
           <DashboardLayout>
             <SmsTemplatesPage />
+          </DashboardLayout>
+        </PermissionRoute>
+      </ProtectedRoute>
+    ),
+  },
+  // Operations routes
+  {
+    path: '/dashboard/operations/bulk-operator-assignment',
+    element: (
+      <ProtectedRoute>
+        <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.EDIT}>
+          <DashboardLayout>
+            <BulkOperatorAssignmentPage />
           </DashboardLayout>
         </PermissionRoute>
       </ProtectedRoute>

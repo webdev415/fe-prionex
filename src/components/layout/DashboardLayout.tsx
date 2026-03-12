@@ -567,8 +567,22 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {
         path: '/dashboard/import',
         icon: 'file-import',
-        label: t('navigation.importClients'),
+        label: t('navigation.import', 'Import'),
         requiredPermission: PERMISSIONS.DATA.IMPORT,
+        subItems: [
+          {
+            path: '/dashboard/import',
+            label: t('navigation.importClients'),
+            icon: 'file-import',
+            requiredPermission: PERMISSIONS.DATA.IMPORT,
+          },
+          {
+            path: '/dashboard/operations/bulk-operator-assignment',
+            label: t('navigation.bulkOperatorAssignment', 'Bulk Operator Assignment'),
+            icon: 'user-multiple-02',
+            requiredPermission: PERMISSIONS.CLIENTS.EDIT,
+          },
+        ],
       },
       {
         path: '/dashboard/projects',

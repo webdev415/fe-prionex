@@ -39,6 +39,7 @@ interface BackendImportJobResponse {
   completed_at: string | null
   processing_duration: number | null
   estimated_completion_time: string | null
+  import_type: string | null
   import_options: Record<string, unknown> | null
   error_summary: Record<string, unknown> | null
   error_report_path: string | null
@@ -80,7 +81,9 @@ function mapStatus(status: string): ImportJobStatus {
   switch (status) {
     case 'processing':
       return 'in_progress'
+    case 'validated':
     case 'pending':
+      return 'pending'
     case 'completed':
     case 'failed':
     case 'cancelled':
@@ -147,7 +150,10 @@ export function transformImportJob(backend: BackendImportJobResponse): ImportJob
     uploaded_at: backend.created_at,
     status: mapStatus(backend.status),
     errors_count: backend.failed_records,
-    import_type: (metadata.import_type as 'simple' | 'vendor') || 'simple',
+    import_type:
+      (backend.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
+      (metadata.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
+      'simple',
     seller_creditor: metadata.seller_creditor,
     project_code: metadata.project_code,
     purchase_date: metadata.purchase_date,
@@ -173,7 +179,10 @@ export function transformImportJobDetail(backend: BackendImportJobResponse): Imp
     updated_clients: backend.updated_records,
     errors_count: backend.failed_records,
     processing_time: formatProcessingTime(backend.processing_duration),
-    import_type: (metadata.import_type as 'simple' | 'vendor') || 'simple',
+    import_type:
+      (backend.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
+      (metadata.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
+      'simple',
     seller_creditor: metadata.seller_creditor,
     project_code: metadata.project_code,
     purchase_date: metadata.purchase_date,
