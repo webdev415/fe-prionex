@@ -975,6 +975,7 @@
           "paymentMethod": "Способ оплаты",
           "status": "Статус",
           "paymentDistribution": "Распределение платежа",
+          "paymentType": "Тип платежа",
           "fixationOnEmployee": "Фиксация на (сотрудник)",
           "writeOffDate": "Дата списания",
           "writeOffMethod": "Способ списания",

@@ -28,7 +28,7 @@ import { ConfigurationHistoryPage } from '@/pages/ScoringConfiguration/Configura
 import { AuditLogsPage } from '@/pages/AuditLogs'
 import { TagsPage } from '@/pages/Tags/TagsPage'
 import { ProfileSettingsPage } from '@/pages/ProfileSettings/ProfileSettingsPage'
-import { BulkOperatorAssignmentPage } from '@/pages/Operations'
+import { BulkOperatorAssignmentPage, BulkPaymentImportPage } from '@/pages/Operations'
 
 export const router = createBrowserRouter([
   {
@@ -234,6 +234,18 @@ export const router = createBrowserRouter([
         <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.EDIT}>
           <DashboardLayout>
             <BulkOperatorAssignmentPage />
+          </DashboardLayout>
+        </PermissionRoute>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/dashboard/operations/bulk-payment-import',
+    element: (
+      <ProtectedRoute>
+        <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT_PAYMENTS}>
+          <DashboardLayout>
+            <BulkPaymentImportPage />
           </DashboardLayout>
         </PermissionRoute>
       </ProtectedRoute>

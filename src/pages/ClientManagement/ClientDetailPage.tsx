@@ -356,7 +356,7 @@ export function ClientDetailPage() {
         amount: Number(p.amount),
         paymentMethod: p.payment_method,
         status: p.status,
-        paymentDistribution: `${p.principal_paid} principal, ${p.interest_paid} interest`,
+        paymentDistribution: p.payment_type ?? '-',
         employee: p.recorded_by_username ?? '-',
       })),
       // Write-offs mapped
@@ -913,7 +913,7 @@ export function ClientDetailPage() {
     },
     {
       key: 'paymentDistribution',
-      header: t('pages.clients.detail.tableHeaders.paymentDistribution'),
+      header: t('pages.clients.detail.tableHeaders.paymentType'),
       align: 'left',
     },
     {

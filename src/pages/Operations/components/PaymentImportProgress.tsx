@@ -1,0 +1,150 @@
+import { useQuery } from '@tanstack/react-query'
+import { importsApi } from '@/features/imports/api/importsApi'
+import { importJobsKeys } from '@/features/imports/hooks/useImportJobs'
+import { useCancelImport, useExportImportErrors } from '@/features/imports/hooks/useImportMutations'
+import { Icons } from '@/lib/icons'
+import { Button } from '@/components/ui/Button'
+
+interface Props {
+  jobId: number
+  onComplete: () => void
+}
+
+export function PaymentImportProgress({ jobId, onComplete }: Props) {
+  const cancelMutation = useCancelImport()
+  const exportErrorsMutation = useExportImportErrors()
+
+  const { data: job } = useQuery({
+    queryKey: importJobsKeys.detail(jobId),
+    queryFn: () => importsApi.getImportJobDetail(jobId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status
+      if (status === 'completed' || status === 'failed' || status === 'cancelled') {
+        return false
+      }
+      return 2000
+    },
+  })
+
+  if (!job) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Icons.Spinner className="h-8 w-8" />
+      </div>
+    )
+  }
+
+  const isActive = job.status === 'in_progress' || job.status === 'pending'
+  const isComplete = job.status === 'completed'
+  const isFailed = job.status === 'failed'
+  const isCancelled = job.status === 'cancelled'
+  const hasErrors = job.errors_count > 0
+  const progressPct =
+    job.progress_percentage ??
+    (job.total_rows > 0
+      ? Math.round(((job.new_clients + job.errors_count) / job.total_rows) * 100)
+      : 0)
+
+  return (
+    <div className="space-y-6">
+      {/* Status header */}
+      <div className="flex items-center gap-3">
+        {isComplete && <Icons.Success size={24} className="text-success-500" />}
+        {isFailed && <Icons.Cancel01 size={24} className="text-error-500" />}
+        {isCancelled && <Icons.Cancel01 size={24} className="text-gray-400" />}
+        {isActive && <Icons.Spinner className="h-6 w-6" />}
+        <div>
+          <h3 className="text-dark-500 text-lg font-medium">
+            {isComplete && 'Payment Import Complete'}
+            {isFailed && 'Payment Import Failed'}
+            {isCancelled && 'Payment Import Cancelled'}
+            {isActive && 'Processing Payments...'}
+          </h3>
+          <p className="text-sm text-gray-600">{job.file_name}</p>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      {isActive && (
+        <div>
+          <div className="mb-1 flex justify-between text-sm text-gray-600">
+            <span>Progress</span>
+            <span>{progressPct}%</span>
+          </div>
+          <div className="h-2.5 w-full rounded-full bg-gray-200">
+            <div
+              className="bg-secondary-700 h-2.5 rounded-full transition-all duration-500"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="rounded-xl border border-gray-200 bg-white/50 px-4 py-3 shadow-sm">
+          <p className="text-dark-500 text-2xl font-bold">{job.total_rows}</p>
+          <p className="text-xs text-gray-600">Total Records</p>
+        </div>
+        <div className="border-success-200 bg-success-50 rounded-xl border px-4 py-3 shadow-sm">
+          <p className="text-success-700 text-2xl font-bold">{job.new_clients}</p>
+          <p className="text-xs text-gray-600">Payments Created</p>
+        </div>
+        <div className="border-error-200 bg-error-50 rounded-xl border px-4 py-3 shadow-sm">
+          <p className="text-error-700 text-2xl font-bold">{job.errors_count}</p>
+          <p className="text-xs text-gray-600">Failed</p>
+        </div>
+      </div>
+
+      {/* Error details */}
+      {isFailed && job.error_summary && (
+        <div className="border-error-200 bg-error-50 rounded-lg border p-3">
+          <p className="text-error-700 text-sm font-medium">Error Details</p>
+          <p className="text-error-600 mt-1 text-sm">
+            {typeof job.error_summary === 'string'
+              ? job.error_summary
+              : (job.error_summary as Record<string, unknown>)?.fatal
+                ? String((job.error_summary as Record<string, unknown>).fatal)
+                : JSON.stringify(job.error_summary)}
+          </p>
+        </div>
+      )}
+
+      {/* Processing time */}
+      {(isComplete || isFailed) && job.processing_time && (
+        <p className="text-sm text-gray-600">Processing time: {job.processing_time}</p>
+      )}
+
+      {/* Actions */}
+      <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-4">
+        {isActive && (
+          <Button
+            variant="danger"
+            size="md"
+            onClick={() => cancelMutation.mutate(jobId)}
+            disabled={cancelMutation.isPending}
+            isLoading={cancelMutation.isPending}
+          >
+            Cancel Import
+          </Button>
+        )}
+        {(isComplete || isFailed || isCancelled) && hasErrors && (
+          <Button
+            variant="white-secondary"
+            size="md"
+            onClick={() => exportErrorsMutation.mutate(jobId)}
+            disabled={exportErrorsMutation.isPending}
+            isLoading={exportErrorsMutation.isPending}
+          >
+            Download Errors
+          </Button>
+        )}
+        {(isComplete || isFailed || isCancelled) && (
+          <Button variant="secondary" size="md" onClick={onComplete}>
+            Start New Import
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}

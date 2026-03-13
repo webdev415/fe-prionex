@@ -985,6 +985,7 @@
           "paymentMethod": "Payment method",
           "status": "Status",
           "paymentDistribution": "Payment distribution",
+          "paymentType": "Payment type",
           "fixationOnEmployee": "Ficsation on (emploee)",
           "writeOffDate": "Write-off date",
           "writeOffMethod": "Write-off method",

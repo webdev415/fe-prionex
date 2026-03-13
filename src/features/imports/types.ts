@@ -44,6 +44,7 @@ export interface ImportJobDetail {
   comment?: string
   progress_percentage?: number // 0-100, only for in_progress
   processing_row?: number // Current row being processed, only for in_progress
+  error_summary?: Record<string, unknown> | string | null // Error details on failure
 }
 
 // Import Error (from GET /api/import/jobs/{id}/errors)

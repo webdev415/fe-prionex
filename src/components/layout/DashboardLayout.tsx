@@ -568,7 +568,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         path: '/dashboard/import',
         icon: 'file-import',
         label: t('navigation.import', 'Import'),
-        requiredPermission: PERMISSIONS.DATA.IMPORT,
         subItems: [
           {
             path: '/dashboard/import',
@@ -581,6 +580,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             label: t('navigation.bulkOperatorAssignment', 'Bulk Operator Assignment'),
             icon: 'user-multiple-02',
             requiredPermission: PERMISSIONS.CLIENTS.EDIT,
+          },
+          {
+            path: '/dashboard/operations/bulk-payment-import',
+            label: t('navigation.bulkPaymentImport', 'Bulk Payment Import'),
+            icon: 'transaction-history',
+            requiredPermission: PERMISSIONS.DATA.IMPORT_PAYMENTS,
           },
         ],
       },
@@ -654,74 +659,43 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       },
     ]
 
+    const hasPermission = (
+      perm?: Permission,
+      perms?: Permission[],
+      mode?: 'any' | 'all'
+    ): boolean => {
+      if (!perm && !perms) return true
+      if (perm) return user?.permissions?.includes(perm) ?? false
+      if (perms && perms.length > 0) {
+        if (mode === 'any') {
+          return perms.some((p: Permission) => user?.permissions?.includes(p)) ?? false
+        }
+        return perms.every((p: Permission) => user?.permissions?.includes(p)) ?? false
+      }
+      return true
+    }
+
     const filteredItems = allNavItems
-      .filter((item) => {
-        // Always show disabled items (for visual consistency)
-        if (item.disabled) return true
-
-        // No permission required - show to all users
-        if (!item.requiredPermission && !item.requiredPermissions) return true
-
-        // Check single permission
-        if (item.requiredPermission) {
-          return user?.permissions?.includes(item.requiredPermission) ?? false
-        }
-
-        // Check multiple permissions
-        if (item.requiredPermissions && item.requiredPermissions.length > 0) {
-          if (item.mode === 'any') {
-            // User needs at least one of the permissions
-            return (
-              item.requiredPermissions.some((p: Permission) => user?.permissions?.includes(p)) ??
-              false
-            )
-          } else {
-            // User needs all of the permissions (default)
-            return (
-              item.requiredPermissions.every((p: Permission) => user?.permissions?.includes(p)) ??
-              false
-            )
-          }
-        }
-
-        // Default: show the item
-        return true
-      })
       .map((item) => {
-        // Filter sub-items based on permissions
+        // Filter sub-items first based on permissions
         if (item.subItems) {
-          const filteredSubItems = item.subItems.filter((subItem) => {
-            // No permission required - show to all users
-            if (!subItem.requiredPermission && !subItem.requiredPermissions) return true
-
-            // Check single permission
-            if (subItem.requiredPermission) {
-              return user?.permissions?.includes(subItem.requiredPermission) ?? false
-            }
-
-            // Check multiple permissions
-            if (subItem.requiredPermissions && subItem.requiredPermissions.length > 0) {
-              if (subItem.mode === 'any') {
-                return (
-                  subItem.requiredPermissions.some((p: Permission) =>
-                    user?.permissions?.includes(p)
-                  ) ?? false
-                )
-              } else {
-                return (
-                  subItem.requiredPermissions.every((p: Permission) =>
-                    user?.permissions?.includes(p)
-                  ) ?? false
-                )
-              }
-            }
-
-            return true
-          })
-
+          const filteredSubItems = item.subItems.filter((subItem) =>
+            hasPermission(subItem.requiredPermission, subItem.requiredPermissions, subItem.mode)
+          )
           return { ...item, subItems: filteredSubItems }
         }
         return item
+      })
+      .filter((item) => {
+        if (item.disabled) return true
+
+        // If item has sub-items, show parent when at least one sub-item is visible
+        if (item.subItems) {
+          return item.subItems.length > 0
+        }
+
+        // Leaf items: check own permission
+        return hasPermission(item.requiredPermission, item.requiredPermissions, item.mode)
       })
 
     // Separate System Settings to render at bottom

@@ -193,6 +193,7 @@ export function transformImportJobDetail(backend: BackendImportJobResponse): Imp
           calculateProgressPercentage(backend.processed_records, backend.total_records))
         : undefined,
     processing_row: status === 'in_progress' ? backend.processed_records : undefined,
+    error_summary: backend.error_summary ?? null,
   }
 }
 
