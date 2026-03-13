@@ -550,6 +550,50 @@ export function useCreateRestructuringAgreement() {
   })
 }
 
+/**
+ * Close a debt (set status to 'closed').
+ */
+export function useCloseDebt() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, debtId }: { clientId: number; debtId: number }) =>
+      clientApi.closeDebt(clientId, debtId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      toast.success('Loan closed successfully')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to close loan'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Complete a restructuring agreement (set status_id to 4).
+ */
+export function useCompleteRestructuringAgreement() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, raId }: { clientId: number; raId: number }) =>
+      clientApi.completeRestructuringAgreement(clientId, raId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringAgreements(variables.clientId),
+      })
+      toast.success('Restructuring agreement completed')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to complete restructuring agreement'
+      toast.error(message)
+    },
+  })
+}
+
 // --- Task mutations ---
 
 /**

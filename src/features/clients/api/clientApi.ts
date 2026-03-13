@@ -307,6 +307,32 @@ export async function createRestructuringAgreement(
 }
 
 /**
+ * Close a debt (set status to 'closed')
+ */
+export async function closeDebt(
+  clientId: number,
+  debtId: number
+): Promise<{ id: number; status: string }> {
+  const response = await api.patch<{ id: number; status: string }>(
+    `${BASE_URL}/${clientId}/debts/${debtId}/close`
+  )
+  return response.data
+}
+
+/**
+ * Complete a restructuring agreement (set status_id to 4)
+ */
+export async function completeRestructuringAgreement(
+  clientId: number,
+  raId: number
+): Promise<{ id: number; status_id: number }> {
+  const response = await api.patch<{ id: number; status_id: number }>(
+    `${BASE_URL}/${clientId}/restructuring-agreements/${raId}/complete`
+  )
+  return response.data
+}
+
+/**
  * Get all contact types from the lookup table
  */
 export async function getContactTypes(): Promise<ContactTypeOption[]> {
@@ -345,4 +371,6 @@ export const clientApi = {
   getClientRestructuringAgreements,
   getRestructuringAgreementDetail,
   createRestructuringAgreement,
+  closeDebt,
+  completeRestructuringAgreement,
 }
