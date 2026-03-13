@@ -520,6 +520,7 @@ export interface PaymentResponse {
   fines_paid: string
   payment_method: string
   payment_method_details?: string | null
+  payment_type?: string | null
   status: string
   payment_date: string
   recorded_at: string

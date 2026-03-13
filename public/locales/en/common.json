@@ -10,6 +10,7 @@
       "profile": "Profile",
       "logout": "Logout",
       "activity": "Activity",
+      "import": "Import",
       "importClients": "Import Clients",
       "projects": "Projects",
       "users": "Users",
@@ -18,6 +19,8 @@
       "departments": "Departments",
       "smsTemplates": "SMS Templates",
       "transactions": "Transactions",
+      "operations": "Operations",
+      "bulkOperatorAssignment": "Bulk Operator Assignment",
       "auditLogs": "Audit Logs",
       "reports": "Reports",
       "scoringConfiguration": "Scoring Configuration",
@@ -589,9 +592,15 @@
         "tableHeaders": {
           "dateTime": "Date/Time",
           "fileName": "File name",
+          "type": "Type",
           "status": "Status",
           "errors": "Errors",
           "actions": "Actions"
+        },
+        "importTypes": {
+          "simple": "Simple",
+          "vendor": "Vendor Dump",
+          "operatorAssignment": "Operator Assignment"
         },
         "uploadedBy": "Uploaded by:",
         "view": "View",
@@ -615,7 +624,9 @@
           "status": "Status",
           "allStatuses": "All statuses",
           "uploadedBy": "Uploaded by",
-          "allUsers": "All users"
+          "allUsers": "All users",
+          "importType": "Type",
+          "allTypes": "All Types"
         }
       },
       "details": {
@@ -673,6 +684,54 @@
         "messages": {
           "importFailed": "The import failed due to a system error. No rows were processed.",
           "someRowsFailed": "Some rows failed. Download error report for details."
+        }
+      },
+      "operatorAssignment": {
+        "title": "Bulk Operator Assignment",
+        "viewHistory": "View History",
+        "preview": {
+          "title": "Validation Preview",
+          "fileInfo": "File: {{filename}} · {{totalRecords}} records · Batch: {{batchId}}",
+          "previewRows": "Preview (first {{count}} rows)",
+          "errors": "Errors ({{count}})",
+          "readyToAssign": "Ready to assign",
+          "noChange": "No change",
+          "invalid": "Invalid",
+          "uniqueOperators": "Unique operators",
+          "columns": {
+            "rowNumber": "#",
+            "client": "Client",
+            "currentOperator": "Current Operator",
+            "newOperator": "New Operator",
+            "status": "Status",
+            "note": "Note"
+          },
+          "statuses": {
+            "ready": "Ready",
+            "noChange": "No Change",
+            "warning": "Warning",
+            "error": "Error"
+          },
+          "assignmentReason": "Assignment Reason (optional)",
+          "assignmentReasonPlaceholder": "e.g., March 2026 portfolio redistribution",
+          "cancel": "Cancel",
+          "confirm": "Confirm & Assign {{count}} Clients",
+          "starting": "Starting..."
+        },
+        "progress": {
+          "assignmentComplete": "Assignment Complete",
+          "assignmentFailed": "Assignment Failed",
+          "assignmentCancelled": "Assignment Cancelled",
+          "processing": "Processing Assignments...",
+          "progress": "Progress",
+          "totalRecords": "Total Records",
+          "successful": "Successful",
+          "failed": "Failed",
+          "processingTime": "Processing time: {{time}}",
+          "cancel": "Cancel",
+          "downloadErrors": "Download Errors",
+          "startNewImport": "Start New Import",
+          "jobStarted": "Operator assignment job started"
         }
       }
     },
@@ -926,6 +985,7 @@
           "paymentMethod": "Payment method",
           "status": "Status",
           "paymentDistribution": "Payment distribution",
+          "paymentType": "Payment type",
           "fixationOnEmployee": "Ficsation on (emploee)",
           "writeOffDate": "Write-off date",
           "writeOffMethod": "Write-off method",

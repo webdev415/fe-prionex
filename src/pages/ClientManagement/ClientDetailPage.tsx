@@ -59,6 +59,8 @@ import {
   useClientRestructuringAgreements,
   useRestructuringAgreementDetail,
   useCreateRestructuringAgreement,
+  useCloseDebt,
+  useCompleteRestructuringAgreement,
 } from '@/features/clients/hooks/useClients'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
 import { useCreateNoteInteraction } from '@/features/clients/hooks/useNoteInteraction'
@@ -150,6 +152,8 @@ export function ClientDetailPage() {
     }>,
   })
   const [connectRrError, setConnectRrError] = useState<string | null>(null)
+  const [closeLoanConfirm, setCloseLoanConfirm] = useState<number | null>(null) // debtId to close
+  const [completeRrConfirm, setCompleteRrConfirm] = useState<number | null>(null) // raId to complete
   const [activeCommentTab, setActiveCommentTab] = useState<'comments' | 'primary' | 'dial-history'>(
     'comments'
   )
@@ -188,6 +192,8 @@ export function ClientDetailPage() {
     !!selectedRaId
   )
   const { mutate: createRr, isPending: isCreatingRr } = useCreateRestructuringAgreement()
+  const { mutate: closeDebt, isPending: isClosingDebt } = useCloseDebt()
+  const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
   const { data: paymentsSection, isLoading: isPaymentsLoading } = useClientPaymentsSection(
     clientId,
     isValidClientId
@@ -343,7 +349,7 @@ export function ClientDetailPage() {
         principalAmount: Number(d.principal_amount ?? 0),
         principalDebt: Number(d.principal_debt ?? d.principal_amount ?? 0),
         remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
-        totalToReturn: Number(d.total_to_return ?? d.remaining_debt_amount ?? 0),
+        totalToReturn: Number(d.total_to_return ?? 0),
         status: d.status,
       })),
       // Payments mapped from PaymentResponse to UI shape
@@ -356,7 +362,7 @@ export function ClientDetailPage() {
         amount: Number(p.amount),
         paymentMethod: p.payment_method,
         status: p.status,
-        paymentDistribution: `${p.principal_paid} principal, ${p.interest_paid} interest`,
+        paymentDistribution: p.payment_type ?? '-',
         employee: p.recorded_by_username ?? '-',
       })),
       // Write-offs mapped
@@ -719,6 +725,22 @@ export function ClientDetailPage() {
       align: 'right',
       render: (loan) => `₴ ${formatCurrency(loan.totalToReturn)}`,
     },
+    {
+      key: 'actions',
+      header: t('pages.clients.detail.tableHeaders.actions'),
+      align: 'center',
+      render: (loan) =>
+        loan.status === 'active' ? (
+          <button
+            onClick={() => setCloseLoanConfirm(loan.id)}
+            disabled={isClosingDebt}
+            className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+            title={t('pages.clients.detail.closeLoan')}
+          >
+            <Icons.Success size={18} />
+          </button>
+        ) : null,
+    },
   ]
 
   type RrRow = (typeof restructuringAgreements)[0]
@@ -758,17 +780,51 @@ export function ClientDetailPage() {
       render: (row) => `₴ ${formatCurrency(Number(row.remaining_debt_amount ?? 0))}`,
     },
     {
+      key: 'status_name',
+      header: t('pages.clients.detail.tableHeaders.status', 'Статус'),
+      align: 'center',
+      render: (row) => {
+        const sid = row.status_id
+        const label = row.status_name ?? '-'
+        const cls =
+          sid === 4
+            ? 'bg-green-100 text-green-800'
+            : sid === 1
+              ? 'bg-blue-100 text-blue-800'
+              : 'bg-gray-100 text-gray-600'
+        return (
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}
+          >
+            {label}
+          </span>
+        )
+      },
+    },
+    {
       key: 'id',
       header: t('pages.clients.detail.tableHeaders.actions'),
       align: 'center',
       render: (row) => (
-        <button
-          onClick={() => setSelectedRaId(row.id)}
-          className="text-secondary-800 hover:text-secondary-600 p-1"
-          title={t('pages.clients.detail.viewDetail')}
-        >
-          <Icons.Eye size={18} />
-        </button>
+        <div className="flex items-center justify-center gap-1">
+          <button
+            onClick={() => setSelectedRaId(row.id)}
+            className="text-secondary-800 hover:text-secondary-600 p-1"
+            title={t('pages.clients.detail.viewDetail')}
+          >
+            <Icons.Eye size={18} />
+          </button>
+          {row.status_id !== 4 && (
+            <button
+              onClick={() => setCompleteRrConfirm(row.id)}
+              disabled={isCompletingRa}
+              className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+              title={t('pages.clients.detail.completeRR', 'Complete RR')}
+            >
+              <Icons.Success size={18} />
+            </button>
+          )}
+        </div>
       ),
     },
   ]
@@ -913,7 +969,7 @@ export function ClientDetailPage() {
     },
     {
       key: 'paymentDistribution',
-      header: t('pages.clients.detail.tableHeaders.paymentDistribution'),
+      header: t('pages.clients.detail.tableHeaders.paymentType'),
       align: 'left',
     },
     {
@@ -3199,6 +3255,107 @@ export function ClientDetailPage() {
               className="w-full rounded-md sm:w-auto"
             >
               {t('actions.close')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Close Loan Confirmation Modal */}
+        <Modal
+          open={closeLoanConfirm !== null}
+          onClose={() => setCloseLoanConfirm(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.CancelCircle size={20} className="text-dark-500" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.closeLoan')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 text-base font-light">
+              {t(
+                'pages.clients.detail.confirmCloseLoan',
+                'Are you sure you want to close this loan? This action cannot be undone.'
+              )}
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setCloseLoanConfirm(null)}
+              disabled={isClosingDebt}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => {
+                if (closeLoanConfirm !== null) {
+                  closeDebt({ clientId, debtId: closeLoanConfirm })
+                  setCloseLoanConfirm(null)
+                }
+              }}
+              disabled={isClosingDebt}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isClosingDebt
+                ? t('actions.saving', 'Saving...')
+                : t('pages.clients.detail.closeLoan')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Complete RR Confirmation Modal */}
+        <Modal
+          open={completeRrConfirm !== null}
+          onClose={() => setCompleteRrConfirm(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Success size={20} className="text-dark-500" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.completeRR', 'Complete RR')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 text-base font-light">
+              {t(
+                'pages.clients.detail.confirmCompleteRR',
+                'Are you sure you want to mark this restructuring agreement as completed?'
+              )}
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setCompleteRrConfirm(null)}
+              disabled={isCompletingRa}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (completeRrConfirm !== null) {
+                  completeRa({ clientId, raId: completeRrConfirm })
+                  setCompleteRrConfirm(null)
+                }
+              }}
+              disabled={isCompletingRa}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isCompletingRa
+                ? t('actions.saving', 'Saving...')
+                : t('pages.clients.detail.completeRR', 'Complete RR')}
             </Button>
           </ModalFooter>
         </Modal>

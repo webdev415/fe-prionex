@@ -149,6 +149,11 @@ export async function getImportJobs(
     backendParams.uploaded_by = params.uploaded_by
   }
 
+  // Add import_type filter
+  if (params.import_type) {
+    backendParams.import_type = params.import_type
+  }
+
   // Add date range filters
   if (params.date_from) {
     backendParams.date_from = params.date_from

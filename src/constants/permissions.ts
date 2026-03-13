@@ -50,6 +50,7 @@ export const PERMISSIONS = {
    */
   DATA: {
     IMPORT: 'import_clients',
+    IMPORT_PAYMENTS: 'import_payments',
     EXPORT: 'export_clients',
     MANAGE_PRIORITY: 'manage_client_priority',
   },
@@ -196,6 +197,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
 
   // Data
   import_clients: 'Import client data from files',
+  import_payments: 'Import payments from bank CSV files in bulk',
   export_clients: 'Export client and system data',
   manage_client_priority: 'Manually change client contact priority',
 

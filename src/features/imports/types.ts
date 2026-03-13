@@ -8,7 +8,7 @@
 export type ImportJobStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled'
 
 // Import Type
-export type ImportType = 'simple' | 'vendor'
+export type ImportType = 'simple' | 'vendor' | 'operator_assignment'
 
 // Import Job (from GET /api/import/jobs)
 export interface ImportJob {
@@ -44,6 +44,7 @@ export interface ImportJobDetail {
   comment?: string
   progress_percentage?: number // 0-100, only for in_progress
   processing_row?: number // Current row being processed, only for in_progress
+  error_summary?: Record<string, unknown> | string | null // Error details on failure
 }
 
 // Import Error (from GET /api/import/jobs/{id}/errors)
@@ -73,6 +74,7 @@ export interface ImportJobsListParams {
   date_from?: string // ISO date string
   date_to?: string // ISO date string
   exclude_status?: ImportJobStatus[] // Exclude jobs with these statuses
+  import_type?: ImportType // Filter by import type
 }
 
 // Upload Import Request

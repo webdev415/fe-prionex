@@ -28,6 +28,7 @@ export interface ImportHistoryFilters {
   dateRange?: string
   status?: string
   uploadedBy?: string
+  importType?: string
 }
 
 interface ImportHistoryFiltersBarProps {
@@ -74,7 +75,7 @@ export function ImportHistoryFiltersBar({
       if (searchValue !== (filters.searchFilename || '')) {
         onFilterChange({ ...filters, searchFilename: searchValue || undefined })
       }
-    }, 2000)
+    }, 400)
     return () => clearTimeout(timer)
   }, [searchValue, filters, onFilterChange])
 
@@ -93,6 +94,16 @@ export function ImportHistoryFiltersBar({
       onFilterChange({
         ...filters,
         status: value === 'all' ? undefined : value,
+      })
+    },
+    [filters, onFilterChange]
+  )
+
+  const handleImportTypeChange = useCallback(
+    (value: string) => {
+      onFilterChange({
+        ...filters,
+        importType: value === 'all' ? undefined : value,
       })
     },
     [filters, onFilterChange]
@@ -243,6 +254,41 @@ export function ImportHistoryFiltersBar({
                   </div>
                 </div>
 
+                {/* Import Type Filter */}
+                <div className="px-2 py-1.5">
+                  <span className="text-xs font-medium text-gray-700">
+                    {t('pages.imports.history.filters.importType', 'Type')}:
+                  </span>
+                  <div className="mt-1">
+                    <Select
+                      value={filters.importType || 'all'}
+                      onValueChange={handleImportTypeChange}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger className="h-8 w-full border border-gray-200 bg-white text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="all">
+                          {t('pages.imports.history.filters.allTypes', 'All Types')}
+                        </SelectItem>
+                        <SelectItem value="simple">
+                          {t('pages.imports.history.importTypes.simple', 'Simple')}
+                        </SelectItem>
+                        <SelectItem value="vendor">
+                          {t('pages.imports.history.importTypes.vendor', 'Vendor Dump')}
+                        </SelectItem>
+                        <SelectItem value="operator_assignment">
+                          {t(
+                            'pages.imports.history.importTypes.operatorAssignment',
+                            'Operator Assignment'
+                          )}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
                 {/* Uploaded By Filter */}
                 <div className="px-2 py-1.5">
                   <span className="text-xs font-medium text-gray-700">
@@ -328,6 +374,38 @@ export function ImportHistoryFiltersBar({
                     </SelectItem>
                     <SelectItem value="cancelled">
                       {t('pages.imports.history.statuses.cancelled')}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Import Type Filter */}
+              <div className="flex items-center gap-1">
+                <Select
+                  value={filters.importType || 'all'}
+                  onValueChange={handleImportTypeChange}
+                  disabled={isLoading}
+                >
+                  <SelectTrigger className="h-auto border-0 bg-transparent p-0 text-[11px] font-medium shadow-none focus:ring-0">
+                    <SelectValue
+                      placeholder={t('pages.imports.history.filters.importType', 'Type')}
+                    />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="all">
+                      {t('pages.imports.history.filters.allTypes', 'All Types')}
+                    </SelectItem>
+                    <SelectItem value="simple">
+                      {t('pages.imports.history.importTypes.simple', 'Simple')}
+                    </SelectItem>
+                    <SelectItem value="vendor">
+                      {t('pages.imports.history.importTypes.vendor', 'Vendor Dump')}
+                    </SelectItem>
+                    <SelectItem value="operator_assignment">
+                      {t(
+                        'pages.imports.history.importTypes.operatorAssignment',
+                        'Operator Assignment'
+                      )}
                     </SelectItem>
                   </SelectContent>
                 </Select>

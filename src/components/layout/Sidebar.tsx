@@ -73,6 +73,8 @@ const iconMap: Record<
   'file-01': (props) => <Icons.File {...props} />,
   'chart-01': (props) => <Icons.Chart01 {...props} />,
   'mail-send-01': (props) => <Icons.MailSend01 {...props} />,
+  'sliders-horizontal': (props) => <Icons.SlidersHorizontal {...props} />,
+  'user-multiple-02': (props) => <Icons.UserMultiple02 {...props} />,
 }
 
 /**
