@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { AddNoteModal } from './components/AddNoteModal'
+import { EditInteractionModal } from './components/EditInteractionModal'
 import { AddTaskModal } from './components/AddTaskModal'
 // import { DeleteClientModal } from './components/DeleteClientModal'
 import { EditClientModal } from './components/EditClientModal'
@@ -63,7 +64,11 @@ import {
   useCompleteRestructuringAgreement,
 } from '@/features/clients/hooks/useClients'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
-import { useCreateNoteInteraction } from '@/features/clients/hooks/useNoteInteraction'
+import {
+  useCreateNoteInteraction,
+  useUpdateInteraction,
+} from '@/features/clients/hooks/useNoteInteraction'
+import type { InteractionResponse } from '@/features/clients/api/types'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
 import { useCallStore } from '@/stores/callStore'
@@ -415,19 +420,34 @@ export function ClientDetailPage() {
       })),
       documents,
       // Activities mapped from InteractionResponse to UI shape
-      activities: (activities ?? []).map((a) => ({
-        id: a.id,
-        date: formatDate(a.interaction_date),
-        type: a.type_name ?? '-',
-        subtype: a.subtype_name ?? '-',
-        contactType: a.contact_type_name ?? '-',
-        result: a.result_name ?? a.status,
-        promisedAmount: a.promise_to_pay_amount ? Number(a.promise_to_pay_amount) : 0,
-        promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
-        callbackDate: formatDate(a.next_action_date ?? undefined),
-        comment: a.summary ?? a.notes ?? '-',
-        employee: a.user_name ?? '-',
-      })),
+      // Deduplicate + filter invalid interactions to keep stable keys for the DataTable
+      activities: (activities ?? [])
+        .reduce<{ seen: Set<string>; items: typeof activities }>(
+          (acc, a) => {
+            const key = a?.id != null ? String(a.id) : null
+            if (!key) return acc
+            if (acc.seen.has(key)) return acc
+            acc.seen.add(key)
+            acc.items.push(a)
+            return acc
+          },
+          { seen: new Set<string>(), items: [] }
+        )
+        .items.map((a) => ({
+          id: a.id,
+          date: formatDate(a.interaction_date),
+          type: a.type_name ?? '-',
+          subtype: a.subtype_name ?? '-',
+          contactType: a.contact_type_name ?? '-',
+          result: a.result_name ?? a.status,
+          promisedAmount: a.promise_to_pay_amount ? Number(a.promise_to_pay_amount) : 0,
+          promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
+          callbackDate: formatDate(a.next_action_date ?? undefined),
+          comment: a.summary ?? a.notes ?? '-',
+          employee: a.user_name ?? '-',
+          updated_at: a.updated_at ?? a.created_at,
+          _raw: a,
+        })),
       // Primary Creditor Payments - Not yet implemented (Phase 8)
       primaryCreditorPayments: [] as Array<{
         id: number
@@ -459,6 +479,9 @@ export function ClientDetailPage() {
   const [isTagModalOpen, setIsTagModalOpen] = useState(false)
   // const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isEditInteractionModalOpen, setIsEditInteractionModalOpen] = useState(false)
+  const { mutate: updateInteraction, isPending: isUpdating } = useUpdateInteraction()
+  const [editingInteraction, setEditingInteraction] = useState<InteractionResponse | null>(null)
   const [assignRoleModalMode, setAssignRoleModalMode] = useState<AssignRoleMode | null>(null)
   // const userRole = useUserRole()
   // const canDelete = userRole === 'Admin' || userRole === 'Supervisor'
@@ -895,7 +918,35 @@ export function ClientDetailPage() {
       key: 'employee',
       header: t('pages.clients.activity.tableHeaders.employee'),
       align: 'left',
-      className: 'w-[200px] whitespace-nowrap',
+      className: 'w-[200px] whitespace-normal',
+      render: (activity) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-dark-500 text-xs font-medium">{activity.employee}</span>
+          {activity.updated_at && (
+            <span className="text-[10px] text-gray-400">{formatDate(activity.updated_at)}</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'center',
+      className: 'w-[48px]',
+      render: (activity) => (
+        <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+          <button
+            title={t('actions.edit', 'Edit')}
+            onClick={() => {
+              setEditingInteraction(activity._raw)
+              setIsEditInteractionModalOpen(true)
+            }}
+            className="flex items-center justify-center rounded-full p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+          >
+            <Icons.PencilEdit size={16} strokeWidth={1.5} />
+          </button>
+        </PermissionGuard>
+      ),
     },
   ]
 
@@ -2987,6 +3038,29 @@ export function ClientDetailPage() {
               <DataTable columns={dialHistoryColumns} data={dialHistory} className="w-full" />
             ))}
         </div>
+
+        {/* Edit Interaction Modal */}
+        <EditInteractionModal
+          open={isEditInteractionModalOpen}
+          onClose={() => {
+            setIsEditInteractionModalOpen(false)
+            setEditingInteraction(null)
+          }}
+          interaction={editingInteraction}
+          isSaving={isUpdating}
+          onSave={(data) => {
+            if (!editingInteraction) return
+            updateInteraction(
+              { clientId, interactionId: editingInteraction.id, data },
+              {
+                onSuccess: () => {
+                  setIsEditInteractionModalOpen(false)
+                  setEditingInteraction(null)
+                },
+              }
+            )
+          }}
+        />
 
         {/* Add Note Modal */}
         <AddNoteModal

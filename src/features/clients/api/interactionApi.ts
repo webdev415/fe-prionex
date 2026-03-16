@@ -138,9 +138,33 @@ export async function addSpamCallHistory(
   return response.data
 }
 
+/**
+ * Update an existing interaction.
+ */
+export async function updateInteraction(data: {
+  client_id: number
+  interaction_id: number
+  type_id?: number
+  subtype_id?: number
+  contact_type_id?: number
+  result_id?: number
+  summary?: string
+  promise_to_pay_date?: string | null
+  promise_to_pay_amount?: number | null
+  next_action_date?: string | null
+}): Promise<InteractionResponse> {
+  const { client_id, interaction_id, ...body } = data
+  const response = await api.put<InteractionResponse>(
+    `/api/v1/clients/${client_id}/interactions/${interaction_id}`,
+    body
+  )
+  return response.data
+}
+
 export const interactionApi = {
   getClientInteractions,
   createInteraction,
+  updateInteraction,
   getInteractionTypes,
   getInteractionSubtypes,
   getInteractionContactTypes,

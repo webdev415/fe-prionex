@@ -112,3 +112,51 @@ export function useCreateInteraction() {
 
 // Re-export for backwards compatibility
 export const useCreateNoteInteraction = useCreateInteraction
+
+/**
+ * Update an existing interaction record.
+ */
+export function useUpdateInteraction() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      clientId,
+      interactionId,
+      data,
+    }: {
+      clientId: number
+      interactionId: number
+      data: {
+        type_id?: number
+        subtype_id?: number
+        contact_type_id?: number
+        result_id?: number
+        summary?: string
+        promise_to_pay_date?: string | null
+        promise_to_pay_amount?: number | null
+        next_action_date?: string | null
+      }
+    }) => {
+      return interactionApi.updateInteraction({
+        client_id: clientId,
+        interaction_id: interactionId,
+        ...data,
+      })
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.activities(variables.clientId) })
+      toast.success('Interaction updated successfully')
+    },
+    onError: (error: AxiosError<{ detail?: string | Array<{ msg: string }> }>) => {
+      const detail = error?.response?.data?.detail
+      let message = 'Failed to update interaction'
+      if (typeof detail === 'string') {
+        message = detail
+      } else if (Array.isArray(detail) && detail.length > 0) {
+        message = detail.map((e) => e.msg).join('; ')
+      }
+      toast.error(message)
+    },
+  })
+}
