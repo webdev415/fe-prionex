@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/Select'
 import { Pagination } from '@/components/ui/Pagination'
 import { AddNoteModal } from '@/pages/ClientManagement/components/AddNoteModal'
+import { EditInteractionModal } from '@/pages/ClientManagement/components/EditInteractionModal'
 import { PriorityBadge } from './components/PriorityBadge'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { DoubleButton } from '@/components/ui/DoubleButton'
@@ -28,8 +29,12 @@ import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageS
 import { formatDate } from '@/lib/formatters'
 import { useCallStore } from '@/stores/callStore'
 import { useClientProfile, useClientActivitiesPaginated } from '@/features/clients/hooks/useClients'
-import { useCreateNoteInteraction } from '@/features/clients/hooks/useNoteInteraction'
+import {
+  useCreateNoteInteraction,
+  useUpdateInteraction,
+} from '@/features/clients/hooks/useNoteInteraction'
 import { useInteractionTypes } from '@/features/clients/hooks/useNoteInteraction'
+import type { InteractionResponse } from '@/features/clients/api/types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useAuth } from '@/features/auth/hooks/useAuth'
@@ -108,9 +113,12 @@ export function ActivityTimelinePage() {
   )
 
   const { mutate: createNote } = useCreateNoteInteraction()
+  const { mutate: updateInteraction, isPending: isUpdating } = useUpdateInteraction()
 
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editingInteraction, setEditingInteraction] = useState<InteractionResponse | null>(null)
 
   // Combined loading state
   const isLoading = isProfileLoading || isActivitiesLoading
@@ -131,6 +139,8 @@ export function ActivityTimelinePage() {
       callbackDate: formatDate(a.next_action_date ?? undefined),
       comment: a.summary ?? a.notes ?? '-',
       employee: a.user_name ?? '-',
+      updated_at: a.updated_at ?? a.created_at,
+      _raw: a,
     }))
   }, [activitiesResponse])
 
@@ -220,7 +230,35 @@ export function ActivityTimelinePage() {
       key: 'employee',
       header: t('pages.clients.activity.tableHeaders.employee'),
       align: 'left',
-      className: 'w-[200px] whitespace-nowrap',
+      className: 'w-[200px] whitespace-normal',
+      render: (activity) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-dark-500 text-xs font-medium">{activity.employee}</span>
+          {activity.updated_at && (
+            <span className="text-[10px] text-gray-400">{formatDate(activity.updated_at)}</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'center',
+      className: 'w-[48px]',
+      render: (activity) => (
+        <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+          <button
+            title={t('actions.edit', 'Edit')}
+            onClick={() => {
+              setEditingInteraction(activity._raw)
+              setIsEditModalOpen(true)
+            }}
+            className="flex items-center justify-center rounded-full p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+          >
+            <Icons.PencilEdit size={16} strokeWidth={1.5} />
+          </button>
+        </PermissionGuard>
+      ),
     },
   ]
 
@@ -428,6 +466,29 @@ export function ActivityTimelinePage() {
         onCallEnd={(duration: number, status: CallStatus) => {
           console.log('Call ended:', { duration, status })
           setOpenCallModal(null)
+        }}
+      />
+
+      {/* Edit Interaction Modal */}
+      <EditInteractionModal
+        open={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false)
+          setEditingInteraction(null)
+        }}
+        interaction={editingInteraction}
+        isSaving={isUpdating}
+        onSave={(data) => {
+          if (!editingInteraction) return
+          updateInteraction(
+            { clientId, interactionId: editingInteraction.id, data },
+            {
+              onSuccess: () => {
+                setIsEditModalOpen(false)
+                setEditingInteraction(null)
+              },
+            }
+          )
         }}
       />
     </div>
