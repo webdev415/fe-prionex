@@ -4,13 +4,13 @@
  * Modal for creating and editing tags with color picker.
  */
 
-import { useEffect, useCallback, useMemo } from 'react'
+import { useEffect, useCallback, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
 import { useCreateTag, useUpdateTag } from '@/features/tags'
-import type { Tag } from '@/features/tags'
+import type { Tag, TagDefinition, TagCategory, TagVisibility } from '@/features/tags'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
@@ -21,13 +21,12 @@ import { Icons } from '@/lib/icons'
 
 interface TagFormModalProps {
   open: boolean
-  tag?: Tag
+  tag?: Tag | TagDefinition
   activeProjectName?: string
   onClose: () => void
   onSuccess: () => void
 }
 
-// Preset colors for quick selection
 const PRESET_COLORS = [
   '#FF6B6B',
   '#4ECDC4',
@@ -43,10 +42,28 @@ const PRESET_COLORS = [
   '#DFDFDF',
 ]
 
+const CATEGORY_VALUES: TagCategory[] = [
+  'custom',
+  'status',
+  'risk',
+  'behavior',
+  'communication',
+  'system',
+]
+const VISIBILITY_VALUES: TagVisibility[] = ['ui', 'analytics', 'system']
+
 type TagFormData = {
   name: string
   color: string
   description?: string
+  code?: string
+  category?: string
+  visibility?: string
+  default_ttl_hours?: number
+  mutex_group?: string
+  requires_payload?: boolean
+  notification_enabled?: boolean
+  notification_template?: string
 }
 
 export function TagFormModal({
@@ -58,6 +75,12 @@ export function TagFormModal({
 }: TagFormModalProps) {
   const { t, i18n } = useTranslation('common')
   const isEdit = !!tag
+  const isSystemTag = (tag as TagDefinition)?.origin === 'system'
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
+
+  const toggleSection = (section: string) => {
+    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }))
+  }
 
   // Form validation schema - defined inside component to use translations
   const tagSchema = useMemo(
@@ -111,6 +134,14 @@ export function TagFormModal({
       name: tag?.name || '',
       color: tag?.color || '#80D80A',
       description: tag?.description || '',
+      code: (tag as TagDefinition)?.code || '',
+      category: (tag as TagDefinition)?.category || 'custom',
+      visibility: (tag as TagDefinition)?.visibility || 'ui',
+      default_ttl_hours: (tag as TagDefinition)?.default_ttl_hours ?? undefined,
+      mutex_group: (tag as TagDefinition)?.mutex_group || '',
+      requires_payload: (tag as TagDefinition)?.requires_payload ?? false,
+      notification_enabled: (tag as TagDefinition)?.notification_enabled ?? false,
+      notification_template: (tag as TagDefinition)?.notification_template || '',
     },
   })
 
@@ -120,10 +151,19 @@ export function TagFormModal({
   // Reset form when modal opens/closes or tag changes
   useEffect(() => {
     if (open) {
+      const tagDef = tag as TagDefinition | undefined
       reset({
         name: tag?.name || '',
         color: tag?.color || '#80D80A',
         description: tag?.description || '',
+        code: tagDef?.code || '',
+        category: tagDef?.category || 'custom',
+        visibility: tagDef?.visibility || 'ui',
+        default_ttl_hours: tagDef?.default_ttl_hours ?? undefined,
+        mutex_group: tagDef?.mutex_group || '',
+        requires_payload: tagDef?.requires_payload ?? false,
+        notification_enabled: tagDef?.notification_enabled ?? false,
+        notification_template: tagDef?.notification_template || '',
       })
     }
   }, [open, tag, reset])
@@ -223,7 +263,151 @@ export function TagFormModal({
                 error={errors.description?.message}
                 rows={3}
                 aria-label={t('pages.tags.fields.description', 'Description')}
+                disabled={isSystemTag}
               />
+            </div>
+
+            {/* Category & Visibility */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="category">{t('pages.tags.fields.category', 'Category')}</Label>
+                <select
+                  id="category"
+                  {...register('category')}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  disabled={isSystemTag}
+                >
+                  {CATEGORY_VALUES.map((c) => (
+                    <option key={c} value={c}>
+                      {t(`pages.tags.categories.${c}`, c)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="visibility">
+                  {t('pages.tags.fields.visibility', 'Visibility')}
+                </Label>
+                <select
+                  id="visibility"
+                  {...register('visibility')}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  disabled={isSystemTag}
+                >
+                  {VISIBILITY_VALUES.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`pages.tags.visibilities.${v}`, v)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Collapsible: TTL Settings */}
+            <div className="rounded-lg border border-gray-200">
+              <button
+                type="button"
+                onClick={() => toggleSection('ttl')}
+                className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <span>{t('pages.tags.fields.ttlSettings', 'TTL Settings')}</span>
+                <span className="text-gray-400">{expandedSections.ttl ? '−' : '+'}</span>
+              </button>
+              {expandedSections.ttl && (
+                <div className="border-t border-gray-200 px-4 py-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="default_ttl_hours">
+                      {t('pages.tags.fields.ttlHours', 'Default TTL (hours)')}
+                    </Label>
+                    <Input
+                      id="default_ttl_hours"
+                      type="number"
+                      {...register('default_ttl_hours', { valueAsNumber: true })}
+                      placeholder="e.g. 24, 48, 168"
+                      disabled={isSystemTag}
+                    />
+                    <p className="text-xs text-gray-500">
+                      {t(
+                        'pages.tags.fields.ttlNote',
+                        'Leave empty for no auto-expiration. Tag will be automatically removed after this many hours.'
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Collapsible: Mutex */}
+            <div className="rounded-lg border border-gray-200">
+              <button
+                type="button"
+                onClick={() => toggleSection('mutex')}
+                className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <span>{t('pages.tags.fields.mutexGroup', 'Mutual Exclusion Group')}</span>
+                <span className="text-gray-400">{expandedSections.mutex ? '−' : '+'}</span>
+              </button>
+              {expandedSections.mutex && (
+                <div className="border-t border-gray-200 px-4 py-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="mutex_group">
+                      {t('pages.tags.fields.mutexGroupName', 'Group Name')}
+                    </Label>
+                    <Input
+                      id="mutex_group"
+                      {...register('mutex_group')}
+                      placeholder="e.g. risk_level, payment_status"
+                      disabled={isSystemTag}
+                    />
+                    <p className="text-xs text-gray-500">
+                      {t(
+                        'pages.tags.fields.mutexNote',
+                        'Tags in the same mutex group are mutually exclusive — assigning one removes others in the group.'
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Collapsible: Notifications */}
+            <div className="rounded-lg border border-gray-200">
+              <button
+                type="button"
+                onClick={() => toggleSection('notifications')}
+                className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <span>{t('pages.tags.fields.notifications', 'Notifications')}</span>
+                <span className="text-gray-400">{expandedSections.notifications ? '−' : '+'}</span>
+              </button>
+              {expandedSections.notifications && (
+                <div className="space-y-4 border-t border-gray-200 px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="notification_enabled"
+                      {...register('notification_enabled')}
+                      className="h-4 w-4 rounded border-gray-300"
+                      disabled={isSystemTag}
+                    />
+                    <Label htmlFor="notification_enabled">
+                      {t('pages.tags.fields.enableNotifications', 'Enable notifications')}
+                    </Label>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="notification_template">
+                      {t('pages.tags.fields.notificationTemplate', 'Template')}
+                    </Label>
+                    <Textarea
+                      id="notification_template"
+                      {...register('notification_template')}
+                      placeholder="e.g. Tag '{tag_name}' assigned to client {client_id}"
+                      rows={2}
+                      disabled={isSystemTag}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </ModalContent>

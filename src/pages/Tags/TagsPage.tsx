@@ -7,8 +7,9 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTags } from '@/features/tags'
-import type { Tag } from '@/features/tags'
+import { useSearchParams } from 'react-router-dom'
+import { useTags, useSegments, useTagRules } from '@/features/tags'
+import type { Tag, Segment, TagRule } from '@/features/tags'
 import { useAuth } from '@/features/auth'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -16,6 +17,7 @@ import { Icons } from '@/lib/icons'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { ErrorState } from '@/components/ErrorState'
+import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { LinkButton } from '@/components/ui/LinkButton'
 import {
@@ -26,13 +28,32 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { TagFormModal } from './components/TagFormModal'
 import { DeleteTagDialog } from './components/DeleteTagDialog'
+import { SegmentFormModal } from './components/SegmentFormModal'
+import { RuleFormModal } from './components/RuleFormModal'
+
+type TabId = 'dictionary' | 'segments' | 'rules'
+
+const TABS: { id: TabId; labelKey: string; fallback: string }[] = [
+  { id: 'dictionary', labelKey: 'pages.tags.tabs.dictionary', fallback: 'Dictionary' },
+  { id: 'segments', labelKey: 'pages.tags.tabs.segments', fallback: 'Segments' },
+  { id: 'rules', labelKey: 'pages.tags.tabs.rules', fallback: 'Rules' },
+]
 
 export function TagsPage() {
   const { t, i18n } = useTranslation('common')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = (searchParams.get('tab') as TabId) || 'dictionary'
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editTag, setEditTag] = useState<Tag | null>(null)
   const [deleteTagId, setDeleteTagId] = useState<number | null>(null)
   const [openDropdownTagId, setOpenDropdownTagId] = useState<number | null>(null)
+  const [editSegment, setEditSegment] = useState<Segment | null>(null)
+  const [editRule, setEditRule] = useState<TagRule | null>(null)
+
+  // Tab switching
+  const setActiveTab = (tab: TabId) => {
+    setSearchParams({ tab })
+  }
 
   // Get current user and active project
   const { user } = useAuth()
@@ -42,8 +63,10 @@ export function TagsPage() {
     return activeProject?.name
   }, [user])
 
-  // Fetch tags
+  // Fetch data
   const { data: tags = [], isLoading, isError, error } = useTags()
+  const { data: segments = [], isLoading: segmentsLoading } = useSegments()
+  const { data: rules = [], isLoading: rulesLoading } = useTagRules()
 
   // Close dropdown when screen size crosses breakpoint (in either direction)
   useEffect(() => {
@@ -200,6 +223,141 @@ export function TagsPage() {
     [t, i18n?.language, openDropdownTagId]
   )
 
+  // Segments columns
+  const segmentColumns: Column<Segment>[] = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: t('pages.tags.segments.name', 'Name'),
+        render: (s) => <span className="font-medium">{s.name}</span>,
+      },
+      {
+        key: 'code',
+        header: t('pages.tags.segments.code', 'Code'),
+        render: (s) => <code className="text-xs text-gray-600">{s.code}</code>,
+      },
+      {
+        key: 'cached_client_count',
+        header: t('pages.tags.segments.clients', 'Clients'),
+        align: 'center',
+        render: (s) => <span className="font-medium">{s.cached_client_count}</span>,
+      },
+      {
+        key: 'refresh_mode',
+        header: t('pages.tags.segments.refreshMode', 'Refresh'),
+        render: (s) => (
+          <span className="rounded bg-gray-100 px-2 py-0.5 text-xs">
+            {t(`pages.tags.segments.refreshModes.${s.refresh_mode}`, s.refresh_mode)}
+          </span>
+        ),
+      },
+      {
+        key: 'is_active',
+        header: t('pages.tags.segments.active', 'Active'),
+        align: 'center',
+        render: (s) => (
+          <span
+            className={`text-xs font-medium ${s.is_active ? 'text-green-600' : 'text-gray-400'}`}
+          >
+            {s.is_active ? t('common.yes', 'Yes') : t('common.no', 'No')}
+          </span>
+        ),
+      },
+      {
+        key: 'actions',
+        header: t('pages.tags.tableHeaders.actions', 'Actions'),
+        align: 'center',
+        render: (s) => (
+          <div className="flex items-center justify-center gap-4">
+            <PermissionGuard permission={PERMISSIONS.TAGS.EDIT}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => setEditSegment(s)}
+                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('pages.tags.actions.edit', 'Edit')}
+              </LinkButton>
+            </PermissionGuard>
+          </div>
+        ),
+      },
+    ],
+    [t]
+  )
+
+  // Rules columns
+  const ruleColumns: Column<TagRule>[] = useMemo(
+    () => [
+      {
+        key: 'name',
+        header: t('pages.tags.rules.name', 'Name'),
+        render: (r) => <span className="font-medium">{r.name}</span>,
+      },
+      {
+        key: 'trigger_type',
+        header: t('pages.tags.rules.trigger', 'Trigger'),
+        render: (r) => (
+          <span className="rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
+            {t(`pages.tags.rules.triggerTypes.${r.trigger_type}`, r.trigger_type)}
+          </span>
+        ),
+      },
+      {
+        key: 'action_type',
+        header: t('pages.tags.rules.action', 'Action'),
+        render: (r) => (
+          <span className="rounded bg-purple-50 px-2 py-0.5 text-xs text-purple-700">
+            {t(`pages.tags.rules.actionTypes.${r.action_type}`, r.action_type)}
+          </span>
+        ),
+      },
+      {
+        key: 'target_tag_code',
+        header: t('pages.tags.rules.targetTag', 'Target Tag'),
+        render: (r) => <code className="text-xs">{r.target_tag_code}</code>,
+      },
+      {
+        key: 'priority',
+        header: t('pages.tags.rules.priority', 'Priority'),
+        align: 'center',
+        render: (r) => <span>{r.priority}</span>,
+      },
+      {
+        key: 'is_active',
+        header: t('pages.tags.rules.active', 'Active'),
+        align: 'center',
+        render: (r) => (
+          <span
+            className={`text-xs font-medium ${r.is_active ? 'text-green-600' : 'text-gray-400'}`}
+          >
+            {r.is_active ? t('common.yes', 'Yes') : t('common.no', 'No')}
+          </span>
+        ),
+      },
+      {
+        key: 'actions',
+        header: t('pages.tags.tableHeaders.actions', 'Actions'),
+        align: 'center',
+        render: (r) => (
+          <div className="flex items-center justify-center gap-4">
+            <PermissionGuard permission={PERMISSIONS.TAGS.EDIT}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => setEditRule(r)}
+                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('pages.tags.actions.edit', 'Edit')}
+              </LinkButton>
+            </PermissionGuard>
+          </div>
+        ),
+      },
+    ],
+    [t]
+  )
+
   return (
     <div>
       {/* Page Header */}
@@ -208,11 +366,9 @@ export function TagsPage() {
           <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
             {t('pages.tags.title', 'Tags')}
           </h1>
-          <span className="text-sm font-light text-gray-500 sm:text-base">{tags.length}</span>
         </div>
 
         <PermissionGuard permission={PERMISSIONS.TAGS.CREATE}>
-          {/* Desktop: Full button with text */}
           <div className="hidden sm:block">
             <DoubleButton
               size="md"
@@ -220,43 +376,155 @@ export function TagsPage() {
               iconPosition="left"
               onClick={() => setShowCreateModal(true)}
             >
-              {t('pages.tags.createTag', 'Create Tag')}
+              {activeTab === 'dictionary'
+                ? t('pages.tags.createTag', 'Create Tag')
+                : activeTab === 'segments'
+                  ? t('pages.tags.createSegment', 'Create Segment')
+                  : t('pages.tags.createRule', 'Create Rule')}
             </DoubleButton>
           </div>
-          {/* Mobile: Icon-only button */}
           <button
             onClick={() => setShowCreateModal(true)}
             className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
-            aria-label={t('pages.tags.createTag', 'Create Tag')}
+            aria-label={t('pages.tags.createTag', 'Create')}
           >
             <Icons.Add size={20} strokeWidth={2} />
           </button>
         </PermissionGuard>
       </div>
 
-      {/* Loading State */}
-      {isLoading && <TableSkeleton columns={columns.length} rows={5} />}
+      {/* Tabs */}
+      <div className="mb-4 border-b border-gray-200">
+        <nav className="-mb-px flex gap-6">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`border-b-2 px-1 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
+                activeTab === tab.id
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+              }`}
+            >
+              {t(tab.labelKey, tab.fallback)}
+              <span className="ml-2 text-xs text-gray-400">
+                {tab.id === 'dictionary'
+                  ? tags.length
+                  : tab.id === 'segments'
+                    ? segments.length
+                    : rules.length}
+              </span>
+            </button>
+          ))}
+        </nav>
+      </div>
 
-      {/* Error State */}
-      {isError && (
-        <ErrorState
-          error={error}
-          onRetry={() => window.location.reload()}
-          title={t('pages.tags.errorLoading', 'Failed to load tags')}
-        />
+      {/* Tab Content: Dictionary */}
+      {activeTab === 'dictionary' && (
+        <>
+          {/* Info banner */}
+          <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
+            <p className="text-xs text-blue-700">
+              {t(
+                'pages.tags.emptyStates.dictionaryBanner',
+                'System tags for debt collection are pre-configured. You can also create custom tags.'
+              )}
+            </p>
+          </div>
+          {isLoading && <TableSkeleton columns={columns.length} rows={5} />}
+          {isError && (
+            <ErrorState
+              error={error}
+              onRetry={() => window.location.reload()}
+              title={t('pages.tags.errorLoading', 'Failed to load tags')}
+            />
+          )}
+          {!isLoading && !isError && (
+            <DataTable
+              columns={columns}
+              data={tags}
+              emptyMessage={t('pages.tags.noTagsFound', 'No tags found')}
+            />
+          )}
+        </>
       )}
 
-      {/* Tags Table */}
-      {!isLoading && !isError && (
-        <DataTable
-          columns={columns}
-          data={tags}
-          emptyMessage={t('pages.tags.noTagsFound', 'No tags found')}
-        />
+      {/* Tab Content: Segments */}
+      {activeTab === 'segments' && (
+        <>
+          {segmentsLoading && <TableSkeleton columns={5} rows={5} />}
+          {!segmentsLoading && segments.length === 0 && (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
+              <Icons.Users size={40} className="mb-3 text-gray-400" strokeWidth={1.5} />
+              <h3 className="mb-1 text-sm font-medium text-gray-900">
+                {t('pages.tags.emptyStates.segmentsTitle', 'No segments yet')}
+              </h3>
+              <p className="mb-4 max-w-sm text-xs text-gray-500">
+                {t(
+                  'pages.tags.emptyStates.segmentsDescription',
+                  'Segments group clients by tag conditions. For example: "All clients with high risk and active debt".'
+                )}
+              </p>
+              <PermissionGuard permission={PERMISSIONS.TAGS.CREATE}>
+                <Button
+                  size="sm"
+                  onClick={() => setShowCreateModal(true)}
+                  leftIcon={<Icons.Add size={14} />}
+                >
+                  {t('pages.tags.emptyStates.createFromTemplate', 'Create from template')}
+                </Button>
+              </PermissionGuard>
+            </div>
+          )}
+          {!segmentsLoading && segments.length > 0 && (
+            <DataTable
+              columns={segmentColumns}
+              data={segments}
+              emptyMessage={t('pages.tags.segments.empty', 'No segments found')}
+            />
+          )}
+        </>
       )}
 
-      {/* Modals */}
-      {showCreateModal && (
+      {/* Tab Content: Rules */}
+      {activeTab === 'rules' && (
+        <>
+          {rulesLoading && <TableSkeleton columns={6} rows={5} />}
+          {!rulesLoading && rules.length === 0 && (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
+              <Icons.Settings size={40} className="mb-3 text-gray-400" strokeWidth={1.5} />
+              <h3 className="mb-1 text-sm font-medium text-gray-900">
+                {t('pages.tags.emptyStates.rulesTitle', 'No automation rules yet')}
+              </h3>
+              <p className="mb-4 max-w-sm text-xs text-gray-500">
+                {t(
+                  'pages.tags.emptyStates.rulesDescription',
+                  'Rules automatically assign or remove tags on events. For example: auto-tag high risk when scoring changes.'
+                )}
+              </p>
+              <PermissionGuard permission={PERMISSIONS.TAGS.CREATE}>
+                <Button
+                  size="sm"
+                  onClick={() => setShowCreateModal(true)}
+                  leftIcon={<Icons.Add size={14} />}
+                >
+                  {t('pages.tags.emptyStates.createFromTemplate', 'Create from template')}
+                </Button>
+              </PermissionGuard>
+            </div>
+          )}
+          {!rulesLoading && rules.length > 0 && (
+            <DataTable
+              columns={ruleColumns}
+              data={rules}
+              emptyMessage={t('pages.tags.rules.empty', 'No rules found')}
+            />
+          )}
+        </>
+      )}
+
+      {/* Modals — Dictionary */}
+      {showCreateModal && activeTab === 'dictionary' && (
         <TagFormModal
           open={showCreateModal}
           activeProjectName={activeProjectName}
@@ -281,6 +549,46 @@ export function TagsPage() {
           tag={tagToDelete}
           onClose={() => setDeleteTagId(null)}
           onSuccess={handleDeleteSuccess}
+        />
+      )}
+
+      {/* Modals — Segments */}
+      {showCreateModal && activeTab === 'segments' && (
+        <SegmentFormModal
+          open={showCreateModal}
+          tags={tags}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => setShowCreateModal(false)}
+        />
+      )}
+
+      {editSegment && (
+        <SegmentFormModal
+          open={editSegment !== null}
+          segment={editSegment}
+          tags={tags}
+          onClose={() => setEditSegment(null)}
+          onSuccess={() => setEditSegment(null)}
+        />
+      )}
+
+      {/* Modals — Rules */}
+      {showCreateModal && activeTab === 'rules' && (
+        <RuleFormModal
+          open={showCreateModal}
+          tags={tags}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => setShowCreateModal(false)}
+        />
+      )}
+
+      {editRule && (
+        <RuleFormModal
+          open={editRule !== null}
+          rule={editRule}
+          tags={tags}
+          onClose={() => setEditRule(null)}
+          onSuccess={() => setEditRule(null)}
         />
       )}
     </div>

@@ -1291,9 +1291,22 @@ export function ClientDetailPage() {
                 <div className="flex items-center justify-between gap-2 self-stretch">
                   <div className="flex flex-1 flex-wrap items-center gap-2">
                     {clientTags && clientTags.length > 0 ? (
-                      clientTags.map((tag) => (
-                        <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
-                      ))
+                      <>
+                        {clientTags.slice(0, 3).map((tag) => (
+                          <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
+                        ))}
+                        {clientTags.length > 3 && (
+                          <button
+                            type="button"
+                            onClick={() => setIsTagModalOpen(true)}
+                            className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200"
+                          >
+                            {t('pages.tags.showMore', '+{{count}} more', {
+                              count: clientTags.length - 3,
+                            })}
+                          </button>
+                        )}
+                      </>
                     ) : (
                       <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                         {t('pages.clients.detail.noTagsAssigned')}

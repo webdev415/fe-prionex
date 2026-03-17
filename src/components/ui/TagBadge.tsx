@@ -15,6 +15,12 @@ interface TagBadgeProps {
   onRemove?: () => void
   className?: string
   size?: 'sm' | 'md' | 'lg'
+  /** TTL expiration timestamp (ISO string) — shows countdown */
+  expiresAt?: string
+  /** Payload data — shows tooltip on hover */
+  payload?: Record<string, unknown>
+  /** System tag — shows lock icon */
+  isSystem?: boolean
 }
 
 export const TagBadge = memo(function TagBadge({
@@ -23,6 +29,9 @@ export const TagBadge = memo(function TagBadge({
   onRemove,
   className,
   size = 'md',
+  expiresAt,
+  payload,
+  isSystem,
 }: TagBadgeProps) {
   const sizeClasses = {
     sm: 'px-2 py-0.5 text-xs',
@@ -60,9 +69,20 @@ export const TagBadge = memo(function TagBadge({
         color: textColor,
       }}
     >
+      {isSystem && <Icons.Lock size={size === 'sm' ? 10 : 12} className="opacity-70" />}
       <span className={cn('rounded-full', dotSizes[size])} style={{ backgroundColor: color }} />
       <span>{name}</span>
-      {onRemove && (
+      {expiresAt && (
+        <span className="opacity-70" title={`Expires: ${new Date(expiresAt).toLocaleString()}`}>
+          <Icons.Clock01 size={size === 'sm' ? 10 : 12} />
+        </span>
+      )}
+      {payload && Object.keys(payload).length > 0 && (
+        <span className="opacity-70" title={JSON.stringify(payload, null, 2)}>
+          <Icons.Info size={size === 'sm' ? 10 : 12} />
+        </span>
+      )}
+      {onRemove && !isSystem && (
         <button
           type="button"
           onClick={onRemove}

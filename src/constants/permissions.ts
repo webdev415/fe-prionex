@@ -99,6 +99,26 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Segments Category (reuses tags permissions)
+   */
+  SEGMENTS: {
+    VIEW: 'view_clients',
+    CREATE: 'create_tags',
+    EDIT: 'edit_tags',
+    DELETE: 'delete_tags',
+  },
+
+  /**
+   * Rules Category (reuses tags permissions)
+   */
+  RULES: {
+    VIEW: 'view_clients',
+    CREATE: 'create_tags',
+    EDIT: 'edit_tags',
+    DELETE: 'delete_tags',
+  },
+
+  /**
    * Sellers Category (4 permissions)
    * Controls access to seller/creditor management
    * Note: View permissions restricted to Admin and Supervisor

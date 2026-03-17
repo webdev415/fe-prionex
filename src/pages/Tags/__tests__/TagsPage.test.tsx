@@ -137,8 +137,8 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       const Wrapper = createTestWrapper()
       render(<TagsPage />, { wrapper: Wrapper })
 
-      // Should show page title
-      expect(screen.getByText(/tags/i)).toBeInTheDocument()
+      // Should show page title (multiple elements may contain "tags")
+      expect(screen.getAllByText(/tags/i).length).toBeGreaterThan(0)
 
       // Should render tags in table
       await waitFor(() => {
