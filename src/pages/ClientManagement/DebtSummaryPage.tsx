@@ -1251,9 +1251,9 @@ export function DebtSummaryPage() {
                                         : 'text-error-500'
                                   )}
                                 >
-                                  {t(
-                                    `pages.clients.debtSummary.paymentStatus.${payment.status.toLowerCase()}`
-                                  )}
+                                  {t(`pages.clients.detail.paymentStatuses.${payment.status}`, {
+                                    defaultValue: payment.status,
+                                  })}
                                 </span>
                               </div>
                             </td>

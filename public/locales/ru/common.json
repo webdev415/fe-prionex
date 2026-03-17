@@ -708,6 +708,7 @@
         "viewHistory": "История",
         "preview": {
           "title": "Предварительный просмотр",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записей · Партия: {{batchId}}",
           "previewRows": "Предпросмотр (первые {{count}} строк)",
           "errors": "Ошибки ({{count}})",
           "readyToAssign": "Готово к назначению",

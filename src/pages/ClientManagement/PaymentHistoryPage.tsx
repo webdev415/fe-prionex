@@ -1271,7 +1271,9 @@ export function PaymentHistoryPage() {
                         {t('pages.clients.paymentHistory.pending')}
                       </SelectItem>
                       <SelectItem value="cancelled">
-                        {t('pages.clients.debtSummary.paymentStatus.cancelled')}
+                        {t('pages.clients.detail.paymentStatuses.cancelled', {
+                          defaultValue: 'cancelled',
+                        })}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -1454,11 +1456,9 @@ export function PaymentHistoryPage() {
                                         : 'text-error-500'
                                   )}
                                 >
-                                  {payment.status === 'verified'
-                                    ? t('pages.clients.debtSummary.paymentStatus.verified')
-                                    : payment.status === 'pending'
-                                      ? t('pages.clients.debtSummary.paymentStatus.pending')
-                                      : t('pages.clients.debtSummary.paymentStatus.cancelled')}
+                                  {t(`pages.clients.detail.paymentStatuses.${payment.status}`, {
+                                    defaultValue: payment.status,
+                                  })}
                                 </span>
                               </div>
                             </td>

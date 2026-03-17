@@ -150,6 +150,23 @@
           "loadingUserData": "Завантаження даних користувача...",
           "userNotFound": "Користувача не знайдено"
         },
+        "unlock": {
+          "title": "Статус облікового запису:",
+          "locked": "Заблоковано",
+          "unlockAccount": "Розблокувати обліковий запис:",
+          "failedAttempts": "Невдалі спроби:",
+          "lockedAt": "Заблоковано о:",
+          "autoUnlockAt": "Автоматичне розблокування о:",
+          "minRemaining": "хв залишилось",
+          "confirmTitle": "Ви впевнені, що хочете розблокувати цей обліковий запис?",
+          "thisWill": "Це:",
+          "restoreAccess": "Негайно відновить доступ для входу",
+          "resetCounter": "Скине лічильник невдалих спроб",
+          "recordAudit": "Буде записано в журнал аудиту",
+          "failedToUnlock": "Не вдалося розблокувати обліковий запис",
+          "unlocking": "Розблокування...",
+          "unlockAccountButton": "Розблокувати обліковий запис"
+        },
         "changeStatus": {
           "activateTitle": "Активувати користувача",
           "deactivateTitle": "Деактивувати користувача",
@@ -691,6 +708,7 @@
         "viewHistory": "Історія",
         "preview": {
           "title": "Попередній перегляд",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записів · Партія: {{batchId}}",
           "previewRows": "Попередній перегляд (перші {{count}} рядків)",
           "errors": "Помилки ({{count}})",
           "readyToAssign": "Готово до призначення",
@@ -945,6 +963,7 @@
           "issueDate": "Дата видачі",
           "counterparty": "Контрагент",
           "saleDate": "Дата продажу",
+          "loanAmount": "Сума позики",
           "principalAmount": "Сума основного боргу",
           "principalDebt": "Основна заборгованість",
           "remainingDebtAmount": "Залишок боргу",
@@ -1308,6 +1327,24 @@
           "noPortfoliosFound": "Портфелів не знайдено",
           "clear": "Очистити",
           "apply": "Застосувати"
+        },
+        "tagsDropdown": {
+          "searchTags": "Пошук тегів...",
+          "noTagsFound": "Теги не знайдено",
+          "clear": "Очистити",
+          "apply": "Застосувати"
+        },
+        "bulkTag": {
+          "addTags": "Додати теги",
+          "removeTags": "Видалити теги",
+          "clients": "клієнт(ів)",
+          "searchTags": "Пошук тегів...",
+          "loadingTags": "Завантаження тегів...",
+          "noTagsFound": "Теги не знайдено",
+          "tagsSelected": "тег(ів) вибрано",
+          "selectAtLeastOneTag": "Будь ласка, виберіть хоча б один тег",
+          "cancel": "Скасувати",
+          "processing": "Обробка..."
         },
         "recordPayment": {
           "title": "Записати платіж",
