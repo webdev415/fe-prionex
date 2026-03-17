@@ -965,7 +965,9 @@
           "done": "Done",
           "pending": "Pending",
           "failed": "Failed",
-          "verified": "Verified"
+          "verified": "Verified",
+          "cancelled": "Cancelled",
+          "canceled": "Cancelled"
         },
         "tableHeaders": {
           "loanNumber": "Loan Number",

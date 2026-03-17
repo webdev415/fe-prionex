@@ -937,7 +937,9 @@
           "done": "Виконано",
           "pending": "В очікуванні",
           "failed": "Не вдалося",
-          "verified": "Підтверджено"
+          "verified": "Підтверджено",
+          "cancelled": "Скасовано",
+          "canceled": "Скасовано"
         },
         "tableHeaders": {
           "loanNumber": "Номер позики",
