@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
+import { SESSION } from '@/constants'
 import { getDateRangeForPeriod } from '@/lib/dateUtils'
 import {
   useDashboard,
@@ -186,7 +187,7 @@ export function ReportsDashboardPage() {
   // Check token expiry in useEffect to avoid impure operations during render
   useEffect(() => {
     if (import.meta.env.DEV) {
-      const token = localStorage.getItem('prionex_token')
+      const token = localStorage.getItem(SESSION.TOKEN_KEY)
       console.log('[ReportsDashboard] Auth Status:', {
         isAuthenticated,
         hasUser: !!user,
@@ -219,7 +220,7 @@ export function ReportsDashboardPage() {
           if (isExpired) {
             console.error('[ReportsDashboard] ⚠️ TOKEN IS EXPIRED! Redirecting to login...')
             // Clear expired token
-            localStorage.removeItem('prionex_token')
+            localStorage.removeItem(SESSION.TOKEN_KEY)
             // Force logout
             setTimeout(() => {
               window.location.href = '/login'

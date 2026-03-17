@@ -1,5 +1,6 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/stores/authStore'
+import { SESSION } from '@/constants'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
@@ -13,7 +14,7 @@ export const api = axios.create({
 })
 
 // Token storage key
-const TOKEN_KEY = 'prionex_token'
+const TOKEN_KEY = SESSION.TOKEN_KEY
 
 // Initialize token from localStorage (shared across tabs in the same browser)
 let accessToken: string | null = localStorage.getItem(TOKEN_KEY)
