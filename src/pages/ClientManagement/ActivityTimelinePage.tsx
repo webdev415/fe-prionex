@@ -122,17 +122,29 @@ export function ActivityTimelinePage() {
       id: a.id,
       date: formatDate(a.interaction_date),
       type_id: a.type_id,
-      type: a.type_name ?? '-',
-      subtype: a.subtype_name ?? '-',
-      contactType: a.contact_type_name ?? '-',
-      result: a.result_name ?? a.status ?? '-',
+      type: a.type_code
+        ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
+        : (a.type_name ?? '-'),
+      subtype: a.subtype_code
+        ? t(`interactionChannels.${a.subtype_code}`, { defaultValue: a.subtype_name ?? '-' })
+        : (a.subtype_name ?? '-'),
+      contactType: a.contact_type_code
+        ? t(`interactionContactTypes.${a.contact_type_code}`, {
+            defaultValue: a.contact_type_name ?? '-',
+          })
+        : (a.contact_type_name ?? '-'),
+      result: a.result_code
+        ? t(`interactionResults.${a.result_code}`, {
+            defaultValue: a.result_name ?? a.status ?? '-',
+          })
+        : (a.result_name ?? a.status ?? '-'),
       promisedAmount: a.promise_to_pay_amount ? parseFloat(a.promise_to_pay_amount) : 0,
       promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
       callbackDate: formatDate(a.next_action_date ?? undefined),
       comment: a.summary ?? a.notes ?? '-',
       employee: a.user_name ?? '-',
     }))
-  }, [activitiesResponse])
+  }, [activitiesResponse, t])
 
   const totalCount = activitiesResponse?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage))
@@ -313,7 +325,7 @@ export function ActivityTimelinePage() {
                 <SelectItem value="all">{t('pages.clients.activity.all')}</SelectItem>
                 {interactionTypes?.map((type) => (
                   <SelectItem key={type.id} value={type.id.toString()}>
-                    {type.name}
+                    {t(`interactionTypes.${type.code}`, { defaultValue: type.name })}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -1018,7 +1018,11 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         {contact.contact_value}
                       </span>
                       <span className="text-xs font-light text-gray-700">
-                        {contact.contact_type_name ?? ''}
+                        {contact.contact_type_code
+                          ? t(`contactTypes.${contact.contact_type_code}`, {
+                              defaultValue: contact.contact_type_name ?? '',
+                            })
+                          : (contact.contact_type_name ?? '')}
                       </span>
                       <span className="text-xs font-light text-gray-500">{contact.comment}</span>
                     </div>
