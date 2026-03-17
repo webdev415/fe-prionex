@@ -45,13 +45,6 @@ export interface EditClientModalProps {
 }
 
 const MARITAL_STATUSES = ['1', '2', '3', '4', '5'] as const
-const MARITAL_STATUS_LABELS: Record<string, string> = {
-  '1': 'Неодружений/Незаміжня',
-  '2': 'Одружений/Заміжня',
-  '3': 'Розлучений/Розлучена',
-  '4': 'Вдівець/Вдова',
-  '5': 'Цивільний шлюб',
-}
 
 const EMPLOYMENT_TYPES = [
   'full_time',
@@ -63,16 +56,6 @@ const EMPLOYMENT_TYPES = [
   'retired',
   'other',
 ] as const
-const EMPLOYMENT_TYPE_LABELS: Record<string, string> = {
-  full_time: 'Повна зайнятість',
-  part_time: 'Часткова зайнятість',
-  contract: 'Контракт',
-  student: 'Студент',
-  self_employed: 'ФОП',
-  unemployed: 'Безробітний',
-  retired: 'Пенсіонер',
-  other: 'Інше',
-}
 
 const ADDRESS_TYPES = ['registration', 'actual'] as const
 const ADDRESS_TYPE_KEYS: Record<string, string> = {
@@ -597,7 +580,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 <SelectContent>
                   {MARITAL_STATUSES.map((key) => (
                     <SelectItem key={key} value={key}>
-                      {MARITAL_STATUS_LABELS[key]}
+                      {t(`pages.clients.detail.maritalStatuses.${key}`, { defaultValue: key })}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -894,7 +877,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 <SelectContent>
                   {EMPLOYMENT_TYPES.map((key) => (
                     <SelectItem key={key} value={key}>
-                      {EMPLOYMENT_TYPE_LABELS[key]}
+                      {t(`pages.clients.detail.employmentTypes.${key}`, { defaultValue: key })}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -105,26 +105,6 @@ type ExtendedCallItem = {
   initiated_at?: string
 }
 
-// Legacy numeric code mappings (from old CRM database)
-const MARITAL_STATUS_MAP: Record<string, string> = {
-  '1': 'Неодружений/Незаміжня',
-  '2': 'Одружений/Заміжня',
-  '3': 'Розлучений/Розлучена',
-  '4': 'Вдівець/Вдова',
-  '5': 'Цивільний шлюб',
-}
-
-const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
-  full_time: 'Повна зайнятість',
-  part_time: 'Часткова зайнятість',
-  contract: 'Контракт',
-  student: 'Студент',
-  self_employed: 'ФОП',
-  unemployed: 'Безробітний',
-  retired: 'Пенсіонер',
-  other: 'Інше',
-}
-
 // Contact type names are now returned by the backend from client_contact_types lookup table
 
 // Client data loaded via useClientProfile + section-specific hooks (real API endpoints)
@@ -293,9 +273,15 @@ export function ClientDetailPage() {
         issuedBy: profile.passport?.issued_by ?? '',
         issuedDate: profile.passport?.issued_date ?? '',
         expiresDate: profile.passport?.expires_date ?? '',
-        gender: profile.passport?.gender ?? '',
+        gender: profile.passport?.gender
+          ? t(`pages.clients.detail.genderOptions.${profile.passport.gender}`, {
+              defaultValue: profile.passport.gender,
+            })
+          : '',
         maritalStatus: profile.marital_status
-          ? (MARITAL_STATUS_MAP[profile.marital_status] ?? profile.marital_status)
+          ? t(`pages.clients.detail.maritalStatuses.${profile.marital_status}`, {
+              defaultValue: profile.marital_status,
+            })
           : '',
         familyMembers: profile.family_members_count ?? '',
         incomeLevel: profile.income_level ?? '',
@@ -311,8 +297,9 @@ export function ClientDetailPage() {
                 : '-',
             managerFullName: profile.employment.manager_full_name ?? '-',
             employmentType: profile.employment.employment_type
-              ? (EMPLOYMENT_TYPE_MAP[profile.employment.employment_type] ??
-                profile.employment.employment_type)
+              ? t(`pages.clients.detail.employmentTypes.${profile.employment.employment_type}`, {
+                  defaultValue: profile.employment.employment_type,
+                })
               : '-',
             workPhone: profile.employment.work_phone ?? '-',
           }
@@ -449,6 +436,7 @@ export function ClientDetailPage() {
     documents,
     activities,
     responsibleEmployeeDepartment,
+    t,
   ])
 
   // Tags are now fetched from useClientTags hook instead of local state
