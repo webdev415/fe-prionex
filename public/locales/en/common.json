@@ -1855,6 +1855,10 @@
           "remove_tag": "Remove Tag",
           "replace_tag": "Replace Tag"
         },
+        "selectField": "Select field",
+        "executionCount": "Executions",
+        "lastExecuted": "Last Run",
+        "neverExecuted": "—",
         "priorityHelp": "0-1000, lower number = higher priority",
         "addCondition": "Add condition",
         "field": "Field",
@@ -1862,6 +1866,16 @@
         "operator": "Operator",
         "value": "Value",
         "valuePlaceholder": "e.g. 80",
+        "conditionFields": {
+          "risk_score": "Risk Score (0-100)",
+          "days_past_due": "Days Past Due",
+          "total_debt": "Total Debt",
+          "remaining_debt": "Remaining Debt",
+          "debt_count": "Debt Count",
+          "status": "Client Status",
+          "has_tag": "Has Tag",
+          "not_has_tag": "Does Not Have Tag"
+        },
         "validation": {
           "nameRequired": "Name is required",
           "nameMax": "Max 100 characters",
@@ -1874,10 +1888,12 @@
           "remove_high_risk": "Remove High Risk",
           "mark_active_debtor": "Mark Active Debtors (Daily)",
           "mark_paid_off": "Mark Paid Off",
-          "broken_promise": "Broken Promise to Pay (Daily)"
+          "broken_promise": "Broken Promise to Pay (Daily)",
+          "no_contact_retry": "Contact Retry"
         }
       },
       "categories": {
+        "all": "All",
         "status": "Status",
         "risk": "Risk",
         "behavior": "Behavior",

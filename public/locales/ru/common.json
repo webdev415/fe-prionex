@@ -2388,6 +2388,10 @@
           "remove_tag": "Удалить тег",
           "replace_tag": "Заменить тег"
         },
+        "selectField": "Выберите поле",
+        "executionCount": "Выполнений",
+        "lastExecuted": "Последний запуск",
+        "neverExecuted": "—",
         "priorityHelp": "0-1000, меньше число = выше приоритет",
         "addCondition": "Добавить условие",
         "field": "Поле",
@@ -2395,6 +2399,16 @@
         "operator": "Оператор",
         "value": "Значение",
         "valuePlaceholder": "напр. 80",
+        "conditionFields": {
+          "risk_score": "Скоринг (0-100)",
+          "days_past_due": "Дней просрочки",
+          "total_debt": "Общая сумма долга",
+          "remaining_debt": "Остаток долга",
+          "debt_count": "Количество кредитов",
+          "status": "Статус клиента",
+          "has_tag": "Имеет тег",
+          "not_has_tag": "Не имеет тег"
+        },
         "validation": {
           "nameRequired": "Название обязательно",
           "nameMax": "Максимум 100 символов",
@@ -2407,10 +2421,12 @@
           "remove_high_risk": "Снять высокий риск",
           "mark_active_debtor": "Отметить активных должников (ежедневно)",
           "mark_paid_off": "Отметить погашенных",
-          "broken_promise": "Нарушенное обещание оплаты (ежедневно)"
+          "broken_promise": "Нарушенное обещание оплаты (ежедневно)",
+          "no_contact_retry": "Повторная попытка контакта"
         }
       },
       "categories": {
+        "all": "Все",
         "status": "Статус",
         "risk": "Риск",
         "behavior": "Поведение",

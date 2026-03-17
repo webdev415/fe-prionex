@@ -2352,6 +2352,10 @@
           "remove_tag": "Видалити тег",
           "replace_tag": "Замінити тег"
         },
+        "selectField": "Оберіть поле",
+        "executionCount": "Виконань",
+        "lastExecuted": "Останній запуск",
+        "neverExecuted": "—",
         "priorityHelp": "0-1000, менше число = вищий пріоритет",
         "addCondition": "Додати умову",
         "field": "Поле",
@@ -2359,6 +2363,16 @@
         "operator": "Оператор",
         "value": "Значення",
         "valuePlaceholder": "напр. 80",
+        "conditionFields": {
+          "risk_score": "Скоринг (0-100)",
+          "days_past_due": "Днів прострочки",
+          "total_debt": "Загальна сума боргу",
+          "remaining_debt": "Залишок боргу",
+          "debt_count": "Кількість кредитів",
+          "status": "Статус клієнта",
+          "has_tag": "Має тег",
+          "not_has_tag": "Не має тег"
+        },
         "validation": {
           "nameRequired": "Назва обов'язкова",
           "nameMax": "Максимум 100 символів",
@@ -2371,10 +2385,12 @@
           "remove_high_risk": "Зняти високий ризик",
           "mark_active_debtor": "Позначити активних боржників (щодня)",
           "mark_paid_off": "Позначити погашених",
-          "broken_promise": "Порушена обіцянка оплати (щодня)"
+          "broken_promise": "Порушена обіцянка оплати (щодня)",
+          "no_contact_retry": "Повторна спроба контакту"
         }
       },
       "categories": {
+        "all": "Усі",
         "status": "Статус",
         "risk": "Ризик",
         "behavior": "Поведінка",

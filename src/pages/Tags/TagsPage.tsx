@@ -39,6 +39,14 @@ const TABS: { id: TabId; labelKey: string; fallback: string }[] = [
   { id: 'rules', labelKey: 'pages.tags.tabs.rules', fallback: 'Rules' },
 ]
 
+const CATEGORY_FILTERS = ['all', 'status', 'risk', 'communication', 'behavior', 'system', 'custom']
+
+const DATE_LOCALE_BY_LANGUAGE: Record<string, string> = {
+  en: 'en-US',
+  ru: 'ru-RU',
+  uk: 'uk-UA',
+}
+
 export function TagsPage() {
   const { t, i18n } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -49,6 +57,7 @@ export function TagsPage() {
   const [openDropdownTagId, setOpenDropdownTagId] = useState<number | null>(null)
   const [editSegment, setEditSegment] = useState<Segment | null>(null)
   const [editRule, setEditRule] = useState<TagRule | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
   // Tab switching
   const setActiveTab = (tab: TabId) => {
@@ -67,6 +76,13 @@ export function TagsPage() {
   const { data: tags = [], isLoading, isError, error } = useTags()
   const { data: segments = [], isLoading: segmentsLoading } = useSegments()
   const { data: rules = [], isLoading: rulesLoading } = useTagRules()
+
+  const filteredTags = useMemo(() => {
+    if (categoryFilter === 'all') return tags
+    return tags.filter((tag) => tag.category === categoryFilter)
+  }, [tags, categoryFilter])
+
+  const dateLocale = DATE_LOCALE_BY_LANGUAGE[i18n.language] ?? 'ru-RU'
 
   // Close dropdown when screen size crosses breakpoint (in either direction)
   useEffect(() => {
@@ -237,6 +253,57 @@ export function TagsPage() {
         render: (s) => <code className="text-xs text-gray-600">{s.code}</code>,
       },
       {
+        key: 'conditions',
+        header: t('pages.tags.segments.conditions', 'Conditions'),
+        render: (s) => {
+          const groupedConditions = s.conditions.reduce<Record<number, typeof s.conditions>>(
+            (acc, condition) => {
+              if (!acc[condition.group_index]) {
+                acc[condition.group_index] = []
+              }
+              acc[condition.group_index].push(condition)
+              return acc
+            },
+            {}
+          )
+
+          const formattedGroups = Object.values(groupedConditions).map((group) =>
+            group
+              .map((condition) => {
+                if (
+                  condition.condition_type === 'has_tag' ||
+                  condition.condition_type === 'not_has_tag'
+                ) {
+                  return `${t(
+                    `pages.tags.segments.conditionTypes.${condition.condition_type}`,
+                    condition.condition_type
+                  )}: ${condition.tag_code ?? '—'}`
+                }
+
+                const conditionLabel =
+                  condition.field_name ??
+                  condition.tag_code ??
+                  t(
+                    `pages.tags.segments.conditionTypes.${condition.condition_type}`,
+                    condition.condition_type
+                  )
+
+                return `${conditionLabel} ${t(
+                  `pages.tags.segments.operators.${condition.operator}`,
+                  condition.operator
+                )} ${condition.value ?? '—'}`
+              })
+              .join(` ${t('pages.tags.segments.andLabel', 'AND')} `)
+          )
+
+          return (
+            <span className="line-clamp-2 text-xs text-gray-600">
+              {formattedGroups.join(` ${t('pages.tags.segments.orLabel', 'OR')} `)}
+            </span>
+          )
+        },
+      },
+      {
         key: 'cached_client_count',
         header: t('pages.tags.segments.clients', 'Clients'),
         align: 'center',
@@ -324,6 +391,28 @@ export function TagsPage() {
         render: (r) => <span>{r.priority}</span>,
       },
       {
+        key: 'execution_count',
+        header: t('pages.tags.rules.executionCount', 'Executions'),
+        align: 'center',
+        render: (r) => <span className="text-xs font-medium">{r.execution_count || 0}</span>,
+      },
+      {
+        key: 'last_executed_at',
+        header: t('pages.tags.rules.lastExecuted', 'Last Run'),
+        render: (r) => (
+          <span className="text-xs text-gray-500">
+            {r.last_executed_at
+              ? new Date(r.last_executed_at).toLocaleString(dateLocale, {
+                  day: '2-digit',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              : t('pages.tags.rules.neverExecuted', '—')}
+          </span>
+        ),
+      },
+      {
         key: 'is_active',
         header: t('pages.tags.rules.active', 'Active'),
         align: 'center',
@@ -355,7 +444,7 @@ export function TagsPage() {
         ),
       },
     ],
-    [t]
+    [dateLocale, t]
   )
 
   return (
@@ -409,7 +498,9 @@ export function TagsPage() {
               {t(tab.labelKey, tab.fallback)}
               <span className="ml-2 text-xs text-gray-400">
                 {tab.id === 'dictionary'
-                  ? tags.length
+                  ? activeTab === 'dictionary'
+                    ? filteredTags.length
+                    : tags.length
                   : tab.id === 'segments'
                     ? segments.length
                     : rules.length}
@@ -431,6 +522,24 @@ export function TagsPage() {
               )}
             </p>
           </div>
+          <div className="mb-4 flex flex-wrap gap-2">
+            {CATEGORY_FILTERS.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategoryFilter(cat)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  categoryFilter === cat
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {cat === 'all'
+                  ? t('pages.tags.categories.all', 'All')
+                  : t(`pages.tags.categories.${cat}`, cat)}
+              </button>
+            ))}
+          </div>
           {isLoading && <TableSkeleton columns={columns.length} rows={5} />}
           {isError && (
             <ErrorState
@@ -442,7 +551,7 @@ export function TagsPage() {
           {!isLoading && !isError && (
             <DataTable
               columns={columns}
-              data={tags}
+              data={filteredTags}
               emptyMessage={t('pages.tags.noTagsFound', 'No tags found')}
             />
           )}
@@ -452,7 +561,7 @@ export function TagsPage() {
       {/* Tab Content: Segments */}
       {activeTab === 'segments' && (
         <>
-          {segmentsLoading && <TableSkeleton columns={5} rows={5} />}
+          {segmentsLoading && <TableSkeleton columns={6} rows={5} />}
           {!segmentsLoading && segments.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
               <Icons.Users size={40} className="mb-3 text-gray-400" strokeWidth={1.5} />
@@ -489,7 +598,7 @@ export function TagsPage() {
       {/* Tab Content: Rules */}
       {activeTab === 'rules' && (
         <>
-          {rulesLoading && <TableSkeleton columns={6} rows={5} />}
+          {rulesLoading && <TableSkeleton columns={8} rows={5} />}
           {!rulesLoading && rules.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
               <Icons.Settings size={40} className="mb-3 text-gray-400" strokeWidth={1.5} />

@@ -44,6 +44,16 @@ const TRIGGER_TYPE_VALUES: RuleTriggerType[] = [
 ]
 const ACTION_TYPE_VALUES: RuleActionType[] = ['add_tag', 'remove_tag', 'replace_tag']
 const RULE_OPERATOR_VALUES = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'contains', 'in', 'not_in']
+const CONDITION_FIELD_OPTIONS = [
+  { value: 'risk_score', label: 'risk_score' },
+  { value: 'days_past_due', label: 'days_past_due' },
+  { value: 'total_debt', label: 'total_debt' },
+  { value: 'remaining_debt', label: 'remaining_debt' },
+  { value: 'debt_count', label: 'debt_count' },
+  { value: 'status', label: 'status' },
+  { value: 'has_tag', label: 'has_tag' },
+  { value: 'not_has_tag', label: 'not_has_tag' },
+]
 
 const RULE_PRESETS = [
   {
@@ -98,6 +108,19 @@ const RULE_PRESETS = [
     action_type: 'replace_tag' as RuleActionType,
     target_tag_code: 'refuses_to_pay',
     replace_tag_code: 'promise_to_pay',
+  },
+  {
+    key: 'no_contact_retry',
+    name: 'Retry No Contact',
+    description: 'Daily: clear no_contact tag after 7+ days past due to retry contact attempts',
+    trigger_type: 'schedule' as RuleTriggerType,
+    cron_expression: '0 9 * * *',
+    conditions: [
+      { field: 'has_tag', op: 'eq', value: 'no_contact' },
+      { field: 'days_past_due', op: 'gt', value: '7' },
+    ],
+    action_type: 'remove_tag' as RuleActionType,
+    target_tag_code: 'no_contact',
   },
 ]
 
@@ -423,12 +446,32 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               <div className="space-y-2">
                 {fields.map((field, index) => (
                   <div key={field.id} className="flex items-start gap-2">
-                    <Input
-                      inputSize="sm"
-                      className="h-9 text-xs"
-                      placeholder={t('pages.tags.rules.fieldPlaceholder', 'e.g. risk_score')}
-                      {...register(`conditions.${index}.field`)}
-                      error={errors.conditions?.[index]?.field?.message}
+                    <Controller
+                      name={`conditions.${index}.field`}
+                      control={control}
+                      render={({ field: fieldCtrl }) => (
+                        <div className="min-w-0">
+                          <Select value={fieldCtrl.value} onValueChange={fieldCtrl.onChange}>
+                            <SelectTrigger className="h-9 w-40 shrink-0 text-xs">
+                              <SelectValue
+                                placeholder={t('pages.tags.rules.selectField', 'Select field')}
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {CONDITION_FIELD_OPTIONS.map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  {t(`pages.tags.rules.conditionFields.${opt.value}`, opt.label)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {errors.conditions?.[index]?.field?.message && (
+                            <p className="mt-1 text-xs text-red-500">
+                              {errors.conditions?.[index]?.field?.message}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     />
                     <Controller
                       name={`conditions.${index}.op`}

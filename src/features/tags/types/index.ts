@@ -4,7 +4,7 @@
  * Type definitions for tags domain (backward-compatible + extended)
  */
 
-// Backward-compatible Tag interface (unchanged)
+// Backward-compatible Tag interface
 export interface Tag {
   id: number
   name: string
@@ -13,6 +13,7 @@ export interface Tag {
   project_id: number
   project_name?: string
   client_count?: number
+  category?: TagCategory
   created_at: string
 }
 
