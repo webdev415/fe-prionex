@@ -18,11 +18,11 @@
     "roles": "Ролі",
     "departments": "Відділи",
     "smsTemplates": "SMS Шаблони",
-      "transactions": "Транзакції",
-      "operations": "Операції",
-      "bulkOperatorAssignment": "Масове призначення операторів",
-      "auditLogs": "Журнал аудиту",
-      "reports": "Звіти",
+    "transactions": "Транзакції",
+    "operations": "Операції",
+    "bulkOperatorAssignment": "Масове призначення операторів",
+    "auditLogs": "Журнал аудиту",
+    "reports": "Звіти",
     "scoringConfiguration": "Конфігурація оцінки",
     "systemSettings": "Системні налаштування",
     "tags": "Теги"
@@ -84,7 +84,7 @@
     "update": "Оновити",
     "saving": "Збереження...",
     "deleting": "Видалення...",
-  "back": "Назад"
+    "back": "Назад"
   },
   "logout": {
     "confirmTitle": "Підтвердити вихід",
@@ -937,7 +937,8 @@
           "done": "Виконано",
           "pending": "В очікуванні",
           "failed": "Не вдалося",
-          "verified": "Підтверджено"
+          "verified": "Підтверджено",
+          "cancelled": "Скасовано"
         },
         "tableHeaders": {
           "loanNumber": "Номер позики",
@@ -1050,6 +1051,36 @@
           "tasks": "Завдання",
           "docs": "Документи",
           "callSms": "Дзвінок / SMS"
+        },
+        "maritalStatuses": {
+          "1": "Неодружений/Незаміжня",
+          "2": "Одружений/Заміжня",
+          "3": "Розлучений/Розлучена",
+          "4": "Вдівець/Вдова",
+          "5": "Цивільний шлюб"
+        },
+        "employmentTypes": {
+          "full_time": "Повна зайнятість",
+          "part_time": "Часткова зайнятість",
+          "contract": "Контракт",
+          "student": "Студент",
+          "self_employed": "ФОП",
+          "unemployed": "Безробітний",
+          "retired": "Пенсіонер",
+          "other": "Інше"
+        },
+        "paymentMethods": {
+          "bank_transfer": "Банківський переказ",
+          "online_gateway": "Онлайн-платіж",
+          "cash": "Готівка",
+          "card": "Картка",
+          "other": "Інше"
+        },
+        "genderOptions": {
+          "M": "Чоловічий",
+          "F": "Жіночий",
+          "male": "Чоловічий",
+          "female": "Жіночий"
         }
       },
       "modals": {
@@ -1858,6 +1889,15 @@
           "deleting": "Видалення...",
           "deleteSeller": "Видалити продавця"
         }
+      },
+      "types": {
+        "bank": "Банк",
+        "mfo": "МФО (Мікрофінансова організація)",
+        "collection_agency": "Колекторська агенція",
+        "retail": "Роздрібна торгівля",
+        "telecom": "Телекомунікації",
+        "utilities": "Комунальні послуги",
+        "other": "Інше"
       }
     },
     "profile": {
@@ -2022,7 +2062,7 @@
       "immediateEffect": "Зміни вплинуть на всіх клієнтів у цьому проєкті негайно",
       "saveThresholds": "Зберегти пороги",
       "sellerOverrides": "Перевизначення для продавців (необов'язково)",
-      "addSellerConfig": "Додати конфігурацію для продавця",
+      "addSellerConfig": "Додати конфігурацію продавця",
       "sellerOverridesDescription": "Налаштування різних порогів для конкретних продавців",
       "configurationPreview": "Попередній перегляд конфігурації",
       "previewDescription": "Подивіться, як зміни порогів вплинуть на розподілення пріоритетів клієнтів",
@@ -2054,7 +2094,6 @@
       "sellerConfigCreated": "Конфігурація продавця успішно створена",
       "saveFailed": "Не вдалося зберегти конфігурацію",
       "editSellerConfig": "Редагувати конфігурацію продавця",
-      "addSellerConfig": "Додати конфігурацію продавця",
       "sellerConfigDeleted": "Конфігурація продавця успішно видалена",
       "deleteFailed": "Не вдалося видалити конфігурацію",
       "clientsAffected": "Залучено клієнтів",
@@ -2237,5 +2276,13 @@
       "goBack": "Назад",
       "goHome": "На головну"
     }
+  },
+  "statusLabels": {
+    "active": "Активний",
+    "inactive": "Неактивний",
+    "suspended": "Призупинений",
+    "pending": "Очікує",
+    "archived": "Архівований",
+    "disabled": "Вимкнений"
   }
 }

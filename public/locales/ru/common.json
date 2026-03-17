@@ -18,11 +18,11 @@
     "roles": "Роли",
     "departments": "Отделы",
     "smsTemplates": "SMS Шаблоны",
-      "transactions": "Транзакции",
-      "operations": "Операции",
-      "bulkOperatorAssignment": "Массовое назначение операторов",
-      "auditLogs": "Журнал аудита",
-      "reports": "Отчеты",
+    "transactions": "Транзакции",
+    "operations": "Операции",
+    "bulkOperatorAssignment": "Массовое назначение операторов",
+    "auditLogs": "Журнал аудита",
+    "reports": "Отчеты",
     "scoringConfiguration": "Конфигурация оценки",
     "systemSettings": "Системные настройки",
     "tags": "Теги"
@@ -760,7 +760,11 @@
       "noClientsFound": "Клиенты не найдены",
       "assign": "Назначить",
       "bulkAssign": "Массовое назначение",
-      "bulkActions": "Массовые действия",
+      "bulkActions": {
+        "assignEmployee": "Назначить сотрудника",
+        "addTags": "Добавить теги",
+        "removeTags": "Удалить теги"
+      },
       "manageTags": "Управление тегами",
       "errorLoading": "Не удалось загрузить клиентов",
       "errorOccurred": "Произошла ошибка",
@@ -823,11 +827,6 @@
         "delivered": "Доставлено",
         "failed": "Не удалось",
         "pending": "Ожидается"
-      },
-      "bulkActions": {
-        "assignEmployee": "Назначить сотрудника",
-        "addTags": "Добавить теги",
-        "removeTags": "Удалить теги"
       },
       "activity": {
         "score": "Оценка",
@@ -955,7 +954,8 @@
           "done": "Выполнено",
           "pending": "В ожидании",
           "failed": "Не удалось",
-          "verified": "Подтверждено"
+          "verified": "Подтверждено",
+          "cancelled": "Отменён"
         },
         "tableHeaders": {
           "loanNumber": "Номер займа",
@@ -1069,6 +1069,36 @@
           "tasks": "Задания",
           "docs": "Документы",
           "callSms": "Звонок / SMS"
+        },
+        "maritalStatuses": {
+          "1": "Холост/Не замужем",
+          "2": "Женат/Замужем",
+          "3": "Разведён/Разведена",
+          "4": "Вдовец/Вдова",
+          "5": "Гражданский брак"
+        },
+        "employmentTypes": {
+          "full_time": "Полная занятость",
+          "part_time": "Частичная занятость",
+          "contract": "Контракт",
+          "student": "Студент",
+          "self_employed": "ФЛП",
+          "unemployed": "Безработный",
+          "retired": "Пенсионер",
+          "other": "Другое"
+        },
+        "paymentMethods": {
+          "bank_transfer": "Банковский перевод",
+          "online_gateway": "Онлайн-платёж",
+          "cash": "Наличные",
+          "card": "Карта",
+          "other": "Другое"
+        },
+        "genderOptions": {
+          "M": "Мужской",
+          "F": "Женский",
+          "male": "Мужской",
+          "female": "Женский"
         }
       },
       "modals": {
@@ -1895,6 +1925,15 @@
           "deleting": "Удаление...",
           "deleteSeller": "Удалить продавца"
         }
+      },
+      "types": {
+        "bank": "Банк",
+        "mfo": "МФО (Микрофинансовая организация)",
+        "collection_agency": "Коллекторское агентство",
+        "retail": "Розничная торговля",
+        "telecom": "Телекоммуникации",
+        "utilities": "Коммунальные услуги",
+        "other": "Другое"
       }
     },
     "profile": {
@@ -2059,7 +2098,7 @@
       "immediateEffect": "Изменения повлияют на всех клиентов в этом проекте немедленно",
       "saveThresholds": "Сохранить пороги",
       "sellerOverrides": "Переопределения для продавцов (необязательно)",
-      "addSellerConfig": "Добавить конфигурацию для продавца",
+      "addSellerConfig": "Добавить конфигурацию продавца",
       "sellerOverridesDescription": "Настройка различных порогов для конкретных продавцов",
       "configurationPreview": "Предпросмотр конфигурации",
       "previewDescription": "Посмотрите, как изменения порогов повлияют на распределение приоритетов клиентов",
@@ -2091,7 +2130,6 @@
       "sellerConfigCreated": "Конфигурация продавца успешно создана",
       "saveFailed": "Не удалось сохранить конфигурацию",
       "editSellerConfig": "Редактировать конфигурацию продавца",
-      "addSellerConfig": "Добавить конфигурацию продавца",
       "sellerConfigDeleted": "Конфигурация продавца успешно удалена",
       "deleteFailed": "Не удалось удалить конфигурацию",
       "clientsAffected": "Затронуто клиентов",
@@ -2274,5 +2312,13 @@
       "goBack": "Назад",
       "goHome": "На главную"
     }
+  },
+  "statusLabels": {
+    "active": "Активен",
+    "inactive": "Неактивен",
+    "suspended": "Приостановлен",
+    "pending": "Ожидание",
+    "archived": "Архивирован",
+    "disabled": "Отключён"
   }
 }
