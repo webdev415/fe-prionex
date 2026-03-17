@@ -2388,5 +2388,35 @@
     "CLIENT": "Клиент",
     "THIRD_PERSON": "Третье лицо",
     "RELATIVE": "Родственник"
+  },
+  "interactionTypes": {
+    "INCOMING": "Входящий",
+    "OUTGOING": "Исходящий",
+    "SEARCHING": "Розыск"
+  },
+  "interactionChannels": {
+    "CALL": "Звонок",
+    "MESSENGER": "Мессенджер",
+    "MAIL": "Почта",
+    "CHAT": "Чат"
+  },
+  "interactionResults": {
+    "agreement": "Договорённость",
+    "callback_by_appointment": "Перезвонить по договорённости",
+    "refusal_to_pay": "Отказ от оплаты",
+    "no_contact": "Нет контакта",
+    "consent_to_interact": "Согласие на взаимодействие",
+    "waiting_for_call": "Ожидание звонка",
+    "hung_up": "Повесил трубку",
+    "request_for_documents": "Запрос документов",
+    "disconnected": "Отключён",
+    "refused_payment": "Отказался платить",
+    "will_provide_information": "Предоставит информацию",
+    "will_not_provide_information": "Не предоставит информацию",
+    "refused_consent_to_interact": "Отказ от согласия на взаимодействие",
+    "threatens": "Угрожает",
+    "sent_documents": "Отправлены документы",
+    "no_numbers": "Нет номеров",
+    "numbers_found": "Номера найдены"
   }
 }

@@ -60,19 +60,7 @@ const MAX_NOTE_LENGTH = 2000
 const RELATIVE_ONLY_CHANNELS = new Set(['MAIL', 'CHAT'])
 
 export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModalProps) {
-  const { t, i18n } = useTranslation('common')
-
-  const localeName = (item: {
-    name: string
-    name_uk?: string | null
-    name_en?: string | null
-    name_ru?: string | null
-  }) => {
-    const lang = i18n.language
-    if (lang === 'uk') return item.name_uk ?? item.name
-    if (lang === 'ru') return item.name_ru ?? item.name
-    return item.name_en ?? item.name
-  }
+  const { t } = useTranslation('common')
 
   const [typeId, setTypeId] = useState<number | undefined>(undefined)
   const [subtypeId, setSubtypeId] = useState<number | undefined>(undefined)
@@ -248,7 +236,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                 <SelectContent>
                   {types?.map((type) => (
                     <SelectItem key={type.id} value={type.id.toString()}>
-                      {localeName(type)}
+                      {t(`interactionTypes.${type.code}`, { defaultValue: type.name })}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -280,7 +268,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                   <SelectContent>
                     {channels?.map((channel) => (
                       <SelectItem key={channel.id} value={channel.id.toString()}>
-                        {localeName(channel)}
+                        {t(`interactionChannels.${channel.code}`, { defaultValue: channel.name })}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -354,7 +342,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                   <SelectContent>
                     {results?.map((result) => (
                       <SelectItem key={result.id} value={result.id.toString()}>
-                        {localeName(result)}
+                        {t(`interactionResults.${result.code}`, { defaultValue: result.name })}
                       </SelectItem>
                     ))}
                   </SelectContent>

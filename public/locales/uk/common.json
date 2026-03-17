@@ -2388,5 +2388,35 @@
     "CLIENT": "Клієнт",
     "THIRD_PERSON": "Третя особа",
     "RELATIVE": "Родич"
+  },
+  "interactionTypes": {
+    "INCOMING": "Вхідний",
+    "OUTGOING": "Вихідний",
+    "SEARCHING": "Розшук"
+  },
+  "interactionChannels": {
+    "CALL": "Дзвінок",
+    "MESSENGER": "Месенджер",
+    "MAIL": "Пошта",
+    "CHAT": "Чат"
+  },
+  "interactionResults": {
+    "agreement": "Домовленість",
+    "callback_by_appointment": "Передзвонити за домовленістю",
+    "refusal_to_pay": "Відмова від оплати",
+    "no_contact": "Немає контакту",
+    "consent_to_interact": "Згода на взаємодію",
+    "waiting_for_call": "Очікування дзвінка",
+    "hung_up": "Поклав слухавку",
+    "request_for_documents": "Запит документів",
+    "disconnected": "Відключено",
+    "refused_payment": "Відмовився платити",
+    "will_provide_information": "Надасть інформацію",
+    "will_not_provide_information": "Не надасть інформацію",
+    "refused_consent_to_interact": "Відмова від згоди на взаємодію",
+    "threatens": "Погрожує",
+    "sent_documents": "Відправлено документи",
+    "no_numbers": "Немає номерів",
+    "numbers_found": "Номери знайдено"
   }
 }

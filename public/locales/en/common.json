@@ -2388,5 +2388,35 @@
     "CLIENT": "Client",
     "THIRD_PERSON": "Third person",
     "RELATIVE": "Relative"
+  },
+  "interactionTypes": {
+    "INCOMING": "Incoming",
+    "OUTGOING": "Outgoing",
+    "SEARCHING": "Searching"
+  },
+  "interactionChannels": {
+    "CALL": "Call",
+    "MESSENGER": "Messenger",
+    "MAIL": "Mail",
+    "CHAT": "Chat"
+  },
+  "interactionResults": {
+    "agreement": "Agreement",
+    "callback_by_appointment": "Call back by appointment",
+    "refusal_to_pay": "Refusal to pay",
+    "no_contact": "No contact",
+    "consent_to_interact": "Consent to interact",
+    "waiting_for_call": "Waiting for a call",
+    "hung_up": "Hung up",
+    "request_for_documents": "Request for documents",
+    "disconnected": "Disconnected",
+    "refused_payment": "Refused payment",
+    "will_provide_information": "Will provide information",
+    "will_not_provide_information": "Will not provide information",
+    "refused_consent_to_interact": "Refused consent to interact",
+    "threatens": "Threatens",
+    "sent_documents": "Sent documents",
+    "no_numbers": "No numbers",
+    "numbers_found": "Numbers found"
   }
 }
