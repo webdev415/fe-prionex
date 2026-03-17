@@ -955,7 +955,9 @@
           "done": "Выполнено",
           "pending": "В ожидании",
           "failed": "Не удалось",
-          "verified": "Подтверждено"
+          "verified": "Подтверждено",
+          "cancelled": "Отменено",
+          "canceled": "Отменено"
         },
         "tableHeaders": {
           "loanNumber": "Номер займа",
