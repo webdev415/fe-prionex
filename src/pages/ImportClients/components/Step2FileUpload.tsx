@@ -293,13 +293,6 @@ export function Step2FileUpload({
       return
     }
 
-    // Don't clear errors here - errors will be set in catch block if upload fails
-    // This ensures previous errors remain visible until a new error occurs or upload succeeds
-    console.log('=== STARTING UPLOAD ===')
-    console.log('Current importError:', importError)
-    console.log('Mutation error:', uploadImportMutation.error)
-    console.log('Mutation isError:', uploadImportMutation.isError)
-
     try {
       const result = await uploadImportMutation.mutateAsync({
         file: data.csvFile,
@@ -319,17 +312,8 @@ export function Step2FileUpload({
         onImportStarted(result.job_id)
       }
     } catch (error) {
-      // Log error for debugging
-      console.error('=== UPLOAD ERROR CAUGHT ===', error)
-      console.error('Error type:', typeof error)
-      console.error('Error keys:', error && typeof error === 'object' ? Object.keys(error) : 'N/A')
-
       // Handle validation errors from backend upload endpoint
       const errorMessage = getErrorMessage(error)
-      console.log('Error message extracted:', errorMessage)
-
-      // CRITICAL: Set error state IMMEDIATELY - this must happen first
-      console.log('Setting error state to:', errorMessage)
       setImportError(errorMessage)
 
       // Extract validation details from error response
@@ -337,7 +321,6 @@ export function Step2FileUpload({
       const isAxiosError = error && typeof error === 'object' && 'response' in error
 
       if (isAxiosError) {
-        console.log('Error has response structure')
         const apiError = error as {
           response?: {
             data?: {
@@ -352,12 +335,8 @@ export function Step2FileUpload({
         const responseData = apiError.response?.data
         const status = apiError.response?.status
 
-        console.log('Response data:', JSON.stringify(responseData, null, 2))
-        console.log('Status:', status)
-
         // Handle 401 Unauthorized - authentication error
         if (status === 401) {
-          console.log('401 Unauthorized - authentication required')
           // Don't set csvValidationError for auth errors
           // The error message is already set in importError
           return // Exit early, don't process as validation error
@@ -368,7 +347,6 @@ export function Step2FileUpload({
         let missingColumns: string[] = []
 
         if (responseData) {
-          console.log('Processing response data...')
           // FastAPI returns detail as string or array
           if (typeof responseData.detail === 'string') {
             detail = responseData.detail
@@ -385,7 +363,6 @@ export function Step2FileUpload({
           // PRIORITY 1: Check if missing_columns is directly in response (backend now provides this)
           if (responseData.missing_columns && Array.isArray(responseData.missing_columns)) {
             missingColumns = responseData.missing_columns
-            console.log('Found missing_columns in response:', missingColumns)
           } else if (detail.includes('Missing required columns:')) {
             // PRIORITY 2: Extract missing columns from detail message (fallback for old format)
             // Backend format: "Missing required columns: first_name, last_name. Required columns: ..."
@@ -398,7 +375,6 @@ export function Step2FileUpload({
                   .split(',')
                   .map((col) => col.trim())
                   .filter((col) => col.length > 0)
-                console.log('Extracted missing_columns from detail:', missingColumns)
               }
             }
           }
@@ -406,7 +382,7 @@ export function Step2FileUpload({
 
         // CRITICAL: ALWAYS set csvValidationError for ANY 400 error
         // This ensures csvValidationError is never null when there's a validation error
-        if (status === 400) {
+          if (status === 400) {
           // Extract missing columns if not already extracted
           if (missingColumns.length === 0 && detail.includes('Missing required columns:')) {
             const match = detail.match(/Missing required columns:\s*([^.]+?)(?:\.|$)/i)
@@ -425,30 +401,22 @@ export function Step2FileUpload({
             errorMessage: missingColumns.length === 0 ? detail : undefined,
           }
 
-          console.log('=== SETTING csvValidationError ===', validationError)
-          console.log('Current data state:', {
-            csvFile: data.csvFile,
-            csvValidationError: data.csvValidationError,
-          })
-
           // CRITICAL: Always call onChange to set csvValidationError
           onChange({
             csvValidationError: validationError,
             csvFile: data.csvFile, // Keep the file so error is visible
           })
 
-          console.log('=== onChange CALLED ===')
+          // state updated via onChange with validation error
         } else {
-          console.log('Not a 400 error. Status:', status, 'Detail:', detail)
+          // Not a 400 error; no CSV validation state update needed here
         }
       } else {
-        console.log('Error does not have response structure')
         // Check if error message indicates authentication issue
         if (
           errorMessage &&
           (errorMessage.includes('401') || errorMessage.includes('Unauthorized'))
         ) {
-          console.log('Authentication error detected in error message')
           // Don't set csvValidationError for auth errors
           return
         }
@@ -456,7 +424,6 @@ export function Step2FileUpload({
 
       // Ensure we have an error message - fallback if extraction failed
       if (!errorMessage) {
-        console.warn('Error caught but no error message extracted!', error)
         setImportError(t('pages.imports.step2.simple.errorOccurred'))
       }
     }
@@ -477,22 +444,11 @@ export function Step2FileUpload({
   const mutationError = uploadImportMutation.error
   const mutationErrorMsg = mutationError ? getErrorMessage(mutationError) : null
 
-  // DEBUG: Log state on render to help diagnose
-  if (mutationError || uploadImportMutation.isError) {
-    console.log('RENDER: Mutation has error!', {
-      importError,
-      mutationErrorMsg,
-      isError: uploadImportMutation.isError,
-      hasInvalidCSV: hasInvalidCSVStructure,
-    })
-  }
-
   // Sync mutation error state with component error state - ALWAYS keep them in sync
   useEffect(() => {
     const mutationError = uploadImportMutation.error
     if (mutationError) {
       const errorMsg = getErrorMessage(mutationError)
-      console.log('useEffect: Setting error from mutation error state:', errorMsg)
       // Defer state update to avoid cascading renders
       setTimeout(() => {
         setImportError(errorMsg)

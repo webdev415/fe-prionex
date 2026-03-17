@@ -547,14 +547,6 @@ const drawCheck = (doc: jsPDF, x: number, y: number, size = 3) => {
 }
 
 export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
-  // Debug: Check what company data is being passed
-  console.log('Company data received:', {
-    companyName: data.companyName,
-    companyAddress: data.companyAddress,
-    companyPhone: data.companyPhone,
-    companyEmail: data.companyEmail,
-  })
-
   const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
 
   // Load Noto Sans font if available (critical for ₴ symbol support)
@@ -610,13 +602,9 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
     } else {
       // Fallback to helvetica (₴ will not display, will use "UAH" fallback in renderCurrency)
       doc.setFont('helvetica', 'normal')
-      console.warn(
-        'Noto Sans font not loaded. ₴ symbol will not display. Using helvetica fallback and "UAH" for currency.'
-      )
     }
   } catch {
     doc.setFont('helvetica', 'normal')
-    console.warn('Failed to set Noto Sans font. Using helvetica fallback and "UAH" for currency.')
   }
 
   const hr = (x1: number, y: number, x2: number) => {

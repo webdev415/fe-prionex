@@ -460,11 +460,8 @@ export function ActivityTimelinePage() {
         clientName={client?.fullName ?? ''}
         phoneNumber={client?.phones?.[0]?.number || ''}
         initialState="initial"
-        onCallStart={(callType: CallType) => {
-          console.log('Call started with type:', callType)
-        }}
-        onCallEnd={(duration: number, status: CallStatus) => {
-          console.log('Call ended:', { duration, status })
+        onCallStart={(_callType: CallType) => {}}
+        onCallEnd={(_duration: number, _status: CallStatus) => {
           setOpenCallModal(null)
         }}
       />

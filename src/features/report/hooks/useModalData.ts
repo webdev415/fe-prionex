@@ -432,9 +432,6 @@ export function useSMSSentModal({
 
     const totalSent = dashboard.kpis.smsSent
 
-    console.log('[SMS Modal Debug] dashboard.kpis.smsSent:', totalSent)
-    console.log('[SMS Modal Debug] smsStats:', smsStats)
-
     // Get delivery breakdown from communication statistics
     let delivered: number
     let failed: number
@@ -446,28 +443,12 @@ export function useSMSSentModal({
       failed = smsStats.failed
       pending = totalSent - delivered - failed
       deliveryRate = smsStats.deliveryRate
-      console.log(
-        '[SMS Modal Debug] Using smsStats - delivered:',
-        delivered,
-        'failed:',
-        failed,
-        'pending:',
-        pending
-      )
     } else {
       // Fallback with estimated values
       deliveryRate = 92
       delivered = Math.round(totalSent * 0.92)
       failed = Math.round(totalSent * 0.05)
       pending = totalSent - delivered - failed
-      console.log(
-        '[SMS Modal Debug] Using fallback - delivered:',
-        delivered,
-        'failed:',
-        failed,
-        'pending:',
-        pending
-      )
     }
 
     const result = {
@@ -487,7 +468,6 @@ export function useSMSSentModal({
         .sort((a, b) => b.smsSent - a.smsSent),
     }
 
-    console.log('[SMS Modal Debug] Final result:', result)
     return result
   }, [dashboardQuery.data, operatorQuery.data, communicationQuery.data])
 

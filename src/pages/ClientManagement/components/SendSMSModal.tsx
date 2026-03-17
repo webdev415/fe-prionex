@@ -184,72 +184,50 @@ export function SendSMSModal({
     // Use debt_close_date as due_date if available, otherwise calculate from debt_start_date + 30 days
     // Fallback to purchase_date + 30 days if other dates are not available
     let dueDate = ''
-    if (clientData?.debts && clientData.debts.length > 0) {
-      const firstDebt = clientData.debts[0]
-
-      // Debug: Log debt data to see what's available
-      if (import.meta.env.DEV) {
-        console.log('Debt data for due_date:', {
-          debt_close_date: firstDebt.debt_close_date,
-          debt_start_date: firstDebt.debt_start_date,
-          purchase_date: firstDebt.purchase_date,
-        })
-      }
+      if (clientData?.debts && clientData.debts.length > 0) {
+        const firstDebt = clientData.debts[0]
 
       // Try debt_close_date first (this is the actual due date)
-      if (firstDebt.debt_close_date) {
-        try {
-          const date = new Date(firstDebt.debt_close_date)
-          if (!isNaN(date.getTime())) {
-            dueDate = formatDate(firstDebt.debt_close_date)
-          } else {
-            console.warn('Invalid debt_close_date:', firstDebt.debt_close_date)
-          }
-        } catch (e) {
-          console.warn('Failed to parse debt_close_date:', firstDebt.debt_close_date, e)
-        }
+          if (firstDebt.debt_close_date) {
+            try {
+              const date = new Date(firstDebt.debt_close_date)
+              if (!isNaN(date.getTime())) {
+                dueDate = formatDate(firstDebt.debt_close_date)
+              }
+            } catch {
+              // ignore parse errors, will fall back to other dates
+            }
       }
 
       // If debt_close_date is not available, try debt_start_date + 30 days
-      if (!dueDate && firstDebt.debt_start_date) {
-        try {
-          const startDate = new Date(firstDebt.debt_start_date)
-          if (!isNaN(startDate.getTime())) {
-            const dueDateObj = new Date(startDate)
-            dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
-            dueDate = formatDate(dueDateObj.toISOString())
-          } else {
-            console.warn('Invalid debt_start_date:', firstDebt.debt_start_date)
-          }
-        } catch (e) {
-          console.warn('Failed to parse debt_start_date:', firstDebt.debt_start_date, e)
-        }
+          if (!dueDate && firstDebt.debt_start_date) {
+            try {
+              const startDate = new Date(firstDebt.debt_start_date)
+              if (!isNaN(startDate.getTime())) {
+                const dueDateObj = new Date(startDate)
+                dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
+                dueDate = formatDate(dueDateObj.toISOString())
+              }
+            } catch {
+              // ignore parse errors, will fall back to other dates
+            }
       }
 
       // Fallback to purchase_date + 30 days if other dates are not available
-      if (!dueDate && firstDebt.purchase_date) {
-        try {
-          const purchaseDate = new Date(firstDebt.purchase_date)
-          if (!isNaN(purchaseDate.getTime())) {
-            const dueDateObj = new Date(purchaseDate)
-            dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
-            dueDate = formatDate(dueDateObj.toISOString())
-          } else {
-            console.warn('Invalid purchase_date:', firstDebt.purchase_date)
-          }
-        } catch (e) {
-          console.warn('Failed to parse purchase_date:', firstDebt.purchase_date, e)
-        }
-      }
-
-      // Debug: Log final dueDate value
-      if (import.meta.env.DEV) {
-        console.log('Calculated dueDate:', dueDate)
+          if (!dueDate && firstDebt.purchase_date) {
+            try {
+              const purchaseDate = new Date(firstDebt.purchase_date)
+              if (!isNaN(purchaseDate.getTime())) {
+                const dueDateObj = new Date(purchaseDate)
+                dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
+                dueDate = formatDate(dueDateObj.toISOString())
+              }
+            } catch {
+              // ignore parse errors, will fall back to defaults
+            }
       }
     } else {
-      if (import.meta.env.DEV) {
-        console.warn('No debt data available for due_date calculation')
-      }
+      // no debt data available for due_date calculation
     }
 
     // Get operator_phone from user API response
