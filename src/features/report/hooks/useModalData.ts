@@ -120,7 +120,14 @@ export function useCallsMadeModal({
     const dashboard = dashboardQuery.data
     const operators = operatorQuery.data?.operators || []
     const rawHourly = communicationQuery.data?.hourlyBreakdown || []
-    const totalCalls = dashboard.kpis.callsMade
+
+    // If dashboard KPI is missing/zero, fall back to sum of operator totals to avoid showing 0 when data exists
+    const totalCallsFromDashboard = dashboard.kpis.callsMade
+    const totalCallsFromOperators = operators.reduce(
+      (sum, op) => sum + (op.summary.totalCalls || 0),
+      0
+    )
+    const totalCalls = totalCallsFromDashboard || totalCallsFromOperators
 
     return {
       total: totalCalls,
@@ -226,13 +233,35 @@ export function useContactRateModal({
     const operators = operatorQuery.data?.operators || []
     const callStats = communicationQuery.data?.callStatistics
 
-    const totalCalls = dashboard.kpis.callsMade
-    const contactRate = dashboard.kpis.contactRate
+    // Fallback: derive totals from operator performance if dashboard has zeros
+    const operatorTotals = operators.reduce(
+      (acc, op) => {
+        acc.calls += op.summary.totalCalls || 0
+        acc.answered += op.summary.callsAnswered || 0
+        return acc
+      },
+      { calls: 0, answered: 0 }
+    )
+
+    const totalCalls = dashboard.kpis.callsMade || operatorTotals.calls
+    const contactRate =
+      dashboard.kpis.contactRate ||
+      (operatorTotals.calls > 0
+        ? Math.round((operatorTotals.answered / operatorTotals.calls) * 1000) / 10
+        : 0)
     const contacted = Math.round(totalCalls * (contactRate / 100))
 
-    // Build outcomes from communication statistics
+    // Build outcomes; prefer communication stats only if they contain data
+    const hasCallStats =
+      !!callStats &&
+      (callStats.totalCalls > 0 ||
+        callStats.answered > 0 ||
+        callStats.noAnswer > 0 ||
+        callStats.busy > 0 ||
+        callStats.failed > 0)
+
     let outcomes: ContactRateOutcome[]
-    if (callStats) {
+    if (hasCallStats && callStats) {
       const total = callStats.totalCalls || totalCalls
       outcomes = [
         {
@@ -257,25 +286,33 @@ export function useContactRateModal({
         },
       ]
     } else {
-      // Fallback with estimated values based on contact rate
-      const answered = contacted
+      // Fallback: if we have real answered counts from operators, use them; otherwise estimate
+      const answered = operatorTotals.answered || contacted
       const remaining = totalCalls - answered
       outcomes = [
-        { key: 'answered' as const, count: answered, percentage: Math.round(contactRate) },
+        {
+          key: 'answered' as const,
+          count: answered,
+          percentage:
+            totalCalls > 0 ? Math.round((answered / totalCalls) * 100) : Math.round(contactRate),
+        },
         {
           key: 'noAnswer' as const,
-          count: Math.round(remaining * 0.6),
-          percentage: Math.round((100 - contactRate) * 0.6),
+          count: Math.max(0, remaining),
+          percentage:
+            totalCalls > 0
+              ? Math.round((Math.max(0, remaining) / totalCalls) * 100)
+              : Math.round(100 - contactRate),
         },
         {
           key: 'busy' as const,
-          count: Math.round(remaining * 0.25),
-          percentage: Math.round((100 - contactRate) * 0.25),
+          count: 0,
+          percentage: 0,
         },
         {
           key: 'failed' as const,
-          count: Math.round(remaining * 0.15),
-          percentage: Math.round((100 - contactRate) * 0.15),
+          count: 0,
+          percentage: 0,
         },
       ]
     }

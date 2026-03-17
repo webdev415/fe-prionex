@@ -150,23 +150,6 @@
           "loadingUserData": "Завантаження даних користувача...",
           "userNotFound": "Користувача не знайдено"
         },
-        "unlock": {
-          "title": "Статус облікового запису:",
-          "locked": "Заблоковано",
-          "unlockAccount": "Розблокувати обліковий запис:",
-          "failedAttempts": "Невдалі спроби:",
-          "lockedAt": "Заблоковано о:",
-          "autoUnlockAt": "Автоматичне розблокування о:",
-          "minRemaining": "хв залишилось",
-          "confirmTitle": "Ви впевнені, що хочете розблокувати цей обліковий запис?",
-          "thisWill": "Це:",
-          "restoreAccess": "Негайно відновить доступ для входу",
-          "resetCounter": "Скине лічильник невдалих спроб",
-          "recordAudit": "Буде записано в журнал аудиту",
-          "failedToUnlock": "Не вдалося розблокувати обліковий запис",
-          "unlocking": "Розблокування...",
-          "unlockAccountButton": "Розблокувати обліковий запис"
-        },
         "changeStatus": {
           "activateTitle": "Активувати користувача",
           "deactivateTitle": "Деактивувати користувача",
@@ -187,6 +170,23 @@
           "changing": "Зміна статусу...",
           "activateButton": "Активувати користувача",
           "deactivateButton": "Деактивувати користувача"
+        },
+        "unlock": {
+          "title": "Статус облікового запису:",
+          "locked": "Заблоковано",
+          "unlockAccount": "Розблокувати обліковий запис:",
+          "failedAttempts": "Невдалі спроби:",
+          "lockedAt": "Заблоковано о:",
+          "autoUnlockAt": "Автоматичне розблокування о:",
+          "minRemaining": "хв залишилось",
+          "confirmTitle": "Ви впевнені, що хочете розблокувати цей обліковий запис?",
+          "thisWill": "Це:",
+          "restoreAccess": "Негайно відновить доступ для входу",
+          "resetCounter": "Скине лічильник невдалих спроб",
+          "recordAudit": "Буде записано в журнал аудиту",
+          "failedToUnlock": "Не вдалося розблокувати обліковий запис",
+          "unlocking": "Розблокування...",
+          "unlockAccountButton": "Розблокувати обліковий запис"
         }
       },
       "forms": {
@@ -708,7 +708,6 @@
         "viewHistory": "Історія",
         "preview": {
           "title": "Попередній перегляд",
-          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записів · Партія: {{batchId}}",
           "previewRows": "Попередній перегляд (перші {{count}} рядків)",
           "errors": "Помилки ({{count}})",
           "readyToAssign": "Готово до призначення",
@@ -733,7 +732,8 @@
           "assignmentReasonPlaceholder": "напр., Перерозподіл портфеля березень 2026",
           "cancel": "Скасувати",
           "confirm": "Підтвердити та призначити {{count}} клієнтів",
-          "starting": "Запуск..."
+          "starting": "Запуск...",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записів · Партія: {{batchId}}"
         },
         "progress": {
           "assignmentComplete": "Призначення завершено",
@@ -956,14 +956,14 @@
           "pending": "В очікуванні",
           "failed": "Не вдалося",
           "verified": "Підтверджено",
-          "cancelled": "Скасовано"
+          "cancelled": "Скасовано",
+          "canceled": "Скасовано"
         },
         "tableHeaders": {
           "loanNumber": "Номер позики",
           "issueDate": "Дата видачі",
           "counterparty": "Контрагент",
           "saleDate": "Дата продажу",
-          "loanAmount": "Сума позики",
           "principalAmount": "Сума основного боргу",
           "principalDebt": "Основна заборгованість",
           "remainingDebtAmount": "Залишок боргу",
@@ -993,7 +993,8 @@
           "documentName": "Назва",
           "documentType": "Тип",
           "uploadDate": "Дата завантаження",
-          "documentSize": "Розмір"
+          "documentSize": "Розмір",
+          "loanAmount": "Сума позики"
         },
         "loansInProcess": "Позики в процесі",
         "closedLoans": "Закриті позики",
@@ -1340,24 +1341,6 @@
           "clear": "Очистити",
           "apply": "Застосувати"
         },
-        "tagsDropdown": {
-          "searchTags": "Пошук тегів...",
-          "noTagsFound": "Теги не знайдено",
-          "clear": "Очистити",
-          "apply": "Застосувати"
-        },
-        "bulkTag": {
-          "addTags": "Додати теги",
-          "removeTags": "Видалити теги",
-          "clients": "клієнт(ів)",
-          "searchTags": "Пошук тегів...",
-          "loadingTags": "Завантаження тегів...",
-          "noTagsFound": "Теги не знайдено",
-          "tagsSelected": "тег(ів) вибрано",
-          "selectAtLeastOneTag": "Будь ласка, виберіть хоча б один тег",
-          "cancel": "Скасувати",
-          "processing": "Обробка..."
-        },
         "recordPayment": {
           "title": "Записати платіж",
           "currentDebt": "Поточний борг:",
@@ -1589,6 +1572,24 @@
           "recentlyProcessed": "Нещодавно оброблено",
           "verified": "Підтверджено",
           "rejected": "Відхилено"
+        },
+        "tagsDropdown": {
+          "searchTags": "Пошук тегів...",
+          "noTagsFound": "Теги не знайдено",
+          "clear": "Очистити",
+          "apply": "Застосувати"
+        },
+        "bulkTag": {
+          "addTags": "Додати теги",
+          "removeTags": "Видалити теги",
+          "clients": "клієнт(ів)",
+          "searchTags": "Пошук тегів...",
+          "loadingTags": "Завантаження тегів...",
+          "noTagsFound": "Теги не знайдено",
+          "tagsSelected": "тег(ів) вибрано",
+          "selectAtLeastOneTag": "Будь ласка, виберіть хоча б один тег",
+          "cancel": "Скасувати",
+          "processing": "Обробка..."
         }
       },
       "debtSummary": {
@@ -1642,24 +1643,6 @@
         "failedToLoadClient": "Не вдалося завантажити клієнта",
         "errorOccurred": "Сталася помилка"
       },
-      "tasks": {
-        "addTask": "Додати завдання",
-        "subject": "Тема завдання",
-        "selectSubject": "Виберіть тему...",
-        "description": "Опис",
-        "descriptionPlaceholder": "Введіть опис завдання...",
-        "priority": {
-          "label": "Пріоритет",
-          "high": "Високий",
-          "normal": "Нормальний",
-          "low": "Низький"
-        },
-        "dueDate": "Термін виконання",
-        "assignedTo": "Призначено",
-        "selectUser": "Виберіть користувача...",
-        "comment": "Коментар",
-        "commentPlaceholder": "Необов'язковий коментар..."
-      },
       "paymentHistory": {
         "title": "Історія платежів",
         "backToClient": "Назад до клієнта",
@@ -1699,6 +1682,24 @@
           "view": "Переглянути"
         },
         "noPaymentHistory": "Історія платежів не знайдена"
+      },
+      "tasks": {
+        "addTask": "Додати завдання",
+        "subject": "Тема завдання",
+        "selectSubject": "Виберіть тему...",
+        "description": "Опис",
+        "descriptionPlaceholder": "Введіть опис завдання...",
+        "priority": {
+          "label": "Пріоритет",
+          "high": "Високий",
+          "normal": "Нормальний",
+          "low": "Низький"
+        },
+        "dueDate": "Термін виконання",
+        "assignedTo": "Призначено",
+        "selectUser": "Виберіть користувача...",
+        "comment": "Коментар",
+        "commentPlaceholder": "Необов'язковий коментар..."
       }
     },
     "smsTemplates": {

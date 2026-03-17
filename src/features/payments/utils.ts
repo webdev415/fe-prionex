@@ -11,13 +11,33 @@ import type {
 // Export receipt generator utilities
 export * from './utils/receiptGenerator'
 
+// Frontend display formats
+export type FrontendPaymentMethod = 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
+export type FrontendPaymentStatus = 'Verified' | 'Pending' | 'Cancelled'
+
 /**
- * Convert frontend payment method label to backend API format
+ * Convert backend payment method to frontend display format
+ */
+export function backendToFrontendPaymentMethod(
+  method: BackendPaymentMethod
+): FrontendPaymentMethod {
+  const mapping: Record<BackendPaymentMethod, FrontendPaymentMethod> = {
+    bank_transfer: 'Bank Transfer',
+    online_gateway: 'Online Gateway',
+    cash: 'Cash',
+    card: 'Card',
+    other: 'Other',
+  }
+  return mapping[method] || 'Other'
+}
+
+/**
+ * Convert frontend payment method to backend API format
  */
 export function frontendToBackendPaymentMethod(
-  method: 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
+  method: FrontendPaymentMethod
 ): BackendPaymentMethod {
-  const mapping: Record<string, BackendPaymentMethod> = {
+  const mapping: Record<FrontendPaymentMethod, BackendPaymentMethod> = {
     'Bank Transfer': 'bank_transfer',
     'Online Gateway': 'online_gateway',
     Cash: 'cash',
@@ -28,12 +48,26 @@ export function frontendToBackendPaymentMethod(
 }
 
 /**
- * Convert frontend payment status label to backend API format
+ * Convert backend payment status to frontend display format
+ */
+export function backendToFrontendPaymentStatus(
+  status: BackendPaymentStatus
+): FrontendPaymentStatus {
+  const mapping: Record<BackendPaymentStatus, FrontendPaymentStatus> = {
+    verified: 'Verified',
+    pending: 'Pending',
+    cancelled: 'Cancelled',
+  }
+  return mapping[status] || 'Pending'
+}
+
+/**
+ * Convert frontend payment status to backend API format
  */
 export function frontendToBackendPaymentStatus(
-  status: 'Verified' | 'Pending' | 'Cancelled'
+  status: FrontendPaymentStatus
 ): BackendPaymentStatus {
-  const mapping: Record<string, BackendPaymentStatus> = {
+  const mapping: Record<FrontendPaymentStatus, BackendPaymentStatus> = {
     Verified: 'verified',
     Pending: 'pending',
     Cancelled: 'cancelled',

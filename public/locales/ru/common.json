@@ -708,7 +708,6 @@
         "viewHistory": "История",
         "preview": {
           "title": "Предварительный просмотр",
-          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записей · Партия: {{batchId}}",
           "previewRows": "Предпросмотр (первые {{count}} строк)",
           "errors": "Ошибки ({{count}})",
           "readyToAssign": "Готово к назначению",
@@ -733,7 +732,8 @@
           "assignmentReasonPlaceholder": "напр., Перераспределение портфеля март 2026",
           "cancel": "Отмена",
           "confirm": "Подтвердить и назначить {{count}} клиентов",
-          "starting": "Запуск..."
+          "starting": "Запуск...",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записей · Партия: {{batchId}}"
         },
         "progress": {
           "assignmentComplete": "Назначение завершено",
@@ -956,7 +956,8 @@
           "pending": "В ожидании",
           "failed": "Не удалось",
           "verified": "Подтверждено",
-          "cancelled": "Отменён"
+          "cancelled": "Отменён",
+          "canceled": "Отменено"
         },
         "tableHeaders": {
           "loanNumber": "Номер займа",
@@ -1642,24 +1643,6 @@
         "failedToLoadClient": "Не удалось загрузить клиента",
         "errorOccurred": "Произошла ошибка"
       },
-      "tasks": {
-        "addTask": "Добавить задачу",
-        "subject": "Тема задачи",
-        "selectSubject": "Выберите тему...",
-        "description": "Описание",
-        "descriptionPlaceholder": "Введите описание задачи...",
-        "priority": {
-          "label": "Приоритет",
-          "high": "Высокий",
-          "normal": "Нормальный",
-          "low": "Низкий"
-        },
-        "dueDate": "Срок выполнения",
-        "assignedTo": "Назначено",
-        "selectUser": "Выберите пользователя...",
-        "comment": "Комментарий",
-        "commentPlaceholder": "Необязательный комментарий..."
-      },
       "paymentHistory": {
         "title": "История платежей",
         "backToClient": "Назад к клиенту",
@@ -1699,6 +1682,24 @@
           "view": "Просмотреть"
         },
         "noPaymentHistory": "История платежей не найдена"
+      },
+      "tasks": {
+        "addTask": "Добавить задачу",
+        "subject": "Тема задачи",
+        "selectSubject": "Выберите тему...",
+        "description": "Описание",
+        "descriptionPlaceholder": "Введите описание задачи...",
+        "priority": {
+          "label": "Приоритет",
+          "high": "Высокий",
+          "normal": "Нормальный",
+          "low": "Низкий"
+        },
+        "dueDate": "Срок выполнения",
+        "assignedTo": "Назначено",
+        "selectUser": "Выберите пользователя...",
+        "comment": "Комментарий",
+        "commentPlaceholder": "Необязательный комментарий..."
       }
     },
     "smsTemplates": {

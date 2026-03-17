@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { AddNoteModal } from './components/AddNoteModal'
+import { EditInteractionModal } from './components/EditInteractionModal'
 import { AddTaskModal } from './components/AddTaskModal'
 // import { DeleteClientModal } from './components/DeleteClientModal'
 import { EditClientModal } from './components/EditClientModal'
@@ -63,7 +64,11 @@ import {
   useCompleteRestructuringAgreement,
 } from '@/features/clients/hooks/useClients'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
-import { useCreateNoteInteraction } from '@/features/clients/hooks/useNoteInteraction'
+import {
+  useCreateNoteInteraction,
+  useUpdateInteraction,
+} from '@/features/clients/hooks/useNoteInteraction'
+import type { InteractionResponse } from '@/features/clients/api/types'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
 import { useCallStore } from '@/stores/callStore'
@@ -71,6 +76,7 @@ import { useClientTags } from '@/features/tags/hooks/useTags'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import { useAuthStore } from '@/stores/authStore'
+import { backendToFrontendPaymentMethod } from '@/features/payments/utils'
 import { useUserDepartment } from '@/features/users'
 import { PermissionGuard } from '@/components/auth'
 import { useHasPermission } from '@/hooks/usePermissions'
@@ -341,18 +347,27 @@ export function ClientDetailPage() {
         status: d.status,
       })),
       // Payments mapped from PaymentResponse to UI shape
-      payments: (paymentsSection?.payments ?? []).map((p) => ({
-        id: p.id,
-        loanNumber: p.debt_contract_number ?? p.payment_number,
-        counterparty: p.seller_name ?? '-',
-        saleDate: '-',
-        paymentDate: formatDate(p.payment_date ?? undefined),
-        amount: Number(p.amount),
-        paymentMethod: p.payment_method,
-        status: p.status,
-        paymentDistribution: p.payment_type ?? '-',
-        employee: p.recorded_by_username ?? '-',
-      })),
+      // Build a quick lookup from loan contract_number -> formatted sale date
+      // so payments can show the sale date when available.
+      payments: (() => {
+        const loanSaleDateMap = new Map<string, string>()
+        ;(loans ?? []).forEach((d) => {
+          if (d.contract_number)
+            loanSaleDateMap.set(d.contract_number, formatDate(d.purchase_date ?? undefined))
+        })
+        return (paymentsSection?.payments ?? []).map((p) => ({
+          id: p.id,
+          loanNumber: p.debt_contract_number ?? p.payment_number,
+          counterparty: p.seller_name ?? '-',
+          saleDate: loanSaleDateMap.get(p.debt_contract_number ?? '') ?? '-',
+          paymentDate: formatDate(p.payment_date ?? undefined),
+          amount: Number(p.amount),
+          paymentMethod: p.payment_method,
+          status: p.status,
+          paymentDistribution: p.payment_type ?? '-',
+          employee: p.recorded_by_username ?? '-',
+        }))
+      })(),
       // Write-offs mapped
       writesOffs: (paymentsSection?.writesOffs ?? []).map((w) => ({
         id: w.id,
@@ -403,29 +418,48 @@ export function ClientDetailPage() {
       })),
       documents,
       // Activities mapped from InteractionResponse to UI shape
-      activities: (activities ?? []).map((a) => ({
-        id: a.id,
-        date: formatDate(a.interaction_date),
-        type: a.type_code
-          ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
-          : (a.type_name ?? '-'),
-        subtype: a.subtype_code
-          ? t(`interactionChannels.${a.subtype_code}`, { defaultValue: a.subtype_name ?? '-' })
-          : (a.subtype_name ?? '-'),
-        contactType: a.contact_type_code
-          ? t(`interactionContactTypes.${a.contact_type_code}`, {
-              defaultValue: a.contact_type_name ?? '-',
-            })
-          : (a.contact_type_name ?? '-'),
-        result: a.result_code
-          ? t(`interactionResults.${a.result_code}`, { defaultValue: a.result_name ?? a.status })
-          : (a.result_name ?? a.status),
-        promisedAmount: a.promise_to_pay_amount ? Number(a.promise_to_pay_amount) : 0,
-        promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
-        callbackDate: formatDate(a.next_action_date ?? undefined),
-        comment: a.summary ?? a.notes ?? '-',
-        employee: a.user_name ?? '-',
-      })),
+      // Deduplicate + filter invalid interactions to keep stable keys for the DataTable
+      activities: (activities ?? [])
+        .reduce<{ seen: Set<string>; items: typeof activities }>(
+          (acc, a) => {
+            const key = a?.id != null ? String(a.id) : null
+            if (!key) return acc
+            if (acc.seen.has(key)) return acc
+            acc.seen.add(key)
+            acc.items.push(a)
+            return acc
+          },
+          { seen: new Set<string>(), items: [] }
+        )
+        .items.map((a) => ({
+          id: a.id,
+          date: formatDate(a.interaction_date),
+          type: a.type_code
+            ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
+            : (a.type_name ?? '-'),
+          subtype: a.subtype_code
+            ? t(`interactionChannels.${a.subtype_code}`, {
+                defaultValue: a.subtype_name ?? '-',
+              })
+            : (a.subtype_name ?? '-'),
+          contactType: a.contact_type_code
+            ? t(`interactionContactTypes.${a.contact_type_code}`, {
+                defaultValue: a.contact_type_name ?? '-',
+              })
+            : (a.contact_type_name ?? '-'),
+          result: a.result_code
+            ? t(`interactionResults.${a.result_code}`, {
+                defaultValue: a.result_name ?? a.status,
+              })
+            : (a.result_name ?? a.status),
+          promisedAmount: a.promise_to_pay_amount ? Number(a.promise_to_pay_amount) : 0,
+          promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
+          callbackDate: formatDate(a.next_action_date ?? undefined),
+          comment: a.summary ?? a.notes ?? '-',
+          employee: a.user_name ?? '-',
+          updated_at: a.updated_at ?? a.created_at,
+          _raw: a,
+        })),
       // Primary Creditor Payments - Not yet implemented (Phase 8)
       primaryCreditorPayments: [] as Array<{
         id: number
@@ -458,6 +492,9 @@ export function ClientDetailPage() {
   const [isTagModalOpen, setIsTagModalOpen] = useState(false)
   // const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isEditInteractionModalOpen, setIsEditInteractionModalOpen] = useState(false)
+  const { mutate: updateInteraction, isPending: isUpdating } = useUpdateInteraction()
+  const [editingInteraction, setEditingInteraction] = useState<InteractionResponse | null>(null)
   const [assignRoleModalMode, setAssignRoleModalMode] = useState<AssignRoleMode | null>(null)
   // const userRole = useUserRole()
   // const canDelete = userRole === 'Admin' || userRole === 'Supervisor'
@@ -894,7 +931,35 @@ export function ClientDetailPage() {
       key: 'employee',
       header: t('pages.clients.activity.tableHeaders.employee'),
       align: 'left',
-      className: 'w-[200px] whitespace-nowrap',
+      className: 'w-[200px] whitespace-normal',
+      render: (activity) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-dark-500 text-xs font-medium">{activity.employee}</span>
+          {activity.updated_at && (
+            <span className="text-[10px] text-gray-400">{formatDate(activity.updated_at)}</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'center',
+      className: 'w-[48px]',
+      render: (activity) => (
+        <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+          <button
+            title={t('actions.edit', 'Edit')}
+            onClick={() => {
+              setEditingInteraction(activity._raw)
+              setIsEditInteractionModalOpen(true)
+            }}
+            className="flex items-center justify-center rounded-full p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+          >
+            <Icons.PencilEdit size={16} strokeWidth={1.5} />
+          </button>
+        </PermissionGuard>
+      ),
     },
   ]
 
@@ -937,31 +1002,63 @@ export function ClientDetailPage() {
       key: 'paymentMethod',
       header: t('pages.clients.detail.tableHeaders.paymentMethod'),
       align: 'left',
+      render: (payment) =>
+        backendToFrontendPaymentMethod(
+          payment.paymentMethod as Parameters<typeof backendToFrontendPaymentMethod>[0]
+        ),
     },
     {
       key: 'status',
       header: t('pages.clients.detail.tableHeaders.status'),
       align: 'left',
       render: (payment) => {
-        const statusColors = {
-          Done: 'bg-success-500',
-          Pending: 'bg-gray-500',
-          Failed: 'bg-error-500',
-        }
-        const statusColor =
-          statusColors[payment.status as keyof typeof statusColors] || 'bg-gray-500'
-        const textColor =
-          payment.status === 'Done'
-            ? 'text-success-500'
-            : payment.status === 'Failed'
+        const s = (payment.status ?? '').toLowerCase().trim()
+        const isVerified = s === 'verified' || s === 'done'
+        const isPending = s === 'pending'
+        const isCancelled =
+          s === 'cancelled' || s === 'canceled' || s === 'failed' || s === 'rejected'
+
+        const dotInner = isVerified
+          ? 'bg-success-500'
+          : isPending
+            ? 'bg-gray-500'
+            : isCancelled
+              ? 'bg-error-500'
+              : 'bg-gray-400'
+        const dotOuter = isVerified
+          ? 'bg-success-200'
+          : isPending
+            ? 'bg-gray-200'
+            : isCancelled
+              ? 'bg-error-200'
+              : 'bg-gray-200'
+        const textClass = isVerified
+          ? 'text-success-500'
+          : isPending
+            ? 'text-gray-500'
+            : isCancelled
               ? 'text-error-500'
               : 'text-gray-500'
+
+        // Use debtSummary.paymentStatus keys (verified/pending/cancelled) for consistency
+        const labelKey = isVerified
+          ? 'pages.clients.debtSummary.paymentStatus.verified'
+          : isPending
+            ? 'pages.clients.debtSummary.paymentStatus.pending'
+            : 'pages.clients.debtSummary.paymentStatus.cancelled'
+        const label = t(labelKey)
+
         return (
           <div className="flex items-center gap-2">
-            <span className={cn('h-2.5 w-2.5 flex-shrink-0 rounded-full', statusColor)} />
-            <span className={cn('text-xs font-medium', textColor)}>
-              {t(`pages.clients.detail.paymentStatuses.${payment.status.toLowerCase()}`)}
+            <span
+              className={cn(
+                'flex h-3 w-3 flex-shrink-0 items-center justify-center rounded-full',
+                dotOuter
+              )}
+            >
+              <span className={cn('h-1.5 w-1.5 rounded-full', dotInner)} />
             </span>
+            <span className={cn('text-xs font-medium', textClass)}>{label}</span>
           </div>
         )
       },
@@ -2990,6 +3087,29 @@ export function ClientDetailPage() {
               <DataTable columns={dialHistoryColumns} data={dialHistory} className="w-full" />
             ))}
         </div>
+
+        {/* Edit Interaction Modal */}
+        <EditInteractionModal
+          open={isEditInteractionModalOpen}
+          onClose={() => {
+            setIsEditInteractionModalOpen(false)
+            setEditingInteraction(null)
+          }}
+          interaction={editingInteraction}
+          isSaving={isUpdating}
+          onSave={(data) => {
+            if (!editingInteraction) return
+            updateInteraction(
+              { clientId, interactionId: editingInteraction.id, data },
+              {
+                onSuccess: () => {
+                  setIsEditInteractionModalOpen(false)
+                  setEditingInteraction(null)
+                },
+              }
+            )
+          }}
+        />
 
         {/* Add Note Modal */}
         <AddNoteModal

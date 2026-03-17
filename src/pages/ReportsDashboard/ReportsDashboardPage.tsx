@@ -75,9 +75,12 @@ export function ReportsDashboardPage() {
 
   // Get current project and auth status from auth store
   const activeProjectId = useAuthStore((state) => state.user?.active_project_id)
+  const userProjects = useAuthStore((state) => state.user?.projects)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const user = useAuthStore((state) => state.user)
-  const projectId = activeProjectId ? Number(activeProjectId) : 1
+  // Prefer active project; fall back to first assigned project before defaulting to 1
+  const fallbackProjectId = userProjects?.[0]?.id
+  const projectId: number = Number(activeProjectId ?? fallbackProjectId ?? 1)
   const userTimezone = user?.timezone
 
   // Calculate date range from selected period in the user's profile timezone
@@ -153,6 +156,23 @@ export function ReportsDashboardPage() {
 
   // Combined loading state
   const isLoading = isDashboardLoading || isOperatorLoading
+
+  // Fallback KPIs derived from operator performance (useful when dashboard KPIs are zero/lagging)
+  const callsFromOperators = useMemo(() => {
+    if (!agentPerformance || agentPerformance.length === 0) return 0
+    return agentPerformance.reduce((sum, row) => sum + (row.calls || 0), 0)
+  }, [agentPerformance])
+
+  const contactRateFromOperators = useMemo(() => {
+    if (!agentPerformance || agentPerformance.length === 0) return 0
+    const totalCalls = agentPerformance.reduce((sum, row) => sum + (row.calls || 0), 0)
+    if (totalCalls === 0) return 0
+    const weighted = agentPerformance.reduce(
+      (sum, row) => sum + (row.contactRate || 0) * (row.calls || 0),
+      0
+    )
+    return Math.round((weighted / totalCalls) * 10) / 10
+  }, [agentPerformance])
 
   // Handle export
   const handleExport = () => {
@@ -300,7 +320,7 @@ export function ReportsDashboardPage() {
         <div className="flex w-[35%] flex-col items-start gap-5 self-stretch">
           <KPICard
             title={t('pages.reports.kpi.callsMade')}
-            value={dashboardData.kpis.callsMade.toString()}
+            value={(dashboardData.kpis.callsMade || callsFromOperators || 0).toString()}
             change={dashboardData.kpis.callsTrend.change}
             changeType={dashboardData.kpis.callsTrend.changeType}
             icon="phone"
@@ -309,12 +329,12 @@ export function ReportsDashboardPage() {
           />
           <KPICard
             title={t('pages.reports.kpi.contactRate')}
-            value={`${dashboardData.kpis.contactRate.toFixed(1)}%`}
+            value={`${(dashboardData.kpis.contactRate || contactRateFromOperators).toFixed(1)}%`}
             change={dashboardData.kpis.contactRateTrend.change}
             changeType={dashboardData.kpis.contactRateTrend.changeType}
             icon="chart"
             isPercentage
-            percentage={dashboardData.kpis.contactRate}
+            percentage={dashboardData.kpis.contactRate || contactRateFromOperators}
             period={selectedPeriod}
             onViewDetails={() => setShowContactRateModal(true)}
           />

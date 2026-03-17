@@ -150,23 +150,6 @@
           "loadingUserData": "Loading user data...",
           "userNotFound": "User not found"
         },
-        "unlock": {
-          "title": "Account Status:",
-          "locked": "Locked",
-          "unlockAccount": "Unlock Account:",
-          "failedAttempts": "Failed Attempts:",
-          "lockedAt": "Locked At:",
-          "autoUnlockAt": "Auto Unlock At:",
-          "minRemaining": "min remaining",
-          "confirmTitle": "Are you sure you want to unlock this account?",
-          "thisWill": "This will:",
-          "restoreAccess": "Immediately restore login access",
-          "resetCounter": "Reset the failed attempts counter",
-          "recordAudit": "Be recorded in the audit log",
-          "failedToUnlock": "Failed to unlock the account",
-          "unlocking": "Unlocking...",
-          "unlockAccountButton": "Unlock Account"
-        },
         "changeStatus": {
           "activateTitle": "Activate User",
           "deactivateTitle": "Deactivate User",
@@ -187,6 +170,23 @@
           "changing": "Changing status...",
           "activateButton": "Activate User",
           "deactivateButton": "Deactivate User"
+        },
+        "unlock": {
+          "title": "Account Status:",
+          "locked": "Locked",
+          "unlockAccount": "Unlock Account:",
+          "failedAttempts": "Failed Attempts:",
+          "lockedAt": "Locked At:",
+          "autoUnlockAt": "Auto Unlock At:",
+          "minRemaining": "min remaining",
+          "confirmTitle": "Are you sure you want to unlock this account?",
+          "thisWill": "This will:",
+          "restoreAccess": "Immediately restore login access",
+          "resetCounter": "Reset the failed attempts counter",
+          "recordAudit": "Be recorded in the audit log",
+          "failedToUnlock": "Failed to unlock the account",
+          "unlocking": "Unlocking...",
+          "unlockAccountButton": "Unlock Account"
         }
       },
       "forms": {
@@ -1067,24 +1067,6 @@
           "clear": "Clear",
           "apply": "Apply"
         },
-        "tagsDropdown": {
-          "searchTags": "Search tags...",
-          "noTagsFound": "No tags found",
-          "clear": "Clear",
-          "apply": "Apply"
-        },
-        "bulkTag": {
-          "addTags": "Add Tags",
-          "removeTags": "Remove Tags",
-          "clients": "client(s)",
-          "searchTags": "Search tags...",
-          "loadingTags": "Loading tags...",
-          "noTagsFound": "No tags found",
-          "tagsSelected": "tag(s) selected",
-          "selectAtLeastOneTag": "Please select at least one tag",
-          "cancel": "Cancel",
-          "processing": "Processing..."
-        },
         "recordPayment": {
           "title": "Record Payment",
           "currentDebt": "Current Debt:",
@@ -1316,6 +1298,24 @@
           "recentlyProcessed": "Recently Processed",
           "verified": "Verified",
           "rejected": "Rejected"
+        },
+        "tagsDropdown": {
+          "searchTags": "Search tags...",
+          "noTagsFound": "No tags found",
+          "clear": "Clear",
+          "apply": "Apply"
+        },
+        "bulkTag": {
+          "addTags": "Add Tags",
+          "removeTags": "Remove Tags",
+          "clients": "client(s)",
+          "searchTags": "Search tags...",
+          "loadingTags": "Loading tags...",
+          "noTagsFound": "No tags found",
+          "tagsSelected": "tag(s) selected",
+          "selectAtLeastOneTag": "Please select at least one tag",
+          "cancel": "Cancel",
+          "processing": "Processing..."
         }
       },
       "activity": {
@@ -1445,14 +1445,14 @@
           "pending": "Pending",
           "failed": "Failed",
           "verified": "Verified",
-          "cancelled": "Cancelled"
+          "cancelled": "Cancelled",
+          "canceled": "Cancelled"
         },
         "tableHeaders": {
           "loanNumber": "Loan Number",
           "issueDate": "Issue Date",
           "counterparty": "Counterparty",
           "saleDate": "Sale Date",
-          "loanAmount": "Loan Amount",
           "principalAmount": "Principal Amount",
           "principalDebt": "Principal Debt",
           "remainingDebtAmount": "Remaining Debt Amount",
@@ -1482,7 +1482,8 @@
           "documentName": "Name",
           "documentType": "Type",
           "uploadDate": "Upload Date",
-          "documentSize": "Size"
+          "documentSize": "Size",
+          "loanAmount": "Loan Amount"
         },
         "loansInProcess": "Loans in Process",
         "closedLoans": "Closed Loans",
@@ -1642,24 +1643,6 @@
         "failedToLoadClient": "Failed to load client",
         "errorOccurred": "An error occurred"
       },
-      "tasks": {
-        "addTask": "Add Task",
-        "subject": "Task Subject",
-        "selectSubject": "Select subject...",
-        "description": "Description",
-        "descriptionPlaceholder": "Enter task description...",
-        "priority": {
-          "label": "Priority",
-          "high": "High",
-          "normal": "Normal",
-          "low": "Low"
-        },
-        "dueDate": "Due Date",
-        "assignedTo": "Assigned To",
-        "selectUser": "Select user...",
-        "comment": "Comment",
-        "commentPlaceholder": "Optional comment..."
-      },
       "paymentHistory": {
         "title": "Payment History",
         "backToClient": "Back to Client",
@@ -1699,6 +1682,24 @@
           "view": "View"
         },
         "noPaymentHistory": "No payment history found"
+      },
+      "tasks": {
+        "addTask": "Add Task",
+        "subject": "Task Subject",
+        "selectSubject": "Select subject...",
+        "description": "Description",
+        "descriptionPlaceholder": "Enter task description...",
+        "priority": {
+          "label": "Priority",
+          "high": "High",
+          "normal": "Normal",
+          "low": "Low"
+        },
+        "dueDate": "Due Date",
+        "assignedTo": "Assigned To",
+        "selectUser": "Select user...",
+        "comment": "Comment",
+        "commentPlaceholder": "Optional comment..."
       }
     },
     "smsTemplates": {
@@ -1883,25 +1884,15 @@
           "title": "Create New Seller",
           "basicInformation": "Basic Information",
           "contactInformation": "Contact Information",
-          "companyInformation": "Company Information",
-          "contactPerson": "Contact Person",
-          "address": "Address",
           "optional": "Optional",
           "sellerCode": "Seller Code",
           "sellerName": "Seller Name",
           "sellerType": "Seller Type",
-          "contactEmail": "Contact Email",
-          "companyName": "Company Name *",
           "taxId": "Tax ID / Business Registration Number",
-          "website": "Website",
-          "email": "Email",
-          "contactName": "Name",
+          "contactPerson": "Contact Person",
+          "contactEmail": "Contact Email",
           "contactPhone": "Phone",
-          "streetAddress": "Street Address",
-          "city": "City",
-          "stateProvince": "State / Province",
-          "postalCode": "Postal Code",
-          "country": "Country",
+          "address": "Address",
           "notes": "Notes",
           "saveSeller": "Save Seller",
           "saving": "Saving...",
@@ -1909,85 +1900,95 @@
             "sellerCode": "e.g., BANK_ABC_2024",
             "sellerName": "Enter seller company name",
             "sellerType": "Select seller type",
-            "contactEmail": "Enter contact email",
-            "address": "Enter business address",
-            "contactPerson": "Enter contact person name",
-            "companyName": "Enter company name",
             "taxId": "Enter tax ID or business registration number",
+            "contactPerson": "Enter contact person name",
+            "contactEmail": "Enter contact email",
+            "contactPhone": "Enter phone number",
+            "address": "Enter business address",
+            "notes": "Enter any additional notes",
+            "companyName": "Enter company name",
             "website": "Enter website URL",
             "email": "Enter email address",
             "contactName": "Enter contact person name",
-            "contactPhone": "Enter phone number",
             "streetAddress": "Enter street address",
             "city": "Enter city",
             "stateProvince": "Enter state or province",
             "postalCode": "Enter postal code",
-            "country": "Select country...",
-            "notes": "Enter any additional notes"
+            "country": "Select country..."
           },
           "errors": {
             "sellerCodeRequired": "Seller code is required",
             "sellerNameRequired": "Seller name is required",
             "sellerTypeRequired": "Seller type is required",
-            "companyNameRequired": "Company name is required",
-            "invalidEmail": "Please enter a valid email address"
-          }
+            "invalidEmail": "Please enter a valid email address",
+            "companyNameRequired": "Company name is required"
+          },
+          "companyInformation": "Company Information",
+          "companyName": "Company Name *",
+          "website": "Website",
+          "email": "Email",
+          "contactName": "Name",
+          "streetAddress": "Street Address",
+          "city": "City",
+          "stateProvince": "State / Province",
+          "postalCode": "Postal Code",
+          "country": "Country"
         },
         "edit": {
           "title": "Edit Seller",
           "basicInformation": "Basic Information",
           "contactInformation": "Contact Information",
-          "companyInformation": "Company Information",
-          "contactPerson": "Contact Person",
-          "address": "Address",
           "optional": "Optional",
           "sellerCode": "Seller Code",
           "sellerCodeReadOnly": "Seller code cannot be changed after creation",
           "sellerName": "Seller Name",
           "sellerType": "Seller Type",
-          "contactEmail": "Contact Email",
-          "saveChanges": "Save Changes",
-          "companyName": "Company Name *",
           "taxId": "Tax ID / Business Registration Number",
-          "website": "Website",
-          "email": "Email",
-          "contactName": "Name",
+          "contactPerson": "Contact Person",
+          "contactEmail": "Contact Email",
           "contactPhone": "Phone",
-          "streetAddress": "Street Address",
-          "city": "City",
-          "stateProvince": "State / Province",
-          "postalCode": "Postal Code",
-          "country": "Country",
+          "address": "Address",
           "notes": "Notes",
-          "saveSeller": "Save Seller",
+          "saveChanges": "Save Changes",
           "saving": "Saving...",
           "loadingSellerData": "Loading seller data...",
           "sellerNotFound": "Seller not found",
           "placeholders": {
             "sellerName": "Enter seller company name",
             "sellerType": "Select seller type",
-            "contactEmail": "Enter contact email",
-            "address": "Enter business address",
-            "contactPerson": "Enter contact person name",
-            "companyName": "Enter company name",
             "taxId": "Enter tax ID or business registration number",
+            "contactPerson": "Enter contact person name",
+            "contactEmail": "Enter contact email",
+            "contactPhone": "Enter phone number",
+            "address": "Enter business address",
+            "notes": "Enter any additional notes",
+            "companyName": "Enter company name",
             "website": "Enter website URL",
             "email": "Enter email address",
             "contactName": "Enter contact person name",
-            "contactPhone": "Enter phone number",
             "streetAddress": "Enter street address",
             "city": "Enter city",
             "stateProvince": "Enter state or province",
             "postalCode": "Enter postal code",
-            "country": "Select country...",
-            "notes": "Enter any additional notes"
+            "country": "Select country..."
           },
           "errors": {
             "sellerNameRequired": "Seller name is required",
             "sellerTypeRequired": "Seller type is required",
-            "companyNameRequired": "Company name is required",
-            "invalidEmail": "Please enter a valid email address"
-          }
+            "invalidEmail": "Please enter a valid email address",
+            "companyNameRequired": "Company name is required"
+          },
+          "companyInformation": "Company Information",
+          "companyName": "Company Name *",
+          "website": "Website",
+          "email": "Email",
+          "contactName": "Name",
+          "streetAddress": "Street Address",
+          "city": "City",
+          "stateProvince": "State / Province",
+          "postalCode": "Postal Code",
+          "country": "Country",
+          "saveSeller": "Save Seller"
         },
         "delete": {
           "title": "Delete Seller",
