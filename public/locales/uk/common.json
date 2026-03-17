@@ -1114,7 +1114,19 @@
           "type2": "Тип 2",
           "type3": "Тип 3",
           "note": "Примітка",
-          "typeYourNoteHere": "Введіть вашу примітку тут"
+          "typeYourNoteHere": "Введіть вашу примітку тут",
+          "channel": "Канал комунікації",
+          "selectChannel": "Виберіть канал",
+          "contactType": "Тип контакту",
+          "selectContactType": "Виберіть тип контакту",
+          "result": "Результат",
+          "selectResult": "Виберіть результат (необов'язково)",
+          "promiseDate": "Дата обіцянки",
+          "selectDate": "Виберіть дату",
+          "promiseAmount": "Сума обіцянки",
+          "callbackDate": "Дата зворотного дзвінка",
+          "successMessage": "Взаємодію успішно додано",
+          "errorMessage": "Не вдалося додати взаємодію"
         },
         "assignClient": {
           "title": "Призначити клієнта: {{fullName}}",

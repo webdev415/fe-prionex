@@ -841,7 +841,19 @@
           "type2": "Type 2",
           "type3": "Type 3",
           "note": "Note",
-          "typeYourNoteHere": "Type your note here"
+          "typeYourNoteHere": "Type your note here",
+          "channel": "Communication channel",
+          "selectChannel": "Select channel",
+          "contactType": "Contact type",
+          "selectContactType": "Select contact type",
+          "result": "Result",
+          "selectResult": "Select result (optional)",
+          "promiseDate": "Promise date",
+          "selectDate": "Select date",
+          "promiseAmount": "Promise amount",
+          "callbackDate": "Callback date",
+          "successMessage": "Interaction added successfully",
+          "errorMessage": "Failed to add interaction"
         },
         "assignClient": {
           "title": "Assign Client: {{fullName}}",

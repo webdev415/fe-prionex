@@ -222,7 +222,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
               {t('pages.clients.modals.addNote.type', 'Type')}:
             </label>
             {isLoadingTypes ? (
-              <div className="text-xs text-gray-500">Loading...</div>
+              <div className="text-xs text-gray-500">{t('common.loading', 'Loading...')}</div>
             ) : (
               <Select value={typeId?.toString()} onValueChange={handleTypeChange}>
                 <SelectTrigger className="w-full" id="interaction-type" aria-label="Type">
@@ -254,7 +254,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                 {t('pages.clients.modals.addNote.channel', 'Communication channel')}:
               </label>
               {isLoadingChannels ? (
-                <div className="text-xs text-gray-500">Loading...</div>
+                <div className="text-xs text-gray-500">{t('common.loading', 'Loading...')}</div>
               ) : (
                 <Select value={subtypeId?.toString()} onValueChange={handleChannelChange}>
                   <SelectTrigger className="w-full" id="interaction-channel" aria-label="Channel">
@@ -287,7 +287,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                 {t('pages.clients.modals.addNote.contactType', 'Contact type')}:
               </label>
               {isLoadingContactTypes ? (
-                <div className="text-xs text-gray-500">Loading...</div>
+                <div className="text-xs text-gray-500">{t('common.loading', 'Loading...')}</div>
               ) : (
                 <Select value={contactTypeId?.toString()} onValueChange={handleContactTypeChange}>
                   <SelectTrigger
@@ -328,7 +328,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                 {t('pages.clients.modals.addNote.result', 'Result')}:
               </label>
               {isLoadingResults ? (
-                <div className="text-xs text-gray-500">Loading...</div>
+                <div className="text-xs text-gray-500">{t('common.loading', 'Loading...')}</div>
               ) : (
                 <Select value={resultId?.toString()} onValueChange={handleResultChange}>
                   <SelectTrigger className="w-full" id="interaction-result" aria-label="Result">

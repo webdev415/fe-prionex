@@ -1114,7 +1114,19 @@
           "type2": "Тип 2",
           "type3": "Тип 3",
           "note": "Заметка",
-          "typeYourNoteHere": "Введите вашу заметку здесь"
+          "typeYourNoteHere": "Введите вашу заметку здесь",
+          "channel": "Канал коммуникации",
+          "selectChannel": "Выберите канал",
+          "contactType": "Тип контакта",
+          "selectContactType": "Выберите тип контакта",
+          "result": "Результат",
+          "selectResult": "Выберите результат (необязательно)",
+          "promiseDate": "Дата обещания",
+          "selectDate": "Выберите дату",
+          "promiseAmount": "Сумма обещания",
+          "callbackDate": "Дата обратного звонка",
+          "successMessage": "Взаимодействие успешно добавлено",
+          "errorMessage": "Не удалось добавить взаимодействие"
         },
         "assignClient": {
           "title": "Назначить клиента: {{fullName}}",
