@@ -1642,6 +1642,24 @@
         "failedToLoadClient": "Не удалось загрузить клиента",
         "errorOccurred": "Произошла ошибка"
       },
+      "tasks": {
+        "addTask": "Добавить задачу",
+        "subject": "Тема задачи",
+        "selectSubject": "Выберите тему...",
+        "description": "Описание",
+        "descriptionPlaceholder": "Введите описание задачи...",
+        "priority": {
+          "label": "Приоритет",
+          "high": "Высокий",
+          "normal": "Нормальный",
+          "low": "Низкий"
+        },
+        "dueDate": "Срок выполнения",
+        "assignedTo": "Назначено",
+        "selectUser": "Выберите пользователя...",
+        "comment": "Комментарий",
+        "commentPlaceholder": "Необязательный комментарий..."
+      },
       "paymentHistory": {
         "title": "История платежей",
         "backToClient": "Назад к клиенту",

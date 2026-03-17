@@ -1642,6 +1642,24 @@
         "failedToLoadClient": "Failed to load client",
         "errorOccurred": "An error occurred"
       },
+      "tasks": {
+        "addTask": "Add Task",
+        "subject": "Task Subject",
+        "selectSubject": "Select subject...",
+        "description": "Description",
+        "descriptionPlaceholder": "Enter task description...",
+        "priority": {
+          "label": "Priority",
+          "high": "High",
+          "normal": "Normal",
+          "low": "Low"
+        },
+        "dueDate": "Due Date",
+        "assignedTo": "Assigned To",
+        "selectUser": "Select user...",
+        "comment": "Comment",
+        "commentPlaceholder": "Optional comment..."
+      },
       "paymentHistory": {
         "title": "Payment History",
         "backToClient": "Back to Client",

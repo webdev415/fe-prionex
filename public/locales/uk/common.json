@@ -1642,6 +1642,24 @@
         "failedToLoadClient": "Не вдалося завантажити клієнта",
         "errorOccurred": "Сталася помилка"
       },
+      "tasks": {
+        "addTask": "Додати завдання",
+        "subject": "Тема завдання",
+        "selectSubject": "Виберіть тему...",
+        "description": "Опис",
+        "descriptionPlaceholder": "Введіть опис завдання...",
+        "priority": {
+          "label": "Пріоритет",
+          "high": "Високий",
+          "normal": "Нормальний",
+          "low": "Низький"
+        },
+        "dueDate": "Термін виконання",
+        "assignedTo": "Призначено",
+        "selectUser": "Виберіть користувача...",
+        "comment": "Коментар",
+        "commentPlaceholder": "Необов'язковий коментар..."
+      },
       "paymentHistory": {
         "title": "Історія платежів",
         "backToClient": "Назад до клієнта",
