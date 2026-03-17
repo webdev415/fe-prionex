@@ -512,9 +512,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             console.error('Failed to extract user info from JWT token')
             localStorage.removeItem('impersonation_original_admin')
 
+            setAccessToken(null)
             set({
               user: null,
-              isAuthenticated: true,
+              isAuthenticated: false,
               isLoading: false,
               hasCheckedAuth: true,
               isImpersonating: false,
