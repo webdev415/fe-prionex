@@ -184,47 +184,47 @@ export function SendSMSModal({
     // Use debt_close_date as due_date if available, otherwise calculate from debt_start_date + 30 days
     // Fallback to purchase_date + 30 days if other dates are not available
     let dueDate = ''
-      if (clientData?.debts && clientData.debts.length > 0) {
-        const firstDebt = clientData.debts[0]
+    if (clientData?.debts && clientData.debts.length > 0) {
+      const firstDebt = clientData.debts[0]
 
       // Try debt_close_date first (this is the actual due date)
-          if (firstDebt.debt_close_date) {
-            try {
-              const date = new Date(firstDebt.debt_close_date)
-              if (!isNaN(date.getTime())) {
-                dueDate = formatDate(firstDebt.debt_close_date)
-              }
-            } catch {
-              // ignore parse errors, will fall back to other dates
-            }
+      if (firstDebt.debt_close_date) {
+        try {
+          const date = new Date(firstDebt.debt_close_date)
+          if (!isNaN(date.getTime())) {
+            dueDate = formatDate(firstDebt.debt_close_date)
+          }
+        } catch {
+          // ignore parse errors, will fall back to other dates
+        }
       }
 
       // If debt_close_date is not available, try debt_start_date + 30 days
-          if (!dueDate && firstDebt.debt_start_date) {
-            try {
-              const startDate = new Date(firstDebt.debt_start_date)
-              if (!isNaN(startDate.getTime())) {
-                const dueDateObj = new Date(startDate)
-                dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
-                dueDate = formatDate(dueDateObj.toISOString())
-              }
-            } catch {
-              // ignore parse errors, will fall back to other dates
-            }
+      if (!dueDate && firstDebt.debt_start_date) {
+        try {
+          const startDate = new Date(firstDebt.debt_start_date)
+          if (!isNaN(startDate.getTime())) {
+            const dueDateObj = new Date(startDate)
+            dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
+            dueDate = formatDate(dueDateObj.toISOString())
+          }
+        } catch {
+          // ignore parse errors, will fall back to other dates
+        }
       }
 
       // Fallback to purchase_date + 30 days if other dates are not available
-          if (!dueDate && firstDebt.purchase_date) {
-            try {
-              const purchaseDate = new Date(firstDebt.purchase_date)
-              if (!isNaN(purchaseDate.getTime())) {
-                const dueDateObj = new Date(purchaseDate)
-                dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
-                dueDate = formatDate(dueDateObj.toISOString())
-              }
-            } catch {
-              // ignore parse errors, will fall back to defaults
-            }
+      if (!dueDate && firstDebt.purchase_date) {
+        try {
+          const purchaseDate = new Date(firstDebt.purchase_date)
+          if (!isNaN(purchaseDate.getTime())) {
+            const dueDateObj = new Date(purchaseDate)
+            dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
+            dueDate = formatDate(dueDateObj.toISOString())
+          }
+        } catch {
+          // ignore parse errors, will fall back to defaults
+        }
       }
     } else {
       // no debt data available for due_date calculation

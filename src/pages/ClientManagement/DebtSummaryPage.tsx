@@ -583,8 +583,8 @@ export function DebtSummaryPage() {
             {/* Client Info Card Skeleton */}
             <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-4 sm:p-6">
               {/* Client Name Skeleton */}
-            <div className="flex flex-col items-center justify-center gap-4 self-stretch">
-              <div className="flex items-center justify-center gap-2 sm:gap-4">
+              <div className="flex flex-col items-center justify-center gap-4 self-stretch">
+                <div className="flex items-center justify-center gap-2 sm:gap-4">
                   <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
                   <div className="h-5 w-36 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-48" />
                 </div>

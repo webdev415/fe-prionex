@@ -333,8 +333,7 @@ export function useGenerateReceipt() {
           companyData = {
             name: project.client_company || project.name || '-',
             address:
-              ((project.settings as Record<string, unknown>)?.address as string | undefined) ||
-              '-',
+              ((project.settings as Record<string, unknown>)?.address as string | undefined) || '-',
             phone:
               ((project.settings as Record<string, unknown>)?.phone as string | undefined) || '-',
             email:

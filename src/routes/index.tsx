@@ -8,24 +8,14 @@ import { DashboardLayout } from '@/components/layout'
 import { PERMISSIONS } from '@/constants/permissions'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
-const ForceChangePasswordPage = lazy(
-  () => import('@/pages/auth/ForceChangePasswordPage')
-)
+const ForceChangePasswordPage = lazy(() => import('@/pages/auth/ForceChangePasswordPage'))
 const UserManagementPage = lazy(() =>
   import('@/pages/UserManagement').then((m) => ({ default: m.UserManagementPage }))
 )
-const ImportClientsPage = lazy(
-  () => import('@/pages/ImportClients/ImportClientsPage')
-)
-const ImportHistoryPage = lazy(
-  () => import('@/pages/ImportClients/ImportHistoryPage')
-)
-const ImportDetailsPage = lazy(
-  () => import('@/pages/ImportClients/ImportDetailsPage')
-)
-const ProjectManagementPage = lazy(
-  () => import('@/pages/ProjectManagement/ProjectManagementPage')
-)
+const ImportClientsPage = lazy(() => import('@/pages/ImportClients/ImportClientsPage'))
+const ImportHistoryPage = lazy(() => import('@/pages/ImportClients/ImportHistoryPage'))
+const ImportDetailsPage = lazy(() => import('@/pages/ImportClients/ImportDetailsPage'))
+const ProjectManagementPage = lazy(() => import('@/pages/ProjectManagement/ProjectManagementPage'))
 const RoleManagementPage = lazy(() =>
   import('@/pages/RoleManagement/RoleManagementPage').then((m) => ({
     default: m.RoleManagementPage,
@@ -81,35 +71,29 @@ const ScoringConfigurationPage = lazy(() =>
     default: m.ScoringConfigurationPage,
   }))
 )
-const ConfigurationHistoryPage = lazy(
-  () =>
-    import('@/pages/ScoringConfiguration/ConfigurationHistoryPage').then((m) => ({
-      default: m.ConfigurationHistoryPage,
-    }))
+const ConfigurationHistoryPage = lazy(() =>
+  import('@/pages/ScoringConfiguration/ConfigurationHistoryPage').then((m) => ({
+    default: m.ConfigurationHistoryPage,
+  }))
 )
 const AuditLogsPage = lazy(() =>
   import('@/pages/AuditLogs').then((m) => ({ default: m.AuditLogsPage }))
 )
-const TagsPage = lazy(() =>
-  import('@/pages/Tags/TagsPage').then((m) => ({ default: m.TagsPage }))
+const TagsPage = lazy(() => import('@/pages/Tags/TagsPage').then((m) => ({ default: m.TagsPage })))
+const ProfileSettingsPage = lazy(() =>
+  import('@/pages/ProfileSettings/ProfileSettingsPage').then((m) => ({
+    default: m.ProfileSettingsPage,
+  }))
 )
-const ProfileSettingsPage = lazy(
-  () =>
-    import('@/pages/ProfileSettings/ProfileSettingsPage').then((m) => ({
-      default: m.ProfileSettingsPage,
-    }))
+const BulkOperatorAssignmentPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkOperatorAssignmentPage,
+  }))
 )
-const BulkOperatorAssignmentPage = lazy(
-  () =>
-    import('@/pages/Operations').then((m) => ({
-      default: m.BulkOperatorAssignmentPage,
-    }))
-)
-const BulkPaymentImportPage = lazy(
-  () =>
-    import('@/pages/Operations').then((m) => ({
-      default: m.BulkPaymentImportPage,
-    }))
+const BulkPaymentImportPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkPaymentImportPage,
+  }))
 )
 
 const withSuspense = (element: React.ReactElement) => (
@@ -127,19 +111,11 @@ const DashboardLayoutRoute = () => (
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: (
-      <GuestRoute>
-        {withSuspense(<LoginPage />)}
-      </GuestRoute>
-    ),
+    element: <GuestRoute>{withSuspense(<LoginPage />)}</GuestRoute>,
   },
   {
     path: '/change-password',
-    element: (
-      <ProtectedRoute>
-        {withSuspense(<ForceChangePasswordPage />)}
-      </ProtectedRoute>
-    ),
+    element: <ProtectedRoute>{withSuspense(<ForceChangePasswordPage />)}</ProtectedRoute>,
   },
   {
     path: '/dashboard',
@@ -326,9 +302,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/dashboard/scoring-configuration/history',
-    element: (
-      <Navigate to="/dashboard/system-settings/scoring-configuration/history" replace />
-    ),
+    element: <Navigate to="/dashboard/system-settings/scoring-configuration/history" replace />,
   },
   {
     path: '/dashboard/sms-templates',

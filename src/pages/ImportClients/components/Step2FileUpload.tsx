@@ -382,7 +382,7 @@ export function Step2FileUpload({
 
         // CRITICAL: ALWAYS set csvValidationError for ANY 400 error
         // This ensures csvValidationError is never null when there's a validation error
-          if (status === 400) {
+        if (status === 400) {
           // Extract missing columns if not already extracted
           if (missingColumns.length === 0 && detail.includes('Missing required columns:')) {
             const match = detail.match(/Missing required columns:\s*([^.]+?)(?:\.|$)/i)

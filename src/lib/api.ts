@@ -106,19 +106,19 @@ const onTokenRefreshed = (token: string) => {
 
 // Request interceptor - add token to requests
 api.interceptors.request.use(
-      (config: InternalAxiosRequestConfig) => {
-        // Refresh token from localStorage in case it was updated in another tab
-        // This ensures we always have the latest token
-        const currentToken = storage.getItem(TOKEN_KEY) || accessToken
-        if (currentToken) {
-          // Update in-memory token if it changed
-          if (currentToken !== accessToken) {
-            accessToken = currentToken
-          }
-          config.headers.Authorization = `Bearer ${currentToken}`
-        }
-        return config
-      },
+  (config: InternalAxiosRequestConfig) => {
+    // Refresh token from localStorage in case it was updated in another tab
+    // This ensures we always have the latest token
+    const currentToken = storage.getItem(TOKEN_KEY) || accessToken
+    if (currentToken) {
+      // Update in-memory token if it changed
+      if (currentToken !== accessToken) {
+        accessToken = currentToken
+      }
+      config.headers.Authorization = `Bearer ${currentToken}`
+    }
+    return config
+  },
   (error) => Promise.reject(error)
 )
 
