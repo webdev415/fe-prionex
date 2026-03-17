@@ -341,6 +341,7 @@ export interface ClientProfileResponse {
     contact_value: string
     contact_type_id?: number | null
     contact_type_name?: string | null
+    contact_type_code?: string | null
     is_phone?: boolean
     comment?: string | null
     created_at?: string | null
