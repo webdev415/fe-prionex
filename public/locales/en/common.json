@@ -2383,5 +2383,10 @@
     "pending": "Pending",
     "archived": "Archived",
     "disabled": "Disabled"
+  },
+  "interactionContactTypes": {
+    "CLIENT": "Client",
+    "THIRD_PERSON": "Third person",
+    "RELATIVE": "Relative"
   }
 }

@@ -2383,5 +2383,10 @@
     "pending": "Очікує",
     "archived": "Архівований",
     "disabled": "Вимкнений"
+  },
+  "interactionContactTypes": {
+    "CLIENT": "Клієнт",
+    "THIRD_PERSON": "Третя особа",
+    "RELATIVE": "Родич"
   }
 }

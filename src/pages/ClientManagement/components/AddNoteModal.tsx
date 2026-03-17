@@ -60,7 +60,19 @@ const MAX_NOTE_LENGTH = 2000
 const RELATIVE_ONLY_CHANNELS = new Set(['MAIL', 'CHAT'])
 
 export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModalProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
+
+  const localeName = (item: {
+    name: string
+    name_uk?: string | null
+    name_en?: string | null
+    name_ru?: string | null
+  }) => {
+    const lang = i18n.language
+    if (lang === 'uk') return item.name_uk ?? item.name
+    if (lang === 'ru') return item.name_ru ?? item.name
+    return item.name_en ?? item.name
+  }
 
   const [typeId, setTypeId] = useState<number | undefined>(undefined)
   const [subtypeId, setSubtypeId] = useState<number | undefined>(undefined)
@@ -236,7 +248,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                 <SelectContent>
                   {types?.map((type) => (
                     <SelectItem key={type.id} value={type.id.toString()}>
-                      {type.name}
+                      {localeName(type)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -268,7 +280,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                   <SelectContent>
                     {channels?.map((channel) => (
                       <SelectItem key={channel.id} value={channel.id.toString()}>
-                        {channel.name}
+                        {localeName(channel)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -305,7 +317,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                   <SelectContent>
                     {contactTypes?.map((ct) => (
                       <SelectItem key={ct.id} value={ct.id.toString()}>
-                        {ct.name}
+                        {t(`interactionContactTypes.${ct.code}`, { defaultValue: ct.name })}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -342,7 +354,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                   <SelectContent>
                     {results?.map((result) => (
                       <SelectItem key={result.id} value={result.id.toString()}>
-                        {result.name}
+                        {localeName(result)}
                       </SelectItem>
                     ))}
                   </SelectContent>

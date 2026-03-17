@@ -697,6 +697,9 @@ export interface InteractionTypeResponse {
   id: number
   code: string
   name: string
+  name_uk?: string | null
+  name_en?: string | null
+  name_ru?: string | null
   is_active: boolean
   sort_order: number
 }
@@ -706,6 +709,9 @@ export interface InteractionSubtypeResponse {
   type_id?: number | null
   code: string
   name: string
+  name_uk?: string | null
+  name_en?: string | null
+  name_ru?: string | null
   description?: string | null
   is_active: boolean
   sort_order: number
@@ -724,6 +730,9 @@ export interface InteractionResultResponse {
   id: number
   code: string
   name: string
+  name_uk?: string | null
+  name_en?: string | null
+  name_ru?: string | null
   result_category?: string | null
   is_positive?: boolean | null
   requires_followup: boolean
