@@ -187,26 +187,15 @@ export function SendSMSModal({
     if (clientData?.debts && clientData.debts.length > 0) {
       const firstDebt = clientData.debts[0]
 
-      // Debug: Log debt data to see what's available
-      if (import.meta.env.DEV) {
-        console.log('Debt data for due_date:', {
-          debt_close_date: firstDebt.debt_close_date,
-          debt_start_date: firstDebt.debt_start_date,
-          purchase_date: firstDebt.purchase_date,
-        })
-      }
-
       // Try debt_close_date first (this is the actual due date)
       if (firstDebt.debt_close_date) {
         try {
           const date = new Date(firstDebt.debt_close_date)
           if (!isNaN(date.getTime())) {
             dueDate = formatDate(firstDebt.debt_close_date)
-          } else {
-            console.warn('Invalid debt_close_date:', firstDebt.debt_close_date)
           }
-        } catch (e) {
-          console.warn('Failed to parse debt_close_date:', firstDebt.debt_close_date, e)
+        } catch {
+          // ignore parse errors, will fall back to other dates
         }
       }
 
@@ -218,11 +207,9 @@ export function SendSMSModal({
             const dueDateObj = new Date(startDate)
             dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
             dueDate = formatDate(dueDateObj.toISOString())
-          } else {
-            console.warn('Invalid debt_start_date:', firstDebt.debt_start_date)
           }
-        } catch (e) {
-          console.warn('Failed to parse debt_start_date:', firstDebt.debt_start_date, e)
+        } catch {
+          // ignore parse errors, will fall back to other dates
         }
       }
 
@@ -234,22 +221,13 @@ export function SendSMSModal({
             const dueDateObj = new Date(purchaseDate)
             dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
             dueDate = formatDate(dueDateObj.toISOString())
-          } else {
-            console.warn('Invalid purchase_date:', firstDebt.purchase_date)
           }
-        } catch (e) {
-          console.warn('Failed to parse purchase_date:', firstDebt.purchase_date, e)
+        } catch {
+          // ignore parse errors, will fall back to defaults
         }
       }
-
-      // Debug: Log final dueDate value
-      if (import.meta.env.DEV) {
-        console.log('Calculated dueDate:', dueDate)
-      }
     } else {
-      if (import.meta.env.DEV) {
-        console.warn('No debt data available for due_date calculation')
-      }
+      // no debt data available for due_date calculation
     }
 
     // Get operator_phone from user API response

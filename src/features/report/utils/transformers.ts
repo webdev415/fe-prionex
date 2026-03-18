@@ -217,7 +217,6 @@ export function parseNumber(value: string | number): number {
  * ```
  */
 export function transformDashboard(data: BackendDashboardResponse): DashboardUI {
-  console.log('[Transform Dashboard] Raw data.kpis.sms_sent:', data.kpis.sms_sent)
   const payments = data.kpis.payments_collected
   return {
     projectId: data.project_id,

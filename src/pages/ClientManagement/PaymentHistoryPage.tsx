@@ -78,11 +78,6 @@ interface Payment {
   project_name?: string
 }
 
-// Mock client data for fallback
-const mockClientDetail = {
-  fullName: 'Savchenko Ivan Petrovich',
-}
-
 export function PaymentHistoryPage() {
   const { t, i18n } = useTranslation('common')
   const userTimezone = useAuthStore((state) => state.user?.timezone)
@@ -207,7 +202,7 @@ export function PaymentHistoryPage() {
 
     return {
       id: apiClient.id,
-      fullName: fullName || mockClientDetail.fullName,
+      fullName: fullName,
       phones: apiClient.phone_primary
         ? [{ number: apiClient.phone_primary, type: 'mobile' as const }]
         : [],
@@ -216,7 +211,7 @@ export function PaymentHistoryPage() {
 
   // Get client name from API or fallback to mock
   const customerName = useMemo(() => {
-    return client?.fullName || mockClientDetail.fullName
+    return client?.fullName || 'Unknown Client'
   }, [client])
 
   // Convert backend payment to frontend format
@@ -300,7 +295,7 @@ export function PaymentHistoryPage() {
     }
 
     return {
-      customerName: fullName || mockClientDetail.fullName,
+      customerName: fullName || 'Unknown Client',
       status: clientStatus,
       progressPercentage,
       totalPaid,
@@ -1154,8 +1149,10 @@ export function PaymentHistoryPage() {
                 leftIcon={<Icons.PencilEdit02 size={18} className="sm:size-5" />}
                 className="w-full rounded-full"
                 onClick={() => {
-                  // TODO: Handle edit
-                  console.log('Edit customer')
+                  // Navigate to client detail page for editing
+                  if (id) {
+                    navigate(`/dashboard/clients/${id}`)
+                  }
                 }}
               >
                 {t('pages.clients.paymentHistory.edit')}

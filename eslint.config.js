@@ -24,6 +24,8 @@ export default defineConfig([
     rules: {
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      // Disallow console calls in production (allow errors for critical issues)
+      'no-console': ['warn', { allow: ['error'] }],
       // Allow headless heading components (content provided via children)
       'jsx-a11y/heading-has-content': 'off',
       // Allow standalone label components (htmlFor provided at usage)

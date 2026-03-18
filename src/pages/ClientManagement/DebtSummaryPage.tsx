@@ -36,7 +36,6 @@ import type {
   PaymentMethod as BackendPaymentMethod,
   PaymentStatus as BackendPaymentStatus,
 } from '@/features/payments/api/types'
-import { mockClientDetail } from './mockClientDetails'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useHasPermission } from '@/hooks/usePermissions'
@@ -207,17 +206,14 @@ export function DebtSummaryPage() {
   const { data: verifiedByUser } = useUser(verifiedByUserId)
   const { data: cancelledByUser } = useUser(cancelledByUserId)
 
-  // Use mock data as fallback for missing fields until backend is fully integrated (same as ClientDetailPage)
   const client = useMemo(() => {
-    if (!apiClient) return mockClientDetail
+    if (!apiClient) return null
 
     const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
       .filter(Boolean)
       .join(' ')
 
-    // Map API client to expected shape, using mock data for fields not yet in API (same as ClientDetailPage)
     return {
-      ...mockClientDetail, // Fallback for fields not yet in backend
       id: apiClient.id,
       fullName,
       taxIdNumber: apiClient.tax_id,
@@ -237,13 +233,11 @@ export function DebtSummaryPage() {
         ? [{ number: apiClient.phone_primary, type: 'mobile' as const }]
         : [],
       personalDetails: {
-        ...mockClientDetail.personalDetails,
         tin: apiClient.tax_id,
-        dateOfBirth: apiClient.date_of_birth || mockClientDetail.personalDetails.dateOfBirth,
+        dateOfBirth: apiClient.date_of_birth || '',
       },
       addresses: {
-        ...mockClientDetail.addresses,
-        registrationAddress: apiClient.address || mockClientDetail.addresses.registrationAddress,
+        registrationAddress: apiClient.address || '',
       },
     }
   }, [apiClient])
@@ -545,7 +539,6 @@ export function DebtSummaryPage() {
     if (selectedPayment) {
       setIsPaymentDetailsModalOpen(false)
       // TODO: Add EditPaymentModal support for DebtSummaryPage if needed
-      console.log('Edit payment', selectedPayment.id)
     }
   }
 
@@ -837,23 +830,6 @@ export function DebtSummaryPage() {
     // Format as YYYY-MM-DD string
     const paymentDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
-    // Debug: Log what we're sending
-    console.log('📅 Sending payment date to backend (FIXED):', {
-      originalDate: data.date,
-      originalDateString: data.date.toString(),
-      originalISO: data.date.toISOString(),
-      utcYear: data.date.getUTCFullYear(),
-      utcMonth: data.date.getUTCMonth(),
-      utcDay: data.date.getUTCDate(),
-      localYear: data.date.getFullYear(),
-      localMonth: data.date.getMonth(),
-      localDay: data.date.getDate(),
-      year,
-      month,
-      day,
-      paymentDateString: paymentDate,
-    })
-
     const backendMethod = frontendToBackendPaymentMethod(data.method)
 
     recordPaymentMutation(
@@ -1052,7 +1028,6 @@ export function DebtSummaryPage() {
                 leftIcon={<Icons.PieChart08 size={20} className="sm:size-[24px]" />}
                 onClick={() => {
                   // TODO: Handle generate payment plan
-                  console.log('Generate payment plan')
                 }}
                 className="w-auto flex-1"
                 disabled
@@ -1070,7 +1045,7 @@ export function DebtSummaryPage() {
                   className="w-full rounded-full sm:w-auto sm:flex-1"
                   disabled={!user?.is_agent || !user?.asterisk_extension}
                   onClick={() => {
-                    const phoneNumber = client.phones?.[0]?.number
+                    const phoneNumber = client?.phones?.[0]?.number
                     if (!phoneNumber) {
                       toast.error('Client has no phone number')
                       return
@@ -1539,7 +1514,6 @@ export function DebtSummaryPage() {
           }}
           onPrintReceipt={() => {
             // TODO: Handle print receipt
-            console.log('Print receipt', selectedPayment.id)
           }}
           onDownloadReceipt={() => {
             if (!paymentHistoryData) return
