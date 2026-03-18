@@ -84,7 +84,7 @@ export function BulkPaymentImportPage() {
     <div>
       {/* Page Header */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">Bulk Payment Import</h1>
+        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">Bulk Payment Verification</h1>
 
         <Button
           variant="primary"

@@ -18,11 +18,11 @@
     "roles": "Роли",
     "departments": "Отделы",
     "smsTemplates": "SMS Шаблоны",
-      "transactions": "Транзакции",
-      "operations": "Операции",
-      "bulkOperatorAssignment": "Массовое назначение операторов",
-      "auditLogs": "Журнал аудита",
-      "reports": "Отчеты",
+    "transactions": "Транзакции",
+    "operations": "Операции",
+    "bulkOperatorAssignment": "Массовое назначение операторов",
+    "auditLogs": "Журнал аудита",
+    "reports": "Отчеты",
     "scoringConfiguration": "Конфигурация оценки",
     "systemSettings": "Системные настройки",
     "tags": "Теги"
@@ -732,7 +732,8 @@
           "assignmentReasonPlaceholder": "напр., Перераспределение портфеля март 2026",
           "cancel": "Отмена",
           "confirm": "Подтвердить и назначить {{count}} клиентов",
-          "starting": "Запуск..."
+          "starting": "Запуск...",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записей · Партия: {{batchId}}"
         },
         "progress": {
           "assignmentComplete": "Назначение завершено",
@@ -760,7 +761,11 @@
       "noClientsFound": "Клиенты не найдены",
       "assign": "Назначить",
       "bulkAssign": "Массовое назначение",
-      "bulkActions": "Массовые действия",
+      "bulkActions": {
+        "assignEmployee": "Назначить сотрудника",
+        "addTags": "Добавить теги",
+        "removeTags": "Удалить теги"
+      },
       "manageTags": "Управление тегами",
       "errorLoading": "Не удалось загрузить клиентов",
       "errorOccurred": "Произошла ошибка",
@@ -823,11 +828,6 @@
         "delivered": "Доставлено",
         "failed": "Не удалось",
         "pending": "Ожидается"
-      },
-      "bulkActions": {
-        "assignEmployee": "Назначить сотрудника",
-        "addTags": "Добавить теги",
-        "removeTags": "Удалить теги"
       },
       "activity": {
         "score": "Оценка",
@@ -956,7 +956,7 @@
           "pending": "В ожидании",
           "failed": "Не удалось",
           "verified": "Подтверждено",
-          "cancelled": "Отменено",
+          "cancelled": "Отменён",
           "canceled": "Отменено"
         },
         "tableHeaders": {
@@ -1071,6 +1071,36 @@
           "tasks": "Задания",
           "docs": "Документы",
           "callSms": "Звонок / SMS"
+        },
+        "maritalStatuses": {
+          "1": "Холост/Не замужем",
+          "2": "Женат/Замужем",
+          "3": "Разведён/Разведена",
+          "4": "Вдовец/Вдова",
+          "5": "Гражданский брак"
+        },
+        "employmentTypes": {
+          "full_time": "Полная занятость",
+          "part_time": "Частичная занятость",
+          "contract": "Контракт",
+          "student": "Студент",
+          "self_employed": "ФЛП",
+          "unemployed": "Безработный",
+          "retired": "Пенсионер",
+          "other": "Другое"
+        },
+        "paymentMethods": {
+          "bank_transfer": "Банковский перевод",
+          "online_gateway": "Онлайн-платёж",
+          "cash": "Наличные",
+          "card": "Карта",
+          "other": "Другое"
+        },
+        "genderOptions": {
+          "M": "Мужской",
+          "F": "Женский",
+          "male": "Мужской",
+          "female": "Женский"
         }
       },
       "modals": {
@@ -1085,7 +1115,19 @@
           "type2": "Тип 2",
           "type3": "Тип 3",
           "note": "Заметка",
-          "typeYourNoteHere": "Введите вашу заметку здесь"
+          "typeYourNoteHere": "Введите вашу заметку здесь",
+          "channel": "Канал коммуникации",
+          "selectChannel": "Выберите канал",
+          "contactType": "Тип контакта",
+          "selectContactType": "Выберите тип контакта",
+          "result": "Результат",
+          "selectResult": "Выберите результат (необязательно)",
+          "promiseDate": "Дата обещания",
+          "selectDate": "Выберите дату",
+          "promiseAmount": "Сумма обещания",
+          "callbackDate": "Дата обратного звонка",
+          "successMessage": "Взаимодействие успешно добавлено",
+          "errorMessage": "Не удалось добавить взаимодействие"
         },
         "assignClient": {
           "title": "Назначить клиента: {{fullName}}",
@@ -1640,6 +1682,24 @@
           "view": "Просмотреть"
         },
         "noPaymentHistory": "История платежей не найдена"
+      },
+      "tasks": {
+        "addTask": "Добавить задачу",
+        "subject": "Тема задачи",
+        "selectSubject": "Выберите тему...",
+        "description": "Описание",
+        "descriptionPlaceholder": "Введите описание задачи...",
+        "priority": {
+          "label": "Приоритет",
+          "high": "Высокий",
+          "normal": "Нормальный",
+          "low": "Низкий"
+        },
+        "dueDate": "Срок выполнения",
+        "assignedTo": "Назначено",
+        "selectUser": "Выберите пользователя...",
+        "comment": "Комментарий",
+        "commentPlaceholder": "Необязательный комментарий..."
       }
     },
     "smsTemplates": {
@@ -1897,6 +1957,15 @@
           "deleting": "Удаление...",
           "deleteSeller": "Удалить продавца"
         }
+      },
+      "types": {
+        "bank": "Банк",
+        "mfo": "МФО (Микрофинансовая организация)",
+        "collection_agency": "Коллекторское агентство",
+        "retail": "Розничная торговля",
+        "telecom": "Телекоммуникации",
+        "utilities": "Коммунальные услуги",
+        "other": "Другое"
       }
     },
     "profile": {
@@ -2061,7 +2130,7 @@
       "immediateEffect": "Изменения повлияют на всех клиентов в этом проекте немедленно",
       "saveThresholds": "Сохранить пороги",
       "sellerOverrides": "Переопределения для продавцов (необязательно)",
-      "addSellerConfig": "Добавить конфигурацию для продавца",
+      "addSellerConfig": "Добавить конфигурацию продавца",
       "sellerOverridesDescription": "Настройка различных порогов для конкретных продавцов",
       "configurationPreview": "Предпросмотр конфигурации",
       "previewDescription": "Посмотрите, как изменения порогов повлияют на распределение приоритетов клиентов",
@@ -2093,7 +2162,6 @@
       "sellerConfigCreated": "Конфигурация продавца успешно создана",
       "saveFailed": "Не удалось сохранить конфигурацию",
       "editSellerConfig": "Редактировать конфигурацию продавца",
-      "addSellerConfig": "Добавить конфигурацию продавца",
       "sellerConfigDeleted": "Конфигурация продавца успешно удалена",
       "deleteFailed": "Не удалось удалить конфигурацию",
       "clientsAffected": "Затронуто клиентов",
@@ -2276,5 +2344,80 @@
       "goBack": "Назад",
       "goHome": "На главную"
     }
+  },
+  "contactTypes": {
+    "client_mobile_phone": "Мобильный телефон клиента",
+    "client_home_phone": "Домашний телефон клиента",
+    "client_work_phone": "Рабочий телефон клиента",
+    "guarantor_mobile_phone": "Мобильный телефон поручителя",
+    "guarantor_home_phone": "Домашний телефон поручителя",
+    "guarantor_work_phone": "Рабочий телефон поручителя",
+    "third_party_mobile_phone": "Мобильный телефон третьего лица",
+    "third_party_home_phone": "Домашний телефон третьего лица",
+    "third_party_work_phone": "Рабочий телефон третьего лица",
+    "other_mobile_phone": "Другой мобильный телефон",
+    "other_home_phone": "Другой домашний телефон",
+    "other_work_phone": "Другой рабочий телефон",
+    "other_contact": "Другой контакт",
+    "excluded_from_work": "Исключён из работы",
+    "personal_email": "Личная электронная почта",
+    "social_vk": "ВКонтакте",
+    "social_facebook": "Facebook",
+    "social_odnoklassniki": "Одноклассники",
+    "registration_phone": "Телефон регистрации",
+    "fax": "Факс",
+    "registration_address": "Адрес регистрации",
+    "actual_address": "Фактический адрес",
+    "website": "Веб-сайт",
+    "work_email": "Рабочая электронная почта",
+    "work_address": "Рабочий адрес",
+    "skip_mobile_phone": "Пропуск мобильного телефона",
+    "skip_home_phone": "Пропуск домашнего телефона",
+    "referrer": "Реферер",
+    "register_mobile_phone": "Мобильный телефон из реестров",
+    "verified_third_party": "Верифицированное третье лицо"
+  },
+  "statusLabels": {
+    "active": "Активен",
+    "inactive": "Неактивен",
+    "suspended": "Приостановлен",
+    "pending": "Ожидание",
+    "archived": "Архивирован",
+    "disabled": "Отключён"
+  },
+  "interactionContactTypes": {
+    "CLIENT": "Клиент",
+    "THIRD_PERSON": "Третье лицо",
+    "RELATIVE": "Родственник"
+  },
+  "interactionTypes": {
+    "INCOMING": "Входящий",
+    "OUTGOING": "Исходящий",
+    "SEARCHING": "Розыск"
+  },
+  "interactionChannels": {
+    "CALL": "Звонок",
+    "MESSENGER": "Мессенджер",
+    "MAIL": "Почта",
+    "CHAT": "Чат"
+  },
+  "interactionResults": {
+    "agreement": "Договорённость",
+    "callback_by_appointment": "Перезвонить по договорённости",
+    "refusal_to_pay": "Отказ от оплаты",
+    "no_contact": "Нет контакта",
+    "consent_to_interact": "Согласие на взаимодействие",
+    "waiting_for_call": "Ожидание звонка",
+    "hung_up": "Повесил трубку",
+    "request_for_documents": "Запрос документов",
+    "disconnected": "Отключён",
+    "refused_payment": "Отказался платить",
+    "will_provide_information": "Предоставит информацию",
+    "will_not_provide_information": "Не предоставит информацию",
+    "refused_consent_to_interact": "Отказ от согласия на взаимодействие",
+    "threatens": "Угрожает",
+    "sent_documents": "Отправлены документы",
+    "no_numbers": "Нет номеров",
+    "numbers_found": "Номера найдены"
   }
 }
