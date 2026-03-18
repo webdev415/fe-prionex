@@ -12,6 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useCreateRole } from '../hooks/useRoleMutations'
 import { usePermissions } from '../hooks/useRoleMutations'
+import { useDepartments } from '@/features/departments'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Label } from '@/components/ui/Label'
@@ -27,6 +28,7 @@ interface CreateRoleFormProps {
 const createRoleSchema = z.object({
   name: z.string().min(1, 'Role name is required'),
   description: z.string().optional(),
+  department_id: z.number().nullable().optional(),
   permission_ids: z.array(z.number()).min(1, 'Please select at least one permission'),
 })
 
@@ -36,6 +38,10 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
   const { t } = useTranslation('common')
   const createMutation = useCreateRole()
   const { data: permissionsData, isLoading: loadingPermissions } = usePermissions()
+  const { data: departmentsData, isLoading: loadingDepartments } = useDepartments({
+    project_id: projectId,
+    is_active: true,
+  })
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
 
   // Group permissions by category
@@ -86,6 +92,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
         project_id: projectId,
         name: data.name,
         description: data.description || undefined,
+        department_id: data.department_id,
         permission_ids: selectedPermissions,
       },
       {
@@ -95,6 +102,11 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
       }
     )
   }
+
+  const departments = useMemo(
+    () => departmentsData?.departments || [],
+    [departmentsData?.departments]
+  )
 
   return (
     <form id="create-role-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -126,6 +138,33 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
         />
         {errors.description && (
           <p className="text-error-500 mt-1 text-sm">{errors.description.message}</p>
+        )}
+      </div>
+
+      {/* Department Selection */}
+      <div>
+        <Label htmlFor="department_id">
+          {t('pages.roles.forms.department')}
+          <span className="ml-1 text-sm font-light text-gray-500">(Optional)</span>
+        </Label>
+        <select
+          id="department_id"
+          {...register('department_id', {
+            setValueAs: (v) => (v === '' || v === 'null' ? null : Number(v)),
+          })}
+          disabled={createMutation.isPending || loadingDepartments}
+          className="text-dark-500 flex h-[45px] w-full items-center rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light shadow-none focus:ring-0 focus:outline-none disabled:opacity-50"
+        >
+          <option value="">{t('pages.roles.forms.placeholders.noDepartment')}</option>
+          {departments.map((dept) => (
+            <option key={dept.id} value={dept.id}>
+              {dept.name}
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-sm text-gray-500">{t('pages.roles.forms.departmentHint')}</p>
+        {errors.department_id && (
+          <p className="text-error-500 mt-1 text-sm">{errors.department_id.message}</p>
         )}
       </div>
 

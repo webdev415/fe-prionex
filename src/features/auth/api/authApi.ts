@@ -28,7 +28,7 @@ export const authApi = {
 
   exitImpersonation: () => api.post<ExitImpersonationResponse>('/api/v1/auth/impersonate/exit'),
 
-  changePassword: (data: { current_password: string; new_password: string }) =>
+  changePassword: (data: { current_password?: string; new_password: string }) =>
     api.post('/api/v1/users/me/change-password', data),
 }
 

@@ -36,3 +36,17 @@ export function useUsers(params: UserListParams = {}) {
     queryFn: () => usersApi.getUsers(params),
   })
 }
+
+/**
+ * Fetch active operators for a project — accessible to ALL users (not admin-only).
+ * Use this for any dropdown that non-admin users can see.
+ */
+export function useOperators(projectId: number | null | undefined) {
+  return useQuery({
+    queryKey: ['users', 'operators', projectId],
+    queryFn: () => usersApi.getOperators(projectId!),
+    enabled: !!projectId,
+    staleTime: 2 * 60_000,
+    select: (data) => data.operators,
+  })
+}

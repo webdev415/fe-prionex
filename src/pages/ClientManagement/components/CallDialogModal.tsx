@@ -9,15 +9,19 @@
  * - Incoming: Incoming call popup
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import { RadioGroup, RadioItem } from '../../../components/ui/Radio'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { useCallStore } from '@/stores/callStore'
+import { useCallDetails, useHangupCall } from '@/features/calls/hooks/useCall'
+import { useCallStateUpdates } from '@/features/calls/hooks/useCallStateUpdates'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 
-export type CallState = 'initial' | 'dialing' | 'connected' | 'ended' | 'incoming'
+export type CallState = 'initial' | 'dialing' | 'connected' | 'ended' | 'failed' | 'incoming'
 export type CallType = 'white-line' | 'gray-line' | 'spam-calls'
 export type CallStatus = 'answered' | 'missed' | 'rejected'
 
@@ -26,11 +30,17 @@ export interface CallDialogModalProps {
   onClose: () => void
   clientName: string
   phoneNumber: string
+  callId?: string | null // Optional call ID for tracking real-time call state
   initialState?: CallState
+  error?: string | null // Error message to display when call fails
+  isLoading?: boolean // Loading state for call initiation
   onCallStart?: (callType: CallType) => void
   onCallEnd?: (duration: number, status: CallStatus) => void
   onAnswer?: () => void
   onReject?: () => void
+  onMinimize?: () => void
+  onRetry?: () => void // Callback to retry failed call
+  onSpamCall?: (phone: string) => void // Callback to add phone to spam call history
   // For incoming call
   loans?: Array<{
     id: string
@@ -58,14 +68,45 @@ export function CallDialogModal({
   onClose,
   clientName,
   phoneNumber,
+  callId,
   initialState = 'initial',
+  error,
+  isLoading,
   onCallStart,
   onCallEnd,
   onAnswer,
   onReject,
+  onMinimize,
+  onRetry,
+  onSpamCall,
   loans = [],
 }: CallDialogModalProps) {
   const { t } = useTranslation('common')
+  const { setMinimizedCall, setOpenCallModal, minimizedCall } = useCallStore()
+  const { user: authUser } = useAuth()
+
+  // Fetch call details with polling if callId is provided
+  const { data: callDetails } = useCallDetails(callId || null)
+
+  // Listen for real-time call state updates via Socket.IO
+  const agentExtension = authUser?.asterisk_extension || null
+  useCallStateUpdates(agentExtension, callId || null)
+
+  // Hangup mutation
+  const hangupMutation = useHangupCall()
+
+  // Track modal open state
+  useEffect(() => {
+    if (open) {
+      setOpenCallModal('call-dialog')
+    } else {
+      // Only clear openCallModal if there's no minimized call
+      // This prevents clearing the state when minimizing
+      if (!minimizedCall || minimizedCall.type !== 'call-dialog') {
+        setOpenCallModal(null)
+      }
+    }
+  }, [open, setOpenCallModal, minimizedCall])
   const [callState, setCallState] = useState<CallState>(initialState)
   const [callType, setCallType] = useState<CallType>('white-line')
   const [elapsedTime, setElapsedTime] = useState(0)
@@ -102,27 +143,49 @@ export function CallDialogModal({
     }
   }, [open, initialState])
 
-  // Auto-transition from dialing to connected (for testing/demo)
-  useEffect(() => {
-    if (callState === 'dialing' && open) {
-      // Auto-connect after 3 seconds for demo purposes
-      dialingTimeoutRef.current = setTimeout(() => {
-        setCallState('connected')
-        setElapsedTime(0) // Reset timer when connected
-      }, 3000)
-    } else {
-      if (dialingTimeoutRef.current) {
-        clearTimeout(dialingTimeoutRef.current)
-        dialingTimeoutRef.current = null
-      }
+  // Derive call state and elapsed time from backend state
+  const derivedState = useMemo(() => {
+    // If there's an error prop, show failed state
+    if (error) {
+      return { state: 'failed' as CallState, time: 0 }
     }
 
-    return () => {
-      if (dialingTimeoutRef.current) {
-        clearTimeout(dialingTimeoutRef.current)
-      }
+    if (!callDetails || !open) {
+      return { state: callState, time: elapsedTime }
     }
-  }, [callState, open])
+
+    // Map backend state to frontend state
+    // Backend returns UPPERCASE values: INITIATED, RINGING, ACTIVE, COMPLETED, FAILED
+    switch (callDetails.state) {
+      case 'INITIATED':
+      case 'RINGING':
+        // During dialing, keep using local timer (ring_duration may not update in real-time)
+        return { state: 'dialing' as CallState, time: -1 } // -1 means "use local timer"
+      case 'ACTIVE':
+        // During active call, keep using local timer (talk_duration is only set when call ends)
+        return { state: 'connected' as CallState, time: -1 } // -1 means "use local timer"
+      case 'COMPLETED':
+        return { state: 'ended' as CallState, time: callDetails.total_duration || 0 }
+      case 'FAILED':
+        return { state: 'failed' as CallState, time: 0 }
+      default:
+        return { state: callState, time: elapsedTime }
+    }
+  }, [callDetails, open, callState, elapsedTime, error])
+
+  // Sync derived state to local state
+  // This is intentional state synchronization with external system (backend call state)
+  useEffect(() => {
+    if (derivedState.state !== callState) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCallState(derivedState.state)
+    }
+    // Only sync time if backend provides a valid duration (not -1)
+    // During ACTIVE state, we use local timer instead of backend value
+    if (derivedState.time >= 0 && derivedState.time !== elapsedTime) {
+      setElapsedTime(derivedState.time)
+    }
+  }, [derivedState, callState, elapsedTime])
 
   // Timer for dialing and connected states
   useEffect(() => {
@@ -201,6 +264,11 @@ export function CallDialogModal({
   }
 
   const handleReject = () => {
+    // Send hangup command to Asterisk to reject the incoming call
+    if (callId) {
+      hangupMutation.mutate(callId)
+    }
+
     if (onReject) {
       onReject()
     }
@@ -212,10 +280,36 @@ export function CallDialogModal({
 
   const handleHangUp = () => {
     const status: CallStatus = callState === 'connected' ? 'answered' : 'missed'
+
+    // Send hangup command to Asterisk if we have a call ID
+    if (callId) {
+      hangupMutation.mutate(callId)
+    }
+
     if (onCallEnd) {
       onCallEnd(elapsedTime, status)
     }
     setCallState('ended')
+  }
+
+  const handleMinimize = () => {
+    setMinimizedCall({
+      id: `call-dialog-${Date.now()}`,
+      type: 'call-dialog',
+      clientName,
+      phoneNumber,
+      callState,
+      callType,
+      elapsedTime,
+      timestamp: Date.now(),
+    })
+    // If onMinimize is provided, use it instead of onClose
+    // This prevents clearing the minimized state when restoring and re-minimizing
+    if (onMinimize) {
+      onMinimize()
+    } else {
+      onClose()
+    }
   }
 
   const handleClose = () => {
@@ -242,17 +336,27 @@ export function CallDialogModal({
   // Incoming call popup (different layout)
   if (callState === 'incoming') {
     return (
-      <Modal open={open} onClose={handleClose} maxWidth="xl" className="p-6">
-        <div className="flex flex-col gap-6">
+      <Modal open={open} onClose={handleClose} maxWidth="xl" className="p-4 sm:p-6">
+        {/* Minimize Button */}
+        <button
+          onClick={handleMinimize}
+          className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100 sm:top-4 sm:right-12"
+          aria-label="Minimize modal"
+        >
+          <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
+        </button>
+        <div className="flex flex-col gap-4 sm:gap-6">
           {/* Call Info */}
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-gray-300 bg-white">
-              <Icons.Headset size={40} className="text-gray-700" strokeWidth={1.5} />
+          <div className="flex flex-col items-center gap-2 sm:gap-3">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-gray-300 bg-white sm:h-20 sm:w-20">
+              <Icons.Headset size={32} className="text-gray-700 sm:size-10" strokeWidth={1.5} />
             </div>
-            <div className="text-dark-500 text-center text-2xl font-semibold">{phoneNumber}</div>
-            <div className="bg-primary-300 flex items-center gap-2 rounded-full px-4 py-1.5">
+            <div className="text-dark-500 text-center text-xl font-semibold sm:text-2xl">
+              {phoneNumber}
+            </div>
+            <div className="bg-primary-300 flex items-center gap-2 rounded-full px-3 py-1 sm:px-4 sm:py-1.5">
               <div className="bg-primary-500 h-2 w-2 rounded-full" />
-              <span className="text-dark-500 text-sm font-medium">
+              <span className="text-dark-500 text-xs font-medium sm:text-sm">
                 {t('pages.clients.modals.callDialog.incomingCall')}
               </span>
             </div>
@@ -260,15 +364,15 @@ export function CallDialogModal({
 
           {/* Loans Information */}
           {loans.length > 0 && (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 sm:gap-4">
               {/* Primary loans */}
               {loans.filter((loan) => loan.priority === 'Critical').length > 0 && (
                 <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="bg-error-500 rounded-full px-3 py-1 text-xs font-medium text-white">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="bg-error-500 rounded-full px-2 py-1 text-xs font-medium text-white sm:px-3">
                       {t('pages.clients.modals.callDialog.primary')}
                     </span>
-                    <span className="text-dark-500 text-sm font-medium">
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
                       {t('pages.clients.modals.callDialog.primaryLoans')}
                     </span>
                   </div>
@@ -283,11 +387,11 @@ export function CallDialogModal({
               {/* Third-party loans */}
               {loans.filter((loan) => loan.priority !== 'Critical').length > 0 && (
                 <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="bg-warning-500 rounded-full px-3 py-1 text-xs font-medium text-white">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="bg-warning-500 rounded-full px-2 py-1 text-xs font-medium text-white sm:px-3">
                       {t('pages.clients.priorities.high')}
                     </span>
-                    <span className="text-dark-500 text-sm font-medium">
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
                       {t('pages.clients.modals.callDialog.thirdPartyLoans')}
                     </span>
                   </div>
@@ -299,37 +403,38 @@ export function CallDialogModal({
                 </div>
               )}
 
-              <button className="text-primary-300 flex items-center justify-center gap-1 text-sm font-medium">
-                {t('pages.clients.modals.callDialog.viewAllLoans')} <Icons.ArrowDown size={16} />
+              <button className="text-primary-300 flex items-center justify-center gap-1 text-xs font-medium sm:text-sm">
+                {t('pages.clients.modals.callDialog.viewAllLoans')}{' '}
+                <Icons.ArrowDown size={14} className="sm:size-4" />
               </button>
             </div>
           )}
 
           {/* Call Actions */}
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2">
-              <Icons.StopWatch size={16} className="text-gray-600" />
-              <span className="text-sm text-gray-600">
+          <div className="flex flex-col gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 sm:px-4">
+              <Icons.StopWatch size={14} className="text-gray-600 sm:size-4" />
+              <span className="text-xs text-gray-600 sm:text-sm">
                 {t('pages.clients.modals.callDialog.ringing')} {formatTime(elapsedTime)}
               </span>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
               <Button
                 variant="danger"
-                size="md"
+                size="sm"
                 onClick={handleReject}
-                className="bg-error-500 hover:bg-error-600 flex-1 text-white"
+                className="bg-error-500 hover:bg-error-600 w-full rounded-md text-white"
               >
-                <Icons.Cancel01 size={20} className="mr-2" />
+                <Icons.Cancel01 size={18} className="mr-2 sm:size-5" />
                 {t('pages.clients.modals.callDialog.reject')}
               </Button>
               <Button
                 variant="primary"
-                size="md"
+                size="sm"
                 onClick={handleAnswer}
-                className="bg-primary-300 text-dark-500 hover:bg-primary-400 flex-1"
+                className="bg-primary-300 text-dark-500 hover:bg-primary-400 w-full rounded-md"
               >
-                <Icons.HeadphoneMute size={20} className="mr-2" />
+                <Icons.HeadphoneMute size={18} className="mr-2 sm:size-5" />
                 {t('pages.clients.modals.callDialog.answerCall')}
               </Button>
             </div>
@@ -341,21 +446,29 @@ export function CallDialogModal({
 
   // Regular call dialog states
   return (
-    <Modal open={open} onClose={handleClose} maxWidth="xl" className="p-10">
-      <div className="flex flex-col gap-6">
+    <Modal open={open} onClose={handleClose} maxWidth="xl" className="p-4 sm:p-6 md:p-10">
+      {/* Minimize Button */}
+      <button
+        onClick={handleMinimize}
+        className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100 sm:top-4 sm:right-12"
+        aria-label="Minimize modal"
+      >
+        <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
+      </button>
+      <div className="flex flex-col gap-4 sm:gap-6">
         {/* Content based on state */}
         {callState === 'initial' && (
           <>
             <ModalHeader
               icon={
-                <div className="bg-primary-300 flex h-12 w-12 items-center justify-center rounded-full">
-                  <Icons.Headset size={24} className="text-dark-500" strokeWidth={1.5} />
+                <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+                  <Icons.Headset size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
                 </div>
               }
               title={t('pages.clients.modals.callDialog.callClient')}
             />
             <ModalContent>
-              <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4 sm:gap-6">
                 {/* Client Name */}
                 <div className="flex flex-col gap-2">
                   <label className="text-dark-500 text-sm font-light">
@@ -390,44 +503,44 @@ export function CallDialogModal({
                   <RadioGroup
                     value={callType}
                     onValueChange={(value) => setCallType(value as CallType)}
-                    className="flex flex-row gap-3"
+                    className="flex flex-col gap-2 sm:flex-row sm:gap-3"
                   >
                     <label
                       className={cn(
-                        'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-4 py-2 transition-colors',
+                        'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors sm:px-4',
                         callType === 'white-line'
                           ? 'border-primary-300 bg-primary-100'
                           : 'border-gray-300 bg-white hover:border-gray-400'
                       )}
                     >
                       <RadioItem value="white-line" id="white-line" />
-                      <span className="text-dark-500 text-sm font-light">
+                      <span className="text-dark-500 text-xs font-light sm:text-sm">
                         {t('pages.clients.modals.callDialog.whiteLine')}
                       </span>
                     </label>
                     <label
                       className={cn(
-                        'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-4 py-2 transition-colors',
+                        'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors sm:px-4',
                         callType === 'gray-line'
                           ? 'border-primary-300 bg-primary-100'
                           : 'border-gray-300 bg-white hover:border-gray-400'
                       )}
                     >
                       <RadioItem value="gray-line" id="gray-line" />
-                      <span className="text-dark-500 text-sm font-light">
+                      <span className="text-dark-500 text-xs font-light sm:text-sm">
                         {t('pages.clients.modals.callDialog.grayLine')}
                       </span>
                     </label>
                     <label
                       className={cn(
-                        'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-4 py-2 transition-colors',
+                        'flex cursor-pointer items-center gap-2 rounded-lg border-2 px-3 py-2 transition-colors sm:px-4',
                         callType === 'spam-calls'
                           ? 'border-primary-300 bg-primary-100'
                           : 'border-gray-300 bg-white hover:border-gray-400'
                       )}
                     >
                       <RadioItem value="spam-calls" id="spam-calls" />
-                      <span className="text-dark-500 text-sm font-light">
+                      <span className="text-dark-500 text-xs font-light sm:text-sm">
                         {t('pages.clients.modals.callDialog.spamCalls')}
                       </span>
                     </label>
@@ -435,67 +548,93 @@ export function CallDialogModal({
                 </div>
               </div>
             </ModalContent>
-            <ModalFooter>
-              <Button variant="cancel" size="md" onClick={handleClose} className="flex-1">
+            <ModalFooter className="flex-col gap-2 sm:flex-row sm:gap-3">
+              <Button
+                variant="cancel"
+                size="sm"
+                onClick={handleClose}
+                className="w-full rounded-md"
+              >
                 {t('actions.cancel')}
               </Button>
-              <Button
-                variant="primary"
-                size="md"
-                onClick={handleCallNow}
-                className="flex-1"
-                leftIcon={<Icons.Headset size={20} />}
-              >
-                {t('pages.clients.modals.callDialog.callNow')}
-              </Button>
+              {callType === 'spam-calls' ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    if (onSpamCall) onSpamCall(phoneNumber)
+                    handleClose()
+                  }}
+                  className="w-full rounded-md"
+                  leftIcon={<Icons.Cancel01 size={18} className="sm:size-5" />}
+                >
+                  {t('pages.clients.modals.callDialog.markAsSpam')}
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleCallNow}
+                  className="w-full rounded-md"
+                  leftIcon={
+                    isLoading ? undefined : <Icons.Headset size={18} className="sm:size-5" />
+                  }
+                  disabled={isLoading}
+                >
+                  {isLoading ? t('status.loading') : t('pages.clients.modals.callDialog.callNow')}
+                </Button>
+              )}
             </ModalFooter>
           </>
         )}
 
-        {(callState === 'dialing' || callState === 'connected' || callState === 'ended') && (
+        {(callState === 'dialing' ||
+          callState === 'connected' ||
+          callState === 'ended' ||
+          callState === 'failed') && (
           <>
             {/* Contact Info */}
-            <div className="flex flex-col items-center gap-3">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-gray-300 bg-white">
-                <Icons.Headset size={40} className="text-gray-700" strokeWidth={1.5} />
+            <div className="flex flex-col items-center gap-2 sm:gap-3">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-gray-300 bg-white sm:h-20 sm:w-20">
+                <Icons.Headset size={32} className="text-gray-700 sm:size-10" strokeWidth={1.5} />
               </div>
-              <div className="text-dark-500 text-center text-2xl font-semibold">{clientName}</div>
+              <div className="text-dark-500 text-center text-xl font-semibold sm:text-2xl">
+                {clientName}
+              </div>
               <div
                 className={cn(
-                  'flex items-center gap-2 rounded-full px-4 py-1.5',
+                  'flex items-center gap-2 rounded-full px-3 py-1 sm:px-4 sm:py-1.5',
                   callState === 'dialing'
                     ? 'bg-primary-300'
                     : callState === 'connected'
                       ? 'bg-success-500'
-                      : 'bg-gray-800'
+                      : callState === 'failed'
+                        ? 'bg-error-500'
+                        : 'bg-gray-800'
                 )}
               >
                 <div
                   className={cn(
                     'h-2 w-2 rounded-full',
-                    callState === 'dialing'
-                      ? 'bg-primary-500'
-                      : callState === 'connected'
-                        ? 'bg-white'
-                        : 'bg-white'
+                    callState === 'dialing' ? 'bg-primary-500' : 'bg-white'
                   )}
                 />
                 <span
                   className={cn(
-                    'text-sm font-medium',
-                    callState === 'dialing' || callState === 'ended'
-                      ? 'text-dark-500'
-                      : 'text-white'
+                    'text-xs font-medium sm:text-sm',
+                    callState === 'dialing' ? 'text-dark-500' : 'text-white'
                   )}
                 >
                   {callState === 'dialing'
                     ? t('pages.clients.modals.callDialog.calling')
                     : callState === 'connected'
                       ? t('pages.clients.modals.callDialog.connected')
-                      : t('pages.clients.modals.callDialog.callEnded')}
+                      : callState === 'failed'
+                        ? t('pages.clients.modals.callDialog.callFailed')
+                        : t('pages.clients.modals.callDialog.callEnded')}
                 </span>
               </div>
-              <div className="text-dark-500 text-sm">{phoneNumber}</div>
+              <div className="text-dark-500 text-xs sm:text-sm">{phoneNumber}</div>
             </div>
 
             {/* Call Details Card */}
@@ -540,42 +679,83 @@ export function CallDialogModal({
               </>
             )}
 
+            {callState === 'failed' && (
+              <>
+                <div className="border-error-200 bg-error-50 flex flex-col items-center justify-center gap-3 rounded-lg border p-4">
+                  <div className="bg-error-100 flex h-12 w-12 items-center justify-center rounded-full">
+                    <Icons.Cancel01 size={24} className="text-error-500" />
+                  </div>
+                  <div className="text-error-600 text-center text-sm font-medium">
+                    {error || t('pages.clients.modals.callDialog.callFailedMessage')}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+                  <Button
+                    variant="cancel"
+                    size="sm"
+                    onClick={handleClose}
+                    className="w-full rounded-md"
+                  >
+                    {t('actions.close')}
+                  </Button>
+                  {onRetry && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => {
+                        setCallState('initial')
+                        onRetry()
+                      }}
+                      className="w-full rounded-md"
+                      leftIcon={<Icons.Headset size={18} className="sm:size-5" />}
+                    >
+                      {t('pages.clients.modals.callDialog.tryAgain')}
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
+
             {/* Action Buttons */}
-            {callState !== 'ended' && (
-              <div className="flex gap-3">
+            {callState !== 'ended' && callState !== 'failed' && (
+              <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                 <Button
                   variant={isMuted ? 'danger' : 'outline'}
-                  size="md"
+                  size="sm"
                   onClick={() => setIsMuted(!isMuted)}
+                  disabled
                   className={cn(
-                    'flex-1',
+                    'w-full rounded-md',
                     isMuted
                       ? 'bg-error-500 hover:bg-error-600 text-white'
-                      : 'text-dark-500 border-gray-400 bg-white hover:bg-gray-50'
+                      : 'text-dark-500 border-gray-400 bg-white hover:bg-gray-50',
+                    'cursor-not-allowed opacity-50'
                   )}
                 >
-                  <Icons.HeadphoneMute size={20} className="mr-2" />
+                  <Icons.HeadphoneMute size={18} className="mr-2 sm:size-5" />
                   {t('pages.clients.modals.callDialog.mute')}
                 </Button>
                 <Button
                   variant="outline"
-                  size="md"
+                  size="sm"
                   onClick={() => setIsOnHold(!isOnHold)}
+                  disabled
                   className={cn(
-                    'text-dark-500 flex-1 border-gray-400 bg-white hover:bg-gray-50',
-                    isOnHold && 'bg-gray-800 text-white'
+                    'text-dark-500 w-full rounded-md border-gray-400 bg-white hover:bg-gray-50',
+                    isOnHold && 'bg-gray-800 text-white',
+                    'cursor-not-allowed opacity-50'
                   )}
                 >
-                  <Icons.Pause size={20} className="mr-2" />
+                  <Icons.Pause size={18} className="mr-2 sm:size-5" />
                   {t('pages.clients.modals.callDialog.hold')}
                 </Button>
                 <Button
                   variant="primary"
-                  size="md"
+                  size="sm"
                   onClick={handleHangUp}
-                  className="bg-primary-300 text-dark-500 hover:bg-primary-400 flex-1"
+                  className="bg-primary-300 text-dark-500 hover:bg-primary-400 w-full rounded-md"
                 >
-                  <Icons.Call02 size={20} className="mr-2" />
+                  <Icons.Call02 size={18} className="mr-2 sm:size-5" />
                   {t('pages.clients.modals.callDialog.hangUp')}
                 </Button>
               </div>
@@ -632,29 +812,29 @@ function LoanCard({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
+    <div className="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
+      <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div
             className={cn(
-              'flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white',
+              'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold text-white sm:h-10 sm:w-10 sm:text-sm',
               getPriorityColor(loan.priority)
             )}
           >
             {loan.score}
           </div>
           <div className="flex flex-col">
-            <div className="text-dark-500 text-sm font-medium">
+            <div className="text-dark-500 text-xs font-medium sm:text-sm">
               {loan.clientName} - {t('pages.clients.detail.tableHeaders.loanNumber')} #
               {loan.loanNumber}
             </div>
           </div>
         </div>
-        <button className="text-primary-300 text-sm font-medium">
+        <button className="text-primary-300 text-xs font-medium sm:text-sm">
           {t('pages.clients.modals.callDialog.viewClient')} &gt;
         </button>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3">
+      <div className="mt-2 grid grid-cols-1 gap-2 sm:mt-3 sm:grid-cols-2 sm:gap-3">
         <div className="flex flex-col gap-1">
           <span className="text-xs text-gray-600">
             {t('pages.clients.detail.tableHeaders.counterparty')}:

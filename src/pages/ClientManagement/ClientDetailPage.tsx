@@ -3,889 +3,501 @@
  *
  * Full page view for displaying detailed client information.
  */
-import { useState, useEffect, useMemo } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
+import { formatDate } from '@/lib/formatters'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
+import { Input } from '@/components/ui/Input'
+import { DateSelect } from '@/components/ui/DateSelect'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { AddNoteModal } from './components/AddNoteModal'
+import { EditInteractionModal } from './components/EditInteractionModal'
+import { AddTaskModal } from './components/AddTaskModal'
+// import { DeleteClientModal } from './components/DeleteClientModal'
+import { EditClientModal } from './components/EditClientModal'
+import { AssignRoleModal, type AssignRoleMode } from './components/AssignRoleModal'
+import { PriorityBadge } from './components/PriorityBadge'
+import type { Priority } from './types'
+import { TagBadge } from '@/components/ui/TagBadge'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { CallRecordingModal } from './components/CallRecordingModal'
 import { ViewSMSModal } from './components/ViewSMSModal'
 import { SendSMSModal } from './components/SendSMSModal'
 import { CallLogCard } from './components/CallLogCard'
 import { cn } from '@/lib/utils'
-import { useClient } from '@/features/clients/hooks/useClients'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/Tooltip'
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuTrigger,
+// } from '@/components/ui/DropdownMenu'
+// import { useUserRole } from '@/hooks/usePermissions'
+import {
+  useClientProfile,
+  useClientLoans,
+  useClientPaymentsSection,
+  useClientCallSmsHistory,
+  useClientTasks,
+  useClientOperatorsSection,
+  useClientDocuments,
+  useClientActivities,
+  useClientDialHistory,
+  useAddSpamCallHistory,
+  useAssignClient,
+  useClientRestructuringAgreements,
+  useRestructuringAgreementDetail,
+  useCreateRestructuringAgreement,
+  useCloseDebt,
+  useCompleteRestructuringAgreement,
+} from '@/features/clients/hooks/useClients'
+import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
+import {
+  useCreateNoteInteraction,
+  useUpdateInteraction,
+} from '@/features/clients/hooks/useNoteInteraction'
+import type { InteractionResponse } from '@/features/clients/api/types'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
+import { useCallStore } from '@/stores/callStore'
+import { useClientTags } from '@/features/tags/hooks/useTags'
+import { TagSelectorModal } from './components/TagSelectorModal'
+import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
+import { useAuthStore } from '@/stores/authStore'
+import { backendToFrontendPaymentMethod } from '@/features/payments/utils'
+import { useUserDepartment } from '@/features/users'
+import { PermissionGuard } from '@/components/auth'
+import { useHasPermission } from '@/hooks/usePermissions'
+import { PERMISSIONS } from '@/constants/permissions'
 
-// Helper function to create mock client detail
-const createMockClientDetail = (
-  id: number,
-  fullName: string,
-  taxIdNumber: string,
-  phoneNumber: string,
-  tags: string[],
-  priority: 'Critical' | 'High' | 'Medium' | 'Low',
-  score: number
-) => ({
-  id,
-  fullName,
-  taxIdNumber,
-  dateOfBirth:
-    id === 1
-      ? '09/05/1904'
-      : id === 2
-        ? '15/08/1985'
-        : id === 3
-          ? '22/11/1990'
-          : id === 4
-            ? '03/02/1988'
-            : id === 5
-              ? '18/07/1992'
-              : id === 6
-                ? '25/09/1987'
-                : '12/04/1991',
-  region:
-    id === 1
-      ? 'Lviv'
-      : id === 2
-        ? 'Kyiv'
-        : id === 3
-          ? 'Kharkiv'
-          : id === 4
-            ? 'Odesa'
-            : id === 5
-              ? 'Dnipro'
-              : id === 6
-                ? 'Zaporizhzhia'
-                : 'Lviv',
-  age:
-    id === 1
-      ? 41
-      : id === 2
-        ? 39
-        : id === 3
-          ? 34
-          : id === 4
-            ? 36
-            : id === 5
-              ? 32
-              : id === 6
-                ? 37
-                : 33,
-  userNumber: taxIdNumber.slice(0, 9),
-  contactStatus: 'Contactable',
-  incomeLevel:
-    id === 1
-      ? 9000.0
-      : id === 2
-        ? 12000.0
-        : id === 3
-          ? 7500.0
-          : id === 4
-            ? 11000.0
-            : id === 5
-              ? 8500.0
-              : id === 6
-                ? 13000.0
-                : 9500.0,
-  score,
-  priority,
-  department: 'Credit',
-  credit: 'Credit',
-  responsibleEmployee:
-    id === 1
-      ? 'Sofia Andreevna Belova'
-      : id === 2
-        ? 'Maria Ivanovna Petrova'
-        : id === 3
-          ? 'Anna Sergeevna Sidorova'
-          : id === 4
-            ? 'Elena Dmitrievna Kozlova'
-            : id === 5
-              ? 'Olga Nikolaevna Morozova'
-              : id === 6
-                ? 'Tatiana Vladimirovna Volkova'
-                : 'Natalia Alexandrovna Sokolova',
-  responsibleResearcher:
-    id === 1
-      ? 'Eva Pavlovna Smirnova'
-      : id === 2
-        ? 'Irina Mikhailovna Fedorova'
-        : id === 3
-          ? 'Yulia Andreevna Popova'
-          : id === 4
-            ? 'Ekaterina Viktorovna Lebedeva'
-            : id === 5
-              ? 'Svetlana Olegovna Novikova'
-              : id === 6
-                ? 'Marina Borisovna Frolova'
-                : 'Daria Romanovna Orlova',
-  phones: [
-    { number: phoneNumber, type: 'primary' as const },
-    {
-      number: phoneNumber.replace(/(\d{2})(\d{3})(\d{4})/, '$1$2$3' + (id + 10)),
-      type: 'secondary' as const,
-    },
-  ],
-  tags,
-  callCount:
-    id === 1
-      ? 69
-      : id === 2
-        ? 45
-        : id === 3
-          ? 32
-          : id === 4
-            ? 58
-            : id === 5
-              ? 41
-              : id === 6
-                ? 67
-                : 52,
-  personalDetails: {
-    tin: taxIdNumber,
-    dateOfBirth:
-      id === 1
-        ? '09/05/1904'
-        : id === 2
-          ? '15/08/1985'
-          : id === 3
-            ? '22/11/1990'
-            : id === 4
-              ? '03/02/1988'
-              : id === 5
-                ? '18/07/1992'
-                : id === 6
-                  ? '25/09/1987'
-                  : '12/04/1991',
-    age:
-      id === 1
-        ? 41
-        : id === 2
-          ? 39
-          : id === 3
-            ? 34
-            : id === 4
-              ? 36
-              : id === 5
-                ? 32
-                : id === 6
-                  ? 37
-                  : 33,
-    passport: taxIdNumber.slice(0, 10),
-    maritalStatus: 'Contactable',
-    familyMembers:
-      id === 1 ? 5 : id === 2 ? 3 : id === 3 ? 4 : id === 4 ? 2 : id === 5 ? 6 : id === 6 ? 3 : 4,
-  },
-  recommenders: [
-    {
-      id: 1,
-      fullName:
-        id === 1
-          ? 'Elena Petrovna Ivanova'
-          : id === 2
-            ? 'Nina Vasilievna Smirnova'
-            : id === 3
-              ? 'Galina Ivanovna Petrova'
-              : id === 4
-                ? 'Larisa Nikolaevna Kozlova'
-                : id === 5
-                  ? 'Raisa Sergeevna Morozova'
-                  : id === 6
-                    ? 'Valentina Dmitrievna Volkova'
-                    : 'Lyudmila Alexandrovna Sokolova',
-      relationship: 'Friend',
-      phoneNumber: phoneNumber.replace(/(\d{2})(\d{3})/, '$1$2' + (id + 20)),
-      comment:
-        id === 1
-          ? 'give their best on and off the field'
-          : id === 2
-            ? 'very reliable and trustworthy person'
-            : id === 3
-              ? 'excellent communication skills'
-              : id === 4
-                ? 'highly recommended contact'
-                : id === 5
-                  ? 'professional and courteous'
-                  : id === 6
-                    ? 'responsive and helpful'
-                    : 'good business relationship',
-    },
-    {
-      id: 2,
-      fullName:
-        id === 1
-          ? 'Oksana Mykolaivna Kovalenko'
-          : id === 2
-            ? 'Tatiana Vladimirovna Romanova'
-            : id === 3
-              ? 'Marina Borisovna Frolova'
-              : id === 4
-                ? 'Daria Romanovna Orlova'
-                : id === 5
-                  ? 'Anastasia Olegovna Novikova'
-                  : id === 6
-                    ? 'Kristina Viktorovna Lebedeva'
-                    : 'Victoria Mikhailovna Fedorova',
-      relationship: 'Friend',
-      phoneNumber: phoneNumber.replace(/(\d{2})(\d{3})/, '$1$2' + (id + 30)),
-      comment:
-        id === 1
-          ? 'always inspiring the team to give their best and fostering a spirit of collaboration.'
-          : id === 2
-            ? 'maintains strong professional connections'
-            : id === 3
-              ? 'known for integrity and honesty'
-              : id === 4
-                ? 'well-respected in the community'
-                : id === 5
-                  ? 'excellent problem-solving abilities'
-                  : id === 6
-                    ? 'very organized and detail-oriented'
-                    : 'great networking skills',
-    },
-  ],
-  addresses: {
-    registrationAddress:
-      id === 1
-        ? '15 Garden Street, Kyiv, Ukraine, 01001'
-        : id === 2
-          ? '42 Main Avenue, Lviv, Ukraine, 79000'
-          : id === 3
-            ? '78 Central Boulevard, Kharkiv, Ukraine, 61000'
-            : id === 4
-              ? '23 Seaside Road, Odesa, Ukraine, 65000'
-              : id === 5
-                ? '56 River Street, Dnipro, Ukraine, 49000'
-                : id === 6
-                  ? '89 Park Lane, Zaporizhzhia, Ukraine, 69000'
-                  : '34 Market Square, Lviv, Ukraine, 79000',
-    personalAddress:
-      id === 1
-        ? '27 Maple Avenue, Lviv, Ukraine, 79000'
-        : id === 2
-          ? '91 Oak Drive, Kyiv, Ukraine, 01001'
-          : id === 3
-            ? '12 Pine Street, Kharkiv, Ukraine, 61000'
-            : id === 4
-              ? '45 Elm Road, Odesa, Ukraine, 65000'
-              : id === 5
-                ? '67 Birch Way, Dnipro, Ukraine, 49000'
-                : id === 6
-                  ? '89 Cedar Court, Zaporizhzhia, Ukraine, 69000'
-                  : '23 Willow Path, Lviv, Ukraine, 79000',
-  },
-  loans: [
-    {
-      id: 1,
-      loanNumber: String(30 + id),
-      counterparty:
-        id === 1
-          ? 'Gamma'
-          : id === 2
-            ? 'Alpha Corp'
-            : id === 3
-              ? 'Beta Solutions'
-              : id === 4
-                ? 'Delta Inc'
-                : id === 5
-                  ? 'Epsilon Ltd'
-                  : id === 6
-                    ? 'Zeta Group'
-                    : 'Theta Partners',
-      saleDate: `0${id}.23.2023`,
-      loanAmount: 20000 + id * 1000,
-      principalDebt: 10000 + id * 500,
-      totalToRepay: 60000 + id * 5000,
-    },
-    {
-      id: 2,
-      loanNumber: String(10 + id),
-      counterparty:
-        id === 1
-          ? 'Acme Corp.'
-          : id === 2
-            ? 'Tech Innovations'
-            : id === 3
-              ? 'Global Finance'
-              : id === 4
-                ? 'Capital Ventures'
-                : id === 5
-                  ? 'Prime Lending'
-                  : id === 6
-                    ? 'Elite Banking'
-                    : 'Premium Credit',
-      saleDate: `0${id + 1}.20.2023`,
-      loanAmount: 22000 + id * 800,
-      principalDebt: 12000 + id * 600,
-      totalToRepay: 65000 + id * 3000,
-    },
-  ],
-  comments: [
-    {
-      id: 1,
-      date: `0${id}/12/2023`,
-      text:
-        id === 1
-          ? "In a conversation about loans, a friend said it's important not to hesitate to ask the bank questions to ensure e..."
-          : id === 2
-            ? 'During our discussion, the client expressed interest in refinancing options and asked about flexible payment terms.'
-            : id === 3
-              ? 'The client mentioned they are considering consolidating multiple debts into a single loan for better management.'
-              : id === 4
-                ? 'Client inquired about early payment options and potential discounts for prompt repayment.'
-                : id === 5
-                  ? 'Discussion focused on loan eligibility criteria and required documentation for the application process.'
-                  : id === 6
-                    ? 'Client asked about interest rates and how they compare to other financial institutions in the market.'
-                    : 'The conversation covered loan terms, repayment schedules, and available grace periods for payments.',
-      author:
-        id === 1
-          ? 'Sofia Andreevna Belova'
-          : id === 2
-            ? 'Maria Ivanovna Petrova'
-            : id === 3
-              ? 'Anna Sergeevna Sidorova'
-              : id === 4
-                ? 'Elena Dmitrievna Kozlova'
-                : id === 5
-                  ? 'Olga Nikolaevna Morozova'
-                  : id === 6
-                    ? 'Tatiana Vladimirovna Volkova'
-                    : 'Natalia Alexandrovna Sokolova',
-    },
-  ],
-  activities: [
-    {
-      id: 1,
-      date: `0${id}/12/2023`,
-      number: phoneNumber,
-      contactType: 'Outgoing' as const,
-      result:
-        id === 1
-          ? "In a conversation about loans, a friend said it's imp..."
-          : id === 2
-            ? 'Discussed loan options and payment plans with the client...'
-            : id === 3
-              ? 'Client expressed interest in learning more about available...'
-              : id === 4
-                ? 'Follow-up call regarding pending loan application status...'
-                : id === 5
-                  ? 'Client requested additional information about interest rates...'
-                  : id === 6
-                    ? 'Scheduled meeting to review loan documentation and terms...'
-                    : 'Client confirmed receipt of loan agreement and will review...',
-      promisedAmount: 600 + id * 10,
-      promisedDate: `0${id}/12/2023`,
-      comment:
-        id === 1
-          ? 'I received a loan of 678 hryvnias, everything went q...'
-          : id === 2
-            ? `Client committed to payment of ${600 + id * 10} hryvnias by the agreed date.`
-            : id === 3
-              ? `Promised amount of ${600 + id * 10} hryvnias discussed during call.`
-              : id === 4
-                ? `Agreed payment schedule includes ${600 + id * 10} hryvnias installment.`
-                : id === 5
-                  ? `Client will process payment of ${600 + id * 10} hryvnias as discussed.`
-                  : id === 6
-                    ? `Payment commitment of ${600 + id * 10} hryvnias confirmed.`
-                    : `Agreed amount of ${600 + id * 10} hryvnias to be paid.`,
-      employee:
-        id === 1
-          ? 'Sidorov'
-          : id === 2
-            ? 'Petrov'
-            : id === 3
-              ? 'Ivanov'
-              : id === 4
-                ? 'Kozlov'
-                : id === 5
-                  ? 'Morozov'
-                  : id === 6
-                    ? 'Volkov'
-                    : 'Sokolov',
-    },
-  ],
-  payments: [
-    {
-      id: 1,
-      loanNumber: String(30 + id),
-      counterparty:
-        id === 1
-          ? 'Gamma'
-          : id === 2
-            ? 'Alpha Corp'
-            : id === 3
-              ? 'Beta Solutions'
-              : id === 4
-                ? 'Delta Inc'
-                : id === 5
-                  ? 'Epsilon Ltd'
-                  : id === 6
-                    ? 'Zeta Group'
-                    : 'Theta Partners',
-      saleDate: `0${id}.23.2023`,
-      paymentDate: `0${id}.23.2023`,
-      amount: 20000 + id * 1000,
-      paymentMethod: id % 2 === 0 ? 'Bank Transfer' : 'Card',
-      status: id === 1 ? 'Failed' : id === 2 ? 'Pending' : 'Done',
-      paymentDistribution: `₴ ${2000 + id * 100} loan body ₴ ${300 + id * 50} commisss`,
-      employee:
-        id === 1
-          ? 'Sidorov'
-          : id === 2
-            ? 'Shevchenko'
-            : id === 3
-              ? 'Petrov'
-              : id === 4
-                ? 'Melnik'
-                : id === 5
-                  ? 'Savchenko'
-                  : id === 6
-                    ? 'Kovalenko'
-                    : 'Ivanov',
-    },
-  ],
-  writesOffs: [
-    {
-      id: 1,
-      loanNumber: String(30 + id),
-      counterparty:
-        id === 1
-          ? 'Gamma'
-          : id === 2
-            ? 'Alpha Corp'
-            : id === 3
-              ? 'Beta Solutions'
-              : id === 4
-                ? 'Delta Inc'
-                : id === 5
-                  ? 'Epsilon Ltd'
-                  : id === 6
-                    ? 'Zeta Group'
-                    : 'Theta Partners',
-      saleDate: `0${id}.23.2023`,
-      writeOffDate: `0${id}.23.2023`,
-      amount: 20000 + id * 1000,
-      writeOffMethod: id % 2 === 0 ? 'Bank Transfer' : 'Card',
-      employee:
-        id === 1
-          ? 'Sidorov'
-          : id === 2
-            ? 'Shevchenko'
-            : id === 3
-              ? 'Petrov'
-              : id === 4
-                ? 'Melnik'
-                : id === 5
-                  ? 'Savchenko'
-                  : id === 6
-                    ? 'Kovalenko'
-                    : 'Ivanov',
-    },
-  ],
-  primaryCreditorPayments: [
-    {
-      id: 1,
-      loanNumber: String(30 + id),
-      counterparty:
-        id === 1
-          ? 'Gamma'
-          : id === 2
-            ? 'Alpha Corp'
-            : id === 3
-              ? 'Beta Solutions'
-              : id === 4
-                ? 'Delta Inc'
-                : id === 5
-                  ? 'Epsilon Ltd'
-                  : id === 6
-                    ? 'Zeta Group'
-                    : 'Theta Partners',
-      saleDate: `0${id}.23.2023`,
-      paymentDate: `0${id}.23.2023`,
-      amount: 20000 + id * 1000,
-      distributionMethod:
-        id === 1
-          ? 'Commission-based'
-          : id === 2
-            ? 'Escrow-based distribution'
-            : id === 3
-              ? 'Fixed amount distribution'
-              : id === 4
-                ? 'Multi-party / Chain distribution'
-                : id === 5
-                  ? 'Commission-based'
-                  : id === 6
-                    ? 'Escrow-based distribution'
-                    : 'Fixed amount distribution',
-    },
-  ],
-  operators: [
-    {
-      id: 1,
-      creationDate: `0${id}.23.2023`,
-      whoCreated:
-        id === 1
-          ? 'Sidorov'
-          : id === 2
-            ? 'Petrov'
-            : id === 3
-              ? 'Ivanov'
-              : id === 4
-                ? 'Kozlov'
-                : id === 5
-                  ? 'Morozov'
-                  : id === 6
-                    ? 'Volkov'
-                    : 'Sokolov',
-      description:
-        id === 1
-          ? 'Meet Alex, who got a loan to open a café and is excited to start.'
-          : id === 2
-            ? 'Client interested in business expansion loan for retail operations.'
-            : id === 3
-              ? 'New client seeking personal loan for home renovation project.'
-              : id === 4
-                ? 'Established client requesting additional credit line increase.'
-                : id === 5
-                  ? 'Client needs loan for vehicle purchase and financing options.'
-                  : id === 6
-                    ? 'Business client exploring working capital loan solutions.'
-                    : 'Individual client interested in debt consolidation services.',
-      reminderDate: `0${id}.23.2023`,
-      reminderRecipient:
-        id === 1
-          ? 'Shevchenko'
-          : id === 2
-            ? 'Petrov'
-            : id === 3
-              ? 'Ivanov'
-              : id === 4
-                ? 'Kozlov'
-                : id === 5
-                  ? 'Morozov'
-                  : id === 6
-                    ? 'Volkov'
-                    : 'Sokolov',
-    },
-  ],
-  searchers: [
-    {
-      id: 1,
-      creationDate: `0${id + 10}.23.2023`,
-      whoCreated:
-        id === 1
-          ? 'Shevchenko'
-          : id === 2
-            ? 'Petrov'
-            : id === 3
-              ? 'Ivanov'
-              : id === 4
-                ? 'Kozlov'
-                : id === 5
-                  ? 'Morozov'
-                  : id === 6
-                    ? 'Volkov'
-                    : 'Sokolov',
-      description:
-        id === 1
-          ? 'Say hello to Taylor, who took a loan to redesign their home.'
-          : id === 2
-            ? 'Client research completed for property investment loan application.'
-            : id === 3
-              ? 'Background verification in progress for new client onboarding.'
-              : id === 4
-                ? 'Credit history review completed for existing client renewal.'
-                : id === 5
-                  ? 'Financial assessment underway for business loan qualification.'
-                  : id === 6
-                    ? 'Documentation review process initiated for loan approval.'
-                    : 'Client eligibility check performed for loan program participation.',
-      reminderDate: `0${id}.23.2023`,
-      reminderRecipient:
-        id === 1
-          ? 'Shevchenko'
-          : id === 2
-            ? 'Petrov'
-            : id === 3
-              ? 'Ivanov'
-              : id === 4
-                ? 'Kozlov'
-                : id === 5
-                  ? 'Morozov'
-                  : id === 6
-                    ? 'Volkov'
-                    : 'Sokolov',
-    },
-  ],
-  callSmsHistory: {
-    all: [
-      {
-        id: 1,
-        number: phoneNumber,
-        contactType: 'Outgoing' as const,
-        comment:
-          id === 1
-            ? 'I received a loan of 678 hryvnias, everything went quickly and smoothly.'
-            : id === 2
-              ? 'Client confirmed receipt of loan documents and will proceed with signing.'
-              : id === 3
-                ? 'Discussion about loan terms and conditions went very well.'
-                : id === 4
-                  ? 'Client expressed satisfaction with the loan application process.'
-                  : id === 5
-                    ? 'Follow-up call regarding loan approval status was productive.'
-                    : id === 6
-                      ? 'Client requested additional information about repayment options.'
-                      : 'Initial consultation call completed successfully with positive feedback.',
-      },
-    ],
-    calls: [
-      {
-        id: 1,
-        date: '2025-12-03',
-        time: `${14 + id}:30`,
-        type: 'Incoming' as const,
-        duration: '2m 35s',
-        status: 'Answered' as const,
-        operator: 'maria_s',
-        phone: phoneNumber,
-        phoneLabel: 'Primary',
-        line: 'White',
-      },
-    ],
-    sms: [
-      {
-        id: 1,
-        date: '2025-12-03',
-        time: `${14 + id}:30`,
-        message:
-          id === 1
-            ? 'Dear Ivan, this is a reminder about your loan payment.'
-            : id === 2
-              ? 'Thank you for your recent loan application. We will review it shortly.'
-              : id === 3
-                ? 'Your loan payment is due soon. Please ensure sufficient funds.'
-                : id === 4
-                  ? 'Loan approval notification: Your application has been processed.'
-                  : id === 5
-                    ? 'Reminder: Loan installment payment scheduled for this week.'
-                    : id === 6
-                      ? 'Update: Your loan status has been updated in our system.'
-                      : 'Notification: Important information regarding your loan account.',
-        template: 'Payment Reminder',
-        operator: 'Svitlana',
-        status: 'Delivered' as const,
-      },
-    ],
-  },
-  tasks: [
-    {
-      id: 1,
-      creationDate: `0${id}.23.2023`,
-      whoCreated:
-        id === 1
-          ? 'Sidorov'
-          : id === 2
-            ? 'Petrov'
-            : id === 3
-              ? 'Ivanov'
-              : id === 4
-                ? 'Kozlov'
-                : id === 5
-                  ? 'Morozov'
-                  : id === 6
-                    ? 'Volkov'
-                    : 'Sokolov',
-      description:
-        id === 1
-          ? 'Meet Alex, who got a loan to open a café and is excited to start.'
-          : id === 2
-            ? 'Follow up with client regarding loan application submission.'
-            : id === 3
-              ? 'Schedule meeting to discuss loan terms and conditions.'
-              : id === 4
-                ? 'Review client documentation for loan approval process.'
-                : id === 5
-                  ? 'Contact client about payment schedule and options.'
-                  : id === 6
-                    ? 'Prepare loan agreement documents for client signature.'
-                    : 'Coordinate with client for loan disbursement procedures.',
-      reminderDate: `0${id}.23.2023`,
-      reminderRecipient:
-        id === 1
-          ? 'Shevchenko'
-          : id === 2
-            ? 'Petrov'
-            : id === 3
-              ? 'Ivanov'
-              : id === 4
-                ? 'Kozlov'
-                : id === 5
-                  ? 'Morozov'
-                  : id === 6
-                    ? 'Volkov'
-                    : 'Sokolov',
-    },
-  ],
-  documents: [
-    {
-      id: 1,
-      name:
-        id === 1
-          ? 'Loan Agreement.pdf'
-          : id === 2
-            ? 'Credit Application Form.pdf'
-            : id === 3
-              ? 'Financial Statement.pdf'
-              : id === 4
-                ? 'Identity Verification.pdf'
-                : id === 5
-                  ? 'Income Certificate.pdf'
-                  : id === 6
-                    ? 'Property Documents.pdf'
-                    : 'Bank Statement.pdf',
-      type: 'PDF',
-      uploadDate: `0${id}.23.2023`,
-      size: `${2 + id * 0.3} MB`,
-    },
-  ],
-})
+// Extended types for SMS and Call items with API-specific properties
+type ExtendedSMSItem = {
+  id: number
+  date: string
+  time: string
+  message: string
+  template: string
+  operator: string
+  status: string
+  phone?: string
+  sent_at?: string
+  delivered_at?: string
+}
 
-// Mock data array - replace with actual API call
-const mockClientsDetail = [
-  createMockClientDetail(
-    1,
-    'Veronika Denisovna Lapina',
-    '12145878778',
-    '+380931234567',
-    ['Bankrupt', 'Did not answer the phone'],
-    'High',
-    88
-  ),
-  createMockClientDetail(
-    2,
-    'Alexandra Petrovna Ilyina',
-    '7896541230',
-    '+380669876543',
-    ['Insolvent', 'Deceiver'],
-    'Medium',
-    10
-  ),
-  createMockClientDetail(
-    3,
-    'Sofia Andreevna Belova',
-    '1236547890',
-    '+380735551212',
-    ['Financially insolvent'],
-    'Low',
-    12
-  ),
-  createMockClientDetail(
-    4,
-    'Polina Antonovna Volkova',
-    '9874563215',
-    '+380502223434',
-    ['Creditor', 'Con artist'],
-    'Low',
-    78
-  ),
-  createMockClientDetail(
-    5,
-    'Valeria Maksimovna Kuznetsova',
-    '3692581470',
-    '+380991115656',
-    ['Insolvent', 'Fraudulent'],
-    'Medium',
-    34
-  ),
-  createMockClientDetail(
-    6,
-    'Ksenia Ilyinichna Sokolova',
-    '1470369258',
-    '+380634447878',
-    ['Financially insolvent'],
-    'High',
-    56
-  ),
-  createMockClientDetail(
-    7,
-    'Victoria Egorovna Zhukova',
-    '2589631470',
-    '+380507778989',
-    ['Employee', 'Con artist'],
-    'Critical',
-    45
-  ),
-]
+type ExtendedCallItem = {
+  id: number
+  date: string
+  time: string
+  type: 'Incoming' | 'Outgoing'
+  duration: string
+  status: string
+  operator: string
+  phone: string
+  phoneLabel: string
+  line: string
+  call_id?: string
+  initiated_at?: string
+}
 
-// Legacy mock data removed - use mockClientsDetail array instead
+// Contact type names are now returned by the backend from client_contact_types lookup table
+
+// Client data loaded via useClientProfile + section-specific hooks (real API endpoints)
 
 export function ClientDetailPage() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
+  const { isCallActive, setOpenCallModal } = useCallStore()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+
+  // Returns true if the value looks like a Ukrainian phone number,
+  // regardless of the contact type's isPhone flag
+  const looksLikePhone = (value: string) => /^(\+?38)?0\d{9}$/.test(value.replace(/[\s\-().]/g, ''))
   const [activeLoanTab, setActiveLoanTab] = useState<'process' | 'closed' | 'rr'>('process')
-  const [activeCommentTab, setActiveCommentTab] = useState<'comments' | 'primary'>('comments')
+  const [selectedRaId, setSelectedRaId] = useState<number | null>(null)
+  const [isConnectRrOpen, setIsConnectRrOpen] = useState(false)
+  const [connectRrForm, setConnectRrForm] = useState({
+    debtId: '' as string,
+    connectionDate: null as Date | null,
+    totalAmount: '',
+    numPayments: 1,
+    payments: [{ date: null as Date | null, amount: '' }] as Array<{
+      date: Date | null
+      amount: string
+    }>,
+  })
+  const [connectRrError, setConnectRrError] = useState<string | null>(null)
+  const [closeLoanConfirm, setCloseLoanConfirm] = useState<number | null>(null) // debtId to close
+  const [completeRrConfirm, setCompleteRrConfirm] = useState<number | null>(null) // raId to complete
+  const [activeCommentTab, setActiveCommentTab] = useState<'comments' | 'primary' | 'dial-history'>(
+    'comments'
+  )
 
-  // Fetch client data from API
+  // Call origination hook (provides user, call state, handlers)
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
+  const {
+    user,
+    isCallModalOpen,
+    setIsCallModalOpen,
+    currentCallId,
+    callError,
+    isOriginatingCall,
+    handleOriginateCall,
+    handleClearCallError,
+    handleCloseCallModal,
+    handleCallEnd,
+  } = useCallOrigination()
+
+  // Client detail: one profile + section endpoints
   const clientId = id ? Number(id) : 0
-  const { data: apiClient, isLoading, isError, error } = useClient(clientId, !!clientId)
+  const isValidClientId = clientId > 0 && !isNaN(clientId)
 
-  // Use mock data as fallback for missing fields until backend is fully integrated
+  const {
+    data: profile,
+    isLoading: isProfileLoading,
+    isError: isProfileError,
+    error: profileError,
+  } = useClientProfile(clientId, isValidClientId)
+  const { data: loans = [], isLoading: isLoansLoading } = useClientLoans(clientId, isValidClientId)
+  const { data: restructuringAgreements = [], isLoading: isRrLoading } =
+    useClientRestructuringAgreements(clientId, isValidClientId)
+  const { data: rrDetail } = useRestructuringAgreementDetail(
+    clientId,
+    selectedRaId ?? 0,
+    !!selectedRaId
+  )
+  const { mutate: createRr, isPending: isCreatingRr } = useCreateRestructuringAgreement()
+  const { mutate: closeDebt, isPending: isClosingDebt } = useCloseDebt()
+  const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
+  const { data: paymentsSection, isLoading: isPaymentsLoading } = useClientPaymentsSection(
+    clientId,
+    isValidClientId
+  )
+  const { data: callSmsHistory, isLoading: isCallSmsLoading } = useClientCallSmsHistory(
+    clientId,
+    isValidClientId
+  )
+  const canViewTasks = useHasPermission(PERMISSIONS.CLIENTS.VIEW_TASKS)
+  const { data: tasks = [], isLoading: isTasksLoading } = useClientTasks(
+    clientId,
+    isValidClientId && canViewTasks
+  )
+  const { data: operatorsSection, isLoading: isOperatorsLoading } = useClientOperatorsSection(
+    clientId,
+    isValidClientId
+  )
+  const { data: documents = [], isLoading: isDocumentsLoading } = useClientDocuments(
+    clientId,
+    isValidClientId
+  )
+  const { data: activities = [], isLoading: isActivitiesLoading } = useClientActivities(
+    clientId,
+    isValidClientId
+  )
+  const { data: dialHistory = [], isLoading: isDialHistoryLoading } = useClientDialHistory(
+    clientId,
+    isValidClientId
+  )
+  const { mutate: addSpamCall } = useAddSpamCallHistory(clientId)
+  // Fetch client tags from API (real)
+  const { data: clientTags } = useClientTags(clientId)
+
+  // Fetch department of responsible employee
+  const { data: responsibleEmployeeDepartment } = useUserDepartment(
+    profile?.responsible_employee_id || 0
+  )
+
+  // Note creation mutation (via interaction API)
+  const { mutate: createNote } = useCreateNoteInteraction()
+
+  // Assign client mutation (used by AssignRoleModal)
+  const assignClientMutation = useAssignClient()
+
+  // Compose single client object from profile + sections for the rest of the page
+  // Maps backend response fields to UI-expected shape for backward compatibility
   const client = useMemo(() => {
-    if (!apiClient) return mockClientsDetail[0]
+    if (!profile) return null
 
-    const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
-      .filter(Boolean)
-      .join(' ')
-
-    // Map API client to expected shape, using mock data for fields not yet in API
-    return {
-      ...mockClientsDetail[0], // Fallback for fields not yet in backend
-      id: apiClient.id,
-      fullName,
-      taxIdNumber: apiClient.tax_id,
-      phoneNumber: apiClient.phone_primary,
-      tags: [], // TODO: Add tags support in backend
-      score: apiClient.priority_score,
-      priority:
-        apiClient.manual_priority ||
-        (apiClient.priority_score >= 75
-          ? 'Critical'
-          : apiClient.priority_score >= 50
-            ? 'High'
-            : apiClient.priority_score >= 25
-              ? 'Medium'
-              : 'Low'),
-      phones: [
-        { number: apiClient.phone_primary, type: 'primary' as const },
-        ...(apiClient.phone_secondary
-          ? [{ number: apiClient.phone_secondary, type: 'secondary' as const }]
-          : []),
-      ],
-      personalDetails: {
-        ...mockClientsDetail[0].personalDetails,
-        tin: apiClient.tax_id,
-        dateOfBirth: apiClient.date_of_birth || mockClientsDetail[0].personalDetails.dateOfBirth,
-      },
-      addresses: {
-        ...mockClientsDetail[0].addresses,
-        registrationAddress:
-          apiClient.address || mockClientsDetail[0].addresses.registrationAddress,
-      },
+    // Build phones array from additional_phones (sourced from client_contacts types 1, 2, 29)
+    const isValidPhone = (p: string | null | undefined): p is string => !!p && !/^0+$/.test(p)
+    const phones: Array<{
+      number: string
+      type: string
+      created_at?: string | null
+      added_by_user_name?: string | null
+    }> = []
+    if (profile.additional_phones && profile.additional_phones.length > 0) {
+      profile.additional_phones
+        .filter((p) => isValidPhone(p.number))
+        .forEach((p) =>
+          phones.push({
+            number: p.number,
+            type: p.type,
+            created_at: p.created_at,
+            added_by_user_name: p.added_by_user_name,
+          })
+        )
+    } else if (isValidPhone(profile.phone_primary)) {
+      // Fallback for backward compat
+      phones.push({ number: profile.phone_primary, type: 'mobile' })
     }
-  }, [apiClient])
 
-  const [tags, setTags] = useState<string[]>(client?.tags || [])
+    return {
+      ...profile,
+      // Header fields
+      fullName: profile.full_name,
+      score: profile.priority_score ?? 0,
+      priority: profile.priority_level
+        ? profile.priority_level.charAt(0).toUpperCase() + profile.priority_level.slice(1)
+        : 'Low',
+      phoneNumber: isValidPhone(profile.phone_primary) ? profile.phone_primary : '-',
+      taxIdNumber: profile.tax_id,
+      // Card fields
+      department: responsibleEmployeeDepartment || '-',
+      responsibleEmployee: profile.responsible_employee_name ?? '-',
+      responsibleResearcher: profile.responsible_searcher_name ?? '-',
+      phones,
+      // Personal details (nested for compatibility)
+      personalDetails: {
+        tin: profile.tax_id,
+        dateOfBirth: profile.date_of_birth ?? '',
+        age: profile.age ?? '',
+        documentType: profile.passport?.document_type ?? '',
+        passportSeries: profile.passport?.series ?? '',
+        passportNumber: profile.passport?.number ?? '',
+        issuedBy: profile.passport?.issued_by ?? '',
+        issuedDate: profile.passport?.issued_date ?? '',
+        expiresDate: profile.passport?.expires_date ?? '',
+        gender: profile.passport?.gender
+          ? t(`pages.clients.detail.genderOptions.${profile.passport.gender}`, {
+              defaultValue: profile.passport.gender,
+            })
+          : '',
+        maritalStatus: profile.marital_status
+          ? t(`pages.clients.detail.maritalStatuses.${profile.marital_status}`, {
+              defaultValue: profile.marital_status,
+            })
+          : '',
+        familyMembers: profile.family_members_count ?? '',
+        incomeLevel: profile.income_level ?? '',
+      },
+      // Work
+      work: profile.employment
+        ? {
+            organizationName: profile.employment.company_name ?? '-',
+            position: profile.employment.position ?? '-',
+            experience:
+              profile.employment.work_experience_months != null
+                ? `${profile.employment.work_experience_months} міс.`
+                : '-',
+            managerFullName: profile.employment.manager_full_name ?? '-',
+            employmentType: profile.employment.employment_type
+              ? t(`pages.clients.detail.employmentTypes.${profile.employment.employment_type}`, {
+                  defaultValue: profile.employment.employment_type,
+                })
+              : '-',
+            workPhone: profile.employment.work_phone ?? '-',
+          }
+        : null,
+      recommenders: (profile.recommenders ?? []).map((r) => ({
+        id: r.id,
+        contactValue: r.contact_value ?? '',
+        contactType: r.contact_type_name ?? '',
+        contactTypeCode: r.contact_type_code ?? null,
+        isPhone: r.is_phone ?? false,
+        comment: r.comment ?? '',
+        created_at: r.created_at,
+        added_by_user_name: r.added_by_user_name,
+      })),
+      addresses: (profile.addresses ?? []).map((a) => ({
+        id: a.id,
+        addressType: a.address_type,
+        fullAddress: a.full_address ?? '-',
+      })),
+      // Comments mapped
+      comments: (profile.comments ?? []).map((c) => ({
+        id: c.id,
+        date: formatDate(c.created_at ?? undefined),
+        text: c.content,
+        author: c.created_by_name ?? `User #${c.created_by}`,
+      })),
+      tags: profile.tags,
+      // Loans mapped from DebtDetail to UI shape
+      loans: (loans ?? []).map((d) => ({
+        id: d.id,
+        loanNumber: d.contract_number,
+        issueDate: formatDate(d.credit_issued_date ?? undefined),
+        counterparty: d.seller_company,
+        saleDate: formatDate(d.purchase_date ?? undefined),
+        principalAmount: Number(d.principal_amount ?? 0),
+        principalDebt: Number(d.principal_debt ?? d.principal_amount ?? 0),
+        remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
+        totalToReturn: Number(d.total_to_return ?? 0),
+        status: d.status,
+      })),
+      // Payments mapped from PaymentResponse to UI shape
+      // Build a quick lookup from loan contract_number -> formatted sale date
+      // so payments can show the sale date when available.
+      payments: (() => {
+        const loanSaleDateMap = new Map<string, string>()
+        ;(loans ?? []).forEach((d) => {
+          if (d.contract_number)
+            loanSaleDateMap.set(d.contract_number, formatDate(d.purchase_date ?? undefined))
+        })
+        return (paymentsSection?.payments ?? []).map((p) => ({
+          id: p.id,
+          loanNumber: p.debt_contract_number ?? p.payment_number,
+          counterparty: p.seller_name ?? '-',
+          saleDate: loanSaleDateMap.get(p.debt_contract_number ?? '') ?? '-',
+          paymentDate: formatDate(p.payment_date ?? undefined),
+          amount: Number(p.amount),
+          paymentMethod: p.payment_method,
+          status: p.status,
+          paymentDistribution: p.payment_type ?? '-',
+          employee: p.recorded_by_username ?? '-',
+        }))
+      })(),
+      // Write-offs mapped
+      writesOffs: (paymentsSection?.writesOffs ?? []).map((w) => ({
+        id: w.id,
+        loanNumber: w.contract_number ?? '-',
+        counterparty: w.seller_name ?? '-',
+        saleDate: formatDate(w.purchase_date ?? undefined),
+        writeOffDate: formatDate(w.writeoff_date ?? undefined),
+        amount: Number(w.amount || 0),
+        writeOffMethod: w.writeoff_type ?? '-',
+        employee: w.submitted_by_name ?? '-',
+      })),
+      // Primary Creditor Payments - Not yet implemented (Phase 8)
+      // Backend API endpoint pending - will be added when primary creditor payment service is implemented
+      paymentsToPrimaryCreditor: [] as Array<{
+        id: number
+        loanNumber: string
+        counterparty: string
+        saleDate: string
+        paymentDate: string
+        amount: number
+        distributionMethod: string
+      }>,
+      callSmsHistory: callSmsHistory ?? { all: [], calls: [], sms: [] },
+      // Tasks mapped from TaskResponse to UI shape
+      tasks: (tasks ?? []).map((t) => ({
+        id: t.id,
+        loanNumber: '-',
+        creationDate: formatDate(t.created_at ?? undefined),
+        whoCreated: t.created_by_name ?? '-',
+        description: t.title + (t.description ? `: ${t.description}` : ''),
+        reminderDate: formatDate(t.due_date ?? undefined),
+        reminderRecipient: t.assigned_to_username ?? '-',
+      })),
+      // Operators/searchers from assignment history
+      operators: (operatorsSection?.operators ?? []).map((o) => ({
+        id: o.id,
+        date: formatDate(o.assigned_at ?? undefined),
+        whoAppointed: o.assigned_by_name ?? '-',
+        whoIsResponsible: o.new_employee_name ?? '-',
+        note: o.assignment_reason ?? '-',
+      })),
+      searchers: (operatorsSection?.searchers ?? []).map((s) => ({
+        id: s.id,
+        date: formatDate(s.assigned_at ?? undefined),
+        whoAppointed: s.assigned_by_name ?? '-',
+        whoIsResponsible: s.new_searcher_name ?? '-',
+        note: s.assignment_reason ?? '-',
+      })),
+      documents,
+      // Activities mapped from InteractionResponse to UI shape
+      // Deduplicate + filter invalid interactions to keep stable keys for the DataTable
+      activities: (activities ?? [])
+        .reduce<{ seen: Set<string>; items: typeof activities }>(
+          (acc, a) => {
+            const key = a?.id != null ? String(a.id) : null
+            if (!key) return acc
+            if (acc.seen.has(key)) return acc
+            acc.seen.add(key)
+            acc.items.push(a)
+            return acc
+          },
+          { seen: new Set<string>(), items: [] }
+        )
+        .items.map((a) => ({
+          id: a.id,
+          date: formatDate(a.interaction_date),
+          type: a.type_code
+            ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
+            : (a.type_name ?? '-'),
+          subtype: a.subtype_code
+            ? t(`interactionChannels.${a.subtype_code}`, {
+                defaultValue: a.subtype_name ?? '-',
+              })
+            : (a.subtype_name ?? '-'),
+          contactType: a.contact_type_code
+            ? t(`interactionContactTypes.${a.contact_type_code}`, {
+                defaultValue: a.contact_type_name ?? '-',
+              })
+            : (a.contact_type_name ?? '-'),
+          result: a.result_code
+            ? t(`interactionResults.${a.result_code}`, {
+                defaultValue: a.result_name ?? a.status,
+              })
+            : (a.result_name ?? a.status),
+          promisedAmount: a.promise_to_pay_amount ? Number(a.promise_to_pay_amount) : 0,
+          promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
+          callbackDate: formatDate(a.next_action_date ?? undefined),
+          comment: a.summary ?? a.notes ?? '-',
+          employee: a.user_name ?? '-',
+          updated_at: a.updated_at ?? a.created_at,
+          _raw: a,
+        })),
+      // Primary Creditor Payments - Not yet implemented (Phase 8)
+      primaryCreditorPayments: [] as Array<{
+        id: number
+        loanNumber: string
+        counterparty: string
+        saleDate: string
+        paymentDate: string
+        amount: number
+        distributionMethod: string
+      }>,
+    }
+  }, [
+    profile,
+    loans,
+    paymentsSection,
+    callSmsHistory,
+    tasks,
+    operatorsSection,
+    documents,
+    activities,
+    responsibleEmployeeDepartment,
+    t,
+  ])
+
+  // Tags are now fetched from useClientTags hook instead of local state
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
-  const [isCallModalOpen, setIsCallModalOpen] = useState(false)
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
+  // isCallModalOpen, currentCallId managed by useCallOrigination hook
   const [isCallRecordingModalOpen, setIsCallRecordingModalOpen] = useState(false)
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false)
+  // const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isEditInteractionModalOpen, setIsEditInteractionModalOpen] = useState(false)
+  const { mutate: updateInteraction, isPending: isUpdating } = useUpdateInteraction()
+  const [editingInteraction, setEditingInteraction] = useState<InteractionResponse | null>(null)
+  const [assignRoleModalMode, setAssignRoleModalMode] = useState<AssignRoleMode | null>(null)
+  // const userRole = useUserRole()
+  // const canDelete = userRole === 'Admin' || userRole === 'Supervisor'
   const [selectedCallData, setSelectedCallData] = useState<{
     type: string
     clientName: string
@@ -894,6 +506,7 @@ export function ClientDetailPage() {
     operator: string
     duration: string
     phone: string
+    call_id?: string
   } | null>(null)
   const [isViewSMSModalOpen, setIsViewSMSModalOpen] = useState(false)
   const [selectedSMSData, setSelectedSMSData] = useState<{
@@ -904,14 +517,18 @@ export function ClientDetailPage() {
     status: string
     message: string
     phone: string
+    sent_at?: string // UTC timestamp from API
+    delivered_at?: string // UTC timestamp from API
   } | null>(null)
   const [isSendSMSModalOpen, setIsSendSMSModalOpen] = useState(false)
   const [selectedPhoneForSMS, setSelectedPhoneForSMS] = useState<string>('')
-  const [activeClientCardTab, setActiveClientCardTab] = useState<
-    'personal' | 'recommenders' | 'addresses' | 'work'
-  >('personal')
+  const [selectedPhoneForCall, setSelectedPhoneForCall] = useState<string>('')
+  const [selectedPhoneForNote, setSelectedPhoneForNote] = useState<string>('')
+  const [activeClientCardTab, setActiveClientCardTab] = useState<'personal' | 'passport' | 'work'>(
+    'personal'
+  )
   const [activeRightCardTab, setActiveRightCardTab] = useState<
-    'loans' | 'payments' | 'operators' | 'call-sms-history' | 'tasks' | 'documents'
+    'loans' | 'payments' | 'recommenders' | 'operators' | 'call-sms-history' | 'tasks' | 'documents'
   >('loans')
   const [activePaymentTab, setActivePaymentTab] = useState<
     'payments' | 'writes-off' | 'primary-creditor'
@@ -919,26 +536,156 @@ export function ClientDetailPage() {
   const [activeOperatorTab, setActiveOperatorTab] = useState<'operators' | 'searchers'>('operators')
   const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms'>('all')
 
-  // Update tags when client changes
+  // Tab navigation scroll state
+  const tabContainerRef = useRef<HTMLDivElement>(null)
+  const [showLeftArrow, setShowLeftArrow] = useState(false)
+  const [showRightArrow, setShowRightArrow] = useState(false)
+
+  // Client card tab navigation scroll state
+  const clientCardTabContainerRef = useRef<HTMLDivElement>(null)
+  const [showClientCardLeftArrow, setShowClientCardLeftArrow] = useState(false)
+  const [showClientCardRightArrow, setShowClientCardRightArrow] = useState(false)
+
+  // Check scroll position and show/hide arrows
+  const checkScrollPosition = () => {
+    if (!tabContainerRef.current) return
+
+    const container = tabContainerRef.current
+    const { scrollLeft, scrollWidth, clientWidth } = container
+
+    setShowLeftArrow(scrollLeft > 0)
+    setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 1) // -1 for rounding errors
+  }
+
+  // Scroll handlers
+  const scrollTabs = (direction: 'left' | 'right') => {
+    if (!tabContainerRef.current) return
+
+    const container = tabContainerRef.current
+    const scrollAmount = 200 // Adjust scroll amount as needed
+    const newScrollLeft =
+      direction === 'left'
+        ? container.scrollLeft - scrollAmount
+        : container.scrollLeft + scrollAmount
+
+    container.scrollTo({
+      left: newScrollLeft,
+      behavior: 'smooth',
+    })
+  }
+
+  // Check scroll position for client card tabs
+  const checkClientCardTabScrollPosition = () => {
+    if (!clientCardTabContainerRef.current) return
+
+    const container = clientCardTabContainerRef.current
+    const { scrollLeft, scrollWidth, clientWidth } = container
+
+    setShowClientCardLeftArrow(scrollLeft > 0)
+    setShowClientCardRightArrow(scrollLeft < scrollWidth - clientWidth - 1) // -1 for rounding errors
+  }
+
+  // Scroll handlers for client card tabs
+  const scrollClientCardTabs = (direction: 'left' | 'right') => {
+    if (!clientCardTabContainerRef.current) return
+
+    const container = clientCardTabContainerRef.current
+    const scrollAmount = 200 // Adjust scroll amount as needed
+    const newScrollLeft =
+      direction === 'left'
+        ? container.scrollLeft - scrollAmount
+        : container.scrollLeft + scrollAmount
+
+    container.scrollTo({
+      left: newScrollLeft,
+      behavior: 'smooth',
+    })
+  }
+
+  // Check scroll position on mount and resize
   useEffect(() => {
-    if (client) {
-      setTags(client.tags)
+    checkScrollPosition()
+    const container = tabContainerRef.current
+    if (container) {
+      container.addEventListener('scroll', checkScrollPosition)
+      window.addEventListener('resize', checkScrollPosition)
+
+      return () => {
+        container.removeEventListener('scroll', checkScrollPosition)
+        window.removeEventListener('resize', checkScrollPosition)
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client.id])
+  }, [activeRightCardTab]) // Re-check when tab changes
+
+  // Check scroll position for client card tabs on mount and resize
+  useEffect(() => {
+    checkClientCardTabScrollPosition()
+    const container = clientCardTabContainerRef.current
+    if (container) {
+      container.addEventListener('scroll', checkClientCardTabScrollPosition)
+      window.addEventListener('resize', checkClientCardTabScrollPosition)
+
+      return () => {
+        container.removeEventListener('scroll', checkClientCardTabScrollPosition)
+        window.removeEventListener('resize', checkClientCardTabScrollPosition)
+      }
+    }
+  }, [activeClientCardTab]) // Re-check when tab changes
+
+  // Scroll active tab into view when it changes
+  useEffect(() => {
+    if (!tabContainerRef.current) return
+
+    const container = tabContainerRef.current
+    const activeTab = container.querySelector(`[data-tab="${activeRightCardTab}"]`) as HTMLElement
+
+    if (activeTab) {
+      // Use setTimeout to ensure DOM is updated
+      setTimeout(() => {
+        activeTab.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'center',
+        })
+        // Re-check scroll position after scrolling
+        setTimeout(checkScrollPosition, 300)
+      }, 0)
+    }
+  }, [activeRightCardTab])
+
+  // Scroll active client card tab into view when it changes
+  useEffect(() => {
+    if (!clientCardTabContainerRef.current) return
+
+    const container = clientCardTabContainerRef.current
+    const activeTab = container.querySelector(`[data-tab="${activeClientCardTab}"]`) as HTMLElement
+
+    if (activeTab) {
+      // Use setTimeout to ensure DOM is updated
+      setTimeout(() => {
+        activeTab.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'center',
+        })
+        // Re-check scroll position after scrolling
+        setTimeout(checkClientCardTabScrollPosition, 300)
+      }, 0)
+    }
+  }, [activeClientCardTab])
 
   // Show loading skeleton
-  if (isLoading) {
+  if (isProfileLoading) {
     return <ClientDetailPageSkeleton />
   }
 
   // Show error state
-  if (isError) {
+  if (isProfileError) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-16">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
         <p className="font-medium text-gray-900">Failed to load client</p>
-        <p className="text-sm text-gray-600">{error?.message || 'An error occurred'}</p>
+        <p className="text-sm text-gray-600">{profileError?.message || 'An error occurred'}</p>
         <Button variant="outline" onClick={() => navigate('/dashboard/client')} className="mt-4">
           Back to Clients
         </Button>
@@ -957,47 +704,33 @@ export function ClientDetailPage() {
     )
   }
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '0'
     return new Intl.NumberFormat('uk-UA', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
       useGrouping: true,
     })
-      .format(amount)
+      .format(num)
       .replace(/,/g, ' ')
   }
 
-  const formatCurrencyWithDecimals = (amount: number) => {
+  const formatCurrencyWithDecimals = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '0'
     return new Intl.NumberFormat('uk-UA', {
-      minimumFractionDigits: amount % 1 !== 0 ? 1 : 0,
+      minimumFractionDigits: num % 1 !== 0 ? 1 : 0,
       maximumFractionDigits: 1,
       useGrouping: true,
     })
-      .format(amount)
+      .format(num)
       .replace(/,/g, ' ')
-  }
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'Critical':
-        return 'bg-error-500'
-      case 'High':
-        return 'bg-warning-500'
-      case 'Medium':
-        return 'bg-success-500'
-      case 'Low':
-        return 'bg-gray-500'
-      default:
-        return 'bg-gray-500'
-    }
-  }
-
-  const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove))
   }
 
   const loanColumns: Column<(typeof client.loans)[0]>[] = [
     { key: 'loanNumber', header: t('pages.clients.detail.tableHeaders.loanNumber'), align: 'left' },
+    { key: 'issueDate', header: t('pages.clients.detail.tableHeaders.issueDate'), align: 'left' },
     {
       key: 'counterparty',
       header: t('pages.clients.detail.tableHeaders.counterparty'),
@@ -1005,10 +738,10 @@ export function ClientDetailPage() {
     },
     { key: 'saleDate', header: t('pages.clients.detail.tableHeaders.saleDate'), align: 'left' },
     {
-      key: 'loanAmount',
-      header: t('pages.clients.detail.tableHeaders.loanAmount'),
+      key: 'principalAmount',
+      header: t('pages.clients.detail.tableHeaders.principalAmount'),
       align: 'right',
-      render: (loan) => `₴ ${formatCurrency(loan.loanAmount)}`,
+      render: (loan) => `₴ ${formatCurrency(loan.principalAmount)}`,
     },
     {
       key: 'principalDebt',
@@ -1017,26 +750,157 @@ export function ClientDetailPage() {
       render: (loan) => `₴ ${formatCurrency(loan.principalDebt)}`,
     },
     {
-      key: 'totalToRepay',
+      key: 'remainingDebtAmount',
+      header: t('pages.clients.detail.tableHeaders.remainingDebtAmount'),
+      align: 'right',
+      render: (loan) => `₴ ${formatCurrency(loan.remainingDebtAmount)}`,
+    },
+    {
+      key: 'totalToReturn',
+      header: t('pages.clients.detail.tableHeaders.totalToReturn'),
+      align: 'right',
+      render: (loan) => `₴ ${formatCurrency(loan.totalToReturn)}`,
+    },
+    {
+      key: 'actions',
+      header: t('pages.clients.detail.tableHeaders.actions'),
+      align: 'center',
+      render: (loan) =>
+        loan.status === 'active' ? (
+          <button
+            onClick={() => setCloseLoanConfirm(loan.id)}
+            disabled={isClosingDebt}
+            className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+            title={t('pages.clients.detail.closeLoan')}
+          >
+            <Icons.Success size={18} />
+          </button>
+        ) : null,
+    },
+  ]
+
+  type RrRow = (typeof restructuringAgreements)[0]
+  const rrColumns: Column<RrRow>[] = [
+    {
+      key: 'contract_number',
+      header: t('pages.clients.detail.tableHeaders.loanNumber'),
+      align: 'left',
+    },
+    {
+      key: 'seller_company',
+      header: t('pages.clients.detail.tableHeaders.counterparty'),
+      align: 'left',
+    },
+    {
+      key: 'purchase_date',
+      header: t('pages.clients.detail.tableHeaders.saleDate'),
+      align: 'left',
+      render: (row) => formatDate(row.purchase_date ?? undefined),
+    },
+    {
+      key: 'restructuring_amount',
+      header: t('pages.clients.detail.tableHeaders.rrAmount'),
+      align: 'right',
+      render: (row) => `₴ ${formatCurrency(Number(row.restructuring_amount ?? 0))}`,
+    },
+    {
+      key: 'first_payment_date',
+      header: t('pages.clients.detail.tableHeaders.rrConnectionDate'),
+      align: 'left',
+      render: (row) => formatDate(row.first_payment_date ?? undefined),
+    },
+    {
+      key: 'remaining_debt_amount',
       header: t('pages.clients.detail.tableHeaders.totalToBeRepaid'),
       align: 'right',
-      render: (loan) => `₴ ${formatCurrency(loan.totalToRepay)}`,
+      render: (row) => `₴ ${formatCurrency(Number(row.remaining_debt_amount ?? 0))}`,
+    },
+    {
+      key: 'status_name',
+      header: t('pages.clients.detail.tableHeaders.status', 'Статус'),
+      align: 'center',
+      render: (row) => {
+        const sid = row.status_id
+        const label = row.status_name ?? '-'
+        const cls =
+          sid === 4
+            ? 'bg-green-100 text-green-800'
+            : sid === 1
+              ? 'bg-blue-100 text-blue-800'
+              : 'bg-gray-100 text-gray-600'
+        return (
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}
+          >
+            {label}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'id',
+      header: t('pages.clients.detail.tableHeaders.actions'),
+      align: 'center',
+      render: (row) => (
+        <div className="flex items-center justify-center gap-1">
+          <button
+            onClick={() => setSelectedRaId(row.id)}
+            className="text-secondary-800 hover:text-secondary-600 p-1"
+            title={t('pages.clients.detail.viewDetail')}
+          >
+            <Icons.Eye size={18} />
+          </button>
+          {row.status_id !== 4 && (
+            <button
+              onClick={() => setCompleteRrConfirm(row.id)}
+              disabled={isCompletingRa}
+              className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+              title={t('pages.clients.detail.completeRR', 'Complete RR')}
+            >
+              <Icons.Success size={18} />
+            </button>
+          )}
+        </div>
+      ),
     },
   ]
 
   const activityColumns: Column<(typeof client.activities)[0]>[] = [
-    { key: 'date', header: t('pages.clients.activity.tableHeaders.date'), align: 'left' },
-    { key: 'number', header: t('pages.clients.activity.tableHeaders.number'), align: 'left' },
+    {
+      key: 'date',
+      header: t('pages.clients.activity.tableHeaders.date'),
+      align: 'left',
+      className: 'w-[90px] overflow-hidden whitespace-normal',
+    },
+    {
+      key: 'type',
+      header: t('pages.clients.activity.tableHeaders.type'),
+      align: 'left',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
+    },
+    {
+      key: 'subtype',
+      header: t('pages.clients.activity.tableHeaders.channel', 'Channel'),
+      align: 'left',
+      className: 'w-[100px] overflow-hidden whitespace-normal break-words',
+    },
     {
       key: 'contactType',
-      header: t('pages.clients.activity.tableHeaders.contactType'),
+      header: t('pages.clients.activity.tableHeaders.contactType', 'Contact Type'),
       align: 'left',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
-    { key: 'result', header: t('pages.clients.activity.tableHeaders.result'), align: 'left' },
+    {
+      key: 'result',
+      header: t('pages.clients.activity.tableHeaders.result'),
+      align: 'left',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
+    },
     {
       key: 'promisedAmount',
       header: t('pages.clients.activity.tableHeaders.promisedAmount'),
       align: 'right',
+      className: 'w-[140px] overflow-hidden whitespace-normal break-words',
       render: (activity) =>
         activity.promisedAmount ? `${formatCurrencyWithDecimals(activity.promisedAmount)}₴` : '-',
     },
@@ -1044,10 +908,75 @@ export function ClientDetailPage() {
       key: 'promisedDate',
       header: t('pages.clients.activity.tableHeaders.promisedDate'),
       align: 'left',
-      render: (activity) => activity.promisedDate || '-',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
-    { key: 'comment', header: t('pages.clients.activity.tableHeaders.comment'), align: 'left' },
-    { key: 'employee', header: t('pages.clients.activity.tableHeaders.employee'), align: 'left' },
+    {
+      key: 'callbackDate',
+      header: t('pages.clients.activity.tableHeaders.callbackDate', 'Callback Date'),
+      align: 'left',
+      className: 'w-[120px] overflow-hidden whitespace-normal break-words',
+    },
+    {
+      key: 'comment',
+      header: t('pages.clients.activity.tableHeaders.comment'),
+      align: 'left',
+      className: 'min-w-[300px] max-w-[500px] whitespace-normal break-words',
+      render: (activity) => (
+        <div className="py-1 text-sm leading-tight break-words whitespace-normal">
+          {activity.comment || '-'}
+        </div>
+      ),
+    },
+    {
+      key: 'employee',
+      header: t('pages.clients.activity.tableHeaders.employee'),
+      align: 'left',
+      className: 'w-[200px] whitespace-normal',
+      render: (activity) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-dark-500 text-xs font-medium">{activity.employee}</span>
+          {activity.updated_at && (
+            <span className="text-[10px] text-gray-400">{formatDate(activity.updated_at)}</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      align: 'center',
+      className: 'w-[48px]',
+      render: (activity) => (
+        <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+          <button
+            title={t('actions.edit', 'Edit')}
+            onClick={() => {
+              setEditingInteraction(activity._raw)
+              setIsEditInteractionModalOpen(true)
+            }}
+            className="flex items-center justify-center rounded-full p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+          >
+            <Icons.PencilEdit size={16} strokeWidth={1.5} />
+          </button>
+        </PermissionGuard>
+      ),
+    },
+  ]
+
+  const dialHistoryColumns: Column<(typeof dialHistory)[0]>[] = [
+    {
+      key: 'interaction_date',
+      header: t('pages.clients.activity.tableHeaders.date'),
+      align: 'left',
+      className: 'w-[100px]',
+      render: (row) => formatDate(row.interaction_date ?? undefined),
+    },
+    {
+      key: 'phone',
+      header: t('pages.clients.activity.tableHeaders.phone'),
+      align: 'left',
+      className: 'w-[120px]',
+    },
   ]
 
   const paymentColumns: Column<(typeof client.payments)[0]>[] = [
@@ -1073,38 +1002,70 @@ export function ClientDetailPage() {
       key: 'paymentMethod',
       header: t('pages.clients.detail.tableHeaders.paymentMethod'),
       align: 'left',
+      render: (payment) =>
+        backendToFrontendPaymentMethod(
+          payment.paymentMethod as Parameters<typeof backendToFrontendPaymentMethod>[0]
+        ),
     },
     {
       key: 'status',
       header: t('pages.clients.detail.tableHeaders.status'),
       align: 'left',
       render: (payment) => {
-        const statusColors = {
-          Done: 'bg-success-500',
-          Pending: 'bg-gray-500',
-          Failed: 'bg-error-500',
-        }
-        const statusColor =
-          statusColors[payment.status as keyof typeof statusColors] || 'bg-gray-500'
-        const textColor =
-          payment.status === 'Done'
-            ? 'text-success-500'
-            : payment.status === 'Failed'
+        const s = (payment.status ?? '').toLowerCase().trim()
+        const isVerified = s === 'verified' || s === 'done'
+        const isPending = s === 'pending'
+        const isCancelled =
+          s === 'cancelled' || s === 'canceled' || s === 'failed' || s === 'rejected'
+
+        const dotInner = isVerified
+          ? 'bg-success-500'
+          : isPending
+            ? 'bg-gray-500'
+            : isCancelled
+              ? 'bg-error-500'
+              : 'bg-gray-400'
+        const dotOuter = isVerified
+          ? 'bg-success-200'
+          : isPending
+            ? 'bg-gray-200'
+            : isCancelled
+              ? 'bg-error-200'
+              : 'bg-gray-200'
+        const textClass = isVerified
+          ? 'text-success-500'
+          : isPending
+            ? 'text-gray-500'
+            : isCancelled
               ? 'text-error-500'
               : 'text-gray-500'
+
+        // Use debtSummary.paymentStatus keys (verified/pending/cancelled) for consistency
+        const labelKey = isVerified
+          ? 'pages.clients.debtSummary.paymentStatus.verified'
+          : isPending
+            ? 'pages.clients.debtSummary.paymentStatus.pending'
+            : 'pages.clients.debtSummary.paymentStatus.cancelled'
+        const label = t(labelKey)
+
         return (
           <div className="flex items-center gap-2">
-            <span className={cn('h-2.5 w-2.5 flex-shrink-0 rounded-full', statusColor)} />
-            <span className={cn('text-xs font-medium', textColor)}>
-              {t(`pages.clients.detail.paymentStatuses.${payment.status.toLowerCase()}`)}
+            <span
+              className={cn(
+                'flex h-3 w-3 flex-shrink-0 items-center justify-center rounded-full',
+                dotOuter
+              )}
+            >
+              <span className={cn('h-1.5 w-1.5 rounded-full', dotInner)} />
             </span>
+            <span className={cn('text-xs font-medium', textClass)}>{label}</span>
           </div>
         )
       },
     },
     {
       key: 'paymentDistribution',
-      header: t('pages.clients.detail.tableHeaders.paymentDistribution'),
+      header: t('pages.clients.detail.tableHeaders.paymentType'),
       align: 'left',
     },
     {
@@ -1145,7 +1106,7 @@ export function ClientDetailPage() {
     },
   ]
 
-  const primaryCreditorPaymentColumns: Column<(typeof client.primaryCreditorPayments)[0]>[] = [
+  const primaryCreditorPaymentColumns: Column<(typeof client.paymentsToPrimaryCreditor)[0]>[] = [
     { key: 'loanNumber', header: t('pages.clients.detail.tableHeaders.loanNumber'), align: 'left' },
     {
       key: 'counterparty',
@@ -1173,48 +1134,46 @@ export function ClientDetailPage() {
 
   const operatorColumns: Column<(typeof client.operators)[0]>[] = [
     {
-      key: 'creationDate',
-      header: t('pages.clients.detail.tableHeaders.creationDate'),
-      align: 'left',
-    },
-    { key: 'whoCreated', header: t('pages.clients.detail.tableHeaders.whoCreated'), align: 'left' },
-    {
-      key: 'description',
-      header: t('pages.clients.detail.tableHeaders.description'),
+      key: 'date',
+      header: t('pages.clients.detail.tableHeaders.date'),
       align: 'left',
     },
     {
-      key: 'reminderDate',
-      header: t('pages.clients.detail.tableHeaders.dateOfReminder'),
+      key: 'whoAppointed',
+      header: t('pages.clients.detail.tableHeaders.whoAppointed'),
       align: 'left',
     },
     {
-      key: 'reminderRecipient',
-      header: t('pages.clients.detail.tableHeaders.whoWillReceiveReminder'),
+      key: 'whoIsResponsible',
+      header: t('pages.clients.detail.tableHeaders.whoIsResponsible'),
+      align: 'left',
+    },
+    {
+      key: 'note',
+      header: t('pages.clients.detail.tableHeaders.note'),
       align: 'left',
     },
   ]
 
   const searcherColumns: Column<(typeof client.searchers)[0]>[] = [
     {
-      key: 'creationDate',
-      header: t('pages.clients.detail.tableHeaders.creationDate'),
-      align: 'left',
-    },
-    { key: 'whoCreated', header: t('pages.clients.detail.tableHeaders.whoCreated'), align: 'left' },
-    {
-      key: 'description',
-      header: t('pages.clients.detail.tableHeaders.description'),
+      key: 'date',
+      header: t('pages.clients.detail.tableHeaders.date'),
       align: 'left',
     },
     {
-      key: 'reminderDate',
-      header: t('pages.clients.detail.tableHeaders.dateOfReminder'),
+      key: 'whoAppointed',
+      header: t('pages.clients.detail.tableHeaders.whoAppointed'),
       align: 'left',
     },
     {
-      key: 'reminderRecipient',
-      header: t('pages.clients.detail.tableHeaders.whoWillReceiveReminder'),
+      key: 'whoIsResponsible',
+      header: t('pages.clients.detail.tableHeaders.whoIsResponsible'),
+      align: 'left',
+    },
+    {
+      key: 'note',
+      header: t('pages.clients.detail.tableHeaders.note'),
       align: 'left',
     },
   ]
@@ -1243,1355 +1202,2520 @@ export function ClientDetailPage() {
     },
   ]
 
-  // const documentColumns: Column<(typeof client.documents)[0]>[] = [
-  //   { key: 'name', header: 'Name', align: 'left' },
-  //   { key: 'type', header: 'Type', align: 'left' },
-  //   { key: 'uploadDate', header: 'Upload Date', align: 'left' },
-  //   { key: 'size', header: 'Size', align: 'left' },
-  // ]
-
-  const callSmsHistoryColumns: Column<(typeof client.callSmsHistory.all)[0]>[] = [
-    {
-      key: 'number',
-      header: t('pages.clients.activity.tableHeaders.number'),
-      align: 'left',
-      render: (item) => (
-        <div className="flex items-center gap-2">
-          <span>{item.number}</span>
-          <div className="flex items-center gap-1">
-            <button className="text-primary-500 flex h-[20px] w-[20px] items-center justify-center hover:opacity-80">
-              <Icons.Headset size={16} className="flex-shrink-0" />
-            </button>
-            <button className="text-primary-500 flex h-[20px] w-[20px] items-center justify-center hover:opacity-80">
-              <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-            </button>
-            <button className="text-primary-500 flex h-[20px] w-[20px] items-center justify-center hover:opacity-80">
-              <Icons.PencilEdit size={16} className="flex-shrink-0" />
-            </button>
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'contactType',
-      header: t('pages.clients.activity.tableHeaders.contactType'),
-      align: 'left',
-    },
-    { key: 'comment', header: t('pages.clients.activity.tableHeaders.comment'), align: 'left' },
+  const documentColumns: Column<(typeof client.documents)[0]>[] = [
+    { key: 'name', header: t('pages.clients.detail.tableHeaders.documentName'), align: 'left' },
+    { key: 'type', header: t('pages.clients.detail.tableHeaders.documentType'), align: 'left' },
+    { key: 'uploadDate', header: t('pages.clients.detail.tableHeaders.uploadDate'), align: 'left' },
+    { key: 'size', header: t('pages.clients.detail.tableHeaders.documentSize'), align: 'left' },
   ]
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Client Header */}
-      <div className="flex items-center justify-between self-stretch">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex h-6 w-6 items-center justify-center"
-          >
-            <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
-          </button>
-          <h1 className="text-dark-500 text-center text-2xl leading-[150%] font-medium">
-            {client.fullName}
-          </h1>
-          <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0">
-            {client.score} {t('pages.clients.activity.score')}
-          </span>
-          <span
-            className={cn(
-              'flex h-[25px] items-center rounded-[16px] px-3 py-2 text-center text-xs leading-[140%] font-medium tracking-[-0.24px]',
-              getPriorityColor(client.priority)
-            )}
-          >
-            {t(`pages.clients.priorities.${client.priority.toLowerCase()}`)}
-          </span>
-        </div>
-        <div className="flex items-center gap-5">
-          <Button
-            size="md"
-            variant="transparent-black"
-            className="flex flex-row rounded-full text-sm font-medium"
-            onClick={() => navigate(`/dashboard/${id}/debt-summary`)}
-          >
-            {t('pages.clients.debtSummary.title')}
-          </Button>
-          <Button
-            size="md"
-            variant="transparent-black"
-            leftIcon={<Icons.PencilEdit size={20} />}
-            className="flex flex-row rounded-full text-sm font-medium"
-            onClick={() => setIsNoteModalOpen(true)}
-          >
-            {t('pages.clients.activity.addNoteAboutClient')}
-          </Button>
-          <Button
-            size="md"
-            leftIcon={<Icons.Headset size={20} />}
-            className="rounded-full"
-            onClick={() => setIsCallModalOpen(true)}
-          >
-            {t('pages.clients.activity.call')}
-          </Button>
-          <Button
-            size="md"
-            variant="secondary"
-            leftIcon={<Icons.RemoveMale size={20} />}
-            className="rounded-full"
-          >
-            {t('pages.clients.activity.deleteClient')}
-          </Button>
-        </div>
-      </div>
-      <div className="flex items-start gap-5 self-stretch">
-        {/* Client Card */}
-        <div className="flex min-h-[44px] w-[428px] flex-col items-start justify-center gap-0 rounded-lg bg-white/50 p-0">
-          {/* Credit Details (top part of card) */}
-          <div className="flex flex-col items-start gap-3 self-stretch px-6 py-5">
-            <div className="flex items-center gap-2 self-stretch">
-              {tags.map((tag) => {
-                return (
-                  <span
-                    key={tag}
-                    className="flex items-center gap-2 rounded-[16px] bg-white px-3 py-2"
-                  >
-                    <span className="text-dark-500 text-center font-sans text-sm leading-[142.857%] font-medium tracking-[0.14px]">
-                      {tag}
-                    </span>
-                    <button
-                      onClick={() => handleRemoveTag(tag)}
-                      className="text-secondary-800 bg-white"
-                    >
-                      <Icons.Close size={14} />
-                    </button>
-                  </span>
-                )
-              })}
-              <button className="bg-primary-300 flex flex-col items-start gap-2.5 rounded-full p-1.5">
-                <Icons.Add size={16} className="text-dark-500 m-[2.667px]" />
+    <TooltipProvider>
+      <div className="flex flex-col gap-4">
+        {/* Client Header */}
+        <div className="flex flex-col gap-4 self-stretch xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-row items-center gap-2">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="flex h-6 w-6 shrink-0 items-center justify-center"
+              >
+                <Icons.ArrowLeft02 size={24} className="text-secondary-800" strokeWidth={1.5} />
               </button>
+              <h1 className="text-dark-500 truncate text-xl leading-[150%] font-light md:text-2xl">
+                {client.fullName}
+              </h1>
             </div>
-            <div className="flex flex-col gap-1 self-stretch">
-              <div className="flex min-h-8 items-center self-stretch p-0">
-                <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                  {t('pages.clients.detail.department')}
-                </label>
-                <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                  {client.department}
-                </p>
-              </div>
-              <div className="flex min-h-8 items-center self-stretch p-0">
-                <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                  {t('pages.clients.filters.responsibleEmployee')}
-                </label>
-                <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                  {client.responsibleEmployee}
-                </p>
-              </div>
-              <div className="flex min-h-8 items-center self-stretch p-0">
-                <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                  {t('pages.clients.filters.responsibleSearcher')}
-                </label>
-                <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                  {client.responsibleResearcher}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start self-stretch p-0">
-              <div className="flex w-[131px] items-center gap-2.5">
-                <label className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                  {t('pages.clients.detail.phones')}
-                </label>
-              </div>
-              <div className="flex flex-1 flex-col items-start justify-center gap-2">
-                {client.phones.map((phone, index) => (
-                  <div key={index} className="flex items-center gap-3 self-stretch">
-                    <span className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {phone.number}
-                    </span>
-                    <button
-                      onClick={() => setIsCallModalOpen(true)}
-                      className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                    >
-                      <Icons.Headset size={16} className="flex-shrink-0" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedPhoneForSMS(phone.number)
-                        setIsSendSMSModalOpen(true)
-                      }}
-                      className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                    >
-                      <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                    </button>
-                    <button
-                      onClick={() => setIsNoteModalOpen(true)}
-                      className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                    >
-                      <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+            <div className="flex flex-row items-center gap-2">
+              <span className="text-dark-500 flex items-center rounded-[16px] bg-white/10 px-3 py-0 text-sm">
+                {client.score} {t('pages.clients.activity.score')}
+              </span>
+              <PriorityBadge priority={client.priority as Priority} />
             </div>
           </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2 md:gap-3 xl:flex-nowrap">
+            <Button
+              size="md"
+              variant="outline"
+              className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
+              onClick={() => navigate(`/dashboard/clients/${id}/debt-summary`)}
+            >
+              {t('pages.clients.debtSummary.title')}
+            </Button>
+            <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+              <Button
+                size="md"
+                variant="outline"
+                leftIcon={<Icons.PencilEdit size={20} />}
+                className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
+                onClick={() => setIsNoteModalOpen(true)}
+              >
+                {t('pages.clients.activity.addNote')}
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_TASKS}>
+              <Button
+                size="md"
+                variant="outline"
+                leftIcon={<Icons.Clock01 size={20} />}
+                className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
+                onClick={() => setIsTaskModalOpen(true)}
+              >
+                {t('pages.clients.tasks.addTask', 'Add Task')}
+              </Button>
+            </PermissionGuard>
+            <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+              <Button
+                size="md"
+                leftIcon={<Icons.Headset size={20} />}
+                className="w-full flex-1 rounded-full xl:w-auto xl:flex-none"
+                disabled={!user?.is_agent || !user?.asterisk_extension}
+                onClick={() => {
+                  const phoneNumber = client.phones?.[0]?.number
+                  if (!phoneNumber) {
+                    toast.error('Client has no phone number')
+                    return
+                  }
 
-          <div className="flex h-px w-[428px] flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
+                  if (isCallActive()) {
+                    toast.warning(
+                      t('pages.clients.modals.callDialog.callInProgress') ||
+                        'Another call or recording is already in progress. Please finish or close it first.'
+                    )
+                    return
+                  }
 
-          {/* Personal & Contact Details - 4 left tabs inside client card */}
-          <div className="flex items-center gap-6 self-stretch pr-6">
-            {/* Vertical tab icons */}
-            <div className="flex min-h-[44px] flex-col items-start gap-1 self-stretch rounded-bl-lg bg-white py-2.5">
-              <button
-                type="button"
-                onClick={() => setActiveClientCardTab('personal')}
-                className={cn(
-                  'flex max-w-[100px] flex-col items-start justify-center self-stretch rounded-none border-l-2 bg-white/10 p-4',
-                  activeClientCardTab === 'personal' ? 'border-primary-300' : 'border-transparent'
-                )}
+                  // Open modal in 'initial' state to let user select call type
+                  setSelectedPhoneForCall(phoneNumber)
+                  setOpenCallModal('call-dialog')
+                  setIsCallModalOpen(true)
+                }}
               >
-                <Icons.UserAccount
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveClientCardTab('work')}
-                className={cn(
-                  'flex max-w-[100px] flex-col items-start justify-center self-stretch rounded-none border-l-2 bg-white/10 p-4',
-                  activeClientCardTab === 'work' ? 'border-primary-300' : 'border-transparent'
-                )}
-              >
-                <Icons.Briefcase01
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveClientCardTab('recommenders')}
-                className={cn(
-                  'flex max-w-[100px] flex-col items-start justify-center self-stretch rounded-none border-l-2 bg-white/10 p-4',
-                  activeClientCardTab === 'recommenders'
-                    ? 'border-primary-300'
-                    : 'border-transparent'
-                )}
-              >
-                <Icons.UserCheck01
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeClientCardTab === 'recommenders' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveClientCardTab('addresses')}
-                className={cn(
-                  'flex max-w-[100px] flex-col items-start justify-center self-stretch rounded-none border-l-2 bg-white/10 p-4',
-                  activeClientCardTab === 'addresses' ? 'border-primary-300' : 'border-transparent'
-                )}
-              >
-                <Icons.Location01
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeClientCardTab === 'addresses' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
-              </button>
-            </div>
-
-            {/* Right side content for selected client card tab */}
-            <div className="flex w-[324px] flex-col items-center gap-6 self-stretch py-4">
-              {activeClientCardTab === 'personal' && (
-                <>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.tin')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.tin}
-                    </p>
+                {t('pages.clients.activity.call')}
+              </Button>
+            </PermissionGuard>
+            <Button
+              size="md"
+              variant="primary"
+              leftIcon={<Icons.PencilEdit size={20} />}
+              className="w-full flex-1 rounded-full xl:w-auto xl:flex-none"
+              onClick={() => setIsEditModalOpen(true)}
+            >
+              {t('pages.clients.activity.editClient')}
+            </Button>
+            {/* {canDelete && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="text-dark-500 flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100"
+                  aria-label="More actions"
+                >
+                  <Icons.FilterVertical size={18} strokeWidth={1.5} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 bg-white">
+                <DropdownMenuItem
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="flex cursor-pointer items-center gap-2 text-sm text-red-600 hover:text-red-700"
+                >
+                  <Icons.Delete size={16} strokeWidth={1.5} />
+                  <span>{t('pages.clients.activity.deleteClient')}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )} */}
+          </div>
+        </div>
+        <div className="flex flex-col items-start gap-4 self-stretch xl:flex-row xl:gap-5">
+          {/* Client Card */}
+          <div className="client-panel-scroll flex min-h-[44px] w-full flex-col items-start justify-start gap-0 rounded-lg bg-white/50 p-0 xl:max-h-[70vh] xl:w-[30%] xl:overflow-y-auto">
+            {/* Credit Details (top part of card) */}
+            <div className="flex flex-col items-start gap-3 self-stretch px-4 py-4 md:px-6 md:py-5">
+              <div className="flex flex-col gap-2 self-stretch">
+                <div className="flex items-center justify-between gap-2 self-stretch">
+                  <div className="flex flex-1 flex-wrap items-center gap-2">
+                    {clientTags && clientTags.length > 0 ? (
+                      clientTags.map((tag) => (
+                        <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
+                      ))
+                    ) : (
+                      <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                        {t('pages.clients.detail.noTagsAssigned')}
+                      </span>
+                    )}
                   </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.dateOfBirth')}
-                      </label>
-                      <Icons.Info size={14} className="text-gray-800" />
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.dateOfBirth}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.age')}
-                      </label>
-                      <Icons.Info size={14} className="text-gray-800" />
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.age}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.passport')}
-                      </label>
-                      <Icons.Info size={14} className="text-gray-800" />
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.passport}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between self-stretch p-0">
-                    <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      {t('pages.clients.detail.maritalStatus')}
-                    </label>
-                    <div className="flex flex-1 items-center justify-end gap-2">
-                      <p className="text-dark-500 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.maritalStatus}
+                  <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                    <button
+                      onClick={() => setIsTagModalOpen(true)}
+                      className="shrink-0 text-gray-500 transition-colors hover:text-gray-700"
+                      title="Manage tags"
+                      type="button"
+                    >
+                      <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
+                    </button>
+                  </PermissionGuard>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1 self-stretch">
+                <div className="flex min-h-8 items-center self-stretch p-0">
+                  <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                    {t('pages.clients.detail.department')}
+                  </label>
+                  <p className="text-dark-500 ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                    {client.department || '-'}
+                  </p>
+                </div>
+                <div className="flex min-h-8 items-center self-stretch p-0">
+                  <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                    {t('pages.clients.filters.responsibleEmployee')}
+                  </label>
+                  <div className="ml-2 flex flex-1 items-center justify-end gap-1">
+                    {profile?.responsible_employee_id && (
+                      <p className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.responsibleEmployee}
                       </p>
-                      <Icons.Tick01 size={18} className="text-gray-800" />
+                    )}
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                      <button
+                        onClick={() => setAssignRoleModalMode('employee')}
+                        className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                        title="Assign employee"
+                        type="button"
+                      >
+                        <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                      </button>
+                    </PermissionGuard>
+                  </div>
+                </div>
+                <div className="flex min-h-8 items-center self-stretch p-0">
+                  <label className="flex-1 text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                    {t('pages.clients.filters.responsibleSearcher')}
+                  </label>
+                  <div className="ml-2 flex flex-1 items-center justify-end gap-1">
+                    {profile?.responsible_searcher_id && (
+                      <p className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.responsibleResearcher}
+                      </p>
+                    )}
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                      <button
+                        onClick={() => setAssignRoleModalMode('searcher')}
+                        className="shrink-0 text-gray-400 transition-colors hover:text-gray-700"
+                        title="Assign searcher"
+                        type="button"
+                      >
+                        <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
+                      </button>
+                    </PermissionGuard>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-row items-center justify-between gap-2 self-stretch p-0">
+                <div className="flex flex-1 shrink-0 items-center gap-2.5">
+                  <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                    {t('pages.clients.detail.phones')}
+                  </label>
+                </div>
+                <div className="flex w-full flex-1 flex-col items-start justify-center gap-2">
+                  {client.phones.map((phone, index) => (
+                    <div key={index} className="flex items-center gap-2 self-stretch md:gap-3">
+                      <div className="flex flex-1 items-center justify-end gap-0.5">
+                        <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                          {phone.number}
+                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
+                            >
+                              <Icons.Info size={14} strokeWidth={1.5} />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="text-xs">
+                            {phone.type && (
+                              <div>
+                                {t('pages.clients.detail.phoneType')}:{' '}
+                                {phone.type === 'mobile'
+                                  ? t('pages.clients.editModal.phoneMobile')
+                                  : phone.type === 'home'
+                                    ? t('pages.clients.editModal.phoneHome')
+                                    : phone.type === 'register'
+                                      ? t('pages.clients.editModal.phoneRegister')
+                                      : phone.type}
+                              </div>
+                            )}
+                            {phone.added_by_user_name && (
+                              <div>
+                                {t('pages.clients.detail.addedBy')}: {phone.added_by_user_name}
+                              </div>
+                            )}
+                            {phone.created_at && (
+                              <div>
+                                {t('pages.clients.detail.addedDate')}:{' '}
+                                {formatDate(phone.created_at ?? undefined)}
+                              </div>
+                            )}
+                            {!phone.added_by_user_name && !phone.created_at && <div>-</div>}
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1 md:gap-2">
+                        <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+                          <button
+                            disabled={!user?.is_agent || !user?.asterisk_extension}
+                            onClick={() => {
+                              if (isCallActive()) {
+                                toast.warning(
+                                  t('pages.clients.modals.callDialog.callInProgress') ||
+                                    'Another call or recording is already in progress. Please finish or close it first.'
+                                )
+                                return
+                              }
+                              setSelectedPhoneForCall(phone.number)
+                              setOpenCallModal('call-dialog')
+                              setIsCallModalOpen(true)
+                            }}
+                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                          >
+                            <Icons.Headset size={16} className="flex-shrink-0" />
+                          </button>
+                        </PermissionGuard>
+                        <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                          <button
+                            onClick={() => {
+                              setSelectedPhoneForSMS(phone.number)
+                              setIsSendSMSModalOpen(true)
+                            }}
+                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                          >
+                            <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                          </button>
+                        </PermissionGuard>
+                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+                          <button
+                            onClick={() => {
+                              setSelectedPhoneForNote(phone.number)
+                              setIsNoteModalOpen(true)
+                            }}
+                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                          >
+                            <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                          </button>
+                        </PermissionGuard>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      {t('pages.clients.detail.numberOfFamilyMembers')}
-                    </label>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.familyMembers}
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {activeClientCardTab === 'recommenders' && (
-                <>
-                  {client.recommenders.map((friend) => (
-                    <>
-                      {/* <div key={friend.id} className="flex flex-col gap-3 self-stretch"> */}
-                      <div className="flex items-center self-stretch p-0">
-                        <div className="flex flex-1 items-center gap-2.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.fullName')}
-                          </label>
-                        </div>
-                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                          {friend.fullName}
-                        </p>
-                      </div>
-                      <div className="flex items-center self-stretch p-0">
-                        <div className="flex flex-1 items-center gap-2.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.relationshipTo')}
-                          </label>
-                        </div>
-                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                          {friend.relationship}
-                        </p>
-                      </div>
-                      <div className="flex items-center self-stretch p-0">
-                        <div className="flex flex-1 items-center gap-2.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.phoneNumber')}
-                          </label>
-                        </div>
-                        <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                          {friend.phoneNumber}
-                        </p>
-                      </div>
-                      <div className="flex items-start self-stretch p-0">
-                        <div className="flex flex-1 items-center gap-2.5">
-                          <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                            {t('pages.clients.detail.comment')}
-                          </label>
-                        </div>
-                        <p className="text-dark-500 flex-1 text-right text-sm leading-[140%] font-medium tracking-[-0.24px]">
-                          {friend.comment}
-                        </p>
-                      </div>
-                      {/* </div> */}
-                      {friend.id < client.recommenders.length && (
-                        <div className="flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
-                      )}
-                    </>
                   ))}
-                </>
-              )}
+                </div>
+              </div>
+            </div>
 
-              {activeClientCardTab === 'addresses' && (
-                <>
-                  <div className="flex items-start self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.registrationAddress')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-sm leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.addresses.registrationAddress}
-                    </p>
-                  </div>
-                  <div className="flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
-                  <div className="flex items-start self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.personalAddress')}
-                      </label>
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-sm leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.addresses.personalAddress}
-                    </p>
-                  </div>
-                </>
-              )}
+            <div className="mx-2 flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
 
-              {activeClientCardTab === 'work' && (
-                <>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.tin')}
-                      </label>
+            {/* Personal & Contact Details - 4 left tabs inside client card */}
+            <div className="flex flex-col items-start gap-4 self-stretch pr-0 md:flex-row md:items-center md:gap-6 md:pr-6">
+              {/* Vertical tab icons - horizontal scroll on mobile */}
+              <div className="relative flex min-h-[44px] w-full items-start gap-1 self-stretch rounded-bl-lg border-gray-200 p-4 md:my-2.5 md:w-auto md:flex-col md:border-r-1 md:border-b md:border-b-0 md:px-2.5 md:pb-0">
+                {/* Left Arrow Button - only show on mobile when scrolling */}
+                {showClientCardLeftArrow && (
+                  <button
+                    onClick={() => scrollClientCardTabs('left')}
+                    className="absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
+                    aria-label="Scroll tabs left"
+                    type="button"
+                  >
+                    <Icons.ArrowLeft size={20} className="text-secondary-800" />
+                  </button>
+                )}
+
+                {/* Right Arrow Button - only show on mobile when scrolling */}
+                {showClientCardRightArrow && (
+                  <button
+                    onClick={() => scrollClientCardTabs('right')}
+                    className="absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100 md:hidden"
+                    aria-label="Scroll tabs right"
+                    type="button"
+                  >
+                    <Icons.ArrowRight size={20} className="text-secondary-800" />
+                  </button>
+                )}
+
+                {/* Tab Container */}
+                <div
+                  ref={clientCardTabContainerRef}
+                  className="scrollbar-hide flex w-full items-start gap-1 self-stretch overflow-x-auto md:w-auto md:flex-col md:overflow-x-visible"
+                  style={{
+                    scrollbarWidth: 'none', // Firefox
+                    msOverflowStyle: 'none', // IE/Edge
+                  }}
+                >
+                  <button
+                    type="button"
+                    data-tab="personal"
+                    onClick={() => setActiveClientCardTab('personal')}
+                    title={t('pages.clients.detail.tabs.personal')}
+                    className={cn(
+                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      activeClientCardTab === 'personal'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        : 'md:border-transparent'
+                    )}
+                  >
+                    <Icons.UserAccount
+                      size={24}
+                      className={cn(
+                        'shrink-0',
+                        activeClientCardTab === 'personal' ? 'text-secondary-800' : 'text-gray-700'
+                      )}
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    data-tab="work"
+                    onClick={() => setActiveClientCardTab('work')}
+                    title={t('pages.clients.detail.tabs.work')}
+                    className={cn(
+                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      activeClientCardTab === 'work'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        : 'md:border-transparent'
+                    )}
+                  >
+                    <Icons.Briefcase01
+                      size={24}
+                      className={cn(
+                        'shrink-0',
+                        activeClientCardTab === 'work' ? 'text-secondary-800' : 'text-gray-700'
+                      )}
+                    />
+                  </button>
+                  <button
+                    type="button"
+                    data-tab="passport"
+                    onClick={() => setActiveClientCardTab('passport')}
+                    title={t('pages.clients.detail.tabs.passport')}
+                    className={cn(
+                      'md:hover:bg-primary-200/10 hover:bg-secondary-800/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
+                      activeClientCardTab === 'passport'
+                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-secondary-800/10'
+                        : 'md:border-transparent'
+                    )}
+                  >
+                    <Icons.File
+                      size={24}
+                      className={cn(
+                        'shrink-0',
+                        activeClientCardTab === 'passport' ? 'text-secondary-800' : 'text-gray-700'
+                      )}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Right side content for selected client card tab */}
+              <div className="flex w-full min-w-0 flex-col items-center gap-6 self-stretch overflow-hidden px-4 py-4 md:px-0">
+                {activeClientCardTab === 'personal' && (
+                  <>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.tin')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.tin}
+                      </p>
                     </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.tin}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.dateOfBirth')}
-                      </label>
-                      <Icons.Info size={14} className="text-gray-800" />
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.dateOfBirth')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.dateOfBirth}
+                      </p>
                     </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.dateOfBirth}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.age')}
-                      </label>
-                      <Icons.Info size={14} className="text-gray-800" />
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.age')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.age}
+                      </p>
                     </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.age}
-                    </p>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2">
-                      <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.detail.passport')}
-                      </label>
-                      <Icons.Info size={14} className="text-gray-800" />
-                    </div>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.passport}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between self-stretch p-0">
-                    <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      {t('pages.clients.detail.maritalStatus')}
-                    </label>
-                    <div className="flex flex-1 items-center justify-end gap-2">
-                      <p className="text-dark-500 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                    <div className="mx-2 h-px self-stretch bg-gray-200"></div>
+                    {client.addresses.map((address) => (
+                      <React.Fragment key={address.id}>
+                        <div className="flex items-start self-stretch p-0">
+                          <div className="flex shrink-0 items-start gap-2.5">
+                            <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                              {address.addressType === 'registration'
+                                ? t('pages.clients.detail.registrationAddress')
+                                : t('pages.clients.detail.personalAddress')}
+                            </label>
+                          </div>
+                          <p className="text-dark-500 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                            {address.fullAddress}
+                          </p>
+                        </div>
+                      </React.Fragment>
+                    ))}
+                    {client.addresses.length === 0 && <p className="text-xs text-gray-500">-</p>}
+                    <div className="mx-2 h-px self-stretch bg-gray-200"></div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.maritalStatus')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                         {client.personalDetails.maritalStatus}
                       </p>
-                      <Icons.Tick01 size={18} className="text-gray-800" />
                     </div>
-                  </div>
-                  <div className="flex items-center self-stretch p-0">
-                    <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                      {t('pages.clients.detail.numberOfFamilyMembers')}
-                    </label>
-                    <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                      {client.personalDetails.familyMembers}
-                    </p>
-                  </div>
-                </>
-              )}
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.numberOfFamilyMembers')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.familyMembers}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.incomeLevel')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.incomeLevel}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {activeClientCardTab === 'passport' && (
+                  <>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.documentType')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.documentType}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.passportSeries')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.passportSeries}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.passportNumber')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.passportNumber}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.issuedBy')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.issuedBy}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.issuedDate')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.issuedDate}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.expiresDate')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.expiresDate}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.gender')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.gender}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {activeClientCardTab === 'work' && (
+                  <>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.organizationName')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.work?.organizationName || '-'}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.position')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.work?.position || '-'}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.experience')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.work?.experience || '-'}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.managerFullName')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.work?.managerFullName || '-'}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.employmentType')}
+                        </label>
+                      </div>
+                      <p className="text-dark-500 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.work?.employmentType || '-'}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.detail.workPhone')}
+                        </label>
+                      </div>
+                      <div className="flex flex-1 items-center justify-end gap-2 md:gap-3">
+                        <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                          {client.work?.workPhone || '-'}
+                        </span>
+                        {client.work?.workPhone && client.work.workPhone !== '-' && (
+                          <div className="flex shrink-0 items-center gap-1 md:gap-2">
+                            <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+                              <button
+                                disabled={!user?.is_agent || !user?.asterisk_extension}
+                                onClick={() => {
+                                  if (isCallActive()) {
+                                    toast.warning(
+                                      t('pages.clients.modals.callDialog.callInProgress') ||
+                                        'Another call or recording is already in progress. Please finish or close it first.'
+                                    )
+                                    return
+                                  }
+                                  setSelectedPhoneForCall(client.work?.workPhone || '')
+                                  setOpenCallModal('call-dialog')
+                                  setIsCallModalOpen(true)
+                                }}
+                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                              >
+                                <Icons.Headset size={16} className="flex-shrink-0" />
+                              </button>
+                            </PermissionGuard>
+                            <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                              <button
+                                onClick={() => {
+                                  setSelectedPhoneForSMS(client.work?.workPhone || '')
+                                  setIsSendSMSModalOpen(true)
+                                }}
+                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                              >
+                                <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                              </button>
+                            </PermissionGuard>
+                            <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
+                              <button
+                                onClick={() => {
+                                  setSelectedPhoneForNote(client.work?.workPhone || '')
+                                  setIsNoteModalOpen(true)
+                                }}
+                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                              >
+                                <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                              </button>
+                            </PermissionGuard>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Right Column - Data + Comments Card with 6 left tabs */}
-        <div className="flex flex-1 flex-col items-start gap-5 self-stretch">
-          <div className="flex min-h-[44px] flex-1 items-start justify-center gap-0 self-stretch rounded-lg bg-white/50 p-0">
-            {/* Vertical tab icons - 6 tabs */}
-            <div className="flex flex-col items-start gap-2.5 self-stretch rounded-l-lg bg-white py-2.5">
-              {/* Tab 1: Loans (Calendar icon) */}
-              <button
-                type="button"
-                onClick={() => setActiveRightCardTab('loans')}
-                className={cn(
-                  'border-primary-300 flex flex-col items-start justify-center gap-2 rounded-none border-l-2 bg-white/10 p-4',
-                  activeRightCardTab === 'loans' ? 'border-primary-300' : 'border-transparent'
+          {/* Right Column - Data + Comments Card with 6 horizontal top tabs */}
+          <div className="client-panel-scroll flex w-full flex-1 flex-col items-start gap-5 self-stretch xl:max-h-[70vh] xl:w-[64%] xl:overflow-y-auto">
+            <div className="flex min-h-0 flex-1 flex-col items-start gap-0 self-stretch overflow-y-auto rounded-lg bg-white/50 p-0">
+              {/* Horizontal tab bar - 6 tabs at the top - scrollable on mobile */}
+              <div className="relative mx-3 flex items-center gap-0 self-stretch border-b border-gray-200">
+                {/* Left Arrow Button */}
+                {showLeftArrow && (
+                  <button
+                    onClick={() => scrollTabs('left')}
+                    className="absolute top-0 left-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-r from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100"
+                    aria-label="Scroll tabs left"
+                    type="button"
+                  >
+                    <Icons.ArrowLeft size={20} className="text-secondary-800" />
+                  </button>
                 )}
-              >
-                <Icons.Briefcase08
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeRightCardTab === 'loans' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
-              </button>
-              {/* Tab 2: Payments (Contact icon) */}
-              <button
-                type="button"
-                onClick={() => setActiveRightCardTab('payments')}
-                className={cn(
-                  'border-primary-300 flex flex-col items-start justify-center gap-2 rounded-none border-l-2 bg-white/10 p-4',
-                  activeRightCardTab === 'payments' ? 'border-primary-300' : 'border-transparent'
-                )}
-              >
-                <Icons.PieChart02
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeRightCardTab === 'payments' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
-              </button>
-              {/* Tab 3: documents */}
-              <button
-                type="button"
-                onClick={() => setActiveRightCardTab('documents')}
-                className={cn(
-                  'border-primary-300 flex flex-col items-start justify-center gap-2 rounded-none border-l-2 bg-white/10 p-4',
-                  activeRightCardTab === 'documents' ? 'border-primary-300' : 'border-transparent'
-                )}
-              >
-                <Icons.UserStatus
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeRightCardTab === 'documents' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
-              </button>
-              {/* Tab 4: tasks (User icon) */}
-              <button
-                type="button"
-                onClick={() => setActiveRightCardTab('tasks')}
-                className={cn(
-                  'border-primary-300 flex flex-col items-start justify-center gap-2 rounded-none border-l-2 bg-white/10 p-4',
-                  activeRightCardTab === 'tasks' ? 'border-primary-300' : 'border-transparent'
-                )}
-              >
-                <Icons.Calendar03
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeRightCardTab === 'tasks' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
-              </button>
-              {/* Tab 5: call-sms-history (Activity icon) */}
-              <button
-                type="button"
-                onClick={() => setActiveRightCardTab('call-sms-history')}
-                className={cn(
-                  'border-primary-300 flex flex-col items-start justify-center gap-2 rounded-none border-l-2 bg-white/10 p-4',
-                  activeRightCardTab === 'call-sms-history'
-                    ? 'border-primary-300'
-                    : 'border-transparent'
-                )}
-              >
-                <Icons.TransactionHistory
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeRightCardTab === 'call-sms-history'
-                      ? 'text-secondary-800'
-                      : 'text-gray-700'
-                  )}
-                />
-              </button>
-              {/* Tab 6: operators (File icon) */}
-              <button
-                type="button"
-                onClick={() => setActiveRightCardTab('operators')}
-                className={cn(
-                  'border-primary-300 flex flex-col items-start justify-center gap-2 rounded-none border-l-2 bg-white/10 p-4',
-                  activeRightCardTab === 'operators' ? 'border-primary-300' : 'border-transparent'
-                )}
-              >
-                <Icons.UserMultiple02
-                  size={24}
-                  className={cn(
-                    'mx-0.5 my-1',
-                    activeRightCardTab === 'operators' ? 'text-secondary-800' : 'text-gray-700'
-                  )}
-                />
-              </button>
-            </div>
 
-            {/* Right side content for selected right card tab */}
-            <div className="flex flex-1 flex-col items-start gap-6 p-0">
-              {/* Tab 1: Loans */}
-              {activeRightCardTab === 'loans' && (
-                <div className="flex w-full flex-col gap-4">
-                  <div className="flex min-h-[44px] items-center gap-6 self-stretch border-b border-gray-200 px-6 pt-6 pb-0">
-                    <button
-                      onClick={() => setActiveLoanTab('process')}
-                      className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
-                        activeLoanTab === 'process'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
+                {/* Right Arrow Button */}
+                {showRightArrow && (
+                  <button
+                    onClick={() => scrollTabs('right')}
+                    className="absolute top-0 right-0 z-10 flex h-full w-10 items-center justify-center bg-gradient-to-l from-white via-white/95 to-transparent shadow-sm transition-opacity hover:opacity-100"
+                    aria-label="Scroll tabs right"
+                    type="button"
+                  >
+                    <Icons.ArrowRight size={20} className="text-secondary-800" />
+                  </button>
+                )}
+
+                {/* Tab Container */}
+                <div
+                  ref={tabContainerRef}
+                  className="scrollbar-hide flex items-center gap-0 self-stretch overflow-x-auto"
+                  style={{
+                    scrollbarWidth: 'none', // Firefox
+                    msOverflowStyle: 'none', // IE/Edge
+                  }}
+                >
+                  {/* Tab 1: Loans */}
+                  <button
+                    type="button"
+                    data-tab="loans"
+                    onClick={() => setActiveRightCardTab('loans')}
+                    className={cn(
+                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      activeRightCardTab === 'loans'
+                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                    )}
+                  >
+                    <Icons.Folder size={20} className="shrink-0 text-current" />
+                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                      {t('pages.clients.detail.tabs.loans')}
+                    </span>
+                  </button>
+                  {/* Tab 2: Payments */}
+                  <button
+                    type="button"
+                    data-tab="payments"
+                    onClick={() => setActiveRightCardTab('payments')}
+                    className={cn(
+                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      activeRightCardTab === 'payments'
+                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                    )}
+                  >
+                    <Icons.Wallet01 size={20} className="shrink-0 text-current" />
+                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                      {t('pages.clients.detail.payments')}
+                    </span>
+                  </button>
+                  {/* Tab 3: Recommenders */}
+                  <button
+                    type="button"
+                    data-tab="recommenders"
+                    onClick={() => setActiveRightCardTab('recommenders')}
+                    className={cn(
+                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      activeRightCardTab === 'recommenders'
+                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                    )}
+                  >
+                    <Icons.UserCheck01 size={20} className="shrink-0 text-current" />
+                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                      {t('pages.clients.detail.tabs.recommenders')}
+                    </span>
+                  </button>
+                  {/* Tab 4: Operators */}
+                  <button
+                    type="button"
+                    data-tab="operators"
+                    onClick={() => setActiveRightCardTab('operators')}
+                    className={cn(
+                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      activeRightCardTab === 'operators'
+                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                    )}
+                  >
+                    <Icons.UserMultiple02 size={20} className="shrink-0 text-current" />
+                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                      {t('pages.clients.detail.operators')}
+                    </span>
+                  </button>
+                  {/* Tab 4: Call/SMS */}
+                  <button
+                    type="button"
+                    data-tab="call-sms-history"
+                    onClick={() => setActiveRightCardTab('call-sms-history')}
+                    className={cn(
+                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      activeRightCardTab === 'call-sms-history'
+                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                    )}
+                  >
+                    <Icons.Clock01 size={20} className="shrink-0 text-current" />
+                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                      {t('pages.clients.detail.tabs.callSms')}
+                    </span>
+                  </button>
+                  {/* Tab 5: Tasks */}
+                  <button
+                    type="button"
+                    data-tab="tasks"
+                    onClick={() => setActiveRightCardTab('tasks')}
+                    className={cn(
+                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      activeRightCardTab === 'tasks'
+                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                    )}
+                  >
+                    <Icons.CheckmarkSquare03 size={20} className="shrink-0 text-current" />
+                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                      {t('pages.clients.detail.tabs.tasks')}
+                    </span>
+                  </button>
+                  {/* Tab 6: Docs */}
+                  <button
+                    type="button"
+                    data-tab="documents"
+                    onClick={() => setActiveRightCardTab('documents')}
+                    className={cn(
+                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      activeRightCardTab === 'documents'
+                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                    )}
+                  >
+                    <Icons.File size={20} className="shrink-0 text-current" />
+                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                      {t('pages.clients.detail.tabs.docs')}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Content area for selected tab */}
+              <div className="flex w-full flex-col items-start gap-0 self-stretch p-0">
+                {/* Tab 1: Loans */}
+                {activeRightCardTab === 'loans' && (
+                  <div className="flex w-full flex-col gap-0">
+                    {/* Secondary filters below primary tabs */}
+                    <div className="mx-3 flex flex-col items-center gap-3 self-stretch overflow-x-auto pt-4 pb-0 sm:flex-row md:mx-6 md:gap-6 md:pt-6">
+                      <button
+                        onClick={() => setActiveLoanTab('process')}
+                        className={cn(
+                          'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
+                          activeLoanTab === 'process'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:text-secondary-800 text-gray-600'
+                        )}
+                      >
+                        {t('pages.clients.detail.loansInProcess')}
+                      </button>
+                      <button
+                        onClick={() => setActiveLoanTab('closed')}
+                        className={cn(
+                          'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
+                          activeLoanTab === 'closed'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:text-secondary-800 text-gray-600'
+                        )}
+                      >
+                        {t('pages.clients.detail.closedLoans')}
+                      </button>
+                      <button
+                        onClick={() => setActiveLoanTab('rr')}
+                        className={cn(
+                          'hover:bg-secondary-800/20 flex w-full shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs font-medium tracking-[-0.28px] sm:w-auto md:p-3',
+                          activeLoanTab === 'rr'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:text-secondary-800 text-gray-600'
+                        )}
+                      >
+                        {t('pages.clients.detail.loansOnRR')}
+                      </button>
+                    </div>
+                    {/* Data table filtered by sub-tab */}
+                    <div className="flex flex-col items-start gap-2.5 self-stretch px-3 py-4 md:px-6">
+                      {activeLoanTab === 'rr' ? (
+                        isRrLoading ? (
+                          <TableSkeleton columns={7} rows={3} />
+                        ) : (
+                          <DataTable
+                            columns={rrColumns}
+                            data={restructuringAgreements}
+                            className="w-full"
+                          />
+                        )
+                      ) : isLoansLoading ? (
+                        <TableSkeleton columns={7} rows={3} />
+                      ) : (
+                        <DataTable
+                          columns={loanColumns}
+                          data={client.loans.filter((loan) => {
+                            if (activeLoanTab === 'process') return loan.status === 'active'
+                            if (activeLoanTab === 'closed') return loan.status === 'closed'
+                            return true
+                          })}
+                          className="w-full"
+                        />
                       )}
-                    >
-                      {t('pages.clients.detail.loansInProcess')}
-                    </button>
-                    <button
-                      onClick={() => setActiveLoanTab('closed')}
-                      className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
-                        activeLoanTab === 'closed'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
-                      )}
-                    >
-                      {t('pages.clients.detail.closedLoans')}
-                    </button>
-                    <button
-                      onClick={() => setActiveLoanTab('rr')}
-                      className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
-                        activeLoanTab === 'rr'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
-                      )}
-                    >
-                      {t('pages.clients.detail.loansOnRR')}
-                    </button>
-                  </div>
-                  <div className="flex flex-col items-start gap-2.5 self-stretch px-6">
-                    <DataTable columns={loanColumns} data={client.loans} className="w-full" />
-                  </div>
-                  <div className="flex flex-wrap content-start items-start gap-3 self-stretch p-[0_24px_24px_24px]">
-                    <Button
+                    </div>
+                    {/* Action buttons at the bottom */}
+                    <div className="flex flex-wrap items-center gap-2 self-stretch px-3 py-4 md:gap-3 md:px-6">
+                      {/* <Button
                       variant="secondary"
                       leftIcon={<Icons.MoneyRemove01 size={20} />}
-                      className="rounded"
+                      className="rounded text-xs md:text-sm"
+                      size="sm"
                     >
                       {t('pages.clients.detail.writeOff')}
                     </Button>
                     <Button
                       variant="secondary"
                       leftIcon={<Icons.MoneyNotFound04 size={20} />}
-                      className="rounded"
+                      className="rounded text-xs md:text-sm"
+                      size="sm"
                     >
                       {t('pages.clients.detail.reversal')}
                     </Button>
                     <Button
                       variant="secondary"
                       leftIcon={<Icons.CancelCircle size={20} />}
-                      className="rounded"
+                      className="rounded text-xs md:text-sm"
+                      size="sm"
                     >
                       {t('pages.clients.detail.closeLoan')}
                     </Button>
                     <Button
                       variant="secondary"
                       leftIcon={<Icons.MailSend01 size={20} />}
-                      className="rounded"
+                      className="rounded text-xs md:text-sm"
+                      size="sm"
                     >
                       {t('pages.clients.detail.sendToUBCI')}
                     </Button>
                     <Button
                       variant="secondary"
                       leftIcon={<Icons.Calculate size={20} />}
-                      className="rounded"
+                      className="rounded text-xs md:text-sm"
+                      size="sm"
                     >
                       {t('pages.clients.detail.rrCalculator')}
                     </Button>
                     <Button
                       variant="secondary"
                       leftIcon={<Icons.PlusSignCircle size={20} />}
-                      className="rounded"
+                      className="rounded text-xs md:text-sm"
+                      size="sm"
                     >
                       {t('pages.clients.detail.makePayment')}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 2: Payments */}
-              {activeRightCardTab === 'payments' && (
-                <div className="flex w-full flex-col gap-4">
-                  <div className="flex min-h-[44px] items-center gap-6 self-stretch border-b border-gray-200 px-6 pt-6 pb-0">
-                    <button
-                      onClick={() => setActivePaymentTab('payments')}
-                      className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
-                        activePaymentTab === 'payments'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
-                      )}
-                    >
-                      {t('pages.clients.detail.payments')}
-                    </button>
-                    <button
-                      onClick={() => setActivePaymentTab('writes-off')}
-                      className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
-                        activePaymentTab === 'writes-off'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
-                      )}
-                    >
-                      {t('pages.clients.detail.writesOff')}
-                    </button>
-                    <button
-                      onClick={() => setActivePaymentTab('primary-creditor')}
-                      className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
-                        activePaymentTab === 'primary-creditor'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
-                      )}
-                    >
-                      {t('pages.clients.detail.paymentToPrimaryCreditor')}
-                    </button>
-                  </div>
-                  <div className="flex flex-col items-start gap-2.5 self-stretch px-6">
-                    {activePaymentTab === 'payments' && (
-                      <DataTable
-                        columns={paymentColumns}
-                        data={client.payments}
-                        className="w-full"
-                      />
-                    )}
-                    {activePaymentTab === 'writes-off' && (
-                      <DataTable
-                        columns={writeOffColumns}
-                        data={client.writesOffs}
-                        className="w-full"
-                      />
-                    )}
-                    {activePaymentTab === 'primary-creditor' && (
-                      <DataTable
-                        columns={primaryCreditorPaymentColumns}
-                        data={client.primaryCreditorPayments}
-                        className="w-full"
-                      />
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 3: Operators/Searchers */}
-              {activeRightCardTab === 'operators' && (
-                <div className="flex w-full flex-col gap-4">
-                  <div className="flex min-h-[44px] items-center gap-6 self-stretch border-b border-gray-200 px-6 pt-6 pb-0">
-                    <button
-                      onClick={() => setActiveOperatorTab('operators')}
-                      className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
-                        activeOperatorTab === 'operators'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
-                      )}
-                    >
-                      {t('pages.clients.detail.operators')}
-                    </button>
-                    <button
-                      onClick={() => setActiveOperatorTab('searchers')}
-                      className={cn(
-                        'text-dark-500 flex items-center justify-center gap-2.5 border-b-[3px] border-transparent pb-5 text-sm leading-[150%] font-medium tracking-[-0.28px]',
-                        activeOperatorTab === 'searchers'
-                          ? 'border-primary-300 border-b-[3px]'
-                          : 'hover:text-dark-500 cursor-pointer text-gray-600'
-                      )}
-                    >
-                      {t('pages.clients.detail.searchers')}
-                    </button>
-                  </div>
-                  <div className="flex flex-col items-start gap-2.5 self-stretch px-6">
-                    {activeOperatorTab === 'operators' && (
-                      <DataTable
-                        columns={operatorColumns}
-                        data={client.operators}
-                        className="w-full"
-                      />
-                    )}
-                    {activeOperatorTab === 'searchers' && (
-                      <DataTable
-                        columns={searcherColumns}
-                        data={client.searchers}
-                        className="w-full"
-                      />
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 4: Call and SMS History */}
-              {activeRightCardTab === 'call-sms-history' && (
-                <div className="flex flex-1 flex-col items-start justify-end gap-5 self-stretch p-6">
-                  <div className="flex h-[41px] items-center gap-5 self-stretch p-0">
-                    <div className="flex flex-1 items-center gap-2.5">
-                      <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                        {t('pages.clients.detail.callAndSMSHistory')}
-                      </span>
-                    </div>
-                    <div className="flex flex-1 items-center justify-between gap-1 rounded-lg bg-white p-1 shadow-sm">
-                      <button
-                        onClick={() => setActiveCallSmsTab('all')}
-                        className={cn(
-                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 transition-colors',
-                          activeCallSmsTab === 'all'
-                            ? 'bg-secondary-800 text-white'
-                            : 'text-dark-500 hover:text-secondary-800 hover:bg-primary-500/10 cursor-pointer'
-                        )}
-                      >
-                        {t('pages.clients.activity.all')}
-                      </button>
-                      <button
-                        onClick={() => setActiveCallSmsTab('calls')}
-                        className={cn(
-                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 transition-colors',
-                          activeCallSmsTab === 'calls'
-                            ? 'bg-secondary-800 text-white'
-                            : 'text-dark-500 hover:text-secondary-800 hover:bg-primary-500/10 cursor-pointer'
-                        )}
-                      >
-                        {t('pages.clients.activity.calls')}
-                      </button>
-                      <button
-                        onClick={() => setActiveCallSmsTab('sms')}
-                        className={cn(
-                          'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 transition-colors',
-                          activeCallSmsTab === 'sms'
-                            ? 'bg-secondary-800 text-white'
-                            : 'text-dark-500 hover:text-secondary-800 hover:bg-primary-500/10 cursor-pointer'
-                        )}
-                      >
-                        {t('pages.clients.activity.sms')}
-                      </button>
-                    </div>
-                    <div className="flex flex-1 flex-col items-end gap-2.5">
+                    </Button> */}
                       <Button
-                        leftIcon={<Icons.Download size={20} />}
-                        className="bg-secondary-800 flex flex-row items-center gap-1 rounded px-4 py-2.5 text-xs leading-[140%] font-medium tracking-[-0.24px] text-white"
+                        variant="secondary"
+                        leftIcon={<Icons.Calculate size={20} />}
+                        className="rounded text-xs md:text-sm"
+                        size="sm"
+                        onClick={() => {
+                          setConnectRrForm({
+                            debtId: '',
+                            connectionDate: null,
+                            totalAmount: '',
+                            numPayments: 1,
+                            payments: [{ date: null, amount: '' }],
+                          })
+                          setConnectRrError(null)
+                          setIsConnectRrOpen(true)
+                        }}
                       >
-                        {t('pages.clients.detail.exportCSV')}
+                        {t('pages.clients.detail.connectRR')}
                       </Button>
                     </div>
                   </div>
-                  {activeCallSmsTab === 'all' && (
-                    <div className="flex flex-col items-start gap-6 self-stretch">
-                      {/* Date-grouped Calls and SMS */}
-                      {(() => {
-                        // Combine calls and SMS, group by date
-                        const allItems = [
-                          ...client.callSmsHistory.calls.map((item) => ({
-                            ...item,
-                            itemType: 'call' as const,
-                          })),
-                          ...client.callSmsHistory.sms.map((item) => ({
-                            ...item,
-                            itemType: 'sms' as const,
-                          })),
-                        ]
+                )}
 
-                        const grouped = allItems.reduce(
-                          (acc, item) => {
-                            const date = new Date(item.date).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                            })
-                            if (!acc[date]) acc[date] = { calls: [], sms: [] }
-                            if (item.itemType === 'call') {
-                              acc[date].calls.push(
-                                item as (typeof client.callSmsHistory.calls)[0] & {
-                                  itemType: 'call'
-                                }
-                              )
-                            } else {
-                              acc[date].sms.push(
-                                item as (typeof client.callSmsHistory.sms)[0] & { itemType: 'sms' }
-                              )
-                            }
-                            return acc
-                          },
-                          {} as Record<
-                            string,
-                            {
-                              calls: ((typeof client.callSmsHistory.calls)[0] & {
-                                itemType: 'call'
-                              })[]
-                              sms: ((typeof client.callSmsHistory.sms)[0] & { itemType: 'sms' })[]
-                            }
-                          >
-                        )
-
-                        return Object.entries(grouped)
-                          .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
-                          .map(([date, items]) => (
-                            <div key={date} className="w-full space-y-4">
-                              <h3 className="text-dark-500 text-base font-semibold">{date}</h3>
-                              <div className="grid grid-cols-2 gap-4">
-                                {/* Calls for this date */}
-                                {items.calls.map((call) => (
-                                  <CallLogCard
-                                    key={`call-${call.id}`}
-                                    clientName={client.fullName}
-                                    title={`${t('pages.clients.detail.play')} (${call.duration})`}
-                                    time={call.time}
-                                    date={call.date}
-                                    duration={call.duration}
-                                    status={call.status}
-                                    type={call.type}
-                                    phone={call.phone}
-                                    line={call.line}
-                                    operator={call.operator}
-                                    icon={
-                                      <Icons.PlayCircle02
-                                        size={20}
-                                        className="text-secondary-800"
-                                      />
-                                    }
-                                    setSelectedCallData={setSelectedCallData}
-                                    setIsCallRecordingModalOpen={setIsCallRecordingModalOpen}
-                                  />
-                                ))}
-                                {/* SMS for this date */}
-                                {items.sms.map((sms) => (
-                                  <CallLogCard
-                                    key={`sms-${sms.id}`}
-                                    clientName={client.fullName}
-                                    title={t('pages.clients.detail.viewSms')}
-                                    time={sms.time}
-                                    date={sms.date}
-                                    status={sms.status}
-                                    template={sms.template}
-                                    message={sms.message}
-                                    operator={sms.operator}
-                                    icon={
-                                      <Icons.ChatFeedback01
-                                        size={20}
-                                        className="text-secondary-800"
-                                      />
-                                    }
-                                    setSelectedSMSData={setSelectedSMSData}
-                                    setIsViewSMSModalOpen={setIsViewSMSModalOpen}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          ))
-                      })()}
+                {/* Tab 2: Payments */}
+                {activeRightCardTab === 'payments' && (
+                  <div className="flex w-full flex-col gap-4">
+                    <div className="mx-3 flex min-h-[44px] items-center gap-3 self-stretch overflow-x-auto pt-4 pb-0 md:mx-6 md:gap-6 md:pt-6">
+                      <button
+                        onClick={() => setActivePaymentTab('payments')}
+                        className={cn(
+                          'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
+                          activePaymentTab === 'payments'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
+                        )}
+                      >
+                        {t('pages.clients.detail.payments')}
+                      </button>
+                      <button
+                        onClick={() => setActivePaymentTab('writes-off')}
+                        className={cn(
+                          'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
+                          activePaymentTab === 'writes-off'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
+                        )}
+                      >
+                        {t('pages.clients.detail.writesOff')}
+                      </button>
+                      <button
+                        onClick={() => setActivePaymentTab('primary-creditor')}
+                        className={cn(
+                          'text-dark-500 flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] md:p-3',
+                          activePaymentTab === 'primary-creditor'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:bg-secondary-800/20 hover:text-secondary-800 text-gray-600'
+                        )}
+                      >
+                        {t('pages.clients.detail.paymentToPrimaryCreditor')}
+                      </button>
                     </div>
-                  )}
-                  {activeCallSmsTab === 'calls' && (
-                    <div className="flex flex-col items-start gap-4 self-stretch">
-                      {/* Summary Statistics */}
-                      <div className="flex h-14 w-full items-start gap-5 p-0">
-                        <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-2 pl-3">
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                              <Icons.Call02 size={24} className="text-gray-700" />
-                            </div>
-                            <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                              Total Calls
-                            </div>
-                          </div>
-                          <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                            {client.callSmsHistory.calls.length}
-                          </div>
+                    <div className="flex flex-col items-start gap-2.5 self-stretch px-3 pb-4 md:px-6">
+                      {isPaymentsLoading ? (
+                        <TableSkeleton columns={7} rows={3} />
+                      ) : (
+                        <>
+                          {activePaymentTab === 'payments' && (
+                            <DataTable
+                              columns={paymentColumns}
+                              data={client.payments}
+                              className="w-full"
+                            />
+                          )}
+                          {activePaymentTab === 'writes-off' && (
+                            <DataTable
+                              columns={writeOffColumns}
+                              data={client.writesOffs}
+                              className="w-full"
+                            />
+                          )}
+                          {activePaymentTab === 'primary-creditor' && (
+                            <DataTable
+                              columns={primaryCreditorPaymentColumns}
+                              data={client.paymentsToPrimaryCreditor}
+                              className="w-full"
+                            />
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab 3: Recommenders */}
+                {activeRightCardTab === 'recommenders' && (
+                  <div className="self-stretch overflow-x-auto p-3 md:p-6">
+                    {client.recommenders.length === 0 ? (
+                      <p className="text-xs text-gray-500">-</p>
+                    ) : (
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
+                              {t('pages.clients.detail.contactValue')}
+                            </th>
+                            <th className="pb-2"></th>
+                            <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
+                              {t('pages.clients.detail.contactType')}
+                            </th>
+                            <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
+                              {t('pages.clients.detail.comment')}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {client.recommenders.map((contact) => (
+                            <tr key={contact.id} className="border-b border-gray-100 last:border-0">
+                              <td className="py-2 pr-3">
+                                <div className="flex items-center gap-0.5">
+                                  <span className="text-dark-500 font-medium tracking-[-0.24px] break-all">
+                                    {contact.contactValue}
+                                  </span>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
+                                      >
+                                        <Icons.Info size={14} strokeWidth={1.5} />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="text-xs">
+                                      {contact.added_by_user_name && (
+                                        <div>
+                                          {t('pages.clients.detail.addedBy')}:{' '}
+                                          {contact.added_by_user_name}
+                                        </div>
+                                      )}
+                                      {contact.created_at && (
+                                        <div>
+                                          {t('pages.clients.detail.addedDate')}:{' '}
+                                          {formatDate(contact.created_at ?? undefined)}
+                                        </div>
+                                      )}
+                                      {!contact.added_by_user_name && !contact.created_at && (
+                                        <div>-</div>
+                                      )}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
+                              </td>
+                              <td className="py-2 pr-3">
+                                {(contact.isPhone || looksLikePhone(contact.contactValue)) &&
+                                  contact.contactValue && (
+                                    <div className="flex items-center gap-1 md:gap-2">
+                                      <PermissionGuard
+                                        permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}
+                                      >
+                                        <button
+                                          disabled={!user?.is_agent || !user?.asterisk_extension}
+                                          onClick={() => {
+                                            if (isCallActive()) {
+                                              toast.warning(
+                                                t(
+                                                  'pages.clients.modals.callDialog.callInProgress'
+                                                ) ||
+                                                  'Another call or recording is already in progress. Please finish or close it first.'
+                                              )
+                                              return
+                                            }
+                                            setSelectedPhoneForCall(contact.contactValue)
+                                            setOpenCallModal('call-dialog')
+                                            setIsCallModalOpen(true)
+                                          }}
+                                          className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                                        >
+                                          <Icons.Headset size={16} className="flex-shrink-0" />
+                                        </button>
+                                      </PermissionGuard>
+                                      <PermissionGuard
+                                        permission={PERMISSIONS.COMMUNICATION.SEND_SMS}
+                                      >
+                                        <button
+                                          onClick={() => {
+                                            setSelectedPhoneForSMS(contact.contactValue)
+                                            setIsSendSMSModalOpen(true)
+                                          }}
+                                          className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
+                                        >
+                                          <Icons.ChatFeedback01
+                                            size={16}
+                                            className="flex-shrink-0"
+                                          />
+                                        </button>
+                                      </PermissionGuard>
+                                      <PermissionGuard
+                                        permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}
+                                      >
+                                        <button
+                                          onClick={() => {
+                                            setSelectedPhoneForNote(contact.contactValue)
+                                            setIsNoteModalOpen(true)
+                                          }}
+                                          className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
+                                        >
+                                          <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                                        </button>
+                                      </PermissionGuard>
+                                    </div>
+                                  )}
+                              </td>
+                              <td className="py-2 pr-3">
+                                <span className="text-dark-500 font-medium tracking-[-0.24px]">
+                                  {contact.contactTypeCode
+                                    ? t(`contactTypes.${contact.contactTypeCode}`, {
+                                        defaultValue: contact.contactType,
+                                      })
+                                    : contact.contactType}
+                                </span>
+                              </td>
+                              <td className="py-2 pr-3">
+                                <span className="text-dark-500 font-medium tracking-[-0.24px]">
+                                  {contact.comment}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab 4: Operators/Searchers */}
+                {activeRightCardTab === 'operators' && (
+                  <div className="flex w-full flex-col gap-4">
+                    <div className="mx-3 flex min-h-[44px] items-center gap-3 self-stretch overflow-x-auto pt-4 pb-0 md:mx-6 md:gap-6 md:pt-6">
+                      <button
+                        onClick={() => setActiveOperatorTab('operators')}
+                        className={cn(
+                          'flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600 md:p-3',
+                          activeOperatorTab === 'operators'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:bg-secondary-800/20 hover:text-secondary-800'
+                        )}
+                      >
+                        {t('pages.clients.detail.operators')}
+                      </button>
+                      <button
+                        onClick={() => setActiveOperatorTab('searchers')}
+                        className={cn(
+                          'flex shrink-0 cursor-pointer items-center justify-center gap-2.5 rounded-md p-2 text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-600 md:p-3',
+                          activeOperatorTab === 'searchers'
+                            ? 'bg-secondary-800/10 text-secondary-800'
+                            : 'hover:bg-secondary-800/20 hover:text-secondary-800'
+                        )}
+                      >
+                        {t('pages.clients.detail.searchers')}
+                      </button>
+                    </div>
+                    <div className="flex flex-col items-start gap-2.5 self-stretch px-3 pb-4 md:px-6">
+                      {isOperatorsLoading ? (
+                        <TableSkeleton columns={5} rows={3} />
+                      ) : (
+                        <>
+                          {activeOperatorTab === 'operators' && (
+                            <DataTable
+                              columns={operatorColumns}
+                              data={client.operators}
+                              className="w-full"
+                            />
+                          )}
+                          {activeOperatorTab === 'searchers' && (
+                            <DataTable
+                              columns={searcherColumns}
+                              data={client.searchers}
+                              className="w-full"
+                            />
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tab 4: Call and SMS History */}
+                {activeRightCardTab === 'call-sms-history' && (
+                  <div className="flex flex-1 flex-col items-start gap-4 self-stretch p-3 md:gap-5 md:p-6">
+                    <div className="flex h-auto flex-col items-start gap-3 self-stretch p-0 md:h-[41px] md:flex-row md:items-center md:gap-5">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                          {activeCallSmsTab === 'calls'
+                            ? t('pages.clients.detail.latestCalls')
+                            : activeCallSmsTab === 'sms'
+                              ? t('pages.clients.detail.latestSms')
+                              : t('pages.clients.detail.latestCallsAndSms')}
+                        </span>
+                      </div>
+                      <div className="flex w-full flex-1 items-center justify-between gap-1 rounded-lg bg-white/50 p-1 shadow-sm md:w-auto">
+                        <button
+                          onClick={() => setActiveCallSmsTab('all')}
+                          className={cn(
+                            'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
+                            activeCallSmsTab === 'all'
+                              ? 'bg-secondary-800/10 text-secondary-800'
+                              : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
+                          )}
+                        >
+                          {t('pages.clients.activity.all')}
+                        </button>
+                        <button
+                          onClick={() => setActiveCallSmsTab('calls')}
+                          className={cn(
+                            'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
+                            activeCallSmsTab === 'calls'
+                              ? 'bg-secondary-800/10 text-secondary-800'
+                              : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
+                          )}
+                        >
+                          {t('pages.clients.activity.calls')}
+                        </button>
+                        <button
+                          onClick={() => setActiveCallSmsTab('sms')}
+                          className={cn(
+                            'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
+                            activeCallSmsTab === 'sms'
+                              ? 'bg-secondary-800/10 text-secondary-800'
+                              : 'hover:text-secondary-800 hover:bg-secondary-800/20 cursor-pointer text-gray-600'
+                          )}
+                        >
+                          {t('pages.clients.activity.sms')}
+                        </button>
+                      </div>
+                      <div className="flex w-full flex-1 flex-col items-start gap-2.5 md:w-auto md:flex-col md:items-end">
+                        <Button
+                          leftIcon={<Icons.Download size={20} />}
+                          className="bg-secondary-800 flex w-full flex-row items-center gap-1 rounded px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] text-white md:w-auto md:px-4 md:py-2.5"
+                          size="sm"
+                        >
+                          {t('pages.clients.detail.exportCSV')}
+                        </Button>
+                      </div>
+                    </div>
+                    {isCallSmsLoading ? (
+                      <div className="flex w-full flex-col gap-4">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+                          {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="h-24 animate-pulse rounded-lg bg-gray-200" />
+                          ))}
                         </div>
-                        <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-2 pl-3">
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                              <Icons.CallDone02 size={24} className="text-gray-700" />
-                            </div>
-                            <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                              Answered
-                            </div>
-                          </div>
-                          <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                      </div>
+                    ) : (
+                      <>
+                        {activeCallSmsTab === 'all' && (
+                          <div className="flex flex-col items-start gap-6 self-stretch">
+                            {/* Date-grouped Calls and SMS */}
                             {(() => {
-                              const answered = client.callSmsHistory.calls.filter(
-                                (c) => c.status === 'Answered'
-                              ).length
-                              const total = client.callSmsHistory.calls.length
-                              const percentage =
-                                total > 0 ? Math.round((answered / total) * 100) : 0
-                              return `${answered} (${percentage}%)`
-                            })()}
-                          </div>
-                        </div>
-                        <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-2 pl-3">
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                              <Icons.Clock01 size={24} className="text-gray-700" />
-                            </div>
-                            <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                              Avg. Duration
-                            </div>
-                          </div>
-                          <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                            {(() => {
-                              const durations = client.callSmsHistory.calls
-                                .filter((c) => c.duration)
-                                .map((c) => {
-                                  const match = c.duration?.match(/(\d+)m (\d+)s/)
-                                  if (match) {
-                                    return parseInt(match[1]) * 60 + parseInt(match[2])
+                              // Combine calls and SMS, group by date
+                              const allItems = [
+                                ...client.callSmsHistory.calls.map((item) => ({
+                                  ...item,
+                                  itemType: 'call' as const,
+                                })),
+                                ...client.callSmsHistory.sms.map((item) => ({
+                                  ...item,
+                                  itemType: 'sms' as const,
+                                })),
+                              ]
+
+                              const grouped = allItems.reduce(
+                                (acc, item) => {
+                                  // Use original UTC timestamp (sent_at for SMS, initiated_at for calls) instead of date string
+                                  const timestamp =
+                                    item.itemType === 'sms'
+                                      ? (item as unknown as ExtendedSMSItem & { itemType: 'sms' })
+                                          .sent_at || item.date
+                                      : (item as unknown as ExtendedCallItem & { itemType: 'call' })
+                                          .initiated_at || item.date
+                                  const locale =
+                                    i18n.language === 'uk'
+                                      ? 'uk-UA'
+                                      : i18n.language === 'ru'
+                                        ? 'ru-RU'
+                                        : 'en-GB'
+                                  const date = new Date(String(timestamp)).toLocaleDateString(
+                                    locale,
+                                    {
+                                      year: 'numeric',
+                                      month: '2-digit',
+                                      day: '2-digit',
+                                      timeZone: userTimezone || undefined,
+                                    }
+                                  )
+                                  if (!acc[date]) acc[date] = { calls: [], sms: [] }
+                                  if (item.itemType === 'call') {
+                                    acc[date].calls.push(
+                                      item as unknown as ExtendedCallItem & { itemType: 'call' }
+                                    )
+                                  } else {
+                                    acc[date].sms.push(
+                                      item as unknown as ExtendedSMSItem & { itemType: 'sms' }
+                                    )
                                   }
-                                  return 0
-                                })
-                              if (durations.length === 0) return '0m 0s'
-                              const avg = Math.round(
-                                durations.reduce((a, b) => a + b, 0) / durations.length
+                                  return acc
+                                },
+                                {} as Record<
+                                  string,
+                                  {
+                                    calls: (ExtendedCallItem & { itemType: 'call' })[]
+                                    sms: (ExtendedSMSItem & { itemType: 'sms' })[]
+                                  }
+                                >
                               )
-                              const minutes = Math.floor(avg / 60)
-                              const seconds = avg % 60
-                              return `${minutes}m ${seconds}s`
+
+                              return Object.entries(grouped)
+                                .sort(
+                                  ([a], [b]) =>
+                                    new Date(b as string).getTime() -
+                                    new Date(a as string).getTime()
+                                )
+                                .map(([date, items]) => (
+                                  <div key={date} className="w-full space-y-4">
+                                    <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                      {date}
+                                    </h3>
+                                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+                                      {/* Calls for this date */}
+                                      {items.calls.map((call) => (
+                                        <CallLogCard
+                                          key={`call-${call.id}`}
+                                          clientName={client.fullName}
+                                          title={`${t('pages.clients.detail.play')} (${call.duration})`}
+                                          time={call.time}
+                                          date={call.date}
+                                          duration={call.duration}
+                                          status={call.status}
+                                          type={call.type}
+                                          phone={call.phone}
+                                          line={call.line}
+                                          operator={call.operator}
+                                          call_id={
+                                            'call_id' in call ? (call.call_id as string) : undefined
+                                          }
+                                          recording_path={
+                                            'recording_path' in call
+                                              ? (call.recording_path as string | null)
+                                              : null
+                                          }
+                                          icon={
+                                            <Icons.Play size={24} className="text-secondary-800" />
+                                          }
+                                          setSelectedCallData={setSelectedCallData}
+                                          setIsCallRecordingModalOpen={setIsCallRecordingModalOpen}
+                                        />
+                                      ))}
+                                      {/* SMS for this date */}
+                                      {items.sms.map((sms) => (
+                                        <CallLogCard
+                                          key={`sms-${sms.id}`}
+                                          clientName={client.fullName}
+                                          title={t('pages.clients.detail.viewSms')}
+                                          time={sms.time}
+                                          date={sms.date}
+                                          status={sms.status}
+                                          template={sms.template}
+                                          message={sms.message}
+                                          operator={sms.operator}
+                                          phone={sms.phone}
+                                          sent_at={sms.sent_at}
+                                          delivered_at={sms.delivered_at}
+                                          icon={
+                                            <Icons.Chat size={24} className="text-secondary-800" />
+                                          }
+                                          setSelectedSMSData={setSelectedSMSData}
+                                          setIsViewSMSModalOpen={setIsViewSMSModalOpen}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))
                             })()}
                           </div>
-                        </div>
-                      </div>
-
-                      {/* Date-grouped Calls */}
-                      <div className="w-full space-y-6">
-                        {(() => {
-                          const groupedCalls = client.callSmsHistory.calls.reduce(
-                            (acc, call) => {
-                              const date = new Date(call.date).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                              })
-                              if (!acc[date]) acc[date] = []
-                              acc[date].push(call)
-                              return acc
-                            },
-                            {} as Record<string, typeof client.callSmsHistory.calls>
-                          )
-
-                          return Object.entries(groupedCalls)
-                            .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
-                            .map(([date, calls]) => (
-                              <div key={date} className="space-y-4">
-                                <h3 className="text-dark-500 text-base font-semibold">{date}</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                  {calls.map((call) => (
-                                    <CallLogCard
-                                      key={call.id}
-                                      clientName={client.fullName}
-                                      title={`${t('pages.clients.detail.play')} (${call.duration})`}
-                                      time={call.time}
-                                      date={call.date}
-                                      duration={call.duration}
-                                      status={call.status}
-                                      type={call.type}
-                                      phone={call.phone}
-                                      line={call.line}
-                                      operator={call.operator}
-                                      icon={
-                                        <Icons.PlayCircle02
-                                          size={20}
-                                          className="text-secondary-800"
-                                        />
-                                      }
-                                      setSelectedCallData={setSelectedCallData}
-                                      setIsCallRecordingModalOpen={setIsCallRecordingModalOpen}
-                                    />
-                                  ))}
+                        )}
+                        {activeCallSmsTab === 'calls' && (
+                          <div className="flex flex-col items-start gap-4 self-stretch">
+                            {/* Summary Statistics */}
+                            <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
+                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
+                                    <Icons.Call02 size={24} className="text-gray-700" />
+                                  </div>
+                                  <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                    {t('pages.clients.detail.totalCalls')}
+                                  </div>
+                                </div>
+                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                  {client.callSmsHistory.calls.length}
                                 </div>
                               </div>
-                            ))
-                        })()}
-                      </div>
-                    </div>
-                  )}
-                  {activeCallSmsTab === 'sms' && (
-                    <div className="flex flex-col items-start gap-4 self-stretch">
-                      {/* Summary Statistics */}
-                      <div className="flex h-14 w-full items-start gap-5 p-0">
-                        <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-4 pl-3">
-                          <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                            {t('pages.clients.detail.totalCost')}
-                          </div>
-
-                          <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                            ₹15.00 ({client.callSmsHistory.sms.length}{' '}
-                            {t('pages.clients.modals.viewSMS.smsParts')})
-                          </div>
-                        </div>
-                        <div className="flex flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-5 py-4 pl-3">
-                          <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                            {t('pages.clients.detail.deliveryRate')}
-                          </div>
-
-                          <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                            {(() => {
-                              const delivered = client.callSmsHistory.sms.filter(
-                                (s) => s.status === 'Delivered'
-                              ).length
-                              const failed = client.callSmsHistory.sms.filter(
-                                (s) => (s.status as string) === 'Failed'
-                              ).length
-                              const pending = client.callSmsHistory.sms.filter(
-                                (s) => (s.status as string) === 'Pending'
-                              ).length
-                              const total = client.callSmsHistory.sms.length
-                              const rate = total > 0 ? Math.round((delivered / total) * 100) : 0
-                              return `${rate}% (${delivered} ${t('pages.clients.detail.delivered')}, ${failed} ${t('pages.clients.detail.failed')}, ${pending} ${t('pages.clients.detail.pending')})`
-                            })()}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Date-grouped SMS */}
-                      <div className="w-full space-y-6">
-                        {(() => {
-                          const groupedSms = client.callSmsHistory.sms.reduce(
-                            (acc, sms) => {
-                              const date = new Date(sms.date).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                              })
-                              if (!acc[date]) acc[date] = []
-                              acc[date].push(sms)
-                              return acc
-                            },
-                            {} as Record<string, typeof client.callSmsHistory.sms>
-                          )
-
-                          return Object.entries(groupedSms)
-                            .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
-                            .map(([date, smsList]) => (
-                              <div key={date} className="space-y-4">
-                                <h3 className="text-dark-500 text-base font-semibold">{date}</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                  {smsList.map((sms) => (
-                                    <CallLogCard
-                                      key={sms.id}
-                                      clientName={client.fullName}
-                                      title={t('pages.clients.detail.viewSms')}
-                                      time={sms.time}
-                                      date={sms.date}
-                                      status={sms.status}
-                                      template={sms.template}
-                                      message={sms.message}
-                                      operator={sms.operator}
-                                      icon={
-                                        <Icons.ChatFeedback01
-                                          size={20}
-                                          className="text-secondary-800"
-                                        />
-                                      }
-                                      setSelectedSMSData={setSelectedSMSData}
-                                      setIsViewSMSModalOpen={setIsViewSMSModalOpen}
-                                    />
-                                  ))}
+                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
+                                    <Icons.CallDone02 size={24} className="text-gray-700" />
+                                  </div>
+                                  <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                    {t('pages.clients.statuses.answered')}
+                                  </div>
+                                </div>
+                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                  {(() => {
+                                    const answered = client.callSmsHistory.calls.filter(
+                                      (c) => c.status === 'COMPLETED'
+                                    ).length
+                                    const total = client.callSmsHistory.calls.length
+                                    const percentage =
+                                      total > 0 ? Math.round((answered / total) * 100) : 0
+                                    return `${answered} (${percentage}%)`
+                                  })()}
                                 </div>
                               </div>
-                            ))
-                        })()}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-2 pl-3 md:w-auto md:px-5">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
+                                    <Icons.Clock01 size={24} className="text-gray-700" />
+                                  </div>
+                                  <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                    {t('pages.clients.detail.avgDuration')}
+                                  </div>
+                                </div>
+                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                  {(() => {
+                                    const durations = client.callSmsHistory.calls
+                                      .filter((c) => c.duration && c.duration !== '-')
+                                      .map((c) => {
+                                        const match = c.duration?.match(/(\d+)m (\d+)s/)
+                                        if (match) {
+                                          return parseInt(match[1]) * 60 + parseInt(match[2])
+                                        }
+                                        return 0
+                                      })
+                                    if (durations.length === 0) return '-'
+                                    const avg = Math.round(
+                                      durations.reduce((a, b) => a + b, 0) / durations.length
+                                    )
+                                    const minutes = Math.floor(avg / 60)
+                                    const seconds = avg % 60
+                                    return `${minutes}m ${seconds}s`
+                                  })()}
+                                </div>
+                              </div>
+                            </div>
 
-              {/* Tab 5: Tasks */}
-              {activeRightCardTab === 'tasks' && (
-                <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-6">
-                  <DataTable columns={taskColumns} data={client.tasks} className="w-full" />
-                </div>
-              )}
+                            {/* Date-grouped Calls */}
+                            <div className="w-full space-y-6">
+                              {(() => {
+                                const groupedCalls = client.callSmsHistory.calls.reduce(
+                                  (acc, call) => {
+                                    // Use initiated_at (full UTC timestamp) instead of date string for correct timezone conversion
+                                    const timestamp =
+                                      'initiated_at' in call && call.initiated_at
+                                        ? call.initiated_at
+                                        : call.date
+                                    const locale =
+                                      i18n.language === 'uk'
+                                        ? 'uk-UA'
+                                        : i18n.language === 'ru'
+                                          ? 'ru-RU'
+                                          : 'en-GB'
+                                    const date = new Date(String(timestamp)).toLocaleDateString(
+                                      locale,
+                                      {
+                                        year: 'numeric',
+                                        month: '2-digit',
+                                        day: '2-digit',
+                                        timeZone: userTimezone || undefined,
+                                      }
+                                    )
+                                    if (!acc[date]) acc[date] = []
+                                    acc[date].push(call as unknown as ExtendedCallItem)
+                                    return acc
+                                  },
+                                  {} as Record<string, ExtendedCallItem[]>
+                                )
 
-              {/* Tab 3: Documents - Shows Call and SMS History table per Figma */}
-              {activeRightCardTab === 'documents' && (
-                <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-6">
-                  <DataTable
-                    columns={callSmsHistoryColumns}
-                    data={client.callSmsHistory.all}
-                    className="w-full"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+                                return Object.entries(groupedCalls)
+                                  .sort(
+                                    ([a], [b]) =>
+                                      new Date(b as string).getTime() -
+                                      new Date(a as string).getTime()
+                                  )
+                                  .map(([date, calls]) => (
+                                    <div key={date} className="space-y-4">
+                                      <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                        {date}
+                                      </h3>
+                                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+                                        {calls.map((call) => (
+                                          <CallLogCard
+                                            key={call.id}
+                                            clientName={client.fullName}
+                                            title={`${t('pages.clients.detail.play')} (${call.duration})`}
+                                            time={call.time}
+                                            date={call.date}
+                                            duration={call.duration}
+                                            status={call.status}
+                                            type={call.type}
+                                            phone={call.phone}
+                                            line={call.line}
+                                            operator={call.operator}
+                                            call_id={
+                                              'call_id' in call
+                                                ? (call.call_id as string)
+                                                : undefined
+                                            }
+                                            recording_path={
+                                              'recording_path' in call
+                                                ? (call.recording_path as string | null)
+                                                : null
+                                            }
+                                            icon={
+                                              <Icons.PlayCircle02
+                                                size={20}
+                                                className="text-secondary-800"
+                                              />
+                                            }
+                                            setSelectedCallData={setSelectedCallData}
+                                            setIsCallRecordingModalOpen={
+                                              setIsCallRecordingModalOpen
+                                            }
+                                          />
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))
+                              })()}
+                            </div>
+                          </div>
+                        )}
+                        {activeCallSmsTab === 'sms' && (
+                          <div className="flex flex-col items-start gap-4 self-stretch">
+                            {/* Summary Statistics */}
+                            <div className="flex h-auto w-full flex-col items-start gap-3 p-0 md:h-14 md:flex-row md:gap-5">
+                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
+                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                  {t('pages.clients.detail.totalCost')}
+                                </div>
 
-      {/* Comments Section */}
-      <div className="flex items-center gap-5 self-stretch rounded-xl border border-white bg-white/50 p-3">
-        <div className="flex w-[416px] flex-col items-start gap-2.5">
-          <div className="flex items-center rounded-lg border border-white bg-white p-1 shadow-sm">
-            <button
-              onClick={() => setActiveCommentTab('comments')}
-              className={cn(
-                'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                activeCommentTab === 'comments'
-                  ? 'bg-secondary-800 text-white'
-                  : 'hover:bg-primary-200/10 hover:text-secondary-800'
-              )}
-            >
-              {t('pages.clients.detail.comments')}
-            </button>
-            <button
-              onClick={() => setActiveCommentTab('primary')}
-              className={cn(
-                'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                activeCommentTab === 'primary'
-                  ? 'bg-secondary-800 text-white'
-                  : 'hover:bg-primary-200/10 hover:text-secondary-800'
-              )}
-            >
-              {t('pages.clients.detail.commentsFromPrimaryCreditor')}
-            </button>
-          </div>
-        </div>
-        <div className="flex flex-1 items-center gap-2 self-stretch">
-          {client.comments.map((comment) => (
-            <div key={comment.id} className="flex flex-1 items-center gap-2 self-stretch">
-              <span className="truncate text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                {comment.date}
-              </span>
-              <span className="text-dark-500 flex-1 truncate text-sm leading-[150%] font-light tracking-[-0.28px]">
-                {' '}
-                {comment.text}
-              </span>
-              <LinkButton variant="regular-secondary" size="xs">
-                {t('pages.clients.detail.readMore')}
-              </LinkButton>
-            </div>
-          ))}
-        </div>
-      </div>
+                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                  {(() => {
+                                    const totalCost = client.callSmsHistory.sms.reduce(
+                                      (sum, s) => sum + (s.cost || 0),
+                                      0
+                                    )
+                                    return `₴${totalCost.toFixed(2)} (${client.callSmsHistory.sms.length} ${t('pages.clients.modals.viewSMS.smsParts')})`
+                                  })()}
+                                </div>
+                              </div>
+                              <div className="flex w-full flex-1 items-center justify-between rounded-xl border border-white bg-white/50 px-4 py-4 pl-3 md:w-auto md:px-5">
+                                <div className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                                  {t('pages.clients.detail.deliveryRate')}
+                                </div>
 
-      {/* Recent Activity Timeline */}
-      <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-6">
-        <div className="flex items-center justify-between self-stretch">
-          <h2 className="text-dark-500 text-lg font-medium">
-            {t('pages.clients.detail.recentActivityTimeline')}
-          </h2>
-          <LinkButton
-            variant="regular-secondary"
-            size="xs"
-            onClick={() => navigate(`/dashboard/${client.id}/activity`)}
-            rightIcon={<Icons.ArrowRight size={18} />}
-          >
-            {t('pages.clients.detail.viewAll')}
-          </LinkButton>
-        </div>
-        {client.activities.length == 0 ? (
-          <div className="flex flex-col items-center gap-6 self-stretch">
-            <div className="flex items-center justify-center gap-6 self-stretch">
-              <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
-              <p className="text-dark-500 text-center text-2xl leading-tight font-light tracking-[-0.48px]">
-                {t('pages.clients.detail.noHistoryYet')}
-              </p>
-            </div>
-            <p className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
-              {t('pages.clients.detail.startByCallingSendingSMSOrAddingNote')}
-            </p>
-            <button
-              className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-              aria-label={t('pages.clients.detail.addFirstNote')}
-            >
-              <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
-                <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+                                <div className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                                  {(() => {
+                                    const delivered = client.callSmsHistory.sms.filter(
+                                      (s) => s.status === 'Delivered'
+                                    ).length
+                                    const failed = client.callSmsHistory.sms.filter(
+                                      (s) => (s.status as string) === 'Failed'
+                                    ).length
+                                    const pending = client.callSmsHistory.sms.filter(
+                                      (s) => (s.status as string) === 'Pending'
+                                    ).length
+                                    const total = client.callSmsHistory.sms.length
+                                    const rate =
+                                      total > 0 ? Math.round((delivered / total) * 100) : 0
+                                    return `${rate}% (${delivered} ${t('pages.clients.detail.delivered')}, ${failed} ${t('pages.clients.detail.failed')}, ${pending} ${t('pages.clients.detail.pending')})`
+                                  })()}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Date-grouped SMS */}
+                            <div className="w-full space-y-6">
+                              {(() => {
+                                const groupedSms = client.callSmsHistory.sms.reduce(
+                                  (acc, sms) => {
+                                    // Use sent_at (full UTC timestamp) instead of date string for correct timezone conversion
+                                    const timestamp =
+                                      'sent_at' in sms && sms.sent_at ? sms.sent_at : sms.date
+                                    const locale =
+                                      i18n.language === 'uk'
+                                        ? 'uk-UA'
+                                        : i18n.language === 'ru'
+                                          ? 'ru-RU'
+                                          : 'en-GB'
+                                    const date = new Date(String(timestamp)).toLocaleDateString(
+                                      locale,
+                                      {
+                                        year: 'numeric',
+                                        month: '2-digit',
+                                        day: '2-digit',
+                                        timeZone: userTimezone || undefined,
+                                      }
+                                    )
+                                    if (!acc[date]) acc[date] = []
+                                    acc[date].push(sms as unknown as ExtendedSMSItem)
+                                    return acc
+                                  },
+                                  {} as Record<string, ExtendedSMSItem[]>
+                                )
+
+                                return Object.entries(groupedSms)
+                                  .sort(
+                                    ([a], [b]) =>
+                                      new Date(b as string).getTime() -
+                                      new Date(a as string).getTime()
+                                  )
+                                  .map(([date, smsList]) => (
+                                    <div key={date} className="space-y-4">
+                                      <h3 className="text-dark-500 text-sm font-semibold md:text-base">
+                                        {date}
+                                      </h3>
+                                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+                                        {smsList.map((sms) => (
+                                          <CallLogCard
+                                            key={sms.id}
+                                            clientName={client.fullName}
+                                            title={t('pages.clients.detail.viewSms')}
+                                            time={sms.time}
+                                            date={sms.date}
+                                            status={sms.status}
+                                            template={sms.template}
+                                            message={sms.message}
+                                            operator={sms.operator}
+                                            phone={sms.phone}
+                                            sent_at={sms.sent_at}
+                                            delivered_at={sms.delivered_at}
+                                            icon={
+                                              <Icons.ChatFeedback01
+                                                size={20}
+                                                className="text-secondary-800"
+                                              />
+                                            }
+                                            setSelectedSMSData={setSelectedSMSData}
+                                            setIsViewSMSModalOpen={setIsViewSMSModalOpen}
+                                          />
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))
+                              })()}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab 5: Tasks */}
+                {activeRightCardTab === 'tasks' && (
+                  <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-3 md:p-6">
+                    {isTasksLoading ? (
+                      <TableSkeleton columns={5} rows={3} />
+                    ) : (
+                      <DataTable columns={taskColumns} data={client.tasks} className="w-full" />
+                    )}
+                  </div>
+                )}
+
+                {/* Tab 6: Documents (no backend infrastructure yet - shows empty) */}
+                {activeRightCardTab === 'documents' && (
+                  <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-3 md:p-6">
+                    {isDocumentsLoading ? (
+                      <TableSkeleton columns={4} rows={3} />
+                    ) : (
+                      <DataTable
+                        columns={documentColumns}
+                        data={client.documents}
+                        className="w-full"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
-              <span className="px-4 py-3 text-sm font-medium text-white">
-                {t('pages.clients.detail.addFirstNote')}
-              </span>
-            </button>
+            </div>
           </div>
-        ) : (
-          <DataTable columns={activityColumns} data={client.activities} className="w-full" />
+        </div>
+
+        {/* Comments / Activity Section - Merged per Marina's request */}
+        <div className="flex flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-3 md:p-6">
+          {/* Header with tabs and View All */}
+          <div className="flex w-full flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+            {/* Tabs */}
+            <div className="flex items-center rounded-lg border border-white bg-white p-1 shadow-sm">
+              <button
+                onClick={() => setActiveCommentTab('comments')}
+                className={cn(
+                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  activeCommentTab === 'comments'
+                    ? 'bg-secondary-800 text-white'
+                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                )}
+              >
+                {t('pages.clients.detail.comments')}
+              </button>
+              <button
+                onClick={() => setActiveCommentTab('primary')}
+                className={cn(
+                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  activeCommentTab === 'primary'
+                    ? 'bg-secondary-800 text-white'
+                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                )}
+              >
+                {t('pages.clients.detail.commentsFromPrimaryCreditor')}
+              </button>
+              <button
+                onClick={() => setActiveCommentTab('dial-history')}
+                className={cn(
+                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  activeCommentTab === 'dial-history'
+                    ? 'bg-secondary-800 text-white'
+                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                )}
+              >
+                {t('pages.clients.detail.spamCallHistory')}
+              </button>
+            </div>
+            {/* View All link */}
+            <LinkButton
+              variant="regular-secondary"
+              size="xs"
+              onClick={() => navigate(`/dashboard/clients/${client.id}/activity`)}
+              rightIcon={<Icons.ArrowRight size={18} />}
+            >
+              {t('pages.clients.detail.viewAll')}
+            </LinkButton>
+          </div>
+
+          {/* Content based on active tab */}
+          {activeCommentTab === 'comments' &&
+            (isActivitiesLoading ? (
+              <TableSkeleton columns={9} rows={3} className="w-full" />
+            ) : client.activities.length === 0 ? (
+              <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
+                <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
+                  <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
+                  <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                    {t('pages.clients.detail.noHistoryYet')}
+                  </p>
+                </div>
+                <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
+                  {t('pages.clients.detail.startByCallingSendingSMSOrAddingNote')}
+                </p>
+                <button
+                  onClick={() => setIsNoteModalOpen(true)}
+                  className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
+                  aria-label={t('pages.clients.detail.addFirstNote')}
+                >
+                  <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
+                    <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+                  </div>
+                  <span className="px-4 py-3 text-sm font-medium text-white">
+                    {t('pages.clients.detail.addFirstNote')}
+                  </span>
+                </button>
+              </div>
+            ) : (
+              <div className="w-full overflow-x-auto">
+                <DataTable
+                  columns={activityColumns}
+                  data={client.activities.slice(0, 10)}
+                  className="w-full"
+                  tableClassName="w-max min-w-full"
+                />
+              </div>
+            ))}
+
+          {activeCommentTab === 'primary' &&
+            (isProfileLoading ? (
+              <TableSkeleton columns={1} rows={3} className="w-full" />
+            ) : !profile?.sale_notes?.trim() ? (
+              <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
+                <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
+                  <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
+                  <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                    {t('pages.clients.detail.noPrimaryCreditorComments')}
+                  </p>
+                </div>
+                <p className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] md:text-base">
+                  {t('pages.clients.detail.primaryCreditorCommentsDescription')}
+                </p>
+              </div>
+            ) : (
+              <div className="w-full p-4">
+                <p className="text-dark-500 text-sm leading-relaxed break-words whitespace-pre-wrap">
+                  {profile.sale_notes}
+                </p>
+              </div>
+            ))}
+
+          {activeCommentTab === 'dial-history' &&
+            (isDialHistoryLoading ? (
+              <TableSkeleton columns={2} rows={3} className="w-full" />
+            ) : dialHistory.length === 0 ? (
+              <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
+                <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
+                  <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
+                  <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                    {t('pages.clients.detail.noSpamCallHistory')}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <DataTable columns={dialHistoryColumns} data={dialHistory} className="w-full" />
+            ))}
+        </div>
+
+        {/* Edit Interaction Modal */}
+        <EditInteractionModal
+          open={isEditInteractionModalOpen}
+          onClose={() => {
+            setIsEditInteractionModalOpen(false)
+            setEditingInteraction(null)
+          }}
+          interaction={editingInteraction}
+          isSaving={isUpdating}
+          onSave={(data) => {
+            if (!editingInteraction) return
+            updateInteraction(
+              { clientId, interactionId: editingInteraction.id, data },
+              {
+                onSuccess: () => {
+                  setIsEditInteractionModalOpen(false)
+                  setEditingInteraction(null)
+                },
+              }
+            )
+          }}
+        />
+
+        {/* Add Note Modal */}
+        <AddNoteModal
+          open={isNoteModalOpen}
+          onClose={() => {
+            setIsNoteModalOpen(false)
+            setSelectedPhoneForNote('')
+          }}
+          phoneNumber={selectedPhoneForNote || client.phones?.[0]?.number || ''}
+          clientId={clientId}
+          onSave={(data) => {
+            createNote({
+              clientId,
+              data,
+            })
+            setIsNoteModalOpen(false)
+          }}
+        />
+
+        {/* Add Task Modal */}
+        {isTaskModalOpen && (
+          <AddTaskModal
+            open={isTaskModalOpen}
+            clientId={clientId}
+            onClose={() => setIsTaskModalOpen(false)}
+          />
         )}
+
+        {/* Call Dialog Modal */}
+        <CallDialogModal
+          open={isCallModalOpen}
+          onClose={() => {
+            handleCloseCallModal()
+            setSelectedPhoneForCall('')
+          }}
+          clientName={client.fullName}
+          phoneNumber={selectedPhoneForCall || client.phones?.[0]?.number || ''}
+          callId={currentCallId}
+          initialState="initial"
+          error={callError}
+          isLoading={isOriginatingCall}
+          onCallStart={(callType: CallType) => {
+            const phoneNumber = selectedPhoneForCall || client.phones?.[0]?.number
+            if (!phoneNumber) return
+            handleOriginateCall(phoneNumber, client.fullName, client.id.toString(), callType)
+          }}
+          onCallEnd={(_duration: number, _status: CallStatus) => {
+            handleCallEnd()
+          }}
+          onRetry={handleClearCallError}
+          onSpamCall={(phone) => addSpamCall(phone)}
+        />
+
+        {/* Call Recording Modal */}
+        {selectedCallData && (
+          <CallRecordingModal
+            open={isCallRecordingModalOpen}
+            onClose={() => {
+              setOpenCallModal(null)
+              setIsCallRecordingModalOpen(false)
+              setSelectedCallData(null)
+            }}
+            callData={selectedCallData}
+          />
+        )}
+
+        {/* View SMS Modal */}
+        {selectedSMSData && (
+          <ViewSMSModal
+            open={isViewSMSModalOpen}
+            onClose={() => {
+              setIsViewSMSModalOpen(false)
+              setSelectedSMSData(null)
+            }}
+            smsData={selectedSMSData}
+          />
+        )}
+
+        {/* Send SMS Modal */}
+        <SendSMSModal
+          open={isSendSMSModalOpen}
+          onClose={() => {
+            setIsSendSMSModalOpen(false)
+            setSelectedPhoneForSMS('')
+          }}
+          clientId={clientId}
+          clientName={client.fullName}
+          phoneNumber={selectedPhoneForSMS || client.phones?.[0]?.number || ''}
+          loans={client.loans?.map((l) => ({
+            id: l.id,
+            loanNumber: l.loanNumber,
+            totalToRepay: l.remainingDebtAmount,
+          }))}
+          onSent={() => {
+            // SMS sent successfully - history will refresh automatically via query invalidation
+          }}
+        />
+
+        {/* Tag Selector Modal */}
+        <TagSelectorModal
+          open={isTagModalOpen}
+          clientId={clientId}
+          clientName={client.fullName}
+          projectId={1}
+          onClose={() => setIsTagModalOpen(false)}
+        />
+
+        {/* Edit Client Modal */}
+        <EditClientModal
+          open={isEditModalOpen}
+          clientId={clientId}
+          onClose={() => setIsEditModalOpen(false)}
+        />
+
+        {/* Delete Client Modal
+      <DeleteClientModal
+        open={isDeleteModalOpen}
+        client={{
+          id: client.id,
+          full_name: client.fullName,
+          tax_id: client.taxIdNumber,
+          phone_primary: client.phoneNumber,
+          total_debt: client.loans?.reduce((sum, loan) => sum + (loan.totalToRepay || 0), 0) || 0,
+          debt_count: client.loans?.length || 0,
+        }}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onSuccess={() => {
+          // Success callback - navigation happens in the modal
+          setIsDeleteModalOpen(false)
+        }}
+      /> */}
+
+        {/* Assign Role Modal (Employee / Searcher) */}
+        {assignRoleModalMode && (
+          <AssignRoleModal
+            open={true}
+            mode={assignRoleModalMode}
+            currentUserId={
+              assignRoleModalMode === 'employee'
+                ? (profile?.responsible_employee_id ?? null)
+                : (profile?.responsible_searcher_id ?? null)
+            }
+            onClose={() => setAssignRoleModalMode(null)}
+            onAssign={({ userId, reason }) => {
+              assignClientMutation.mutate(
+                {
+                  clientId,
+                  data: {
+                    responsible_employee_id:
+                      assignRoleModalMode === 'employee' ? parseInt(userId) : undefined,
+                    responsible_searcher_id:
+                      assignRoleModalMode === 'searcher' ? parseInt(userId) : undefined,
+                    assignment_reason: reason,
+                  },
+                },
+                {
+                  onSuccess: () => setAssignRoleModalMode(null),
+                }
+              )
+            }}
+          />
+        )}
+
+        {/* RR Detail Modal */}
+        <Modal open={!!selectedRaId} onClose={() => setSelectedRaId(null)} maxWidth="lg">
+          <ModalHeader
+            icon={
+              <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+                <Icons.Calculate size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+              </div>
+            }
+            title={t('pages.clients.detail.rrDetail')}
+          />
+          <ModalContent>
+            {rrDetail ? (
+              <div className="flex flex-col gap-4">
+                {/* Two fields per row */}
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                      {t('pages.clients.detail.rrLoanNumber')}
+                    </span>
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                      {rrDetail.contract_number ?? '-'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                      {t('pages.clients.detail.rrClientNumber')}
+                    </span>
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                      {rrDetail.client_id ?? '-'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                      {t('pages.clients.detail.rrRestructuringAmount')}
+                    </span>
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                      ₴ {formatCurrency(Number(rrDetail.restructuring_amount ?? 0))}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                      {t('pages.clients.detail.rrFirstPaymentDate')}
+                    </span>
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                      {rrDetail.first_payment_date ?? '-'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                      {t('pages.clients.detail.rrFirstPaymentAmount')}
+                    </span>
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                      ₴ {formatCurrency(Number(rrDetail.first_payment_amount ?? 0))}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-dark-500 text-xs font-light sm:text-sm">
+                      {t('pages.clients.detail.rrResponsibleEmployee')}
+                    </span>
+                    <span className="text-dark-500 text-xs font-medium sm:text-sm">
+                      {rrDetail.responsible_user_name ?? '-'}
+                    </span>
+                  </div>
+                </div>
+                {/* Payment schedule with vertical scroll */}
+                {rrDetail.payments.length > 0 && (
+                  <div className="pt-2">
+                    <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                      {t('pages.clients.detail.rrPaymentSchedule')}
+                    </h3>
+                    <div className="max-h-48 overflow-y-auto">
+                      <DataTable<RestructuringPaymentEntry & { id: number }>
+                        columns={[
+                          {
+                            key: 'date',
+                            header: t('pages.clients.detail.rrPaymentDate'),
+                            render: (p) => p.date ?? '-',
+                          },
+                          {
+                            key: 'amount',
+                            header: t('pages.clients.detail.rrPaymentAmount'),
+                            align: 'right',
+                            render: (p) => `₴ ${formatCurrency(Number(p.amount ?? 0))}`,
+                          },
+                        ]}
+                        data={rrDetail.payments.map((p, idx) => ({ ...p, id: idx }))}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex justify-center py-8">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+              </div>
+            )}
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              variant="cancel"
+              size="sm"
+              onClick={() => setSelectedRaId(null)}
+              className="w-full rounded-md sm:w-auto"
+            >
+              {t('actions.close')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Close Loan Confirmation Modal */}
+        <Modal
+          open={closeLoanConfirm !== null}
+          onClose={() => setCloseLoanConfirm(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.CancelCircle size={20} className="text-dark-500" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.closeLoan')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 text-base font-light">
+              {t(
+                'pages.clients.detail.confirmCloseLoan',
+                'Are you sure you want to close this loan? This action cannot be undone.'
+              )}
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setCloseLoanConfirm(null)}
+              disabled={isClosingDebt}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => {
+                if (closeLoanConfirm !== null) {
+                  closeDebt({ clientId, debtId: closeLoanConfirm })
+                  setCloseLoanConfirm(null)
+                }
+              }}
+              disabled={isClosingDebt}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isClosingDebt
+                ? t('actions.saving', 'Saving...')
+                : t('pages.clients.detail.closeLoan')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Complete RR Confirmation Modal */}
+        <Modal
+          open={completeRrConfirm !== null}
+          onClose={() => setCompleteRrConfirm(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Success size={20} className="text-dark-500" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.completeRR', 'Complete RR')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 text-base font-light">
+              {t(
+                'pages.clients.detail.confirmCompleteRR',
+                'Are you sure you want to mark this restructuring agreement as completed?'
+              )}
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setCompleteRrConfirm(null)}
+              disabled={isCompletingRa}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (completeRrConfirm !== null) {
+                  completeRa({ clientId, raId: completeRrConfirm })
+                  setCompleteRrConfirm(null)
+                }
+              }}
+              disabled={isCompletingRa}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isCompletingRa
+                ? t('actions.saving', 'Saving...')
+                : t('pages.clients.detail.completeRR', 'Complete RR')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Connect RR Modal */}
+        <Modal open={isConnectRrOpen} onClose={() => setIsConnectRrOpen(false)} maxWidth="lg">
+          <ModalHeader
+            icon={
+              <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+                <Icons.Calculate size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
+              </div>
+            }
+            title={t('pages.clients.detail.connectRR')}
+          />
+          <ModalContent>
+            <div className="flex flex-col gap-4">
+              {/* Loan Selection */}
+              <div>
+                <label className="text-dark-500 mb-1 block text-sm font-medium">
+                  {t('pages.clients.detail.rrSelectLoan')} *
+                </label>
+                <Select
+                  value={connectRrForm.debtId}
+                  onValueChange={(val) => setConnectRrForm((prev) => ({ ...prev, debtId: val }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('pages.clients.detail.rrSelectLoanPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {loans.map((loan) => (
+                      <SelectItem key={loan.id} value={String(loan.id)}>
+                        {loan.contract_number} — {loan.seller_company}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* Connection Date & Total RR Amount */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                <DateSelect
+                  label={`${t('pages.clients.detail.rrConnectionDate')} *`}
+                  value={connectRrForm.connectionDate}
+                  onChange={({ value }) =>
+                    setConnectRrForm((prev) => ({ ...prev, connectionDate: value }))
+                  }
+                  placeholder={t('pages.clients.detail.rrConnectionDate')}
+                />
+                <Input
+                  label={`${t('pages.clients.detail.rrRestructuringAmount')} *`}
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={connectRrForm.totalAmount}
+                  onChange={(e) =>
+                    setConnectRrForm((prev) => ({ ...prev, totalAmount: e.target.value }))
+                  }
+                  placeholder="0.00"
+                />
+              </div>
+              {/* Number of Payments */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                <Input
+                  label={`${t('pages.clients.detail.rrNumPayments')} *`}
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={connectRrForm.numPayments}
+                  onChange={(e) => {
+                    const num = Math.max(1, Math.min(12, Number(e.target.value) || 1))
+                    setConnectRrForm((prev) => {
+                      const payments = [...prev.payments]
+                      while (payments.length < num) payments.push({ date: null, amount: '' })
+                      return { ...prev, numPayments: num, payments: payments.slice(0, num) }
+                    })
+                  }}
+                />
+              </div>
+              {/* Payment Schedule */}
+              <div className="pt-2">
+                <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                  {t('pages.clients.detail.rrPaymentSchedule')}
+                </h3>
+                <div className="flex flex-col gap-3">
+                  {connectRrForm.payments.map((payment, idx) => (
+                    <div key={idx} className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                      <DateSelect
+                        label={`${t('pages.clients.detail.rrPaymentDate')} ${idx + 1} *`}
+                        value={payment.date}
+                        onChange={({ value }) => {
+                          setConnectRrForm((prev) => {
+                            const payments = [...prev.payments]
+                            payments[idx] = { ...payments[idx], date: value }
+                            return { ...prev, payments }
+                          })
+                        }}
+                        placeholder={t('pages.clients.detail.rrPaymentDate')}
+                      />
+                      <Input
+                        label={`${t('pages.clients.detail.rrPaymentAmount')} ${idx + 1} *`}
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={payment.amount}
+                        onChange={(e) => {
+                          setConnectRrForm((prev) => {
+                            const payments = [...prev.payments]
+                            payments[idx] = { ...payments[idx], amount: e.target.value }
+                            return { ...prev, payments }
+                          })
+                        }}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            {connectRrError && (
+              <div className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+                {connectRrError}
+              </div>
+            )}
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              variant="cancel"
+              size="sm"
+              onClick={() => setIsConnectRrOpen(false)}
+              className="w-full rounded-md sm:w-auto"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={isCreatingRr}
+              onClick={() => {
+                const d = 'pages.clients.detail'
+                setConnectRrError(null)
+                // Validation
+                if (!connectRrForm.debtId) {
+                  setConnectRrError(t(`${d}.rrValidationLoanRequired`))
+                  return
+                }
+                if (!connectRrForm.connectionDate) {
+                  setConnectRrError(t(`${d}.rrValidationConnectionDateRequired`))
+                  return
+                }
+                if (!connectRrForm.totalAmount || parseFloat(connectRrForm.totalAmount) <= 0) {
+                  setConnectRrError(t(`${d}.rrValidationAmountRequired`))
+                  return
+                }
+                for (let i = 0; i < connectRrForm.payments.length; i++) {
+                  if (!connectRrForm.payments[i].date) {
+                    setConnectRrError(t(`${d}.rrValidationPaymentDateRequired`, { num: i + 1 }))
+                    return
+                  }
+                  if (
+                    !connectRrForm.payments[i].amount ||
+                    parseFloat(connectRrForm.payments[i].amount) <= 0
+                  ) {
+                    setConnectRrError(t(`${d}.rrValidationPaymentAmountRequired`, { num: i + 1 }))
+                    return
+                  }
+                }
+                const totalAmount = parseFloat(connectRrForm.totalAmount)
+                const paymentsSum = connectRrForm.payments.reduce(
+                  (sum, p) => sum + (parseFloat(p.amount) || 0),
+                  0
+                )
+                if (Math.abs(paymentsSum - totalAmount) > 0.01) {
+                  setConnectRrError(
+                    t(`${d}.rrValidationSumMismatch`, {
+                      sum: paymentsSum.toFixed(2),
+                      total: totalAmount.toFixed(2),
+                    })
+                  )
+                  return
+                }
+
+                const formatDate = (dt: Date | null) => {
+                  if (!dt) return null
+                  const y = dt.getFullYear()
+                  const m = String(dt.getMonth() + 1).padStart(2, '0')
+                  const day = String(dt.getDate()).padStart(2, '0')
+                  return `${y}-${m}-${day}`
+                }
+                createRr(
+                  {
+                    clientId,
+                    data: {
+                      debt_id: parseInt(connectRrForm.debtId),
+                      connection_date: formatDate(connectRrForm.connectionDate),
+                      restructuring_amount: totalAmount,
+                      num_payments: connectRrForm.numPayments,
+                      payments: connectRrForm.payments.map((p) => ({
+                        payment_date: formatDate(p.date),
+                        payment_amount: parseFloat(p.amount),
+                      })),
+                    },
+                  },
+                  {
+                    onSuccess: () => {
+                      toast.success(t(`${d}.connectRRSuccess`))
+                      setIsConnectRrOpen(false)
+                    },
+                    onError: (error) => {
+                      const detail = (
+                        error as import('axios').AxiosError<{
+                          detail?: string | Array<{ msg?: string }>
+                        }>
+                      )?.response?.data?.detail
+                      let message = t(
+                        `${d}.connectRRError`,
+                        t('errors.somethingWentWrong', 'Something went wrong')
+                      )
+                      if (typeof detail === 'string') {
+                        message = detail
+                      } else if (Array.isArray(detail) && detail.length > 0) {
+                        message = detail
+                          .map((e) => e.msg || '')
+                          .filter(Boolean)
+                          .join('; ')
+                      }
+                      setConnectRrError(message)
+                    },
+                  }
+                )
+              }}
+              className="w-full rounded-md sm:w-auto"
+            >
+              {isCreatingRr ? '...' : t('pages.clients.detail.connectRR')}
+            </Button>
+          </ModalFooter>
+        </Modal>
       </div>
-
-      {/* Add Note Modal */}
-      <AddNoteModal
-        open={isNoteModalOpen}
-        onClose={() => setIsNoteModalOpen(false)}
-        phoneNumber={client.phones?.[0]?.number || ''}
-        onSave={(data) => {
-          // TODO: Save note to API
-          console.log('Note saved:', data)
-        }}
-      />
-
-      {/* Call Dialog Modal */}
-      <CallDialogModal
-        open={isCallModalOpen}
-        onClose={() => setIsCallModalOpen(false)}
-        clientName={client.fullName}
-        phoneNumber={client.phones?.[0]?.number || ''}
-        initialState="initial"
-        onCallStart={(callType: CallType) => {
-          console.log('Call started with type:', callType)
-        }}
-        onCallEnd={(duration: number, status: CallStatus) => {
-          console.log('Call ended:', { duration, status })
-        }}
-      />
-
-      {/* Call Recording Modal */}
-      {selectedCallData && (
-        <CallRecordingModal
-          open={isCallRecordingModalOpen}
-          onClose={() => {
-            setIsCallRecordingModalOpen(false)
-            setSelectedCallData(null)
-          }}
-          callData={selectedCallData}
-        />
-      )}
-
-      {/* View SMS Modal */}
-      {selectedSMSData && (
-        <ViewSMSModal
-          open={isViewSMSModalOpen}
-          onClose={() => {
-            setIsViewSMSModalOpen(false)
-            setSelectedSMSData(null)
-          }}
-          smsData={selectedSMSData}
-        />
-      )}
-
-      {/* Send SMS Modal */}
-      <SendSMSModal
-        open={isSendSMSModalOpen}
-        onClose={() => {
-          setIsSendSMSModalOpen(false)
-          setSelectedPhoneForSMS('')
-        }}
-        clientName={client.fullName}
-        phoneNumber={selectedPhoneForSMS || client.phones?.[0]?.number || ''}
-        debtAmount={client.loans?.reduce((sum, loan) => sum + (loan.totalToRepay || 0), 0) || 0}
-        onSend={(data) => {
-          // TODO: Send SMS to API
-          console.log('SMS sent:', data)
-        }}
-      />
-    </div>
+    </TooltipProvider>
   )
 }
 

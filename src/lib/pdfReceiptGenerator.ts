@@ -72,8 +72,8 @@
 //   try {
 //     // Try to use Lexend if available
 //     const fonts = doc.getFontList()
-//     if ('Lexend' in fonts) {
-//       doc.setFont('Lexend', style)
+//     if ('NotoSans' in fonts) {
+//       doc.setFont('NotoSans', style)
 //     } else {
 //       doc.setFont('helvetica', style)
 //     }
@@ -353,7 +353,7 @@
 // }
 
 import jsPDF from 'jspdf'
-import { loadLexendFont } from './loadLexendFont'
+import { loadNotoSansFont } from './loadNotoFont'
 
 export interface PaymentReceiptData {
   receiptNumber: string
@@ -379,17 +379,23 @@ export interface PaymentReceiptData {
   companyAddress?: string
   companyPhone?: string
   companyEmail?: string
+  userTimezone?: string // User's timezone for date formatting
 }
 
-const formatCurrency = (amount: number): string => {
+const formatCurrency = (amount: string | number): string => {
   // Format with space as thousands separator and comma as decimal separator (Ukrainian format)
   // Example: ₴ 125 450,00 (matches UI format)
-  const formatted = amount.toLocaleString('uk-UA', {
+  // Handle negative numbers correctly: - ₴ 10 000,00
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount
+  if (isNaN(num)) return '₴ 0,00'
+  const isNegative = num < 0
+  const absAmount = Math.abs(num)
+  const formatted = absAmount.toLocaleString('uk-UA', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
-  // Return with currency symbol - will be handled by font support
-  return `₴ ${formatted}`
+  // Return with currency symbol and negative sign if needed
+  return isNegative ? `- ₴ ${formatted}` : `₴ ${formatted}`
 }
 
 // Helper function to render currency with proper symbol support
@@ -447,18 +453,77 @@ const renderCurrency = (
   }
 }
 
-const formatDate = (dateString: string): string => {
+const formatDate = (dateString: string, timezone?: string): string => {
   try {
-    const d = new Date(dateString)
+    // Append Z if missing to ensure UTC parsing
+    let dateStr = dateString
+    if (
+      (dateStr.includes('T') || dateStr.includes(' ')) &&
+      !dateStr.endsWith('Z') &&
+      !dateStr.includes('+')
+    ) {
+      dateStr = dateStr.replace(' ', 'T') + 'Z'
+    }
+
+    const d = new Date(dateStr)
+
+    // Format date using timezone if provided
+    if (timezone) {
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        timeZone: timezone,
+      })
+      const parts = formatter.formatToParts(d)
+      const year = parts.find((p) => p.type === 'year')?.value || ''
+      const month = parts.find((p) => p.type === 'month')?.value || ''
+      const day = parts.find((p) => p.type === 'day')?.value || ''
+      return `${year}-${month}-${day}`
+    }
+
     return d.toISOString().split('T')[0]
   } catch {
     return dateString
   }
 }
 
-const formatDateTime = (dateString: string): string => {
+const formatDateTime = (dateString: string, timezone?: string): string => {
   try {
-    const d = new Date(dateString)
+    // Append Z if missing to ensure UTC parsing
+    let dateStr = dateString
+    if (
+      (dateStr.includes('T') || dateStr.includes(' ')) &&
+      !dateStr.endsWith('Z') &&
+      !dateStr.includes('+')
+    ) {
+      dateStr = dateStr.replace(' ', 'T') + 'Z'
+    }
+
+    const d = new Date(dateStr)
+
+    // Format datetime using timezone if provided
+    if (timezone) {
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZone: timezone,
+      })
+      const parts = formatter.formatToParts(d)
+      const year = parts.find((p) => p.type === 'year')?.value || ''
+      const month = parts.find((p) => p.type === 'month')?.value || ''
+      const day = parts.find((p) => p.type === 'day')?.value || ''
+      const hour = parts.find((p) => p.type === 'hour')?.value || ''
+      const minute = parts.find((p) => p.type === 'minute')?.value || ''
+      const second = parts.find((p) => p.type === 'second')?.value || ''
+      return `${year}-${month}-${day} ${hour}:${minute}:${second}`
+    }
+
     const yyyy = d.getFullYear()
     const mm = String(d.getMonth() + 1).padStart(2, '0')
     const dd = String(d.getDate()).padStart(2, '0')
@@ -482,29 +547,18 @@ const drawCheck = (doc: jsPDF, x: number, y: number, size = 3) => {
 }
 
 export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
+  // Debug: Check what company data is being passed
+  console.log('Company data received:', {
+    companyName: data.companyName,
+    companyAddress: data.companyAddress,
+    companyPhone: data.companyPhone,
+    companyEmail: data.companyEmail,
+  })
+
   const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' })
 
-  // Load Lexend font if available (critical for ₴ symbol support)
-  loadLexendFont(doc)
-
-  // IMPORTANT: Try to use Lexend font, but fall back gracefully if not available
-  // Default fonts (helvetica, times, courier) do NOT support ₴ Unicode character
-  // The symbol will only display if Lexend (or another Unicode font) is loaded
-  try {
-    const fonts = doc.getFontList()
-    if ('Lexend' in fonts) {
-      doc.setFont('Lexend', 'normal')
-    } else {
-      // Fallback to helvetica (₴ will not display, will use "UAH" fallback in renderCurrency)
-      doc.setFont('helvetica', 'normal')
-      console.warn(
-        'Lexend font not loaded. ₴ symbol will not display. Using helvetica fallback and "UAH" for currency.'
-      )
-    }
-  } catch {
-    doc.setFont('helvetica', 'normal')
-    console.warn('Failed to set Lexend font. Using helvetica fallback and "UAH" for currency.')
-  }
+  // Load Noto Sans font if available (critical for ₴ symbol support)
+  loadNotoSansFont(doc)
 
   const pageW = doc.internal.pageSize.getWidth()
   const pageH = doc.internal.pageSize.getHeight()
@@ -531,6 +585,40 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
   const setText = (c: [number, number, number]) => doc.setTextColor(c[0], c[1], c[2])
   const setDraw = (c: [number, number, number]) => doc.setDrawColor(c[0], c[1], c[2])
 
+  // Helper to safely set font (fallback to helvetica if NotoSans not available)
+  // Must be declared before first use
+  const safeSetFont = (style: 'normal' | 'bold' = 'normal') => {
+    try {
+      const fonts = doc.getFontList()
+      if ('NotoSans' in fonts) {
+        doc.setFont('NotoSans', style)
+      } else {
+        doc.setFont('helvetica', style)
+      }
+    } catch {
+      doc.setFont('helvetica', style)
+    }
+  }
+
+  // IMPORTANT: Try to use Noto Sans font, but fall back gracefully if not available
+  // Default fonts (helvetica, times, courier) do NOT support ₴ Unicode character
+  // The symbol will only display if Noto Sans (or another Unicode font) is loaded
+  try {
+    const fonts = doc.getFontList()
+    if ('NotoSans' in fonts) {
+      safeSetFont('normal')
+    } else {
+      // Fallback to helvetica (₴ will not display, will use "UAH" fallback in renderCurrency)
+      doc.setFont('helvetica', 'normal')
+      console.warn(
+        'Noto Sans font not loaded. ₴ symbol will not display. Using helvetica fallback and "UAH" for currency.'
+      )
+    }
+  } catch {
+    doc.setFont('helvetica', 'normal')
+    console.warn('Failed to set Noto Sans font. Using helvetica fallback and "UAH" for currency.')
+  }
+
   const hr = (x1: number, y: number, x2: number) => {
     setDraw(LINE)
     doc.line(x1, y, x2, y)
@@ -539,7 +627,7 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
 
   const section = (title: string, y: number) => {
     doc.setFontSize(fsSection)
-    doc.setFont('Lexend', 'bold')
+    safeSetFont('bold')
     setText(MUTED)
     doc.text(title, xLabel, y)
 
@@ -548,7 +636,7 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
     hr(xLabel + w + 6, y - 2.2, xRight)
 
     setText(TEXT)
-    doc.setFont('Lexend', 'normal')
+    safeSetFont('normal')
   }
 
   const kv = (
@@ -565,13 +653,13 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
     doc.setFontSize(fsBody)
 
     // label
-    doc.setFont('Lexend', 'normal')
+    safeSetFont('normal')
     setText(opts?.labelMuted === false ? TEXT : MUTED)
     doc.text(label, xLabel, y)
 
     // value
     setText(TEXT)
-    doc.setFont('Lexend', opts?.valueBold === false ? 'normal' : 'bold')
+    safeSetFont(opts?.valueBold === false ? 'normal' : 'bold')
 
     // If it's currency, use special rendering to ensure symbol displays
     if (opts?.isCurrency || value.includes('₴')) {
@@ -587,22 +675,22 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
         doc.text(value, xValue, y)
       }
     }
-    doc.setFont('Lexend', 'normal')
+    safeSetFont('normal')
   }
 
   let y = 18
 
   // ===== Header =====
   doc.setFontSize(fsTitle)
-  doc.setFont('Lexend', 'bold')
+  safeSetFont('bold')
   setText(TEXT)
   doc.text('Payment Receipt', xLabel, y)
 
-  const companyName = data.companyName || 'PrivatBank Debt Collection'
+  const companyName = data.companyName || '-'
   doc.setFontSize(fsBody + 1)
-  doc.setFont('Lexend', 'bold')
+  safeSetFont('bold')
   doc.text(companyName, xRight, y, { align: 'right' })
-  doc.setFont('Lexend', 'normal')
+  doc.setFont('NotoSans', 'normal')
 
   y += 16
 
@@ -611,7 +699,7 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
   y += 6
   kv('Payment ID:', data.paymentId, y)
   y += 6
-  kv('Date Issued:', formatDate(data.dateIssued), y)
+  kv('Date Issued:', formatDate(data.dateIssued, data.userTimezone), y)
   y += 12
 
   // ===== Client Information =====
@@ -629,7 +717,7 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
   // ===== Payment Details =====
   section('Payment Details', y)
   y += 8
-  kv('Payment Date:', formatDate(data.paymentDate), y)
+  kv('Payment Date:', formatDate(data.paymentDate, data.userTimezone), y)
   y += 6
   kv('Payment Method:', data.paymentMethod, y)
   y += 6
@@ -673,7 +761,7 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
 
   if (String(data.status).toUpperCase() === 'ACTIVE') {
     doc.setFontSize(fsBody - 0.5)
-    doc.setFont('Lexend', 'normal')
+    safeSetFont('normal')
     setText(MUTED)
     // wrap inside the left column area (no overlap into box)
     doc.text('(Outstanding debt remains)', xValue, y, { maxWidth: leftMaxWidth })
@@ -696,11 +784,11 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
     doc.setFontSize(fsBody)
     setText(TEXT)
 
-    doc.setFont('Lexend', 'normal')
+    safeSetFont('normal')
     // keep label on left, avoid running under the right-aligned value
     doc.text(label, boxLabelX, yy, { maxWidth: boxW - boxPadX * 2 - 32 })
 
-    doc.setFont('Lexend', 'bold')
+    safeSetFont('bold')
     // Use special currency rendering for values with ₴ symbol
     if (value.includes('₴')) {
       // For right-aligned currency, we need to calculate position
@@ -715,9 +803,10 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
     if (i < rows - 1) hr(boxX, yy + 3.3, boxX + boxW)
   }
 
-  boxRow(0, 'Outstanding Balance Before:', formatCurrency(data.outstandingBalanceBefore))
-  boxRow(1, 'Payment Applied:', `- ${formatCurrency(Math.abs(data.paymentApplied))}`)
-  boxRow(2, 'Remaining Balance:', formatCurrency(data.remainingBalance))
+  // boxRow(0, 'Outstanding Balance Before:', formatCurrency(data.outstandingBalanceBefore))
+  // paymentApplied is already negative, so format it directly (will show "- ₴ amount")
+  boxRow(1, 'Payment Applied:', formatCurrency(data.paymentApplied))
+  // boxRow(2, 'Remaining Balance:', formatCurrency(data.remainingBalance))
 
   y = Math.max(leftEndY, boxTopY + boxH) + 12
 
@@ -733,22 +822,22 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
   }
 
   if (data.verifiedOn) {
-    kv('Verified on:', formatDateTime(data.verifiedOn), y)
+    kv('Verified on:', formatDateTime(data.verifiedOn, data.userTimezone), y)
     y += 6
   }
 
   // Status line (black, with drawn check)
   doc.setFontSize(fsBody)
-  doc.setFont('Lexend', 'normal')
+  doc.setFont('NotoSans', 'normal')
   setText(MUTED)
   doc.text('Status:', xLabel, y)
 
   setText(TEXT)
   drawCheck(doc, xValue, y, 3.2)
 
-  doc.setFont('Lexend', 'bold')
+  safeSetFont('bold')
   doc.text('VERIFIED AND APPLIED', xValue + 6, y)
-  doc.setFont('Lexend', 'normal')
+  doc.setFont('NotoSans', 'normal')
   y += 14
 
   // ===== Company Information =====
@@ -756,14 +845,14 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
   y += 8
 
   doc.setFontSize(fsBody)
-  doc.setFont('Lexend', 'normal')
+  doc.setFont('NotoSans', 'normal')
   setText(TEXT)
   doc.text(`${companyName} Department`, xLabel, y)
   y += 8
 
-  const address = data.companyAddress || 'Kyiv, Ukraine, 01001'
-  const phone = data.companyPhone || '+380 44 123 4567'
-  const email = data.companyEmail || 'collections@privatbank.ua'
+  const address = data.companyAddress || '-'
+  const phone = data.companyPhone || '-'
+  const email = data.companyEmail || '-'
 
   kv('Address:', address, y)
   y += 6
@@ -774,11 +863,16 @@ export function generatePaymentReceiptPDF(data: PaymentReceiptData): void {
 
   // ===== Footer =====
   doc.setFontSize(fsFooter)
-  doc.setFont('Lexend', 'normal')
+  doc.setFont('NotoSans', 'normal')
   setText(FOOTER)
-  doc.text(`Generated: ${formatDateTime(new Date().toISOString())}`, xRight, pageH - marginX, {
-    align: 'right',
-  })
+  doc.text(
+    `Generated: ${formatDateTime(new Date().toISOString(), data.userTimezone)}`,
+    xRight,
+    pageH - marginX,
+    {
+      align: 'right',
+    }
+  )
   setText(TEXT)
 
   doc.save(`Payment_Receipt_${data.receiptNumber}.pdf`)

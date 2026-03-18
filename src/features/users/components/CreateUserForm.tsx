@@ -84,7 +84,6 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
     handleSubmit,
     control,
     setValue,
-    getValues,
     trigger,
     formState: { errors },
   } = useForm<CreateUserFormData>({
@@ -172,6 +171,8 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
         language: formData.language || 'uk',
         timezone: formData.timezone || 'Europe/Kyiv',
         must_change_password: formData.must_change_password || false,
+        asterisk_extension: formData.asterisk_extension || undefined,
+        is_agent: formData.is_agent || false,
         project_assignments,
       },
       {
@@ -198,7 +199,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
       {/* User Credentials Section */}
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="username" required>
               {t('pages.users.forms.username')}
@@ -233,7 +234,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <PasswordInput
             id="password"
             label={t('pages.users.forms.password')}
@@ -262,10 +263,16 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Checkbox
-            id="must_change_password"
-            checked={getValues('must_change_password') || false}
-            onCheckedChange={(checked) => setValue('must_change_password', checked === true)}
+          <Controller
+            name="must_change_password"
+            control={control}
+            render={({ field }) => (
+              <Checkbox
+                id="must_change_password"
+                checked={field.value || false}
+                onCheckedChange={(checked) => field.onChange(checked === true)}
+              />
+            )}
           />
           <Label htmlFor="must_change_password" className="mb-0 cursor-pointer">
             {t('pages.users.forms.mustChangePassword')}
@@ -275,7 +282,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
       {/* Name Fields Section - Required by API */}
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="first_name" required>
               {t('pages.users.forms.firstName')}
@@ -311,7 +318,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="middle_name">{t('pages.users.forms.middleName')}</Label>
             <Input
@@ -345,7 +352,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
       {/* Preferences Section */}
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="language" required>
               {t('pages.users.forms.language')}
@@ -407,6 +414,46 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
         </div>
       </div>
 
+      {/* Call Settings Section */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="asterisk_extension">{t('pages.users.forms.asteriskExtension')}</Label>
+            <Input
+              id="asterisk_extension"
+              placeholder="1001"
+              {...register('asterisk_extension')}
+              aria-invalid={!!errors.asterisk_extension}
+              variant={errors.asterisk_extension ? 'error' : 'default'}
+              className="mt-1"
+            />
+            {errors.asterisk_extension && (
+              <p className="mt-1 text-sm text-red-500">{errors.asterisk_extension.message}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              {t('pages.users.forms.helpers.asteriskExtension')}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 pt-7">
+            <Controller
+              name="is_agent"
+              control={control}
+              render={({ field }) => (
+                <Checkbox
+                  id="is_agent"
+                  checked={field.value || false}
+                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                />
+              )}
+            />
+            <Label htmlFor="is_agent" className="mb-0 cursor-pointer">
+              {t('pages.users.forms.isAgent')}
+            </Label>
+          </div>
+        </div>
+      </div>
+
       {/* Assign Projects Section */}
       <div className="mt-4 mb-0 space-y-4">
         <h3 className="text-dark-500 text-sm font-semibold">
@@ -451,7 +498,10 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
               const selectedRoleId = projectRoles[projectId]
 
               return (
-                <div key={projectId} className="grid w-full grid-cols-2 items-center gap-4">
+                <div
+                  key={projectId}
+                  className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 sm:gap-4"
+                >
                   <span className="text-dark-500 text-sm font-light">{project?.name}:</span>
                   <Select
                     value={selectedRoleId?.toString() || ''}

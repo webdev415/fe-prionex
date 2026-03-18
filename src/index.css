@@ -1,5 +1,5 @@
 @import 'tailwindcss';
-@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700&display=swap');
 
 @theme {
   /* PRIMARY (Green #80D80A) - CTAs, links, focus states, interactive elements */
@@ -120,7 +120,7 @@
   --color-error-950: #450a0a;
 
   /* Font Family */
-  --font-family-sans: 'Lexend', sans-serif;
+  --font-family-sans: 'Noto Sans', sans-serif;
 
   /* Font Sizes - Display */
   --font-size-2xl-display: 72px;
@@ -166,7 +166,7 @@
 
 @layer base {
   :root {
-    font-family: 'Lexend', sans-serif;
+    font-family: 'Noto Sans', sans-serif;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -185,6 +185,32 @@
 }
 
 @layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .select-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #b5b5b5 #f0f0f0;
+    scrollbar-gutter: stable;
+    overflow-y: scroll !important;
+  }
+  .select-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    display: block !important;
+  }
+  .select-scrollbar::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 9999px;
+  }
+  .select-scrollbar::-webkit-scrollbar-thumb {
+    background: #c0c0c0;
+    border-radius: 9999px;
+    border: 2px solid #f0f0f0;
+    min-height: 30px;
+  }
+  .select-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #9a9a9a;
+  }
   /* Dashboard background image */
   .bg-dashboard-light {
     background-image: url(/assets/images/dashboard-light-bg.svg);
@@ -251,6 +277,86 @@
     scrollbar-width: thin;
     scrollbar-color: #c8c8c8 transparent;
   }
+
+  /* Client Detail Panel Scrollbar */
+  .client-panel-scroll::-webkit-scrollbar {
+    width: 5px;
+  }
+  .client-panel-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .client-panel-scroll::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border-radius: 3px;
+  }
+  .client-panel-scroll::-webkit-scrollbar-thumb:hover {
+    background: #adadad;
+  }
+  /* Firefox */
+  .client-panel-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #d4d4d4 transparent;
+  }
+
+  /* Data Table Scrollbar */
+  .data-table-scroll::-webkit-scrollbar {
+    height: 8px;
+  }
+  .data-table-scroll::-webkit-scrollbar-track {
+    background: #ebece8;
+    border-radius: 0 0 12px 12px;
+  }
+  .data-table-scroll::-webkit-scrollbar-thumb {
+    background: #90947b;
+    border-radius: 4px;
+    border: 1px solid #ebece8;
+  }
+  .data-table-scroll::-webkit-scrollbar-thumb:hover {
+    background: #6f715d;
+  }
+  /* Firefox */
+  .data-table-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #90947b transparent;
+    margin: 0;
+    padding: 0;
+  }
+  .sidebar-scrollbar {
+    scrollbar-gutter: stable;
+  }
+  /* Sidebar Scrollbar - Modern and elegant */
+  .sidebar-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-button {
+    display: none;
+    height: 0;
+    width: 0;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-button:start:decrement,
+  .sidebar-scrollbar::-webkit-scrollbar-button:end:increment {
+    display: none;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 0;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+  }
+  .sidebar-scrollbar::-webkit-scrollbar-thumb:active {
+    background: #4b5563;
+  }
+  /* Firefox */
+  .sidebar-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #9ca3af transparent;
+  }
 }
 
 @layer components {
@@ -302,4 +408,33 @@
     box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
     padding: 1.5rem;
   }
+}
+
+@keyframes bell-shake {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(14deg);
+  }
+  30% {
+    transform: rotate(-12deg);
+  }
+  45% {
+    transform: rotate(10deg);
+  }
+  60% {
+    transform: rotate(-8deg);
+  }
+  75% {
+    transform: rotate(5deg);
+  }
+  90% {
+    transform: rotate(-3deg);
+  }
+}
+
+.animate-bell-shake {
+  animation: bell-shake 0.8s ease-in-out;
 }

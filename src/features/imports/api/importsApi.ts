@@ -6,7 +6,6 @@
  */
 
 import api, { getAccessToken } from '@/lib/api'
-import { useAuthStore } from '@/stores/authStore'
 import type {
   UploadImportRequest,
   UploadImportResponse,
@@ -65,8 +64,8 @@ export async function uploadImport(request: UploadImportRequest): Promise<Upload
   }
 
   // Add metadata to form data for backend
-  if (request.seller_creditor) {
-    formData.append('seller_creditor', request.seller_creditor)
+  if (request.seller_id) {
+    formData.append('seller_id', request.seller_id.toString())
   }
   if (request.project_code) {
     formData.append('project_code', request.project_code)
@@ -119,10 +118,6 @@ export async function getImportJobs(
   const page = params.page || 1
   const pageSize = params.page_size || 100
 
-  // Get active project ID from auth store
-  const user = useAuthStore.getState().user
-  const activeProjectId = user?.active_project_id ? parseInt(user.active_project_id, 10) : undefined
-
   // Map frontend status to backend status
   let backendStatus: string | undefined
   if (params.status) {
@@ -135,10 +130,9 @@ export async function getImportJobs(
     offset: (page - 1) * pageSize,
   }
 
-  // Add project_id if available
-  if (activeProjectId && !isNaN(activeProjectId)) {
-    backendParams.project_id = activeProjectId
-  }
+  // Don't send project_id filter - let backend show all jobs from projects user has access to
+  // The backend already filters by user_project_ids, so users will see jobs from all their projects
+  // If we send project_id, it will filter to only that project, which may hide jobs from other projects
 
   // Add status filter
   if (backendStatus) {
@@ -153,6 +147,11 @@ export async function getImportJobs(
   // Add uploaded_by filter
   if (params.uploaded_by) {
     backendParams.uploaded_by = params.uploaded_by
+  }
+
+  // Add import_type filter
+  if (params.import_type) {
+    backendParams.import_type = params.import_type
   }
 
   // Add date range filters

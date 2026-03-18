@@ -12,29 +12,33 @@ const ITEMS_PER_PAGE = 10
 
 export function ActivityTimelinePageSkeleton() {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* Client Header Skeleton */}
-      <div className="flex items-center justify-between self-stretch">
-        <div className="flex items-center gap-2">
-          <div className="h-6 w-6 animate-pulse rounded bg-gray-200" />
-          <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
-          <div className="h-6 w-16 animate-pulse rounded-full bg-gray-200" />
-          <div className="h-6 w-20 animate-pulse rounded-full bg-gray-200" />
+      <div className="flex flex-col gap-4 self-stretch 2xl:flex-row 2xl:items-center 2xl:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-row items-center gap-2">
+            <div className="h-6 w-6 animate-pulse rounded bg-gray-200" />
+            <div className="h-6 w-32 animate-pulse rounded bg-gray-200 md:h-8 md:w-48" />
+          </div>
+          <div className="flex flex-row items-center gap-2">
+            <div className="h-5 w-14 animate-pulse rounded-full bg-gray-200 md:h-6 md:w-16" />
+            <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 md:h-6 md:w-20" />
+          </div>
         </div>
-        <div className="flex items-center gap-5">
-          <div className="h-10 w-40 animate-pulse rounded-full bg-gray-200" />
-          <div className="h-10 w-24 animate-pulse rounded-full bg-gray-200" />
-          <div className="h-10 w-32 animate-pulse rounded-full bg-gray-200" />
+        <div className="flex flex-wrap items-center gap-2 md:gap-5">
+          <div className="h-9 w-full flex-1 animate-pulse rounded-full bg-gray-200 md:h-10" />
+          <div className="h-9 w-full flex-1 animate-pulse rounded-full bg-gray-200 md:h-10" />
+          <div className="h-9 w-full flex-1 animate-pulse rounded-full bg-gray-200 md:h-10" />
         </div>
       </div>
 
       {/* Filters and Table Skeleton */}
-      <div className="flex flex-col items-start gap-5 self-stretch rounded-xl bg-white/50 p-6">
-        <div className="flex items-center justify-between self-stretch">
+      <div className="flex flex-col items-start gap-5 self-stretch rounded-xl bg-white/50 p-3 md:p-6">
+        <div className="flex flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:justify-between">
           {/* Type of communication Skeleton */}
-          <div className="flex flex-1 items-center gap-6">
-            <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
-            <div className="flex flex-1 items-center gap-2">
+          <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center lg:flex-1">
+            <div className="h-4 w-40 shrink-0 animate-pulse rounded bg-gray-200" />
+            <div className="flex flex-1 flex-wrap items-center gap-2 sm:gap-4">
               {Array.from({ length: 4 }).map((_, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <div className="h-4 w-4 animate-pulse rounded-full bg-gray-200" />
@@ -45,25 +49,21 @@ export function ActivityTimelinePageSkeleton() {
           </div>
 
           {/* Date range Skeleton */}
-          <div className="flex flex-1 items-center gap-3">
-            <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
-            <div className="flex flex-1 items-start gap-2">
-              <div className="h-10 w-32 animate-pulse rounded bg-gray-200" />
-            </div>
-            <div className="h-4 w-4 animate-pulse rounded bg-gray-200" />
-            <div className="flex flex-1 items-start gap-2">
-              <div className="h-10 w-32 animate-pulse rounded bg-gray-200" />
+          <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center lg:flex-1 lg:justify-end">
+            <div className="h-4 w-24 shrink-0 animate-pulse rounded bg-gray-200" />
+            <div className="flex flex-1 items-center gap-2">
+              <div className="h-10 w-full flex-1 animate-pulse rounded bg-gray-200 sm:w-32" />
+              <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200" />
+              <div className="h-10 w-full flex-1 animate-pulse rounded bg-gray-200 sm:w-32" />
             </div>
           </div>
-          <div className="flex items-center justify-end gap-5">
+          <div className="flex items-center justify-end gap-2 self-stretch sm:justify-end lg:w-auto lg:flex-none">
             <div className="h-8 w-24 animate-pulse rounded-full bg-gray-200" />
           </div>
         </div>
 
         {/* Table Skeleton */}
-        <div className="flex flex-col items-center justify-center gap-6 self-stretch">
-          <TableSkeleton columns={TABLE_COLUMNS} rows={ITEMS_PER_PAGE} className="w-full" />
-        </div>
+        <TableSkeleton columns={TABLE_COLUMNS} rows={ITEMS_PER_PAGE} className="w-full" />
       </div>
 
       {/* Pagination Skeleton */}

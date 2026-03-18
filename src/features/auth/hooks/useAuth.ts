@@ -1,10 +1,12 @@
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import type { LoginRequest } from '@/types/api'
 
 export function useAuth() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   const {
     user,
@@ -22,6 +24,8 @@ export function useAuth() {
     logout: storeLogout,
     forceLogin: storeForceLogin,
     checkAuth,
+    refreshUser,
+    updateCurrentUser,
     clearError,
     startImpersonation: storeStartImpersonation,
     exitImpersonation: storeExitImpersonation,
@@ -31,7 +35,12 @@ export function useAuth() {
     async (credentials: LoginRequest) => {
       try {
         await storeLogin(credentials)
-        navigate('/dashboard')
+        const currentUser = useAuthStore.getState().user
+        if (currentUser?.mustChangePassword) {
+          navigate('/change-password')
+        } else {
+          navigate('/dashboard')
+        }
       } catch {
         // Error is handled by the store
       }
@@ -41,13 +50,19 @@ export function useAuth() {
 
   const logout = useCallback(async () => {
     await storeLogout()
+    queryClient.clear()
     navigate('/login')
-  }, [storeLogout, navigate])
+  }, [storeLogout, queryClient, navigate])
 
   const forceLogin = useCallback(async () => {
     try {
       await storeForceLogin()
-      navigate('/dashboard')
+      const currentUser = useAuthStore.getState().user
+      if (currentUser?.mustChangePassword) {
+        navigate('/change-password')
+      } else {
+        navigate('/dashboard')
+      }
     } catch {
       // Error is handled by the store
     }
@@ -81,6 +96,8 @@ export function useAuth() {
     logout,
     forceLogin,
     checkAuth,
+    refreshUser,
+    updateCurrentUser,
     clearError,
     startImpersonation,
     exitImpersonation,

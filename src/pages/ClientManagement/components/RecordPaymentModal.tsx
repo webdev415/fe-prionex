@@ -4,7 +4,7 @@
  * Modal for recording a new payment for a client.
  */
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -13,21 +13,46 @@ import { DateSelect } from '@/components/ui/DateSelect'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Label } from '@/components/ui/Label'
+import { Textarea } from '@/components/ui/Textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import type { DebtDetail } from '@/features/clients/api/types'
+
+/**
+ * Get today's date at midnight local time.
+ * Used for date-only fields to avoid timezone issues.
+ */
+const getTodayAtMidnight = (): Date => {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+}
 
 export interface RecordPaymentModalProps {
   open: boolean
   onClose: () => void
   customerName: string
   currentDebt: number
+  debts?: DebtDetail[]
+  /** Whether user has verify_payment permission. When false, hides Verified radio and Save & Verify button. */
+  canVerify?: boolean
   onSave: (data: {
     amount: number
     date: Date
-    method: 'Bank Transfer' | 'Card Payment' | 'Other'
+    method: 'Bank Transfer' | 'Online Gateway' | 'Card'
     status: 'Pending Verification' | 'Verified'
     generateReceipt: boolean
     updateBalance: boolean
+    referenceNumber?: string
+    last4Digits?: string
+    paymentMethodDetails?: string
+    debtId?: number
   }) => void
 }
 
@@ -36,20 +61,24 @@ export function RecordPaymentModal({
   onClose,
   customerName,
   currentDebt,
+  debts,
+  canVerify = true,
   onSave,
 }: RecordPaymentModalProps) {
   const { t, i18n } = useTranslation('common')
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '₴ 0,00'
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    return `₴ ${amount.toLocaleString(locale, {
+    return `₴ ${num.toLocaleString(locale, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`
   }
-  const [paymentAmount, setPaymentAmount] = useState<string>('10000.00')
-  const [paymentDate, setPaymentDate] = useState<Date | null>(new Date())
-  const [paymentMethod, setPaymentMethod] = useState<'Bank Transfer' | 'Card Payment' | 'Other'>(
+  const [paymentAmount, setPaymentAmount] = useState<string>('')
+  const [paymentDate, setPaymentDate] = useState<Date | null>(getTodayAtMidnight)
+  const [paymentMethod, setPaymentMethod] = useState<'Bank Transfer' | 'Online Gateway' | 'Card'>(
     'Bank Transfer'
   )
   const [paymentStatus, setPaymentStatus] = useState<'Pending Verification' | 'Verified'>(
@@ -57,6 +86,21 @@ export function RecordPaymentModal({
   )
   const [generateReceipt, setGenerateReceipt] = useState(true)
   const [updateBalance, setUpdateBalance] = useState(false)
+  const [amountError, setAmountError] = useState<string | null>(null)
+  const [last4Digits, setLast4Digits] = useState<string>('')
+  const [paymentMethodDetails, setPaymentMethodDetails] = useState<string>('')
+  const [last4DigitsError, setLast4DigitsError] = useState<string | null>(null)
+
+  const activeDebts = useMemo(
+    () =>
+      (debts || [])
+        .filter((debt) => debt.status === 'active' || !debt.status)
+        .sort((a, b) => a.id - b.id),
+    [debts]
+  )
+  const [selectedDebtId, setSelectedDebtId] = useState<number | null>(
+    () => activeDebts[0]?.id ?? null
+  )
 
   const amountValue = parseFloat(paymentAmount) || 0
   const minAmount = 100
@@ -64,9 +108,89 @@ export function RecordPaymentModal({
   const newDebt = currentDebt - amountValue
   const hasDebt = newDebt > 0
 
+  // Calculate date restrictions
+  const today = getTodayAtMidnight()
+  today.setHours(23, 59, 59, 999) // End of today
+  const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())
+
+  // Handle payment method change - clear related fields
+  const handlePaymentMethodChange = (value: string) => {
+    const newMethod = value as 'Bank Transfer' | 'Online Gateway' | 'Card'
+    setPaymentMethod(newMethod)
+
+    // Clear card fields when switching away from Card
+    if (newMethod !== 'Card') {
+      setLast4Digits('')
+      setLast4DigitsError(null)
+    }
+
+    // Re-validate if switching to Card
+    if (newMethod === 'Card') {
+      if (!last4Digits) {
+        setLast4DigitsError(t('pages.clients.modals.recordPayment.last4DigitsRequired'))
+      } else if (last4Digits.length !== 4) {
+        setLast4DigitsError(t('pages.clients.modals.recordPayment.last4DigitsMustBe4'))
+      }
+    }
+  }
+
+  // Check if there are validation errors
+  const hasValidationErrors =
+    !!amountError ||
+    !!last4DigitsError ||
+    !paymentDate ||
+    amountValue < 0 ||
+    amountValue < minAmount ||
+    amountValue > maxAmount ||
+    (paymentMethod === 'Card' && last4Digits.length !== 4) ||
+    (activeDebts.length > 1 && !selectedDebtId)
+
+  // Validate payment amount on change
+  const handleAmountChange = (value: string) => {
+    setPaymentAmount(value)
+    const numValue = parseFloat(value) || 0
+
+    // Clear previous error
+    setAmountError(null)
+
+    // Validate: must be positive
+    if (numValue < 0) {
+      setAmountError(t('pages.clients.modals.recordPayment.validationPaymentMustBePositive'))
+      return
+    }
+
+    // Validate: cannot exceed current debt
+    if (numValue > currentDebt) {
+      setAmountError(
+        t('pages.clients.modals.recordPayment.validationPaymentExceedsDebt', {
+          amount: formatCurrency(currentDebt),
+        })
+      )
+      return
+    }
+  }
+
   const handleSave = (status: 'Pending Verification' | 'Verified') => {
+    // Validate payment amount
+    if (amountValue < 0) {
+      setAmountError(t('pages.clients.modals.recordPayment.validationPaymentMustBePositive'))
+      return
+    }
+
+    if (amountValue > currentDebt) {
+      setAmountError(
+        t('pages.clients.modals.recordPayment.validationPaymentExceedsDebt', {
+          amount: formatCurrency(currentDebt),
+        })
+      )
+      return
+    }
+
     if (!paymentDate || amountValue < minAmount || amountValue > maxAmount) {
-      // TODO: Show validation error
+      // Show validation error if amount is below minimum
+      if (amountValue < minAmount) {
+        setAmountError(t('pages.clients.modals.recordPayment.validationPaymentMustBePositive'))
+      }
       return
     }
 
@@ -77,26 +201,39 @@ export function RecordPaymentModal({
       status,
       generateReceipt,
       updateBalance,
+      last4Digits: paymentMethod === 'Card' ? last4Digits : undefined,
+      paymentMethodDetails: paymentMethodDetails.trim() || undefined,
+      debtId: selectedDebtId ?? undefined,
     })
 
     // Reset form
-    setPaymentAmount('10000.00')
-    setPaymentDate(new Date())
+    setPaymentAmount('')
+    setPaymentDate(getTodayAtMidnight())
     setPaymentMethod('Bank Transfer')
     setPaymentStatus('Pending Verification')
     setGenerateReceipt(true)
     setUpdateBalance(false)
+    setAmountError(null)
+    setLast4Digits('')
+    setPaymentMethodDetails('')
+    setLast4DigitsError(null)
+    setSelectedDebtId(activeDebts[0]?.id ?? null)
     onClose()
   }
 
   const handleClose = () => {
     // Reset form on close
-    setPaymentAmount('10000.00')
-    setPaymentDate(new Date())
+    setPaymentAmount('')
+    setPaymentDate(getTodayAtMidnight())
     setPaymentMethod('Bank Transfer')
     setPaymentStatus('Pending Verification')
     setGenerateReceipt(true)
     setUpdateBalance(false)
+    setAmountError(null)
+    setLast4Digits('')
+    setPaymentMethodDetails('')
+    setLast4DigitsError(null)
+    setSelectedDebtId(activeDebts[0]?.id ?? null)
     onClose()
   }
 
@@ -112,27 +249,27 @@ export function RecordPaymentModal({
         className="pb-6"
       />
 
-      <ModalContent className="max-h-[calc(90vh-250px)]">
+      <ModalContent className="max-h-[calc(90vh-300px)] sm:max-h-[calc(90vh-250px)]">
         {/* Client Info Section */}
-        <div className="mb-6 flex items-center justify-between self-stretch">
-          <div className="flex items-center justify-center gap-4">
+        <div className="mb-6 flex flex-col items-start gap-3 self-stretch sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center justify-center gap-2 sm:gap-4">
             <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-              <Icons.User size={20} className="text-dark-500" />
+              <Icons.User size={18} className="text-dark-500 sm:size-5" />
             </div>
-            <span className="text-dark-500 text-[18px] leading-[150%] font-medium tracking-[-0.36px]">
+            <span className="text-dark-500 text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
               {customerName}
             </span>
           </div>
-          <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
+          <span className="text-dark-500 text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
             {t('pages.clients.modals.recordPayment.currentDebt')}{' '}
             <span className="font-medium">{formatCurrency(currentDebt)}</span>
           </span>
         </div>
 
         {/* Two Column Layout */}
-        <div className="mb-6 flex items-start gap-4 self-stretch">
+        <div className="mb-6 flex flex-col items-start gap-4 self-stretch lg:flex-row">
           {/* Left Column - Payment Information */}
-          <div className="flex flex-1 flex-col items-start gap-2">
+          <div className="flex w-full flex-1 flex-col items-start gap-2 lg:w-auto">
             <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {t('pages.clients.modals.recordPayment.paymentInformation')}
             </span>
@@ -146,19 +283,55 @@ export function RecordPaymentModal({
                   <Input
                     type="number"
                     value={paymentAmount}
-                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    onChange={(e) => handleAmountChange(e.target.value)}
                     placeholder="0.00"
                     inputSize="md"
                     className="rounded-md"
+                    error={amountError || undefined}
                   />
-                  <div className="flex items-center gap-2 self-stretch">
-                    <Icons.Money01 size={20} className="text-gray-700" />
-                    <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                      ({t('pages.clients.modals.recordPayment.min')} {formatCurrency(minAmount)},{' '}
-                      {t('pages.clients.modals.recordPayment.max')} {formatCurrency(maxAmount)})
-                    </span>
-                  </div>
+                  {!amountError && (
+                    <div className="flex items-center gap-2 self-stretch">
+                      <Icons.Money01 size={20} className="text-gray-700" />
+                      <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
+                        ({t('pages.clients.modals.recordPayment.min')} {formatCurrency(minAmount)},{' '}
+                        {t('pages.clients.modals.recordPayment.max')} {formatCurrency(maxAmount)})
+                      </span>
+                    </div>
+                  )}
                 </div>
+                {activeDebts.length > 1 && (
+                  <div className="flex flex-col items-start gap-2 self-stretch">
+                    <Label
+                      required
+                      className="text-sm leading-[150%] font-medium tracking-[-0.28px]"
+                    >
+                      {t('pages.clients.modals.recordPayment.contractNumber')}
+                    </Label>
+                    <Select
+                      value={selectedDebtId ? String(selectedDebtId) : ''}
+                      onValueChange={(value) => setSelectedDebtId(Number(value))}
+                    >
+                      <SelectTrigger className="w-full rounded-md">
+                        <SelectValue
+                          placeholder={t(
+                            'pages.clients.modals.recordPayment.contractPlaceholder',
+                            'Select contract'
+                          )}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {activeDebts.map((debt) => (
+                          <SelectItem key={debt.id} value={String(debt.id)}>
+                            {debt.contract_number}
+                            {debt.remaining_debt_amount
+                              ? ` • ${formatCurrency(debt.remaining_debt_amount)}`
+                              : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 {/* Payment Date */}
                 <div className="flex flex-col items-start gap-2 self-stretch">
                   <Label required className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
@@ -169,6 +342,8 @@ export function RecordPaymentModal({
                     onChange={({ value }) => setPaymentDate(value)}
                     placeholder={t('pages.clients.modals.recordPayment.selectDate')}
                     className="rounded-md"
+                    min={oneYearAgo}
+                    max={today}
                   />
                 </div>
               </div>
@@ -179,9 +354,7 @@ export function RecordPaymentModal({
                 </Label>
                 <RadioGroup
                   value={paymentMethod}
-                  onValueChange={(value) =>
-                    setPaymentMethod(value as 'Bank Transfer' | 'Card Payment' | 'Other')
-                  }
+                  onValueChange={handlePaymentMethodChange}
                   className="mt-2 space-y-2"
                 >
                   <div className="flex items-center gap-2">
@@ -194,35 +367,51 @@ export function RecordPaymentModal({
                     </Label>
                   </div>
                   <div className="flex items-center gap-2">
-                    <RadioItem value="Card Payment" id="method-card" />
+                    <RadioItem value="Online Gateway" id="method-online" />
                     <Label
-                      htmlFor="method-card"
+                      htmlFor="method-online"
                       className="text-dark-500 cursor-pointer text-sm font-light"
                     >
-                      {t('pages.clients.modals.recordPayment.cardPayment')}
+                      {t('pages.clients.modals.recordPayment.onlineGateway')}
                     </Label>
                   </div>
                   <div className="flex items-center gap-2">
-                    <RadioItem value="Other" id="method-other" />
+                    <RadioItem value="Card" id="method-card" disabled />
                     <Label
-                      htmlFor="method-other"
-                      className="text-dark-500 cursor-pointer text-sm font-light"
+                      htmlFor="method-card"
+                      className="text-dark-500 cursor-not-allowed text-sm font-light opacity-50"
                     >
-                      {t('pages.clients.modals.recordPayment.other')}
+                      {t('pages.clients.modals.recordPayment.card')}
                     </Label>
                   </div>
                 </RadioGroup>
+              </div>
+
+              {/* Payment Method Details - Shown for all payment methods */}
+              <div className="flex flex-col items-start gap-2 self-stretch">
+                <Label className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                  {t('pages.clients.modals.recordPayment.paymentMethodDetails')}
+                </Label>
+                <Textarea
+                  value={paymentMethodDetails}
+                  onChange={(e) => setPaymentMethodDetails(e.target.value)}
+                  placeholder={t(
+                    'pages.clients.modals.recordPayment.paymentMethodDetailsPlaceholder'
+                  )}
+                  className="rounded-md"
+                  textareaSize="md"
+                />
               </div>
             </div>
           </div>
 
           {/* Right Column - Impact Preview */}
-          <div className="flex flex-1 flex-col items-start gap-2 self-stretch">
+          <div className="flex w-full flex-1 flex-col items-start gap-2 self-stretch lg:w-auto">
             <h3 className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
               {t('pages.clients.modals.recordPayment.impactPreview')}
             </h3>
 
-            <div className="flex flex-1 flex-col items-start gap-6 self-stretch rounded-xl border border-white/100 bg-white/50 p-6">
+            <div className="flex flex-1 flex-col items-start gap-6 self-stretch rounded-xl border border-white/100 bg-white/50 p-4 sm:p-6">
               <div className="flex flex-col items-start gap-4 self-stretch">
                 <div className="flex items-center gap-5 self-stretch">
                   <span className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
@@ -250,7 +439,7 @@ export function RecordPaymentModal({
                   <div className="h-px w-full bg-gray-200" />
                   <div className="flex items-center gap-5 self-stretch">
                     <span className="text-dark-500 flex-1 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                      {t('pages.clients.modals.recordPayment.paymentAmountLabel')}
+                      {t('pages.clients.modals.recordPayment.newTotalDebt')}
                     </span>
                     <div className="flex flex-1 items-center gap-2.5">
                       <span className="text-dark-500 flex-1 text-right text-sm leading-[150%] font-medium tracking-[-0.28px]">
@@ -302,12 +491,12 @@ export function RecordPaymentModal({
           </div>
         </div>
         <div className="flex flex-col items-start gap-4 self-stretch">
-          <div className="flex items-start gap-4 self-stretch">
+          <div className="flex flex-row items-start gap-4 self-stretch">
             <div className="flex flex-1 flex-col items-start gap-2">
               <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
                 {t('pages.clients.modals.recordPayment.verification')}
               </span>
-              <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white bg-white/50 p-[20px_24px]">
+              <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white bg-white/50 p-4 sm:p-[20px_24px]">
                 <div className="flex flex-col items-start gap-2 self-stretch">
                   <Label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
                     {t('pages.clients.modals.recordPayment.paymentStatus')}
@@ -317,7 +506,7 @@ export function RecordPaymentModal({
                     onValueChange={(value) =>
                       setPaymentStatus(value as 'Pending Verification' | 'Verified')
                     }
-                    className="flex items-start gap-4 self-stretch"
+                    className="flex flex-col items-start gap-3 self-stretch sm:flex-row sm:gap-4"
                   >
                     <div className="flex flex-1 items-center gap-1">
                       <RadioItem value="Pending Verification" id="status-pending" />
@@ -328,78 +517,90 @@ export function RecordPaymentModal({
                         {t('pages.clients.modals.recordPayment.pendingVerification')}
                       </Label>
                     </div>
-                    <div className="flex flex-1 flex-col items-start gap-2">
-                      <div className="flex items-center gap-1">
-                        <RadioItem value="Verified" id="status-verified" />
-                        <Label
-                          htmlFor="status-verified"
-                          className="text-dark-500 cursor-pointer text-sm font-light"
-                        >
-                          {t('pages.clients.modals.recordPayment.verified')}
-                        </Label>
+                    {canVerify && (
+                      <div className="flex flex-1 flex-col items-start gap-2">
+                        <div className="flex items-center gap-1">
+                          <RadioItem value="Verified" id="status-verified" />
+                          <Label
+                            htmlFor="status-verified"
+                            className="text-dark-500 cursor-pointer text-sm font-light"
+                          >
+                            {t('pages.clients.modals.recordPayment.verified')}
+                          </Label>
+                        </div>
+                        <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
+                          {t('pages.clients.modals.recordPayment.requiresSupervisorPermission')}
+                        </span>
                       </div>
-                      <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
-                        {t('pages.clients.modals.recordPayment.requiresSupervisorPermission')}
-                      </span>
-                    </div>
+                    )}
                   </RadioGroup>
                 </div>
 
-                {/* Checkboxes */}
-                <div className="flex flex-col items-start gap-3 self-stretch">
-                  <div className="flex items-center gap-1 self-stretch">
-                    <Checkbox
-                      checked={generateReceipt}
-                      onCheckedChange={(checked) => setGenerateReceipt(checked === true)}
-                      id="generate-receipt"
-                    />
-                    <Label
-                      htmlFor="generate-receipt"
-                      className="flex flex-1 cursor-pointer flex-col justify-center self-stretch text-sm font-light text-gray-950"
-                    >
-                      {t('pages.clients.modals.recordPayment.generateReceiptAutomatically')}
-                    </Label>
+                {/* Checkboxes — only relevant when saving as Verified */}
+                {paymentStatus === 'Verified' && (
+                  <div className="flex flex-col items-start gap-3 self-stretch">
+                    <div className="flex items-center gap-1 self-stretch">
+                      <Checkbox
+                        checked={generateReceipt}
+                        onCheckedChange={(checked) => setGenerateReceipt(checked === true)}
+                        id="generate-receipt"
+                      />
+                      <Label
+                        htmlFor="generate-receipt"
+                        className="flex flex-1 cursor-pointer flex-col justify-center self-stretch text-sm font-light text-gray-950"
+                      >
+                        {t('pages.clients.modals.recordPayment.generateReceiptAutomatically')}
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-1 self-stretch">
+                      <Checkbox
+                        checked={updateBalance}
+                        onCheckedChange={(checked) => setUpdateBalance(checked === true)}
+                        id="update-balance"
+                      />
+                      <Label
+                        htmlFor="update-balance"
+                        className="flex flex-1 cursor-pointer flex-col justify-center self-stretch text-sm font-light text-gray-950"
+                      >
+                        {t('pages.clients.modals.recordPayment.updateDebtBalanceImmediately')}
+                      </Label>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 self-stretch">
-                    <Checkbox
-                      checked={updateBalance}
-                      onCheckedChange={(checked) => setUpdateBalance(checked === true)}
-                      id="update-balance"
-                    />
-                    <Label
-                      htmlFor="update-balance"
-                      className="flex flex-1 cursor-pointer flex-col justify-center self-stretch text-sm font-light text-gray-950"
-                    >
-                      {t('pages.clients.modals.recordPayment.updateDebtBalanceImmediately')}
-                    </Label>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </ModalContent>
       <ModalFooter className="flex flex-col items-start gap-4 self-stretch border-none">
-        <div className="flex items-start gap-6 self-stretch">
+        <div className="flex w-full flex-col items-stretch gap-3 gap-6 self-stretch sm:flex-row">
           <Button
-            variant="secondary"
+            variant={canVerify ? 'secondary' : 'primary'}
             leftIcon={<Icons.Clock04 size={18} />}
             onClick={() => handleSave('Pending Verification')}
-            className="flex-1"
+            className="h-12 w-full rounded-md sm:w-auto"
+            disabled={hasValidationErrors}
           >
             {t('pages.clients.modals.recordPayment.saveAsPending')}
           </Button>
-          <Button
-            variant="primary"
-            leftIcon={<Icons.CheckmarkSquare03 size={18} />}
-            onClick={() => handleSave('Verified')}
-            className="flex-1"
-          >
-            {t('pages.clients.modals.recordPayment.saveAndVerify')}
-          </Button>
+          {canVerify && (
+            <Button
+              variant="primary"
+              leftIcon={<Icons.CheckmarkSquare03 size={18} />}
+              onClick={() => handleSave('Verified')}
+              className="h-12 w-full rounded-md sm:w-auto"
+              disabled={hasValidationErrors}
+            >
+              {t('pages.clients.modals.recordPayment.saveAndVerify')}
+            </Button>
+          )}
         </div>
 
-        <Button variant="cancel" onClick={handleClose} className="flex self-stretch">
+        <Button
+          variant="cancel"
+          onClick={handleClose}
+          className="flex h-12 w-full self-stretch rounded-md"
+        >
           {t('pages.clients.modals.recordPayment.cancel')}
         </Button>
       </ModalFooter>

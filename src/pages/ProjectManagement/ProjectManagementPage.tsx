@@ -5,38 +5,114 @@
  * Updated: 2025-12-08 - Added search/filters, new columns, side panel
  */
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { useProjects, useProjectDetail } from '@/features/projects/hooks/useProjects'
 import { useProjectExport, useDeleteProject } from '@/features/projects/hooks/useProjectMutations'
 import { EditProjectModal } from './components/EditProjectModal'
 import { ProjectDetailPanel } from './components/ProjectDetailPanel'
+import { ProjectDetailModal } from './components/ProjectDetailModal'
 import { DeleteProjectConfirmationModal } from './components/DeleteProjectConfirmationModal'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import type { ApiProject, ApiProjectDetail, ProjectFilters } from '@/features/projects/types'
-import { formatPeriod, formatCurrency } from '@/lib/formatters'
+import { formatPeriod, formatCurrency, formatNumber } from '@/lib/formatters'
 import { DataTable, type Column, type SortConfig, type SortOrder } from '@/components/ui/DataTable'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ErrorState } from '@/components/ErrorState'
 import { Pagination } from '@/components/ui/Pagination'
 import { ProjectManagementPageSkeleton } from './components/ProjectManagementPageSkeleton'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 
 const DEFAULT_PAGE_SIZE = 10
 
 export function ProjectManagementPage() {
   const { t } = useTranslation('common')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+
+  // URL state for pagination
+  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
+  const [pageSize, setPageSize] = useURLState<number>('pageSize', DEFAULT_PAGE_SIZE)
+
+  // URL state for sorting
+  const [sortBy, setSortBy] = useURLState<string>('sort_by', 'created_at')
+  const [sortOrder, setSortOrder] = useURLState<'asc' | 'desc'>('sort_order', 'desc')
+
+  // URL state for all filter fields
+  const [searchFilter, setSearchFilter] = useURLState<string>('search', '')
+  const [statusFilter, setStatusFilter] = useURLState<string>('status', 'active')
+  const [clientCompanyFilter, setClientCompanyFilter] = useURLState<string>('client_company', '')
+  const [startDateFromFilter, setStartDateFromFilter] = useURLState<string>('start_date_from', '')
+  const [startDateToFilter, setStartDateToFilter] = useURLState<string>('start_date_to', '')
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'project-management-state',
+    {
+      currentPage,
+      pageSize,
+      sortBy,
+      sortOrder,
+      searchFilter,
+      statusFilter,
+      clientCompanyFilter,
+      startDateFromFilter,
+      startDateToFilter,
+    },
+    {
+      currentPage: setCurrentPage,
+      pageSize: setPageSize,
+      sortBy: setSortBy,
+      sortOrder: setSortOrder,
+      searchFilter: setSearchFilter,
+      statusFilter: setStatusFilter,
+      clientCompanyFilter: setClientCompanyFilter,
+      startDateFromFilter: setStartDateFromFilter,
+      startDateToFilter: setStartDateToFilter,
+    }
+  )
+
+  // Reconstruct filters object from URL state
+  const filters = useMemo<ProjectFilters>(
+    () => ({
+      search: searchFilter || undefined,
+      status: (statusFilter as 'active' | 'inactive' | 'archived' | 'all' | undefined) || undefined,
+      client_company: clientCompanyFilter || undefined,
+      start_date_from: startDateFromFilter || undefined,
+      start_date_to: startDateToFilter || undefined,
+    }),
+    [searchFilter, statusFilter, clientCompanyFilter, startDateFromFilter, startDateToFilter]
+  )
+
+  // Reconstruct sortConfig from URL state
+  const sortConfig = useMemo<SortConfig>(
+    () => ({
+      key: sortBy,
+      order: sortOrder,
+    }),
+    [sortBy, sortOrder]
+  )
+
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [editingProject, setEditingProject] = useState<ApiProjectDetail | null>(null)
   const [deletingProject, setDeletingProject] = useState<ApiProjectDetail | null>(null)
-  const [filters, setFilters] = useState<ProjectFilters>({
-    status: 'active',
-  })
-  const [sortConfig, setSortConfig] = useState<SortConfig>({
-    key: 'created_at',
-    order: 'desc',
-  })
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024) // lg breakpoint
+  const [showDetailModal, setShowDetailModal] = useState(false)
+
+  // Track screen size to determine if we're on mobile
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024
+      setIsMobile(mobile)
+      // Close modal when transitioning from mobile to desktop
+      if (!mobile && showDetailModal) {
+        setShowDetailModal(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [showDetailModal])
 
   // Fetch projects with pagination, filters, and sorting
   const { data, isLoading, isError, error, refetch } = useProjects({
@@ -82,15 +158,34 @@ export function ProjectManagementPage() {
     return Array.from(companies).sort()
   }, [projects])
 
-  const handleFilterChange = useCallback((newFilters: ProjectFilters) => {
-    setFilters(newFilters)
-    setCurrentPage(1) // Reset to first page on filter change
-  }, [])
+  const handleFilterChange = useCallback(
+    (newFilters: ProjectFilters) => {
+      // Update individual URL state for each filter field
+      setSearchFilter(newFilters.search || '')
+      setStatusFilter(newFilters.status || 'active')
+      setClientCompanyFilter(newFilters.client_company || '')
+      setStartDateFromFilter(newFilters.start_date_from || '')
+      setStartDateToFilter(newFilters.start_date_to || '')
+      setCurrentPage(1) // Reset to first page on filter change
+    },
+    [
+      setSearchFilter,
+      setStatusFilter,
+      setClientCompanyFilter,
+      setStartDateFromFilter,
+      setStartDateToFilter,
+      setCurrentPage,
+    ]
+  )
 
-  const handleSort = useCallback((key: string, order: SortOrder) => {
-    setSortConfig({ key, order })
-    setCurrentPage(1) // Reset to first page on sort change
-  }, [])
+  const handleSort = useCallback(
+    (key: string, order: SortOrder) => {
+      setSortBy(key)
+      setSortOrder(order)
+      setCurrentPage(1) // Reset to first page on sort change
+    },
+    [setSortBy, setSortOrder, setCurrentPage]
+  )
 
   const handleExport = useCallback(() => {
     exportMutation.mutate({
@@ -99,9 +194,16 @@ export function ProjectManagementPage() {
     })
   }, [exportMutation, filters])
 
-  const handleRowClick = useCallback((project: ApiProject) => {
-    setSelectedProjectId(project.id)
-  }, [])
+  const handleRowClick = useCallback(
+    (project: ApiProject) => {
+      setSelectedProjectId(project.id)
+      // Show modal on mobile, panel is automatically shown on desktop
+      if (isMobile) {
+        setShowDetailModal(true)
+      }
+    },
+    [isMobile]
+  )
 
   const handleEditFromPanel = useCallback(() => {
     if (projectDetail) {
@@ -203,6 +305,17 @@ export function ProjectManagementPage() {
       ),
     },
     {
+      key: 'total_clients',
+      header: t('pages.projects.tableHeaders.clients'),
+      align: 'center',
+      sortable: true,
+      render: (project) => (
+        <span className="text-dark-500 text-xs font-medium">
+          {formatNumber(project.total_clients)}
+        </span>
+      ),
+    },
+    {
       key: 'total_debt_amount',
       header: t('pages.projects.tableHeaders.debt'),
       align: 'right',
@@ -226,7 +339,9 @@ export function ProjectManagementPage() {
     <div className="flex h-full flex-col">
       {/* Page Header */}
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-dark-500 text-2xl font-light">{t('pages.projects.title')}</h1>
+        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+          {t('pages.projects.title')}
+        </h1>
       </div>
 
       {/* Search & Filters */}
@@ -239,7 +354,7 @@ export function ProjectManagementPage() {
       />
 
       {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
         {/* Loading State */}
         {isLoading && <ProjectManagementPageSkeleton />}
 
@@ -256,34 +371,39 @@ export function ProjectManagementPage() {
 
         {/* Projects Table */}
         {!isLoading && !isError && (
-          <div className="flex flex-1 flex-col">
-            <div className="flex w-full flex-1 items-start justify-between overflow-y-auto">
-              <div className="w-[70%]">
-                <div className="rounded-xl bg-white/50 p-6">
-                  <DataTable
-                    columns={columns}
-                    data={projects}
-                    emptyMessage={t('pages.projects.noProjectsFound')}
-                    onRowClick={handleRowClick}
-                    sortConfig={sortConfig}
-                    onSort={handleSort}
-                  />
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="flex flex-1 gap-4 overflow-hidden">
+              {/* Table Container */}
+              <div className="flex min-w-0 flex-1 flex-col">
+                <div className="flex h-full flex-col overflow-hidden rounded-xl bg-white/50">
+                  <div className="flex-1 overflow-auto lg:p-6">
+                    <DataTable
+                      columns={columns}
+                      data={projects}
+                      emptyMessage={t('pages.projects.noProjectsFound')}
+                      onRowClick={handleRowClick}
+                      sortConfig={sortConfig}
+                      onSort={handleSort}
+                    />
+                  </div>
                 </div>
               </div>
-              <div className="w-[30%] pl-4">
-                {/* Side Panel */}
-                <ProjectDetailPanel
-                  project={projectDetail as ApiProjectDetail | null}
-                  hasProjects={projects.length > 0}
-                  onEdit={handleEditFromPanel}
-                  onDelete={handleDeleteFromPanel}
-                  isLoading={effectiveSelectedProjectId !== null && isDetailLoading}
-                />
+              {/* Side Panel - hidden on mobile, visible on desktop */}
+              <div className="hidden min-w-0 flex-col lg:flex lg:w-[30%] lg:self-stretch">
+                <div className="flex h-full overflow-hidden">
+                  <ProjectDetailPanel
+                    project={projectDetail as ApiProjectDetail | null}
+                    hasProjects={projects.length > 0}
+                    onEdit={handleEditFromPanel}
+                    onDelete={handleDeleteFromPanel}
+                    isLoading={effectiveSelectedProjectId !== null && isDetailLoading}
+                  />
+                </div>
               </div>
             </div>
 
             {/* Pagination */}
-            <div className="mt-4">
+            <div className="mt-4 shrink-0">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -300,23 +420,40 @@ export function ProjectManagementPage() {
       </div>
 
       {/* Edit Modal */}
-      {editingProject && (
-        <EditProjectModal
-          project={editingProject}
-          open={editingProject !== null}
-          onClose={() => setEditingProject(null)}
-          onSuccess={handleEditSuccess}
-        />
-      )}
+      <PermissionGuard permission={PERMISSIONS.PROJECTS.MANAGE}>
+        {editingProject && (
+          <EditProjectModal
+            project={editingProject}
+            open={editingProject !== null}
+            onClose={() => setEditingProject(null)}
+            onSuccess={handleEditSuccess}
+          />
+        )}
+      </PermissionGuard>
 
       {/* Delete Confirmation Modal */}
-      {deletingProject && (
-        <DeleteProjectConfirmationModal
-          open={deletingProject !== null}
-          projectName={deletingProject.name}
-          onConfirm={handleDeleteConfirm}
-          onCancel={handleDeleteCancel}
-          isLoading={deleteMutation.isPending}
+      <PermissionGuard permission={PERMISSIONS.PROJECTS.MANAGE}>
+        {deletingProject && (
+          <DeleteProjectConfirmationModal
+            open={deletingProject !== null}
+            projectName={deletingProject.name}
+            onConfirm={handleDeleteConfirm}
+            onCancel={handleDeleteCancel}
+            isLoading={deleteMutation.isPending}
+          />
+        )}
+      </PermissionGuard>
+
+      {/* Project Detail Modal - shown on mobile when project is clicked */}
+      {showDetailModal && (
+        <ProjectDetailModal
+          open={showDetailModal}
+          onClose={() => setShowDetailModal(false)}
+          project={projectDetail as ApiProjectDetail | null}
+          hasProjects={projects.length > 0}
+          onEdit={handleEditFromPanel}
+          onDelete={handleDeleteFromPanel}
+          isLoading={effectiveSelectedProjectId !== null && isDetailLoading}
         />
       )}
     </div>

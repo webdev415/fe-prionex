@@ -75,6 +75,8 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       phone: user?.phone || '',
       language: (user?.language as 'uk' | 'ru' | 'en') || 'uk',
       timezone: user?.timezone || 'Europe/Kyiv',
+      asterisk_extension: user?.asterisk_extension || '',
+      is_agent: user?.is_agent || false,
     },
   })
 
@@ -89,6 +91,8 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
         phone: user.phone || '',
         language: (user.language as 'uk' | 'ru' | 'en') || 'uk',
         timezone: user.timezone || 'Europe/Kyiv',
+        asterisk_extension: user.asterisk_extension || '',
+        is_agent: user.is_agent || false,
       })
     }
   }, [user, reset])
@@ -112,6 +116,8 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       phone: data.phone,
       language: data.language,
       timezone: data.timezone,
+      asterisk_extension: data.asterisk_extension || undefined,
+      is_agent: data.is_agent,
     }
 
     // Build project assignments array from all selected projects
@@ -145,7 +151,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
       {/* User Credentials Section */}
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="username">Username:</Label>
             <Input id="username" value={user.username} disabled className="mt-1 bg-gray-50" />
@@ -172,7 +178,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
       {/* Name Fields Section */}
       <div className="mt-4 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="first_name" required>
               First Name:
@@ -208,7 +214,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="middle_name">Middle Name:</Label>
             <Input
@@ -242,7 +248,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
       {/* Preferences Section */}
       <div className="mt-4 space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="language" required>
               Language:
@@ -305,6 +311,46 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
         </div>
       </div>
 
+      {/* Call Settings Section */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="asterisk_extension">{t('pages.users.forms.asteriskExtension')}</Label>
+            <Input
+              id="asterisk_extension"
+              placeholder="1001"
+              {...register('asterisk_extension')}
+              aria-invalid={!!errors.asterisk_extension}
+              variant={errors.asterisk_extension ? 'error' : 'default'}
+              className="mt-1"
+            />
+            {errors.asterisk_extension && (
+              <p className="mt-1 text-sm text-red-500">{errors.asterisk_extension.message}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              {t('pages.users.forms.helpers.asteriskExtension')}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 pt-7">
+            <Controller
+              name="is_agent"
+              control={control}
+              render={({ field }) => (
+                <Checkbox
+                  id="is_agent"
+                  checked={field.value || false}
+                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                />
+              )}
+            />
+            <Label htmlFor="is_agent" className="mb-0 cursor-pointer">
+              {t('pages.users.forms.isAgent')}
+            </Label>
+          </div>
+        </div>
+      </div>
+
       {/* Assign Projects Section (editable, similar to CreateUserForm) */}
       <div className="mt-4 mb-0 space-y-4">
         <h3 className="text-dark-500 text-sm font-semibold">Assign Projects:</h3>
@@ -352,7 +398,10 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
               const selectedRoleId = projectRoles[projectId]
 
               return (
-                <div key={projectId} className="grid w-full grid-cols-2 items-center gap-4">
+                <div
+                  key={projectId}
+                  className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 sm:gap-4"
+                >
                   <span className="text-dark-500 text-sm font-light">{project?.name}:</span>
                   <Select
                     value={selectedRoleId?.toString() || ''}

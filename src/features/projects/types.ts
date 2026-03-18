@@ -26,7 +26,7 @@ export interface ApiProject {
 
   // Metrics
   total_clients: number
-  total_debt_amount: number
+  total_debt_amount: string
 
   // Counts
   user_count: number

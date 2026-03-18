@@ -1,14 +1,15 @@
 /**
  * ProjectSelector Component
  *
- * Dropdown component that allows users with multiple projects
- * to switch between their assigned projects.
+ * Dropdown component that allows users to view and switch
+ * between their assigned projects (shown when user has >= 1 project).
  * Uses the same style as LanguageSwitcher for consistency.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth'
 import { authApi } from '@/features/auth/api/authApi'
 import { useAuthStore } from '@/stores/authStore'
@@ -26,15 +27,29 @@ import { cn } from '@/lib/utils'
 export function ProjectSelector() {
   const { t } = useTranslation('common')
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   const [isSwitchingProject, setIsSwitchingProject] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
 
   // Get user's assigned projects
   const userProjects = user?.projects || []
-  const hasMultipleProjects = userProjects.length > 1
+  const hasProjects = userProjects.length >= 1
   const currentProject = userProjects.find((p) => p.id === user?.active_project_id)
 
-  // Don't render if user has only one project or no projects
-  if (!hasMultipleProjects || !currentProject) {
+  // Close dropdown on window resize to prevent positioning issues
+  useEffect(() => {
+    const handleResize = () => {
+      if (isOpen) {
+        setIsOpen(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isOpen])
+
+  // Don't render if user has no projects or no current project
+  if (!hasProjects || !currentProject) {
     return null
   }
 
@@ -83,13 +98,18 @@ export function ProjectSelector() {
           permissions: backendUser.permissions || [],
           createdAt: backendUser.created_at,
           updatedAt: backendUser.created_at,
+          timezone: backendUser.timezone,
         }
 
         // Update store state directly
         useAuthStore.setState({ user: updatedUser, hasCheckedAuth: true })
+
+        // Clear all React Query cache so data re-fetches with new project context
+        queryClient.removeQueries()
       } catch (meError) {
         console.warn('Failed to fetch updated user data after project switch:', meError)
-        // Still show success since the switch worked, just couldn't refresh user data
+        // Still clear cache even if user fetch failed — token was already updated
+        queryClient.removeQueries()
       }
 
       toast.success(
@@ -114,23 +134,22 @@ export function ProjectSelector() {
   }
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu modal={false} open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors',
-            'bg-secondary-800 text-white hover:opacity-90',
+            'text-secondary-800 inline-flex cursor-pointer items-center gap-1.5 rounded-md px-1 py-0 text-lg font-medium hover:opacity-90',
             isSwitchingProject && 'cursor-not-allowed opacity-50'
           )}
           disabled={isSwitchingProject}
         >
-          <span className="max-w-[120px] truncate font-medium">{currentProject.name}</span>
-          <Icons.ArrowDown size={14} strokeWidth={1.5} className="text-white" />
+          <span className={cn('max-w-[220px] truncate text-center')}>{currentProject.name}</span>
+          <Icons.ArrowDown size={18} strokeWidth={1.5} className={'text-secondary-800'} />
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align={'center'} className={cn('w-56')}>
         {userProjects.map((project) => {
           const isActive = project.id === user?.active_project_id
           const projectRole = project.roles?.[0]

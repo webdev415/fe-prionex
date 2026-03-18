@@ -10,6 +10,7 @@ import { usersApi } from '../api/usersApi'
 import { usersKeys } from './useUsers'
 import { rolesKeys } from '@/features/roles/hooks/useRoles'
 import { getErrorMessage } from '@/lib/errors'
+import { useAuthStore } from '@/stores/authStore'
 import type { UpdateUserInput } from '../types'
 
 /**
@@ -32,6 +33,8 @@ import type { UpdateUserInput } from '../types'
  */
 export function useUpdateUser() {
   const queryClient = useQueryClient()
+  const currentUser = useAuthStore((state) => state.user)
+  const refreshUser = useAuthStore((state) => state.refreshUser)
 
   return useMutation({
     mutationFn: ({ userId, data }: { userId: number; data: UpdateUserInput }) =>
@@ -46,6 +49,10 @@ export function useUpdateUser() {
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
       // Invalidate all role detail queries (including users) to update role user lists
       queryClient.invalidateQueries({ queryKey: rolesKeys.details() })
+      // If the updated user is the current user, refresh the auth store
+      if (currentUser && String(variables.userId) === currentUser.id) {
+        refreshUser()
+      }
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))

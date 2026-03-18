@@ -7,6 +7,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Modal, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import {
@@ -18,316 +19,516 @@ import {
 } from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { useSMSTemplates, useSendSMS, useSMSConfig, useSMSHistory } from '@/features/sms'
+import { useAuthStore } from '@/stores/authStore'
+import { useClient } from '@/features/clients/hooks/useClients'
+import { authApi } from '@/features/auth/api/authApi'
+import { useQuery } from '@tanstack/react-query'
+import { getErrorMessage } from '@/lib/errors'
+import { formatDate } from '@/lib/formatters'
 
 export interface SendSMSModalProps {
   open: boolean
   onClose: () => void
+  clientId: number
   clientName: string
   phoneNumber: string
-  debtAmount?: number
-  onSend: (data: {
-    template: string
-    message: string
-    clientName: string
-    debtAmount: string
-  }) => void
+  loans?: Array<{ id: number; loanNumber: string; totalToRepay: number }>
+  onSent?: () => void
 }
 
-const SMS_TEMPLATES = [
-  'Payment Reminder',
-  'Payment Overdue',
-  'Payment Confirmation',
-  'Loan Information',
-  'Custom Message',
-]
-
-// Mock daily SMS limit tracking (in real app, this would come from API)
-const DAILY_SMS_LIMIT = 3
-let dailySMSCount = 1 // Mock: start with 1 sent today
-
-const calculateSMSParts = (message: string): number => {
-  const hasCyrillic = /[А-Яа-яЁё]/.test(message)
-  const maxLength = hasCyrillic ? 70 : 160
-  return Math.ceil(message.length / maxLength)
+/**
+ * Formats a full name (FirstName MiddleName LastName) into
+ * "LastName F. M." format as required for SMS display.
+ * Falls back to original string if parsing fails.
+ */
+const formatClientNameInitials = (fullName: string): string => {
+  const parts = fullName.trim().split(/\s+/)
+  if (parts.length === 3) {
+    const [firstName, middleName, lastName] = parts
+    return `${lastName} ${firstName[0].toUpperCase()}. ${middleName[0].toUpperCase()}.`
+  }
+  if (parts.length === 2) {
+    const [firstName, lastName] = parts
+    return `${lastName} ${firstName[0].toUpperCase()}.`
+  }
+  return fullName
 }
 
-const calculateCost = (smsParts: number): number => {
-  return smsParts * 1.0 // 1.00 per SMS part
+// Render template message by replacing variables with actual values
+const renderTemplateMessage = (
+  templateText: string,
+  variables: {
+    client_name?: string
+    debt_amount?: string
+    operator_name?: string
+    [key: string]: string | undefined
+  }
+): string => {
+  let rendered = templateText
+  // Replace all variables in format {variable_name}
+  rendered = rendered.replace(/\{(\w+)\}/g, (match, varName) => {
+    return variables[varName] !== undefined && variables[varName] !== ''
+      ? variables[varName]!
+      : match
+  })
+  return rendered
 }
 
 export function SendSMSModal({
   open,
   onClose,
+  clientId,
   clientName,
   phoneNumber,
-  debtAmount = 0,
-  onSend,
+  loans = [],
+  onSent,
 }: SendSMSModalProps) {
   const { t } = useTranslation('common')
-  const [template, setTemplate] = useState<string>('Payment Reminder')
-  const [message, setMessage] = useState<string>('')
-  const [clientNameField, setClientNameField] = useState<string>(clientName)
-  const [debtAmountField, setDebtAmountField] = useState<string>(
-    debtAmount > 0 ? debtAmount.toFixed(2) : ''
+  const { user } = useAuthStore()
+
+  // API hooks
+  const { data: templatesData, isLoading: isLoadingTemplates } = useSMSTemplates(
+    user?.active_project_id ? { project_id: parseInt(user.active_project_id) } : undefined
   )
-  const [smsSentToday, setSmsSentToday] = useState<number>(dailySMSCount)
+  const { data: configData } = useSMSConfig(
+    user?.active_project_id ? parseInt(user.active_project_id) : undefined
+  )
+  const sendSMSMutation = useSendSMS()
+
+  // Fetch client details to get debt information (contract_number, due_date)
+  const { data: clientData } = useClient(clientId, !!clientId && open)
+
+  // Fetch current user details to get operator phone
+  const { data: currentUserData } = useQuery({
+    queryKey: ['current-user'],
+    queryFn: () => authApi.me(),
+    enabled: open, // Only fetch when modal is open
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  })
+
+  // Get SMS history for today's count
+  const today = new Date().toISOString().split('T')[0]
+  const { data: historyData } = useSMSHistory(clientId, {
+    from_date: today,
+    to_date: today,
+  })
+
+  // Memoize templates to avoid recreating array on every render
+  const templates = useMemo(() => templatesData?.templates || [], [templatesData?.templates])
+  const dailyLimit = configData?.max_sms_per_recipient_per_day || 3
+  const smsSentToday = historyData?.total || 0
+
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
+  const [message, setMessage] = useState<string>('')
+  const [customMessage, setCustomMessage] = useState<string>('')
+  const [messageEdited, setMessageEdited] = useState<boolean>(false)
+  const [clientNameField, setClientNameField] = useState<string>(
+    formatClientNameInitials(clientName)
+  )
+  const [selectedLoanId, setSelectedLoanId] = useState<number | null>(
+    loans.length > 0 ? loans[0].id : null
+  )
+
+  const selectedLoan = loans.find((l) => l.id === selectedLoanId) ?? loans[0] ?? null
 
   // Reset form when modal opens/closes
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (open) {
-      setTemplate('Payment Reminder')
-      setMessage('Dear Ivan, we remind you of the debt of 25,000 UAH Contact: Maria')
-      setClientNameField(clientName)
-      setDebtAmountField(debtAmount > 0 ? debtAmount.toFixed(2) : '')
-      setSmsSentToday(dailySMSCount)
+      // Reset form state when modal opens - this is intentional behavior
+      setSelectedTemplateId(null)
+      setMessage('')
+      setCustomMessage('')
+      setMessageEdited(false)
+      setClientNameField(formatClientNameInitials(clientName))
+      setSelectedLoanId(loans.length > 0 ? loans[0].id : null)
+
+      // Set default template if available
+      if (templates.length > 0) {
+        const defaultTemplate =
+          templates.find((tpl) => tpl.name === 'Payment Reminder') || templates[0]
+        setSelectedTemplateId(defaultTemplate.id)
+        setMessage(defaultTemplate.message_text)
+        setMessageEdited(false)
+      }
     } else {
       setMessage('')
+      setCustomMessage('')
+      setMessageEdited(false)
     }
-  }, [open, clientName, debtAmount])
+  }, [open, clientName, loans, templates])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Calculate message metrics
-  const messageMetrics = useMemo(() => {
-    const hasCyrillic = /[А-Яа-яЁё]/.test(message)
-    const maxChars = hasCyrillic ? 70 : 160
-    const charCount = message.length
-    const smsParts = calculateSMSParts(message)
-    const cost = calculateCost(smsParts)
-    const exceedsLimit = charCount > maxChars
+  // Update message when template changes
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (selectedTemplateId && templates.length > 0) {
+      const template = templates.find((t) => t.id === selectedTemplateId)
+      if (template) {
+        // Update message when template selection changes - this is intentional behavior
+        setMessage(template.message_text)
+        setMessageEdited(false)
+      }
+    }
+  }, [selectedTemplateId, templates])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Calculate variable values from client data
+  const variableValues = useMemo(() => {
+    // Get contract_number from first debt (if available)
+    const contractNumber =
+      clientData?.debts && clientData.debts.length > 0 ? clientData.debts[0].contract_number : ''
+
+    // Get due_date from first debt's debt_close_date or calculate from debt_start_date
+    // Use debt_close_date as due_date if available, otherwise calculate from debt_start_date + 30 days
+    // Fallback to purchase_date + 30 days if other dates are not available
+    let dueDate = ''
+    if (clientData?.debts && clientData.debts.length > 0) {
+      const firstDebt = clientData.debts[0]
+
+      // Debug: Log debt data to see what's available
+      if (import.meta.env.DEV) {
+        console.log('Debt data for due_date:', {
+          debt_close_date: firstDebt.debt_close_date,
+          debt_start_date: firstDebt.debt_start_date,
+          purchase_date: firstDebt.purchase_date,
+        })
+      }
+
+      // Try debt_close_date first (this is the actual due date)
+      if (firstDebt.debt_close_date) {
+        try {
+          const date = new Date(firstDebt.debt_close_date)
+          if (!isNaN(date.getTime())) {
+            dueDate = formatDate(firstDebt.debt_close_date)
+          } else {
+            console.warn('Invalid debt_close_date:', firstDebt.debt_close_date)
+          }
+        } catch (e) {
+          console.warn('Failed to parse debt_close_date:', firstDebt.debt_close_date, e)
+        }
+      }
+
+      // If debt_close_date is not available, try debt_start_date + 30 days
+      if (!dueDate && firstDebt.debt_start_date) {
+        try {
+          const startDate = new Date(firstDebt.debt_start_date)
+          if (!isNaN(startDate.getTime())) {
+            const dueDateObj = new Date(startDate)
+            dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
+            dueDate = formatDate(dueDateObj.toISOString())
+          } else {
+            console.warn('Invalid debt_start_date:', firstDebt.debt_start_date)
+          }
+        } catch (e) {
+          console.warn('Failed to parse debt_start_date:', firstDebt.debt_start_date, e)
+        }
+      }
+
+      // Fallback to purchase_date + 30 days if other dates are not available
+      if (!dueDate && firstDebt.purchase_date) {
+        try {
+          const purchaseDate = new Date(firstDebt.purchase_date)
+          if (!isNaN(purchaseDate.getTime())) {
+            const dueDateObj = new Date(purchaseDate)
+            dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
+            dueDate = formatDate(dueDateObj.toISOString())
+          } else {
+            console.warn('Invalid purchase_date:', firstDebt.purchase_date)
+          }
+        } catch (e) {
+          console.warn('Failed to parse purchase_date:', firstDebt.purchase_date, e)
+        }
+      }
+
+      // Debug: Log final dueDate value
+      if (import.meta.env.DEV) {
+        console.log('Calculated dueDate:', dueDate)
+      }
+    } else {
+      if (import.meta.env.DEV) {
+        console.warn('No debt data available for due_date calculation')
+      }
+    }
+
+    // Get operator_phone from user API response
+    const operatorPhone = currentUserData?.data?.phone || ''
 
     return {
-      charCount,
-      maxChars,
-      smsParts,
-      cost,
-      hasCyrillic,
-      exceedsLimit,
+      client_name: clientNameField,
+      debt_amount: selectedLoan ? Number(selectedLoan.totalToRepay).toFixed(2) : '',
+      operator_name: user?.username || '',
+      operator_phone: operatorPhone,
+      due_date: dueDate,
+      contract_number: contractNumber,
     }
-  }, [message])
+  }, [clientData, clientNameField, selectedLoan, user?.username, currentUserData])
 
-  const isDailyLimitReached = smsSentToday >= DAILY_SMS_LIMIT
-  const canSend = !isDailyLimitReached && message.trim().length > 0
+  // Render template message with variables replaced, or use custom message
+  // If message was manually edited, use it as-is (don't re-render)
+  const displayMessage = useMemo(() => {
+    if (selectedTemplateId && message) {
+      if (messageEdited) {
+        // Message was manually edited, use it as-is
+        return message
+      }
+      // Render template with all variables
+      return renderTemplateMessage(message, variableValues)
+    }
+    return customMessage
+  }, [selectedTemplateId, message, messageEdited, customMessage, variableValues])
 
-  const handleSend = () => {
+  const isDailyLimitReached = smsSentToday >= dailyLimit
+  const canSend =
+    !isDailyLimitReached && displayMessage.trim().length > 0 && !sendSMSMutation.isPending
+
+  const handleSend = async () => {
     if (!canSend) return
 
-    onSend({
-      template,
-      message,
-      clientName: clientNameField,
-      debtAmount: debtAmountField,
-    })
-    // Increment daily count (mock)
-    dailySMSCount++
-    setSmsSentToday(dailySMSCount)
-    onClose()
-  }
+    try {
+      const request =
+        selectedTemplateId && !messageEdited
+          ? {
+              client_id: clientId,
+              to_number: phoneNumber || undefined,
+              template_id: selectedTemplateId,
+              variables: {
+                client_name: variableValues.client_name,
+                debt_amount: variableValues.debt_amount || '0',
+                operator_name: variableValues.operator_name,
+                operator_phone: variableValues.operator_phone,
+                due_date: variableValues.due_date,
+                contract_number: variableValues.contract_number,
+              },
+            }
+          : selectedTemplateId && messageEdited
+            ? {
+                // If template was selected but edited, send as custom message but include template_id to preserve template_name
+                client_id: clientId,
+                to_number: phoneNumber || undefined,
+                custom_message: displayMessage,
+                template_id: selectedTemplateId, // Include template_id so backend can save template_name
+              }
+            : {
+                client_id: clientId,
+                to_number: phoneNumber || undefined,
+                custom_message: displayMessage,
+              }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uk-UA', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-      useGrouping: true,
-    })
-      .format(amount)
-      .replace(/,/g, ' ')
+      const response = await sendSMSMutation.mutateAsync(request)
+
+      // Check the status field in response
+      if (response.status === 'failed') {
+        const isDuplicate =
+          response.error_message?.toUpperCase().includes('DUPLICATE') ||
+          response.error_code?.toUpperCase().includes('DUPLICATE')
+
+        toast.error(
+          isDuplicate
+            ? t('pages.clients.modals.sendSMS.smsFailedDuplicate')
+            : t('pages.clients.modals.sendSMS.smsFailedToSend')
+        )
+        // Don't close modal - let user try again or check configuration
+        return
+      }
+
+      // Success case
+      toast.success(
+        t('pages.clients.modals.sendSMS.smsSentSuccessfully') || 'SMS sent successfully'
+      )
+      onSent?.()
+      onClose()
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+    }
   }
 
   return (
-    <Modal open={open} onClose={onClose} maxWidth="xl" className="p-10">
-      <div className="flex flex-col gap-6">
-        {/* Header */}
-        <div className="flex items-center justify-between self-stretch">
-          <div className="flex items-center gap-6">
-            <div className="bg-primary-300 flex h-12 w-12 items-center justify-center rounded-full">
-              <Icons.ChatFeedback01 size={24} className="text-dark-500" strokeWidth={1.5} />
-            </div>
-            <span className="text-dark-500 text-2xl font-medium">
-              {t('pages.clients.modals.sendSMS.title')}
-            </span>
+    <Modal open={open} onClose={onClose} maxWidth="xl" className="p-4 sm:p-6 md:p-10">
+      {/* Header */}
+      <div className="flex flex-col items-start justify-between gap-3 self-stretch sm:flex-row sm:items-center sm:gap-0">
+        <div className="flex items-center gap-3 sm:gap-6">
+          <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full sm:h-12 sm:w-12">
+            <Icons.ChatFeedback01 size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
           </div>
-          <div className="flex items-center justify-end gap-1 pr-4">
-            <div
-              className={cn(
-                'h-2 w-2 rounded-full',
-                isDailyLimitReached ? 'bg-error-500' : 'bg-success-500'
-              )}
-            />
-            <span className="text-dark-500 text-base font-light">
-              {t('pages.clients.modals.sendSMS.smsSentToday')}:{' '}
-              <span className="font-medium">
-                {smsSentToday}/{DAILY_SMS_LIMIT}
-              </span>
-            </span>
-          </div>
+          <span className="text-dark-500 text-xl font-medium sm:text-2xl">
+            {t('pages.clients.modals.sendSMS.title')}
+          </span>
         </div>
-        <div className="flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
-        {/* Content */}
-        <ModalContent className="p-0">
-          <div className="flex flex-col gap-6">
-            {/* Recipient Info */}
-            <div className="flex items-start justify-between self-stretch">
-              <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
-                {t('pages.clients.modals.sendSMS.sendSMSTo')} {clientName}
-              </span>
-              <span className="text-dark-500 text-base leading-[155%] font-light tracking-[-0.32px]">
-                {phoneNumber}
-              </span>
+        <div className="flex items-center justify-end gap-1 sm:pr-4">
+          <div
+            className={cn(
+              'h-2 w-2 rounded-full',
+              isDailyLimitReached ? 'bg-error-500' : 'bg-success-500'
+            )}
+          />
+          <span className="text-dark-500 text-xs font-light sm:text-base">
+            {t('pages.clients.modals.sendSMS.smsSentToday')}:{' '}
+            <span className="font-medium">
+              {smsSentToday}/{dailyLimit}
+            </span>
+          </span>
+        </div>
+      </div>
+      <div className="flex h-px flex-col items-start gap-2.5 self-stretch bg-gray-200 p-0"></div>
+      {/* Content */}
+      <ModalContent className="p-0">
+        <div className="flex flex-col gap-4 sm:gap-6">
+          {/* Recipient Info */}
+          <div className="flex flex-col items-start justify-between gap-2 self-stretch sm:flex-row sm:items-center">
+            <span className="text-dark-500 text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
+              {t('pages.clients.modals.sendSMS.sendSMSTo')} {clientName}
+            </span>
+            <span className="text-dark-500 text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
+              {phoneNumber}
+            </span>
+          </div>
+          {/* Daily Limit Reached State */}
+          {isDailyLimitReached ? (
+            <div className="flex flex-col items-center gap-4 self-stretch rounded-xl border border-white bg-white/50 px-4 py-4 sm:gap-5 sm:px-6 sm:py-5">
+              <Icons.MailBlock02
+                size={40}
+                className="text-error-500 sm:size-12"
+                strokeWidth={0.5}
+              />
+              <p className="text-error-500 self-stretch text-center text-base leading-[132%] font-light tracking-[-0.4px] sm:text-xl">
+                {t('pages.clients.modals.sendSMS.dailyLimitReached')}: {smsSentToday}/{dailyLimit}{' '}
+                {t('pages.clients.modals.sendSMS.smsSentToThisNumber')}
+              </p>
+              <p className="text-dark-500 self-stretch text-center text-sm leading-[150%] font-light tracking-[-0.36px] sm:text-[18px]">
+                {t('pages.clients.modals.sendSMS.nextSMSAvailableTomorrow')}{' '}
+                <span className="font-medium">00:00</span>
+              </p>
             </div>
-            {/* Daily Limit Reached State */}
-            {isDailyLimitReached ? (
-              <div className="flex flex-col items-center gap-5 self-stretch rounded-xl border border-white bg-white/50 px-6 py-5">
-                <Icons.MailBlock02 size={48} className="text-error-500" strokeWidth={0.5} />
-                <p className="text-error-500 self-stretch text-center text-xl leading-[132%] font-light tracking-[-0.4px]">
-                  {t('pages.clients.modals.sendSMS.dailyLimitReached')}: {smsSentToday}/
-                  {DAILY_SMS_LIMIT} {t('pages.clients.modals.sendSMS.smsSentToThisNumber')}
-                </p>
-                <p className="text-dark-500 self-stretch text-center text-[18px] leading-[150%] font-light tracking-[-0.36px]">
-                  {t('pages.clients.modals.sendSMS.nextSMSAvailableTomorrow')}{' '}
-                  <span className="font-medium">00:00</span>
-                </p>
+          ) : (
+            <>
+              {/* Template Selection */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-950 sm:text-sm">
+                  {t('pages.clients.modals.sendSMS.template')}:
+                </label>
+                <Select
+                  value={selectedTemplateId?.toString() || 'custom'}
+                  onValueChange={(value) => {
+                    if (value === 'custom') {
+                      setSelectedTemplateId(null)
+                      setCustomMessage('')
+                    } else {
+                      setSelectedTemplateId(parseInt(value, 10))
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full" disabled={isLoadingTemplates}>
+                    <SelectValue
+                      placeholder={
+                        isLoadingTemplates
+                          ? t('pages.clients.modals.sendSMS.loadingTemplates') || 'Loading...'
+                          : t('pages.clients.modals.sendSMS.selectTemplate')
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="custom">
+                      {t('pages.clients.modals.sendSMS.customMessage') || 'Custom Message'}
+                    </SelectItem>
+                    {templates.map((tpl) => (
+                      <SelectItem key={tpl.id} value={tpl.id.toString()}>
+                        {tpl.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            ) : (
-              <>
-                {/* Template */}
-                <div className="flex flex-col gap-2">
-                  <label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
-                    {t('pages.clients.modals.sendSMS.template')}:
-                  </label>
-                  <Select value={template} onValueChange={setTemplate}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder={t('pages.clients.modals.sendSMS.selectTemplate')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SMS_TEMPLATES.map((tpl) => (
-                        <SelectItem key={tpl} value={tpl}>
-                          {tpl}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
 
-                {/* Message */}
+              {/* Message */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-950 sm:text-sm">
+                  {t('pages.clients.modals.sendSMS.message')}:
+                </label>
+                <textarea
+                  value={displayMessage}
+                  onChange={(e) => {
+                    if (selectedTemplateId) {
+                      setMessage(e.target.value)
+                      setMessageEdited(true)
+                    } else {
+                      setCustomMessage(e.target.value)
+                    }
+                  }}
+                  disabled={!!selectedTemplateId && isLoadingTemplates}
+                  placeholder={t('pages.clients.modals.sendSMS.typeYourMessageHere')}
+                  className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[100px] resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 sm:min-h-[120px] sm:text-sm"
+                />
+              </div>
+
+              {/* Client Name and Loan Number */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
-                    {t('pages.clients.modals.sendSMS.message')}:
+                  <label className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-950 sm:text-sm">
+                    {t('pages.clients.modals.sendSMS.clientName')}:
                   </label>
-                  <textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder={t('pages.clients.modals.sendSMS.typeYourMessageHere')}
-                    className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[120px] resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none"
+                  <input
+                    type="text"
+                    value={clientNameField}
+                    onChange={(e) => setClientNameField(e.target.value)}
+                    readOnly
+                    className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none sm:text-sm"
                   />
                 </div>
-
-                {/* Message Metrics */}
-                <div className="flex flex-col items-start justify-center gap-5 self-stretch rounded-xl border border-white bg-white/50 px-6 py-5">
-                  <div className="flex items-center gap-5 self-stretch">
-                    <div className="flex flex-1 items-center gap-1">
-                      <div
-                        className={cn(
-                          'h-2 w-2 rounded-full',
-                          messageMetrics.exceedsLimit ? 'bg-error-500' : 'bg-success-500'
-                        )}
-                      />
-                      <span className="text-dark-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
-                        {messageMetrics.charCount}/{messageMetrics.maxChars}{' '}
-                        {t('pages.clients.modals.sendSMS.characters')}
-                      </span>
-                    </div>
-                    <div className="flex flex-1 items-center gap-2">
-                      <Icons.TypeCursor size={20} className="text-gray-600" />
-                      <span className="text-dark-500 text-sm font-light">
-                        {t('pages.clients.modals.sendSMS.script')}:{' '}
-                        <span className="text-dark-500 font-medium">
-                          {messageMetrics.hasCyrillic
-                            ? t('pages.clients.modals.sendSMS.cyrillic')
-                            : t('pages.clients.modals.sendSMS.latin')}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-5 self-stretch">
-                    <div className="flex flex-1 items-center gap-2">
-                      <Icons.Mail size={20} className="text-gray-600" />
-                      <span className="text-dark-500 text-sm font-medium">
-                        {messageMetrics.smsParts}{' '}
-                        <span className="font-light">
-                          {messageMetrics.smsParts !== 1
-                            ? t('pages.clients.modals.sendSMS.smsParts')
-                            : t('pages.clients.modals.sendSMS.smsPart')}
-                        </span>
-                      </span>
-                    </div>
-                    <div className="flex flex-1 items-center gap-2">
-                      <Icons.Money04 size={20} className="text-gray-600" />
-                      <span className="text-dark-500 text-sm font-light">
-                        {t('pages.clients.modals.sendSMS.cost')}:{' '}
-                        <span className="text-dark-500 font-medium">
-                          ₴{formatCurrency(messageMetrics.cost)}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
-                  {/* Warning if exceeds limit */}
-                  {messageMetrics.exceedsLimit && (
-                    <div className="flex items-center justify-center gap-2 self-stretch">
-                      <Icons.Warning size={20} className="text-warning-500" strokeWidth={2} />
-                      <span className="text-error-500 text-sm font-medium">
-                        {t('pages.clients.modals.sendSMS.messageWillBeSplit')}{' '}
-                        {messageMetrics.smsParts} {t('pages.clients.modals.sendSMS.smsParts')}
-                      </span>
-                    </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-950 sm:text-sm">
+                    {t('pages.clients.modals.sendSMS.loanNumber')}:
+                  </label>
+                  {loans.length > 0 ? (
+                    <Select
+                      value={selectedLoanId?.toString() ?? ''}
+                      onValueChange={(value) => setSelectedLoanId(Number(value))}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="—" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {loans.map((loan) => (
+                          <SelectItem key={loan.id} value={loan.id.toString()}>
+                            {loan.loanNumber} — ₴{Number(loan.totalToRepay).toFixed(2)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <input
+                      type="text"
+                      value="—"
+                      readOnly
+                      className="text-dark-500 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light sm:text-sm"
+                    />
                   )}
                 </div>
+              </div>
+            </>
+          )}
+        </div>
+      </ModalContent>
 
-                {/* Client Name and Debt Amount */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
-                      {t('pages.clients.modals.sendSMS.clientName')}:
-                    </label>
-                    <input
-                      type="text"
-                      value={clientNameField}
-                      onChange={(e) => setClientNameField(e.target.value)}
-                      className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light focus:ring-2 focus:outline-none"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-950">
-                      {t('pages.clients.modals.sendSMS.debtAmount')}:
-                    </label>
-                    <input
-                      type="text"
-                      value={debtAmountField}
-                      onChange={(e) => setDebtAmountField(e.target.value)}
-                      className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light focus:ring-2 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </ModalContent>
-
-        {/* Footer */}
-        <ModalFooter>
-          <Button variant="cancel" size="md" onClick={onClose} className="flex-1">
-            {t('actions.cancel')}
-          </Button>
-          <Button
-            variant="primary"
-            size="md"
-            onClick={handleSend}
-            disabled={!canSend}
-            className="flex-1"
-            leftIcon={<Icons.MailSend01 size={20} className="mr-2" />}
-          >
-            {t('pages.clients.modals.sendSMS.sendSMS')}
-          </Button>
-        </ModalFooter>
-      </div>
+      {/* Footer */}
+      <ModalFooter className="flex-col gap-2 sm:flex-row sm:gap-3">
+        <Button variant="cancel" size="sm" onClick={onClose} className="w-full rounded-md">
+          {t('actions.cancel')}
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleSend}
+          disabled={!canSend || sendSMSMutation.isPending}
+          className="w-full rounded-md"
+          leftIcon={<Icons.MailSend01 size={18} className="sm:size-5" />}
+        >
+          {sendSMSMutation.isPending
+            ? t('pages.clients.modals.sendSMS.sending') || 'Sending...'
+            : t('pages.clients.modals.sendSMS.sendSMS')}
+        </Button>
+      </ModalFooter>
     </Modal>
   )
 }

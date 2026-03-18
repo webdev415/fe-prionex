@@ -5,18 +5,19 @@
  * Integrated with real API using React Query.
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAuth } from '@/features/auth'
 import { useUsers } from '@/features/users/hooks/useUsers'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { CreateUserModal } from './components/CreateUserModal'
 import { UserDetailModal } from './components/UserDetailModal'
 import { EditUserModal } from './components/EditUserModal'
-import UnlockAccountModal from './components/UnlockAccountModal'
+import ChangeStatusModal from './components/ChangeStatusModal'
 import type { ApiUser } from '@/features/users/types'
 import { Icons } from '@/lib/icons'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -27,6 +28,12 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { ErrorState } from '@/components/ErrorState'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { DoubleButton } from '@/components/ui/DoubleButton'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -34,18 +41,59 @@ export function UserManagementPage() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
   const { startImpersonation, user: currentUser, isLoading: authLoading } = useAuth()
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+
+  // URL state for pagination and search
+  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
+  const [pageSize, setPageSize] = useURLState<number>('pageSize', DEFAULT_PAGE_SIZE)
+  const [searchQuery, setSearchQuery] = useURLState<string>('search', '')
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'user-management-state',
+    {
+      currentPage,
+      pageSize,
+      searchQuery,
+    },
+    {
+      currentPage: setCurrentPage,
+      pageSize: setPageSize,
+      searchQuery: setSearchQuery,
+    }
+  )
+
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [viewUserId, setViewUserId] = useState<number | null>(null)
   const [editUserId, setEditUserId] = useState<number | null>(null)
-  const [unlockUser, setUnlockUser] = useState<ApiUser | null>(null)
+  const [changeStatusUser, setChangeStatusUser] = useState<ApiUser | null>(null)
+  const [newStatus, setNewStatus] = useState<'active' | 'inactive'>('active')
   const [impersonatingUserId, setImpersonatingUserId] = useState<number | null>(null)
+  const [openDropdownUserId, setOpenDropdownUserId] = useState<number | null>(null)
 
-  // Fetch users with pagination
+  // Close dropdown when screen size crosses breakpoint (in either direction)
+  useEffect(() => {
+    let wasMobile = window.innerWidth < 1024 // lg breakpoint
+
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 1024
+
+      // Close dropdown if transitioning across breakpoint (mobile <-> desktop)
+      if (wasMobile !== isMobile && openDropdownUserId !== null) {
+        setOpenDropdownUserId(null)
+      }
+
+      wasMobile = isMobile
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [openDropdownUserId])
+
+  // Fetch users with pagination and search
   const { data, isLoading, isError, error } = useUsers({
     page: currentPage,
     page_size: pageSize,
+    search: searchQuery || undefined,
   })
 
   const users = data?.users || []
@@ -94,11 +142,13 @@ export function UserManagementPage() {
     }
   }
 
-  const handleUnlockToggle = (user: ApiUser, checked: boolean) => {
-    // Only support unlocking via confirmation modal; no manual locking from UI.
-    if (checked && !isUnlocked(user)) {
-      setUnlockUser(user)
-    }
+  const handleStatusToggle = (user: ApiUser, checked: boolean) => {
+    // Toggle between active/inactive status
+    const targetStatus = checked ? 'active' : 'inactive'
+
+    // Open confirmation modal
+    setChangeStatusUser(user)
+    setNewStatus(targetStatus)
   }
 
   // Map status for StatusBadge component
@@ -111,10 +161,13 @@ export function UserManagementPage() {
     return 'disabled'
   }
 
-  // Check if user is unlocked (for toggle state)
-  const isUnlocked = (user: ApiUser) => {
-    if (!user.locked_until) return true
-    return new Date(user.locked_until) <= new Date()
+  const handleSearch = useCallback(() => {
+    setCurrentPage(1)
+  }, [setCurrentPage])
+
+  // Check if user is active (for toggle state)
+  const isActive = (user: ApiUser) => {
+    return user.status === 'active'
   }
 
   // Table columns definition
@@ -127,13 +180,7 @@ export function UserManagementPage() {
     {
       key: 'fullName',
       header: t('pages.users.tableHeaders.fullName'),
-      render: (user) => (
-        <span>
-          {user.first_name && user.last_name
-            ? `${user.first_name} ${user.last_name}`
-            : user.first_name || user.last_name || '-'}
-        </span>
-      ),
+      render: (user) => <span>{user.full_name || '-'}</span>,
     },
     {
       key: 'email',
@@ -162,6 +209,34 @@ export function UserManagementPage() {
       },
     },
     {
+      key: 'extension',
+      header: t('pages.users.tableHeaders.extension'),
+      align: 'center',
+      render: (user) => (
+        <div className="flex flex-col items-center gap-1">
+          <span className="text-sm text-gray-700">{user.asterisk_extension || '—'}</span>
+          {user.is_agent && (
+            <div className="flex items-center gap-1">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  user.agent_status === 'online'
+                    ? 'bg-green-500'
+                    : user.agent_status === 'busy'
+                      ? 'bg-yellow-500'
+                      : user.agent_status === 'on-call'
+                        ? 'bg-red-500'
+                        : 'bg-gray-400'
+                }`}
+              />
+              <span className="text-xs text-gray-500 capitalize">
+                {user.agent_status || 'offline'}
+              </span>
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
       key: 'status',
       header: t('pages.users.tableHeaders.status'),
       align: 'center',
@@ -172,51 +247,115 @@ export function UserManagementPage() {
       header: t('pages.users.tableHeaders.actions'),
       align: 'center',
       render: (user) => (
-        <div className="flex items-center justify-center gap-4">
-          <LinkButton
-            variant="regular-black"
-            size="xs"
-            onClick={() => handleView(user)}
-            leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
-          >
-            {t('pages.users.actions.view')}
-          </LinkButton>
-          <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+        <div className="flex items-center justify-center gap-2 sm:gap-4">
+          {/* Desktop: Individual link buttons */}
+          <div className="hidden items-center gap-4 lg:flex">
             <LinkButton
               variant="regular-black"
               size="xs"
-              onClick={() => handleEdit(user)}
-              leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+              onClick={() => handleView(user)}
+              leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
             >
-              {t('pages.users.actions.edit')}
+              {t('pages.users.actions.view')}
             </LinkButton>
-          </PermissionGuard>
-
-          <PermissionGuard permission={PERMISSIONS.USERS.IMPERSONATE}>
-            {currentUser?.id !== String(user.id) && (
+            <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
               <LinkButton
                 variant="regular-black"
                 size="xs"
-                onClick={() => handleImpersonate(user)}
-                disabled={authLoading || impersonatingUserId !== null}
-                leftIcon={<Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />}
+                onClick={() => handleEdit(user)}
+                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
               >
-                {impersonatingUserId === user.id
-                  ? t('pages.users.actions.impersonating')
-                  : t('pages.users.actions.impersonate')}
+                {t('pages.users.actions.edit')}
               </LinkButton>
+            </PermissionGuard>
+
+            <PermissionGuard permission={PERMISSIONS.USERS.IMPERSONATE}>
+              {currentUser?.id !== String(user.id) && (
+                <LinkButton
+                  variant="regular-black"
+                  size="xs"
+                  onClick={() => handleImpersonate(user)}
+                  disabled={authLoading || impersonatingUserId !== null}
+                  leftIcon={
+                    <Icons.SecurityValidation size={16} color="#05040D" strokeWidth={1.5} />
+                  }
+                >
+                  {impersonatingUserId === user.id
+                    ? t('pages.users.actions.impersonating')
+                    : t('pages.users.actions.impersonate')}
+                </LinkButton>
+              )}
+            </PermissionGuard>
+          </div>
+
+          {/* Mobile/Tablet: Dropdown button group */}
+          <div className="lg:hidden">
+            <DropdownMenu
+              modal={false}
+              open={openDropdownUserId === user.id}
+              onOpenChange={(open) => setOpenDropdownUserId(open ? user.id : null)}
+            >
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
+                  aria-label={t('pages.users.tableHeaders.actions')}
+                >
+                  <Icons.FilterVertical size={16} strokeWidth={1.5} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white">
+                <DropdownMenuItem
+                  onClick={() => handleView(user)}
+                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                >
+                  <Icons.View size={16} strokeWidth={1.5} />
+                  <span>{t('pages.users.actions.view')}</span>
+                </DropdownMenuItem>
+                <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+                  <DropdownMenuItem
+                    onClick={() => handleEdit(user)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                  >
+                    <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                    <span>{t('pages.users.actions.edit')}</span>
+                  </DropdownMenuItem>
+                </PermissionGuard>
+                <PermissionGuard permission={PERMISSIONS.USERS.IMPERSONATE}>
+                  {currentUser?.id !== String(user.id) && (
+                    <DropdownMenuItem
+                      onClick={() => handleImpersonate(user)}
+                      disabled={authLoading || impersonatingUserId !== null}
+                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <Icons.SecurityValidation size={16} strokeWidth={1.5} />
+                      <span>
+                        {impersonatingUserId === user.id
+                          ? t('pages.users.actions.impersonating')
+                          : t('pages.users.actions.impersonate')}
+                      </span>
+                    </DropdownMenuItem>
+                  )}
+                </PermissionGuard>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Status toggle - hide for current user */}
+          <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+            {currentUser?.id !== String(user.id) && (
+              <div className="flex items-center gap-1 sm:gap-2">
+                <label className="text-dark-500 hidden text-xs font-medium sm:inline">
+                  {t('pages.users.actions.status')}
+                </label>
+                <ToggleSwitch
+                  checked={isActive(user)}
+                  onChange={(checked) => handleStatusToggle(user, checked)}
+                  ariaLabel={`${isActive(user) ? t('pages.users.actions.deactivate') : t('pages.users.actions.activate')} user ${user.username}`}
+                />
+              </div>
             )}
           </PermissionGuard>
-          <div className="flex items-center gap-2">
-            <label className="text-dark-500 text-xs font-medium">
-              {t('pages.users.actions.unlock')}
-            </label>
-            <ToggleSwitch
-              checked={isUnlocked(user)}
-              onChange={(checked) => handleUnlockToggle(user, checked)}
-              ariaLabel={`${isUnlocked(user) ? t('pages.users.actions.lock') : t('pages.users.actions.unlock')} user ${user.username}`}
-            />
-          </div>
         </div>
       ),
     },
@@ -225,22 +364,74 @@ export function UserManagementPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-dark-500 text-2xl font-light">{t('pages.users.title')}</h1>
-          <span className="text-base font-light text-gray-500">{totalUsers}</span>
+      <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">{t('pages.users.title')}</h1>
+          <span className="text-sm font-light text-gray-500 sm:text-base">{totalUsers}</span>
         </div>
 
         <PermissionGuard permission={PERMISSIONS.USERS.CREATE}>
-          <DoubleButton
-            size="md"
-            icon={<Icons.Add size={20} strokeWidth={2} />}
-            iconPosition="left"
+          {/* Desktop: Full button with text, Mobile: Icon-only button */}
+          <div className="hidden sm:block">
+            <DoubleButton
+              size="md"
+              icon={<Icons.Add size={20} strokeWidth={2} />}
+              iconPosition="left"
+              onClick={() => setShowCreateModal(true)}
+            >
+              {t('pages.users.addNewUser')}
+            </DoubleButton>
+          </div>
+          {/* Mobile: Icon-only button */}
+          <button
             onClick={() => setShowCreateModal(true)}
+            className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+            aria-label={t('pages.users.addNewUser')}
           >
-            {t('pages.users.addNewUser')}
-          </DoubleButton>
+            <Icons.Add size={20} strokeWidth={2} />
+          </button>
         </PermissionGuard>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mb-6 flex w-full items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex w-[280px] items-center gap-3 rounded-full border border-gray-200 bg-white pr-2 pl-4 shadow-sm sm:w-[400px] md:w-[500px] lg:w-[600px]">
+            <div className="flex flex-1 items-center gap-2 py-1">
+              <input
+                type="text"
+                placeholder={t('pages.users.searchPlaceholder')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearch()
+                  }
+                }}
+                className="text-dark-500 h-9 w-full bg-transparent text-sm font-light outline-none placeholder:text-gray-500"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+                  type="button"
+                  aria-label="Clear search"
+                >
+                  <Icons.Close size={14} className="text-gray-500" />
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleSearch}
+              disabled={isLoading}
+              className="bg-primary-300 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
+              aria-label={t('pages.users.searchButton')}
+            >
+              <Icons.Search size={18} className="text-dark-500" strokeWidth={1.5} />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Loading State */}
@@ -296,11 +487,12 @@ export function UserManagementPage() {
         />
       )}
 
-      {unlockUser && (
-        <UnlockAccountModal
-          open={unlockUser !== null}
-          user={unlockUser}
-          onClose={() => setUnlockUser(null)}
+      {changeStatusUser && (
+        <ChangeStatusModal
+          open={changeStatusUser !== null}
+          user={changeStatusUser}
+          newStatus={newStatus}
+          onClose={() => setChangeStatusUser(null)}
         />
       )}
     </div>

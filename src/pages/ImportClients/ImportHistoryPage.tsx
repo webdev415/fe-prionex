@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
@@ -21,6 +22,8 @@ import {
 import { useImportJobs, useExportImportErrors } from '@/features/imports'
 import type { ImportJob, ImportJobsListParams } from '@/features/imports'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { useAuthStore } from '@/stores/authStore'
+import { convertUTCToUserTimezone } from '@/lib/formatters'
 
 // Types for import history data - map from API types
 export interface ImportHistoryItem {
@@ -30,6 +33,7 @@ export interface ImportHistoryItem {
   uploadedBy: string
   status: 'done' | 'failed' | 'in_progress' | 'pending' | 'cancelled'
   errors: number
+  importType: string
 }
 
 // Helper to convert API ImportJob to ImportHistoryItem
@@ -53,6 +57,7 @@ function mapImportJobToHistoryItem(job: ImportJob): ImportHistoryItem {
                 ? 'cancelled'
                 : 'done', // Default fallback
     errors: job.errors_count,
+    importType: job.import_type || 'simple',
   }
 }
 
@@ -66,7 +71,7 @@ function ImportStatusBadge({
 
   if (status === 'done') {
     return (
-      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-[#204E4D] px-3 text-xs font-medium text-white">
+      <span className="bg-secondary-800 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
         <span className="h-2 w-2 rounded-full bg-white" />
         {t('pages.imports.history.statuses.done')}
       </span>
@@ -108,24 +113,105 @@ function ImportStatusBadge({
   )
 }
 
+// Import Type Badge Component
+function ImportTypeBadge({ importType }: { importType: string }) {
+  const { t } = useTranslation('common')
+
+  const config: Record<string, { label: string; className: string }> = {
+    simple: {
+      label: t('pages.imports.history.importTypes.simple', 'Simple'),
+      className: 'bg-primary-300 text-dark-500',
+    },
+    vendor: {
+      label: t('pages.imports.history.importTypes.vendor', 'Vendor Dump'),
+      className: 'bg-secondary-800 text-white',
+    },
+    operator_assignment: {
+      label: t('pages.imports.history.importTypes.operatorAssignment', 'Operator Assignment'),
+      className: 'bg-primary-700 text-white',
+    },
+  }
+
+  const cfg = config[importType] || config.simple
+
+  return (
+    <span
+      className={`inline-flex h-[28px] items-center rounded-full px-2.5 text-[11px] font-medium ${cfg.className}`}
+    >
+      {cfg.label}
+    </span>
+  )
+}
+
 export function ImportHistoryPage() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
-  const [currentPage, setCurrentPage] = useState(1)
-  const [rowsPerPage, setRowsPerPage] = useState(10) // Change from constant to state
-  const [sortConfig, setSortConfig] = useState<SortConfig | undefined>(undefined)
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
+
+  // URL state for pagination
+  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
+  const [rowsPerPage, setRowsPerPage] = useURLState<number>('pageSize', 10)
+
+  // URL state for sorting
+  const [sortBy, setSortBy] = useURLState<string>('sort_by', '')
+  const [sortOrder, setSortOrder] = useURLState<'asc' | 'desc'>('sort_order', 'asc')
+
+  // URL state for all filter fields
+  const [searchFilenameFilter, setSearchFilenameFilter] = useURLState<string>('search', '')
+  const [dateRangeFilter, setDateRangeFilter] = useURLState<string>('date_range', '')
+  const [statusFilter, setStatusFilter] = useURLState<string>('status', '')
+  const [uploadedByFilter, setUploadedByFilter] = useURLState<string>('uploaded_by', '')
+  const [importTypeFilter, setImportTypeFilter] = useURLState<string>('import_type', '')
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'import-history-state',
+    {
+      currentPage,
+      rowsPerPage,
+      sortBy,
+      sortOrder,
+      searchFilenameFilter,
+      dateRangeFilter,
+      statusFilter,
+      uploadedByFilter,
+      importTypeFilter,
+    },
+    {
+      currentPage: setCurrentPage,
+      rowsPerPage: setRowsPerPage,
+      sortBy: setSortBy,
+      sortOrder: setSortOrder,
+      searchFilenameFilter: setSearchFilenameFilter,
+      dateRangeFilter: setDateRangeFilter,
+      statusFilter: setStatusFilter,
+      uploadedByFilter: setUploadedByFilter,
+      importTypeFilter: setImportTypeFilter,
+    }
+  )
+
+  // Reconstruct filters object from URL state
+  const filters = useMemo<ImportHistoryFilters>(
+    () => ({
+      searchFilename: searchFilenameFilter || undefined,
+      dateRange: dateRangeFilter || undefined,
+      status: statusFilter || undefined,
+      uploadedBy: uploadedByFilter || undefined,
+      importType: importTypeFilter || undefined,
+    }),
+    [searchFilenameFilter, dateRangeFilter, statusFilter, uploadedByFilter, importTypeFilter]
+  )
+
+  // Reconstruct sortConfig from URL state
+  const sortConfig = useMemo<SortConfig | undefined>(
+    () => (sortBy ? { key: sortBy, order: sortOrder } : undefined),
+    [sortBy, sortOrder]
+  )
+
   const [selectedJobId, setSelectedJobId] = useState<number | string | null>(null)
 
   // Export errors mutation
   const exportErrorsMutation = useExportImportErrors()
-
-  // Filter state - using the same pattern as SearchFiltersBar
-  const [filters, setFilters] = useState<ImportHistoryFilters>({
-    searchFilename: undefined,
-    dateRange: undefined,
-    status: undefined,
-    uploadedBy: undefined,
-  })
 
   // Track previous filter values to detect changes
   const prevFiltersRef = useRef(filters)
@@ -144,6 +230,10 @@ export function ImportHistoryPage() {
 
     if (filters.searchFilename) {
       params.search = filters.searchFilename
+    }
+
+    if (filters.importType && filters.importType !== 'all') {
+      params.import_type = filters.importType as ImportJobsListParams['import_type']
     }
 
     // Only allow filtering by 'completed', 'failed', or 'cancelled' status
@@ -266,6 +356,10 @@ export function ImportHistoryPage() {
             aValue = a.status
             bValue = b.status
             break
+          case 'importType':
+            aValue = a.importType
+            bValue = b.importType
+            break
           case 'errors':
             aValue = a.errors
             bValue = b.errors
@@ -302,7 +396,8 @@ export function ImportHistoryPage() {
       prevFilters.searchFilename !== filters.searchFilename ||
       prevFilters.dateRange !== filters.dateRange ||
       prevFilters.status !== filters.status ||
-      prevFilters.uploadedBy !== filters.uploadedBy
+      prevFilters.uploadedBy !== filters.uploadedBy ||
+      prevFilters.importType !== filters.importType
 
     if (filtersChanged) {
       prevFiltersRef.current = filters
@@ -311,7 +406,15 @@ export function ImportHistoryPage() {
         setCurrentPage(1)
       }, 0)
     }
-  }, [filters.searchFilename, filters.dateRange, filters.status, filters.uploadedBy, filters])
+  }, [
+    filters.searchFilename,
+    filters.dateRange,
+    filters.status,
+    filters.uploadedBy,
+    filters.importType,
+    filters,
+    setCurrentPage,
+  ])
 
   // Ensure current page doesn't exceed total pages when data changes
   useEffect(() => {
@@ -321,10 +424,11 @@ export function ImportHistoryPage() {
         setCurrentPage(1)
       }, 0)
     }
-  }, [maxPage, currentPage])
+  }, [maxPage, currentPage, setCurrentPage])
 
   const handleSort = (key: string, order: 'asc' | 'desc') => {
-    setSortConfig({ key, order })
+    setSortBy(key)
+    setSortOrder(order)
     // Don't reset page when sorting - keep current page if possible
   }
 
@@ -354,10 +458,24 @@ export function ImportHistoryPage() {
     }
   }
 
-  const handleFilterChange = useCallback((newFilters: ImportHistoryFilters) => {
-    setFilters(newFilters)
-    // Page reset is handled by useEffect above
-  }, [])
+  const handleFilterChange = useCallback(
+    (newFilters: ImportHistoryFilters) => {
+      // Update individual URL state for each filter field
+      setSearchFilenameFilter(newFilters.searchFilename || '')
+      setDateRangeFilter(newFilters.dateRange || '')
+      setStatusFilter(newFilters.status || '')
+      setUploadedByFilter(newFilters.uploadedBy || '')
+      setImportTypeFilter(newFilters.importType || '')
+      // Page reset is handled by useEffect above
+    },
+    [
+      setSearchFilenameFilter,
+      setDateRangeFilter,
+      setStatusFilter,
+      setUploadedByFilter,
+      setImportTypeFilter,
+    ]
+  )
 
   const handleClearFilters = useCallback(() => {
     const clearedFilters: ImportHistoryFilters = {
@@ -365,12 +483,26 @@ export function ImportHistoryPage() {
       dateRange: undefined,
       status: undefined,
       uploadedBy: undefined,
+      importType: undefined,
     }
-    setFilters(clearedFilters)
+    // Update individual URL state for each filter field
+    setSearchFilenameFilter('')
+    setDateRangeFilter('')
+    setStatusFilter('')
+    setUploadedByFilter('')
+    setImportTypeFilter('')
     setCurrentPage(1)
     // Explicitly trigger filter change to ensure child component syncs
     handleFilterChange(clearedFilters)
-  }, [handleFilterChange])
+  }, [
+    handleFilterChange,
+    setSearchFilenameFilter,
+    setDateRangeFilter,
+    setStatusFilter,
+    setUploadedByFilter,
+    setImportTypeFilter,
+    setCurrentPage,
+  ])
 
   const handleGoToImportClients = useCallback(() => {
     navigate('/dashboard/import')
@@ -382,7 +514,8 @@ export function ImportHistoryPage() {
       filters.searchFilename ||
       (filters.dateRange && filters.dateRange !== 'all') ||
       (filters.status && filters.status !== 'all') ||
-      (filters.uploadedBy && filters.uploadedBy !== 'all')
+      (filters.uploadedBy && filters.uploadedBy !== 'all') ||
+      (filters.importType && filters.importType !== 'all')
     )
   }, [filters])
 
@@ -395,7 +528,11 @@ export function ImportHistoryPage() {
       key: 'dateTime',
       header: t('pages.imports.history.tableHeaders.dateTime'),
       sortable: true,
-      render: (item) => <span>{item.dateTime}</span>,
+      render: (item) => {
+        // Convert UTC datetime to user's timezone for display
+        const formattedDateTime = convertUTCToUserTimezone(item.dateTime, userTimezone)
+        return <span>{formattedDateTime}</span>
+      },
     },
     {
       key: 'fileName',
@@ -409,6 +546,12 @@ export function ImportHistoryPage() {
           </span>
         </div>
       ),
+    },
+    {
+      key: 'importType',
+      header: t('pages.imports.history.tableHeaders.type', 'Type'),
+      sortable: true,
+      render: (item) => <ImportTypeBadge importType={item.importType} />,
     },
     {
       key: 'status',
@@ -449,11 +592,23 @@ export function ImportHistoryPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-dark-500 mb-6 text-2xl font-light">
-          {t('pages.imports.history.title')}
-        </h1>
-        <div className="mb-6 flex w-full items-center justify-between gap-3">
+      <div className="mb-4 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <LinkButton
+            variant="regular-black"
+            onClick={handleGoToImportClients}
+            leftIcon={<Icons.ArrowLeft size={16} className="text-dark-500" />}
+            className="text-sm"
+          >
+            {t('common.back', 'Back')}
+          </LinkButton>
+          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+            {t('pages.imports.history.title')}
+          </h1>
+        </div>
+      </div>
+      <div className="mb-6">
+        <div className="mb-6 flex w-full flex-row items-center justify-between gap-3">
           {/* Filters Section - using the reusable component */}
           <ImportHistoryFiltersBar
             filters={filters}
@@ -464,11 +619,11 @@ export function ImportHistoryPage() {
 
           {/* Action Buttons */}
           <div className="flex w-[30%] items-center justify-end gap-2">
+            {/* Download Errors Button - icon-only on mobile/tablet, full on desktop */}
             <Button
               onClick={handleDownloadErrors}
               variant="primary"
-              size="xs"
-              leftIcon={<Icons.FileDownload size={20} />}
+              size="md"
               disabled={
                 exportErrorsMutation.isPending ||
                 (!selectedJobId && paginatedData.length === 0) ||
@@ -476,18 +631,35 @@ export function ImportHistoryPage() {
                   ? !paginatedData.find((item) => item.id === selectedJobId)?.errors
                   : !paginatedData[0]?.errors)
               }
-              className="flex h-12 items-center rounded-full text-xs font-medium"
+              leftIcon={<Icons.FileDownload size={16} className="text-dark-500" />}
+              className="hidden h-[45px] rounded-full text-xs lg:flex"
             >
               {exportErrorsMutation.isPending
                 ? t('pages.imports.history.exporting')
                 : t('pages.imports.history.downloadErrors')}
             </Button>
+            {/* Mobile/Tablet: Icon-only button */}
+            <button
+              type="button"
+              onClick={handleDownloadErrors}
+              disabled={
+                exportErrorsMutation.isPending ||
+                (!selectedJobId && paginatedData.length === 0) ||
+                (selectedJobId
+                  ? !paginatedData.find((item) => item.id === selectedJobId)?.errors
+                  : !paginatedData[0]?.errors)
+              }
+              className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60 lg:hidden"
+              aria-label={t('pages.imports.history.downloadErrors')}
+            >
+              <Icons.FileDownload size={18} className="text-dark-500" strokeWidth={1.5} />
+            </button>
           </div>
         </div>
       </div>
 
       {/* Data Table or Empty State */}
-      <div className="min-h-[400px] rounded-xl bg-white/50 p-6 shadow-sm">
+      <div className="rounded-xl bg-white/50 p-4 shadow-sm sm:p-6">
         {isLoading ? (
           // Loading State - Show skeleton table while fetching data
           <TableSkeleton columns={5} rows={rowsPerPage} />
@@ -500,7 +672,7 @@ export function ImportHistoryPage() {
             </div>
 
             {/* Message */}
-            <h3 className="text-dark-500 flex flex-col items-center justify-center gap-6 p-6 text-2xl leading-[120%] font-light tracking-[-0.48px]">
+            <h3 className="text-dark-500 flex flex-col items-center justify-center gap-6 p-6 text-xl leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
               {t('pages.imports.history.noImportsFound')}
             </h3>
 
@@ -523,12 +695,12 @@ export function ImportHistoryPage() {
             </div>
 
             {/* Primary Message */}
-            <h3 className="text-dark-500 text-center text-2xl leading-[120%] font-light tracking-[-0.48px]">
+            <h3 className="text-dark-500 text-center text-xl leading-[120%] font-light tracking-[-0.48px] sm:text-2xl">
               {t('pages.imports.history.noHistoryYet')}
             </h3>
 
             {/* Secondary Message */}
-            <p className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.32px]">
+            <p className="text-dark-500 text-center text-sm leading-[150%] font-medium tracking-[-0.32px] sm:text-base">
               {t('pages.imports.history.runFirstImport')}
             </p>
 
@@ -556,7 +728,7 @@ export function ImportHistoryPage() {
 
       {/* Pagination Footer - Only show if there's data */}
       {filteredAndSortedData.length > 0 && (
-        <div className="mt-6 flex items-center justify-center">
+        <div className="mt-4 flex items-center justify-center sm:mt-6">
           {/* Pagination */}
           <Pagination
             currentPage={currentPage}

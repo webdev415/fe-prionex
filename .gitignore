@@ -13,6 +13,7 @@ dist-ssr
 
 # Environment files (never commit)
 .env.local
+.env.dev
 .env.staging
 .env.production
 
@@ -48,3 +49,4 @@ memory-bank/
 .cursorrules
 
 .env
+packages-lock.json

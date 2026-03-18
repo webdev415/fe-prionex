@@ -7,13 +7,32 @@
 
 import api from '@/lib/api'
 import type {
+  AddressResponse,
+  AssignClientRequest,
+  AssignmentHistoryResponse,
+  BulkAssignClientRequest,
+  BulkAssignmentResponse,
   Client,
   ClientDetail,
+  ClientProfileResponse,
+  ContactResponse,
+  ContactTypeOption,
+  CreateAddressRequest,
   CreateClientRequest,
+  CreateContactRequest,
+  CreateRestructuringAgreementRequest,
   GetClientsParams,
   ManualPriorityRequest,
+  PaginatedClientResponse,
+  RestructuringAgreementDetail,
+  RestructuringAgreementSummary,
   SearchByTinParams,
+  UpdateAddressRequest,
   UpdateClientRequest,
+  UpdateContactRequest,
+  UpdateEmploymentRequest,
+  UpdatePassportRequest,
+  WriteoffsResponse,
 } from './types'
 
 const BASE_URL = '/api/v1/clients'
@@ -21,9 +40,9 @@ const BASE_URL = '/api/v1/clients'
 /**
  * Get list of clients for user's active project
  */
-export async function getClients(params: GetClientsParams = {}): Promise<Client[]> {
+export async function getClients(params: GetClientsParams = {}): Promise<PaginatedClientResponse> {
   // Add trailing slash to match FastAPI route definition @router.get("/")
-  const response = await api.get<Client[]>(`${BASE_URL}/`, { params })
+  const response = await api.get<PaginatedClientResponse>(`${BASE_URL}/`, { params })
   return response.data
 }
 
@@ -100,11 +119,11 @@ export async function getClientCount(): Promise<number> {
  * Priority summary response type
  */
 export interface PrioritySummary {
-  critical: { count: number; total_debt: number }
-  high: { count: number; total_debt: number }
-  medium: { count: number; total_debt: number }
-  low: { count: number; total_debt: number }
-  total: { count: number; total_debt: number }
+  critical: { count: number; total_debt: string }
+  high: { count: number; total_debt: string }
+  medium: { count: number; total_debt: string }
+  low: { count: number; total_debt: string }
+  total: { count: number; total_debt: string }
 }
 
 /**
@@ -112,6 +131,212 @@ export interface PrioritySummary {
  */
 export async function getPrioritySummary(): Promise<PrioritySummary> {
   const response = await api.get<PrioritySummary>(`${BASE_URL}/stats/priority-summary`)
+  return response.data
+}
+
+/**
+ * Assign a client to an employee and/or searcher
+ * Requires Admin or Supervisor role
+ */
+export async function assignClient(
+  clientId: number,
+  assignmentData: AssignClientRequest
+): Promise<Client> {
+  const response = await api.post<Client>(`${BASE_URL}/${clientId}/assign`, assignmentData)
+  return response.data
+}
+
+/**
+ * Bulk assign multiple clients to an employee and/or searcher
+ * Requires Admin or Supervisor role
+ */
+export async function bulkAssignClients(
+  bulkData: BulkAssignClientRequest
+): Promise<BulkAssignmentResponse> {
+  const response = await api.post<BulkAssignmentResponse>(`${BASE_URL}/bulk/assign`, bulkData)
+  return response.data
+}
+
+/**
+ * Get client profile (header + left card data)
+ */
+export async function getClientProfile(clientId: number): Promise<ClientProfileResponse> {
+  const response = await api.get<ClientProfileResponse>(`${BASE_URL}/${clientId}/profile`)
+  return response.data
+}
+
+/**
+ * Get client write-offs
+ */
+export async function getClientWriteoffs(
+  clientId: number,
+  params: { skip?: number; limit?: number } = {}
+): Promise<WriteoffsResponse> {
+  const response = await api.get<WriteoffsResponse>(`${BASE_URL}/${clientId}/writeoffs`, { params })
+  return response.data
+}
+
+/**
+ * Get client assignment history
+ */
+export async function getClientAssignmentHistory(
+  clientId: number,
+  params: { assignment_type?: string; skip?: number; limit?: number } = {}
+): Promise<AssignmentHistoryResponse> {
+  const response = await api.get<AssignmentHistoryResponse>(
+    `${BASE_URL}/${clientId}/assignment-history`,
+    { params }
+  )
+  return response.data
+}
+
+/**
+ * Create a new address for a client
+ */
+export async function createAddress(
+  clientId: number,
+  data: CreateAddressRequest
+): Promise<AddressResponse> {
+  const response = await api.post<AddressResponse>(`${BASE_URL}/${clientId}/addresses`, data)
+  return response.data
+}
+
+/**
+ * Update an existing address
+ */
+export async function updateAddress(
+  clientId: number,
+  addressId: number,
+  data: UpdateAddressRequest
+): Promise<AddressResponse> {
+  const response = await api.put<AddressResponse>(
+    `${BASE_URL}/${clientId}/addresses/${addressId}`,
+    data
+  )
+  return response.data
+}
+
+/**
+ * Delete an address (soft delete)
+ */
+export async function deleteAddress(clientId: number, addressId: number): Promise<void> {
+  await api.delete(`${BASE_URL}/${clientId}/addresses/${addressId}`)
+}
+
+/**
+ * Create a new contact for a client
+ */
+export async function createContact(
+  clientId: number,
+  data: CreateContactRequest
+): Promise<ContactResponse> {
+  const response = await api.post<ContactResponse>(`${BASE_URL}/${clientId}/contacts`, data)
+  return response.data
+}
+
+/**
+ * Update an existing contact
+ */
+export async function updateContact(
+  clientId: number,
+  contactId: number,
+  data: UpdateContactRequest
+): Promise<ContactResponse> {
+  const response = await api.put<ContactResponse>(
+    `${BASE_URL}/${clientId}/contacts/${contactId}`,
+    data
+  )
+  return response.data
+}
+
+/**
+ * Delete a contact (soft delete)
+ */
+export async function deleteContact(clientId: number, contactId: number): Promise<void> {
+  await api.delete(`${BASE_URL}/${clientId}/contacts/${contactId}`)
+}
+
+export async function updateEmployment(
+  clientId: number,
+  data: UpdateEmploymentRequest
+): Promise<void> {
+  await api.put(`${BASE_URL}/${clientId}/employment`, data)
+}
+
+export async function updatePassport(clientId: number, data: UpdatePassportRequest): Promise<void> {
+  await api.put(`${BASE_URL}/${clientId}/passport`, data)
+}
+
+/**
+ * Get restructuring agreements for a client
+ */
+export async function getClientRestructuringAgreements(
+  clientId: number
+): Promise<RestructuringAgreementSummary[]> {
+  const response = await api.get<RestructuringAgreementSummary[]>(
+    `${BASE_URL}/${clientId}/restructuring-agreements`
+  )
+  return response.data
+}
+
+/**
+ * Get restructuring agreement detail for modal
+ */
+export async function getRestructuringAgreementDetail(
+  clientId: number,
+  raId: number
+): Promise<RestructuringAgreementDetail> {
+  const response = await api.get<RestructuringAgreementDetail>(
+    `${BASE_URL}/${clientId}/restructuring-agreements/${raId}`
+  )
+  return response.data
+}
+
+/**
+ * Create a restructuring agreement for a client
+ */
+export async function createRestructuringAgreement(
+  clientId: number,
+  data: CreateRestructuringAgreementRequest
+): Promise<{ id: number; status: string }> {
+  const response = await api.post<{ id: number; status: string }>(
+    `${BASE_URL}/${clientId}/restructuring-agreements`,
+    data
+  )
+  return response.data
+}
+
+/**
+ * Close a debt (set status to 'closed')
+ */
+export async function closeDebt(
+  clientId: number,
+  debtId: number
+): Promise<{ id: number; status: string }> {
+  const response = await api.patch<{ id: number; status: string }>(
+    `${BASE_URL}/${clientId}/debts/${debtId}/close`
+  )
+  return response.data
+}
+
+/**
+ * Complete a restructuring agreement (set status_id to 4)
+ */
+export async function completeRestructuringAgreement(
+  clientId: number,
+  raId: number
+): Promise<{ id: number; status_id: number }> {
+  const response = await api.patch<{ id: number; status_id: number }>(
+    `${BASE_URL}/${clientId}/restructuring-agreements/${raId}/complete`
+  )
+  return response.data
+}
+
+/**
+ * Get all contact types from the lookup table
+ */
+export async function getContactTypes(): Promise<ContactTypeOption[]> {
+  const response = await api.get<ContactTypeOption[]>(`${BASE_URL}/contact-types`)
   return response.data
 }
 
@@ -129,4 +354,23 @@ export const clientApi = {
   setManualPriority,
   getClientCount,
   getPrioritySummary,
+  assignClient,
+  bulkAssignClients,
+  getClientProfile,
+  getClientWriteoffs,
+  getClientAssignmentHistory,
+  createAddress,
+  updateAddress,
+  deleteAddress,
+  createContact,
+  updateContact,
+  deleteContact,
+  getContactTypes,
+  updateEmployment,
+  updatePassport,
+  getClientRestructuringAgreements,
+  getRestructuringAgreementDetail,
+  createRestructuringAgreement,
+  closeDebt,
+  completeRestructuringAgreement,
 }

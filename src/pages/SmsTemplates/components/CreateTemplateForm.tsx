@@ -9,6 +9,7 @@ import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
@@ -21,6 +22,9 @@ import {
 } from '@/components/ui/Select'
 import { Alert } from '@/components/ui/Alert'
 import { Icons } from '@/lib/icons'
+import { useCreateTemplate } from '@/features/sms'
+import { useAuthStore } from '@/stores/authStore'
+import { getErrorMessage } from '@/lib/errors'
 
 type CreateTemplateFormData = {
   name: string
@@ -43,11 +47,10 @@ const AVAILABLE_VARIABLES = [
   { name: 'contract_number', key: 'contractLoanNumber' },
 ] as const
 
-// Cyrillic character limit for SMS
-const CYRILLIC_SMS_LIMIT = 70
-
 export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
   const { t } = useTranslation('common')
+  const { user } = useAuthStore()
+  const createTemplateMutation = useCreateTemplate()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const createTemplateSchema = z.object({
@@ -85,11 +88,6 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
     return Array.from(new Set(variables)) // Remove duplicates
   }, [watchedMessageText])
 
-  // Calculate character count
-  const characterCount = useMemo(() => {
-    return watchedMessageText?.length || 0
-  }, [watchedMessageText])
-
   // Insert variable into message text at cursor position
   const insertVariable = (variableName: string) => {
     const textarea = textareaRef.current
@@ -112,11 +110,20 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
   }
 
   const onSubmit = async (data: CreateTemplateFormData) => {
-    // TODO: Replace with actual API call
-    console.log('Creating template:', data)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    onSuccess()
+    try {
+      await createTemplateMutation.mutateAsync({
+        name: data.name,
+        message_text: data.messageText,
+        category: data.category,
+        project_id: user?.active_project_id ? parseInt(user.active_project_id) : undefined,
+      })
+      toast.success(
+        t('pages.smsTemplates.messages.templateCreated') || 'Template created successfully'
+      )
+      onSuccess()
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+    }
   }
 
   return (
@@ -190,14 +197,6 @@ export function CreateTemplateForm({ onSuccess }: CreateTemplateFormProps) {
             />
           )}
         />
-        {/* Character Counter */}
-        <div className="flex items-center justify-end gap-1 self-stretch">
-          <span className="bg-success-500 h-2 w-2 rounded-full" />
-          <span className="text-dark-500 text-sm font-light">
-            {characterCount}/{CYRILLIC_SMS_LIMIT} {t('pages.smsTemplates.forms.characters')} (
-            {t('pages.smsTemplates.forms.cyrillicLimit')}: {CYRILLIC_SMS_LIMIT})
-          </span>
-        </div>
       </div>
 
       {/* Variables Detected */}

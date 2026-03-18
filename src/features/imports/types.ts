@@ -8,7 +8,7 @@
 export type ImportJobStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled'
 
 // Import Type
-export type ImportType = 'simple' | 'vendor'
+export type ImportType = 'simple' | 'vendor' | 'operator_assignment'
 
 // Import Job (from GET /api/import/jobs)
 export interface ImportJob {
@@ -19,7 +19,7 @@ export interface ImportJob {
   status: ImportJobStatus
   errors_count: number
   import_type: ImportType
-  seller_creditor?: string
+  seller_creditor?: string // Seller code for display (from job metadata)
   project_code?: string
   purchase_date?: string
   comment?: string
@@ -38,12 +38,13 @@ export interface ImportJobDetail {
   errors_count: number
   processing_time: string // e.g., "7 min 42 s"
   import_type: ImportType
-  seller_creditor?: string
+  seller_creditor?: string // Seller code for display (from job metadata)
   project_code?: string
   purchase_date?: string
   comment?: string
   progress_percentage?: number // 0-100, only for in_progress
   processing_row?: number // Current row being processed, only for in_progress
+  error_summary?: Record<string, unknown> | string | null // Error details on failure
 }
 
 // Import Error (from GET /api/import/jobs/{id}/errors)
@@ -73,6 +74,7 @@ export interface ImportJobsListParams {
   date_from?: string // ISO date string
   date_to?: string // ISO date string
   exclude_status?: ImportJobStatus[] // Exclude jobs with these statuses
+  import_type?: ImportType // Filter by import type
 }
 
 // Upload Import Request
@@ -80,7 +82,7 @@ export interface UploadImportRequest {
   file?: File // For simple CSV (required for simple import type)
   files?: File[] // For vendor dump (multiple CSVs)
   zip_file?: File // For vendor dump (ZIP with documents)
-  seller_creditor: string
+  seller_id: number
   project_code: string
   purchase_date: string
   comment?: string

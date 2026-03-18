@@ -2,7 +2,7 @@ name: CD
 
 on:
   push:
-    branches: [main, staging, development]
+    branches: [main, development]
     tags:
       - 'v*'
   workflow_dispatch:
@@ -14,7 +14,6 @@ on:
         type: choice
         options:
           - production
-          - staging
           - dev
 
 env:
@@ -34,21 +33,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Determine API URL for build
+      - name: Determine API and WebSocket URLs for build
         id: set-api-url
         run: |
           if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            API_URL="${{ secrets.VITE_API_BASE_URL_PROD || secrets.VITE_API_BASE_URL || 'https://api.crm-prionex.com' }}"
-          elif [ "${{ github.ref }}" == "refs/heads/staging" ]; then
-            API_URL="${{ secrets.VITE_API_BASE_URL_STAGING || 'https://api.staging.crm-prionex.com' }}"
+            # Production environment
+            API_URL="${{ secrets.VITE_API_BASE_URL_PROD }}"
+            if [ -z "$API_URL" ]; then
+              API_URL="https://api.crm-prionex.online"
+            fi
+            WS_URL="${{ secrets.VITE_WS_URL_PROD }}"
+            if [ -z "$WS_URL" ]; then
+              WS_URL="wss://api.crm-prionex.online"
+            fi
           elif [ "${{ github.ref }}" == "refs/heads/development" ]; then
-            API_URL="${{ secrets.VITE_API_BASE_URL_DEV || 'https://api.dev.crm-prionex.com' }}"
+            # Development environment
+            API_URL="${{ secrets.VITE_API_BASE_URL_DEV }}"
+            if [ -z "$API_URL" ]; then
+              API_URL="https://api.dev.crm-prionex.online"
+            fi
+            WS_URL="${{ secrets.VITE_WS_URL_DEV }}"
+            if [ -z "$WS_URL" ]; then
+              WS_URL="wss://api.dev.crm-prionex.online"
+            fi
           else
             # Default to production for tags or other branches
-            API_URL="${{ secrets.VITE_API_BASE_URL_PROD || secrets.VITE_API_BASE_URL || 'https://api.crm-prionex.com' }}"
+            API_URL="${{ secrets.VITE_API_BASE_URL_PROD }}"
+            if [ -z "$API_URL" ]; then
+              API_URL="https://api.crm-prionex.online"
+            fi
+            WS_URL="${{ secrets.VITE_WS_URL_PROD }}"
+            if [ -z "$WS_URL" ]; then
+              WS_URL="wss://api.crm-prionex.online"
+            fi
           fi
           echo "API_URL=$API_URL" >> $GITHUB_OUTPUT
+          echo "WS_URL=$WS_URL" >> $GITHUB_OUTPUT
           echo "📋 Building with API URL: $API_URL"
+          echo "📋 Building with WS URL: $WS_URL"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -83,6 +105,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VITE_API_BASE_URL=${{ steps.set-api-url.outputs.API_URL }}
+            VITE_WS_URL=${{ steps.set-api-url.outputs.WS_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -90,63 +113,62 @@ jobs:
     name: Deploy Frontend
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/v')
     environment:
-      name: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/staging' && 'staging' || github.ref == 'refs/heads/development' && 'dev' || 'production') }}
+      name: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'dev') }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Determine deployment environment
+        id: set-env
+        run: |
+          if [ -n "${{ github.event.inputs.environment }}" ]; then
+            DEPLOY_ENV="${{ github.event.inputs.environment }}"
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            DEPLOY_ENV="production"
+          elif [ "${{ github.ref }}" == "refs/heads/development" ]; then
+            DEPLOY_ENV="dev"
+          else
+            DEPLOY_ENV="production"
+          fi
+          echo "DEPLOY_ENV=$DEPLOY_ENV" >> $GITHUB_OUTPUT
+          echo "📋 Determined environment: $DEPLOY_ENV"
+
       - name: Copy docker-compose files to server
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.DEPLOY_SSH_HOST }}
-          username: ${{ secrets.DEPLOY_SSH_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
-          source: "docker-compose.prod.yml,docker-compose.staging.yml,docker-compose.dev-env.yml"
+          host: ${{ steps.set-env.outputs.DEPLOY_ENV == 'production' && secrets.PROD_SSH_HOST || secrets.DEV_SSH_HOST }}
+          username: ${{ steps.set-env.outputs.DEPLOY_ENV == 'production' && secrets.PROD_SSH_USER || secrets.DEV_SSH_USER }}
+          key: ${{ steps.set-env.outputs.DEPLOY_ENV == 'production' && secrets.PROD_SSH_KEY || secrets.DEV_SSH_KEY }}
+          port: 22
+          source: "docker-compose.server.yml"
           target: "~/crm-prionex/fe-prionex/"
 
       - name: Deploy to server
         env:
-          DEPLOY_ENV: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/staging' && 'staging' || github.ref == 'refs/heads/development' && 'dev' || 'production') }}
+          DEPLOY_ENV: ${{ steps.set-env.outputs.DEPLOY_ENV }}
           GITHUB_REF: ${{ github.ref }}
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.DEPLOY_SSH_HOST }}
-          username: ${{ secrets.DEPLOY_SSH_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          host: ${{ steps.set-env.outputs.DEPLOY_ENV == 'production' && secrets.PROD_SSH_HOST || secrets.DEV_SSH_HOST }}
+          username: ${{ steps.set-env.outputs.DEPLOY_ENV == 'production' && secrets.PROD_SSH_USER || secrets.DEV_SSH_USER }}
+          key: ${{ steps.set-env.outputs.DEPLOY_ENV == 'production' && secrets.PROD_SSH_KEY || secrets.DEV_SSH_KEY }}
+          port: 22
           envs: DEPLOY_ENV,GITHUB_REF
           script: |
             cd ~/crm-prionex/fe-prionex
-            
-            # Use environment from GitHub Actions
-            ENV_TYPE="$DEPLOY_ENV"
-            
+
             echo "📋 Branch: $GITHUB_REF"
-            echo "📋 Deploying to: $ENV_TYPE"
-            
-            # Set compose file and env file based on environment
-            if [ "$ENV_TYPE" == "production" ]; then
-              COMPOSE_FILE="docker-compose.prod.yml"
-              # Try multiple possible env file names
-              ENV_FILE=".env.prod"
-              if [ ! -f "$ENV_FILE" ]; then
-                ENV_FILE=".env.production"
-              fi
-            elif [ "$ENV_TYPE" == "staging" ]; then
-              COMPOSE_FILE="docker-compose.staging.yml"
-              ENV_FILE=".env.staging"
-            elif [ "$ENV_TYPE" == "dev" ]; then
-              COMPOSE_FILE="docker-compose.dev-env.yml"
-              ENV_FILE=".env.dev"
-            else
-              echo "Unknown environment: $ENV_TYPE"
-              exit 1
-            fi
-            
+            echo "📋 Deploying to: $DEPLOY_ENV"
+
+            COMPOSE_FILE="docker-compose.server.yml"
+            ENV_FILE=".env"
+
+            # Ensure crm-network exists
+            docker network create crm-network 2>/dev/null || true
+
             # Pull the latest image (use branch-specific tag if available, otherwise latest)
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
             # Try to pull branch-specific image first, fallback to latest
@@ -159,17 +181,14 @@ jobs:
               export DOCKER_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
               echo "✅ Using latest image: $DOCKER_IMAGE"
             fi
-            
-            # DOCKER_IMAGE is already set above
-            
-            # Use docker compose to deploy
-            # Only use --env-file if the file exists, otherwise use defaults from compose file
+
+            # Deploy
             if [ -f "$ENV_FILE" ]; then
               echo "Using env file: $ENV_FILE"
               docker compose --env-file $ENV_FILE -f $COMPOSE_FILE up -d
             else
               echo "Warning: Env file $ENV_FILE not found, using defaults from compose file"
-              docker compose -f $COMPOSE_FILE up -d
+              DOCKER_IMAGE=$DOCKER_IMAGE docker compose -f $COMPOSE_FILE up -d
             fi
 
       - name: Deploy notification
@@ -177,4 +196,3 @@ jobs:
         run: |
           echo "Deployment completed for ${{ github.ref }}"
           echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-

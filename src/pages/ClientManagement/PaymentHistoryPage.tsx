@@ -4,9 +4,13 @@
  * Displays full payment history for a client with filtering and pagination.
  */
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { useAuthStore } from '@/stores/authStore'
 import { useParams, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
@@ -19,36 +23,59 @@ import {
   SelectItem,
 } from '@/components/ui/Select'
 import { Pagination } from '@/components/ui/Pagination'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
 import { cn } from '@/lib/utils'
 import { PaymentVerificationQueueModal } from './components/PaymentVerificationQueueModal'
-import { ExportPaymentsCSVModal } from './components/ExportPaymentsCSVModal'
+import {
+  ExportPaymentsCSVModal,
+  type ExportPaymentsCSVModalProps,
+} from './components/ExportPaymentsCSVModal'
 import { PaymentDetailsModal } from './components/PaymentDetailsModal'
 import { CancelPaymentModal } from './components/CancelPaymentModal'
+import { EditPaymentModal } from './components/EditPaymentModal'
 import { useClient } from '@/features/clients/hooks/useClients'
+import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
+import { useCallStore } from '@/stores/callStore'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
+import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
+import {
+  useClientPaymentHistory,
+  useVerifyPayment,
+  useCancelPayment,
+  useEditPayment,
+  useExportPaymentsCSV,
+  usePayment,
+  useGenerateReceipt,
+} from '@/features/payments'
+import { useUser } from '@/features/users/hooks/useUser'
+import {
+  isPaymentLessThan7DaysOld,
+  frontendToBackendPaymentMethod,
+  frontendToBackendPaymentStatus,
+} from '@/features/payments/utils'
+import type {
+  Payment as BackendPayment,
+  PaymentMethod as BackendPaymentMethod,
+  PaymentStatus as BackendPaymentStatus,
+} from '@/features/payments/api/types'
 
 // Types
 interface Payment {
   id: number
   date: string
   amount: number
-  method: 'Online' | 'Bank' | 'Card' | 'Direct Debit'
-  status: 'Verified' | 'Pending' | 'Cancelled'
+  contractNumber?: string
+  method: BackendPaymentMethod
+  status: BackendPaymentStatus
   receipt?: string
-}
-
-interface PaymentHistoryData {
-  customerName: string
-  status: 'Active' | 'Paid' | 'Partially Paid' | 'Dispute' | 'Written off' | 'Sold' | 'Legal'
-  progressPercentage: number
-  totalPaid: number
-  totalDebt: number
-  totalPayments: number
-  totalPaymentsAmount: number
-  verifiedPayments: number
-  verifiedPaymentsAmount: number
-  pendingPayments: number
-  pendingPaymentsAmount: number
-  payments: Payment[]
+  reference?: string
+  project_name?: string
 }
 
 // Mock client data for fallback
@@ -56,218 +83,90 @@ const mockClientDetail = {
   fullName: 'Savchenko Ivan Petrovich',
 }
 
-// Mock payment history data - replace with actual API call
-const getMockPaymentHistory = (): Omit<PaymentHistoryData, 'customerName'> => {
-  return {
-    status: 'Active',
-    progressPercentage: 15,
-    totalPaid: 15450.0,
-    totalDebt: 125450.0,
-    totalPayments: 23,
-    totalPaymentsAmount: 125450.0,
-    verifiedPayments: 13,
-    verifiedPaymentsAmount: 11170.0,
-    pendingPayments: 7,
-    pendingPaymentsAmount: 14510.0,
-    payments: [
-      {
-        id: 1,
-        date: '10/7/2023',
-        amount: 10080,
-        method: 'Online',
-        status: 'Pending',
-      },
-      {
-        id: 2,
-        date: '10/6/2023',
-        amount: 900,
-        method: 'Bank',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-      },
-      {
-        id: 3,
-        date: '10/7/2023',
-        amount: 780,
-        method: 'Online',
-        status: 'Pending',
-      },
-      {
-        id: 4,
-        date: '10/8/2023',
-        amount: 820,
-        method: 'Bank',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-      },
-      {
-        id: 5,
-        date: '10/9/2023',
-        amount: 870,
-        method: 'Online',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-      },
-      {
-        id: 6,
-        date: '10/10/2023',
-        amount: 810,
-        method: 'Bank',
-        status: 'Pending',
-      },
-      {
-        id: 7,
-        date: '10/11/2023',
-        amount: 830,
-        method: 'Bank',
-        status: 'Cancelled',
-      },
-      {
-        id: 8,
-        date: '10/5/2023',
-        amount: 850,
-        method: 'Card',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-      },
-      {
-        id: 9,
-        date: '10/11/2023',
-        amount: 830,
-        method: 'Bank',
-        status: 'Cancelled',
-      },
-      {
-        id: 10,
-        date: '10/5/2023',
-        amount: 850,
-        method: 'Card',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-      },
-      {
-        id: 11,
-        date: '10/4/2023',
-        amount: 920,
-        method: 'Online',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-      },
-      {
-        id: 12,
-        date: '10/3/2023',
-        amount: 750,
-        method: 'Bank',
-        status: 'Pending',
-      },
-      {
-        id: 13,
-        date: '10/2/2023',
-        amount: 680,
-        method: 'Card',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-      },
-      {
-        id: 14,
-        date: '10/1/2023',
-        amount: 950,
-        method: 'Online',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-      },
-      {
-        id: 15,
-        date: '9/30/2023',
-        amount: 720,
-        method: 'Bank',
-        status: 'Pending',
-      },
-      {
-        id: 16,
-        date: '9/29/2023',
-        amount: 880,
-        method: 'Card',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-      },
-      {
-        id: 17,
-        date: '9/28/2023',
-        amount: 640,
-        method: 'Online',
-        status: 'Cancelled',
-      },
-      {
-        id: 18,
-        date: '9/27/2023',
-        amount: 790,
-        method: 'Bank',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-      },
-      {
-        id: 19,
-        date: '9/26/2023',
-        amount: 910,
-        method: 'Card',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-      },
-      {
-        id: 20,
-        date: '9/25/2023',
-        amount: 560,
-        method: 'Online',
-        status: 'Pending',
-      },
-      {
-        id: 21,
-        date: '9/24/2023',
-        amount: 1020,
-        method: 'Bank',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-      },
-      {
-        id: 22,
-        date: '9/23/2023',
-        amount: 730,
-        method: 'Card',
-        status: 'Verified',
-        receipt: 'receipt.pdf',
-      },
-      {
-        id: 23,
-        date: '9/22/2023',
-        amount: 890,
-        method: 'Online',
-        status: 'Pending',
-      },
-    ],
-  }
-}
-
 export function PaymentHistoryPage() {
   const { t, i18n } = useTranslation('common')
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [paymentHistory, setPaymentHistory] = useState<PaymentHistoryData | null>(null)
-  const [statusFilter, setStatusFilter] = useState<string>('All')
-  const [methodFilter, setMethodFilter] = useState<string>('All')
-  const [startDate, setStartDate] = useState<Date | null>(null)
-  const [endDate, setEndDate] = useState<Date | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+
+  // URL state for pagination
+  const [currentPage, setCurrentPage] = useURLState<number>('page', 1)
+  const [pageSize, setPageSize] = useURLState<number>('pageSize', 10)
+
+  // URL state for filters
+  const [statusFilterUrl, setStatusFilterUrl] = useURLState<string>('status', 'All')
+  const [methodFilterUrl, setMethodFilterUrl] = useURLState<string>('method', 'All')
+  const [startDateUrl, setStartDateUrl] = useURLState<string>('start_date', '')
+  const [endDateUrl, setEndDateUrl] = useURLState<string>('end_date', '')
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'payment-history-state',
+    {
+      currentPage,
+      pageSize,
+      statusFilterUrl,
+      methodFilterUrl,
+      startDateUrl,
+      endDateUrl,
+    },
+    {
+      currentPage: setCurrentPage,
+      pageSize: setPageSize,
+      statusFilterUrl: setStatusFilterUrl,
+      methodFilterUrl: setMethodFilterUrl,
+      startDateUrl: setStartDateUrl,
+      endDateUrl: setEndDateUrl,
+    }
+  )
+
+  // Convert URL state to component state
+  const statusFilter = statusFilterUrl
+  const methodFilter = methodFilterUrl
+  const startDate = useMemo(() => (startDateUrl ? new Date(startDateUrl) : null), [startDateUrl])
+  const endDate = useMemo(() => (endDateUrl ? new Date(endDateUrl) : null), [endDateUrl])
+
+  // Create setters that update URL state
+  const setStatusFilter = (value: string) => setStatusFilterUrl(value)
+  const setMethodFilter = (value: string) => setMethodFilterUrl(value)
+  const setStartDate = useCallback(
+    (value: Date | null) => setStartDateUrl(value ? value.toISOString().split('T')[0] : ''),
+    [setStartDateUrl]
+  )
+  const setEndDate = useCallback(
+    (value: Date | null) => setEndDateUrl(value ? value.toISOString().split('T')[0] : ''),
+    [setEndDateUrl]
+  )
+
+  // Note: paymentHistory is computed from API data using useMemo (see line 299)
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false)
-  // Note: selectedPaymentId is set but not currently read, reserved for future use
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null)
+  const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   const [isPaymentDetailsModalOpen, setIsPaymentDetailsModalOpen] = useState(false)
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null)
+  const [openDropdownPaymentId, setOpenDropdownPaymentId] = useState<number | null>(null)
   const dateRangeInitialized = useRef(false)
+  const dateFiltersCleared = useRef(false)
+
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState<{ key: string; order: 'asc' | 'desc' } | null>(null)
+
+  // Call functionality state
+  const { isCallActive, setOpenCallModal } = useCallStore()
+  const {
+    user,
+    isCallModalOpen,
+    setIsCallModalOpen,
+    currentCallId,
+    callError,
+    isOriginatingCall,
+    handleOriginateCall,
+    handleClearCallError,
+    handleCloseCallModal,
+    handleCallEnd,
+  } = useCallOrigination()
 
   // Fetch client data from API (same as DebtSummaryPage)
   const clientId = id ? Number(id) : 0
@@ -278,89 +177,326 @@ export function PaymentHistoryPage() {
     error: clientError,
   } = useClient(clientId, !!clientId)
 
-  // Get client name from API or fallback to mock
-  const customerName = useMemo(() => {
-    if (apiClient) {
-      const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
-        .filter(Boolean)
-        .join(' ')
-      return fullName || mockClientDetail.fullName
-    }
-    return mockClientDetail.fullName
-  }, [apiClient])
-
-  // Mock data for verification queue (will use customerName from state)
-  const mockPendingPayments = useMemo(
-    () => [
-      {
-        id: '1',
-        paymentId: 'PMT-2025-12-001',
-        submittedAt: '2 hours ago',
-        client: customerName,
-        project: 'PrivatBank Collection',
-        amount: 5000.0,
-        method: 'Bank Transfer',
-        date: '2025-12-15',
-        reference: 'TRX98765',
-        currentDebt: 125450.0,
-        newDebt: 120450.0,
-      },
-      {
-        id: '2',
-        paymentId: 'PMT-2025-12-002',
-        submittedAt: '6 hours ago',
-        client: customerName,
-        project: 'PrivatBank Collection',
-        amount: 12000.0,
-        method: 'Bank Transfer',
-        date: '2025-12-15',
-        reference: 'TRX98766',
-        currentDebt: 125450.0,
-        newDebt: 113450.0,
-      },
-    ],
-    [customerName]
+  // Fetch payment history from API
+  const {
+    data: paymentHistoryData,
+    isLoading: isLoadingPayments,
+    isError: isPaymentError,
+    error: paymentError,
+    refetch: refetchPayments,
+  } = useClientPaymentHistory(
+    {
+      client_id: clientId,
+      page: currentPage,
+      limit: pageSize,
+      status: statusFilter !== 'All' ? (statusFilter as BackendPaymentStatus) : undefined,
+      payment_method: methodFilter !== 'All' ? (methodFilter as BackendPaymentMethod) : undefined,
+      from_date: startDate ? startDate.toISOString().split('T')[0] : undefined,
+      to_date: endDate ? endDate.toISOString().split('T')[0] : undefined,
+    },
+    { enabled: !!clientId }
   )
 
-  const mockProcessedPayments = [
-    {
-      id: '1',
-      paymentId: 'PMT-2025-12-000',
-      status: 'Verified' as const,
-      amount: 3500.0,
-      action: 'Verified by You',
-      time: '30 mins ago',
+  // Get client name and create client object for call functionality
+  const client = useMemo(() => {
+    if (!apiClient) return null
+
+    const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
+      .filter(Boolean)
+      .join(' ')
+
+    return {
+      id: apiClient.id,
+      fullName: fullName || mockClientDetail.fullName,
+      phones: apiClient.phone_primary
+        ? [{ number: apiClient.phone_primary, type: 'mobile' as const }]
+        : [],
+    }
+  }, [apiClient])
+
+  // Get client name from API or fallback to mock
+  const customerName = useMemo(() => {
+    return client?.fullName || mockClientDetail.fullName
+  }, [client])
+
+  // Convert backend payment to frontend format
+  const convertBackendPayment = useCallback((backendPayment: BackendPayment): Payment => {
+    return {
+      id: backendPayment.id,
+      // Use appropriate datetime based on status:
+      // - verified: verified_at (when verified)
+      // - cancelled: reversed_at (when cancelled)
+      // - pending: recorded_at (when recorded)
+      date:
+        backendPayment.status === 'verified' && backendPayment.verified_at
+          ? backendPayment.verified_at
+          : backendPayment.status === 'cancelled' && backendPayment.reversed_at
+            ? backendPayment.reversed_at
+            : backendPayment.recorded_at,
+      amount: Number(backendPayment.amount),
+      contractNumber: backendPayment.debt_contract_number || undefined,
+      method: backendPayment.payment_method,
+      status: backendPayment.status,
+      receipt: backendPayment.receipt_url,
+      reference: backendPayment.bank_reference || backendPayment.payment_number,
+    }
+  }, [])
+
+  // Convert payment history data to frontend format
+  const paymentHistory = useMemo(() => {
+    if (!paymentHistoryData || !apiClient) return null
+
+    const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
+      .filter(Boolean)
+      .join(' ')
+
+    const frontendPayments = paymentHistoryData.payments.map(convertBackendPayment)
+
+    // Calculate statistics
+    const verifiedPayments = frontendPayments.filter((p) => p.status === 'verified')
+    const pendingPayments = frontendPayments.filter((p) => p.status === 'pending')
+
+    const totalPaymentsAmount = frontendPayments.reduce((sum, p) => sum + p.amount, 0)
+    const verifiedPaymentsAmount = verifiedPayments.reduce((sum, p) => sum + p.amount, 0)
+    const pendingPaymentsAmount = pendingPayments.reduce((sum, p) => sum + p.amount, 0)
+
+    // Total paid and progress:
+    // - Total paid: use backend's total_amount_paid (includes ALL verified payments, not just current page)
+    //   This value should NOT be affected by date filters - it's the total for all verified payments
+    // - Current debt: ALWAYS use apiClient.total_debt as primary source (it's the source of truth)
+    //   Only use paymentHistoryData.current_debt if apiClient is not available
+    // - Progress = 100 * TotalPaid / (TotalPaid + CurrentDebt)
+    let currentDebt = 0
+    if (apiClient?.total_debt !== undefined && apiClient.total_debt !== null) {
+      currentDebt = Number(apiClient.total_debt)
+    } else if (
+      paymentHistoryData?.current_debt !== undefined &&
+      paymentHistoryData.current_debt !== null
+    ) {
+      currentDebt = Number(paymentHistoryData.current_debt)
+    }
+
+    // Use total_amount_paid from backend (all verified payments, regardless of filters)
+    // This should always be present and correct
+    const totalPaid = Number(paymentHistoryData?.total_amount_paid ?? 0)
+
+    const initialTotal = currentDebt + totalPaid
+    const rawProgress = initialTotal > 0 ? (totalPaid / initialTotal) * 100 : 0
+    const progressPercentage = Math.max(0, Math.min(100, rawProgress))
+
+    // Determine client status based on debt
+    let clientStatus:
+      | 'Active'
+      | 'Paid'
+      | 'Partially Paid'
+      | 'Dispute'
+      | 'Written off'
+      | 'Sold'
+      | 'Legal' = 'Active'
+    if (currentDebt === 0) {
+      clientStatus = 'Paid'
+    } else if (initialTotal > 0 && currentDebt < initialTotal) {
+      clientStatus = 'Partially Paid'
+    }
+
+    return {
+      customerName: fullName || mockClientDetail.fullName,
+      status: clientStatus,
+      progressPercentage,
+      totalPaid,
+      totalDebt: currentDebt,
+      totalPayments: paymentHistoryData.total_payments,
+      totalPaymentsAmount,
+      verifiedPayments: verifiedPayments.length,
+      verifiedPaymentsAmount,
+      pendingPayments: pendingPayments.length,
+      pendingPaymentsAmount,
+      payments: frontendPayments,
+    }
+  }, [paymentHistoryData, apiClient, convertBackendPayment])
+
+  // Payment mutations
+  const { mutate: verifyPaymentMutation } = useVerifyPayment()
+  const { mutate: cancelPaymentMutation } = useCancelPayment()
+  const { mutate: editPaymentMutation } = useEditPayment()
+  const { mutate: exportPaymentsMutation } = useExportPaymentsCSV()
+  const { mutate: generateReceiptMutation } = useGenerateReceipt()
+
+  // Fetch payment details when selectedPayment changes
+  const backendPayment = paymentHistoryData?.payments.find((p) => p.id === selectedPayment?.id)
+  const paymentNumber = backendPayment?.payment_number || selectedPayment?.id.toString()
+  const { data: paymentDetails } = usePayment(
+    paymentNumber || null,
+    !!selectedPayment && !!paymentNumber
+  )
+
+  // Load user details for "Cancelled by" using reversed_by_user_id
+  const cancelledByUserId = paymentDetails?.reversed_by_user_id ?? null
+  const { data: cancelledByUser } = useUser(cancelledByUserId)
+
+  // Helper function to check if payment date is less than 7 days old
+  // Use utility function from payments feature
+  const checkPaymentLessThan7DaysOld = useCallback((paymentDate: string): boolean => {
+    // Convert MM/DD/YYYY to ISO date for utility function
+    try {
+      const [month, day, year] = paymentDate.split('/')
+      const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+      return isPaymentLessThan7DaysOld(isoDate)
+    } catch {
+      return false
+    }
+  }, [])
+
+  // Resolve a human-friendly project name for a payment
+  const resolveProjectName = useCallback(
+    (paymentId?: number) => {
+      try {
+        const fromPayment = paymentHistoryData?.payments.find((p) => p.id === paymentId)
+        if (fromPayment?.project_name) return fromPayment.project_name
+      } catch {
+        // ignore
+      }
+      return 'Unknown Project'
     },
-    {
-      id: '2',
-      paymentId: 'PMT-2025-12-000',
-      status: 'Verified' as const,
-      amount: 6500.0,
-      action: 'Verified by You',
-      time: '2 hours ago',
+    [paymentHistoryData]
+  )
+
+  // Convert Payment to PendingPayment format
+  const convertPaymentToPendingPayment = useCallback(
+    (payment: Payment): import('./components/PaymentVerificationQueueModal').PendingPayment => {
+      // Calculate time ago (simple implementation)
+      const paymentDateObj = new Date(payment.date)
+      const now = new Date()
+      const diffMs = now.getTime() - paymentDateObj.getTime()
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+      const diffDays = Math.floor(diffHours / 24)
+
+      let submittedAt = ''
+      if (diffDays > 0) {
+        submittedAt = `${diffDays} ${diffDays === 1 ? 'day' : 'days'} ago`
+      } else if (diffHours > 0) {
+        submittedAt = `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`
+      } else {
+        submittedAt = 'Just now'
+      }
+
+      // Use backend debt_before / debt_after when available for accurate debt impact
+      const backendPayment = paymentHistoryData?.payments.find((p) => p.id === payment.id)
+      const currentDebt = backendPayment
+        ? Number(backendPayment.debt_before) || 0
+        : paymentHistory?.totalDebt || 0
+      const newDebt = backendPayment
+        ? Number(backendPayment.debt_after) || 0
+        : Math.max(0, currentDebt - payment.amount)
+
+      return {
+        id: payment.id.toString(),
+        paymentId: `PMT-${payment.id}`,
+        submittedAt,
+        client: customerName,
+        project: resolveProjectName(payment.id),
+        amount: payment.amount,
+        method: payment.method,
+        date: payment.date,
+        reference: payment.reference || `TRX${payment.id.toString().padStart(5, '0')}`,
+        currentDebt,
+        newDebt,
+      }
     },
-    {
-      id: '3',
-      paymentId: 'PMT-2025-12-000',
-      status: 'Rejected' as const,
-      amount: 7500.0,
-      action: 'Rejected by You',
-      time: '3 hours ago',
-    },
-  ]
+    [customerName, paymentHistory, paymentHistoryData, resolveProjectName]
+  )
+
+  // Filter pending payments that are less than 7 days old
+  const pendingPaymentsForVerification = useMemo(() => {
+    if (!paymentHistory) return []
+
+    return paymentHistory.payments
+      .filter((payment) => {
+        return payment.status === 'pending' && checkPaymentLessThan7DaysOld(payment.date)
+      })
+      .map(convertPaymentToPendingPayment)
+  }, [paymentHistory, checkPaymentLessThan7DaysOld, convertPaymentToPendingPayment])
 
   const handleVerifyPayment = (paymentId: string) => {
-    // TODO: Implement API call to verify payment
-    console.log('Verify payment', paymentId)
-    // Close modal after verification
-    setIsVerificationModalOpen(false)
+    // Find payment by ID
+    const payment = paymentHistory?.payments.find((p) => p.id.toString() === paymentId)
+    if (!payment) {
+      toast.error('Payment not found')
+      return
+    }
+
+    // Use payment_number from backend if available, otherwise use ID
+    const backendPayment = paymentHistoryData?.payments.find((p) => p.id.toString() === paymentId)
+    const paymentNumber = backendPayment?.payment_number || paymentId
+
+    verifyPaymentMutation(
+      {
+        paymentId: paymentNumber,
+        request: {},
+      },
+      {
+        onSuccess: () => {
+          setIsVerificationModalOpen(false)
+          refetchPayments()
+        },
+      }
+    )
   }
 
-  const handleRejectPayment = (paymentId: string) => {
-    // TODO: Implement API call to reject payment
-    console.log('Reject payment', paymentId)
-    // Close modal after rejection
+  const handleCancelPaymentFromQueue = (
+    paymentId: string,
+    _payment: import('./components/PaymentVerificationQueueModal').PendingPayment
+  ) => {
+    // Close PaymentVerificationQueueModal
     setIsVerificationModalOpen(false)
+    setSelectedPaymentId(null)
+
+    // Find the payment in paymentHistory and set it as selectedPayment
+    if (paymentHistory) {
+      const paymentToCancel = paymentHistory.payments.find((p) => p.id.toString() === paymentId)
+      if (paymentToCancel) {
+        setSelectedPayment(paymentToCancel)
+        setIsCancelModalOpen(true)
+      }
+    }
+  }
+
+  const handleSaveEditPayment = (data: {
+    amount: number
+    date: Date
+    method: 'Bank Transfer' | 'Online Gateway' | 'Card'
+    referenceNumber?: string
+    last4Digits?: string
+    paymentMethodDetails?: string
+  }) => {
+    if (!selectedPayment) return
+
+    const backendPayment = paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
+    if (!backendPayment) {
+      toast.error('Payment not found')
+      return
+    }
+
+    editPaymentMutation(
+      {
+        paymentId: backendPayment.id,
+        request: {
+          amount: data.amount,
+          payment_method: frontendToBackendPaymentMethod(data.method),
+          payment_method_details: data.paymentMethodDetails,
+          bank_reference:
+            data.referenceNumber ||
+            (data.method === 'Card' ? `****${data.last4Digits}` : undefined),
+        },
+      },
+      {
+        onSuccess: () => {
+          setIsEditModalOpen(false)
+          setSelectedPayment(null)
+          refetchPayments()
+        },
+      }
+    )
   }
 
   const handleExport = (data: {
@@ -371,8 +507,21 @@ export function PaymentHistoryPage() {
     project: string
     columns: string[]
   }) => {
-    // TODO: Implement CSV export
-    console.log('Export CSV with data:', data)
+    exportPaymentsMutation({
+      client_id: clientId,
+      from_date: data.startDate ? data.startDate.toISOString().split('T')[0] : undefined,
+      to_date: data.endDate ? data.endDate.toISOString().split('T')[0] : undefined,
+      status:
+        data.statuses.length === 1 && data.statuses[0] !== 'All'
+          ? frontendToBackendPaymentStatus(data.statuses[0] as 'Verified' | 'Pending' | 'Cancelled')
+          : undefined,
+      payment_method:
+        data.method !== 'All'
+          ? frontendToBackendPaymentMethod(
+              data.method as 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other'
+            )
+          : undefined,
+    })
   }
 
   const handleViewDetails = (payment: Payment) => {
@@ -382,55 +531,95 @@ export function PaymentHistoryPage() {
 
   const handleCancelPayment = () => {
     if (selectedPayment) {
+      // Close PaymentDetailsModal and open CancelPaymentModal
       setIsPaymentDetailsModalOpen(false)
+      // Use setTimeout to ensure state updates happen in sequence
       setIsCancelModalOpen(true)
+    }
+  }
+
+  const handleEditPayment = () => {
+    if (selectedPayment) {
+      // Close PaymentDetailsModal and open EditPaymentModal
+      setIsPaymentDetailsModalOpen(false)
+      // Use setTimeout to ensure state updates happen in sequence
+      setIsEditModalOpen(true)
     }
   }
 
   const handleViewClientProfile = () => {
     if (selectedPayment && id) {
       setIsPaymentDetailsModalOpen(false)
-      navigate(`/dashboard/${id}`)
+      navigate(`/dashboard/clients/${id}`)
     }
   }
 
-  // Load payment history data
+  // Clear restrictive date filters immediately if they cause no results
   useEffect(() => {
-    if (customerName) {
-      // TODO: Replace with actual API call to fetch payment history
-      // For now, use mock data but with real customer name from client data
-      const mockData = getMockPaymentHistory()
-      const data: PaymentHistoryData = {
-        ...mockData,
-        customerName,
-      }
-      // Simulate API delay
-      setTimeout(() => {
-        setPaymentHistory(data)
+    if (
+      paymentHistoryData &&
+      paymentHistoryData.total_payments > 0 &&
+      paymentHistoryData.payments.length === 0 &&
+      (startDate || endDate)
+    ) {
+      // Date filter is too restrictive - clear it immediately to show all payments
+      setStartDate(null)
+      setEndDate(null)
+      dateRangeInitialized.current = false
+      dateFiltersCleared.current = true
+    }
+  }, [paymentHistoryData, setStartDate, setEndDate, startDate, endDate])
 
-        // Calculate and set date range to match payment history date range
-        if (data.payments.length > 0 && !dateRangeInitialized.current) {
-          // Parse all payment dates and find min/max
-          const dates = data.payments.map((payment) => {
-            const [month, day, year] = payment.date.split('/')
-            return new Date(Number(year), Number(month) - 1, Number(day))
-          })
+  // Clear date filters on initial load if they're set to a single day (likely wrong/restrictive)
+  useEffect(() => {
+    // Only run once on mount - clear single-day filters that are likely wrong
+    // This prevents restrictive date filters from hiding all payments
+    if (!dateFiltersCleared.current && startDateUrl && endDateUrl && startDateUrl === endDateUrl) {
+      // Single day filter on initial load - clear it immediately to show all payments
+      setStartDateUrl('')
+      setEndDateUrl('')
+      dateFiltersCleared.current = true
+    }
+  }, [startDateUrl, endDateUrl, setStartDateUrl, setEndDateUrl])
 
-          const minDate = new Date(Math.min(...dates.map((d) => d.getTime())))
-          const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())))
+  // Initialize date range from payment history data (only after we have payments)
+  useEffect(() => {
+    // Only initialize if we have payments and haven't initialized yet
+    if (
+      paymentHistoryData &&
+      paymentHistoryData.payments.length > 0 &&
+      !dateRangeInitialized.current
+    ) {
+      const dates = paymentHistoryData.payments
+        .map((payment) => {
+          const dateStr = payment.payment_date
+          if (!dateStr) return null
+          const [year, month, day] = dateStr.split('-').map(Number)
+          if (isNaN(year) || isNaN(month) || isNaN(day)) return null
+          return new Date(year, month - 1, day)
+        })
+        .filter((d): d is Date => d !== null)
 
-          // Set dates only once when payment history first loads
+      if (dates.length > 0) {
+        const minDate = new Date(Math.min(...dates.map((d) => d.getTime())))
+        const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())))
+
+        // Only set date range if it covers multiple days or if it's the actual payment date range
+        // Don't set if it's a single day (that would be too restrictive)
+        if (minDate.getTime() !== maxDate.getTime() || dates.length === 1) {
           setStartDate(minDate)
           setEndDate(maxDate)
           dateRangeInitialized.current = true
         }
-      }, 500)
+      }
     }
-  }, [customerName])
+  }, [paymentHistoryData, setStartDate, setEndDate])
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: string | number) => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount
+    if (isNaN(num)) return '₴ 0'
     const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    return `₴ ${amount
+    return `₴ ${num
       .toLocaleString(locale, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
@@ -440,14 +629,14 @@ export function PaymentHistoryPage() {
 
   const getStatusDot = (status: Payment['status']) => {
     const statusColors = {
-      Verified: 'bg-success-500',
-      Pending: 'bg-gray-500',
-      Cancelled: 'bg-error-500',
+      verified: 'bg-success-500',
+      pending: 'bg-gray-500',
+      cancelled: 'bg-error-500',
     }
     const borderStatusColors = {
-      Verified: 'bg-success-200',
-      Pending: 'bg-gray-200',
-      Cancelled: 'bg-error-200',
+      verified: 'bg-success-200',
+      pending: 'bg-gray-200',
+      cancelled: 'bg-error-200',
     }
     return (
       <span
@@ -461,13 +650,46 @@ export function PaymentHistoryPage() {
     )
   }
 
-  // Filter payments
+  // Handle sort
+  const handleSort = (key: string) => {
+    const newOrder: 'asc' | 'desc' =
+      sortConfig?.key === key && sortConfig.order === 'asc' ? 'desc' : 'asc'
+    setSortConfig({ key, order: newOrder })
+  }
+
+  // Get sort icon for column header
+  const getSortIcon = (columnKey: string) => {
+    const isActive = sortConfig?.key === columnKey
+
+    if (!isActive) {
+      return (
+        <span className="ml-1 opacity-40">
+          <Icons.Sorting01Icon size={14} className="text-gray-500" strokeWidth={1.5} />
+        </span>
+      )
+    }
+
+    return sortConfig.order === 'asc' ? (
+      <span className="ml-1 inline-block rotate-180">
+        <Icons.Sorting01Icon size={14} className="text-information-400" strokeWidth={2} />
+      </span>
+    ) : (
+      <span className="ml-1">
+        <Icons.Sorting01Icon size={14} className="text-information-400" strokeWidth={2} />
+      </span>
+    )
+  }
+
+  // Filter and sort payments
   const filteredPayments = useMemo(() => {
     if (!paymentHistory) return []
 
-    return paymentHistory.payments.filter((payment) => {
+    let result = paymentHistory.payments.filter((payment) => {
       if (statusFilter !== 'All' && payment.status !== statusFilter) return false
-      if (methodFilter !== 'All' && payment.method !== methodFilter) return false
+      if (methodFilter !== 'All') {
+        // Payment method is already in frontend format, compare directly
+        if (payment.method !== methodFilter) return false
+      }
 
       // Date range filtering
       if (startDate || endDate) {
@@ -490,7 +712,58 @@ export function PaymentHistoryPage() {
 
       return true
     })
-  }, [paymentHistory, statusFilter, methodFilter, startDate, endDate])
+
+    // Apply sorting
+    if (sortConfig) {
+      result = [...result].sort((a, b) => {
+        let aValue: string | number
+        let bValue: string | number
+
+        switch (sortConfig.key) {
+          case 'date': {
+            // Parse dates in format MM/DD/YYYY
+            const [aMonth, aDay, aYear] = a.date.split('/')
+            const [bMonth, bDay, bYear] = b.date.split('/')
+            aValue = new Date(Number(aYear), Number(aMonth) - 1, Number(aDay)).getTime()
+            bValue = new Date(Number(bYear), Number(bMonth) - 1, Number(bDay)).getTime()
+            break
+          }
+          case 'amount':
+            aValue = a.amount
+            bValue = b.amount
+            break
+          case 'method':
+            aValue = a.method.toLowerCase()
+            bValue = b.method.toLowerCase()
+            break
+          case 'status':
+            aValue = a.status.toLowerCase()
+            bValue = b.status.toLowerCase()
+            break
+          case 'reference':
+            aValue = (a.reference || '').toLowerCase()
+            bValue = (b.reference || '').toLowerCase()
+            break
+          case 'contract':
+            aValue = (a.contractNumber || '').toLowerCase()
+            bValue = (b.contractNumber || '').toLowerCase()
+            break
+          default:
+            return 0
+        }
+
+        if (aValue < bValue) {
+          return sortConfig.order === 'asc' ? -1 : 1
+        }
+        if (aValue > bValue) {
+          return sortConfig.order === 'asc' ? 1 : -1
+        }
+        return 0
+      })
+    }
+
+    return result
+  }, [paymentHistory, statusFilter, methodFilter, startDate, endDate, sortConfig])
 
   // Paginate payments
   const totalPages = Math.ceil(filteredPayments.length / pageSize)
@@ -523,50 +796,50 @@ export function PaymentHistoryPage() {
   }
 
   // Show loading state while fetching client or payment history
-  if (isLoadingClient || !paymentHistory) {
+  if (isLoadingClient || isLoadingPayments || !paymentHistory) {
     return (
       <div className="flex flex-1 flex-col items-start gap-5 self-stretch">
         {/* Header Skeleton */}
-        <div className="flex h-12 items-start justify-between self-stretch">
-          <div className="flex items-center gap-4 self-stretch">
-            <div className="h-12 w-32 animate-pulse rounded-full bg-gray-200" />
-            <div className="h-8 w-64 animate-pulse rounded bg-gray-200" />
+        <div className="flex flex-col gap-3 self-stretch sm:h-12 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-center gap-2 sm:gap-4 sm:self-stretch">
+            <div className="h-10 w-24 animate-pulse rounded-full bg-gray-200 sm:h-12 sm:w-32" />
+            <div className="h-6 w-48 animate-pulse rounded bg-gray-200 sm:h-8 sm:w-64" />
           </div>
-          <div className="h-12 w-32 animate-pulse rounded-full bg-gray-200" />
+          <div className="h-10 w-full animate-pulse rounded-full bg-gray-200 sm:h-12 sm:w-32" />
         </div>
 
         {/* Main Content Skeleton */}
-        <div className="flex items-start gap-5 self-stretch">
+        <div className="flex flex-col items-start gap-5 self-stretch xl:flex-row">
           {/* Left Column Skeleton */}
-          <div className="flex w-[35%] flex-col items-start gap-5 self-stretch">
+          <div className="flex w-full flex-col items-start gap-5 self-stretch xl:w-[35%]">
             {/* Client Information Card Skeleton */}
-            <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-6">
+            <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-4 sm:p-6">
               {/* Client Name Skeleton */}
               <div className="flex flex-col items-center justify-center gap-4 self-stretch">
-                <div className="flex items-center justify-center gap-4">
-                  <div className="h-10 w-10 animate-pulse rounded-full bg-gray-200" />
-                  <div className="h-6 w-48 animate-pulse rounded bg-gray-200" />
+                <div className="flex items-center justify-center gap-2 sm:gap-4">
+                  <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
+                  <div className="h-5 w-36 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-48" />
                 </div>
-                <div className="h-8 w-24 animate-pulse rounded-full bg-gray-200" />
+                <div className="h-6 w-20 animate-pulse rounded-full bg-gray-200 sm:h-8 sm:w-24" />
               </div>
 
               {/* Progress Circle Skeleton */}
               <div className="mb-6 flex justify-center">
-                <div className="relative flex h-[150px] w-[150px] items-center justify-center">
-                  <div className="h-[150px] w-[150px] animate-pulse rounded-full bg-gray-200" />
-                  <div className="absolute h-12 w-12 animate-pulse rounded-full bg-gray-300" />
+                <div className="relative flex h-[120px] w-[120px] items-center justify-center sm:h-[150px] sm:w-[150px]">
+                  <div className="h-[120px] w-[120px] animate-pulse rounded-full bg-gray-200 sm:h-[150px] sm:w-[150px]" />
+                  <div className="absolute h-10 w-10 animate-pulse rounded-full bg-gray-300 sm:h-12 sm:w-12" />
                 </div>
               </div>
 
               {/* Total Paid Skeleton */}
               <div className="flex flex-col items-center gap-5 self-stretch">
-                <div className="h-6 w-32 animate-pulse rounded bg-gray-200" />
+                <div className="h-5 w-28 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-32" />
               </div>
 
               {/* Action Buttons Skeleton */}
-              <div className="flex items-start gap-3">
-                <div className="h-10 flex-1 animate-pulse rounded-full bg-gray-200" />
-                <div className="h-10 flex-1 animate-pulse rounded-full bg-gray-200" />
+              <div className="flex w-full flex-col items-start gap-3 sm:flex-row">
+                <div className="h-10 w-full flex-1 animate-pulse rounded-full bg-gray-200 sm:w-auto" />
+                <div className="h-10 w-full flex-1 animate-pulse rounded-full bg-gray-200 sm:w-auto" />
               </div>
             </div>
 
@@ -574,64 +847,64 @@ export function PaymentHistoryPage() {
             {Array.from({ length: 3 }).map((_, index) => (
               <div
                 key={index}
-                className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white bg-white/50 px-0 pt-5 pb-6"
+                className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5"
               >
-                <div className="flex items-start justify-between self-stretch px-6">
-                  <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
-                  <div className="h-4 w-32 animate-pulse rounded bg-gray-200" />
+                <div className="flex flex-col items-start gap-2 self-stretch px-4 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+                  <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
+                  <div className="h-3 w-28 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-32" />
                 </div>
-                <div className="flex items-center justify-between self-stretch px-6">
-                  <div className="h-6 w-32 animate-pulse rounded bg-gray-200" />
-                  <div className="h-5 w-16 animate-pulse rounded bg-gray-200" />
+                <div className="flex flex-col items-start gap-2 self-stretch px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                  <div className="h-5 w-28 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-32" />
+                  <div className="h-4 w-14 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-16" />
                 </div>
               </div>
             ))}
           </div>
 
           {/* Right Column Skeleton - Payment History Table */}
-          <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-6">
+          <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
             <div className="flex flex-col items-start gap-3 self-stretch">
-              <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
+              <div className="h-4 w-40 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-48" />
 
               {/* Filters Skeleton */}
-              <div className="flex items-start gap-5 self-stretch rounded-t-xl border border-b-0 border-[#EBECE8] bg-white p-4">
-                <div className="flex flex-1 flex-col items-start justify-center gap-1">
+              <div className="flex flex-col items-start gap-3 self-stretch rounded-t-xl border border-b-0 border-[#EBECE8] bg-white p-3 sm:flex-row sm:gap-5 sm:p-4">
+                <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 sm:w-auto">
                   <div className="h-3 w-12 animate-pulse rounded bg-gray-200" />
                   <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
                 </div>
-                <div className="flex flex-1 flex-col items-start justify-center gap-1">
+                <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 sm:w-auto">
                   <div className="h-3 w-16 animate-pulse rounded bg-gray-200" />
                   <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
                 </div>
-                <div className="flex flex-1 flex-col items-start justify-center gap-1">
+                <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 sm:w-auto">
                   <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
                   <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
                 </div>
-                <div className="flex flex-1 flex-col items-start justify-center gap-1">
+                <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 sm:w-auto">
                   <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
                   <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
                 </div>
               </div>
 
               {/* Table Skeleton */}
-              <div className="w-full overflow-hidden rounded-xl rounded-t-none border border-[#EBECE8] bg-[#EBECE8] shadow-sm">
+              <div className="w-full overflow-x-auto overflow-y-hidden rounded-xl rounded-t-none border border-[#EBECE8] bg-[#EBECE8] shadow-sm">
                 <table className="min-w-full border-collapse">
                   <thead>
                     <tr className="bg-white">
-                      <th className="h-[49px] border-r border-[#EBECE8] px-6 text-left">
-                        <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
+                        <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
                       </th>
-                      <th className="h-[49px] border-r border-[#EBECE8] px-6 text-right">
-                        <div className="ml-auto h-4 w-20 animate-pulse rounded bg-gray-200" />
+                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-right sm:px-6">
+                        <div className="ml-auto h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
                       </th>
-                      <th className="h-[49px] border-r border-[#EBECE8] px-6 text-left">
-                        <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
+                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
+                        <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
                       </th>
-                      <th className="h-[49px] border-r border-[#EBECE8] px-6 text-left">
-                        <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
+                        <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
                       </th>
-                      <th className="h-[49px] px-6 text-center">
-                        <div className="mx-auto h-4 w-20 animate-pulse rounded bg-gray-200" />
+                      <th className="h-[49px] px-3 text-center sm:px-6">
+                        <div className="mx-auto h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
                       </th>
                     </tr>
                   </thead>
@@ -641,23 +914,23 @@ export function PaymentHistoryPage() {
                         key={rowIndex}
                         className={rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'}
                       >
-                        <td className="h-[49px] border-r border-[#EBECE8] px-6">
-                          <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
+                        <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
+                          <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
                         </td>
-                        <td className="h-[49px] border-r border-[#EBECE8] px-6 text-right">
-                          <div className="ml-auto h-4 w-24 animate-pulse rounded bg-gray-200" />
+                        <td className="h-[49px] border-r border-[#EBECE8] px-3 text-right sm:px-6">
+                          <div className="ml-auto h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
                         </td>
-                        <td className="h-[49px] border-r border-[#EBECE8] px-6">
-                          <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+                        <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
+                          <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
                         </td>
-                        <td className="h-[49px] border-r border-[#EBECE8] px-6">
+                        <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
                           <div className="flex items-center gap-2">
                             <div className="h-3 w-3 animate-pulse rounded-full bg-gray-200" />
-                            <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
+                            <div className="hidden h-4 w-16 animate-pulse rounded bg-gray-200 sm:block sm:w-20" />
                           </div>
                         </td>
-                        <td className="h-[49px] px-6 text-center">
-                          <div className="mx-auto h-6 w-24 animate-pulse rounded bg-gray-200" />
+                        <td className="h-[49px] px-3 text-center sm:px-6">
+                          <div className="mx-auto h-5 w-20 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-24" />
                         </td>
                       </tr>
                     ))}
@@ -666,15 +939,15 @@ export function PaymentHistoryPage() {
               </div>
 
               {/* Pagination Skeleton */}
-              <div className="flex items-center justify-between self-stretch">
+              <div className="flex flex-col items-start gap-3 self-stretch sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
-                  <div className="h-10 w-20 animate-pulse rounded bg-gray-200" />
+                  <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
+                  <div className="h-9 w-18 animate-pulse rounded bg-gray-200 sm:h-10 sm:w-20" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="h-10 w-10 animate-pulse rounded bg-gray-200" />
-                  <div className="h-10 w-10 animate-pulse rounded bg-gray-200" />
-                  <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
+                  <div className="h-9 w-9 animate-pulse rounded bg-gray-200 sm:h-10 sm:w-10" />
+                  <div className="h-9 w-9 animate-pulse rounded bg-gray-200 sm:h-10 sm:w-10" />
+                  <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
                 </div>
               </div>
             </div>
@@ -684,20 +957,22 @@ export function PaymentHistoryPage() {
     )
   }
 
-  // Show error state if client fetch failed
-  if (isClientError) {
+  // Show error state if client or payment fetch failed
+  if (isClientError || isPaymentError) {
+    const errorMessage =
+      clientError?.message || paymentError?.message || t('pages.clients.debtSummary.errorOccurred')
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
         <p className="font-medium text-gray-900">
-          {t('pages.clients.debtSummary.failedToLoadClient')}
+          {isClientError
+            ? t('pages.clients.debtSummary.failedToLoadClient')
+            : t('pages.clients.paymentHistory.failedToLoadPayments')}
         </p>
-        <p className="text-sm text-gray-600">
-          {clientError?.message || t('pages.clients.debtSummary.errorOccurred')}
-        </p>
+        <p className="text-sm text-gray-600">{errorMessage}</p>
         <Button
           variant="outline"
-          onClick={() => navigate(`/dashboard/${id}/debt-summary`)}
+          onClick={() => navigate(`/dashboard/clients/${id}/debt-summary`)}
           className="mt-4"
         >
           {t('pages.clients.debtSummary.backToClient')}
@@ -709,43 +984,48 @@ export function PaymentHistoryPage() {
   return (
     <div className="flex flex-1 flex-col items-start gap-5 self-stretch">
       {/* Header */}
-      <div className="flex h-12 items-start justify-between self-stretch">
-        <div className="flex items-center gap-4 self-stretch">
+      <div className="flex flex-col gap-3 self-stretch xl:h-12 xl:flex-row xl:items-start xl:justify-between">
+        <div className="flex items-center gap-2 sm:gap-4 sm:self-stretch">
           <Button
             variant="white-secondary"
-            leftIcon={<Icons.ArrowLeft02 size={20} />}
-            onClick={() => navigate(`/dashboard/${id}/debt-summary`)}
-            className="h-12 rounded-full"
+            leftIcon={<Icons.ArrowLeft02 size={18} className="sm:size-5" />}
+            onClick={() => navigate(`/dashboard/clients/${id}/debt-summary`)}
+            className="h-10 rounded-full sm:h-12"
           >
-            {t('pages.clients.paymentHistory.backToClient')}
+            <span className="hidden sm:inline">
+              {t('pages.clients.paymentHistory.backToClient')}
+            </span>
+            <span className="sm:hidden">Back</span>
           </Button>
-          <span className="text-dark-500 text-center text-2xl leading-tight font-light tracking-[-0.48px]">
+          <span className="text-dark-500 text-center text-lg leading-tight font-light tracking-[-0.48px] sm:text-2xl">
             {t('pages.clients.paymentHistory.title')}:{' '}
             <span className="font-medium">{paymentHistory.customerName}</span>
           </span>
         </div>
-        <Button
-          variant="primary"
-          leftIcon={<Icons.Csv02 size={20} />}
-          onClick={() => setIsExportModalOpen(true)}
-          className="h-12 rounded-full"
-        >
-          {t('pages.clients.paymentHistory.exportCSV')}
-        </Button>
+        <PermissionGuard permission={PERMISSIONS.DATA.EXPORT}>
+          <Button
+            variant="primary"
+            leftIcon={<Icons.Csv02 size={18} className="sm:size-5" />}
+            onClick={() => setIsExportModalOpen(true)}
+            className="h-10 w-full rounded-full sm:h-12 sm:w-auto"
+          >
+            {t('pages.clients.paymentHistory.exportCSV')}
+          </Button>
+        </PermissionGuard>
       </div>
 
       {/* Main Content */}
-      <div className="flex items-start gap-5 self-stretch">
+      <div className="flex flex-col items-start gap-5 self-stretch xl:flex-row">
         {/* Left Column - Client Summary */}
-        <div className="flex w-[35%] flex-col items-start gap-5 self-stretch">
+        <div className="flex w-full flex-col items-start gap-5 xl:w-[35%]">
           {/* Client Information Card */}
-          <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-6">
+          <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-4 sm:p-6">
             <div className="flex flex-col items-center justify-center gap-4 self-stretch">
-              <div className="flex items-center justify-center gap-4">
+              <div className="flex items-center justify-center gap-2 sm:gap-4">
                 <div className="flex items-center gap-2.5 rounded-full bg-white p-2">
-                  <Icons.User size={24} className="text-dark-500" />
+                  <Icons.User size={20} className="text-dark-500 sm:size-[24px]" />
                 </div>
-                <span className="text-dark-500 text-xl leading-[132%] font-medium tracking-[-0.4px]">
+                <span className="text-dark-500 text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
                   {paymentHistory.customerName}
                 </span>
               </div>
@@ -796,8 +1076,11 @@ export function PaymentHistoryPage() {
 
             {/* Progress Circle */}
             <div className="mb-6 flex justify-center">
-              <div className="relative flex h-[150px] w-[150px] items-center justify-center">
-                <svg className="h-[150px] w-[150px] -rotate-90 transform" viewBox="0 0 100 100">
+              <div className="relative flex h-[120px] w-[120px] items-center justify-center sm:h-[150px] sm:w-[150px]">
+                <svg
+                  className="h-[120px] w-[120px] -rotate-90 transform sm:h-[150px] sm:w-[150px]"
+                  viewBox="0 0 100 100"
+                >
                   <circle
                     cx="50"
                     cy="50"
@@ -822,36 +1105,54 @@ export function PaymentHistoryPage() {
                     className="transition-all duration-500 ease-in-out"
                   />
                 </svg>
-                <span className="text-secondary-800 absolute text-[36px] leading-[126%] font-medium tracking-[-0.72px]">
+                <span className="text-secondary-800 absolute text-[28px] leading-[126%] font-medium tracking-[-0.72px] sm:text-[36px]">
                   {Math.round(paymentHistory.progressPercentage)}%
                 </span>
               </div>
             </div>
 
             <div className="flex flex-col items-center gap-5 self-stretch">
-              <span className="text-dark-500 text-center text-xl leading-[132%] font-light tracking-[-0.4px]">
+              <span className="text-dark-500 text-center text-base leading-[132%] font-light tracking-[-0.4px] sm:text-xl">
                 {t('pages.clients.paymentHistory.totalPaid')}{' '}
                 <span className="font-medium">{formatCurrency(paymentHistory.totalPaid)}</span>
               </span>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-start gap-3">
-              <Button
-                variant="primary"
-                leftIcon={<Icons.Headset size={20} />}
-                className="flex-1 rounded-full"
-                onClick={() => {
-                  // TODO: Handle call
-                  console.log('Call customer')
-                }}
-              >
-                {t('pages.clients.paymentHistory.call')}
-              </Button>
+            <div className="flex w-full flex-col items-start gap-3 sm:flex-row">
+              <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
+                <Button
+                  variant="primary"
+                  leftIcon={<Icons.Headset size={18} className="sm:size-5" />}
+                  className="w-full rounded-full"
+                  disabled={!user?.is_agent || !user?.asterisk_extension}
+                  onClick={() => {
+                    const phoneNumber = client?.phones?.[0]?.number
+                    if (!phoneNumber) {
+                      toast.error('Client has no phone number')
+                      return
+                    }
+
+                    if (isCallActive()) {
+                      toast.warning(
+                        t('pages.clients.modals.callDialog.callInProgress') ||
+                          'Another call or recording is already in progress. Please finish or close it first.'
+                      )
+                      return
+                    }
+
+                    // Open modal in 'initial' state to let user select call type
+                    setOpenCallModal('call-dialog')
+                    setIsCallModalOpen(true)
+                  }}
+                >
+                  {t('pages.clients.paymentHistory.call')}
+                </Button>
+              </PermissionGuard>
               <Button
                 variant="secondary"
-                leftIcon={<Icons.PencilEdit02 size={20} />}
-                className="flex-1 rounded-full"
+                leftIcon={<Icons.PencilEdit02 size={18} className="sm:size-5" />}
+                className="w-full rounded-full"
                 onClick={() => {
                   // TODO: Handle edit
                   console.log('Edit customer')
@@ -863,25 +1164,25 @@ export function PaymentHistoryPage() {
           </div>
 
           {/* Total Payments */}
-          <div className="relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border border-white bg-white/50 px-0 pt-5 pb-6">
-            <div className="flex items-start justify-between self-stretch px-6">
+          <div className="relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+            <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
               <div className="flex items-center gap-2">
-                <Icons.Wallet01 size={18} className="text-gray-700" />
-                <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                <Icons.Wallet01 size={16} className="text-gray-700 sm:size-[18px]" />
+                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                   {t('pages.clients.paymentHistory.totalPayments')}
                 </span>
               </div>
               <div className="flex items-start gap-3">
-                <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                   {t('pages.clients.paymentHistory.numberOfPayments')}
                 </span>
               </div>
             </div>
-            <div className="flex items-center justify-between self-stretch px-6">
-              <span className="text-dark-500 text-center text-xl leading-[132%] font-medium tracking-[-0.4px]">
+            <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 px-6">
+              <span className="text-dark-500 text-center text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
                 {formatCurrency(paymentHistory.totalPaymentsAmount)}
               </span>
-              <span className="text-dark-500 text-center text-base leading-[155%] font-medium tracking-[-0.32px]">
+              <span className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                 {paymentHistory.totalPayments}
               </span>
             </div>
@@ -889,50 +1190,50 @@ export function PaymentHistoryPage() {
           </div>
 
           {/* Verified Payments */}
-          <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white bg-white/50 px-0 pt-5 pb-6">
-            <div className="flex items-start justify-between self-stretch px-6">
+          <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+            <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
               <div className="flex items-center gap-2">
-                <Icons.AddInvoice size={18} className="text-gray-700" />
-                <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                <Icons.AddInvoice size={16} className="text-gray-700 sm:size-[18px]" />
+                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                   {t('pages.clients.paymentHistory.verified')}
                 </span>
               </div>
               <div className="flex items-start gap-3">
-                <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                   {t('pages.clients.paymentHistory.numberOfPayments')}
                 </span>
               </div>
             </div>
-            <div className="flex items-center justify-between self-stretch px-6">
-              <span className="text-dark-500 text-center text-xl leading-[132%] font-medium tracking-[-0.4px]">
+            <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 px-6">
+              <span className="text-dark-500 text-center text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
                 {formatCurrency(paymentHistory.verifiedPaymentsAmount)}
               </span>
-              <span className="text-dark-500 text-center text-base leading-[155%] font-medium tracking-[-0.32px]">
+              <span className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                 {paymentHistory.verifiedPayments}
               </span>
             </div>
           </div>
 
           {/* Pending Payments */}
-          <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white bg-white/50 px-0 pt-5 pb-6">
-            <div className="flex items-start justify-between self-stretch px-6">
+          <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+            <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
               <div className="flex items-center gap-2">
-                <Icons.Invoice01 size={18} className="text-gray-700" />
-                <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                <Icons.Invoice01 size={16} className="text-gray-700 sm:size-[18px]" />
+                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                   {t('pages.clients.paymentHistory.pending')}
                 </span>
               </div>
               <div className="flex items-start gap-3">
-                <span className="text-sm leading-[150%] font-medium tracking-[-0.28px] text-gray-700">
+                <span className="text-xs leading-[150%] font-medium tracking-[-0.28px] text-gray-700 sm:text-sm">
                   {t('pages.clients.paymentHistory.numberOfPayments')}
                 </span>
               </div>
             </div>
-            <div className="flex items-center justify-between self-stretch px-6">
-              <span className="text-dark-500 text-center text-xl leading-[132%] font-medium tracking-[-0.4px]">
+            <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 px-6">
+              <span className="text-dark-500 text-center text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
                 {formatCurrency(paymentHistory.pendingPaymentsAmount)}
               </span>
-              <span className="text-dark-500 text-center text-base leading-[155%] font-medium tracking-[-0.32px]">
+              <span className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                 {paymentHistory.pendingPayments}
               </span>
             </div>
@@ -940,9 +1241,9 @@ export function PaymentHistoryPage() {
         </div>
 
         {/* Right Column - Payment History Table */}
-        <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-6">
+        <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
           <div className="flex flex-col items-start gap-3 self-stretch">
-            <span className="text-dark-500 text-base leading-[155%] font-medium tracking-[-0.32px]">
+            <span className="text-dark-500 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
               {t('pages.clients.paymentHistory.title')}{' '}
               {getPaymentHistorySubtitle() && (
                 <span className="font-light">({getPaymentHistorySubtitle()})</span>
@@ -950,32 +1251,34 @@ export function PaymentHistoryPage() {
             </span>
             <div className="flex flex-col items-start self-stretch">
               {/* Filters */}
-              <div className="flex items-start gap-5 self-stretch rounded-t-xl border border-b-0 border-[#EBECE8] bg-white p-4">
-                <div className="flex flex-1 flex-col items-start justify-center gap-1">
+              <div className="flex flex-col items-start gap-3 self-stretch rounded-t-xl border border-b-0 border-[#EBECE8] bg-white p-3 sm:flex-row sm:gap-5 sm:p-4">
+                <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 self-stretch">
                   <span className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
                     {t('pages.clients.paymentHistory.filters.status')}
                   </span>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-[45px] rounded-md border-gray-200">
+                    <SelectTrigger className="h-[45px] w-full rounded-md border-gray-200">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="All">
                         {t('pages.clients.paymentHistory.filters.all')}
                       </SelectItem>
-                      <SelectItem value="Verified">
+                      <SelectItem value="verified">
                         {t('pages.clients.paymentHistory.verified')}
                       </SelectItem>
-                      <SelectItem value="Pending">
+                      <SelectItem value="pending">
                         {t('pages.clients.paymentHistory.pending')}
                       </SelectItem>
-                      <SelectItem value="Cancelled">
-                        {t('pages.clients.debtSummary.paymentStatus.cancelled')}
+                      <SelectItem value="cancelled">
+                        {t('pages.clients.detail.paymentStatuses.cancelled', {
+                          defaultValue: 'cancelled',
+                        })}
                       </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex flex-1 flex-col items-start justify-center gap-1">
+                <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 self-stretch">
                   <span className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
                     {t('pages.clients.paymentHistory.filters.method')}
                   </span>
@@ -987,17 +1290,18 @@ export function PaymentHistoryPage() {
                       <SelectItem value="All">
                         {t('pages.clients.paymentHistory.filters.all')}
                       </SelectItem>
-                      <SelectItem value="Bank">
-                        {t('pages.clients.debtSummary.paymentMethod.bank')}
+                      <SelectItem value="bank_transfer">
+                        {t('pages.clients.detail.paymentMethods.bank_transfer', {
+                          defaultValue: 'Bank Transfer',
+                        })}
                       </SelectItem>
-                      <SelectItem value="Card">
-                        {t('pages.clients.debtSummary.paymentMethod.card')}
+                      <SelectItem value="online_gateway">
+                        {t('pages.clients.detail.paymentMethods.online_gateway', {
+                          defaultValue: 'Online Gateway',
+                        })}
                       </SelectItem>
-                      <SelectItem value="Online">
-                        {t('pages.clients.debtSummary.paymentMethod.online')}
-                      </SelectItem>
-                      <SelectItem value="Direct Debit">
-                        {t('pages.clients.debtSummary.paymentMethod.directDebit')}
+                      <SelectItem value="card" disabled>
+                        {t('pages.clients.detail.paymentMethods.card', { defaultValue: 'Card' })}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -1006,14 +1310,14 @@ export function PaymentHistoryPage() {
                   <span className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
                     {t('pages.clients.paymentHistory.filters.dateRange')}
                   </span>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 self-stretch">
                     <DateSelect
                       value={startDate}
                       onChange={({ value }) => setStartDate(value)}
                       placeholder={t('pages.clients.paymentHistory.filters.startDate')}
                       className="flex-1"
                     />
-                    <span>-</span>
+                    <span className="text-dark-500 text-xs sm:text-base">-</span>
                     <DateSelect
                       value={endDate}
                       onChange={({ value }) => setEndDate(value)}
@@ -1025,23 +1329,65 @@ export function PaymentHistoryPage() {
               </div>
 
               {/* Custom Table */}
-              <div className="w-full overflow-hidden rounded-xl rounded-t-none border border-[#EBECE8] bg-[#EBECE8] shadow-sm">
+              <div className="data-table-scroll w-full overflow-x-auto overflow-y-hidden rounded-xl rounded-t-none border border-[#EBECE8] bg-[#EBECE8] shadow-sm">
                 <table className="min-w-full border-collapse">
                   <thead>
                     <tr className="bg-white">
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-left text-xs font-medium">
-                        {t('pages.clients.paymentHistory.tableHeaders.date')}
+                      <th
+                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                        onClick={() => handleSort('date')}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {t('pages.clients.paymentHistory.tableHeaders.date')}
+                          {getSortIcon('date')}
+                        </span>
                       </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-right text-xs font-medium">
-                        {t('pages.clients.paymentHistory.tableHeaders.amount')}
+                      <th
+                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-right text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                        onClick={() => handleSort('amount')}
+                      >
+                        <span className="inline-flex items-center justify-end gap-1">
+                          {t('pages.clients.paymentHistory.tableHeaders.amount')}
+                          {getSortIcon('amount')}
+                        </span>
                       </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-left text-xs font-medium">
-                        {t('pages.clients.paymentHistory.tableHeaders.method')}
+                      <th
+                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                        onClick={() => handleSort('method')}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {t('pages.clients.paymentHistory.tableHeaders.method')}
+                          {getSortIcon('method')}
+                        </span>
                       </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-left text-xs font-medium">
-                        {t('pages.clients.paymentHistory.tableHeaders.status')}
+                      <th
+                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                        onClick={() => handleSort('reference')}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {t('pages.clients.paymentHistory.tableHeaders.reference')}
+                          {getSortIcon('reference')}
+                        </span>
                       </th>
-                      <th className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium">
+                      <th
+                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                        onClick={() => handleSort('contract')}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {t('pages.clients.paymentHistory.tableHeaders.contractNumber')}
+                          {getSortIcon('contract')}
+                        </span>
+                      </th>
+                      <th
+                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                        onClick={() => handleSort('status')}
+                      >
+                        <span className="inline-flex items-center gap-1">
+                          {t('pages.clients.paymentHistory.tableHeaders.status')}
+                          {getSortIcon('status')}
+                        </span>
+                      </th>
+                      <th className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
                         {t('pages.clients.paymentHistory.tableHeaders.actions')}
                       </th>
                     </tr>
@@ -1050,85 +1396,228 @@ export function PaymentHistoryPage() {
                     {paginatedPayments.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={5}
+                          colSpan={7}
                           className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium"
                         >
                           {t('pages.clients.paymentHistory.noPaymentHistory')}
                         </td>
                       </tr>
                     ) : (
-                      paginatedPayments.map((payment, index) => (
-                        <tr
-                          key={payment.id}
-                          className={`transition-colors ${
-                            index % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
-                          }`}
-                        >
-                          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-xs font-medium">
-                            {payment.date}
-                          </td>
-                          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-right text-xs font-medium">
-                            {formatCurrency(payment.amount)}
-                          </td>
-                          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-xs font-medium">
-                            {payment.method === 'Direct Debit'
-                              ? t('pages.clients.debtSummary.paymentMethod.directDebit')
-                              : t(
-                                  `pages.clients.debtSummary.paymentMethod.${payment.method.toLowerCase()}`
-                                )}
-                          </td>
-                          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-xs font-medium">
-                            <div className="flex items-center gap-2">
-                              {getStatusDot(payment.status)}
-                              <span>
-                                {payment.status === 'Verified'
-                                  ? t('pages.clients.debtSummary.paymentStatus.verified')
-                                  : payment.status === 'Pending'
-                                    ? t('pages.clients.debtSummary.paymentStatus.pending')
-                                    : t('pages.clients.debtSummary.paymentStatus.cancelled')}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium">
-                            <div className="flex items-center justify-center gap-2">
-                              {payment.status === 'Verified' && payment.receipt && (
-                                <LinkButton
-                                  variant="regular-secondary"
-                                  size="xs"
-                                  leftIcon={<Icons.FileDownload size={14} />}
-                                  onClick={() => {
-                                    // TODO: Handle download PDF
-                                    console.log('Download PDF', payment.id)
-                                  }}
+                      paginatedPayments.map((payment, index) => {
+                        // Always get backend payment to use the same date source as the modal
+                        // This ensures consistency - the date displayed matches what's stored in the database
+                        // Use both id and payment_number to ensure we find the correct payment
+                        const backendPayment = paymentHistoryData?.payments.find(
+                          (p) => p.id === payment.id || p.payment_number === payment.reference
+                        )
+
+                        // Use appropriate datetime based on status
+                        const displayDate = backendPayment
+                          ? backendPayment.status === 'verified' && backendPayment.verified_at
+                            ? backendPayment.verified_at
+                            : backendPayment.status === 'cancelled' && backendPayment.reversed_at
+                              ? backendPayment.reversed_at
+                              : backendPayment.recorded_at
+                          : payment.date // Fallback only if backend payment not found (shouldn't happen)
+
+                        return (
+                          <tr
+                            key={payment.id}
+                            className={`transition-colors ${
+                              index % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
+                            }`}
+                          >
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              {convertUTCToUserTimezone(displayDate, userTimezone)}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
+                              {formatCurrency(payment.amount)}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              {t(`pages.clients.detail.paymentMethods.${payment.method}`, {
+                                defaultValue: payment.method,
+                              })}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              {payment.reference || '-'}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              {payment.contractNumber || '-'}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              <div className="flex items-center gap-2">
+                                {getStatusDot(payment.status)}
+                                <span
+                                  className={cn(
+                                    payment.status === 'verified'
+                                      ? 'text-success-500'
+                                      : payment.status === 'pending'
+                                        ? 'text-gray-500'
+                                        : 'text-error-500'
+                                  )}
                                 >
-                                  {t('pages.clients.paymentHistory.actions.pdf')}
-                                </LinkButton>
-                              )}
-                              {payment.status === 'Pending' && (
-                                <LinkButton
-                                  variant="regular-secondary"
-                                  size="xs"
-                                  leftIcon={<Icons.Success size={14} />}
-                                  onClick={() => {
-                                    setSelectedPaymentId(payment.id)
-                                    setIsVerificationModalOpen(true)
-                                  }}
-                                >
-                                  {t('pages.clients.paymentHistory.actions.verify')}
-                                </LinkButton>
-                              )}
-                              <LinkButton
-                                variant="regular-secondary"
-                                size="xs"
-                                leftIcon={<Icons.View size={14} />}
-                                onClick={() => handleViewDetails(payment)}
-                              >
-                                {t('pages.clients.paymentHistory.actions.view')}
-                              </LinkButton>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
+                                  {t(`pages.clients.detail.paymentStatuses.${payment.status}`, {
+                                    defaultValue: payment.status,
+                                  })}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
+                              <div className="flex items-center justify-center gap-2 sm:gap-4">
+                                {/* Desktop: Individual buttons */}
+                                <div className="hidden items-center gap-4 lg:flex">
+                                  {payment.status === 'verified' && (
+                                    <LinkButton
+                                      variant="regular-black"
+                                      size="xs"
+                                      leftIcon={
+                                        <Icons.FileDownload
+                                          size={16}
+                                          color="#05040D"
+                                          strokeWidth={1.5}
+                                        />
+                                      }
+                                      onClick={() => {
+                                        const backendPayment = paymentHistoryData?.payments.find(
+                                          (p) => p.id === payment.id
+                                        )
+                                        if (backendPayment) {
+                                          generateReceiptMutation({
+                                            paymentId: backendPayment.id,
+                                            payment: backendPayment,
+                                            clientId: clientId,
+                                            format: 'pdf',
+                                          })
+                                        } else {
+                                          toast.error('Payment not found')
+                                        }
+                                      }}
+                                    >
+                                      {t('pages.clients.paymentHistory.actions.pdf')}
+                                    </LinkButton>
+                                  )}
+                                  {payment.status === 'pending' &&
+                                    checkPaymentLessThan7DaysOld(payment.date) && (
+                                      <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT_DEBT}>
+                                        <LinkButton
+                                          variant="regular-black"
+                                          size="xs"
+                                          leftIcon={
+                                            <Icons.Success
+                                              size={16}
+                                              color="#05040D"
+                                              strokeWidth={1.5}
+                                            />
+                                          }
+                                          onClick={() => {
+                                            setSelectedPaymentId(payment.id)
+                                            setIsVerificationModalOpen(true)
+                                          }}
+                                        >
+                                          {t('pages.clients.paymentHistory.actions.verify')}
+                                        </LinkButton>
+                                      </PermissionGuard>
+                                    )}
+                                  <LinkButton
+                                    variant="regular-black"
+                                    size="xs"
+                                    leftIcon={
+                                      <Icons.View size={16} color="#05040D" strokeWidth={1.5} />
+                                    }
+                                    onClick={() => handleViewDetails(payment)}
+                                  >
+                                    {t('pages.clients.paymentHistory.actions.view')}
+                                  </LinkButton>
+                                </div>
+
+                                {/* Mobile/Tablet: Dropdown button group */}
+                                <div className="lg:hidden">
+                                  <DropdownMenu
+                                    modal={false}
+                                    open={openDropdownPaymentId === payment.id}
+                                    onOpenChange={(open) =>
+                                      setOpenDropdownPaymentId(open ? payment.id : null)
+                                    }
+                                  >
+                                    <DropdownMenuTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
+                                        aria-label={t(
+                                          'pages.clients.paymentHistory.tableHeaders.actions'
+                                        )}
+                                      >
+                                        <Icons.FilterVertical size={16} strokeWidth={1.5} />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="bg-white">
+                                      {payment.status === 'verified' && (
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            const backendPayment =
+                                              paymentHistoryData?.payments.find(
+                                                (p) => p.id === payment.id
+                                              )
+                                            if (backendPayment) {
+                                              generateReceiptMutation({
+                                                paymentId: backendPayment.id,
+                                                payment: backendPayment,
+                                                clientId: clientId,
+                                                format: 'pdf',
+                                              })
+                                            } else {
+                                              toast.error('Payment not found')
+                                            }
+                                            setOpenDropdownPaymentId(null)
+                                          }}
+                                          className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                                        >
+                                          <Icons.FileDownload size={16} strokeWidth={1.5} />
+                                          <span>
+                                            {t('pages.clients.paymentHistory.actions.pdf')}
+                                          </span>
+                                        </DropdownMenuItem>
+                                      )}
+                                      {payment.status === 'pending' &&
+                                        checkPaymentLessThan7DaysOld(payment.date) && (
+                                          <PermissionGuard
+                                            permission={PERMISSIONS.CLIENTS.EDIT_DEBT}
+                                          >
+                                            <DropdownMenuItem
+                                              onClick={() => {
+                                                setSelectedPaymentId(payment.id)
+                                                setIsVerificationModalOpen(true)
+                                                setOpenDropdownPaymentId(null)
+                                              }}
+                                              className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                                            >
+                                              <Icons.Success size={16} strokeWidth={1.5} />
+                                              <span>
+                                                {t('pages.clients.paymentHistory.actions.verify')}
+                                              </span>
+                                            </DropdownMenuItem>
+                                          </PermissionGuard>
+                                        )}
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          handleViewDetails(payment)
+                                          setOpenDropdownPaymentId(null)
+                                        }}
+                                        className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                                      >
+                                        <Icons.View size={16} strokeWidth={1.5} />
+                                        <span>
+                                          {t('pages.clients.paymentHistory.actions.view')}
+                                        </span>
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })
                     )}
                   </tbody>
                 </table>
@@ -1161,14 +1650,14 @@ export function PaymentHistoryPage() {
           setIsVerificationModalOpen(false)
           setSelectedPaymentId(null)
         }}
-        pendingPayments={mockPendingPayments}
-        processedPayments={mockProcessedPayments}
+        pendingPayments={pendingPaymentsForVerification}
+        processedPayments={[]}
         onVerify={handleVerifyPayment}
-        onReject={handleRejectPayment}
+        onCancel={handleCancelPaymentFromQueue}
         onRefresh={() => {
-          // TODO: Refresh pending payments
-          console.log('Refresh payments')
+          refetchPayments()
         }}
+        initialExpandedPaymentId={selectedPaymentId?.toString() || null}
       />
 
       {/* Export CSV Modal */}
@@ -1178,6 +1667,12 @@ export function PaymentHistoryPage() {
         onExport={handleExport}
         totalPayments={paymentHistory?.totalPayments || 0}
         totalAmount={paymentHistory?.totalPaymentsAmount || 0}
+        {...({
+          verifiedPayments: paymentHistory?.verifiedPayments || 0,
+          verifiedAmount: paymentHistory?.verifiedPaymentsAmount || 0,
+          pendingPayments: paymentHistory?.pendingPayments || 0,
+          pendingAmount: paymentHistory?.pendingPaymentsAmount || 0,
+        } as Partial<ExportPaymentsCSVModalProps>)}
       />
 
       {/* Payment Details Modal */}
@@ -1189,76 +1684,216 @@ export function PaymentHistoryPage() {
             setSelectedPayment(null)
           }}
           payment={{
-            paymentId: `PMT-${selectedPayment.id}`,
-            status: selectedPayment.status,
-            amount: selectedPayment.amount,
-            paymentDate: selectedPayment.date,
-            method: selectedPayment.method,
-            reference: `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
+            paymentId: paymentDetails?.payment_number || `PMT-${selectedPayment.id}`,
+            status: (() => {
+              const rawStatus = paymentDetails ? paymentDetails.status : selectedPayment.status
+              return (
+                rawStatus === 'verified'
+                  ? 'Verified'
+                  : rawStatus === 'pending'
+                    ? 'Pending'
+                    : 'Cancelled'
+              ) as 'Verified' | 'Pending' | 'Cancelled'
+            })(),
+            amount: paymentDetails ? Number(paymentDetails.amount) : selectedPayment.amount,
+            // Use verified_at for verified payments, recorded_at for others
+            paymentDate: paymentDetails
+              ? paymentDetails.status === 'verified' && paymentDetails.verified_at
+                ? paymentDetails.verified_at
+                : paymentDetails.recorded_at
+              : selectedPayment.date,
+            method: (() => {
+              const rawMethod = paymentDetails
+                ? paymentDetails.payment_method
+                : selectedPayment.method
+              const methodMap: Record<BackendPaymentMethod, string> = {
+                bank_transfer: 'Bank Transfer',
+                online_gateway: 'Online Gateway',
+                cash: 'Cash',
+                card: 'Card',
+                other: 'Other',
+              }
+              return methodMap[rawMethod] || rawMethod
+            })(),
+            reference:
+              paymentDetails?.bank_reference ||
+              paymentDetails?.payment_number ||
+              selectedPayment.reference ||
+              `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
             clientId: id || '',
             clientName: paymentHistory.customerName,
-            phone: '+380 50 123 4567',
-            project: 'PrivatBank Collection',
-            currentDebt: paymentHistory.totalDebt,
-            newDebt: paymentHistory.totalDebt - selectedPayment.amount,
-            createdBy: 'Operator Sidorov',
-            createdAt: '2025-12-10 09:15:32',
-            verifiedBy: selectedPayment.status === 'Verified' ? 'Supervisor Petrov' : undefined,
-            verifiedAt: selectedPayment.status === 'Verified' ? '2025-12-10 14:30:18' : undefined,
+            phone: apiClient?.phone_primary || '+380 50 123 4567',
+            project: resolveProjectName(selectedPayment?.id),
+            // Debt Impact: use backend snapshot when available
+            currentDebt: backendPayment
+              ? Number(backendPayment.debt_before)
+              : paymentHistory.totalDebt,
+            newDebt: backendPayment
+              ? Number(backendPayment.debt_after)
+              : Math.max(0, paymentHistory.totalDebt - selectedPayment.amount),
+            // Audit trail from backend, fallback to 'Unknown'
+            // Format dates consistently with payment date (MM/DD/YYYY)
+            createdBy: paymentDetails?.recorded_by_username || 'Unknown',
+            createdAt: paymentDetails?.recorded_at || 'Unknown',
+            verifiedBy: paymentDetails?.verified_by_username,
+            verifiedAt: paymentDetails?.verified_at || undefined,
+            cancelledBy:
+              cancelledByUser?.username ||
+              (paymentDetails?.reversed_by_user_id ? 'Unknown' : undefined),
+            cancelledAt: paymentDetails?.reversed_at || undefined,
+            cancellationReason: paymentDetails?.reversal_reason,
           }}
           onCancelPayment={handleCancelPayment}
-          onEditPayment={() => {
-            // Edit payment modal is handled internally by PaymentDetailsModal
-            console.log('Edit payment', selectedPayment.id)
-          }}
-          onSaveEdit={(data) => {
-            // TODO: Handle save edit payment
-            console.log('Save edit payment', selectedPayment.id, data)
-            // Close the payment details modal after saving
-            setIsPaymentDetailsModalOpen(false)
-            setSelectedPayment(null)
-            // Optionally refresh the payment history data
-          }}
+          onEditPayment={handleEditPayment}
           onViewClientProfile={handleViewClientProfile}
           onPrintReceipt={() => {
-            // TODO: Handle print receipt
-            console.log('Print receipt', selectedPayment.id)
+            if (!backendPayment) {
+              toast.error('Payment not found')
+              return
+            }
+            // Prepare client data if available
+            generateReceiptMutation({
+              paymentId: backendPayment.id,
+              payment: backendPayment,
+              clientId: clientId,
+              format: 'pdf',
+            })
           }}
           onDownloadReceipt={() => {
-            // TODO: Handle download receipt
-            console.log('Download receipt', selectedPayment.id)
+            if (!backendPayment) {
+              toast.error('Payment not found')
+              return
+            }
+            // Prepare client data if available
+            generateReceiptMutation({
+              paymentId: backendPayment.id,
+              payment: backendPayment,
+              clientId: clientId,
+              format: 'pdf',
+            })
           }}
         />
       )}
 
       {/* Cancel Payment Modal */}
-      {selectedPayment && paymentHistory && isCancelModalOpen && (
-        <CancelPaymentModal
-          open={isCancelModalOpen}
-          onClose={() => {
-            setIsCancelModalOpen(false)
-            setSelectedPayment(null)
-          }}
-          payment={{
-            paymentId: `PMT-${selectedPayment.id}`,
-            client: paymentHistory.customerName,
-            amount: selectedPayment.amount,
-            paymentDate: selectedPayment.date,
-            method: selectedPayment.method,
-            reference: `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
-            status: selectedPayment.status as 'Verified' | 'Pending' | 'Cancelled',
-            createdBy: 'Operator Sidorov',
-            createdAt: '2025-12-10 09:15:32',
-            currentDebt: paymentHistory.totalDebt,
-          }}
-          onConfirm={(data) => {
-            // TODO: Handle cancel payment
-            console.log('Cancel payment:', data)
-            setIsCancelModalOpen(false)
-            setSelectedPayment(null)
-          }}
-        />
-      )}
+      <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT_DEBT}>
+        {selectedPayment && paymentHistory && isCancelModalOpen && (
+          <CancelPaymentModal
+            open={isCancelModalOpen}
+            onClose={() => {
+              setIsCancelModalOpen(false)
+              setSelectedPayment(null)
+            }}
+            payment={{
+              paymentId: `PMT-${selectedPayment.id}`,
+              client: paymentHistory.customerName,
+              amount: selectedPayment.amount,
+              paymentDate: selectedPayment.date,
+              method: selectedPayment.method,
+              reference: `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
+              status: (selectedPayment.status === 'verified'
+                ? 'Verified'
+                : selectedPayment.status === 'pending'
+                  ? 'Pending'
+                  : 'Cancelled') as 'Verified' | 'Pending' | 'Cancelled',
+              createdBy: 'Operator Sidorov',
+              createdAt: '2025-12-10 09:15:32',
+              currentDebt: paymentHistory.totalDebt,
+            }}
+            onConfirm={(data) => {
+              if (!selectedPayment) return
+
+              const backendPayment = paymentHistoryData?.payments.find(
+                (p) => p.id === selectedPayment.id
+              )
+              if (!backendPayment) {
+                toast.error('Payment not found')
+                return
+              }
+
+              cancelPaymentMutation(
+                {
+                  paymentId: backendPayment.payment_number || backendPayment.id.toString(),
+                  request: {
+                    cancellation_reason: data.reason,
+                  },
+                },
+                {
+                  onSuccess: () => {
+                    setIsCancelModalOpen(false)
+                    setSelectedPayment(null)
+                    refetchPayments()
+                  },
+                }
+              )
+            }}
+          />
+        )}
+      </PermissionGuard>
+
+      {/* Edit Payment Modal */}
+      <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT_DEBT}>
+        {selectedPayment && paymentHistory && (
+          <EditPaymentModal
+            open={isEditModalOpen}
+            onClose={() => {
+              setIsEditModalOpen(false)
+              setSelectedPayment(null)
+            }}
+            payment={{
+              paymentId: `PMT-${selectedPayment.id}`,
+              amount: selectedPayment.amount,
+              paymentDate: selectedPayment.date,
+              method: (() => {
+                // Normalize payment method to match EditPaymentModal expected types
+                const method = selectedPayment.method
+                if (method === 'card') return 'Card'
+                if (method === 'bank_transfer') return 'Bank Transfer'
+                if (method === 'online_gateway') return 'Online Gateway'
+                if (method === 'cash') return 'Cash'
+                return 'Other'
+              })(),
+              reference:
+                selectedPayment.reference || `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
+              createdBy: 'Operator Sidorov',
+              createdAt: '2025-12-10 09:15:32',
+              currentDebt: paymentHistory.totalDebt,
+              referenceNumber: selectedPayment.reference || undefined,
+              last4Digits: selectedPayment.reference?.match(/^\d{4}$/)
+                ? selectedPayment.reference
+                : undefined,
+              paymentMethodDetails: undefined,
+            }}
+            onSave={handleSaveEditPayment}
+          />
+        )}
+      </PermissionGuard>
+
+      {/* Call Dialog Modal */}
+      <CallDialogModal
+        open={isCallModalOpen}
+        onClose={handleCloseCallModal}
+        clientName={client?.fullName || ''}
+        phoneNumber={client?.phones?.[0]?.number || ''}
+        callId={currentCallId}
+        initialState="initial"
+        error={callError}
+        isLoading={isOriginatingCall}
+        onCallStart={(callType: CallType) => {
+          const phoneNumber = client?.phones?.[0]?.number
+          if (!phoneNumber) return
+          handleOriginateCall(
+            phoneNumber,
+            client?.fullName || '',
+            client?.id?.toString() || '',
+            callType
+          )
+        }}
+        onCallEnd={(_duration: number, _status: CallStatus) => {
+          handleCallEnd()
+        }}
+        onRetry={handleClearCallError}
+      />
     </div>
   )
 }

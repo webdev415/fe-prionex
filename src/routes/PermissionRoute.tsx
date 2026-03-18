@@ -1,6 +1,6 @@
-import { Navigate, useLocation } from 'react-router-dom'
 import { useHasPermission, useHasAnyPermission, useHasAllPermissions } from '@/hooks'
 import type { Permission } from '@/constants/permissions'
+import { ForbiddenPage } from '@/pages/Forbidden'
 
 interface PermissionRouteProps {
   children: React.ReactNode
@@ -21,7 +21,7 @@ interface PermissionRouteProps {
   mode?: 'any' | 'all'
   /**
    * Custom fallback component to render if user lacks permission
-   * If not provided, redirects to /forbidden
+   * If not provided, shows the 403 Forbidden page
    */
   fallback?: React.ReactNode
 }
@@ -29,7 +29,7 @@ interface PermissionRouteProps {
 /**
  * Route wrapper that checks if user has required permissions
  *
- * Redirects to /forbidden page if user lacks required permissions.
+ * Shows a 403 Forbidden page if user lacks required permissions.
  * Use this for protecting entire routes based on RBAC.
  *
  * @example Single permission
@@ -81,8 +81,6 @@ export function PermissionRoute({
   mode = 'all',
   fallback,
 }: PermissionRouteProps) {
-  const location = useLocation()
-
   // Check single permission
   const hasSinglePermission = useHasPermission(requiredPermission!)
 
@@ -115,8 +113,8 @@ export function PermissionRoute({
       return <>{fallback}</>
     }
 
-    // Otherwise redirect to forbidden page
-    return <Navigate to="/forbidden" state={{ from: location }} replace />
+    // Otherwise show 403 Forbidden page
+    return <ForbiddenPage />
   }
 
   // User has required permissions - render children

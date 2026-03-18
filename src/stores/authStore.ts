@@ -22,6 +22,8 @@ interface AuthState {
   logout: () => Promise<void>
   forceLogin: () => Promise<void>
   checkAuth: () => Promise<void>
+  refreshUser: () => Promise<void>
+  updateCurrentUser: (updates: Partial<User>) => void
   clearError: () => void
   startImpersonation: (userId: number) => Promise<void>
   exitImpersonation: () => Promise<void>
@@ -96,6 +98,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           permissions: backendUser.permissions || [],
           createdAt: backendUser.created_at,
           updatedAt: backendUser.created_at,
+          asterisk_extension: backendUser.asterisk_extension,
+          is_agent: backendUser.is_agent,
+          agent_status: backendUser.agent_status,
+          timezone: backendUser.timezone,
+          mustChangePassword: backendUser.must_change_password ?? false,
         }
 
         set({
@@ -131,6 +138,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           permissions: [], // No permissions available from login response
           createdAt: undefined,
           updatedAt: undefined,
+          mustChangePassword: false,
         }
 
         set({
@@ -200,8 +208,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } finally {
       setAccessToken(null)
 
-      // Clear impersonation sessionStorage
-      sessionStorage.removeItem('impersonation_original_admin')
+      // Clear impersonation localStorage
+      localStorage.removeItem('impersonation_original_admin')
 
       set({
         user: null,
@@ -262,6 +270,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           permissions: backendUser.permissions || [],
           createdAt: backendUser.created_at,
           updatedAt: backendUser.created_at,
+          asterisk_extension: backendUser.asterisk_extension,
+          is_agent: backendUser.is_agent,
+          agent_status: backendUser.agent_status,
+          timezone: backendUser.timezone,
+          mustChangePassword: backendUser.must_change_password ?? false,
         }
 
         set({
@@ -298,6 +311,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           permissions: [], // No permissions available from login response
           createdAt: undefined,
           updatedAt: undefined,
+          mustChangePassword: false,
         }
 
         set({
@@ -382,13 +396,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             permissions: backendUser.permissions || [],
             createdAt: backendUser.created_at,
             updatedAt: backendUser.created_at,
+            asterisk_extension: backendUser.asterisk_extension,
+            is_agent: backendUser.is_agent,
+            agent_status: backendUser.agent_status,
+            timezone: backendUser.timezone,
+            mustChangePassword: backendUser.must_change_password ?? false,
           }
 
           if (isImpersonating) {
-            // In impersonation mode - restore original admin from sessionStorage
+            // In impersonation mode - restore original admin from localStorage
             let originalAdmin: User | null = null
             try {
-              const storedAdmin = sessionStorage.getItem('impersonation_original_admin')
+              const storedAdmin = localStorage.getItem('impersonation_original_admin')
               if (storedAdmin) {
                 originalAdmin = JSON.parse(storedAdmin) as User
               }
@@ -401,7 +420,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               isAuthenticated: true,
               isImpersonating: true,
               impersonatedUser: user,
-              originalAdminUser: originalAdmin, // Restored from sessionStorage
+              originalAdminUser: originalAdmin, // Restored from localStorage
               isLoading: false,
               hasCheckedAuth: true,
             })
@@ -449,15 +468,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 ? String(tokenPayload.active_role_name)
                 : null,
               permissions: [], // No permissions available from token
+              timezone: tokenPayload.timezone ? String(tokenPayload.timezone) : undefined,
               createdAt: undefined,
               updatedAt: undefined,
+              mustChangePassword: false,
             }
 
             if (isImpersonating) {
-              // In impersonation mode - restore original admin from sessionStorage
+              // In impersonation mode - restore original admin from localStorage
               let originalAdmin: User | null = null
               try {
-                const storedAdmin = sessionStorage.getItem('impersonation_original_admin')
+                const storedAdmin = localStorage.getItem('impersonation_original_admin')
                 if (storedAdmin) {
                   originalAdmin = JSON.parse(storedAdmin) as User
                 }
@@ -489,7 +510,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           } else {
             // Cannot extract user info from token - clear all state
             console.error('Failed to extract user info from JWT token')
-            sessionStorage.removeItem('impersonation_original_admin')
+            localStorage.removeItem('impersonation_original_admin')
 
             set({
               user: null,
@@ -530,6 +551,58 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
+  refreshUser: async () => {
+    const { isAuthenticated } = get()
+
+    if (!isAuthenticated) {
+      return
+    }
+
+    try {
+      const userResponse = await authApi.me()
+      const backendUser = userResponse.data
+
+      // Map backend user data to frontend User type
+      const user: User = {
+        id: String(backendUser.id),
+        username: backendUser.username,
+        email: backendUser.email,
+        firstName: backendUser.first_name,
+        lastName: backendUser.last_name,
+        projects:
+          backendUser.projects?.map((p) => ({
+            id: String(p.id),
+            name: p.name,
+            roles: [{ id: String(p.id), name: p.role_name }],
+          })) || [],
+        active_project_id: backendUser.active_project
+          ? String(backendUser.active_project.id)
+          : null,
+        active_role_id: backendUser.role ? String(backendUser.role.id) : null,
+        active_role_name: backendUser.role?.name || null,
+        permissions: backendUser.permissions || [],
+        asterisk_extension: backendUser.asterisk_extension,
+        is_agent: backendUser.is_agent,
+        agent_status: backendUser.agent_status,
+        timezone: backendUser.timezone,
+        createdAt: backendUser.created_at,
+        updatedAt: backendUser.created_at,
+        mustChangePassword: backendUser.must_change_password ?? false,
+      }
+
+      set({ user })
+    } catch (error) {
+      console.error('Failed to refresh user data:', error)
+    }
+  },
+
+  updateCurrentUser: (updates: Partial<User>) => {
+    const { user } = get()
+    if (user) {
+      set({ user: { ...user, ...updates } })
+    }
+  },
+
   clearError: () => {
     set({ error: null, errorState: null, lockoutMinutes: null, pendingCredentials: null })
   },
@@ -561,9 +634,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Preserve original admin user
       const originalAdmin = get().user
 
-      // Store original admin in sessionStorage to survive page refresh
+      // Store original admin in localStorage to survive page refresh and work across tabs
       if (originalAdmin) {
-        sessionStorage.setItem('impersonation_original_admin', JSON.stringify(originalAdmin))
+        localStorage.setItem('impersonation_original_admin', JSON.stringify(originalAdmin))
       }
 
       // Map backend impersonated user data to frontend User type
@@ -676,10 +749,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         permissions: admin_user.permissions || [],
         createdAt: admin_user.created_at,
         updatedAt: admin_user.created_at,
+        asterisk_extension: admin_user.asterisk_extension,
+        is_agent: admin_user.is_agent,
+        agent_status: admin_user.agent_status,
+        timezone: admin_user.timezone,
       }
 
-      // Clear stored admin from sessionStorage
-      sessionStorage.removeItem('impersonation_original_admin')
+      // Clear stored admin from localStorage
+      localStorage.removeItem('impersonation_original_admin')
 
       set({
         isImpersonating: false,

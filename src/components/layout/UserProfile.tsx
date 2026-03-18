@@ -4,8 +4,9 @@
  * User profile dropdown with user info, settings, and logout option.
  */
 
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { useAuth } from '@/features/auth'
 import {
@@ -22,6 +23,8 @@ interface UserProfileProps {
 export function UserProfile({ onLogoutClick }: UserProfileProps) {
   const { t } = useTranslation('common')
   const { user } = useAuth()
+  const [isOpen, setIsOpen] = useState(false)
+  const navigate = useNavigate()
 
   // Get display name: prefer firstName + lastName, fallback to username
   const displayName =
@@ -29,21 +32,33 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
       ? `${user.firstName} ${user.lastName}`
       : user?.username || 'User'
 
+  // Close dropdown on window resize to prevent positioning issues
+  useEffect(() => {
+    const handleResize = () => {
+      if (isOpen) {
+        setIsOpen(false)
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isOpen])
+
   const handleSettingsClick = () => {
-    // TODO: Navigate to settings page or open settings modal
-    console.log('Settings clicked')
-    toast.info(t('navigation.settings'))
+    // Navigate to profile settings page
+    setIsOpen(false)
+    navigate('/dashboard/profile')
   }
 
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu modal={false} open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <button className="bg-primary-300 flex h-10 w-[175px] items-center gap-2 rounded-md px-3 transition-all duration-200 hover:opacity-90">
-          <Icons.User02 size={20} className="text-dark-500" strokeWidth={1.5} />
-          <span className="text-dark-500 flex-1 truncate text-left text-xs font-medium">
+        <button className="bg-secondary-800 flex h-10 w-[175px] cursor-pointer items-center gap-2 rounded-md px-3 transition-all duration-200 hover:opacity-90">
+          <Icons.User02 size={20} className="text-primary-500" strokeWidth={1.5} />
+          <span className="flex-1 truncate text-left text-xs font-medium text-white">
             {displayName}
           </span>
-          <Icons.ArrowDown size={16} className="text-dark-500" strokeWidth={1.5} />
+          <Icons.ArrowDown size={16} className="text-white" strokeWidth={1.5} />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[175px] bg-white">
@@ -52,8 +67,8 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
           onClick={handleSettingsClick}
           className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
         >
-          <Icons.Setting07 size={16} className="text-dark-500" />
-          <span>{t('navigation.settings')}</span>
+          <Icons.SlidersHorizontal size={16} className="text-dark-500" />
+          <span>{t('navigation.profile')}</span>
         </DropdownMenuItem>
 
         {/* Logout */}

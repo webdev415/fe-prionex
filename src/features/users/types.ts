@@ -32,6 +32,7 @@ export interface ApiUser {
   email: string
   first_name: string
   last_name: string
+  full_name: string
   middle_name?: string
   phone?: string
   language: 'uk' | 'ru' | 'en'
@@ -44,6 +45,9 @@ export interface ApiUser {
   created_at: string
   updated_at?: string
   projects?: ProjectRole[]
+  asterisk_extension?: string
+  is_agent: boolean
+  agent_status?: 'online' | 'offline' | 'busy' | 'on-call'
 }
 
 /**
@@ -84,6 +88,8 @@ export interface CreateUserInput {
   timezone: string
   must_change_password: boolean
   project_assignments: ProjectRoleAssignment[]
+  asterisk_extension?: string
+  is_agent?: boolean
 }
 
 /**
@@ -97,7 +103,10 @@ export interface UpdateUserInput {
   phone?: string
   language?: 'uk' | 'ru' | 'en'
   timezone?: string
+  status?: 'active' | 'inactive' | 'suspended'
   project_assignments?: ProjectRoleAssignment[]
+  asterisk_extension?: string
+  is_agent?: boolean
 }
 
 /**

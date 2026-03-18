@@ -122,6 +122,47 @@ export async function unlockAccount(userId: number): Promise<UnlockAccountRespon
 /**
  * Exported API object for easier importing
  */
+
+export interface OperatorUser {
+  id: number
+  username: string
+  full_name: string
+  first_name: string
+  middle_name: string | null
+  last_name: string
+  email: string
+  status: string
+}
+
+/**
+ * Fetch active users for a project — accessible to ALL authenticated users.
+ * Uses /api/v1/users/operators instead of the admin-only /api/v1/admin/users.
+ */
+export async function getOperators(
+  projectId: number,
+  status = 'active'
+): Promise<{ operators: OperatorUser[] }> {
+  const response = await api.get<{ operators: OperatorUser[] }>('/api/v1/users/operators', {
+    params: { project_id: projectId, status },
+  })
+  return response.data
+}
+
+/**
+ * Get the department name for a user in a project.
+ * Uses the non-admin endpoint accessible to any authenticated user.
+ */
+export async function getUserDepartment(
+  userId: number,
+  projectId?: number
+): Promise<{ department_name: string | null }> {
+  const response = await api.get<{ department_name: string | null }>(
+    `/api/v1/users/${userId}/department`,
+    { params: projectId ? { project_id: projectId } : {} }
+  )
+  return response.data
+}
+
 export const usersApi = {
   getUsers,
   getUser,
@@ -131,4 +172,6 @@ export const usersApi = {
   reactivateUser,
   resetPassword,
   unlockAccount,
+  getOperators,
+  getUserDepartment,
 }

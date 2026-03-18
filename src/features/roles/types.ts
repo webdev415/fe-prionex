@@ -23,6 +23,8 @@ export interface ApiRole {
   project_id: number
   name: string
   description?: string
+  department_id?: number | null
+  department_name?: string | null
   is_default: boolean
   is_active: boolean
   permission_count: number
@@ -64,6 +66,7 @@ export interface CreateRoleInput {
   project_id: number
   name: string
   description?: string
+  department_id?: number | null
   permission_ids: number[]
 }
 
@@ -74,6 +77,7 @@ export interface CreateRoleInput {
 export interface UpdateRoleInput {
   name?: string
   description?: string
+  department_id?: number | null
   permission_ids?: number[]
   is_active?: boolean
 }

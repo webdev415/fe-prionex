@@ -7,30 +7,47 @@
     "home": "Главная",
     "dashboard": "Панель управления",
     "clients": "Клиенты",
-    "settings": "Настройки",
+    "profile": "Профиль",
     "logout": "Выйти",
     "activity": "Активность",
+    "import": "Импорт",
     "importClients": "Импорт клиентов",
     "projects": "Проекты",
     "users": "Пользователи",
+    "sellers": "Продавцы",
     "roles": "Роли",
+    "departments": "Отделы",
     "smsTemplates": "SMS Шаблоны",
     "transactions": "Транзакции",
-    "reports": "Отчеты"
+    "operations": "Операции",
+    "bulkOperatorAssignment": "Массовое назначение операторов",
+    "auditLogs": "Журнал аудита",
+    "reports": "Отчеты",
+    "scoringConfiguration": "Конфигурация оценки",
+    "systemSettings": "Системные настройки",
+    "tags": "Теги"
   },
   "search": {
     "placeholder": "Поиск",
     "phoneNumber": "Номер телефона",
-    "email": "Электронная почта",
-    "username": "Имя пользователя",
-    "error": "Не удалось выполнить поиск клиентов. Пожалуйста, попробуйте снова."
+    "fullName": "Полное имя",
+    "tin": "ИНН",
+    "contractNumber": "Номер договора",
+    "error": "Не удалось выполнить поиск клиентов. Пожалуйста, попробуйте снова.",
+    "searching": "Поиск...",
+    "noResults": "Клиенты по запросу «{{query}}» не найдены.",
+    "debt": "Долг",
+    "phone": "Телефон",
+    "viewAllResults": "Показать все результаты"
   },
   "actions": {
     "save": "Сохранить",
+    "saving": "Сохранение...",
     "cancel": "Отмена",
     "delete": "Удалить",
     "edit": "Редактировать",
     "create": "Создать",
+    "creating": "Создание...",
     "submit": "Отправить",
     "confirm": "Подтвердить",
     "back": "Назад",
@@ -52,7 +69,22 @@
     "ru": "Русский"
   },
   "common": {
-    "step": "Шаг"
+    "step": "Шаг",
+    "selected": "Выбрано",
+    "of": "из",
+    "all": "Все",
+    "reset": "Сбросить",
+    "exporting": "Экспорт...",
+    "export": "Экспорт",
+    "loading": "Загрузка...",
+    "previous": "Предыдущая",
+    "page": "Страница",
+    "next": "Следующая",
+    "actions": "Действия",
+    "update": "Обновить",
+    "saving": "Сохранение...",
+    "deleting": "Удаление...",
+    "back": "Назад"
   },
   "logout": {
     "confirmTitle": "Подтвердить выход",
@@ -64,11 +96,14 @@
       "addNewUser": "Новый пользователь",
       "noUsersFound": "Пользователи не найдены",
       "errorLoading": "Ошибка загрузки пользователей",
+      "searchPlaceholder": "Поиск по имени, логину или email...",
+      "searchButton": "Поиск",
       "tableHeaders": {
         "username": "Имя пользователя",
         "fullName": "Полное имя",
         "email": "Электронная почта",
         "projectRole": "Проект и роль",
+        "extension": "Расширение / Агент",
         "status": "Статус",
         "actions": "Действия"
       },
@@ -77,8 +112,9 @@
         "edit": "Редактировать",
         "impersonate": "Просмотреть как",
         "impersonating": "Просмотр...",
-        "unlock": "Разблокировать",
-        "lock": "Заблокировать"
+        "status": "Статус",
+        "activate": "Активировать",
+        "deactivate": "Деактивировать"
       },
       "messages": {
         "nowViewingAs": "Теперь просмотр как {{username}}",
@@ -87,6 +123,11 @@
         "exitedImpersonation": "Выход из режима просмотра",
         "projectSwitched": "Переключено на {{projectName}}",
         "failedToSwitchProject": "Не удалось переключить проект"
+      },
+      "status": {
+        "active": "Активный",
+        "inactive": "Неактивный",
+        "suspended": "Приостановлен"
       },
       "activeProject": "Активный проект",
       "noAssignment": "Нет назначения",
@@ -125,22 +166,46 @@
           "failedToUnlock": "Не удалось разблокировать учетную запись",
           "unlocking": "Разблокировка...",
           "unlockAccountButton": "Разблокировать учетную запись"
+        },
+        "changeStatus": {
+          "activateTitle": "Активировать пользователя",
+          "deactivateTitle": "Деактивировать пользователя",
+          "username": "Имя пользователя:",
+          "email": "Электронная почта:",
+          "currentStatus": "Текущий статус:",
+          "newStatus": "Новый статус:",
+          "activateConfirmTitle": "Вы уверены, что хотите активировать этого пользователя?",
+          "deactivateConfirmTitle": "Вы уверены, что хотите деактивировать этого пользователя?",
+          "activateWillAllow": "Активация этого пользователя позволит:",
+          "deactivateWillPrevent": "Деактивация этого пользователя приведет к:",
+          "allowLogin": "Разрешить пользователю входить в систему",
+          "accessSystem": "Предоставить доступ ко всем назначенным ресурсам",
+          "preventLogin": "Запретить пользователю входить в систему",
+          "terminateSessions": "Завершить все активные сеансы",
+          "recordAudit": "Будет записано в журнал аудита",
+          "failedToChange": "Не удалось изменить статус пользователя",
+          "changing": "Изменение статуса...",
+          "activateButton": "Активировать пользователя",
+          "deactivateButton": "Деактивировать пользователя"
         }
       },
       "forms": {
-        "username": "Имя пользователя:",
-        "email": "Электронная почта:",
+        "username": "Имя пользователя",
+        "email": "Электронная почта *",
         "password": "Пароль:",
-        "confirmPassword": "Подтвердить пароль:",
+        "confirmPassword": "Подтвердить пароль",
         "mustChangePassword": "Пользователь должен изменить пароль при первом входе",
-        "firstName": "Имя:",
-        "lastName": "Фамилия:",
-        "middleName": "Отчество:",
-        "phone": "Телефон:",
-        "language": "Язык:",
-        "timezone": "Часовой пояс:",
-        "assignProjects": "Назначить проекты:",
-        "rolePerProject": "Роль на проект:",
+        "firstName": "Имя *",
+        "lastName": "Фамилия *",
+        "middleName": "Отчество",
+        "phone": "Телефон",
+        "language": "Язык",
+        "timezone": "Часовой пояс",
+        "asteriskExtension": "Внутренний номер Asterisk",
+        "agentStatus": "Статус агента",
+        "isAgent": "Является агентом",
+        "assignProjects": "Назначить проекты",
+        "rolePerProject": "Роль на проект",
         "notAssigned": "Не назначено",
         "noRolesAvailable": "Роли недоступны",
         "errorCreating": "Ошибка создания пользователя",
@@ -159,12 +224,21 @@
           "passwordsDontMatch": "Пароли не совпадают",
           "selectAtLeastOneProject": "Пожалуйста, выберите хотя бы один проект",
           "assignRoleForEachProject": "Пожалуйста, назначьте роль для каждого выбранного проекта"
+        },
+        "helpers": {
+          "asteriskExtension": "3-10 значный номер внутренней линии для телефонной системы Asterisk (например, 1001, 1002)"
         }
       },
       "editForm": {
         "errorUpdating": "Ошибка обновления пользователя",
         "failedToUpdate": "Не удалось обновить пользователя",
         "usernameCannotBeChanged": "Имя пользователя нельзя изменить"
+      },
+      "agentStatuses": {
+        "online": "Онлайн",
+        "offline": "Офлайн",
+        "busy": "Занят",
+        "onCall": "На звонке"
       }
     },
     "projects": {
@@ -176,7 +250,8 @@
         "projectCode": "Проект / Код",
         "client": "Клиент",
         "period": "Период",
-        "debt": "Задолженность",
+        "clients": "Всего клиентов",
+        "debt": "Общая задолженность",
         "status": "Статус"
       },
       "searchFilters": {
@@ -356,15 +431,83 @@
       "forms": {
         "roleName": "Название роли",
         "description": "Описание",
+        "department": "Отдел",
+        "departmentHint": "Назначить эту роль конкретному отделу (необязательно, только для пользовательских ролей)",
+        "departmentNotAvailableForDefault": "Роли по умолчанию не могут быть назначены отделам",
         "permissions": "Разрешения",
         "loadingPermissions": "Загрузка разрешений...",
         "placeholders": {
           "roleName": "Введите название роли",
-          "description": "Опишите эту роль"
+          "description": "Опишите эту роль",
+          "noDepartment": "Без отдела"
         },
         "errors": {
           "failedToCreate": "Не удалось создать роль. Пожалуйста, попробуйте снова."
         }
+      }
+    },
+    "departments": {
+      "title": "Управление отделами",
+      "newDepartment": "Новый отдел",
+      "selectProject": "Выберите проект",
+      "project": "Проект:",
+      "noActiveProjects": "Активные проекты не найдены. Сначала создайте проект.",
+      "errorLoading": "Ошибка загрузки отделов",
+      "allDepartments": "Все отделы",
+      "noDepartments": "Отделы не найдены",
+      "tableHeaders": {
+        "name": "Название",
+        "description": "Описание",
+        "assignedRoles": "Назначенные роли",
+        "actions": "Действия"
+      },
+      "actions": {
+        "view": "Просмотреть",
+        "edit": "Редактировать",
+        "delete": "Удалить"
+      },
+      "modals": {
+        "create": {
+          "title": "Создать отдел"
+        },
+        "edit": {
+          "title": "Редактировать отдел",
+          "failedToLoad": "Не удалось загрузить данные отдела. Попробуйте снова."
+        },
+        "view": {
+          "title": "Просмотреть отдел",
+          "failedToLoad": "Не удалось загрузить данные отдела. Попробуйте снова."
+        },
+        "archive": {
+          "title": "Архивировать отдел: {{departmentName}}",
+          "defaultTitle": "Архивировать отдел",
+          "confirmMessage": "Вы уверены, что хотите архивировать отдел \"{{departmentName}}\"?",
+          "hasAssignedRoles": "В этом отделе {{count}} назначенных роли. Архивирование отменит их назначение.",
+          "archiving": "Архивирование...",
+          "archiveDepartment": "Архивировать отдел",
+          "failedToArchive": "Не удалось архивировать отдел. Попробуйте снова.",
+          "failedToLoad": "Не удалось загрузить данные отдела. Попробуйте снова.",
+          "departmentNotFound": "Отдел не найден"
+        }
+      },
+      "forms": {
+        "name": "Название",
+        "description": "Описание",
+        "project": "Проект",
+        "assignedRoles": "Назначенные роли",
+        "status": "Статус",
+        "placeholders": {
+          "name": "Введите название отдела",
+          "description": "Опишите этот отдел"
+        },
+        "errors": {
+          "failedToCreate": "Не удалось создать отдел. Попробуйте снова.",
+          "failedToUpdate": "Не удалось обновить отдел. Попробуйте снова."
+        }
+      },
+      "status": {
+        "active": "Активный",
+        "inactive": "Неактивный"
       }
     },
     "imports": {
@@ -405,9 +548,12 @@
           "selectPurchaseDate": "Выберите дату покупки",
           "placeholderText": "Текст-заполнитель",
           "enterSellerCreditor": "Введите название продавца/кредитора",
-          "loadingProjects": "Загрузка проектов..."
+          "selectSellerCreditor": "Выберите продавца/кредитора",
+          "loadingProjects": "Загрузка проектов...",
+          "loadingSellers": "Загрузка продавцов..."
         },
-        "noProjectsAvailable": "Нет доступных проектов"
+        "noProjectsAvailable": "Нет доступных проектов",
+        "noSellersAvailable": "Нет доступных продавцов"
       },
       "step2": {
         "simple": {
@@ -463,9 +609,15 @@
         "tableHeaders": {
           "dateTime": "Дата/Время",
           "fileName": "Имя файла",
+          "type": "Тип",
           "status": "Статус",
           "errors": "Ошибки",
           "actions": "Действия"
+        },
+        "importTypes": {
+          "simple": "Простой",
+          "vendor": "Выгрузка продавца",
+          "operatorAssignment": "Назначение операторов"
         },
         "uploadedBy": "Загружено:",
         "view": "Просмотр",
@@ -489,7 +641,9 @@
           "status": "Статус",
           "allStatuses": "Все статусы",
           "uploadedBy": "Загружено",
-          "allUsers": "Все пользователи"
+          "allUsers": "Все пользователи",
+          "importType": "Тип",
+          "allTypes": "Все типы"
         }
       },
       "details": {
@@ -548,6 +702,54 @@
           "importFailed": "Импорт не удался из-за системной ошибки. Строки не были обработаны.",
           "someRowsFailed": "Некоторые строки не удались. Скачайте отчет об ошибках для деталей."
         }
+      },
+      "operatorAssignment": {
+        "title": "Массовое назначение операторов",
+        "viewHistory": "История",
+        "preview": {
+          "title": "Предварительный просмотр",
+          "previewRows": "Предпросмотр (первые {{count}} строк)",
+          "errors": "Ошибки ({{count}})",
+          "readyToAssign": "Готово к назначению",
+          "noChange": "Без изменений",
+          "invalid": "Недействительно",
+          "uniqueOperators": "Уникальные операторы",
+          "columns": {
+            "rowNumber": "#",
+            "client": "Клиент",
+            "currentOperator": "Текущий оператор",
+            "newOperator": "Новый оператор",
+            "status": "Статус",
+            "note": "Примечание"
+          },
+          "statuses": {
+            "ready": "Готово",
+            "noChange": "Без изменений",
+            "warning": "Предупреждение",
+            "error": "Ошибка"
+          },
+          "assignmentReason": "Причина назначения (необязательно)",
+          "assignmentReasonPlaceholder": "напр., Перераспределение портфеля март 2026",
+          "cancel": "Отмена",
+          "confirm": "Подтвердить и назначить {{count}} клиентов",
+          "starting": "Запуск...",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записей · Партия: {{batchId}}"
+        },
+        "progress": {
+          "assignmentComplete": "Назначение завершено",
+          "assignmentFailed": "Назначение не удалось",
+          "assignmentCancelled": "Назначение отменено",
+          "processing": "Обработка назначений...",
+          "progress": "Прогресс",
+          "totalRecords": "Всего записей",
+          "successful": "Успешно",
+          "failed": "Не удалось",
+          "processingTime": "Время обработки: {{time}}",
+          "cancel": "Отмена",
+          "downloadErrors": "Скачать ошибки",
+          "startNewImport": "Новый импорт",
+          "jobStarted": "Назначение операторов запущено"
+        }
       }
     },
     "clients": {
@@ -557,17 +759,30 @@
       "filtersLabel": "Фильтры",
       "applied": "применено",
       "noClientsFound": "Клиенты не найдены",
+      "assign": "Назначить",
+      "bulkAssign": "Массовое назначение",
+      "bulkActions": {
+        "assignEmployee": "Назначить сотрудника",
+        "addTags": "Добавить теги",
+        "removeTags": "Удалить теги"
+      },
+      "manageTags": "Управление тегами",
+      "errorLoading": "Не удалось загрузить клиентов",
+      "errorOccurred": "Произошла ошибка",
       "tableHeaders": {
         "fullName": "Полное имя",
         "taxIdNumber": "ИНН",
         "tags": "Теги",
         "phoneNumber": "Номер телефона",
-        "dateOfSale": "Дата продажи",
+        "createdDate": "Добавлено",
         "creditor": "Кредитор",
         "debt": "Долг",
-        "amountOfDebt": "Сумма долга",
+        "totalDebt": "Общий долг",
         "priority": "Приоритет",
-        "score": "Оценка"
+        "score": "Оценка",
+        "employee": "Сотрудник",
+        "searcher": "Розыскник",
+        "actions": "Действия"
       },
       "priorities": {
         "critical": "Критический",
@@ -584,16 +799,19 @@
         "client": "Клиент:"
       },
       "filters": {
-        "debtRange": "Диапазон долга",
+        "debtRange": "Общий долг клиента",
         "dpdRange": "Диапазон DPD",
-        "amountOfDebtRange": "Диапазон суммы долга",
-        "dateOfSale": "Дата продажи",
-        "portfolio": "Портфель",
+        "amountOfDebtRange": "Сумма отдельного долга",
+        "dateOfSale": "Дата продажи долга",
+        "portfolio": "Кредитор/Продавец",
         "status": "Статус",
         "responsibleEmployee": "Ответственный сотрудник",
         "responsibleSearcher": "Ответственный поисковик",
         "selectEmployee": "Выберите сотрудника",
         "selectSearcher": "Выберите поисковика",
+        "unassignedOnly": "Только без назначения",
+        "tags": "Теги",
+        "noUsersAvailable": "Нет доступных пользователей",
         "more": "больше",
         "days": "дней"
       },
@@ -606,15 +824,17 @@
         "defaulted": "Просрочено",
         "answered": "Отвечен",
         "noAnswer": "Нет ответа",
+        "sent": "Отправлено",
         "delivered": "Доставлено",
         "failed": "Не удалось",
         "pending": "Ожидается"
       },
       "activity": {
         "score": "Оценка",
-        "addNoteAboutClient": "Добавить заметку о клиенте",
+        "addNote": "Добавить заметку",
         "call": "Звонок",
         "deleteClient": "Удалить клиента",
+        "editClient": "Редактировать клиента",
         "typeOfCommunication": "Тип коммуникации",
         "calls": "Звонки",
         "sms": "SMS",
@@ -629,6 +849,10 @@
         "tableHeaders": {
           "date": "Дата",
           "number": "Номер",
+          "loanNumber": "Номер займа",
+          "phone": "Телефон",
+          "type": "Тип",
+          "subtype": "Подтип",
           "contactType": "Тип контакта",
           "result": "Результат",
           "promisedAmount": "Обещанная сумма",
@@ -636,6 +860,59 @@
           "comment": "Комментарий",
           "employee": "Сотрудник"
         }
+      },
+      "editModal": {
+        "title": "Редактировать клиента",
+        "personalInfo": "Личная информация",
+        "phoneNumbers": "Номера телефонов",
+        "addresses": "Адреса",
+        "contacts": "Контакты и рекомендатели",
+        "firstName": "Имя",
+        "lastName": "Фамилия",
+        "middleName": "Отчество",
+        "dateOfBirth": "Дата рождения",
+        "email": "Электронная почта",
+        "phonePrimary": "Мобильный телефон",
+        "phoneMobile": "Мобильный телефон",
+        "phoneHome": "Домашний телефон",
+        "phoneRegister": "Регистрационный телефон",
+        "phoneSecondary": "Дополнительный телефон",
+        "addAddress": "Добавить адрес",
+        "addContact": "Добавить контакт",
+        "addressType": "Тип адреса",
+        "region": "Область",
+        "city": "Город",
+        "street": "Улица",
+        "building": "Дом",
+        "apartment": "Квартира",
+        "postalCode": "Почтовый индекс",
+        "district": "Район",
+        "houseNumber": "Корпус",
+        "housingType": "Тип жилья",
+        "isPrimary": "Основной",
+        "contactType": "Тип контакта",
+        "relationship": "Отношения",
+        "phone": "Телефон",
+        "notes": "Заметки",
+        "save": "Сохранить изменения",
+        "saving": "Сохранение...",
+        "cancel": "Отмена",
+        "taxId": "ИНН",
+        "saveSuccess": "Клиент успешно обновлен",
+        "saveError": "Не удалось обновить клиента",
+        "addressCreated": "Адрес успешно добавлен",
+        "addressUpdated": "Адрес успешно обновлен",
+        "addressDeleted": "Адрес успешно удален",
+        "contactCreated": "Контакт успешно добавлен",
+        "contactUpdated": "Контакт успешно обновлен",
+        "contactDeleted": "Контакт успешно удален",
+        "confirmDelete": "Вы уверены, что хотите удалить это?",
+        "unsavedChanges": "У вас есть несохраненные изменения. Отменить?",
+        "editAddress": "Редактировать адрес",
+        "deleteAddress": "Удалить адрес",
+        "editContact": "Редактировать контакт",
+        "deleteContact": "Удалить контакт",
+        "workPhone": "Рабочий телефон"
       },
       "detail": {
         "clientNotFound": "Клиент не найден",
@@ -648,29 +925,59 @@
         "passport": "Паспорт",
         "maritalStatus": "Семейное положение",
         "numberOfFamilyMembers": "Количество членов семьи",
+        "incomeLevel": "Уровень дохода",
+        "documentType": "Тип документа",
+        "passportSeries": "Серия",
+        "passportNumber": "Номер",
+        "issuedBy": "Кем выдан",
+        "issuedDate": "Дата выдачи",
+        "expiresDate": "Дата окончания",
+        "gender": "Пол",
+        "recordNumber": "Номер записи",
+        "employmentType": "Тип занятости",
         "fullName": "Полное имя",
         "relationshipTo": "Отношения к",
         "phoneNumber": "Номер телефона",
+        "contactValue": "Контакт",
+        "contactType": "Тип контакта",
+        "addedBy": "Добавил",
+        "addedDate": "Дата",
+        "phoneType": "Тип",
         "comment": "Комментарий",
         "registrationAddress": "Адрес регистрации",
         "personalAddress": "Личный адрес",
+        "organizationName": "Название организации",
+        "position": "Должность",
+        "experience": "Опыт работы",
+        "managerFullName": "ФИО руководителя",
+        "workPhone": "Рабочий телефон",
         "paymentStatuses": {
           "done": "Выполнено",
           "pending": "В ожидании",
-          "failed": "Не удалось"
+          "failed": "Не удалось",
+          "verified": "Подтверждено",
+          "cancelled": "Отменён",
+          "canceled": "Отменено"
         },
         "tableHeaders": {
           "loanNumber": "Номер займа",
+          "issueDate": "Дата выдачи",
           "counterparty": "Контрагент",
           "saleDate": "Дата продажи",
           "loanAmount": "Сумма займа",
           "principalDebt": "Основная задолженность",
+          "principalAmount": "Основная сумма",
+          "remainingDebtAmount": "Остаток долга",
+          "rrAmount": "Сумма РР",
+          "rrConnectionDate": "Дата подключения РР",
+          "totalToReturn": "Итого к возврату",
           "totalToBeRepaid": "Всего к возврату",
           "paymentDate": "Дата платежа",
           "amount": "Сумма",
           "paymentMethod": "Способ оплаты",
           "status": "Статус",
           "paymentDistribution": "Распределение платежа",
+          "paymentType": "Тип платежа",
           "fixationOnEmployee": "Фиксация на (сотрудник)",
           "writeOffDate": "Дата списания",
           "writeOffMethod": "Способ списания",
@@ -678,7 +985,16 @@
           "whoCreated": "Кто создал",
           "description": "Описание",
           "dateOfReminder": "Дата напоминания",
-          "whoWillReceiveReminder": "Кто получит напоминание"
+          "whoWillReceiveReminder": "Кто получит напоминание",
+          "date": "Дата",
+          "whoAppointed": "Кто назначил",
+          "whoIsResponsible": "Кто ответственный",
+          "note": "Примечание",
+          "documentName": "Название",
+          "documentType": "Тип",
+          "uploadDate": "Дата загрузки",
+          "documentSize": "Размер",
+          "actions": "Действия"
         },
         "loansInProcess": "Займы в процессе",
         "closedLoans": "Закрытые займы",
@@ -688,6 +1004,30 @@
         "closeLoan": "Закрыть займ",
         "sendToUBCI": "Отправить в UBCI",
         "rrCalculator": "RR Калькулятор",
+        "rrDetail": "Детали соглашения о реструктуризации",
+        "rrLoanNumber": "Номер займа",
+        "rrClientNumber": "Номер клиента",
+        "rrRestructuringAmount": "Сумма реструктуризации",
+        "rrNumPayments": "Количество платежей",
+        "rrMonthlyPayment": "Ежемесячный платеж",
+        "rrResponsibleEmployee": "Ответственный сотрудник",
+        "rrFirstPaymentDate": "Дата первого взноса",
+        "rrFirstPaymentAmount": "Сумма первого взноса",
+        "rrPaymentSchedule": "График платежей",
+        "rrPaymentDate": "Дата",
+        "rrPaymentAmount": "Сумма",
+        "rrConnectionDate": "Дата подключения",
+        "connectRR": "Подключить РР",
+        "connectRRSuccess": "Реструктуризация успешно подключена",
+        "rrSelectLoan": "Кредит",
+        "rrSelectLoanPlaceholder": "Выберите кредит...",
+        "rrValidationLoanRequired": "Пожалуйста, выберите кредит",
+        "rrValidationAmountRequired": "Общая сумма реструктуризации обязательна",
+        "rrValidationConnectionDateRequired": "Дата подключения обязательна",
+        "rrValidationPaymentDateRequired": "Дата платежа {{num}} обязательна",
+        "rrValidationPaymentAmountRequired": "Сумма платежа {{num}} обязательна",
+        "rrValidationSumMismatch": "Сумма платежей ({{sum}}) должна равняться общей сумме ({{total}})",
+        "viewDetail": "Просмотреть",
         "makePayment": "Сделать платеж",
         "payments": "Платежи",
         "writesOff": "Списания",
@@ -706,11 +1046,62 @@
         "noHistoryYet": "Истории еще нет",
         "startByCallingSendingSMSOrAddingNote": "Начните с звонка, отправки SMS или добавления заметки.",
         "addFirstNote": "Добавить первую заметку",
+        "noPrimaryCreditorComments": "Нет комментариев от первичного кредитора",
+        "primaryCreditorCommentsDescription": "Исторические данные о взаимодействии от продавца долга появятся здесь, когда будут доступны.",
+        "spamCallHistory": "История спам-звонков",
+        "noSpamCallHistory": "История спам-звонков отсутствует",
         "totalCost": "Общая стоимость",
         "deliveryRate": "Уровень доставки",
         "delivered": "доставлено",
         "failed": "не удалось",
-        "pending": "ожидается"
+        "pending": "ожидается",
+        "noTagsAssigned": "Теги не назначены",
+        "totalCalls": "Всего звонков",
+        "avgDuration": "Сред. длительность",
+        "latestCalls": "Последние звонки",
+        "latestSms": "Последние SMS",
+        "latestCallsAndSms": "Последние звонки и SMS",
+        "tabs": {
+          "personal": "Личное",
+          "work": "Работа",
+          "recommenders": "Поручители",
+          "addresses": "Адреса",
+          "passport": "Паспорт",
+          "loans": "Займы",
+          "tasks": "Задания",
+          "docs": "Документы",
+          "callSms": "Звонок / SMS"
+        },
+        "maritalStatuses": {
+          "1": "Холост/Не замужем",
+          "2": "Женат/Замужем",
+          "3": "Разведён/Разведена",
+          "4": "Вдовец/Вдова",
+          "5": "Гражданский брак"
+        },
+        "employmentTypes": {
+          "full_time": "Полная занятость",
+          "part_time": "Частичная занятость",
+          "contract": "Контракт",
+          "student": "Студент",
+          "self_employed": "ФЛП",
+          "unemployed": "Безработный",
+          "retired": "Пенсионер",
+          "other": "Другое"
+        },
+        "paymentMethods": {
+          "bank_transfer": "Банковский перевод",
+          "online_gateway": "Онлайн-платёж",
+          "cash": "Наличные",
+          "card": "Карта",
+          "other": "Другое"
+        },
+        "genderOptions": {
+          "M": "Мужской",
+          "F": "Женский",
+          "male": "Мужской",
+          "female": "Женский"
+        }
       },
       "modals": {
         "addNote": {
@@ -724,7 +1115,79 @@
           "type2": "Тип 2",
           "type3": "Тип 3",
           "note": "Заметка",
-          "typeYourNoteHere": "Введите вашу заметку здесь"
+          "typeYourNoteHere": "Введите вашу заметку здесь",
+          "channel": "Канал коммуникации",
+          "selectChannel": "Выберите канал",
+          "contactType": "Тип контакта",
+          "selectContactType": "Выберите тип контакта",
+          "result": "Результат",
+          "selectResult": "Выберите результат (необязательно)",
+          "promiseDate": "Дата обещания",
+          "selectDate": "Выберите дату",
+          "promiseAmount": "Сумма обещания",
+          "callbackDate": "Дата обратного звонка",
+          "successMessage": "Взаимодействие успешно добавлено",
+          "errorMessage": "Не удалось добавить взаимодействие"
+        },
+        "assignClient": {
+          "title": "Назначить клиента: {{fullName}}",
+          "clientInformation": "Информация о клиенте",
+          "assignmentDetails": "Детали назначения",
+          "name": "Имя",
+          "email": "Электронная почта",
+          "phone": "Телефон",
+          "priority": "Приоритет",
+          "score": "Оценка",
+          "totalDebt": "Общий долг",
+          "debt": "долг",
+          "debts": "долгов",
+          "employee": "Сотрудник (необязательно)",
+          "searcher": "Поисковик (необязательно)",
+          "assignmentReason": "Причина назначения",
+          "notes": "Примечания (необязательно)",
+          "selectEmployee": "Выберите сотрудника...",
+          "selectSearcher": "Выберите поисковика...",
+          "noUsersAvailable": "Нет доступных пользователей",
+          "enterAdditionalNotes": "Введите дополнительные примечания...",
+          "warningMessage": "Примечание: Должно быть выбрано хотя бы одно назначение (Сотрудник или Поисковик).",
+          "assignClient": "Назначить клиента",
+          "reasons": {
+            "newClient": "Новый клиент",
+            "workloadDistribution": "Распределение нагрузки",
+            "specialistRequired": "Требуется специалист",
+            "reassignment": "Переназначение",
+            "other": "Другое"
+          }
+        },
+        "bulkAssignClient": {
+          "title": "Массовое назначение клиентов ({{count}} выбрано)",
+          "selectedClientsPreview": "Предпросмотр выбранных клиентов",
+          "assignmentOptions": "Параметры назначения",
+          "assignEmployeeToAll": "Назначить сотрудника всем (необязательно)",
+          "assignSearcherToAll": "Назначить поисковика всем (необязательно)",
+          "distributionMethod": "Метод распределения",
+          "assignmentReason": "Причина назначения",
+          "notes": "Примечания",
+          "selectEmployee": "Выберите сотрудника...",
+          "selectSearcher": "Выберите поисковика...",
+          "selectReason": "Выберите причину...",
+          "enterAdditionalNotes": "Введите дополнительные примечания...",
+          "assignAllToSelected": "Назначить всех выбранным пользователям выше",
+          "distributeEvenly": "Распределить равномерно среди доступных пользователей (в будущем)",
+          "totalDebt": "Общий долг:",
+          "avgScore": "Средняя оценка:",
+          "andMoreClients": "... и еще {{count}} {{client}}",
+          "client": "клиент",
+          "clients": "клиентов",
+          "warningMessage": "Это назначит {{count}} {{client}}. История назначений будет зарегистрирована для каждого клиента отдельно.",
+          "assignAllClients": "Назначить всех клиентов",
+          "reasons": {
+            "newClient": "Новый клиент",
+            "workloadDistribution": "Распределение нагрузки",
+            "specialistRequired": "Требуется специалист",
+            "reassignment": "Переназначение",
+            "other": "Другое"
+          }
         },
         "callDialog": {
           "incomingCall": "Входящий звонок",
@@ -742,10 +1205,14 @@
           "whiteLine": "Белая линия",
           "grayLine": "Серая линия",
           "spamCalls": "Спам звонки",
+          "markAsSpam": "Отметить как спам",
           "callNow": "Позвонить сейчас",
           "calling": "Звонит...",
           "connected": "Подключено",
           "callEnded": "Звонок завершен",
+          "callFailed": "Звонок не удался",
+          "callFailedMessage": "Не удалось подключить звонок. Пожалуйста, попробуйте снова.",
+          "tryAgain": "Попробовать снова",
           "elapsedTime": "Прошло времени",
           "talkTime": "Время разговора",
           "dialing": "Набор номера...",
@@ -759,7 +1226,8 @@
           "hangUp": "Завершить звонок",
           "viewClient": "Просмотреть клиента",
           "loanPrincipal": "Основная сумма займа",
-          "lastContact": "Последний контакт"
+          "lastContact": "Последний контакт",
+          "callInProgress": "Другой звонок или запись уже идет. Пожалуйста, сначала завершите или закройте его."
         },
         "callLogCard": {
           "message": "Сообщение",
@@ -768,6 +1236,7 @@
           "type": "Тип",
           "phone": "Телефон",
           "line": "Линия",
+          "noRecording": "Запись звонка недоступна",
           "callTypes": {
             "incoming": "Входящий",
             "outgoing": "Исходящий",
@@ -803,11 +1272,14 @@
           "title": "Отправить SMS",
           "smsSentToday": "SMS отправлено сегодня",
           "sendSMSTo": "Отправить SMS",
+          "dailyLimit": "Дневной лимит",
           "dailyLimitReached": "Дневной лимит достигнут",
           "smsSentToThisNumber": "SMS отправлено на этот номер",
           "nextSMSAvailableTomorrow": "Следующий SMS доступен завтра в",
           "template": "Шаблон",
           "selectTemplate": "Выберите шаблон",
+          "customMessage": "Пользовательское сообщение",
+          "loadingTemplates": "Загрузка шаблонов...",
           "message": "Сообщение",
           "typeYourMessageHere": "Введите ваше сообщение здесь...",
           "characters": "символов",
@@ -817,9 +1289,15 @@
           "smsParts": "частей SMS",
           "smsPart": "часть SMS",
           "cost": "Стоимость",
-          "messageWillBeSplit": "Сообщение будет разделено на",
+          "messageWillBeSplit": "Вы не можете отправить это сообщение в одном SMS. Оно будет разделено на несколько частей.",
           "clientName": "Имя клиента",
           "debtAmount": "Сумма долга",
+          "loanNumber": "Номер займа",
+          "templateVariables": "Переменные шаблона",
+          "sending": "Отправка...",
+          "smsSentSuccessfully": "SMS успешно отправлено",
+          "smsFailedToSend": "Не удалось отправить SMS. Проверьте настройки провайдера или повторите попытку.",
+          "smsFailedDuplicate": "Дублирующее сообщение отклонено провайдером. Измените текст и попробуйте снова.",
           "sendSMS": "Отправить SMS"
         },
         "viewSMS": {
@@ -851,6 +1329,10 @@
             "oct": "Окт",
             "nov": "Ноя",
             "dec": "Дек"
+          },
+          "time": {
+            "am": "AM",
+            "pm": "PM"
           }
         },
         "portfolioDropdown": {
@@ -859,20 +1341,52 @@
           "clear": "Очистить",
           "apply": "Применить"
         },
+        "tagsDropdown": {
+          "searchTags": "Поиск тегов...",
+          "noTagsFound": "Теги не найдены",
+          "clear": "Очистить",
+          "apply": "Применить"
+        },
+        "bulkTag": {
+          "addTags": "Добавить теги",
+          "removeTags": "Удалить теги",
+          "clients": "клиент(ов)",
+          "searchTags": "Поиск тегов...",
+          "loadingTags": "Загрузка тегов...",
+          "noTagsFound": "Теги не найдены",
+          "tagsSelected": "тег(ов) выбрано",
+          "selectAtLeastOneTag": "Пожалуйста, выберите хотя бы один тег",
+          "cancel": "Отмена",
+          "processing": "Обработка..."
+        },
         "recordPayment": {
           "title": "Записать платеж",
           "currentDebt": "Текущий долг:",
           "paymentInformation": "Информация о платеже",
           "paymentAmount": "Сумма платежа",
+          "contractNumber": "Номер договора",
+          "contractPlaceholder": "Выберите договор",
           "paymentDate": "Дата платежа",
           "selectDate": "Выберите дату",
           "paymentMethod": "Способ оплаты:",
           "bankTransfer": "Банковский перевод",
-          "cardPayment": "Оплата картой",
+          "onlineGateway": "Онлайн-шлюз",
+          "cash": "Наличные",
+          "card": "Карта",
           "other": "Другое",
+          "referenceNumber": "Номер ссылки",
+          "referenceNumberPlaceholder": "Введите номер ссылки",
+          "referenceNumberRequired": "Номер ссылки обязателен",
+          "last4Digits": "Последние 4 цифры",
+          "last4DigitsPlaceholder": "Введите последние 4 цифры",
+          "last4DigitsRequired": "Последние 4 цифры обязательны",
+          "last4DigitsMustBe4": "Последние 4 цифры должны быть ровно 4 числами",
+          "paymentMethodDetails": "Детали способа оплаты",
+          "paymentMethodDetailsPlaceholder": "Введите дополнительные детали оплаты (необязательно)",
           "impactPreview": "Предварительный просмотр влияния",
           "currentTotalDebt": "Текущий общий долг:",
           "paymentAmountLabel": "Сумма платежа:",
+          "newTotalDebt": "Новый общий долг:",
           "newStatus": "Новый статус:",
           "stillHasDebt": "еще имеет долг",
           "verification": "Верификация",
@@ -886,7 +1400,9 @@
           "saveAndVerify": "Сохранить и подтвердить",
           "cancel": "Отменить",
           "min": "мин:",
-          "max": "макс:"
+          "max": "макс:",
+          "validationPaymentExceedsDebt": "Платеж не может превышать текущий долг ({{amount}})",
+          "validationPaymentMustBePositive": "Сумма платежа должна быть положительной."
         },
         "editPayment": {
           "title": "Редактировать платеж #{{paymentId}}",
@@ -940,6 +1456,8 @@
           "project": "Проект:",
           "debtImpact": "Влияние на долг",
           "currentTotalDebt": "Текущий общий долг:",
+          "debtBefore": "Долг до:",
+          "debtAfter": "Долг после:",
           "paymentAmount": "Сумма платежа:",
           "clientStatus": "Статус клиента:",
           "stillHasDebt": "еще имеет долг",
@@ -948,6 +1466,9 @@
           "createdAt": "Создано в:",
           "verifiedBy": "Подтверждено:",
           "verifiedAt": "Подтверждено в:",
+          "cancelledBy": "Отменено:",
+          "cancelledAt": "Отменено в:",
+          "cancellationReason": "Причина отмены:",
           "printReceipt": "Печать квитанции",
           "downloadReceiptPDF": "Скачать квитанцию PDF",
           "close": "Закрыть"
@@ -1063,7 +1584,7 @@
           "reference": "Референс:",
           "currentDebt": "Текущий долг:",
           "newDebt": "Новый долг:",
-          "rejectPayment": "Отклонить платеж",
+          "cancelPayment": "Отменить платеж",
           "verifyAndApprove": "Подтвердить и одобрить",
           "expandDetails": "Развернуть детали",
           "recentlyProcessed": "Недавно обработано",
@@ -1083,7 +1604,7 @@
         "lastPayment": "Последний платеж",
         "date": "Дата",
         "totalDebt": "Общий долг",
-        "daysPastDue": "Дней просрочки:",
+        "daysPastDue": "Дней просрочки",
         "paymentHistory": "История платежей",
         "last10": "Последние 10",
         "all": "Все",
@@ -1098,10 +1619,11 @@
           "actions": "Действия"
         },
         "paymentMethod": {
-          "online": "Онлайн",
-          "bank": "Банк",
+          "bankTransfer": "Банковский перевод",
+          "onlineGateway": "Онлайн-шлюз",
+          "cash": "Наличные",
           "card": "Карта",
-          "directDebit": "Прямое списание"
+          "other": "Другое"
         },
         "paymentStatus": {
           "verified": "Подтверждено",
@@ -1110,6 +1632,7 @@
         },
         "actions": {
           "verify": "Подтвердить",
+          "cancel": "Отменить",
           "viewDetails": "Просмотреть детали"
         },
         "summary": {
@@ -1148,6 +1671,8 @@
           "date": "Дата",
           "amount": "Сумма",
           "method": "Способ",
+          "reference": "Номер ссылки",
+          "contractNumber": "Номер договора",
           "status": "Статус",
           "actions": "Действия"
         },
@@ -1157,6 +1682,24 @@
           "view": "Просмотреть"
         },
         "noPaymentHistory": "История платежей не найдена"
+      },
+      "tasks": {
+        "addTask": "Добавить задачу",
+        "subject": "Тема задачи",
+        "selectSubject": "Выберите тему...",
+        "description": "Описание",
+        "descriptionPlaceholder": "Введите описание задачи...",
+        "priority": {
+          "label": "Приоритет",
+          "high": "Высокий",
+          "normal": "Нормальный",
+          "low": "Низкий"
+        },
+        "dueDate": "Срок выполнения",
+        "assignedTo": "Назначено",
+        "selectUser": "Выберите пользователя...",
+        "comment": "Комментарий",
+        "commentPlaceholder": "Необязательный комментарий..."
       }
     },
     "smsTemplates": {
@@ -1199,6 +1742,8 @@
         "usageCount": "Количество использований",
         "characters": "символов",
         "cyrillicLimit": "Кириллический лимит",
+        "latinLimit": "Латинский лимит",
+        "messageExceedsLimit": "Сообщение превышает лимит символов. Пожалуйста, сократите сообщение.",
         "variablesDetected": "Обнаруженные переменные",
         "clickToInsert": "Нажмите, чтобы вставить",
         "availableVariables": "Доступные переменные",
@@ -1216,6 +1761,11 @@
           "templateNameRequired": "Название шаблона обязательно",
           "messageTextRequired": "Текст сообщения обязателен"
         }
+      },
+      "messages": {
+        "templateDeleted": "Шаблон успешно удален",
+        "templateCreated": "Шаблон успешно создан",
+        "templateUpdated": "Шаблон успешно обновлен"
       },
       "modals": {
         "templateNotFound": "Шаблон не найден",
@@ -1239,8 +1789,213 @@
         }
       }
     },
+    "sellers": {
+      "title": "Управление продавцами",
+      "addNewSeller": "Новый продавец",
+      "noSellersFound": "Продавцы не найдены",
+      "errorLoading": "Ошибка загрузки продавцов",
+      "search": "Поиск",
+      "searchPlaceholder": "Поиск по названию компании, налоговому номеру, контакту...",
+      "searchButton": "Поиск",
+      "sellers": "продавцов",
+      "searchFilters": {
+        "status": "Статус",
+        "client": "Клиент",
+        "period": "Период",
+        "allClients": "Все клиенты",
+        "statusOptions": {
+          "active": "Активный",
+          "inactive": "Неактивный",
+          "all": "Все"
+        },
+        "periodOptions": {
+          "any": "Любое время",
+          "last30Days": "Последние 30 дней",
+          "last90Days": "Последние 90 дней",
+          "thisYear": "В этом году"
+        }
+      },
+      "tableHeaders": {
+        "sellerCode": "Код продавца",
+        "sellerName": "Название продавца",
+        "sellerType": "Тип продавца",
+        "status": "Статус",
+        "companyEmail": "Электронная почта компании",
+        "companyName": "Название компании",
+        "website": "Веб-сайт компании",
+        "email": "Электронная почта компании",
+        "taxId": "Налоговый номер",
+        "contact": "Контакт",
+        "clients": "Клиенты",
+        "actions": "Действия"
+      },
+      "status": {
+        "active": "Активный",
+        "inactive": "Неактивный"
+      },
+      "actions": {
+        "edit": "Редактировать",
+        "delete": "Удалить"
+      },
+      "modals": {
+        "create": {
+          "title": "Создать нового продавца",
+          "basicInformation": "Основная информация",
+          "contactInformation": "Контактная информация",
+          "companyInformation": "Информация о компании",
+          "contactPerson": "Контактное лицо",
+          "address": "Адрес",
+          "optional": "Необязательно",
+          "sellerCode": "Код продавца",
+          "sellerName": "Название продавца",
+          "sellerType": "Тип продавца",
+          "contactEmail": "Контактный email",
+          "companyName": "Название компании *",
+          "taxId": "Налоговый номер / Регистрационный номер бизнеса",
+          "website": "Веб-сайт",
+          "email": "Электронная почта",
+          "contactName": "Имя",
+          "contactPhone": "Телефон",
+          "streetAddress": "Улица и номер дома",
+          "city": "Город",
+          "stateProvince": "Область/Провинция",
+          "postalCode": "Почтовый индекс",
+          "country": "Страна",
+          "notes": "Примечания",
+          "saveSeller": "Сохранить продавца",
+          "saving": "Сохранение...",
+          "placeholders": {
+            "sellerCode": "напр., BANK_ABC_2024",
+            "sellerName": "Введите название компании продавца",
+            "sellerType": "Выберите тип продавца",
+            "contactEmail": "Введите контактный email",
+            "address": "Введите адрес",
+            "contactPerson": "Введите имя контактного лица",
+            "companyName": "Введите название компании",
+            "taxId": "Введите налоговый номер или регистрационный номер бизнеса",
+            "website": "Введите URL веб-сайта",
+            "email": "Введите адрес электронной почты",
+            "contactName": "Введите имя контактного лица",
+            "contactPhone": "Введите номер телефона",
+            "streetAddress": "Введите адрес улицы",
+            "city": "Введите город",
+            "stateProvince": "Введите область или провинцию",
+            "postalCode": "Введите почтовый индекс",
+            "country": "Выберите страну...",
+            "notes": "Введите любые дополнительные примечания"
+          },
+          "errors": {
+            "sellerCodeRequired": "Код продавца является обязательным",
+            "sellerNameRequired": "Название продавца является обязательным",
+            "sellerTypeRequired": "Тип продавца является обязательным",
+            "companyNameRequired": "Название компании является обязательным",
+            "invalidEmail": "Пожалуйста, введите действительный адрес электронной почты"
+          }
+        },
+        "edit": {
+          "title": "Редактировать продавца",
+          "basicInformation": "Основная информация",
+          "contactInformation": "Контактная информация",
+          "companyInformation": "Информация о компании",
+          "contactPerson": "Контактное лицо",
+          "address": "Адрес",
+          "optional": "Необязательно",
+          "sellerCode": "Код продавца",
+          "sellerCodeReadOnly": "Код продавца нельзя изменить после создания",
+          "sellerName": "Название продавца",
+          "sellerType": "Тип продавца",
+          "contactEmail": "Контактный email",
+          "saveChanges": "Сохранить изменения",
+          "companyName": "Название компании *",
+          "taxId": "Налоговый номер / Регистрационный номер бизнеса",
+          "website": "Веб-сайт",
+          "email": "Электронная почта",
+          "contactName": "Имя",
+          "contactPhone": "Телефон",
+          "streetAddress": "Улица и номер дома",
+          "city": "Город",
+          "stateProvince": "Область/Провинция",
+          "postalCode": "Почтовый индекс",
+          "country": "Страна",
+          "notes": "Примечания",
+          "saveSeller": "Сохранить продавца",
+          "saving": "Сохранение...",
+          "loadingSellerData": "Загрузка данных продавца...",
+          "sellerNotFound": "Продавец не найден",
+          "placeholders": {
+            "sellerName": "Введите название компании продавца",
+            "sellerType": "Выберите тип продавца",
+            "contactEmail": "Введите контактный email",
+            "address": "Введите адрес",
+            "contactPerson": "Введите имя контактного лица",
+            "companyName": "Введите название компании",
+            "taxId": "Введите налоговый номер или регистрационный номер бизнеса",
+            "website": "Введите URL веб-сайта",
+            "email": "Введите адрес электронной почты",
+            "contactName": "Введите имя контактного лица",
+            "contactPhone": "Введите номер телефона",
+            "streetAddress": "Введите адрес улицы",
+            "city": "Введите город",
+            "stateProvince": "Введите область или провинцию",
+            "postalCode": "Введите почтовый индекс",
+            "country": "Выберите страну...",
+            "notes": "Введите любые дополнительные примечания"
+          },
+          "errors": {
+            "sellerNameRequired": "Название продавца является обязательным",
+            "sellerTypeRequired": "Тип продавца является обязательным",
+            "companyNameRequired": "Название компании является обязательным",
+            "invalidEmail": "Пожалуйста, введите действительный адрес электронной почты"
+          }
+        },
+        "delete": {
+          "title": "Удалить продавца",
+          "confirmMessage": {
+            "question": "Вы уверены, что хотите удалить этого продавца?",
+            "warning": "Это действие нельзя отменить."
+          },
+          "deleting": "Удаление...",
+          "deleteSeller": "Удалить продавца"
+        }
+      },
+      "types": {
+        "bank": "Банк",
+        "mfo": "МФО (Микрофинансовая организация)",
+        "collection_agency": "Коллекторское агентство",
+        "retail": "Розничная торговля",
+        "telecom": "Телекоммуникации",
+        "utilities": "Коммунальные услуги",
+        "other": "Другое"
+      }
+    },
+    "profile": {
+      "title": "Настройки профиля",
+      "roleLabel": "Роль:",
+      "resetPassword": "Сбросить пароль",
+      "passwordChanged": "Пароль изменён",
+      "passwordChangeFailed": "Не удалось изменить пароль",
+      "profileUpdated": "Профиль обновлён",
+      "profileUpdateFailed": "Не удалось обновить профиль",
+      "saveChanges": "Сохранить изменения",
+      "currentPassword": "Текущий пароль *",
+      "newPassword": "Новый пароль *",
+      "confirmNewPassword": "Подтвердите новый пароль *",
+      "currentPasswordRequired": "Текущий пароль обязателен",
+      "newPasswordRequired": "Новый пароль обязателен",
+      "changePassword": "Изменить пароль",
+      "changing": "Изменение...",
+      "callSettings": "Настройки звонков",
+      "extensionHelperText": "Номер внутренней линии управляется системным администратором",
+      "agentStatus": {
+        "online": "Онлайн",
+        "offline": "Офлайн",
+        "busy": "Занят",
+        "onCall": "На звонке"
+      }
+    },
     "reports": {
       "title": "Панель отчетов",
+      "exporting": "Экспортируется...",
       "periods": {
         "today": "Сегодня",
         "thisWeek": "Эта неделя",
@@ -1250,12 +2005,22 @@
         "callsMade": "Сделано звонков",
         "contactRate": "Контактность",
         "smsSent": "Отправлено SMS",
+        "paymentsCollected": "Собрано платежей",
         "vs": "по сравнению с",
         "yesterday": "вчера",
         "lastWeek": "прошлой недели",
         "lastMonth": "прошлого месяца",
         "vsYesterday": "по сравнению с вчера",
         "viewDetails": "Просмотреть детали"
+      },
+      "error": {
+        "title": "Не удалось загрузить отчеты",
+        "retry": "Повторить",
+        "notAuthenticated": "Требуется аутентификация",
+        "pleaseLogin": "Пожалуйста, войдите для просмотра отчетов",
+        "goToLogin": "Перейти к входу",
+        "generic": "Произошла ошибка при загрузке панели",
+        "noData": "Данные недоступны"
       },
       "agentPerformance": {
         "title": "Производительность операторов ({{count}} операторов)",
@@ -1279,6 +2044,38 @@
       },
       "exportCsv": "Экспортировать CSV",
       "currencySymbol": "₴",
+      "estimated": "Приблизительно",
+      "callsMadeModal": {
+        "title": "Сделано звонков",
+        "noData": "Данные недоступны",
+        "total": "Всего",
+        "byHour": "По часам",
+        "calls": "звонков",
+        "byOperator": "По операторам"
+      },
+      "contactRateModal": {
+        "title": "Контактность",
+        "noData": "Данные недоступны",
+        "of": "из",
+        "outcomes": "Результаты звонков",
+        "bestPerformer": "Лучший результат",
+        "needsImprovement": "Требуется улучшение",
+        "answered": "Ответил",
+        "noAnswer": "Нет ответа",
+        "busy": "Занято",
+        "failed": "Не удалось"
+      },
+      "smsModal": {
+        "title": "Отправлено SMS",
+        "noData": "Данные недоступны",
+        "totalSent": "Всего отправлено",
+        "deliveryStats": "Статистика доставки",
+        "delivered": "Доставлено",
+        "failed": "Не доставлено",
+        "pending": "В ожидании",
+        "deliveryRate": "Процент доставки",
+        "byOperator": "По операторам"
+      },
       "paymentsModal": {
         "title": "Собранные платежи",
         "payments": "платежей",
@@ -1291,8 +2088,336 @@
         "other": "Другое",
         "averagePayment": "Средний платеж",
         "topCollector": "Лучший сборщик",
-        "largestPmt": "Самый большой платеж"
+        "largestPayment": "Самый большой платеж"
       }
+    },
+    "scoringConfiguration": {
+      "title": "Конфигурация оценки",
+      "defaultProject": "Проект",
+      "fallbackWarning": "Используется резервная конфигурация. Подключение к базе данных недоступно.",
+      "loadError": "Не удалось загрузить конфигурацию. Используются значения по умолчанию.",
+      "previewSuccess": "Предпросмотр обновлен",
+      "previewError": "Не удалось выполнить предпросмотр изменений",
+      "weightError": "Общая сумма весов должна равняться 100%",
+      "weightsSaveSuccess": "Веса оценки успешно сохранены",
+      "weightsSaveError": "Не удалось сохранить веса оценки",
+      "thresholdsSaveSuccess": "Пороги приоритетов успешно сохранены",
+      "thresholdsSaveError": "Не удалось сохранить пороги приоритетов",
+      "viewHistory": "Просмотр истории",
+      "scoreWeights": "Веса оценки",
+      "scoreWeightsDescription": "Настройте относительную важность каждого фактора при расчете оценок клиентов. Итого должно равняться 100%.",
+      "debtAmountWeight": "Вес суммы долга",
+      "daysOverdueWeight": "Вес дней просрочки",
+      "contactHistoryWeight": "Вес истории контактов",
+      "totalMustEqual": "Итого должно равняться 100%",
+      "current": "Текущее",
+      "changeReason": "Причина изменения",
+      "optional": "Необязательно",
+      "changeReasonPlaceholder": "Введите причину этого изменения (необязательно)",
+      "saving": "Сохранение...",
+      "saveWeights": "Сохранить веса",
+      "priorityThresholds": "Пороги классификации приоритетов",
+      "thresholdsDescription": "Установите минимальные значения оценок для каждого уровня приоритета. Клиенты классифицируются на основе их рассчитанных оценок.",
+      "resetDefaults": "Сбросить по умолчанию",
+      "scoreGreaterThanOrEqual": "Оценка ≥",
+      "scoreLessThan": "Оценка <",
+      "points": "баллов",
+      "andLessThan": "и <",
+      "criticalDescription": "Клиенты с наивысшей срочностью (оценка 25-100)",
+      "highDescription": "Важные клиенты, требующие внимания (оценка 18-24)",
+      "mediumDescription": "Требуется стандартное наблюдение (оценка 10-17)",
+      "lowDescription": "Минимальная срочность (оценка 0-9)",
+      "immediateEffect": "Изменения повлияют на всех клиентов в этом проекте немедленно",
+      "saveThresholds": "Сохранить пороги",
+      "sellerOverrides": "Переопределения для продавцов (необязательно)",
+      "addSellerConfig": "Добавить конфигурацию продавца",
+      "sellerOverridesDescription": "Настройка различных порогов для конкретных продавцов",
+      "configurationPreview": "Предпросмотр конфигурации",
+      "previewDescription": "Посмотрите, как изменения порогов повлияют на распределение приоритетов клиентов",
+      "previewing": "Предпросмотр...",
+      "previewChanges": "Предпросмотр изменений",
+      "previewEmpty": "Нажмите \"Предпросмотр изменений\", чтобы увидеть, как изменения порогов повлияют на распределение приоритетов клиентов",
+      "thresholdDetails": "Детали порогов:",
+      "new": "Новое",
+      "currentDistribution": "Текущее распределение:",
+      "withNewThresholds": "С новыми порогами:",
+      "clients": "клиентов",
+      "lastUpdated": "Последнее обновление:",
+      "by": "от",
+      "saveConfiguration": "Сохранить конфигурацию",
+      "seller": "Продавец",
+      "selectSeller": "Выберите продавца",
+      "criticalThreshold": "Порог критического",
+      "highThreshold": "Порог высокого",
+      "mediumThreshold": "Порог среднего",
+      "lowThreshold": "Порог низкого",
+      "criticalHelp": "Клиенты с оценкой ≥ этого значения являются критическими",
+      "highHelp": "Клиенты с оценкой ≥ этого значения имеют высокий приоритет",
+      "mediumHelp": "Клиенты с оценкой ≥ этого значения имеют средний приоритет",
+      "lowHelp": "Клиенты ниже среднего имеют низкий приоритет (обычно 0)",
+      "criticalMustBeHigher": "Порог критического должен быть выше порога высокого",
+      "highMustBeHigher": "Порог высокого должен быть выше порога среднего",
+      "mediumMustBeHigher": "Порог среднего должен быть выше порога низкого",
+      "sellerConfigUpdated": "Конфигурация продавца успешно обновлена",
+      "sellerConfigCreated": "Конфигурация продавца успешно создана",
+      "saveFailed": "Не удалось сохранить конфигурацию",
+      "editSellerConfig": "Редактировать конфигурацию продавца",
+      "sellerConfigDeleted": "Конфигурация продавца успешно удалена",
+      "deleteFailed": "Не удалось удалить конфигурацию",
+      "clientsAffected": "Затронуто клиентов",
+      "noSellerConfigs": "Пока нет конфигураций для продавцов. Нажмите \"Добавить конфигурацию для продавца\", чтобы создать одну.",
+      "deleteSellerConfigTitle": "Удалить конфигурацию продавца",
+      "confirmDeleteSeller": "Вы уверены, что хотите удалить пользовательскую конфигурацию для \"{{sellerName}}\"? Это вернет пороги уровня проекта для этого продавца.",
+      "filters": "Фильтры",
+      "startDate": "Дата начала",
+      "endDate": "Дата окончания",
+      "historyLoadFailed": "Не удалось загрузить историю конфигурации",
+      "exportSuccess": "История успешно экспортирована",
+      "exportFailed": "Не удалось экспортировать историю",
+      "noHistory": "Изменения конфигурации не найдены для выбранных фильтров.",
+      "before": "До",
+      "after": "После",
+      "showingResults": "Показано {{start}} - {{end}} из {{total}} результатов",
+      "history": {
+        "title": "История конфигурации",
+        "export": "Экспорт CSV",
+        "noHistoryYet": "Пока нет изменений конфигурации",
+        "makeFirstChange": "Сделайте первое изменение конфигурации, чтобы увидеть историю здесь",
+        "goToConfig": "Перейти к конфигурации",
+        "noHistoryFound": "История не найдена",
+        "changeTypes": {
+          "created": "Создано",
+          "updated": "Обновлено",
+          "deleted": "Удалено"
+        },
+        "tableHeaders": {
+          "dateTime": "Дата и время",
+          "changeType": "Тип изменения",
+          "changedBy": "Изменено",
+          "reason": "Причина",
+          "changes": "Изменения"
+        }
+      }
+    },
+    "auditLogs": {
+      "title": "Журнал аудита",
+      "exportCsv": "Экспорт CSV",
+      "noLogsFound": "Журналов аудита не найдено",
+      "searchFilters": {
+        "placeholder": "Поиск по ID клиента, ID сущности или ключевому слову",
+        "status": "Статус",
+        "client": "Клиент",
+        "period": "Период",
+        "search": "Поиск",
+        "dateRange": "Диапазон дат",
+        "user": "Пользователь",
+        "entity": "Сущность",
+        "action": "Действие",
+        "role": "Роль",
+        "quickRanges": "Быстрые диапазоны",
+        "today": "Сегодня",
+        "yesterday": "Вчера",
+        "last7": "Последние 7",
+        "last30": "Последние 30 дней",
+        "selectEmployee": "Выберите сотрудника",
+        "allTypes": "Все типы",
+        "selectSearcher": "Выберите поиск",
+        "selectRole": "Выберите роль",
+        "selectStartDate": "Выберите дату начала",
+        "selectEndDate": "Выберите дату окончания",
+        "allActions": "Все действия",
+        "allUsers": "Все пользователи",
+        "applyFilters": "Применить фильтры",
+        "clearAll": "Очистить все"
+      },
+      "tableHeaders": {
+        "status": "Статус",
+        "timestamp": "ВРЕМЕННАЯ МЕТКА",
+        "user": "ПОЛЬЗОВАТЕЛЬ",
+        "actions": "Действия",
+        "entity": "Энтити",
+        "details": "Детали"
+      },
+      "status": {
+        "success": "Успех",
+        "failed": "Ошибка"
+      },
+      "viewDetails": "Просмотреть детали",
+      "detailModal": {
+        "title": "Детали журнала аудита",
+        "eventInformation": "Информация о событии",
+        "changes": "Изменения",
+        "requestInformation": "Информация о запросе",
+        "timestamp": "Временная метка",
+        "user": "Пользователь",
+        "role": "Роль",
+        "action": "Действие",
+        "result": "Результат",
+        "ipAddress": "IP адрес",
+        "sessionId": "ID сессии",
+        "status": "Статус",
+        "yes": "Да",
+        "no": "Нет",
+        "field": "Поле",
+        "oldValue": "Старое значение",
+        "newValue": "Новое значение",
+        "change": "Изменение",
+        "httpMethod": "HTTP метод",
+        "apiPath": "API путь",
+        "responseStatus": "Статус ответа",
+        "responseTime": "Время ответа",
+        "userAgent": "User Agent",
+        "added": "Добавлено",
+        "modified": "Изменено",
+        "removed": "Удалено"
+      },
+      "csvExport": {
+        "title": "ЭКСПОРТ ЖУРНАЛА АУДИТА В CSV",
+        "exportScope": "Экспортировать {{count}} записей журнала аудита, соответствующих текущим фильтрам.",
+        "csvOptions": "ПАРАМЕТРЫ CSV",
+        "columnsToInclude": "Колонки для включения",
+        "selectAll": "Выбрать все",
+        "formatSettings": "Настройки формата",
+        "dateFormat": "Формат даты",
+        "fieldDelimiter": "Разделитель полей",
+        "encoding": "Кодировка",
+        "includeHeaders": "Включить заголовки колонок",
+        "exportDownload": "Экспортировать и загрузить",
+        "columns": {
+          "timestamp": "Временная метка",
+          "user": "Пользователь",
+          "action": "Действие",
+          "entityType": "Тип сущности",
+          "entityId": "ID сущности",
+          "oldValue": "Старое значение",
+          "newValue": "Новое значение",
+          "ipAddress": "IP адрес",
+          "successStatus": "Статус успеха"
+        }
+      }
+    },
+    "tags": {
+      "title": "Теги",
+      "createTag": "Создать тег",
+      "editTag": "Редактировать тег",
+      "newTag": "Новый тег",
+      "noTagsFound": "Теги не найдены",
+      "errorLoading": "Не удалось загрузить теги",
+      "tableHeaders": {
+        "name": "Название тега",
+        "project": "Проект",
+        "description": "Описание",
+        "clients": "Клиенты",
+        "actions": "Действия"
+      },
+      "fields": {
+        "name": "Название",
+        "namePlaceholder": "Введите название тега",
+        "color": "Цвет",
+        "description": "Описание",
+        "descriptionPlaceholder": "Введите описание тега",
+        "optional": "Необязательно",
+        "project": "Проект",
+        "projectNote": "Теги автоматически назначаются вашему активному проекту",
+        "tagName": "Название тега",
+        "validation": {
+          "nameRequired": "Название обязательно",
+          "nameMaxLength": "Название должно быть не более 50 символов",
+          "colorFormat": "Пожалуйста, введите действительный цвет в формате hex (#RRGGBB)",
+          "descriptionMaxLength": "Описание должно быть не более 200 символов"
+        }
+      },
+      "actions": {
+        "edit": "Редактировать",
+        "delete": "Удалить"
+      },
+      "deleteTag": "Удалить тег",
+      "deleteConfirmation": "Вы уверены, что хотите удалить этот тег?",
+      "usageWarning": "Этот тег используется",
+      "deleteWarningMessage": "Этот тег назначен {{count}} клиенту(ам). Удаление удалит тег у всех клиентов.",
+      "deleteNotice": "Это действие нельзя отменить.",
+      "deleting": "Удаление..."
+    },
+    "forbidden": {
+      "title": "Доступ запрещён",
+      "message": "У вас нет разрешения на доступ к этой странице. Обратитесь к администратору, если считаете, что это ошибка.",
+      "goBack": "Назад",
+      "goHome": "На главную"
     }
+  },
+  "contactTypes": {
+    "client_mobile_phone": "Мобильный телефон клиента",
+    "client_home_phone": "Домашний телефон клиента",
+    "client_work_phone": "Рабочий телефон клиента",
+    "guarantor_mobile_phone": "Мобильный телефон поручителя",
+    "guarantor_home_phone": "Домашний телефон поручителя",
+    "guarantor_work_phone": "Рабочий телефон поручителя",
+    "third_party_mobile_phone": "Мобильный телефон третьего лица",
+    "third_party_home_phone": "Домашний телефон третьего лица",
+    "third_party_work_phone": "Рабочий телефон третьего лица",
+    "other_mobile_phone": "Другой мобильный телефон",
+    "other_home_phone": "Другой домашний телефон",
+    "other_work_phone": "Другой рабочий телефон",
+    "other_contact": "Другой контакт",
+    "excluded_from_work": "Исключён из работы",
+    "personal_email": "Личная электронная почта",
+    "social_vk": "ВКонтакте",
+    "social_facebook": "Facebook",
+    "social_odnoklassniki": "Одноклассники",
+    "registration_phone": "Телефон регистрации",
+    "fax": "Факс",
+    "registration_address": "Адрес регистрации",
+    "actual_address": "Фактический адрес",
+    "website": "Веб-сайт",
+    "work_email": "Рабочая электронная почта",
+    "work_address": "Рабочий адрес",
+    "skip_mobile_phone": "Пропуск мобильного телефона",
+    "skip_home_phone": "Пропуск домашнего телефона",
+    "referrer": "Реферер",
+    "register_mobile_phone": "Мобильный телефон из реестров",
+    "verified_third_party": "Верифицированное третье лицо"
+  },
+  "statusLabels": {
+    "active": "Активен",
+    "inactive": "Неактивен",
+    "suspended": "Приостановлен",
+    "pending": "Ожидание",
+    "archived": "Архивирован",
+    "disabled": "Отключён"
+  },
+  "interactionContactTypes": {
+    "CLIENT": "Клиент",
+    "THIRD_PERSON": "Третье лицо",
+    "RELATIVE": "Родственник"
+  },
+  "interactionTypes": {
+    "INCOMING": "Входящий",
+    "OUTGOING": "Исходящий",
+    "SEARCHING": "Розыск"
+  },
+  "interactionChannels": {
+    "CALL": "Звонок",
+    "MESSENGER": "Мессенджер",
+    "MAIL": "Почта",
+    "CHAT": "Чат"
+  },
+  "interactionResults": {
+    "agreement": "Договорённость",
+    "callback_by_appointment": "Перезвонить по договорённости",
+    "refusal_to_pay": "Отказ от оплаты",
+    "no_contact": "Нет контакта",
+    "consent_to_interact": "Согласие на взаимодействие",
+    "waiting_for_call": "Ожидание звонка",
+    "hung_up": "Повесил трубку",
+    "request_for_documents": "Запрос документов",
+    "disconnected": "Отключён",
+    "refused_payment": "Отказался платить",
+    "will_provide_information": "Предоставит информацию",
+    "will_not_provide_information": "Не предоставит информацию",
+    "refused_consent_to_interact": "Отказ от согласия на взаимодействие",
+    "threatens": "Угрожает",
+    "sent_documents": "Отправлены документы",
+    "no_numbers": "Нет номеров",
+    "numbers_found": "Номера найдены"
   }
 }

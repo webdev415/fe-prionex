@@ -12,12 +12,14 @@ export function LoginCard({ onSubmit, isLoading, error }: LoginCardProps) {
 
   return (
     <div className="w-full">
-      <div className="mb-6 flex w-full flex-col items-center text-center sm:mb-8">
-        <h1 className="text-display-xs sm:text-display-sm text-dark-500 flex items-center gap-2 font-medium">
+      <div className="mb-4 flex w-full flex-col items-center text-center sm:mb-6 md:mb-8">
+        <h1 className="text-dark-500 flex items-center gap-1.5 text-2xl font-medium sm:gap-2 md:text-[30px]">
           {t('login.welcome')}
-          <span>👋🏻</span>
+          <span className="text-xl md:text-2xl">👋🏻</span>
         </h1>
-        <p className="text-body-sm sm:text-body-md mt-2 text-gray-500">{t('login.subtitle')}</p>
+        <p className="md:text-body-md mt-1.5 px-2 text-sm font-light text-gray-500 sm:mt-2 sm:px-0 sm:text-base">
+          {t('login.subtitle')}
+        </p>
       </div>
       <LoginForm onSubmit={onSubmit} isLoading={isLoading} error={error} />
     </div>

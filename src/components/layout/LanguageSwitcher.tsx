@@ -5,72 +5,70 @@
  * Built with Radix UI DropdownMenu for consistency.
  */
 
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
-import { Icons } from '@/lib/icons'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/DropdownMenu'
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/Select'
 import { SUPPORTED_LANGUAGES, LANGUAGE_NAMES, type SupportedLanguage } from '@/lib/i18n'
 
 interface LanguageSwitcherProps {
   variant?: 'auth' | 'dashboard'
+  value?: string
+  onValueChange?: (v: string) => void
+  id?: string
 }
 
-export function LanguageSwitcher({ variant = 'auth' }: LanguageSwitcherProps) {
+export function LanguageSwitcher({
+  variant = 'auth',
+  value,
+  onValueChange,
+  id,
+}: LanguageSwitcherProps) {
   const { i18n } = useTranslation('common')
 
-  const currentLanguage = i18n.language as SupportedLanguage
+  const currentLanguage =
+    (value as SupportedLanguage) || (i18n.language as SupportedLanguage) || 'en'
 
-  const handleLanguageChange = (lang: SupportedLanguage) => {
-    i18n.changeLanguage(lang)
+  const handleLanguageChange = (lang: string) => {
+    i18n.changeLanguage(lang as SupportedLanguage)
+    if (onValueChange) onValueChange(lang)
   }
+
+  useEffect(() => {
+    const handleResize = () => {}
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const isAuth = variant === 'auth'
 
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors',
-            isAuth
-              ? 'bg-white/10 text-white backdrop-blur-sm hover:bg-white/20'
-              : 'bg-primary-300 text-dark-500 hover:opacity-90'
-          )}
-        >
-          <span className="font-medium">{LANGUAGE_NAMES[currentLanguage]}</span>
-          <Icons.ArrowDown
-            size={14}
-            color={isAuth ? 'currentColor' : '#05040D'}
-            strokeWidth={1.5}
-            className="opacity-70"
-          />
-        </button>
-      </DropdownMenuTrigger>
-
-      <DropdownMenuContent align="end" className="w-40">
+    <Select value={currentLanguage} onValueChange={handleLanguageChange}>
+      <SelectTrigger
+        id={id}
+        className={cn(
+          'cursor-pointer',
+          isAuth
+            ? 'bg-white/10 text-white backdrop-blur-sm hover:bg-white/20'
+            : 'text-dark-500 bg-white'
+        )}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
         {SUPPORTED_LANGUAGES.map((lang) => (
-          <DropdownMenuItem
-            key={lang}
-            onClick={() => handleLanguageChange(lang)}
-            className={cn(
-              'flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors',
-              currentLanguage === lang ? 'text-primary-600 font-medium' : 'text-gray-700'
-            )}
-          >
-            <span>{LANGUAGE_NAMES[lang]}</span>
-            {currentLanguage === lang && (
-              <Icons.Checkmark size={16} className="text-information-700 ml-auto" strokeWidth={2} />
-            )}
-          </DropdownMenuItem>
+          <SelectItem key={lang} value={lang}>
+            {LANGUAGE_NAMES[lang]}
+          </SelectItem>
         ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </SelectContent>
+    </Select>
   )
 }
 

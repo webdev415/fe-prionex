@@ -4,13 +4,15 @@
  * Modal for confirming template deletion.
  */
 
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/Alert'
-import { mockSmsTemplates } from '../mockSmsTemplates'
+import { useDeleteTemplate, useSMSTemplate } from '@/features/sms'
+import { mapTemplateResponseToSmsTemplate } from '../utils'
+import { getErrorMessage } from '@/lib/errors'
 
 interface DeleteTemplateModalProps {
   open: boolean
@@ -26,44 +28,48 @@ export function DeleteTemplateModal({
   onSuccess,
 }: DeleteTemplateModalProps) {
   const { t } = useTranslation('common')
-  const [isDeleting, setIsDeleting] = useState(false)
-  // TODO: Replace with actual API hook
-  const template = mockSmsTemplates.find((t) => t.id === templateId)
+  const deleteTemplateMutation = useDeleteTemplate()
+  const { data: apiTemplate } = useSMSTemplate(templateId)
+  const template = apiTemplate ? mapTemplateResponseToSmsTemplate(apiTemplate) : null
 
   const handleDelete = async () => {
     if (!template) return
 
-    setIsDeleting(true)
     try {
-      // TODO: Replace with actual API call
-      console.log('Deleting template:', template.id)
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      await deleteTemplateMutation.mutateAsync(template.id)
+      toast.success(
+        t('pages.smsTemplates.messages.templateDeleted') || 'Template deleted successfully'
+      )
       onSuccess()
     } catch (error) {
-      console.error('Failed to delete template:', error)
-    } finally {
-      setIsDeleting(false)
+      toast.error(getErrorMessage(error))
     }
   }
+
+  const isDeleting = deleteTemplateMutation.isPending
 
   if (!template) {
     return null
   }
 
   return (
-    <Modal open={open} onClose={onClose} maxWidth="md">
+    <Modal
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      className="w-[95%] max-w-[500px] sm:w-[500px]"
+    >
       <ModalHeader
         icon={
-          <div className="bg-error-500 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Delete size={20} className="text-white" strokeWidth={2} />
+          <div className="bg-error-500 flex h-7 w-7 items-center justify-center rounded-full sm:h-8 sm:w-8">
+            <Icons.Delete size={18} className="text-white sm:size-5" strokeWidth={2} />
           </div>
         }
         title={t('pages.smsTemplates.modals.delete.title')}
       />
       <ModalContent>
         <div className="space-y-4">
-          <p className="text-dark-500 text-sm">
+          <p className="text-dark-500 text-xs sm:text-sm">
             {t('pages.smsTemplates.modals.delete.confirmMessage')}{' '}
             <strong>"{template.name}"</strong>?
           </p>
@@ -93,7 +99,7 @@ export function DeleteTemplateModal({
           variant="cancel"
           onClick={onClose}
           disabled={isDeleting}
-          className="h-[45px] flex-1"
+          className="h-10 w-full flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
           {t('actions.cancel')}
         </Button>
@@ -103,7 +109,7 @@ export function DeleteTemplateModal({
             variant="danger"
             onClick={handleDelete}
             disabled={isDeleting}
-            className="h-[45px] flex-1"
+            className="h-10 w-full flex-1 text-xs sm:h-[45px] sm:text-sm"
           >
             {isDeleting ? t('pages.smsTemplates.modals.delete.deleting') : t('actions.delete')}
           </Button>

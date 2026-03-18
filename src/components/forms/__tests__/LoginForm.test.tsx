@@ -30,14 +30,15 @@ describe('LoginForm', () => {
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
     await waitFor(() => {
-      expect(screen.getByText(/username is required/i)).toBeInTheDocument()
+      expect(screen.getByText(/username or email is required/i)).toBeInTheDocument()
     })
 
     expect(mockOnSubmit).not.toHaveBeenCalled()
   })
 
-  it('validates minimum username length', async () => {
+  it('accepts short username (email login support)', async () => {
     const user = userEvent.setup()
+    mockOnSubmit.mockResolvedValue(undefined)
     render(<LoginForm onSubmit={mockOnSubmit} />)
 
     await user.type(screen.getByLabelText(/username/i), 'ab')
@@ -45,7 +46,10 @@ describe('LoginForm', () => {
     await user.click(screen.getByRole('button', { name: /sign in/i }))
 
     await waitFor(() => {
-      expect(screen.getByText(/at least 3 characters/i)).toBeInTheDocument()
+      expect(mockOnSubmit).toHaveBeenCalledWith({
+        username: 'ab',
+        password: 'validpassword',
+      })
     })
   })
 

@@ -5,16 +5,19 @@
  * Shows import summary and error details.
  */
 
-import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useURLState, useAutoPersistedState } from '@/hooks'
 import { Button } from '@/components/ui/Button'
+import { LinkButton } from '@/components/ui/LinkButton'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
 import { SemiCircularProgress } from './components'
 import { useImportJob, useImportJobErrors, useExportImportErrors } from '@/features/imports'
 import { ImportDetailsPageSkeleton } from './components/ImportDetailsPageSkeleton'
+import { useAuthStore } from '@/stores/authStore'
+import { convertUTCToUserTimezone } from '@/lib/formatters'
 
 // Status Badge Component
 function ImportDetailStatusBadge({
@@ -93,10 +96,24 @@ export function ImportDetailsPage() {
   const { t } = useTranslation('common')
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
 
-  // Pagination state for errors
-  const [errorPage, setErrorPage] = useState(1)
-  const [errorPageSize, setErrorPageSize] = useState(50)
+  // URL state for pagination
+  const [errorPage, setErrorPage] = useURLState<number>('page', 1)
+  const [errorPageSize, setErrorPageSize] = useURLState<number>('pageSize', 50)
+
+  // Add persistence for state
+  useAutoPersistedState(
+    'import-details-state',
+    {
+      errorPage,
+      errorPageSize,
+    },
+    {
+      errorPage: setErrorPage,
+      errorPageSize: setErrorPageSize,
+    }
+  )
 
   // Fetch import job detail from API
   const { data: jobDetail, isLoading: isLoadingJob } = useImportJob(id, {
@@ -122,10 +139,7 @@ export function ImportDetailsPage() {
         id: jobDetail.id,
         file: jobDetail.file_name,
         uploadedBy: jobDetail.uploaded_by,
-        uploadedAt: new Date(jobDetail.uploaded_at).toLocaleTimeString('en-US', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
+        uploadedAt: convertUTCToUserTimezone(jobDetail.uploaded_at, userTimezone),
         status:
           jobDetail.status === 'completed'
             ? jobDetail.errors_count > 0
@@ -222,13 +236,14 @@ export function ImportDetailsPage() {
     return (
       <div className="flex flex-col items-center justify-center py-16">
         <p className="text-gray-600">{t('pages.imports.details.importNotFound')}</p>
-        <Button
-          variant="outline"
+        <LinkButton
+          variant="regular-black"
           onClick={() => navigate('/dashboard/import/history')}
+          leftIcon={<Icons.ArrowLeft size={16} className="text-dark-500" />}
           className="mt-4"
         >
-          {t('pages.imports.details.backToHistory')}
-        </Button>
+          {t('common.back', 'Back')}
+        </LinkButton>
       </div>
     )
   }
@@ -264,17 +279,19 @@ export function ImportDetailsPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="white-secondary"
+      <div className="mb-4 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <LinkButton
+            variant="regular-black"
             onClick={() => navigate('/dashboard/import/history')}
-            leftIcon={<Icons.ArrowLeft02 size={20} />}
-            className="flex h-12 flex-row items-center justify-center rounded-full text-sm leading-[150%] font-medium"
+            leftIcon={<Icons.ArrowLeft size={16} className="text-dark-500" />}
+            className="text-sm"
           >
-            {t('pages.imports.details.backToHistory')}
-          </Button>
-          <h1 className="text-dark-500 text-2xl font-light">{t('pages.imports.details.title')}</h1>
+            {t('common.back', 'Back')}
+          </LinkButton>
+          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+            {t('pages.imports.details.title')}
+          </h1>
         </div>
 
         <Button
@@ -282,7 +299,7 @@ export function ImportDetailsPage() {
           onClick={handleDownloadErrors}
           disabled={exportErrorsMutation.isPending || importDetail.errors === 0}
           leftIcon={<Icons.FileDownload size={20} className="text-dark-500" />}
-          className="h-12 rounded-full text-sm font-medium"
+          className="h-10 w-full rounded-full text-xs font-medium sm:h-12 sm:w-auto sm:text-sm"
         >
           {exportErrorsMutation.isPending
             ? t('pages.imports.details.exporting')
@@ -291,10 +308,10 @@ export function ImportDetailsPage() {
       </div>
 
       {/* Content Cards */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Last Import Summary Card */}
-        <div className="flex flex-1 flex-col gap-3 rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
-          <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+        <div className="flex flex-1 flex-col gap-3 rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+          <h2 className="text-dark-500 self-stretch text-lg leading-[150%] font-light tracking-[-0.4px] sm:text-xl">
             {t('pages.imports.details.lastImportSummary')}
           </h2>
 
@@ -302,26 +319,26 @@ export function ImportDetailsPage() {
           <div className="mb-4 h-px w-full bg-gray-200" />
 
           <div className="flex flex-col items-start gap-3 self-stretch">
-            <div className="flex items-center gap-6 self-stretch">
-              <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+            <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
+              <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
                 {t('pages.imports.details.file')}{' '}
               </span>
-              <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+              <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] break-words sm:text-base">
                 {importDetail.file}
               </span>
             </div>
 
-            <div className="flex items-center gap-6 self-stretch">
-              <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+            <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
+              <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
                 {t('pages.imports.details.uploadedBy')}{' '}
               </span>
-              <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+              <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] break-words sm:text-base">
                 {importDetail.uploadedBy} at {importDetail.uploadedAt}
               </span>
             </div>
 
-            <div className="flex items-center gap-6 self-stretch">
-              <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+            <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
+              <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
                 {t('pages.imports.details.status')}{' '}
               </span>
               <div className="flex flex-1">
@@ -337,49 +354,49 @@ export function ImportDetailsPage() {
           {importDetail.status !== 'failed' && (
             <>
               <div className="flex flex-col items-start gap-3 self-stretch">
-                <div className="flex items-center gap-6 self-stretch">
-                  <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+                <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
+                  <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
                     {t('pages.imports.details.totalRows')}
                   </span>
-                  <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                  <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                     {importDetail.totalRows.toLocaleString()}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-6 self-stretch">
-                  <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+                <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
+                  <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
                     {t('pages.imports.details.newClients')}
                   </span>
-                  <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                  <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                     {importDetail.newClients.toLocaleString()}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-6 self-stretch">
-                  <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+                <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
+                  <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
                     {t('pages.imports.details.updatedClients')}
                   </span>
-                  <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                  <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                     {importDetail.updatedClients.toLocaleString()}
                   </span>
                 </div>
 
-                <div className="flex items-center gap-6 self-stretch">
-                  <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+                <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
+                  <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
                     {t('pages.imports.details.errors')}
                   </span>
-                  <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                  <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                     {importDetail.errors}
                   </span>
                 </div>
               </div>
 
               {/* Processing time - separate from grid */}
-              <div className="flex items-center gap-6 self-stretch">
-                <span className="text-dark-500 w-[120px] text-base leading-[155%] font-light tracking-[-0.32px]">
+              <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
+                <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
                   {t('pages.imports.details.processingTime')}
                 </span>
-                <span className="text-dark-500 flex-1 text-base leading-[155%] font-medium tracking-[-0.32px]">
+                <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {importDetail.processingTime}
                 </span>
               </div>
@@ -389,8 +406,8 @@ export function ImportDetailsPage() {
 
         {/* Errors Card or Progress Card */}
         {importDetail.status === 'failed' ? (
-          <div className="flex min-h-[448px] flex-1 flex-col items-center gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
-            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+          <div className="flex min-h-[448px] flex-1 flex-col items-center gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+            <h2 className="text-dark-500 self-stretch text-lg leading-[150%] font-light tracking-[-0.4px] sm:text-xl">
               {t('pages.imports.details.progress')}
             </h2>
 
@@ -410,8 +427,8 @@ export function ImportDetailsPage() {
             </div>
           </div>
         ) : importDetail.status === 'pending' ? (
-          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
-            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+            <h2 className="text-dark-500 self-stretch text-lg leading-[150%] font-light tracking-[-0.4px] sm:text-xl">
               {t('pages.imports.details.progress')}
             </h2>
 
@@ -428,8 +445,8 @@ export function ImportDetailsPage() {
             </div>
           </div>
         ) : importDetail.status === 'cancelled' ? (
-          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
-            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+            <h2 className="text-dark-500 self-stretch text-lg leading-[150%] font-light tracking-[-0.4px] sm:text-xl">
               {t('pages.imports.details.progress')}
             </h2>
 
@@ -446,8 +463,8 @@ export function ImportDetailsPage() {
             </div>
           </div>
         ) : importDetail.status === 'in_progress' ? (
-          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
-            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+            <h2 className="text-dark-500 self-stretch text-lg leading-[150%] font-light tracking-[-0.4px] sm:text-xl">
               {t('pages.imports.details.progress')}
             </h2>
 
@@ -468,8 +485,8 @@ export function ImportDetailsPage() {
           </div>
         ) : importDetail.status === 'completed_with_errors' && importDetail.errors > 0 ? (
           // Show errors panel when completed with errors
-          <div className="rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
-            <h2 className="text-dark-500 mb-6 text-xl font-light">
+          <div className="rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+            <h2 className="text-dark-500 mb-4 text-lg font-light sm:mb-6 sm:text-xl">
               {t('pages.imports.details.errorsTitle')} ({importDetail.errors.toLocaleString()})
             </h2>
 
@@ -495,8 +512,8 @@ export function ImportDetailsPage() {
           </div>
         ) : importDetail.status === 'done' || importDetail.status === 'completed_with_errors' ? (
           // Show progress bar at 100% for completed imports (without errors)
-          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
-            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+            <h2 className="text-dark-500 self-stretch text-lg leading-[150%] font-light tracking-[-0.4px] sm:text-xl">
               {t('pages.imports.details.progress')}
             </h2>
 
@@ -517,8 +534,8 @@ export function ImportDetailsPage() {
           </div>
         ) : (
           // Fallback: Show progress bar at 100%
-          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-6 shadow-sm">
-            <h2 className="text-dark-500 self-stretch text-xl leading-[150%] font-light tracking-[-0.4px]">
+          <div className="flex min-h-[448px] flex-1 flex-col gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+            <h2 className="text-dark-500 self-stretch text-lg leading-[150%] font-light tracking-[-0.4px] sm:text-xl">
               {t('pages.imports.details.progress')}
             </h2>
 

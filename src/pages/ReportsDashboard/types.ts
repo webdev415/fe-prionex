@@ -1,5 +1,5 @@
 /**
- * Report Service API Types
+ * Report Dashboard Page Types
  *
  * Type definitions matching the Report Service API specification.
  * These types will be used when the actual API is implemented.
@@ -34,7 +34,7 @@ export interface DashboardKPIs {
   payments_count_today: number
   payments_verified: number
   payments_pending: number
-  avg_payment_amount: number
+  avg_payment_amount: string
   total_talk_time: number
   avg_call_duration: number
 }
@@ -42,8 +42,8 @@ export interface DashboardKPIs {
 export interface ClientStatistics {
   by_status: Record<string, number>
   by_priority: Record<string, number>
-  total_debt: number
-  avg_debt?: number
+  total_debt: string
+  avg_debt?: string
 }
 
 export interface TopOperator {
@@ -137,7 +137,7 @@ export interface CommunicationTrend {
 /**
  * Period type for date filtering
  */
-export type Period = 'today' | 'thisWeek' | 'thisMonth'
+export type Period = 'today' | 'thisWeek' | 'thisMonth' | 'custom'
 
 /**
  * Helper type for KPI change calculation

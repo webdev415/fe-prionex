@@ -10,9 +10,19 @@ import { useTranslation } from 'react-i18next'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { DoubleButton } from '@/components/ui/DoubleButton'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
 import { Icons } from '@/lib/icons'
 import type { SmsTemplate } from './types'
-import { mockSmsTemplates } from './mockSmsTemplates'
+import { mapTemplateResponseArray } from './utils'
+import { useSMSTemplates } from '@/features/sms'
+import { useAuthStore } from '@/stores/authStore'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
 import {
   CreateTemplateModal,
   EditTemplateModal,
@@ -29,6 +39,7 @@ export function SmsTemplatesPage() {
   const [searchParams] = useSearchParams()
   const searchQuery = searchParams.get('search') || ''
   const searchType = searchParams.get('type') || 'name'
+  const { user } = useAuthStore()
 
   const [currentPage, setCurrentPage] = useState(1)
   const rowsPerPage = 10
@@ -37,16 +48,38 @@ export function SmsTemplatesPage() {
   const [viewTemplateId, setViewTemplateId] = useState<number | null>(null)
   const [editTemplateId, setEditTemplateId] = useState<number | null>(null)
   const [deleteTemplateId, setDeleteTemplateId] = useState<number | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [openDropdownTemplateId, setOpenDropdownTemplateId] = useState<number | null>(null)
   const prevSearchQueryRef = useRef(searchQuery)
 
-  // Simulate loading state on mount
+  // Close dropdown when screen size crosses breakpoint (in either direction)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [])
+    let wasMobile = window.innerWidth < 1024 // lg breakpoint
+
+    const handleResize = () => {
+      const isMobile = window.innerWidth < 1024
+
+      // Close dropdown if transitioning across breakpoint (mobile <-> desktop)
+      if (wasMobile !== isMobile && openDropdownTemplateId !== null) {
+        setOpenDropdownTemplateId(null)
+      }
+
+      wasMobile = isMobile
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [openDropdownTemplateId])
+
+  // Fetch templates from API
+  const { data: templatesData, isLoading } = useSMSTemplates(
+    user?.active_project_id ? { project_id: parseInt(user.active_project_id) } : undefined
+  )
+
+  // Map API templates to frontend format
+  const apiTemplates = useMemo(() => {
+    if (!templatesData?.templates) return []
+    return mapTemplateResponseArray(templatesData.templates)
+  }, [templatesData])
 
   // Reset to page 1 when search query changes
   useEffect(() => {
@@ -60,7 +93,7 @@ export function SmsTemplatesPage() {
 
   // Filter and sort templates
   const filteredTemplates = useMemo(() => {
-    let result = [...mockSmsTemplates]
+    let result = [...apiTemplates]
 
     // Apply search filter
     if (searchQuery.trim()) {
@@ -95,7 +128,7 @@ export function SmsTemplatesPage() {
     }
 
     return result
-  }, [searchQuery, searchType, sortConfig])
+  }, [apiTemplates, searchQuery, searchType, sortConfig])
 
   // Helper function to truncate message text
   const truncateMessage = (text: string, maxLength: number) => {
@@ -130,17 +163,17 @@ export function SmsTemplatesPage() {
 
   const handleCreateSuccess = () => {
     setShowCreateModal(false)
-    // TODO: Refresh templates from API
+    // Templates will refresh automatically via query invalidation in mutation hook
   }
 
   const handleEditSuccess = () => {
     setEditTemplateId(null)
-    // TODO: Refresh templates from API
+    // Templates will refresh automatically via query invalidation in mutation hook
   }
 
   const handleDeleteSuccess = () => {
     setDeleteTemplateId(null)
-    // TODO: Refresh templates from API
+    // Templates will refresh automatically via query invalidation in mutation hook
   }
 
   const columns: Column<SmsTemplate>[] = [
@@ -193,32 +226,86 @@ export function SmsTemplatesPage() {
       header: t('pages.smsTemplates.tableHeaders.actions'),
       align: 'center',
       render: (template) => (
-        <div className="flex items-center justify-center gap-4">
-          <LinkButton
-            variant="regular-black"
-            size="xs"
-            onClick={() => handleEdit(template)}
-            leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
-          >
-            {t('actions.edit')}
-          </LinkButton>
-          <LinkButton
-            variant="regular-black"
-            size="xs"
-            onClick={() => handleView(template)}
-            leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
-          >
-            {t('pages.smsTemplates.view')}
-          </LinkButton>
-          <LinkButton
-            variant="regular-black"
-            size="xs"
-            disabled={template.isSystem}
-            onClick={() => handleDelete(template)}
-            leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
-          >
-            {t('actions.delete')}
-          </LinkButton>
+        <div className="flex items-center justify-center gap-2 sm:gap-4">
+          {/* Desktop: Individual link buttons */}
+          <div className="hidden items-center gap-4 lg:flex">
+            <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => handleEdit(template)}
+                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('actions.edit')}
+              </LinkButton>
+            </PermissionGuard>
+            <LinkButton
+              variant="regular-black"
+              size="xs"
+              onClick={() => handleView(template)}
+              leftIcon={<Icons.View size={16} color="#05040D" strokeWidth={1.5} />}
+            >
+              {t('pages.smsTemplates.view')}
+            </LinkButton>
+            <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                disabled={template.isSystem}
+                onClick={() => handleDelete(template)}
+                leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('actions.delete')}
+              </LinkButton>
+            </PermissionGuard>
+          </div>
+
+          {/* Mobile/Tablet: Dropdown button group */}
+          <div className="lg:hidden">
+            <DropdownMenu
+              modal={false}
+              open={openDropdownTemplateId === template.id}
+              onOpenChange={(open) => setOpenDropdownTemplateId(open ? template.id : null)}
+            >
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
+                  aria-label={t('pages.smsTemplates.tableHeaders.actions')}
+                >
+                  <Icons.FilterVertical size={16} strokeWidth={1.5} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white">
+                <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+                  <DropdownMenuItem
+                    onClick={() => handleEdit(template)}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                  >
+                    <Icons.PencilEdit size={16} strokeWidth={1.5} />
+                    <span>{t('actions.edit')}</span>
+                  </DropdownMenuItem>
+                </PermissionGuard>
+                <DropdownMenuItem
+                  onClick={() => handleView(template)}
+                  className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                >
+                  <Icons.View size={16} strokeWidth={1.5} />
+                  <span>{t('pages.smsTemplates.view')}</span>
+                </DropdownMenuItem>
+                <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+                  <DropdownMenuItem
+                    onClick={() => handleDelete(template)}
+                    disabled={template.isSystem}
+                    className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Icons.Delete size={16} strokeWidth={1.5} />
+                    <span>{t('actions.delete')}</span>
+                  </DropdownMenuItem>
+                </PermissionGuard>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       ),
     },
@@ -230,27 +317,39 @@ export function SmsTemplatesPage() {
   }
 
   return (
-    <div className="flex w-full flex-col items-start gap-5 pt-1 pr-7 pb-6 pl-7">
+    <div className="flex w-full flex-col items-start gap-4">
       {/* Page Header */}
-      <div className="flex items-center justify-between self-stretch">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-dark-500 text-center text-2xl leading-tight font-light tracking-[-0.48px]">
-              {t('pages.smsTemplates.title')}
-            </span>
-            <span className="text-center text-base leading-[155%] font-light tracking-[-0.32px] text-gray-700">
-              {filteredTemplates.length} {t('pages.smsTemplates.templates')}
-            </span>
-          </div>
+      <div className="mb-4 flex w-full flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+            {t('pages.smsTemplates.title')}
+          </h1>
+          <span className="text-sm font-light text-gray-500 sm:text-base">
+            {filteredTemplates.length} {t('pages.smsTemplates.templates')}
+          </span>
         </div>
-        <DoubleButton
-          size="md"
-          icon={<Icons.Add size={20} strokeWidth={2} />}
-          iconPosition="left"
-          onClick={() => setShowCreateModal(true)}
-        >
-          {t('pages.smsTemplates.createTemplate')}
-        </DoubleButton>
+
+        {/* Desktop: Full button with text, Mobile: Icon-only button */}
+        <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+          <div className="hidden sm:block">
+            <DoubleButton
+              size="md"
+              icon={<Icons.Add size={20} strokeWidth={2} />}
+              iconPosition="left"
+              onClick={() => setShowCreateModal(true)}
+            >
+              {t('pages.smsTemplates.createTemplate')}
+            </DoubleButton>
+          </div>
+          {/* Mobile: Icon-only button */}
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+            aria-label={t('pages.smsTemplates.createTemplate')}
+          >
+            <Icons.Add size={20} strokeWidth={2} />
+          </button>
+        </PermissionGuard>
       </div>
 
       {/* Data Table */}
@@ -264,12 +363,12 @@ export function SmsTemplatesPage() {
       />
 
       {/* Pagination */}
-      <div className="flex w-full items-center justify-between self-stretch">
-        <span className="text-sm font-light text-gray-700">
+      <div className="flex w-full flex-row justify-center gap-3 sm:items-center sm:justify-between">
+        <span className="hidden text-xs font-light text-gray-700 sm:inline sm:text-sm">
           {t('pages.smsTemplates.showing')} {paginatedTemplates.length} {t('pages.smsTemplates.of')}{' '}
           {filteredTemplates.length} {t('pages.smsTemplates.templates')}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           {/* Previous Arrow */}
           <button
             onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
@@ -322,7 +421,10 @@ export function SmsTemplatesPage() {
             return pages.map((page, index) => {
               if (page === 'ellipsis') {
                 return (
-                  <span key={`ellipsis-${index}`} className="text-dark-500 px-2 text-sm">
+                  <span
+                    key={`ellipsis-${index}`}
+                    className="text-dark-500 px-1 text-xs sm:px-2 sm:text-sm"
+                  >
                     ...
                   </span>
                 )
@@ -331,7 +433,7 @@ export function SmsTemplatesPage() {
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page as number)}
-                  className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors sm:h-10 sm:w-10 sm:text-sm ${
                     currentPage === page
                       ? 'bg-secondary-800 text-white'
                       : 'text-dark-500 border border-gray-300 bg-white hover:bg-gray-100'
@@ -355,9 +457,9 @@ export function SmsTemplatesPage() {
             <Icons.ArrowRight size={16} className="text-dark-500" strokeWidth={1.5} />
           </button>
         </div>
-        <div className="flex items-center gap-1">
-          <Icons.Info size={16} className="text-gray-500" strokeWidth={1.5} />
-          <span className="text-xs font-light text-gray-700">
+        <div className="flex hidden items-center gap-1 sm:flex">
+          <Icons.Info size={14} className="text-gray-500 sm:size-4" strokeWidth={1.5} />
+          <span className="text-[10px] font-light text-gray-700 sm:text-xs">
             {t('pages.smsTemplates.systemTemplatesCannotBeDeleted')}
           </span>
         </div>
