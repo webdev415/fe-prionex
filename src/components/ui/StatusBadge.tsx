@@ -5,6 +5,8 @@
  * Matches the design specification for Active/Disabled statuses.
  */
 
+import { useTranslation } from 'react-i18next'
+
 export type StatusType = 'active' | 'disabled' | 'inactive' | 'suspended' | 'pending' | 'archived'
 
 interface StatusBadgeProps {
@@ -13,7 +15,11 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
+  const { t } = useTranslation('common')
   const isActive = status === 'active'
+  const label = t(isActive ? 'statusLabels.active' : `statusLabels.${status}`, {
+    defaultValue: status,
+  })
 
   return (
     <span
@@ -24,17 +30,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       ) : (
         <span className="h-2 w-2 rounded-full border border-[#DFDFDF] bg-transparent" />
       )}
-      {isActive
-        ? 'Active'
-        : status === 'inactive'
-          ? 'Inactive'
-          : status === 'suspended'
-            ? 'Suspended'
-            : status === 'pending'
-              ? 'Pending'
-              : status === 'archived'
-                ? 'Archived'
-                : 'Disabled'}
+      {label}
     </span>
   )
 }
