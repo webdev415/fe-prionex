@@ -7,10 +7,21 @@
 import type { Payment } from '@/features/payments/api/types'
 import type { PaymentReceiptData } from '@/lib/pdfReceiptGenerator'
 import { generatePaymentReceiptPDF } from '@/lib/pdfReceiptGenerator'
-import {
-  backendToFrontendPaymentMethod,
-  backendToFrontendPaymentStatus,
-} from '@/features/payments/utils'
+import type { PaymentMethod, PaymentStatus } from '@/features/payments/api/types'
+
+const paymentMethodLabels: Record<PaymentMethod, string> = {
+  bank_transfer: 'Bank Transfer',
+  online_gateway: 'Online Gateway',
+  cash: 'Cash',
+  card: 'Card',
+  other: 'Other',
+}
+
+const paymentStatusLabels: Record<PaymentStatus, string> = {
+  verified: 'Verified',
+  pending: 'Pending',
+  cancelled: 'Cancelled',
+}
 
 /**
  * Convert Payment data to PaymentReceiptData format for PDF generation
@@ -31,11 +42,11 @@ export function convertPaymentToReceiptData(
   },
   userTimezone?: string
 ): PaymentReceiptData {
-  // Format payment method for display
-  const paymentMethod = backendToFrontendPaymentMethod(payment.payment_method)
+  // Format payment method for display (receipts are always in English)
+  const paymentMethod = paymentMethodLabels[payment.payment_method] || payment.payment_method
 
   // Format status for display
-  const status = backendToFrontendPaymentStatus(payment.status).toUpperCase()
+  const status = (paymentStatusLabels[payment.status] || payment.status).toUpperCase()
 
   // Calculate payment applied (total of all components)
   // Handle null/undefined values properly to avoid NaN

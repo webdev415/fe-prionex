@@ -1,22 +1,14 @@
-# Frontend Dev Environment Docker Compose (server-hosted)
-# For dev deployment with nginx on the same server (not local hot-reload)
+# Frontend - Unified Server Deployment
+# Usage: docker compose -f docker-compose.server.yml --env-file .env up -d
 
-name: fe-prionex-dev-env
+name: fe-prionex
 
 services:
   frontend:
-    # Use image from registry (built by CI/CD) instead of building locally
     image: ${DOCKER_IMAGE:-ghcr.io/crm-prionex/fe-prionex:latest}
-    # Uncomment below if you need to build locally instead
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile.prod
-    #   args:
-    #     - VITE_API_BASE_URL=${VITE_API_BASE_URL:-https://api.dev.crm-prionex.online}
-    container_name: fe-prionex-dev-env
+    container_name: fe-prionex
     ports:
-      # Dev frontend on host port 8280
-      - "8280:80"
+      - "${FRONTEND_PORT:-8080}:80"
     networks:
       - crm-network
     restart: always
@@ -41,5 +33,4 @@ services:
 networks:
   crm-network:
     external: true
-    name: crm-dev-network
-
+    name: crm-network

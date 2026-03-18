@@ -55,10 +55,10 @@ export function PaymentImportProgress({ jobId, onComplete }: Props) {
         {isActive && <Icons.Spinner className="h-6 w-6" />}
         <div>
           <h3 className="text-dark-500 text-lg font-medium">
-            {isComplete && 'Payment Import Complete'}
-            {isFailed && 'Payment Import Failed'}
-            {isCancelled && 'Payment Import Cancelled'}
-            {isActive && 'Processing Payments...'}
+            {isComplete && 'Payment Verification Complete'}
+            {isFailed && 'Payment Verification Failed'}
+            {isCancelled && 'Payment Verification Cancelled'}
+            {isActive && 'Verifying Payments...'}
           </h3>
           <p className="text-sm text-gray-600">{job.file_name}</p>
         </div>
@@ -88,7 +88,7 @@ export function PaymentImportProgress({ jobId, onComplete }: Props) {
         </div>
         <div className="border-success-200 bg-success-50 rounded-xl border px-4 py-3 shadow-sm">
           <p className="text-success-700 text-2xl font-bold">{job.new_clients}</p>
-          <p className="text-xs text-gray-600">Payments Created</p>
+          <p className="text-xs text-gray-600">Payments Verified</p>
         </div>
         <div className="border-error-200 bg-error-50 rounded-xl border px-4 py-3 shadow-sm">
           <p className="text-error-700 text-2xl font-bold">{job.errors_count}</p>

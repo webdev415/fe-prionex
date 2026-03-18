@@ -20,7 +20,13 @@ Element.prototype.scrollIntoView = vi.fn()
 vi.mock('@/features/clients/hooks/useNoteInteraction')
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback || key,
+    t: (key: string, fallback?: string | Record<string, unknown>) => {
+      if (typeof fallback === 'string') return fallback || key
+      if (fallback && typeof fallback === 'object' && 'defaultValue' in fallback) {
+        return (fallback.defaultValue as string) || key
+      }
+      return key
+    },
     i18n: { language: 'en' },
   }),
 }))
