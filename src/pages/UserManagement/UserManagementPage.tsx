@@ -173,6 +173,11 @@ export function UserManagementPage() {
   // Table columns definition
   const columns: Column<ApiUser>[] = [
     {
+      key: 'id',
+      header: t('pages.users.tableHeaders.userId'),
+      render: (user) => <span className="text-gray-700">{user.id}</span>,
+    },
+    {
       key: 'username',
       header: t('pages.users.tableHeaders.username'),
       render: (user) => <span className="font-medium">{user.username}</span>,
