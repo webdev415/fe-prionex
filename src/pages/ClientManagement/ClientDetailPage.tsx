@@ -111,26 +111,6 @@ type ExtendedCallItem = {
   initiated_at?: string
 }
 
-// Legacy numeric code mappings (from old CRM database)
-const MARITAL_STATUS_MAP: Record<string, string> = {
-  '1': 'Неодружений/Незаміжня',
-  '2': 'Одружений/Заміжня',
-  '3': 'Розлучений/Розлучена',
-  '4': 'Вдівець/Вдова',
-  '5': 'Цивільний шлюб',
-}
-
-const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
-  full_time: 'Повна зайнятість',
-  part_time: 'Часткова зайнятість',
-  contract: 'Контракт',
-  student: 'Студент',
-  self_employed: 'ФОП',
-  unemployed: 'Безробітний',
-  retired: 'Пенсіонер',
-  other: 'Інше',
-}
-
 // Contact type names are now returned by the backend from client_contact_types lookup table
 
 // Client data loaded via useClientProfile + section-specific hooks (real API endpoints)
@@ -299,9 +279,15 @@ export function ClientDetailPage() {
         issuedBy: profile.passport?.issued_by ?? '',
         issuedDate: profile.passport?.issued_date ?? '',
         expiresDate: profile.passport?.expires_date ?? '',
-        gender: profile.passport?.gender ?? '',
+        gender: profile.passport?.gender
+          ? t(`pages.clients.detail.genderOptions.${profile.passport.gender}`, {
+              defaultValue: profile.passport.gender,
+            })
+          : '',
         maritalStatus: profile.marital_status
-          ? (MARITAL_STATUS_MAP[profile.marital_status] ?? profile.marital_status)
+          ? t(`pages.clients.detail.maritalStatuses.${profile.marital_status}`, {
+              defaultValue: profile.marital_status,
+            })
           : '',
         familyMembers: profile.family_members_count ?? '',
         incomeLevel: profile.income_level ?? '',
@@ -317,8 +303,9 @@ export function ClientDetailPage() {
                 : '-',
             managerFullName: profile.employment.manager_full_name ?? '-',
             employmentType: profile.employment.employment_type
-              ? (EMPLOYMENT_TYPE_MAP[profile.employment.employment_type] ??
-                profile.employment.employment_type)
+              ? t(`pages.clients.detail.employmentTypes.${profile.employment.employment_type}`, {
+                  defaultValue: profile.employment.employment_type,
+                })
               : '-',
             workPhone: profile.employment.work_phone ?? '-',
           }
@@ -327,6 +314,7 @@ export function ClientDetailPage() {
         id: r.id,
         contactValue: r.contact_value ?? '',
         contactType: r.contact_type_name ?? '',
+        contactTypeCode: r.contact_type_code ?? null,
         isPhone: r.is_phone ?? false,
         comment: r.comment ?? '',
         created_at: r.created_at,
@@ -446,10 +434,24 @@ export function ClientDetailPage() {
         .items.map((a) => ({
           id: a.id,
           date: formatDate(a.interaction_date),
-          type: a.type_name ?? '-',
-          subtype: a.subtype_name ?? '-',
-          contactType: a.contact_type_name ?? '-',
-          result: a.result_name ?? a.status,
+          type: a.type_code
+            ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
+            : (a.type_name ?? '-'),
+          subtype: a.subtype_code
+            ? t(`interactionChannels.${a.subtype_code}`, {
+                defaultValue: a.subtype_name ?? '-',
+              })
+            : (a.subtype_name ?? '-'),
+          contactType: a.contact_type_code
+            ? t(`interactionContactTypes.${a.contact_type_code}`, {
+                defaultValue: a.contact_type_name ?? '-',
+              })
+            : (a.contact_type_name ?? '-'),
+          result: a.result_code
+            ? t(`interactionResults.${a.result_code}`, {
+                defaultValue: a.result_name ?? a.status,
+              })
+            : (a.result_name ?? a.status),
           promisedAmount: a.promise_to_pay_amount ? Number(a.promise_to_pay_amount) : 0,
           promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
           callbackDate: formatDate(a.next_action_date ?? undefined),
@@ -479,6 +481,7 @@ export function ClientDetailPage() {
     documents,
     activities,
     responsibleEmployeeDepartment,
+    t,
   ])
 
   // Tags are now fetched from useClientTags hook instead of local state
@@ -2377,7 +2380,11 @@ export function ClientDetailPage() {
                               </td>
                               <td className="py-2 pr-3">
                                 <span className="text-dark-500 font-medium tracking-[-0.24px]">
-                                  {contact.contactType}
+                                  {contact.contactTypeCode
+                                    ? t(`contactTypes.${contact.contactTypeCode}`, {
+                                        defaultValue: contact.contactType,
+                                      })
+                                    : contact.contactType}
                                 </span>
                               </td>
                               <td className="py-2 pr-3">
