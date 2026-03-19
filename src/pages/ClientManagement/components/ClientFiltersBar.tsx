@@ -20,8 +20,9 @@ import { Icons } from '@/lib/icons'
 import { PortfolioDropdown } from './PortfolioDropdown'
 import { TagsDropdown } from './TagsDropdown'
 import { useSellers } from '@/features/sellers/hooks/useSellers'
-import { useUsers } from '@/features/users/hooks/useUsers'
+import { useOperators } from '@/features/users/hooks/useUsers'
 import { useTags } from '@/features/tags/hooks/useTags'
+import { useAuthStore } from '@/stores/authStore'
 import type { ClientFilters } from '../ClientManagementPage'
 
 // Debounced number input component to avoid re-rendering on every keystroke
@@ -117,19 +118,17 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   }, [sellersResponse])
 
   // Fetch active users for employee and searcher dropdowns
-  const { data: usersResponse } = useUsers({
-    status: 'active',
-    page_size: 100,
-  })
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
   // Map users to dropdown options (full name format)
   const userOptions = useMemo(() => {
-    if (!usersResponse?.users) return []
-    return usersResponse.users.map((user) => ({
+    if (!operators) return []
+    return operators.map((user) => ({
       id: user.id.toString(),
-      name: [user.first_name, user.middle_name, user.last_name].filter(Boolean).join(' '),
+      name: user.full_name,
     }))
-  }, [usersResponse])
+  }, [operators])
 
   const handleDateChange = (field: 'dateOfSaleFrom' | 'dateOfSaleTo', date: Date | null) => {
     onFilterChange({
