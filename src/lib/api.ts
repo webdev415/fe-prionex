@@ -13,26 +13,42 @@ export const api = axios.create({
 })
 
 // Token storage key
-const TOKEN_KEY = 'prionex_token'
+// const TOKEN_KEY = SESSION.TOKEN_KEY
 
-// Safe localStorage wrapper for non-browser/test environments
-const storage =
+// // Safe localStorage wrapper for non-browser/test environments
+// const storage =
+// Safe storage wrapper so tests (non-browser env) don't crash on localStorage access
+const isBrowser =
   typeof window !== 'undefined' &&
   typeof window.localStorage !== 'undefined' &&
   typeof window.localStorage.getItem === 'function'
-    ? window.localStorage
-    : (() => {
-        const memoryStore: Record<string, string> = {}
-        return {
-          getItem: (key: string) => (key in memoryStore ? memoryStore[key] : null),
-          setItem: (key: string, value: string) => {
-            memoryStore[key] = value
-          },
-          removeItem: (key: string) => {
-            delete memoryStore[key]
-          },
-        }
-      })()
+const memoryStorage: Record<string, string> = {}
+
+const storage = {
+  getItem(key: string): string | null {
+    if (isBrowser) {
+      return window.localStorage.getItem(key)
+    }
+    return Object.prototype.hasOwnProperty.call(memoryStorage, key) ? memoryStorage[key] : null
+  },
+  setItem(key: string, value: string): void {
+    if (isBrowser) {
+      window.localStorage.setItem(key, value)
+    } else {
+      memoryStorage[key] = value
+    }
+  },
+  removeItem(key: string): void {
+    if (isBrowser) {
+      window.localStorage.removeItem(key)
+    } else {
+      delete memoryStorage[key]
+    }
+  },
+}
+
+// Token storage key
+const TOKEN_KEY = 'prionex_token'
 
 // Initialize token from storage (shared across tabs in the same browser)
 let accessToken: string | null = storage.getItem(TOKEN_KEY)
@@ -58,7 +74,7 @@ export const getAccessToken = () => {
 }
 
 // Cross-tab sync: detect logout/login from other tabs (browser only)
-if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+if (isBrowser && typeof window.addEventListener === 'function') {
   window.addEventListener('storage', (event) => {
     if (event.key !== TOKEN_KEY) return
 
@@ -96,7 +112,7 @@ const onTokenRefreshed = (token: string) => {
 // Request interceptor - add token to requests
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Refresh token from storage in case it was updated in another tab
+    // Refresh token from localStorage in case it was updated in another tab
     // This ensures we always have the latest token
     const currentToken = storage.getItem(TOKEN_KEY) || accessToken
     if (currentToken) {
@@ -105,17 +121,6 @@ api.interceptors.request.use(
         accessToken = currentToken
       }
       config.headers.Authorization = `Bearer ${currentToken}`
-      if (import.meta.env.DEV) {
-        console.log('[API Request]', {
-          method: config.method?.toUpperCase(),
-          url: config.url,
-          baseURL: config.baseURL,
-          fullURL: `${config.baseURL}${config.url}`,
-          hasToken: !!currentToken,
-        })
-      }
-    } else {
-      console.warn('Request interceptor: No token available', { url: config.url })
     }
     return config
   },

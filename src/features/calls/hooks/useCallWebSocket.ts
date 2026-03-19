@@ -6,7 +6,6 @@ import type { CallStateEvent, ConnectionStatus } from '../types'
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8005'
 const MAX_RECONNECT_ATTEMPTS = 10
-const RECONNECT_BACKOFF = [1000, 2000, 4000, 8000, 16000, 30000] // milliseconds
 
 export function useCallWebSocket(agentExtension: string | null) {
   const queryClient = useQueryClient()
@@ -55,7 +54,6 @@ export function useCallWebSocket(agentExtension: string | null) {
 
     // Connection established
     socket.on('connect', () => {
-      console.log('WebSocket connected')
       reconnectAttempts.current = 0
       setConnectionStatus({
         connected: true,
@@ -76,8 +74,6 @@ export function useCallWebSocket(agentExtension: string | null) {
 
     // Listen for call state updates
     socket.on('call.state.changed', (event: CallStateEvent) => {
-      console.log('Call state changed:', event)
-
       // Invalidate call details query to trigger refetch
       queryClient.invalidateQueries({
         queryKey: ['callDetails', event.call_id],
@@ -92,7 +88,6 @@ export function useCallWebSocket(agentExtension: string | null) {
 
     // Handle disconnection
     socket.on('disconnect', () => {
-      console.log('WebSocket disconnected')
       setConnectionStatus((prev) => ({
         ...prev,
         connected: false,
@@ -113,19 +108,11 @@ export function useCallWebSocket(agentExtension: string | null) {
         toast.info('Reconnecting to call service...')
       }
 
-      // Get backoff delay
-      const backoffIndex = Math.min(attemptNumber - 1, RECONNECT_BACKOFF.length - 1)
-      const backoffDelay = RECONNECT_BACKOFF[backoffIndex]
-
       // If max attempts reached, switch to polling fallback
       if (attemptNumber > MAX_RECONNECT_ATTEMPTS) {
         enablePollingFallback()
         socket.disconnect()
       }
-
-      console.log(
-        `Reconnection attempt ${attemptNumber}/${MAX_RECONNECT_ATTEMPTS}, next try in ${backoffDelay}ms`
-      )
     })
 
     // Successful reconnection

@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
+import { SESSION } from '@/constants'
 import { getDateRangeForPeriod } from '@/lib/dateUtils'
 import {
   useDashboard,
@@ -186,15 +187,7 @@ export function ReportsDashboardPage() {
   // Check token expiry in useEffect to avoid impure operations during render
   useEffect(() => {
     if (import.meta.env.DEV) {
-      const token = localStorage.getItem('prionex_token')
-      console.log('[ReportsDashboard] Auth Status:', {
-        isAuthenticated,
-        hasUser: !!user,
-        projectId,
-        hasToken: !!token,
-        tokenLength: token?.length || 0,
-        userPermissions: user?.permissions?.length || 0,
-      })
+      const token = localStorage.getItem(SESSION.TOKEN_KEY)
 
       // Decode and check token expiry
       if (token) {
@@ -205,21 +198,10 @@ export function ReportsDashboardPage() {
           const now = Math.floor(Date.now() / 1000)
           const isExpired = payload.exp && payload.exp < now
 
-          console.log('[ReportsDashboard] Token Details:', {
-            exp: payload.exp,
-            expDate: payload.exp ? new Date(payload.exp * 1000).toISOString() : 'N/A',
-            now,
-            nowDate: new Date(now * 1000).toISOString(),
-            isExpired,
-            timeLeft: payload.exp ? `${Math.floor((payload.exp - now) / 60)} minutes` : 'N/A',
-            sub: payload.sub,
-            roles: payload.roles,
-          })
-
           if (isExpired) {
             console.error('[ReportsDashboard] ⚠️ TOKEN IS EXPIRED! Redirecting to login...')
             // Clear expired token
-            localStorage.removeItem('prionex_token')
+            localStorage.removeItem(SESSION.TOKEN_KEY)
             // Force logout
             setTimeout(() => {
               window.location.href = '/login'
@@ -228,11 +210,9 @@ export function ReportsDashboardPage() {
         } catch (e) {
           console.error('[ReportsDashboard] Failed to decode token:', e)
         }
-      } else {
-        console.error('[ReportsDashboard] NO TOKEN FOUND IN SESSION STORAGE!')
       }
     }
-  }, [isAuthenticated, user, projectId])
+  }, [isAuthenticated, projectId, user])
 
   // Check if user is authenticated
   if (!isAuthenticated || !user) {

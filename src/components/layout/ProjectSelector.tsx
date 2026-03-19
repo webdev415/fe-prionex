@@ -106,8 +106,7 @@ export function ProjectSelector() {
 
         // Clear all React Query cache so data re-fetches with new project context
         queryClient.removeQueries()
-      } catch (meError) {
-        console.warn('Failed to fetch updated user data after project switch:', meError)
+      } catch {
         // Still clear cache even if user fetch failed — token was already updated
         queryClient.removeQueries()
       }
