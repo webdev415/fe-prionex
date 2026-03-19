@@ -47,12 +47,11 @@ export function useCallStateUpdates(agentExtension: string | null, callId: strin
 
       // Join room for this agent's calls
       socket.on('connect', () => {
-        console.log('[CallState] Socket.IO connected')
         socket.emit('join', { agent_extension: agentExtension })
       })
 
       socket.on('disconnect', () => {
-        console.log('[CallState] Socket.IO disconnected')
+        // no-op
       })
     }
 
@@ -60,15 +59,11 @@ export function useCallStateUpdates(agentExtension: string | null, callId: strin
 
     // Listen for call state change events
     const handleCallStateChanged = (event: CallStateChangedEvent) => {
-      console.log('[CallState] State changed:', event)
-
       // Extract data from the event (backend wraps payload in 'data' field)
       const eventData = event.data
 
       // Only handle events for the current call
       if (eventData?.call_id === callId) {
-        console.log(`[CallState] Call ${callId} state changed to: ${eventData.state}`)
-
         // Invalidate the call details query to trigger immediate re-fetch
         queryClient.invalidateQueries({ queryKey: ['callDetails', callId] })
 

@@ -188,14 +188,6 @@ export function ReportsDashboardPage() {
   useEffect(() => {
     if (import.meta.env.DEV) {
       const token = localStorage.getItem(SESSION.TOKEN_KEY)
-      console.log('[ReportsDashboard] Auth Status:', {
-        isAuthenticated,
-        hasUser: !!user,
-        projectId,
-        hasToken: !!token,
-        tokenLength: token?.length || 0,
-        userPermissions: user?.permissions?.length || 0,
-      })
 
       // Decode and check token expiry
       if (token) {
@@ -205,17 +197,6 @@ export function ReportsDashboardPage() {
           const payload = JSON.parse(atob(base64))
           const now = Math.floor(Date.now() / 1000)
           const isExpired = payload.exp && payload.exp < now
-
-          console.log('[ReportsDashboard] Token Details:', {
-            exp: payload.exp,
-            expDate: payload.exp ? new Date(payload.exp * 1000).toISOString() : 'N/A',
-            now,
-            nowDate: new Date(now * 1000).toISOString(),
-            isExpired,
-            timeLeft: payload.exp ? `${Math.floor((payload.exp - now) / 60)} minutes` : 'N/A',
-            sub: payload.sub,
-            roles: payload.roles,
-          })
 
           if (isExpired) {
             console.error('[ReportsDashboard] ⚠️ TOKEN IS EXPIRED! Redirecting to login...')
@@ -229,11 +210,9 @@ export function ReportsDashboardPage() {
         } catch (e) {
           console.error('[ReportsDashboard] Failed to decode token:', e)
         }
-      } else {
-        console.error('[ReportsDashboard] NO TOKEN FOUND IN SESSION STORAGE!')
       }
     }
-  }, [isAuthenticated, user, projectId])
+  }, [isAuthenticated, projectId, user])
 
   // Check if user is authenticated
   if (!isAuthenticated || !user) {

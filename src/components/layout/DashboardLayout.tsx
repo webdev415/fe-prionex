@@ -16,7 +16,7 @@ import { TaskBell } from './TaskBell'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
@@ -34,7 +34,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { searchClients, mapPriorityLevel, type SearchType } from '@/api/clientSearchApi'
 
 interface DashboardLayoutProps {
-  children?: ReactNode
+  children: ReactNode
 }
 
 // Extend SidebarItem interface to support permission checking
@@ -789,7 +789,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Scrollable Page Content with top padding for fixed header */}
         <main className="min-h-screen overflow-y-auto px-4 pt-[80px] pb-4 sm:px-6 sm:pb-6 lg:px-[28px] lg:pb-[20px]">
-          {children ?? <Outlet />}
+          {children}
         </main>
       </div>
 
@@ -837,12 +837,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           }))}
           onAnswer={() => {
             // TODO: Handle answer call - send to backend
-            console.log('Answer incoming call:', incomingCall.call_id)
             dismissIncomingCall()
           }}
           onReject={() => {
             // TODO: Handle reject call - send to backend
-            console.log('Reject incoming call:', incomingCall.call_id)
             dismissIncomingCall()
           }}
         />

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import '@testing-library/jest-dom'
 import { vi, beforeAll, afterAll } from 'vitest'
 

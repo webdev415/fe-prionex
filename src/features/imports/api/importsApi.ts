@@ -285,10 +285,6 @@ export async function validateCSV(_file: File): Promise<{
   is_valid: boolean
   missing_columns?: string[]
 }> {
-  // Backend doesn't have a separate validation endpoint
-  // Validation happens during upload
-  // Return valid by default - actual validation will happen on upload
-  console.warn('validateCSV is deprecated. Validation happens during upload.')
   return {
     is_valid: true,
     missing_columns: [],
