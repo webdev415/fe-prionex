@@ -1096,6 +1096,14 @@ export function ClientManagementPage() {
       align: 'left',
       sortable: true,
       sortKey: 'taxIdNumber',
+      render: (client) => (
+        <Link
+          to={`/dashboard/clients/${client.id}`}
+          className="text-dark-500 cursor-pointer text-left hover:underline"
+        >
+          {client.taxIdNumber}
+        </Link>
+      ),
     },
     {
       key: 'tags',
