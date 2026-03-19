@@ -145,9 +145,9 @@ export async function updateInteraction(data: {
   client_id: number
   interaction_id: number
   type_id?: number
-  subtype_id?: number
-  contact_type_id?: number
-  result_id?: number
+  subtype_id?: number | null
+  contact_type_id?: number | null
+  result_id?: number | null
   summary?: string
   promise_to_pay_date?: string | null
   promise_to_pay_amount?: number | null

@@ -12,6 +12,11 @@ export const api = axios.create({
   withCredentials: true,
 })
 
+// Token storage key
+// const TOKEN_KEY = SESSION.TOKEN_KEY
+
+// // Safe localStorage wrapper for non-browser/test environments
+// const storage =
 // Safe storage wrapper so tests (non-browser env) don't crash on localStorage access
 const isBrowser =
   typeof window !== 'undefined' &&
