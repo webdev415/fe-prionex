@@ -22,6 +22,10 @@ export function MinimizedCallBubble() {
     return null
   }
 
+  const isActiveCall =
+    minimizedCall.type === 'call-dialog' &&
+    (minimizedCall.callState === 'dialing' || minimizedCall.callState === 'connected')
+
   const handleRestore = () => {
     setIsRestored(true)
   }
@@ -43,11 +47,6 @@ export function MinimizedCallBubble() {
     const secs = seconds % 60
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
   }
-
-  // Determine if call is active (dialing or connected) for enhanced animation
-  const isActiveCall =
-    minimizedCall.type === 'call-dialog' &&
-    (minimizedCall.callState === 'dialing' || minimizedCall.callState === 'connected')
 
   const getStatusColor = () => {
     if (minimizedCall.type === 'call-dialog') {
@@ -229,7 +228,10 @@ export function MinimizedCallBubble() {
           onMinimize={handleMinimize}
           clientName={minimizedCall.clientName}
           phoneNumber={minimizedCall.phoneNumber}
+          callId={minimizedCall.callId}
           initialState={minimizedCall.callState || 'initial'}
+          initialElapsedTime={minimizedCall.elapsedTime ?? 0}
+          minimizedAt={isActiveCall ? minimizedCall.timestamp : undefined}
         />
       )}
 
