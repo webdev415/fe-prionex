@@ -43,11 +43,6 @@ export function usePermissionRefresh() {
         const newPermissions = response.data.permissions?.sort().join(',')
 
         if (oldPermissions !== newPermissions) {
-          console.log('Permissions updated:', {
-            old: oldPermissions,
-            new: newPermissions,
-          })
-
           // Map backend user data to frontend User type
           const updatedUser = {
             id: String(response.data.id),

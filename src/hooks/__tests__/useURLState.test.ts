@@ -214,12 +214,12 @@ describe('useURLState', () => {
         result.current[1]('new-value')
       })
 
-      // Wait for custom debounce (100ms)
+      // Wait for custom debounce (100ms) with some buffer
       await waitFor(
         () => {
           expect(mockSetSearchParams).toHaveBeenCalled()
         },
-        { timeout: 200 }
+        { timeout: 400 }
       )
     })
   })

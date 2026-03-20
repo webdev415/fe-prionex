@@ -28,15 +28,15 @@ interface CreateSellerModalProps {
   onSuccess: () => void
 }
 
-// Seller type options
-const SELLER_TYPES: { value: SellerType; label: string }[] = [
-  { value: 'bank', label: 'Bank' },
-  { value: 'mfo', label: 'MFO (Microfinance Organization)' },
-  { value: 'collection_agency', label: 'Collection Agency' },
-  { value: 'retail', label: 'Retail' },
-  { value: 'telecom', label: 'Telecom' },
-  { value: 'utilities', label: 'Utilities' },
-  { value: 'other', label: 'Other' },
+// Seller type raw DB values
+const SELLER_TYPE_VALUES: SellerType[] = [
+  'bank',
+  'mfo',
+  'collection_agency',
+  'retail',
+  'telecom',
+  'utilities',
+  'other',
 ]
 
 interface SellerFormData extends Omit<CreateSellerInput, 'seller_type'> {
@@ -193,9 +193,9 @@ export function CreateSellerModal({ open, onClose, onSuccess }: CreateSellerModa
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {SELLER_TYPES.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
+                    {SELLER_TYPE_VALUES.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {t(`pages.sellers.types.${value}`, { defaultValue: value })}
                       </SelectItem>
                     ))}
                   </SelectContent>

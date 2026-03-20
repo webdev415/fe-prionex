@@ -309,7 +309,6 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
             const IconComponent = iconMap[item.icon]
 
             if (!IconComponent) {
-              console.warn(`Icon "${item.icon}" not found in iconMap`)
               return null
             }
 
@@ -481,7 +480,6 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                 const IconComponent = iconMap[item.icon]
 
                 if (!IconComponent) {
-                  console.warn(`Icon "${item.icon}" not found in iconMap`)
                   return null
                 }
 
@@ -648,7 +646,6 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
               const ActionIcon = iconMap[action.icon]
 
               if (!ActionIcon) {
-                console.warn(`Icon "${action.icon}" not found in iconMap`)
                 return null
               }
 

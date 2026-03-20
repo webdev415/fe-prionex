@@ -346,6 +346,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           clientName={minimizedCall.clientName}
           phoneNumber={minimizedCall.phoneNumber}
           initialState={minimizedCall.callState || 'initial'}
+          initialCallType={minimizedCall.callType || 'white-line'}
         />
       )}
 
@@ -837,12 +838,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           }))}
           onAnswer={() => {
             // TODO: Handle answer call - send to backend
-            console.log('Answer incoming call:', incomingCall.call_id)
             dismissIncomingCall()
           }}
           onReject={() => {
             // TODO: Handle reject call - send to backend
-            console.log('Reject incoming call:', incomingCall.call_id)
             dismissIncomingCall()
           }}
         />

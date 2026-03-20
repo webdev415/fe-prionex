@@ -11,8 +11,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
     "test": "vitest",
-    "test:run": "NODE_OPTIONS=--max-old-space-size=8192 vitest run",
-    "test:coverage": "NODE_OPTIONS=--max-old-space-size=8192 vitest run --coverage",
+    "test:run": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vitest run",
+    "test:coverage": "cross-env NODE_OPTIONS=--max-old-space-size=8192 vitest run --coverage",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "prepare": "husky"
@@ -72,6 +72,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "cross-env": "^7.0.3",
     "husky": "^9.1.7",
     "jsdom": "^27.2.0",
     "postcss": "^8.5.6",

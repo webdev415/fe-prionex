@@ -76,6 +76,7 @@ import { useClientTags } from '@/features/tags/hooks/useTags'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import { useAuthStore } from '@/stores/authStore'
+import { backendToFrontendPaymentMethod } from '@/features/payments/utils'
 import { useUserDepartment } from '@/features/users'
 import { PermissionGuard } from '@/components/auth'
 import { useHasPermission } from '@/hooks/usePermissions'
@@ -108,26 +109,6 @@ type ExtendedCallItem = {
   line: string
   call_id?: string
   initiated_at?: string
-}
-
-// Legacy numeric code mappings (from old CRM database)
-const MARITAL_STATUS_MAP: Record<string, string> = {
-  '1': 'Неодружений/Незаміжня',
-  '2': 'Одружений/Заміжня',
-  '3': 'Розлучений/Розлучена',
-  '4': 'Вдівець/Вдова',
-  '5': 'Цивільний шлюб',
-}
-
-const EMPLOYMENT_TYPE_MAP: Record<string, string> = {
-  full_time: 'Повна зайнятість',
-  part_time: 'Часткова зайнятість',
-  contract: 'Контракт',
-  student: 'Студент',
-  self_employed: 'ФОП',
-  unemployed: 'Безробітний',
-  retired: 'Пенсіонер',
-  other: 'Інше',
 }
 
 // Contact type names are now returned by the backend from client_contact_types lookup table
@@ -170,6 +151,7 @@ export function ClientDetailPage() {
     isCallModalOpen,
     setIsCallModalOpen,
     currentCallId,
+    activeCallType,
     callError,
     isOriginatingCall,
     handleOriginateCall,
@@ -298,9 +280,15 @@ export function ClientDetailPage() {
         issuedBy: profile.passport?.issued_by ?? '',
         issuedDate: profile.passport?.issued_date ?? '',
         expiresDate: profile.passport?.expires_date ?? '',
-        gender: profile.passport?.gender ?? '',
+        gender: profile.passport?.gender
+          ? t(`pages.clients.detail.genderOptions.${profile.passport.gender}`, {
+              defaultValue: profile.passport.gender,
+            })
+          : '',
         maritalStatus: profile.marital_status
-          ? (MARITAL_STATUS_MAP[profile.marital_status] ?? profile.marital_status)
+          ? t(`pages.clients.detail.maritalStatuses.${profile.marital_status}`, {
+              defaultValue: profile.marital_status,
+            })
           : '',
         familyMembers: profile.family_members_count ?? '',
         incomeLevel: profile.income_level ?? '',
@@ -316,8 +304,9 @@ export function ClientDetailPage() {
                 : '-',
             managerFullName: profile.employment.manager_full_name ?? '-',
             employmentType: profile.employment.employment_type
-              ? (EMPLOYMENT_TYPE_MAP[profile.employment.employment_type] ??
-                profile.employment.employment_type)
+              ? t(`pages.clients.detail.employmentTypes.${profile.employment.employment_type}`, {
+                  defaultValue: profile.employment.employment_type,
+                })
               : '-',
             workPhone: profile.employment.work_phone ?? '-',
           }
@@ -326,6 +315,7 @@ export function ClientDetailPage() {
         id: r.id,
         contactValue: r.contact_value ?? '',
         contactType: r.contact_type_name ?? '',
+        contactTypeCode: r.contact_type_code ?? null,
         isPhone: r.is_phone ?? false,
         comment: r.comment ?? '',
         created_at: r.created_at,
@@ -358,18 +348,27 @@ export function ClientDetailPage() {
         status: d.status,
       })),
       // Payments mapped from PaymentResponse to UI shape
-      payments: (paymentsSection?.payments ?? []).map((p) => ({
-        id: p.id,
-        loanNumber: p.debt_contract_number ?? p.payment_number,
-        counterparty: p.seller_name ?? '-',
-        saleDate: '-',
-        paymentDate: formatDate(p.payment_date ?? undefined),
-        amount: Number(p.amount),
-        paymentMethod: p.payment_method,
-        status: p.status,
-        paymentDistribution: p.payment_type ?? '-',
-        employee: p.recorded_by_username ?? '-',
-      })),
+      // Build a quick lookup from loan contract_number -> formatted sale date
+      // so payments can show the sale date when available.
+      payments: (() => {
+        const loanSaleDateMap = new Map<string, string>()
+        ;(loans ?? []).forEach((d) => {
+          if (d.contract_number)
+            loanSaleDateMap.set(d.contract_number, formatDate(d.purchase_date ?? undefined))
+        })
+        return (paymentsSection?.payments ?? []).map((p) => ({
+          id: p.id,
+          loanNumber: p.debt_contract_number ?? p.payment_number,
+          counterparty: p.seller_name ?? '-',
+          saleDate: loanSaleDateMap.get(p.debt_contract_number ?? '') ?? '-',
+          paymentDate: formatDate(p.payment_date ?? undefined),
+          amount: Number(p.amount),
+          paymentMethod: p.payment_method,
+          status: p.status,
+          paymentDistribution: p.payment_type ?? '-',
+          employee: p.recorded_by_username ?? '-',
+        }))
+      })(),
       // Write-offs mapped
       writesOffs: (paymentsSection?.writesOffs ?? []).map((w) => ({
         id: w.id,
@@ -436,10 +435,24 @@ export function ClientDetailPage() {
         .items.map((a) => ({
           id: a.id,
           date: formatDate(a.interaction_date),
-          type: a.type_name ?? '-',
-          subtype: a.subtype_name ?? '-',
-          contactType: a.contact_type_name ?? '-',
-          result: a.result_name ?? a.status,
+          type: a.type_code
+            ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
+            : (a.type_name ?? '-'),
+          subtype: a.subtype_code
+            ? t(`interactionChannels.${a.subtype_code}`, {
+                defaultValue: a.subtype_name ?? '-',
+              })
+            : (a.subtype_name ?? '-'),
+          contactType: a.contact_type_code
+            ? t(`interactionContactTypes.${a.contact_type_code}`, {
+                defaultValue: a.contact_type_name ?? '-',
+              })
+            : (a.contact_type_name ?? '-'),
+          result: a.result_code
+            ? t(`interactionResults.${a.result_code}`, {
+                defaultValue: a.result_name ?? a.status,
+              })
+            : (a.result_name ?? a.status),
           promisedAmount: a.promise_to_pay_amount ? Number(a.promise_to_pay_amount) : 0,
           promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
           callbackDate: formatDate(a.next_action_date ?? undefined),
@@ -469,6 +482,7 @@ export function ClientDetailPage() {
     documents,
     activities,
     responsibleEmployeeDepartment,
+    t,
   ])
 
   // Tags are now fetched from useClientTags hook instead of local state
@@ -989,31 +1003,63 @@ export function ClientDetailPage() {
       key: 'paymentMethod',
       header: t('pages.clients.detail.tableHeaders.paymentMethod'),
       align: 'left',
+      render: (payment) =>
+        backendToFrontendPaymentMethod(
+          payment.paymentMethod as Parameters<typeof backendToFrontendPaymentMethod>[0]
+        ),
     },
     {
       key: 'status',
       header: t('pages.clients.detail.tableHeaders.status'),
       align: 'left',
       render: (payment) => {
-        const statusColors = {
-          Done: 'bg-success-500',
-          Pending: 'bg-gray-500',
-          Failed: 'bg-error-500',
-        }
-        const statusColor =
-          statusColors[payment.status as keyof typeof statusColors] || 'bg-gray-500'
-        const textColor =
-          payment.status === 'Done'
-            ? 'text-success-500'
-            : payment.status === 'Failed'
+        const s = (payment.status ?? '').toLowerCase().trim()
+        const isVerified = s === 'verified' || s === 'done'
+        const isPending = s === 'pending'
+        const isCancelled =
+          s === 'cancelled' || s === 'canceled' || s === 'failed' || s === 'rejected'
+
+        const dotInner = isVerified
+          ? 'bg-success-500'
+          : isPending
+            ? 'bg-gray-500'
+            : isCancelled
+              ? 'bg-error-500'
+              : 'bg-gray-400'
+        const dotOuter = isVerified
+          ? 'bg-success-200'
+          : isPending
+            ? 'bg-gray-200'
+            : isCancelled
+              ? 'bg-error-200'
+              : 'bg-gray-200'
+        const textClass = isVerified
+          ? 'text-success-500'
+          : isPending
+            ? 'text-gray-500'
+            : isCancelled
               ? 'text-error-500'
               : 'text-gray-500'
+
+        // Use debtSummary.paymentStatus keys (verified/pending/cancelled) for consistency
+        const labelKey = isVerified
+          ? 'pages.clients.debtSummary.paymentStatus.verified'
+          : isPending
+            ? 'pages.clients.debtSummary.paymentStatus.pending'
+            : 'pages.clients.debtSummary.paymentStatus.cancelled'
+        const label = t(labelKey)
+
         return (
           <div className="flex items-center gap-2">
-            <span className={cn('h-2.5 w-2.5 flex-shrink-0 rounded-full', statusColor)} />
-            <span className={cn('text-xs font-medium', textColor)}>
-              {t(`pages.clients.detail.paymentStatuses.${payment.status.toLowerCase()}`)}
+            <span
+              className={cn(
+                'flex h-3 w-3 flex-shrink-0 items-center justify-center rounded-full',
+                dotOuter
+              )}
+            >
+              <span className={cn('h-1.5 w-1.5 rounded-full', dotInner)} />
             </span>
+            <span className={cn('text-xs font-medium', textClass)}>{label}</span>
           </div>
         )
       },
@@ -2348,7 +2394,11 @@ export function ClientDetailPage() {
                               </td>
                               <td className="py-2 pr-3">
                                 <span className="text-dark-500 font-medium tracking-[-0.24px]">
-                                  {contact.contactType}
+                                  {contact.contactTypeCode
+                                    ? t(`contactTypes.${contact.contactTypeCode}`, {
+                                        defaultValue: contact.contactType,
+                                      })
+                                    : contact.contactType}
                                 </span>
                               </td>
                               <td className="py-2 pr-3">
@@ -3112,6 +3162,7 @@ export function ClientDetailPage() {
           clientName={client.fullName}
           phoneNumber={selectedPhoneForCall || client.phones?.[0]?.number || ''}
           callId={currentCallId}
+          initialCallType={activeCallType}
           initialState="initial"
           error={callError}
           isLoading={isOriginatingCall}

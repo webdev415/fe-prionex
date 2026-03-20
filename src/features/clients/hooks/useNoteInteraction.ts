@@ -6,6 +6,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
 import { interactionApi } from '../api/interactionApi'
@@ -77,6 +78,7 @@ export function useInteractionResults(params?: {
  */
 export function useCreateInteraction() {
   const queryClient = useQueryClient()
+  const { t } = useTranslation('common')
 
   return useMutation({
     mutationFn: async ({ clientId, data }: { clientId: number; data: InteractionCreateData }) => {
@@ -95,11 +97,13 @@ export function useCreateInteraction() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.activities(variables.clientId) })
-      toast.success('Interaction added successfully')
+      toast.success(
+        t('pages.clients.modals.addNote.successMessage', 'Interaction added successfully')
+      )
     },
     onError: (error: AxiosError<{ detail?: string | Array<{ msg: string }> }>) => {
       const detail = error?.response?.data?.detail
-      let message = 'Failed to add interaction'
+      let message = t('pages.clients.modals.addNote.errorMessage', 'Failed to add interaction')
       if (typeof detail === 'string') {
         message = detail
       } else if (Array.isArray(detail) && detail.length > 0) {
@@ -129,9 +133,9 @@ export function useUpdateInteraction() {
       interactionId: number
       data: {
         type_id?: number
-        subtype_id?: number
-        contact_type_id?: number
-        result_id?: number
+        subtype_id?: number | null
+        contact_type_id?: number | null
+        result_id?: number | null
         summary?: string
         promise_to_pay_date?: string | null
         promise_to_pay_amount?: number | null
