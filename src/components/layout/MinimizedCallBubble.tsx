@@ -230,6 +230,7 @@ export function MinimizedCallBubble() {
           clientName={minimizedCall.clientName}
           phoneNumber={minimizedCall.phoneNumber}
           initialState={minimizedCall.callState || 'initial'}
+          initialCallType={minimizedCall.callType || 'white-line'}
         />
       )}
 
