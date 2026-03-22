@@ -9,7 +9,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
-import { useCreateTag, useUpdateTag } from '@/features/tags'
+import { useCreateTagExtended, useUpdateTag } from '@/features/tags'
 import type { Tag, TagDefinition, TagCategory, TagVisibility } from '@/features/tags'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
@@ -118,7 +118,7 @@ export function TagFormModal({
     [t, i18n.language]
   )
 
-  const createMutation = useCreateTag()
+  const createMutation = useCreateTagExtended()
   const updateMutation = useUpdateTag()
 
   const {
@@ -129,7 +129,8 @@ export function TagFormModal({
     formState: { errors, isSubmitting },
     reset,
   } = useForm<TagFormData>({
-    resolver: zodResolver(tagSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(tagSchema) as any,
     defaultValues: {
       name: tag?.name || '',
       color: tag?.color || '#80D80A',
@@ -174,7 +175,8 @@ export function TagFormModal({
         if (isEdit && tag) {
           await updateMutation.mutateAsync({ id: tag.id, data })
         } else {
-          await createMutation.mutateAsync(data)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await createMutation.mutateAsync(data as any)
         }
         onSuccess()
       } catch (error) {
@@ -413,10 +415,18 @@ export function TagFormModal({
         </ModalContent>
 
         <ModalFooter>
-          <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleClose}
+            disabled={isSubmitting || createMutation.isPending || updateMutation.isPending}
+          >
             {t('actions.cancel', 'Cancel')}
           </Button>
-          <Button type="submit" isLoading={isSubmitting}>
+          <Button
+            type="submit"
+            isLoading={isSubmitting || createMutation.isPending || updateMutation.isPending}
+          >
             {isEdit ? t('actions.save', 'Save') : t('actions.create', 'Create')}
           </Button>
         </ModalFooter>

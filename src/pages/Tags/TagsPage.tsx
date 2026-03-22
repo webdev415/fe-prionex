@@ -72,10 +72,14 @@ export function TagsPage() {
     return activeProject?.name
   }, [user])
 
-  // Fetch data
+  // Fetch data (only load active tab's data)
   const { data: tags = [], isLoading, isError, error } = useTags()
-  const { data: segments = [], isLoading: segmentsLoading } = useSegments()
-  const { data: rules = [], isLoading: rulesLoading } = useTagRules()
+  const { data: segments = [], isLoading: segmentsLoading } = useSegments({
+    enabled: activeTab === 'segments' || activeTab === 'dictionary',
+  })
+  const { data: rules = [], isLoading: rulesLoading } = useTagRules({
+    enabled: activeTab === 'rules',
+  })
 
   const filteredTags = useMemo(() => {
     if (categoryFilter === 'all') return tags

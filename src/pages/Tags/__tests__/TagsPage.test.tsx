@@ -68,6 +68,17 @@ vi.mock('@/features/tags/api/tagsApi', () => ({
       mockTags.push(newTag)
       return Promise.resolve(newTag)
     }),
+    createTagExtended: vi.fn((data) => {
+      const newTag = {
+        id: mockTags.length + 1,
+        ...data,
+        project_id: 1,
+        client_count: 0,
+        created_at: new Date().toISOString(),
+      }
+      mockTags.push(newTag)
+      return Promise.resolve(newTag)
+    }),
     updateTag: vi.fn((id, data) => {
       const index = mockTags.findIndex((t) => t.id === id)
       if (index !== -1) {

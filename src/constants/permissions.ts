@@ -102,7 +102,7 @@ export const PERMISSIONS = {
    * Segments Category (reuses tags permissions)
    */
   SEGMENTS: {
-    VIEW: 'view_clients',
+    VIEW: 'view_tags',
     CREATE: 'create_tags',
     EDIT: 'edit_tags',
     DELETE: 'delete_tags',
@@ -112,7 +112,7 @@ export const PERMISSIONS = {
    * Rules Category (reuses tags permissions)
    */
   RULES: {
-    VIEW: 'view_clients',
+    VIEW: 'view_tags',
     CREATE: 'create_tags',
     EDIT: 'edit_tags',
     DELETE: 'delete_tags',

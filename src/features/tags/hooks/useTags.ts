@@ -224,11 +224,17 @@ export function useClientState(clientId: number) {
 
 // --- Rules ---
 
-export function useTagRules(params?: { trigger_type?: string; is_active?: boolean }) {
+export function useTagRules(params?: {
+  trigger_type?: string
+  is_active?: boolean
+  enabled?: boolean
+}) {
+  const { enabled = true, ...queryParams } = params ?? {}
   return useQuery({
-    queryKey: [...tagsKeys.rules(), params],
-    queryFn: () => tagsApi.getRules(params),
+    queryKey: [...tagsKeys.rules(), queryParams],
+    queryFn: () => tagsApi.getRules(queryParams),
     staleTime: 5 * 60 * 1000,
+    enabled,
   })
 }
 
@@ -279,11 +285,13 @@ export function useDeleteRule() {
 
 // --- Segments ---
 
-export function useSegments(params?: { is_active?: boolean }) {
+export function useSegments(params?: { is_active?: boolean; enabled?: boolean }) {
+  const { enabled = true, ...queryParams } = params ?? {}
   return useQuery({
-    queryKey: [...tagsKeys.segments(), params],
-    queryFn: () => tagsApi.getSegments(params),
+    queryKey: [...tagsKeys.segments(), queryParams],
+    queryFn: () => tagsApi.getSegments(queryParams),
     staleTime: 5 * 60 * 1000,
+    enabled,
   })
 }
 

@@ -5,6 +5,7 @@
  * Renders dynamic fields based on condition_type selection.
  */
 
+import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -29,7 +30,12 @@ export interface ConditionRowProps {
 const CONDITION_TYPE_VALUES: ConditionType[] = ['has_tag', 'not_has_tag', 'tag_payload_field']
 const OPERATOR_VALUES = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'contains', 'in', 'not_in']
 
-export function ConditionRow({ condition, tags, onChange, onRemove }: ConditionRowProps) {
+export const ConditionRow = memo(function ConditionRow({
+  condition,
+  tags,
+  onChange,
+  onRemove,
+}: ConditionRowProps) {
   const { t } = useTranslation('common')
 
   const isTagType =
@@ -76,7 +82,10 @@ export function ConditionRow({ condition, tags, onChange, onRemove }: ConditionR
             <SelectTrigger className="h-9 text-xs">
               <SelectValue placeholder={t('pages.tags.segments.selectTag', 'Select tag')} />
             </SelectTrigger>
-            <SelectContent searchable searchPlaceholder="Search tags...">
+            <SelectContent
+              searchable
+              searchPlaceholder={t('pages.tags.searchTags', 'Search tags...')}
+            >
               {tags.map((tag) => (
                 <SelectItem key={tag.id} value={(tag as { code?: string }).code ?? tag.name}>
                   {tag.name}
@@ -168,4 +177,4 @@ export function ConditionRow({ condition, tags, onChange, onRemove }: ConditionR
       </Button>
     </div>
   )
-}
+})

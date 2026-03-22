@@ -146,6 +146,7 @@ export function ClientDetailPage() {
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
+  const activeProjectId = useAuthStore((state) => Number(state.user?.active_project_id ?? 1))
   const {
     user,
     isCallModalOpen,
@@ -1362,7 +1363,7 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setIsTagModalOpen(true)}
                       className="shrink-0 text-gray-500 transition-colors hover:text-gray-700"
-                      title="Manage tags"
+                      title={t('pages.tags.manageTags', 'Manage tags')}
                       type="button"
                     >
                       <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
@@ -3226,7 +3227,7 @@ export function ClientDetailPage() {
           open={isTagModalOpen}
           clientId={clientId}
           clientName={client.fullName}
-          projectId={1}
+          projectId={activeProjectId}
           onClose={() => setIsTagModalOpen(false)}
         />
 

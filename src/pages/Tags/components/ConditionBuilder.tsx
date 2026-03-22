@@ -35,16 +35,11 @@ export function ConditionBuilder({ conditions, tags, onChange }: ConditionBuilde
 
   const handleConditionChange = useCallback(
     (groupIndex: number, condIndex: number, updated: SegmentCondition) => {
+      const groupConditions = conditions.filter((c) => c.group_index === groupIndex)
+      const target = groupConditions[condIndex]
+      const flatIndex = conditions.indexOf(target)
+      if (flatIndex === -1) return
       const newConditions = [...conditions]
-      // Find the actual index in the flat array
-      let flatIndex = 0
-      for (const cond of conditions) {
-        if (cond.group_index === groupIndex) {
-          if (condIndex === 0) break
-          condIndex--
-        }
-        flatIndex++
-      }
       newConditions[flatIndex] = updated
       onChange(newConditions)
     },

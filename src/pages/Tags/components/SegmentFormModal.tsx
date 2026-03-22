@@ -10,6 +10,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
@@ -283,6 +284,34 @@ export function SegmentFormModal({
 
   const onSubmit = useCallback(
     async (data: SegmentFormData) => {
+      // Validate conditions before submitting
+      for (const cond of conditions) {
+        if (
+          (cond.condition_type === 'has_tag' || cond.condition_type === 'not_has_tag') &&
+          !cond.tag_code
+        ) {
+          toast.error(
+            t(
+              'pages.tags.segments.validation.tagCodeRequired',
+              'Please select a tag for all conditions'
+            )
+          )
+          return
+        }
+        if (
+          cond.condition_type === 'tag_payload_field' &&
+          (!cond.field_name || !cond.operator || !cond.value)
+        ) {
+          toast.error(
+            t(
+              'pages.tags.segments.validation.payloadFieldRequired',
+              'Please fill in all payload field condition values'
+            )
+          )
+          return
+        }
+      }
+
       const stripped = conditions.map(({ id: _id, segment_id: _sid, ...rest }) => rest)
 
       try {
@@ -302,7 +331,7 @@ export function SegmentFormModal({
         console.error('Failed to save segment:', error)
       }
     },
-    [isEdit, segment, conditions, createMutation, updateMutation, onSuccess]
+    [isEdit, segment, conditions, createMutation, updateMutation, onSuccess, t]
   )
 
   const handleClose = useCallback(() => {
@@ -480,10 +509,18 @@ export function SegmentFormModal({
         </ModalContent>
 
         <ModalFooter>
-          <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleClose}
+            disabled={isSubmitting || createMutation.isPending || updateMutation.isPending}
+          >
             {t('actions.cancel', 'Cancel')}
           </Button>
-          <Button type="submit" isLoading={isSubmitting}>
+          <Button
+            type="submit"
+            isLoading={isSubmitting || createMutation.isPending || updateMutation.isPending}
+          >
             {isEdit ? t('actions.save', 'Save') : t('actions.create', 'Create')}
           </Button>
         </ModalFooter>

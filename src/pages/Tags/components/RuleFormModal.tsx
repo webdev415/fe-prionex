@@ -161,11 +161,25 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
           'import_complete',
         ]),
         trigger_event: z.string().optional().default(''),
-        cron_expression: z.string().optional().default(''),
+        cron_expression: z
+          .string()
+          .optional()
+          .default('')
+          .refine(
+            (val) => !val || /^(\S+\s){4}\S+$/.test(val.trim()),
+            t(
+              'pages.tags.rules.validation.cronInvalid',
+              'Invalid cron expression (expected 5-part format)'
+            )
+          ),
         conditions: z.array(
           z.object({
-            field: z.string().min(1, 'Field is required'),
-            op: z.string().min(1, 'Operator is required'),
+            field: z
+              .string()
+              .min(1, t('pages.tags.rules.validation.fieldRequired', 'Field is required')),
+            op: z
+              .string()
+              .min(1, t('pages.tags.rules.validation.operatorRequired', 'Operator is required')),
             value: z.string(),
           })
         ),
@@ -558,7 +572,10 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       <SelectTrigger>
                         <SelectValue placeholder={t('pages.tags.rules.selectTag', 'Select tag')} />
                       </SelectTrigger>
-                      <SelectContent searchable searchPlaceholder="Search tags...">
+                      <SelectContent
+                        searchable
+                        searchPlaceholder={t('pages.tags.searchTags', 'Search tags...')}
+                      >
                         {tagCodeOptions.map((opt) => (
                           <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
@@ -586,7 +603,10 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       <SelectTrigger>
                         <SelectValue placeholder={t('pages.tags.rules.selectTag', 'Select tag')} />
                       </SelectTrigger>
-                      <SelectContent searchable searchPlaceholder="Search tags...">
+                      <SelectContent
+                        searchable
+                        searchPlaceholder={t('pages.tags.searchTags', 'Search tags...')}
+                      >
                         {tagCodeOptions.map((opt) => (
                           <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
@@ -609,7 +629,10 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                   {...register('priority', { valueAsNumber: true })}
                   placeholder="0"
                   error={errors.priority?.message}
-                  helperText={t('pages.tags.rules.priorityHelp', 'Higher = runs first (0-1000)')}
+                  helperText={t(
+                    'pages.tags.rules.priorityHelp',
+                    '0-1000, lower number = higher priority'
+                  )}
                 />
               </div>
 
@@ -635,10 +658,18 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
         </ModalContent>
 
         <ModalFooter>
-          <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleClose}
+            disabled={isSubmitting || createMutation.isPending || updateMutation.isPending}
+          >
             {t('actions.cancel', 'Cancel')}
           </Button>
-          <Button type="submit" isLoading={isSubmitting}>
+          <Button
+            type="submit"
+            isLoading={isSubmitting || createMutation.isPending || updateMutation.isPending}
+          >
             {isEdit ? t('actions.save', 'Save') : t('actions.create', 'Create')}
           </Button>
         </ModalFooter>
