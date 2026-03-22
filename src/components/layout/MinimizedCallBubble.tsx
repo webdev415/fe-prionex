@@ -232,6 +232,7 @@ export function MinimizedCallBubble() {
           initialState={minimizedCall.callState || 'initial'}
           initialElapsedTime={minimizedCall.elapsedTime ?? 0}
           minimizedAt={isActiveCall ? minimizedCall.timestamp : undefined}
+          initialCallType={minimizedCall.callType || 'white-line'}
         />
       )}
 

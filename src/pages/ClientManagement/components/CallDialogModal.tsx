@@ -30,6 +30,7 @@ export interface CallDialogModalProps {
   onClose: () => void
   clientName: string
   phoneNumber: string
+  initialCallType?: CallType
   callId?: string | null // Optional call ID for tracking real-time call state
   initialState?: CallState
   initialElapsedTime?: number // Initial elapsed time in seconds (used when restoring from minimized)
@@ -70,6 +71,7 @@ export function CallDialogModal({
   onClose,
   clientName,
   phoneNumber,
+  initialCallType = 'white-line',
   callId,
   initialState = 'initial',
   initialElapsedTime = 0,
@@ -134,6 +136,7 @@ export function CallDialogModal({
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCallState(initialState)
       setElapsedTime(initialElapsedTime ?? 0)
+      setCallType(initialCallType)
       setIsMuted(false)
       setIsOnHold(false)
       setAutoCloseCountdown(3)
@@ -152,7 +155,14 @@ export function CallDialogModal({
         dialingTimeoutRef.current = null
       }
     }
-  }, [open, initialState, initialElapsedTime])
+  }, [open, initialState, initialElapsedTime, initialCallType])
+
+  const callLineLabel = useMemo(() => {
+    if (callType === 'gray-line') {
+      return t('pages.clients.modals.callDialog.grayLine')
+    }
+    return t('pages.clients.modals.callDialog.whiteLine')
+  }, [callType, t])
 
   // Derive call state and elapsed time from backend state
   const derivedState = useMemo(() => {
@@ -348,7 +358,13 @@ export function CallDialogModal({
   // Incoming call popup (different layout)
   if (callState === 'incoming') {
     return (
-      <Modal open={open} onClose={handleClose} maxWidth="xl" className="p-4 sm:p-6">
+      <Modal
+        open={open}
+        onClose={handleClose}
+        maxWidth="xl"
+        className="p-4 sm:p-6"
+        showCloseButton={false}
+      >
         {/* Minimize Button */}
         <button
           onClick={handleMinimize}
@@ -458,7 +474,13 @@ export function CallDialogModal({
 
   // Regular call dialog states
   return (
-    <Modal open={open} onClose={handleClose} maxWidth="xl" className="p-4 sm:p-6 md:p-10">
+    <Modal
+      open={open}
+      onClose={handleClose}
+      maxWidth="xl"
+      className="p-4 sm:p-6 md:p-10"
+      showCloseButton={false}
+    >
       {/* Minimize Button */}
       <button
         onClick={handleMinimize}
@@ -666,6 +688,12 @@ export function CallDialogModal({
                     ? t('pages.clients.modals.callDialog.dialing')
                     : t('pages.clients.modals.callDialog.activeCall')}
                 </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Icons.Phone size={14} className="text-gray-500" />
+                  <span>
+                    {t('pages.clients.modals.callDialog.callType')}: {callLineLabel}
+                  </span>
+                </div>
               </div>
             )}
 
@@ -681,6 +709,12 @@ export function CallDialogModal({
                   </div>
                   <div className="text-success-500 mt-1 text-sm font-medium">
                     {t('pages.clients.modals.callDialog.answered')}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Icons.Phone size={14} className="text-gray-500" />
+                    <span>
+                      {t('pages.clients.modals.callDialog.callType')}: {callLineLabel}
+                    </span>
                   </div>
                 </div>
                 <div className="text-dark-500 mt-2 text-center text-sm">
