@@ -31,12 +31,11 @@ import {
   useGenerateReceipt,
 } from '@/features/payments'
 import { useUser } from '@/features/users/hooks/useUser'
-import {
-  frontendToBackendPaymentMethod,
-  backendToFrontendPaymentMethod,
-  backendToFrontendPaymentStatus,
-} from '@/features/payments/utils'
-import { mockClientDetail } from './mockClientDetails'
+import { frontendToBackendPaymentMethod } from '@/features/payments/utils'
+import type {
+  PaymentMethod as BackendPaymentMethod,
+  PaymentStatus as BackendPaymentStatus,
+} from '@/features/payments/api/types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useHasPermission } from '@/hooks/usePermissions'
@@ -47,8 +46,8 @@ interface Payment {
   date: string
   amount: number
   contractNumber?: string
-  method: 'Online' | 'Bank' | 'Card' | 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Other'
-  status: 'Verified' | 'Pending' | 'Cancelled'
+  method: BackendPaymentMethod
+  status: BackendPaymentStatus
   receipt?: string
   reference?: string
   project_name?: string
@@ -207,17 +206,14 @@ export function DebtSummaryPage() {
   const { data: verifiedByUser } = useUser(verifiedByUserId)
   const { data: cancelledByUser } = useUser(cancelledByUserId)
 
-  // Use mock data as fallback for missing fields until backend is fully integrated (same as ClientDetailPage)
   const client = useMemo(() => {
-    if (!apiClient) return mockClientDetail
+    if (!apiClient) return null
 
     const fullName = [apiClient.first_name, apiClient.middle_name, apiClient.last_name]
       .filter(Boolean)
       .join(' ')
 
-    // Map API client to expected shape, using mock data for fields not yet in API (same as ClientDetailPage)
     return {
-      ...mockClientDetail, // Fallback for fields not yet in backend
       id: apiClient.id,
       fullName,
       taxIdNumber: apiClient.tax_id,
@@ -237,13 +233,11 @@ export function DebtSummaryPage() {
         ? [{ number: apiClient.phone_primary, type: 'mobile' as const }]
         : [],
       personalDetails: {
-        ...mockClientDetail.personalDetails,
         tin: apiClient.tax_id,
-        dateOfBirth: apiClient.date_of_birth || mockClientDetail.personalDetails.dateOfBirth,
+        dateOfBirth: apiClient.date_of_birth || '',
       },
       addresses: {
-        ...mockClientDetail.addresses,
-        registrationAddress: apiClient.address || mockClientDetail.addresses.registrationAddress,
+        registrationAddress: apiClient.address || '',
       },
     }
   }, [apiClient])
@@ -312,8 +306,8 @@ export function DebtSummaryPage() {
             : p.recorded_at,
       amount: Number(p.amount),
       contractNumber: p.debt_contract_number || undefined,
-      method: backendToFrontendPaymentMethod(p.payment_method),
-      status: backendToFrontendPaymentStatus(p.status),
+      method: p.payment_method,
+      status: p.status,
       receipt: p.receipt_url ? 'PDF' : undefined,
       reference: p.bank_reference || p.payment_number,
     }))
@@ -364,8 +358,8 @@ export function DebtSummaryPage() {
       }
     }
 
-    const verifiedPayments = payments.filter((p) => p.status === 'Verified')
-    const pendingPayments = payments.filter((p) => p.status === 'Pending')
+    const verifiedPayments = payments.filter((p) => p.status === 'verified')
+    const pendingPayments = payments.filter((p) => p.status === 'pending')
     const totalVerified = verifiedPayments.reduce((sum, p) => sum + p.amount, 0)
     const pendingVerification = pendingPayments.reduce((sum, p) => sum + p.amount, 0)
 
@@ -401,14 +395,13 @@ export function DebtSummaryPage() {
     }, 0)
   }, [customerName, paymentHistoryData, apiClient])
 
-  // Helper function to normalize payment method
+  // Helper function to normalize payment method for modals that expect frontend format
   const normalizePaymentMethod = useCallback(
     (method: Payment['method']): 'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other' => {
-      // Handle both old and new method values
-      if (method === 'Bank' || method === 'Bank Transfer') return 'Bank Transfer'
-      if (method === 'Card') return 'Card'
-      if (method === 'Online' || method === 'Online Gateway') return 'Online Gateway'
-      if (method === 'Cash') return 'Cash'
+      if (method === 'bank_transfer') return 'Bank Transfer'
+      if (method === 'card') return 'Card'
+      if (method === 'online_gateway') return 'Online Gateway'
+      if (method === 'cash') return 'Cash'
       return 'Other'
     },
     []
@@ -475,7 +468,7 @@ export function DebtSummaryPage() {
 
     return debtSummary.payments
       .filter((payment) => {
-        return payment.status === 'Pending' && isPaymentLessThan7DaysOld(payment.date)
+        return payment.status === 'pending' && isPaymentLessThan7DaysOld(payment.date)
       })
       .map(convertPaymentToPendingPayment)
   }, [debtSummary, isPaymentLessThan7DaysOld, convertPaymentToPendingPayment])
@@ -546,7 +539,6 @@ export function DebtSummaryPage() {
     if (selectedPayment) {
       setIsPaymentDetailsModalOpen(false)
       // TODO: Add EditPaymentModal support for DebtSummaryPage if needed
-      console.log('Edit payment', selectedPayment.id)
     }
   }
 
@@ -555,14 +547,16 @@ export function DebtSummaryPage() {
     () =>
       debtSummary
         ? debtSummary.payments
-            .filter((p) => p.status === 'Verified' || p.status === 'Cancelled')
+            .filter((p) => p.status === 'verified' || p.status === 'cancelled')
             .slice(0, 10)
             .map((p) => ({
               id: p.id.toString(),
               paymentId: `PMT-${p.id}`,
-              status: p.status as 'Verified' | 'Cancelled',
+              status: (p.status === 'verified' ? 'Verified' : 'Cancelled') as
+                | 'Verified'
+                | 'Cancelled',
               amount: p.amount,
-              action: p.status === 'Verified' ? 'Verified by You' : 'Cancelled by You',
+              action: p.status === 'verified' ? 'Verified by You' : 'Cancelled by You',
               // For now, just show the payment date; PaymentVerificationQueueModal formats it as-is
               time: p.date,
             }))
@@ -781,14 +775,14 @@ export function DebtSummaryPage() {
 
   const getStatusDot = (status: Payment['status']) => {
     const statusColors = {
-      Verified: 'bg-success-500',
-      Pending: 'bg-gray-500',
-      Cancelled: 'bg-error-500',
+      verified: 'bg-success-500',
+      pending: 'bg-gray-500',
+      cancelled: 'bg-error-500',
     }
     const borderStatusColors = {
-      Verified: 'bg-success-200',
-      Pending: 'bg-gray-200',
-      Cancelled: 'bg-error-200',
+      verified: 'bg-success-200',
+      pending: 'bg-gray-200',
+      cancelled: 'bg-error-200',
     }
     return (
       <span
@@ -835,23 +829,6 @@ export function DebtSummaryPage() {
 
     // Format as YYYY-MM-DD string
     const paymentDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-
-    // Debug: Log what we're sending
-    console.log('📅 Sending payment date to backend (FIXED):', {
-      originalDate: data.date,
-      originalDateString: data.date.toString(),
-      originalISO: data.date.toISOString(),
-      utcYear: data.date.getUTCFullYear(),
-      utcMonth: data.date.getUTCMonth(),
-      utcDay: data.date.getUTCDate(),
-      localYear: data.date.getFullYear(),
-      localMonth: data.date.getMonth(),
-      localDay: data.date.getDate(),
-      year,
-      month,
-      day,
-      paymentDateString: paymentDate,
-    })
 
     const backendMethod = frontendToBackendPaymentMethod(data.method)
 
@@ -1051,7 +1028,6 @@ export function DebtSummaryPage() {
                 leftIcon={<Icons.PieChart08 size={20} className="sm:size-[24px]" />}
                 onClick={() => {
                   // TODO: Handle generate payment plan
-                  console.log('Generate payment plan')
                 }}
                 className="w-auto flex-1"
                 disabled
@@ -1069,7 +1045,7 @@ export function DebtSummaryPage() {
                   className="w-full rounded-full sm:w-auto sm:flex-1"
                   disabled={!user?.is_agent || !user?.asterisk_extension}
                   onClick={() => {
-                    const phoneNumber = client.phones?.[0]?.number
+                    const phoneNumber = client?.phones?.[0]?.number
                     if (!phoneNumber) {
                       toast.error('Client has no phone number')
                       return
@@ -1234,45 +1210,30 @@ export function DebtSummaryPage() {
                               {payment.contractNumber || '-'}
                             </td>
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
-                              {(() => {
-                                const normalizedMethod = normalizePaymentMethod(payment.method)
-                                const methodTranslations: Record<
-                                  'Bank Transfer' | 'Online Gateway' | 'Cash' | 'Card' | 'Other',
-                                  string
-                                > = {
-                                  'Bank Transfer': t(
-                                    'pages.clients.modals.recordPayment.bankTransfer'
-                                  ),
-                                  'Online Gateway': t(
-                                    'pages.clients.modals.recordPayment.onlineGateway'
-                                  ),
-                                  Cash: t('pages.clients.modals.recordPayment.cash'),
-                                  Card: t('pages.clients.modals.recordPayment.card'),
-                                  Other: t('pages.clients.modals.recordPayment.other'),
-                                }
-                                return methodTranslations[normalizedMethod] || normalizedMethod
-                              })()}
+                              {t(`pages.clients.detail.paymentMethods.${payment.method}`, {
+                                defaultValue: payment.method,
+                              })}
                             </td>
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
                               <div className="flex items-center gap-2">
                                 {getStatusDot(payment.status)}
                                 <span
                                   className={cn(
-                                    payment.status === 'Verified'
+                                    payment.status === 'verified'
                                       ? 'text-success-500'
-                                      : payment.status === 'Pending'
+                                      : payment.status === 'pending'
                                         ? 'text-gray-500'
                                         : 'text-error-500'
                                   )}
                                 >
-                                  {t(
-                                    `pages.clients.debtSummary.paymentStatus.${payment.status.toLowerCase()}`
-                                  )}
+                                  {t(`pages.clients.detail.paymentStatuses.${payment.status}`, {
+                                    defaultValue: payment.status,
+                                  })}
                                 </span>
                               </div>
                             </td>
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-center text-xs font-medium sm:px-6">
-                              {payment.status === 'Verified' && (
+                              {payment.status === 'verified' && (
                                 <LinkButton
                                   variant="regular-secondary"
                                   size="xs"
@@ -1320,7 +1281,7 @@ export function DebtSummaryPage() {
                             </td>
                             <td className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
                               <div className="flex items-center justify-center gap-1 sm:gap-2">
-                                {payment.status === 'Pending' &&
+                                {payment.status === 'pending' &&
                                   isPaymentLessThan7DaysOld(payment.date) && (
                                     <PermissionGuard
                                       permission={PERMISSIONS.CLIENTS.VERIFY_PAYMENT}
@@ -1339,8 +1300,8 @@ export function DebtSummaryPage() {
                                       </LinkButton>
                                     </PermissionGuard>
                                   )}
-                                {(payment.status === 'Pending' ||
-                                  payment.status === 'Verified') && (
+                                {(payment.status === 'pending' ||
+                                  payment.status === 'verified') && (
                                   <PermissionGuard permission={PERMISSIONS.CLIENTS.VERIFY_PAYMENT}>
                                     <LinkButton
                                       variant="regular-secondary"
@@ -1356,9 +1317,9 @@ export function DebtSummaryPage() {
                                     </LinkButton>
                                   </PermissionGuard>
                                 )}
-                                {(payment.status === 'Verified' ||
-                                  payment.status === 'Cancelled' ||
-                                  (payment.status === 'Pending' &&
+                                {(payment.status === 'verified' ||
+                                  payment.status === 'cancelled' ||
+                                  (payment.status === 'pending' &&
                                     !isPaymentLessThan7DaysOld(payment.date))) && (
                                   <LinkButton
                                     variant="regular-secondary"
@@ -1493,7 +1454,11 @@ export function DebtSummaryPage() {
             paymentId:
               paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
                 ?.payment_number || `PMT-${selectedPayment.id}`,
-            status: selectedPayment.status,
+            status: (selectedPayment.status === 'verified'
+              ? 'Verified'
+              : selectedPayment.status === 'pending'
+                ? 'Pending'
+                : 'Cancelled') as 'Verified' | 'Pending' | 'Cancelled',
             amount:
               Number(
                 paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)?.amount
@@ -1549,7 +1514,6 @@ export function DebtSummaryPage() {
           }}
           onPrintReceipt={() => {
             // TODO: Handle print receipt
-            console.log('Print receipt', selectedPayment.id)
           }}
           onDownloadReceipt={() => {
             if (!paymentHistoryData) return
@@ -1603,7 +1567,11 @@ export function DebtSummaryPage() {
               method: normalizePaymentMethod(selectedPayment.method),
               reference:
                 selectedPayment.reference || `TRX${selectedPayment.id.toString().padStart(5, '0')}`,
-              status: selectedPayment.status as 'Verified' | 'Pending' | 'Cancelled',
+              status: (selectedPayment.status === 'verified'
+                ? 'Verified'
+                : selectedPayment.status === 'pending'
+                  ? 'Pending'
+                  : 'Cancelled') as 'Verified' | 'Pending' | 'Cancelled',
               createdBy: 'Operator Sidorov',
               createdAt: '2025-12-10 09:15:32',
               currentDebt: debtSummary.totalDebt,

@@ -37,7 +37,7 @@ export const ROUTES = {
  * Session Constants
  */
 export const SESSION = {
-  TOKEN_KEY: 'auth_token',
+  TOKEN_KEY: 'prionex_token',
   REFRESH_TOKEN_KEY: 'refresh_token',
 } as const
 

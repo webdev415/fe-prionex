@@ -78,10 +78,11 @@ export function PaymentImportUpload({ onFileSelected, isUploading }: Props) {
         <div>
           <h3 className="text-dark-500 text-lg font-medium">Upload Bank CSV</h3>
           <p className="text-sm text-gray-600">
-            CSV with <code className="rounded bg-gray-100 px-1 text-xs">loan_number</code>,{' '}
+            Verifies existing pending payments. Required columns:{' '}
+            <code className="rounded bg-gray-100 px-1 text-xs">loan_number</code>,{' '}
             <code className="rounded bg-gray-100 px-1 text-xs">payment_amount</code>,{' '}
-            <code className="rounded bg-gray-100 px-1 text-xs">payment_date</code> columns.
-            Optional: <code className="rounded bg-gray-100 px-1 text-xs">payment_method</code>,{' '}
+            <code className="rounded bg-gray-100 px-1 text-xs">payment_date</code>. Optional:{' '}
+            <code className="rounded bg-gray-100 px-1 text-xs">payment_method</code>,{' '}
             <code className="rounded bg-gray-100 px-1 text-xs">payment_type</code>
           </p>
         </div>

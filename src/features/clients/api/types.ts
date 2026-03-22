@@ -341,6 +341,7 @@ export interface ClientProfileResponse {
     contact_value: string
     contact_type_id?: number | null
     contact_type_name?: string | null
+    contact_type_code?: string | null
     is_phone?: boolean
     comment?: string | null
     created_at?: string | null
@@ -696,6 +697,9 @@ export interface InteractionTypeResponse {
   id: number
   code: string
   name: string
+  name_uk?: string | null
+  name_en?: string | null
+  name_ru?: string | null
   is_active: boolean
   sort_order: number
 }
@@ -705,6 +709,9 @@ export interface InteractionSubtypeResponse {
   type_id?: number | null
   code: string
   name: string
+  name_uk?: string | null
+  name_en?: string | null
+  name_ru?: string | null
   description?: string | null
   is_active: boolean
   sort_order: number
@@ -723,6 +730,9 @@ export interface InteractionResultResponse {
   id: number
   code: string
   name: string
+  name_uk?: string | null
+  name_en?: string | null
+  name_ru?: string | null
   result_category?: string | null
   is_positive?: boolean | null
   requires_followup: boolean

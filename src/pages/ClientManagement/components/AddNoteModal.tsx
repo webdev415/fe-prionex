@@ -222,7 +222,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
               {t('pages.clients.modals.addNote.type', 'Type')}:
             </label>
             {isLoadingTypes ? (
-              <div className="text-xs text-gray-500">Loading...</div>
+              <div className="text-xs text-gray-500">{t('common.loading', 'Loading...')}</div>
             ) : (
               <Select value={typeId?.toString()} onValueChange={handleTypeChange}>
                 <SelectTrigger className="w-full" id="interaction-type" aria-label="Type">
@@ -236,7 +236,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                 <SelectContent>
                   {types?.map((type) => (
                     <SelectItem key={type.id} value={type.id.toString()}>
-                      {type.name}
+                      {t(`interactionTypes.${type.code}`, { defaultValue: type.name })}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -254,7 +254,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                 {t('pages.clients.modals.addNote.channel', 'Communication channel')}:
               </label>
               {isLoadingChannels ? (
-                <div className="text-xs text-gray-500">Loading...</div>
+                <div className="text-xs text-gray-500">{t('common.loading', 'Loading...')}</div>
               ) : (
                 <Select value={subtypeId?.toString()} onValueChange={handleChannelChange}>
                   <SelectTrigger className="w-full" id="interaction-channel" aria-label="Channel">
@@ -268,7 +268,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                   <SelectContent>
                     {channels?.map((channel) => (
                       <SelectItem key={channel.id} value={channel.id.toString()}>
-                        {channel.name}
+                        {t(`interactionChannels.${channel.code}`, { defaultValue: channel.name })}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -287,7 +287,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                 {t('pages.clients.modals.addNote.contactType', 'Contact type')}:
               </label>
               {isLoadingContactTypes ? (
-                <div className="text-xs text-gray-500">Loading...</div>
+                <div className="text-xs text-gray-500">{t('common.loading', 'Loading...')}</div>
               ) : (
                 <Select value={contactTypeId?.toString()} onValueChange={handleContactTypeChange}>
                   <SelectTrigger
@@ -305,7 +305,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                   <SelectContent>
                     {contactTypes?.map((ct) => (
                       <SelectItem key={ct.id} value={ct.id.toString()}>
-                        {ct.name}
+                        {t(`interactionContactTypes.${ct.code}`, { defaultValue: ct.name })}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -328,7 +328,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                 {t('pages.clients.modals.addNote.result', 'Result')}:
               </label>
               {isLoadingResults ? (
-                <div className="text-xs text-gray-500">Loading...</div>
+                <div className="text-xs text-gray-500">{t('common.loading', 'Loading...')}</div>
               ) : (
                 <Select value={resultId?.toString()} onValueChange={handleResultChange}>
                   <SelectTrigger className="w-full" id="interaction-result" aria-label="Result">
@@ -342,7 +342,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                   <SelectContent>
                     {results?.map((result) => (
                       <SelectItem key={result.id} value={result.id.toString()}>
-                        {result.name}
+                        {t(`interactionResults.${result.code}`, { defaultValue: result.name })}
                       </SelectItem>
                     ))}
                   </SelectContent>

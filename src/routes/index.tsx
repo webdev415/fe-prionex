@@ -1,316 +1,299 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom'
-import LoginPage from '@/pages/auth/LoginPage'
-import ForceChangePasswordPage from '@/pages/auth/ForceChangePasswordPage'
-import { UserManagementPage } from '@/pages/UserManagement'
-import { ImportClientsPage } from '@/pages/ImportClients/ImportClientsPage'
-import { ProjectManagementPage } from '@/pages/ProjectManagement/ProjectManagementPage'
-import { RoleManagementPage } from '@/pages/RoleManagement/RoleManagementPage'
-import { DepartmentManagementPage } from '@/pages/DepartmentManagement'
+/* eslint-disable react-refresh/only-export-components */
+import { lazy, Suspense } from 'react'
+import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { ProtectedRoute } from './ProtectedRoute'
 import { PermissionRoute } from './PermissionRoute'
 import { GuestRoute } from './GuestRoute'
 import { DashboardLayout } from '@/components/layout'
 import { PERMISSIONS } from '@/constants/permissions'
-import { ImportHistoryPage } from '@/pages/ImportClients/ImportHistoryPage'
-import { ImportDetailsPage } from '@/pages/ImportClients/ImportDetailsPage'
-import {
-  ClientManagementPage,
-  ClientDetailPage,
-  ActivityTimelinePage,
-  DebtSummaryPage,
-  PaymentHistoryPage,
-} from '@/pages/ClientManagement'
-import { SmsTemplatesPage } from '@/pages/SmsTemplates'
-import { ReportsDashboardPage } from '@/pages/ReportsDashboard'
-import { SellerManagementPage } from '@/pages/SellerManagement'
-import { ScoringConfigurationPage } from '@/pages/ScoringConfiguration'
-import { ConfigurationHistoryPage } from '@/pages/ScoringConfiguration/ConfigurationHistoryPage'
-import { AuditLogsPage } from '@/pages/AuditLogs'
-import { TagsPage } from '@/pages/Tags/TagsPage'
-import { ProfileSettingsPage } from '@/pages/ProfileSettings/ProfileSettingsPage'
-import { BulkOperatorAssignmentPage, BulkPaymentImportPage } from '@/pages/Operations'
+
+const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
+const ForceChangePasswordPage = lazy(() => import('@/pages/auth/ForceChangePasswordPage'))
+const UserManagementPage = lazy(() =>
+  import('@/pages/UserManagement').then((m) => ({ default: m.UserManagementPage }))
+)
+const ImportClientsPage = lazy(() => import('@/pages/ImportClients/ImportClientsPage'))
+const ImportHistoryPage = lazy(() => import('@/pages/ImportClients/ImportHistoryPage'))
+const ImportDetailsPage = lazy(() => import('@/pages/ImportClients/ImportDetailsPage'))
+const ProjectManagementPage = lazy(() => import('@/pages/ProjectManagement/ProjectManagementPage'))
+const RoleManagementPage = lazy(() =>
+  import('@/pages/RoleManagement/RoleManagementPage').then((m) => ({
+    default: m.RoleManagementPage,
+  }))
+)
+const DepartmentManagementPage = lazy(() =>
+  import('@/pages/DepartmentManagement').then((m) => ({
+    default: m.DepartmentManagementPage,
+  }))
+)
+const ClientManagementPage = lazy(() =>
+  import('@/pages/ClientManagement').then((m) => ({
+    default: m.ClientManagementPage,
+  }))
+)
+const ClientDetailPage = lazy(() =>
+  import('@/pages/ClientManagement').then((m) => ({
+    default: m.ClientDetailPage,
+  }))
+)
+const ActivityTimelinePage = lazy(() =>
+  import('@/pages/ClientManagement').then((m) => ({
+    default: m.ActivityTimelinePage,
+  }))
+)
+const DebtSummaryPage = lazy(() =>
+  import('@/pages/ClientManagement').then((m) => ({
+    default: m.DebtSummaryPage,
+  }))
+)
+const PaymentHistoryPage = lazy(() =>
+  import('@/pages/ClientManagement').then((m) => ({
+    default: m.PaymentHistoryPage,
+  }))
+)
+const SmsTemplatesPage = lazy(() =>
+  import('@/pages/SmsTemplates').then((m) => ({
+    default: m.SmsTemplatesPage,
+  }))
+)
+const ReportsDashboardPage = lazy(() =>
+  import('@/pages/ReportsDashboard').then((m) => ({
+    default: m.ReportsDashboardPage,
+  }))
+)
+const SellerManagementPage = lazy(() =>
+  import('@/pages/SellerManagement').then((m) => ({
+    default: m.SellerManagementPage,
+  }))
+)
+const ScoringConfigurationPage = lazy(() =>
+  import('@/pages/ScoringConfiguration').then((m) => ({
+    default: m.ScoringConfigurationPage,
+  }))
+)
+const ConfigurationHistoryPage = lazy(() =>
+  import('@/pages/ScoringConfiguration/ConfigurationHistoryPage').then((m) => ({
+    default: m.ConfigurationHistoryPage,
+  }))
+)
+const AuditLogsPage = lazy(() =>
+  import('@/pages/AuditLogs').then((m) => ({ default: m.AuditLogsPage }))
+)
+const TagsPage = lazy(() => import('@/pages/Tags/TagsPage').then((m) => ({ default: m.TagsPage })))
+const ProfileSettingsPage = lazy(() =>
+  import('@/pages/ProfileSettings/ProfileSettingsPage').then((m) => ({
+    default: m.ProfileSettingsPage,
+  }))
+)
+const BulkOperatorAssignmentPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkOperatorAssignmentPage,
+  }))
+)
+const BulkPaymentImportPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkPaymentImportPage,
+  }))
+)
+
+const withSuspense = (element: React.ReactElement) => (
+  <Suspense fallback={<div>Loading...</div>}>{element}</Suspense>
+)
+
+const DashboardLayoutRoute = () => (
+  <ProtectedRoute>
+    <DashboardLayout>
+      <Outlet />
+    </DashboardLayout>
+  </ProtectedRoute>
+)
 
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: (
-      <GuestRoute>
-        <LoginPage />
-      </GuestRoute>
-    ),
+    element: <GuestRoute>{withSuspense(<LoginPage />)}</GuestRoute>,
   },
   {
     path: '/change-password',
-    element: (
-      <ProtectedRoute>
-        <ForceChangePasswordPage />
-      </ProtectedRoute>
-    ),
+    element: <ProtectedRoute>{withSuspense(<ForceChangePasswordPage />)}</ProtectedRoute>,
   },
   {
     path: '/dashboard',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
-          <DashboardLayout>
-            <ClientManagementPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/profile',
-    element: (
-      <ProtectedRoute>
-        <DashboardLayout>
-          <ProfileSettingsPage />
-        </DashboardLayout>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/users',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.USERS.VIEW}>
-          <DashboardLayout>
-            <UserManagementPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/import',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT}>
-          <DashboardLayout>
-            <ImportClientsPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/import/history/:id',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT}>
-          <DashboardLayout>
-            <ImportDetailsPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/import/history',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT}>
-          <DashboardLayout>
-            <ImportHistoryPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/projects',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.PROJECTS.MANAGE}>
-          <DashboardLayout>
-            <ProjectManagementPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/roles',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
-          <DashboardLayout>
-            <RoleManagementPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/departments',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
-          <DashboardLayout>
-            <DepartmentManagementPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/reports',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.REPORTS.VIEW_ALL_REPORTS}>
-          <DashboardLayout>
-            <ReportsDashboardPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/sellers',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.SELLERS.VIEW}>
-          <DashboardLayout>
-            <SellerManagementPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  // System Settings routes
-  {
-    path: '/dashboard/system-settings/tags',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.TAGS.VIEW}>
-          <DashboardLayout>
-            <TagsPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/system-settings/scoring-configuration',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW}>
-          <DashboardLayout>
-            <ScoringConfigurationPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/system-settings/scoring-configuration/history',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW_HISTORY}>
-          <DashboardLayout>
-            <ConfigurationHistoryPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/system-settings/sms-templates',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
-          <DashboardLayout>
-            <SmsTemplatesPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  // Operations routes
-  {
-    path: '/dashboard/operations/bulk-operator-assignment',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.EDIT}>
-          <DashboardLayout>
-            <BulkOperatorAssignmentPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/operations/bulk-payment-import',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT_PAYMENTS}>
-          <DashboardLayout>
-            <BulkPaymentImportPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/audit-logs',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.VIEW_AUDIT_LOGS}>
-          <DashboardLayout>
-            <AuditLogsPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  // Client detail routes - must come after all specific routes
-  {
-    path: '/dashboard/clients/:id',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
-          <DashboardLayout>
-            <ClientDetailPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/clients/:id/debt-summary',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
-          <DashboardLayout>
-            <DebtSummaryPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/clients/:id/activity',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
-          <DashboardLayout>
-            <ActivityTimelinePage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/dashboard/clients/:id/payment-history',
-    element: (
-      <ProtectedRoute>
-        <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
-          <DashboardLayout>
-            <PaymentHistoryPage />
-          </DashboardLayout>
-        </PermissionRoute>
-      </ProtectedRoute>
-    ),
+    element: <DashboardLayoutRoute />,
+    children: [
+      {
+        index: true,
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
+            {withSuspense(<ClientManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'profile',
+        element: withSuspense(<ProfileSettingsPage />),
+      },
+      {
+        path: 'users',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.USERS.VIEW}>
+            {withSuspense(<UserManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'import',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT}>
+            {withSuspense(<ImportClientsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'import/history',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT}>
+            {withSuspense(<ImportHistoryPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'import/history/:id',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT}>
+            {withSuspense(<ImportDetailsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'projects',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.PROJECTS.MANAGE}>
+            {withSuspense(<ProjectManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'roles',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
+            {withSuspense(<RoleManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'departments',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_ROLES}>
+            {withSuspense(<DepartmentManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'reports',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.REPORTS.VIEW_ALL_REPORTS}>
+            {withSuspense(<ReportsDashboardPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'sellers',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SELLERS.VIEW}>
+            {withSuspense(<SellerManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/tags',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.TAGS.VIEW}>
+            {withSuspense(<TagsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/scoring-configuration',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW}>
+            {withSuspense(<ScoringConfigurationPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/scoring-configuration/history',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW_HISTORY}>
+            {withSuspense(<ConfigurationHistoryPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/sms-templates',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            {withSuspense(<SmsTemplatesPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'operations/bulk-operator-assignment',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.EDIT}>
+            {withSuspense(<BulkOperatorAssignmentPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'operations/bulk-payment-import',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT_PAYMENTS}>
+            {withSuspense(<BulkPaymentImportPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'audit-logs',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.VIEW_AUDIT_LOGS}>
+            {withSuspense(<AuditLogsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'clients/:id',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
+            {withSuspense(<ClientDetailPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'clients/:id/debt-summary',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
+            {withSuspense(<DebtSummaryPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'clients/:id/activity',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
+            {withSuspense(<ActivityTimelinePage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'clients/:id/payment-history',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
+            {withSuspense(<PaymentHistoryPage />)}
+          </PermissionRoute>
+        ),
+      },
+    ],
   },
   // Legacy routes - redirect to new paths
   {

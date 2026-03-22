@@ -141,7 +141,7 @@ export function PaymentImportPreview({ preview, onConfirm, onCancel, isExecuting
     <div className="space-y-6">
       {/* File info */}
       <div>
-        <h3 className="text-dark-500 text-lg font-medium">Preview Payment Import</h3>
+        <h3 className="text-dark-500 text-lg font-medium">Preview Payment Verification</h3>
         <p className="text-sm text-gray-600">
           File: <span className="font-medium">{preview.filename}</span> &middot;{' '}
           {preview.total_records} records &middot; Batch: {preview.batch_id}
@@ -240,7 +240,7 @@ export function PaymentImportPreview({ preview, onConfirm, onCancel, isExecuting
           disabled={isExecuting || actionableCount === 0}
           isLoading={isExecuting}
         >
-          {isExecuting ? 'Starting...' : `Create ${actionableCount} Payments (Pending)`}
+          {isExecuting ? 'Starting...' : `Verify ${actionableCount} Payments`}
         </Button>
       </div>
     </div>

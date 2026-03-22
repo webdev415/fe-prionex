@@ -113,9 +113,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           errorState: null,
           hasCheckedAuth: true,
         })
-      } catch (meError) {
+      } catch {
         // Failed to fetch /users/me - fall back to login response data
-        console.warn('Failed to fetch full user details, using login response data:', meError)
 
         // Map login response user data to frontend User type (without permissions)
         const user: User = {
@@ -286,9 +285,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           pendingCredentials: null,
           hasCheckedAuth: true,
         })
-      } catch (meError) {
+      } catch {
         // Failed to fetch /users/me - fall back to login response data
-        console.warn('Failed to fetch full user details, using login response data:', meError)
 
         // Map login response user data to frontend User type (without permissions)
         const user: User = {
@@ -436,10 +434,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               hasCheckedAuth: true,
             })
           }
-        } catch (userError) {
+        } catch {
           // Failed to fetch user data, but token is valid
           // Fallback: Extract basic user info from JWT token
-          console.warn('Failed to fetch user data:', userError)
 
           // Parse JWT token to extract basic user information
           const tokenPayload = parseJwt(token)
@@ -512,9 +509,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             console.error('Failed to extract user info from JWT token')
             localStorage.removeItem('impersonation_original_admin')
 
+            setAccessToken(null)
             set({
               user: null,
-              isAuthenticated: true,
+              isAuthenticated: false,
               isLoading: false,
               hasCheckedAuth: true,
               isImpersonating: false,

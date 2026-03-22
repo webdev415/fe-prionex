@@ -837,12 +837,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           }))}
           onAnswer={() => {
             // TODO: Handle answer call - send to backend
-            console.log('Answer incoming call:', incomingCall.call_id)
             dismissIncomingCall()
           }}
           onReject={() => {
             // TODO: Handle reject call - send to backend
-            console.log('Reject incoming call:', incomingCall.call_id)
             dismissIncomingCall()
           }}
         />

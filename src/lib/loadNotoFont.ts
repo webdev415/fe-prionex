@@ -25,11 +25,8 @@ export function loadNotoSansFont(doc: jsPDF): void {
       return // Font already loaded
     }
 
-    // If font data is not provided, skip loading
+    // If font data is not provided, skip loading (fallback to default font)
     if (!NOTO_SANS_FONT_BASE64 || NOTO_SANS_FONT_BASE64.length === 0) {
-      console.warn(
-        'Noto Sans font not configured. Please add base64 font data to loadNotoFont.ts. Using helvetica fallback.'
-      )
       return
     }
 
@@ -42,13 +39,10 @@ export function loadNotoSansFont(doc: jsPDF): void {
 
     // Verify font was added
     const updatedFonts = doc.getFontList()
-    if ('NotoSans' in updatedFonts) {
-      console.log('✓ Noto Sans font loaded successfully')
-    } else {
-      console.warn('Failed to verify Noto Sans font')
+    if (!('NotoSans' in updatedFonts)) {
+      // Verification failed; jsPDF will fall back to default font
     }
-  } catch (error) {
-    console.error('Failed to load Noto Sans font:', error)
+  } catch {
     // Font loading failed, but PDF generation can continue with helvetica
   }
 }

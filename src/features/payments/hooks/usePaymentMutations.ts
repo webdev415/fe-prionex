@@ -276,8 +276,7 @@ export function useGenerateReceipt() {
               daysPastDue: undefined,
             }
           }
-        } catch (error) {
-          console.warn('Failed to fetch client data for receipt:', error)
+        } catch {
           // Continue with provided clientData or payment data only
         }
       }
@@ -293,9 +292,7 @@ export function useGenerateReceipt() {
         | undefined
       if (sellerId) {
         try {
-          console.log('Fetching seller data for receipt, sellerId:', sellerId)
           const seller = await getSeller(sellerId)
-          console.log('Fetched seller data:', seller)
           // Use seller information for company details
           // Map backend fields (primary_contact_phone, primary_contact_email, legal_address)
           // to frontend fields (contact_phone, contact_email, address)
@@ -305,9 +302,7 @@ export function useGenerateReceipt() {
             phone: seller.primary_contact_phone || seller.contact_phone || '-',
             email: seller.primary_contact_email || seller.contact_email || '-',
           }
-          console.log('Using seller company data:', companyData)
-        } catch (error) {
-          console.warn('Failed to fetch seller data for receipt:', error)
+        } catch {
           // Fallback to project data if seller fetch fails
           if (paymentData.project_id) {
             try {
@@ -325,31 +320,27 @@ export function useGenerateReceipt() {
                   ((project.settings as Record<string, unknown>)?.email as string | undefined) ||
                   '-',
               }
-            } catch (projectError) {
-              console.warn('Failed to fetch project data for receipt:', projectError)
+            } catch {
+              // Ignore and leave companyData undefined
             }
           }
         }
-      } else {
-        console.warn('No sellerId found, sellerId:', sellerId, 'paymentData:', paymentData)
+      } else if (paymentData.project_id) {
         // Fallback to project if no seller_id available
-        if (paymentData.project_id) {
-          try {
-            const { getProject } = await import('@/features/projects/api/projectsApi')
-            const project = await getProject(paymentData.project_id)
-            companyData = {
-              name: project.client_company || project.name || '-',
-              address:
-                ((project.settings as Record<string, unknown>)?.address as string | undefined) ||
-                '-',
-              phone:
-                ((project.settings as Record<string, unknown>)?.phone as string | undefined) || '-',
-              email:
-                ((project.settings as Record<string, unknown>)?.email as string | undefined) || '-',
-            }
-          } catch (error) {
-            console.warn('Failed to fetch project data for receipt:', error)
+        try {
+          const { getProject } = await import('@/features/projects/api/projectsApi')
+          const project = await getProject(paymentData.project_id)
+          companyData = {
+            name: project.client_company || project.name || '-',
+            address:
+              ((project.settings as Record<string, unknown>)?.address as string | undefined) || '-',
+            phone:
+              ((project.settings as Record<string, unknown>)?.phone as string | undefined) || '-',
+            email:
+              ((project.settings as Record<string, unknown>)?.email as string | undefined) || '-',
           }
+        } catch {
+          // Ignore and leave companyData undefined
         }
       }
 
