@@ -102,6 +102,7 @@
       "searchButton": "Search",
       "tableHeaders": {
         "username": "Username",
+        "userId": "User ID",
         "fullName": "Full Name",
         "email": "Email",
         "projectRole": "Project & Role",

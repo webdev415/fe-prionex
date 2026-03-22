@@ -165,6 +165,7 @@ export function DebtSummaryPage() {
     isCallModalOpen,
     setIsCallModalOpen,
     currentCallId,
+    activeCallType,
     callError,
     isOriginatingCall,
     handleOriginateCall,
@@ -1404,6 +1405,7 @@ export function DebtSummaryPage() {
         clientName={client?.fullName || ''}
         phoneNumber={client?.phones?.[0]?.number || ''}
         callId={currentCallId}
+        initialCallType={activeCallType}
         initialState="initial"
         error={callError}
         isLoading={isOriginatingCall}

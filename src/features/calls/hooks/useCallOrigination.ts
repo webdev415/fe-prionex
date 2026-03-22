@@ -12,6 +12,7 @@ export function useCallOrigination() {
   const [isCallModalOpen, setIsCallModalOpen] = useState(false)
   const [currentCallId, setCurrentCallId] = useState<string | null>(null)
   const [callError, setCallError] = useState<string | null>(null)
+  const [activeCallType, setActiveCallType] = useState<CallType>('white-line')
 
   // WebSocket for real-time call updates
   useCallWebSocket(user?.asterisk_extension || null)
@@ -29,6 +30,7 @@ export function useCallOrigination() {
       return
     }
     setCallError(null)
+    setActiveCallType(callType)
 
     const context = callType === 'gray-line' ? 'outbound-gray' : 'outbound-white'
 
@@ -71,12 +73,14 @@ export function useCallOrigination() {
     setOpenCallModal(null)
     setIsCallModalOpen(false)
     setCurrentCallId(null)
+    setActiveCallType('white-line')
     handleClearCallError()
   }
 
   const handleCallEnd = () => {
     setOpenCallModal(null)
     setCurrentCallId(null)
+    setActiveCallType('white-line')
   }
 
   return {
@@ -84,6 +88,7 @@ export function useCallOrigination() {
     isCallModalOpen,
     setIsCallModalOpen,
     currentCallId,
+    activeCallType,
     callError,
     isOriginatingCall,
     handleOriginateCall,

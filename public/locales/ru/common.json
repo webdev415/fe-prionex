@@ -102,6 +102,7 @@
       "searchButton": "Поиск",
       "tableHeaders": {
         "username": "Имя пользователя",
+        "userId": "ID пользователя",
         "fullName": "Полное имя",
         "email": "Электронная почта",
         "projectRole": "Проект и роль",

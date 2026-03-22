@@ -152,6 +152,7 @@ export function ClientDetailPage() {
     isCallModalOpen,
     setIsCallModalOpen,
     currentCallId,
+    activeCallType,
     callError,
     isOriginatingCall,
     handleOriginateCall,
@@ -3162,6 +3163,7 @@ export function ClientDetailPage() {
           clientName={client.fullName}
           phoneNumber={selectedPhoneForCall || client.phones?.[0]?.number || ''}
           callId={currentCallId}
+          initialCallType={activeCallType}
           initialState="initial"
           error={callError}
           isLoading={isOriginatingCall}
