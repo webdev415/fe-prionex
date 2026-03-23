@@ -6,7 +6,7 @@
  */
 
 import api from '@/lib/api'
-import type { Tag, TagCreate, TagUpdate } from '../types'
+import type { Tag, TagCreate, TagDefinitionUpdate } from '../types'
 
 /**
  * Fetch tags list for a project
@@ -38,7 +38,7 @@ export async function createTag(input: TagCreate): Promise<Tag> {
  * @param input - Fields to update
  * @returns Updated tag
  */
-export async function updateTag(id: number, input: TagUpdate): Promise<Tag> {
+export async function updateTag(id: number, input: TagDefinitionUpdate): Promise<Tag> {
   const response = await api.put<Tag>(`/api/v1/tags/${id}`, input)
   return response.data
 }

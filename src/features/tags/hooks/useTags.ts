@@ -9,8 +9,8 @@ import { toast } from 'sonner'
 import { tagsApi } from '../api/tagsApi'
 import type {
   TagCreate,
-  TagUpdate,
   TagDefinitionCreate,
+  TagDefinitionUpdate,
   TagRuleCreate,
   TagRuleUpdate,
   SegmentCreate,
@@ -72,7 +72,8 @@ export function useUpdateTag() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: TagUpdate }) => tagsApi.updateTag(id, data),
+    mutationFn: ({ id, data }: { id: number; data: TagDefinitionUpdate }) =>
+      tagsApi.updateTag(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.lists() })
       toast.success('Tag updated successfully')

@@ -94,34 +94,36 @@ export function TagFormModal({
   // Form validation schema - defined inside component to use translations
   const tagSchema = useMemo(
     () =>
-      z.object({
-        name: z
-          .string()
-          .min(1, t('pages.tags.fields.validation.nameRequired', 'Name is required'))
-          .max(
-            50,
-            t('pages.tags.fields.validation.nameMaxLength', 'Name must be 50 characters or less')
-          ),
-        color: z
-          .string()
-          .regex(
-            /^#[0-9A-F]{6}$/i,
-            t(
-              'pages.tags.fields.validation.colorFormat',
-              'Please enter a valid color in hex format (#RRGGBB)'
+      z
+        .object({
+          name: z
+            .string()
+            .min(1, t('pages.tags.fields.validation.nameRequired', 'Name is required'))
+            .max(
+              50,
+              t('pages.tags.fields.validation.nameMaxLength', 'Name must be 50 characters or less')
+            ),
+          color: z
+            .string()
+            .regex(
+              /^#[0-9A-F]{6}$/i,
+              t(
+                'pages.tags.fields.validation.colorFormat',
+                'Please enter a valid color in hex format (#RRGGBB)'
+              )
+            ),
+          description: z
+            .string()
+            .max(
+              200,
+              t(
+                'pages.tags.fields.validation.descriptionMaxLength',
+                'Description must be 200 characters or less'
+              )
             )
-          ),
-        description: z
-          .string()
-          .max(
-            200,
-            t(
-              'pages.tags.fields.validation.descriptionMaxLength',
-              'Description must be 200 characters or less'
-            )
-          )
-          .optional(),
-      }),
+            .optional(),
+        })
+        .passthrough(),
     // i18n.language is needed to recalculate schema when language changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [t, i18n.language]
@@ -183,7 +185,8 @@ export function TagFormModal({
     async (data: TagFormData) => {
       try {
         if (isEdit && tag) {
-          await updateMutation.mutateAsync({ id: tag.id, data })
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await updateMutation.mutateAsync({ id: tag.id, data: data as any })
         } else {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await createMutation.mutateAsync(data as any)

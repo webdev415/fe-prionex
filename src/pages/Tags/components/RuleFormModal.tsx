@@ -188,7 +188,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
           .string()
           .min(1, t('pages.tags.rules.validation.targetRequired', 'Target tag is required')),
         replace_tag_code: z.string().optional().default(''),
-        priority: z.coerce.number().int().min(0).max(1000).default(0),
+        priority: z.coerce.number().int().min(1).max(1000).default(100),
         is_active: z.boolean().default(true),
       }),
     [t]
@@ -214,7 +214,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
       action_type: 'add_tag',
       target_tag_code: '',
       replace_tag_code: '',
-      priority: 0,
+      priority: 100,
       is_active: true,
     },
   })
@@ -339,7 +339,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                         action_type: preset.action_type,
                         target_tag_code: preset.target_tag_code,
                         replace_tag_code: preset.replace_tag_code ?? '',
-                        priority: 0,
+                        priority: 100,
                         is_active: true,
                       })
                     }
