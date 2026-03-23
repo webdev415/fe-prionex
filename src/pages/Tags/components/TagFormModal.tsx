@@ -183,13 +183,26 @@ export function TagFormModal({
 
   const onSubmit = useCallback(
     async (data: TagFormData) => {
+      // Clean empty strings → undefined so backend stores NULL not ""
+      const cleaned = {
+        ...data,
+        code: data.code || undefined,
+        description: data.description || undefined,
+        mutex_group: data.mutex_group || undefined,
+        notification_template: data.notification_template || undefined,
+        default_ttl_hours:
+          data.default_ttl_hours && !Number.isNaN(data.default_ttl_hours)
+            ? data.default_ttl_hours
+            : undefined,
+      }
+
       try {
         if (isEdit && tag) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await updateMutation.mutateAsync({ id: tag.id, data: data as any })
+          await updateMutation.mutateAsync({ id: tag.id, data: cleaned as any })
         } else {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await createMutation.mutateAsync(data as any)
+          await createMutation.mutateAsync(cleaned as any)
         }
         onSuccess()
       } catch (error) {

@@ -9,7 +9,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { useTags, useSegments, useTagRules } from '@/features/tags'
-import type { Tag, Segment, TagRule } from '@/features/tags'
+import type { Tag, TagDefinition, Segment, TagRule } from '@/features/tags'
 import { useAuth } from '@/features/auth'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -138,20 +138,69 @@ export function TagsPage() {
         header: t('pages.tags.tableHeaders.name', 'Tag Name'),
         render: (tag) => (
           <div className="flex items-center gap-2">
-            <div className="h-4 w-4 rounded-full" style={{ backgroundColor: tag.color }} />
+            <div className="h-4 w-4 shrink-0 rounded-full" style={{ backgroundColor: tag.color }} />
             <span className="font-medium">{tag.name}</span>
           </div>
         ),
       },
       {
-        key: 'project_name',
-        header: t('pages.tags.tableHeaders.project', 'Project'),
-        render: (tag) => <span className="text-gray-700">{tag.project_name || '-'}</span>,
+        key: 'code',
+        header: t('pages.tags.tableHeaders.code', 'Code'),
+        render: (tag) => (
+          <code className="text-xs text-gray-600">{(tag as TagDefinition).code || '-'}</code>
+        ),
       },
       {
-        key: 'description',
-        header: t('pages.tags.tableHeaders.description', 'Description'),
-        render: (tag) => <span className="text-gray-700">{tag.description || '-'}</span>,
+        key: 'category',
+        header: t('pages.tags.tableHeaders.category', 'Category'),
+        render: (tag) => (
+          <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+            {tag.category ? t(`pages.tags.categories.${tag.category}`, tag.category) : '-'}
+          </span>
+        ),
+      },
+      {
+        key: 'visibility',
+        header: t('pages.tags.tableHeaders.visibility', 'Visibility'),
+        render: (tag) => {
+          const vis = (tag as TagDefinition).visibility
+          return (
+            <span className="text-xs text-gray-600">
+              {vis ? t(`pages.tags.visibilities.${vis}`, vis) : '-'}
+            </span>
+          )
+        },
+      },
+      {
+        key: 'origin',
+        header: t('pages.tags.tableHeaders.origin', 'Origin'),
+        render: (tag) => {
+          const origin = (tag as TagDefinition).origin
+          return origin === 'system' ? (
+            <span className="bg-information-50 text-information-700 rounded px-2 py-0.5 text-xs">
+              {t('pages.tags.origins.system', 'System')}
+            </span>
+          ) : (
+            <span className="text-xs text-gray-500">
+              {t('pages.tags.origins.custom', 'Custom')}
+            </span>
+          )
+        },
+      },
+      {
+        key: 'is_active',
+        header: t('pages.tags.tableHeaders.active', 'Active'),
+        align: 'center',
+        render: (tag) => {
+          const active = (tag as TagDefinition).is_active ?? true
+          return (
+            <span
+              className={`text-xs font-medium ${active ? 'text-success-600' : 'text-gray-400'}`}
+            >
+              {active ? t('common.yes', 'Yes') : t('common.no', 'No')}
+            </span>
+          )
+        },
       },
       {
         key: 'client_count',
