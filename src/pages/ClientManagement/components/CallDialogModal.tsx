@@ -135,7 +135,11 @@ export function CallDialogModal({
     if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCallState(initialState)
-      setElapsedTime(initialElapsedTime ?? 0)
+      // Account for time passed while minimized
+      const correctedTime = minimizedAt
+        ? (initialElapsedTime ?? 0) + Math.floor((Date.now() - minimizedAt) / 1000)
+        : (initialElapsedTime ?? 0)
+      setElapsedTime(correctedTime)
       setCallType(initialCallType)
       setIsMuted(false)
       setIsOnHold(false)
@@ -155,7 +159,7 @@ export function CallDialogModal({
         dialingTimeoutRef.current = null
       }
     }
-  }, [open, initialState, initialElapsedTime, initialCallType])
+  }, [open, initialState, initialElapsedTime, initialCallType, minimizedAt])
 
   const callLineLabel = useMemo(() => {
     if (callType === 'gray-line') {
@@ -355,15 +359,19 @@ export function CallDialogModal({
     onClose()
   }
 
+  const isCallActive =
+    callState === 'dialing' || callState === 'connected' || callState === 'incoming'
+
   // Incoming call popup (different layout)
   if (callState === 'incoming') {
     return (
       <Modal
         open={open}
-        onClose={handleClose}
+        onClose={isCallActive ? handleMinimize : handleClose}
         maxWidth="xl"
         className="p-4 sm:p-6"
         showCloseButton={false}
+        preventOutsideClose={isCallActive}
       >
         {/* Minimize Button */}
         <button
@@ -476,10 +484,11 @@ export function CallDialogModal({
   return (
     <Modal
       open={open}
-      onClose={handleClose}
+      onClose={isCallActive ? handleMinimize : handleClose}
       maxWidth="xl"
       className="p-4 sm:p-6 md:p-10"
       showCloseButton={false}
+      preventOutsideClose={isCallActive}
     >
       {/* Minimize Button */}
       <button
