@@ -1340,6 +1340,7 @@
         "resetFilters": "Reset filters",
         "tableHeaders": {
           "date": "Date",
+          "dateAndTime": "Date & Time",
           "number": "Number",
           "loanNumber": "Loan Number",
           "phone": "Phone",

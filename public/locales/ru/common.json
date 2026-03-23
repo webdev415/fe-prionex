@@ -851,6 +851,7 @@
         "resetFilters": "Сбросить фильтры",
         "tableHeaders": {
           "date": "Дата",
+          "dateAndTime": "Дата и время",
           "number": "Номер",
           "loanNumber": "Номер займа",
           "phone": "Телефон",

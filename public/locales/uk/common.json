@@ -851,6 +851,7 @@
         "resetFilters": "Скинути фільтри",
         "tableHeaders": {
           "date": "Дата",
+          "dateAndTime": "Дата та час",
           "number": "Номер",
           "loanNumber": "Номер позики",
           "phone": "Телефон",
