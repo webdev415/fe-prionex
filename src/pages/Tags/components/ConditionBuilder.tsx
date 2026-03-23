@@ -86,7 +86,7 @@ export function ConditionBuilder({ conditions, tags, onChange }: ConditionBuilde
           {gIdx > 0 && (
             <div className="my-3 flex items-center gap-3">
               <div className="h-px flex-1 bg-gray-200" />
-              <span className="rounded bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-600">
+              <span className="bg-warning-100 text-warning-600 rounded px-2 py-0.5 text-xs font-medium">
                 {t('pages.tags.segments.orLabel', 'OR')}
               </span>
               <div className="h-px flex-1 bg-gray-200" />
@@ -101,7 +101,7 @@ export function ConditionBuilder({ conditions, tags, onChange }: ConditionBuilde
                   {/* AND label between rows in same group */}
                   {cIdx > 0 && (
                     <div className="my-1.5 flex items-center gap-2 pl-2">
-                      <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
+                      <span className="bg-information-100 text-information-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
                         {t('pages.tags.segments.andLabel', 'AND')}
                       </span>
                     </div>

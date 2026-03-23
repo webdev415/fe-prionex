@@ -480,7 +480,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                             </SelectContent>
                           </Select>
                           {errors.conditions?.[index]?.field?.message && (
-                            <p className="mt-1 text-xs text-red-500">
+                            <p className="text-error-500 mt-1 text-xs">
                               {errors.conditions?.[index]?.field?.message}
                             </p>
                           )}

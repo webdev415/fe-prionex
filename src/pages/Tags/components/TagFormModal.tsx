@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
+import { Controller } from 'react-hook-form'
 import { useCreateTagExtended, useUpdateTag } from '@/features/tags'
 import type { Tag, TagDefinition, TagCategory, TagVisibility } from '@/features/tags'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
@@ -16,6 +17,14 @@ import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Button } from '@/components/ui/Button'
 import { Label } from '@/components/ui/Label'
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/Select'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { ColorPickerField } from '@/components/forms'
 import { Icons } from '@/lib/icons'
 
@@ -126,6 +135,7 @@ export function TagFormModal({
     handleSubmit,
     watch,
     setValue,
+    control,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<TagFormData>({
@@ -272,36 +282,56 @@ export function TagFormModal({
             {/* Category & Visibility */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="category">{t('pages.tags.fields.category', 'Category')}</Label>
-                <select
-                  id="category"
-                  {...register('category')}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  disabled={isSystemTag}
-                >
-                  {CATEGORY_VALUES.map((c) => (
-                    <option key={c} value={c}>
-                      {t(`pages.tags.categories.${c}`, c)}
-                    </option>
-                  ))}
-                </select>
+                <Label>{t('pages.tags.fields.category', 'Category')}</Label>
+                <Controller
+                  name="category"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={isSystemTag}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('pages.tags.fields.category', 'Category')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORY_VALUES.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {t(`pages.tags.categories.${c}`, c)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="visibility">
-                  {t('pages.tags.fields.visibility', 'Visibility')}
-                </Label>
-                <select
-                  id="visibility"
-                  {...register('visibility')}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  disabled={isSystemTag}
-                >
-                  {VISIBILITY_VALUES.map((v) => (
-                    <option key={v} value={v}>
-                      {t(`pages.tags.visibilities.${v}`, v)}
-                    </option>
-                  ))}
-                </select>
+                <Label>{t('pages.tags.fields.visibility', 'Visibility')}</Label>
+                <Controller
+                  name="visibility"
+                  control={control}
+                  render={({ field }) => (
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={isSystemTag}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={t('pages.tags.fields.visibility', 'Visibility')}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {VISIBILITY_VALUES.map((v) => (
+                          <SelectItem key={v} value={v}>
+                            {t(`pages.tags.visibilities.${v}`, v)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
             </div>
 
@@ -384,15 +414,19 @@ export function TagFormModal({
               </button>
               {expandedSections.notifications && (
                 <div className="space-y-4 border-t border-gray-200 px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="notification_enabled"
-                      {...register('notification_enabled')}
-                      className="h-4 w-4 rounded border-gray-300"
-                      disabled={isSystemTag}
+                  <div className="flex items-center gap-3">
+                    <Controller
+                      name="notification_enabled"
+                      control={control}
+                      render={({ field }) => (
+                        <ToggleSwitch
+                          checked={field.value ?? false}
+                          onChange={field.onChange}
+                          disabled={isSystemTag}
+                        />
+                      )}
                     />
-                    <Label htmlFor="notification_enabled">
+                    <Label>
                       {t('pages.tags.fields.enableNotifications', 'Enable notifications')}
                     </Label>
                   </div>

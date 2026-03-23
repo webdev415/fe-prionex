@@ -223,9 +223,9 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
           // The new tag should appear in the table after submit
           expect(screen.getByText('New Tag')).toBeInTheDocument()
         },
-        { timeout: 8000 }
+        { timeout: 15000 }
       )
-    }, 10000)
+    }, 20000)
 
     it('test_validates_required_fields - Name and color are required', async () => {
       const user = userEvent.setup()

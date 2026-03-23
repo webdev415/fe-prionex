@@ -68,12 +68,12 @@ export function PayloadSchemaEditor({ value, onChange, error }: PayloadSchemaEdi
       <div className="flex items-center justify-between">
         <Label>{t('pages.tags.payloadSchema.title', 'Payload Schema (JSON)')}</Label>
         {rawText.trim() && !displayError && (
-          <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
+          <span className="bg-success-100 text-success-700 rounded px-1.5 py-0.5 text-[10px] font-medium">
             {t('pages.tags.payloadSchema.valid', 'Valid JSON')}
           </span>
         )}
         {displayError && (
-          <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-600">
+          <span className="bg-error-100 text-error-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
             {t('pages.tags.payloadSchema.invalid', 'Invalid')}
           </span>
         )}

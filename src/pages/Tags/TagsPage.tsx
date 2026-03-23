@@ -328,7 +328,7 @@ export function TagsPage() {
         align: 'center',
         render: (s) => (
           <span
-            className={`text-xs font-medium ${s.is_active ? 'text-green-600' : 'text-gray-400'}`}
+            className={`text-xs font-medium ${s.is_active ? 'text-success-600' : 'text-gray-400'}`}
           >
             {s.is_active ? t('common.yes', 'Yes') : t('common.no', 'No')}
           </span>
@@ -369,7 +369,7 @@ export function TagsPage() {
         key: 'trigger_type',
         header: t('pages.tags.rules.trigger', 'Trigger'),
         render: (r) => (
-          <span className="rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
+          <span className="bg-information-50 text-information-700 rounded px-2 py-0.5 text-xs">
             {t(`pages.tags.rules.triggerTypes.${r.trigger_type}`, r.trigger_type)}
           </span>
         ),
@@ -378,7 +378,7 @@ export function TagsPage() {
         key: 'action_type',
         header: t('pages.tags.rules.action', 'Action'),
         render: (r) => (
-          <span className="rounded bg-purple-50 px-2 py-0.5 text-xs text-purple-700">
+          <span className="bg-secondary-50 text-secondary-700 rounded px-2 py-0.5 text-xs">
             {t(`pages.tags.rules.actionTypes.${r.action_type}`, r.action_type)}
           </span>
         ),
@@ -422,7 +422,7 @@ export function TagsPage() {
         align: 'center',
         render: (r) => (
           <span
-            className={`text-xs font-medium ${r.is_active ? 'text-green-600' : 'text-gray-400'}`}
+            className={`text-xs font-medium ${r.is_active ? 'text-success-600' : 'text-gray-400'}`}
           >
             {r.is_active ? t('common.yes', 'Yes') : t('common.no', 'No')}
           </span>
@@ -518,8 +518,8 @@ export function TagsPage() {
       {activeTab === 'dictionary' && (
         <>
           {/* Info banner */}
-          <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
-            <p className="text-xs text-blue-700">
+          <div className="border-information-100 bg-information-50 mb-4 rounded-lg border px-4 py-3">
+            <p className="text-information-700 text-xs">
               {t(
                 'pages.tags.emptyStates.dictionaryBanner',
                 'System tags for debt collection are pre-configured. You can also create custom tags.'
