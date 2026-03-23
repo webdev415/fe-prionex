@@ -289,6 +289,7 @@ export function CallDialogModal({
   }
 
   const handleReject = () => {
+    if (hangupMutation.isPending) return
     // Send hangup command to Asterisk to reject the incoming call
     if (callId) {
       hangupMutation.mutate(callId)
@@ -304,6 +305,7 @@ export function CallDialogModal({
   }
 
   const handleHangUp = () => {
+    if (hangupMutation.isPending) return
     const status: CallStatus = callState === 'connected' ? 'answered' : 'missed'
 
     // Send hangup command to Asterisk if we have a call ID
@@ -808,6 +810,7 @@ export function CallDialogModal({
                   variant="primary"
                   size="sm"
                   onClick={handleHangUp}
+                  disabled={hangupMutation.isPending}
                   className="bg-primary-300 text-dark-500 hover:bg-primary-400 w-full rounded-md"
                 >
                   <Icons.Call02 size={18} className="mr-2 sm:size-5" />
