@@ -33,6 +33,8 @@ export interface CallDialogModalProps {
   initialCallType?: CallType
   callId?: string | null // Optional call ID for tracking real-time call state
   initialState?: CallState
+  initialElapsedTime?: number // Initial elapsed time in seconds (used when restoring from minimized)
+  minimizedAt?: number // Timestamp (ms) when call was minimized — used to compute extra elapsed time
   error?: string | null // Error message to display when call fails
   isLoading?: boolean // Loading state for call initiation
   onCallStart?: (callType: CallType) => void
@@ -72,6 +74,8 @@ export function CallDialogModal({
   initialCallType = 'white-line',
   callId,
   initialState = 'initial',
+  initialElapsedTime = 0,
+  minimizedAt,
   error,
   isLoading,
   onCallStart,
@@ -111,7 +115,14 @@ export function CallDialogModal({
   }, [open, setOpenCallModal, minimizedCall])
   const [callState, setCallState] = useState<CallState>(initialState)
   const [callType, setCallType] = useState<CallType>('white-line')
-  const [elapsedTime, setElapsedTime] = useState(0)
+  // Lazy initializer: runs once on mount. minimizedAt lets us resume the timer
+  // from where it left off when restoring a minimized call.
+  const [elapsedTime, setElapsedTime] = useState(() => {
+    if (minimizedAt) {
+      return initialElapsedTime + Math.floor((Date.now() - minimizedAt) / 1000)
+    }
+    return initialElapsedTime
+  })
   const [isMuted, setIsMuted] = useState(false)
   const [isOnHold, setIsOnHold] = useState(false)
   const [autoCloseCountdown, setAutoCloseCountdown] = useState(3)
@@ -124,8 +135,8 @@ export function CallDialogModal({
     if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCallState(initialState)
+      setElapsedTime(initialElapsedTime ?? 0)
       setCallType(initialCallType)
-      setElapsedTime(0)
       setIsMuted(false)
       setIsOnHold(false)
       setAutoCloseCountdown(3)
@@ -144,7 +155,7 @@ export function CallDialogModal({
         dialingTimeoutRef.current = null
       }
     }
-  }, [open, initialState, initialCallType])
+  }, [open, initialState, initialElapsedTime, initialCallType])
 
   const callLineLabel = useMemo(() => {
     if (callType === 'gray-line') {
@@ -308,6 +319,7 @@ export function CallDialogModal({
       type: 'call-dialog',
       clientName,
       phoneNumber,
+      callId: callId || null,
       callState,
       callType,
       elapsedTime,

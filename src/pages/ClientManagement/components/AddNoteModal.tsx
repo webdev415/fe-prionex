@@ -13,6 +13,7 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import {
@@ -357,9 +358,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
               label={`${t('pages.clients.modals.addNote.promiseDate', 'Promise date')}:`}
               id="promise-date"
               value={promiseDate || null}
-              onChange={({ value }) =>
-                setPromiseDate(value ? value.toISOString().slice(0, 10) : '')
-              }
+              onChange={({ value }) => setPromiseDate(value ? getDateStringInTimezone(value) : '')}
               placeholder={t('pages.clients.modals.addNote.selectDate', 'Select date')}
               format="dd/MM/yyyy"
             />
@@ -393,9 +392,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
               label={`${t('pages.clients.modals.addNote.callbackDate', 'Callback date')}:`}
               id="callback-date"
               value={callbackDate || null}
-              onChange={({ value }) =>
-                setCallbackDate(value ? value.toISOString().slice(0, 10) : '')
-              }
+              onChange={({ value }) => setCallbackDate(value ? getDateStringInTimezone(value) : '')}
               placeholder={t('pages.clients.modals.addNote.selectDate', 'Select date')}
               format="dd/MM/yyyy"
             />
