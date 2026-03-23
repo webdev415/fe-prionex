@@ -2,7 +2,7 @@
  * Add Interaction Modal Component
  *
  * 4-step sequential form:
- *   Step 1 — Type:         Incoming | Outgoing | Searching
+ *   Step 1 — Type:         Incoming | Outgoing | Searching (default: Outgoing)
  *   Step 2 — Channel:      Call | Messenger | Mail | Chat  (skipped for Searching)
  *   Step 3 — Contact Type: Client | 3rd Person | Relative  (skipped for Searching;
  *                          auto-set to Relative for Mail/Chat channels)
@@ -74,12 +74,31 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
   const { data: types, isLoading: isLoadingTypes } = useInteractionTypes()
   const { data: channels, isLoading: isLoadingChannels } = useInteractionSubtypes()
   const { data: contactTypes, isLoading: isLoadingContactTypes } = useInteractionContactTypes()
+
+  const defaultOutgoingTypeId = useMemo(
+    () => types?.find((t) => t.code === 'OUTGOING')?.id,
+    [types]
+  )
+
+  // Default to Outgoing while the modal is open and the user has not chosen another type (no setState in effects).
+  const resolvedTypeId =
+    typeId !== undefined
+      ? typeId
+      : open && defaultOutgoingTypeId !== undefined
+        ? defaultOutgoingTypeId
+        : undefined
+
   const { data: results, isLoading: isLoadingResults } = useInteractionResults(
-    typeId !== undefined ? { typeId, channelId: subtypeId, contactTypeId } : undefined
+    resolvedTypeId !== undefined
+      ? { typeId: resolvedTypeId, channelId: subtypeId, contactTypeId }
+      : undefined
   )
 
   // Derived flags from selected lookups
-  const selectedType = useMemo(() => types?.find((t) => t.id === typeId), [types, typeId])
+  const selectedType = useMemo(
+    () => types?.find((t) => t.id === resolvedTypeId),
+    [types, resolvedTypeId]
+  )
   const selectedChannel = useMemo(
     () => channels?.find((c) => c.id === subtypeId),
     [channels, subtypeId]
@@ -135,7 +154,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
   // --- Validation & submit ---
 
   const handleSave = () => {
-    if (!typeId) {
+    if (!resolvedTypeId) {
       toast.error(t('pages.clients.modals.addNote.selectType', 'Please select a type'))
       return
     }
@@ -151,7 +170,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
     }
 
     const data: InteractionCreateData = {
-      type_id: typeId,
+      type_id: resolvedTypeId,
       subtype_id: isSearching ? undefined : subtypeId,
       contact_type_id: isSearching ? undefined : resolvedContactTypeId,
       result_id: resultId,
@@ -224,7 +243,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
             {isLoadingTypes ? (
               <div className="text-xs text-gray-500">{t('common.loading', 'Loading...')}</div>
             ) : (
-              <Select value={typeId?.toString()} onValueChange={handleTypeChange}>
+              <Select value={resolvedTypeId?.toString()} onValueChange={handleTypeChange}>
                 <SelectTrigger className="w-full" id="interaction-type" aria-label="Type">
                   <SelectValue
                     placeholder={t(
@@ -245,7 +264,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
           </div>
 
           {/* Step 2 — Communication Channel (hidden for Searching) */}
-          {typeId !== undefined && showChannelStep && (
+          {resolvedTypeId !== undefined && showChannelStep && (
             <div className="flex flex-col gap-2">
               <label
                 className="text-dark-500 text-xs font-light sm:text-sm"
@@ -316,7 +335,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
 
           {/* Step 4 — Result (shown once upstream steps are complete) */}
           {(isSearching
-            ? typeId !== undefined
+            ? resolvedTypeId !== undefined
             : isRelativeOnlyChannel
               ? subtypeId !== undefined
               : contactTypeId !== undefined) && (

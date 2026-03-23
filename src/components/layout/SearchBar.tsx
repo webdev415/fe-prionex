@@ -141,6 +141,12 @@ export function SearchBar({
     }
   }
 
+  const handleInputFocus = () => {
+    if (searchQuery.trim() && onSearch) {
+      onSearch(searchQuery, searchType)
+    }
+  }
+
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSearch()
@@ -181,6 +187,7 @@ export function SearchBar({
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          onFocus={handleInputFocus}
           onKeyPress={handleKeyPress}
           placeholder={placeholder}
           className="text-dark-500 min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:font-light placeholder:text-gray-400 sm:text-sm"

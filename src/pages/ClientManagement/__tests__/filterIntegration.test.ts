@@ -89,6 +89,19 @@ function mapFiltersToAPIParams(
     params.status = filters.status.join(',')
   }
 
+  if (filters.promiseDateFrom) {
+    params.promise_date_from = filters.promiseDateFrom
+  }
+  if (filters.promiseDateTo) {
+    params.promise_date_to = filters.promiseDateTo
+  }
+  if (filters.callbackDateFrom) {
+    params.callback_date_from = filters.callbackDateFrom
+  }
+  if (filters.callbackDateTo) {
+    params.callback_date_to = filters.callbackDateTo
+  }
+
   return params
 }
 
@@ -166,6 +179,32 @@ describe('Client Management Filter Integration', () => {
 
       expect(params.sale_date_from).toBe('2024-01-01')
       expect(params.sale_date_to).toBe('2024-12-31')
+    })
+  })
+
+  describe('Promise and callback date ranges', () => {
+    it('should map promiseDateFrom/To to promise_date_from/to', () => {
+      const filters: ClientFilters = {
+        promiseDateFrom: '2025-03-01',
+        promiseDateTo: '2025-03-31',
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.promise_date_from).toBe('2025-03-01')
+      expect(params.promise_date_to).toBe('2025-03-31')
+    })
+
+    it('should map callbackDateFrom/To to callback_date_from/to', () => {
+      const filters: ClientFilters = {
+        callbackDateFrom: '2025-04-01',
+        callbackDateTo: '2025-04-15',
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.callback_date_from).toBe('2025-04-01')
+      expect(params.callback_date_to).toBe('2025-04-15')
     })
   })
 
