@@ -12,6 +12,7 @@ export function useOriginateCall() {
       toast.success('Call initiated successfully')
       // Invalidate call history to refetch
       queryClient.invalidateQueries({ queryKey: ['callHistory'] })
+      queryClient.invalidateQueries({ queryKey: ['clients', 'detail'] })
     },
     onError: (_error: unknown) => {
       // Error handling is done in the component via onError callback
@@ -47,6 +48,7 @@ export function useUpdateCallOutcome() {
       toast.success('Call outcome saved')
       queryClient.invalidateQueries({ queryKey: ['callHistory'] })
       queryClient.invalidateQueries({ queryKey: ['callDetails'] })
+      queryClient.invalidateQueries({ queryKey: ['clients', 'detail'] })
     },
     onError: () => {
       toast.error('Failed to save call outcome')
@@ -71,9 +73,12 @@ export function useHangupCall() {
       toast.success('Call ended')
       queryClient.invalidateQueries({ queryKey: ['callHistory'] })
       queryClient.invalidateQueries({ queryKey: ['callDetails'] })
+      queryClient.invalidateQueries({ queryKey: ['clients', 'detail'] })
     },
     onError: () => {
       toast.error('Failed to end call')
+      queryClient.invalidateQueries({ queryKey: ['callHistory'] })
+      queryClient.invalidateQueries({ queryKey: ['clients', 'detail'] })
     },
   })
 }
