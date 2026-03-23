@@ -345,7 +345,14 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           onMinimize={handleMinimizeCall}
           clientName={minimizedCall.clientName}
           phoneNumber={minimizedCall.phoneNumber}
+          callId={minimizedCall.callId}
           initialState={minimizedCall.callState || 'initial'}
+          initialElapsedTime={minimizedCall.elapsedTime ?? 0}
+          minimizedAt={
+            minimizedCall.callState === 'dialing' || minimizedCall.callState === 'connected'
+              ? minimizedCall.timestamp
+              : undefined
+          }
           initialCallType={minimizedCall.callType || 'white-line'}
         />
       )}
