@@ -392,6 +392,11 @@ export function ClientManagementPage() {
       tagIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
+      dateOfSaleToFilter !== '' ||
+      promiseDateFromFilter !== '' ||
+      promiseDateToFilter !== '' ||
+      callbackDateFromFilter !== '' ||
+      callbackDateToFilter !== '' ||
       debtRangeFromFilter > 0 ||
       principalRangeFromFilter > 0
 

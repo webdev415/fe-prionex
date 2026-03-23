@@ -806,6 +806,8 @@
         "dpdRange": "DPD Range",
         "amountOfDebtRange": "Individual Debt Amount",
         "dateOfSale": "Debt Sale Date",
+        "promiseDate": "Promise Date",
+        "callbackDate": "Callback Date",
         "portfolio": "Creditor/Seller",
         "status": "Status",
         "tags": "Tags",

@@ -26,7 +26,7 @@ import { PriorityBadge } from './components/PriorityBadge'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
-import { formatDate } from '@/lib/formatters'
+import { formatDate, formatDateTime } from '@/lib/formatters'
 import { useCallStore } from '@/stores/callStore'
 import { useClientProfile, useClientActivitiesPaginated } from '@/features/clients/hooks/useClients'
 import {
@@ -128,7 +128,7 @@ export function ActivityTimelinePage() {
     const items = activitiesResponse?.items ?? []
     return items.map((a) => ({
       id: a.id,
-      date: formatDate(a.interaction_date),
+      date: formatDateTime(a.created_at),
       type_id: a.type_id,
       type: a.type_code
         ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
@@ -181,7 +181,7 @@ export function ActivityTimelinePage() {
       key: 'date',
       header: t('pages.clients.activity.tableHeaders.date'),
       align: 'left',
-      className: 'w-[90px] overflow-hidden whitespace-normal',
+      className: 'min-w-[118px] w-[128px] overflow-hidden whitespace-normal',
     },
     {
       key: 'type',
@@ -247,7 +247,7 @@ export function ActivityTimelinePage() {
         <div className="flex flex-col gap-0.5">
           <span className="text-dark-500 text-xs font-medium">{activity.employee}</span>
           {activity.updated_at && (
-            <span className="text-[10px] text-gray-400">{formatDate(activity.updated_at)}</span>
+            <span className="text-[10px] text-gray-400">{formatDateTime(activity.updated_at)}</span>
           )}
         </div>
       ),

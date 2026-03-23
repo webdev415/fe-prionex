@@ -328,7 +328,7 @@ export function useClientCallSmsHistory(clientId: number, enabled = true) {
           time: dt.toTimeString().slice(0, 5),
           phone: c.customer_number && c.customer_number !== 'unknown' ? c.customer_number : '-',
           phoneLabel: 'Primary',
-          status: c.state ?? 'unknown',
+          status: c.outcome ?? c.state ?? 'unknown',
           duration: durationSecs > 0 ? `${durationMin}m ${durationSec}s` : '-',
           operator: c.agent_extension && c.agent_extension !== '000' ? c.agent_extension : '-',
           cost: 0,

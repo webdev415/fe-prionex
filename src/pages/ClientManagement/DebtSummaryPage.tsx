@@ -292,29 +292,53 @@ export function DebtSummaryPage() {
   useEffect(() => {
     if (!customerName || !apiClient) return
 
-    // Map backend payments (may be empty) to frontend payments
-    const payments: Payment[] = (paymentHistoryData?.payments || []).map((p) => ({
-      id: p.id,
-      // Use appropriate datetime based on status:
-      // - verified: verified_at (when verified)
-      // - cancelled: reversed_at (when cancelled)
-      // - pending: recorded_at (when recorded)
-      date:
-        p.status === 'verified' && p.verified_at
-          ? p.verified_at
-          : p.status === 'cancelled' && p.reversed_at
-            ? p.reversed_at
-            : p.recorded_at,
-      amount: Number(p.amount),
-      contractNumber: p.debt_contract_number || undefined,
-      method: p.payment_method,
-      status: p.status,
-      receipt: p.receipt_url ? 'PDF' : undefined,
-      reference: p.bank_reference || p.payment_number,
-    }))
+    // Build a lookup from debt contract_number -> purchase_date to filter
+    // primary creditor payments (payment_date < purchase_date) from system payments
+    const purchaseDateMap = new Map<string, string>()
+    ;(apiClient.debts ?? []).forEach((d) => {
+      if (d.contract_number && d.purchase_date) {
+        purchaseDateMap.set(d.contract_number, d.purchase_date)
+      }
+    })
 
-    // Total paid: use backend's total_amount_paid (includes ALL verified payments, not just current page)
-    const totalPaid = Number(paymentHistoryData?.total_amount_paid ?? 0)
+    // Map backend payments, filtering out primary creditor payments
+    const payments: Payment[] = (paymentHistoryData?.payments || [])
+      .filter((p) => {
+        // If payment is linked to a debt, only include if payment_date >= purchase_date
+        const contractNum = p.debt_contract_number
+        if (contractNum) {
+          const purchaseDate = purchaseDateMap.get(contractNum)
+          if (purchaseDate && p.payment_date && p.payment_date < purchaseDate) {
+            return false // primary creditor payment - exclude
+          }
+        }
+        return true
+      })
+      .map((p) => ({
+        id: p.id,
+        // Use appropriate datetime based on status:
+        // - verified: verified_at (when verified)
+        // - cancelled: reversed_at (when cancelled)
+        // - pending: recorded_at (when recorded)
+        date:
+          p.status === 'verified' && p.verified_at
+            ? p.verified_at
+            : p.status === 'cancelled' && p.reversed_at
+              ? p.reversed_at
+              : p.recorded_at,
+        amount: Number(p.amount),
+        contractNumber: p.debt_contract_number || undefined,
+        method: p.payment_method,
+        status: p.status,
+        receipt: p.receipt_url ? 'PDF' : undefined,
+        reference: p.bank_reference || p.payment_number,
+      }))
+
+    // Total paid: sum total_paid_amount from debts (already filtered by purchase_date on backend)
+    const totalPaid = (apiClient.debts ?? []).reduce(
+      (sum, d) => sum + Number(d.total_paid_amount ?? 0),
+      0
+    )
 
     // Current debt: ALWAYS use apiClient.total_debt as primary source (it's the source of truth)
     // Only use paymentHistoryData.current_debt if apiClient is not available
@@ -334,14 +358,21 @@ export function DebtSummaryPage() {
     const rawProgress = initialTotal > 0 ? (totalPaid / initialTotal) * 100 : 0
     const progressPercentage = Math.max(0, Math.min(100, rawProgress))
 
-    // Last payment: most recently recorded payment from payment history
+    // Last payment: most recently recorded system payment (excludes primary creditor payments)
     // Uses the same date field logic as the payment table rows for consistency.
     let lastPaymentAmount = 0
     let lastPaymentDate = ''
     if (paymentHistoryData) {
-      const verifiedBackendPayments = paymentHistoryData.payments.filter(
-        (p) => p.status === 'verified'
-      )
+      const verifiedBackendPayments = paymentHistoryData.payments.filter((p) => {
+        if (p.status !== 'verified') return false
+        // Exclude primary creditor payments
+        const contractNum = p.debt_contract_number
+        if (contractNum) {
+          const purchaseDate = purchaseDateMap.get(contractNum)
+          if (purchaseDate && p.payment_date && p.payment_date < purchaseDate) return false
+        }
+        return true
+      })
       if (verifiedBackendPayments.length > 0) {
         // Resolve the display date for each payment (same logic as table row mapping)
         const withDate = verifiedBackendPayments.map((p) => ({
