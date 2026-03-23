@@ -88,6 +88,14 @@ interface ClientFiltersBarProps {
   onFilterChange: (filters: ClientFilters) => void
 }
 
+type FilterDateField =
+  | 'dateOfSaleFrom'
+  | 'dateOfSaleTo'
+  | 'promiseDateFrom'
+  | 'promiseDateTo'
+  | 'callbackDateFrom'
+  | 'callbackDateTo'
+
 // Status options matching backend Client.status field (services/client/app/routers/clients.py:440)
 // Valid statuses: new, active, closed
 const statusOptions = ['new', 'active', 'closed']
@@ -130,7 +138,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     }))
   }, [operators])
 
-  const handleDateChange = (field: 'dateOfSaleFrom' | 'dateOfSaleTo', date: Date | null) => {
+  const handleFilterDateChange = (field: FilterDateField, date: Date | null) => {
     onFilterChange({
       ...filters,
       [field]: date ? date.toISOString().split('T')[0] : undefined,
@@ -292,7 +300,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               <div className="flex w-full flex-1 items-center gap-2">
                 <DateSelect
                   value={filters.dateOfSaleFrom || null}
-                  onChange={({ value }) => handleDateChange('dateOfSaleFrom', value)}
+                  onChange={({ value }) => handleFilterDateChange('dateOfSaleFrom', value)}
                   placeholder="Min"
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
@@ -302,7 +310,59 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 </span>
                 <DateSelect
                   value={filters.dateOfSaleTo || null}
-                  onChange={({ value }) => handleDateChange('dateOfSaleTo', value)}
+                  onChange={({ value }) => handleFilterDateChange('dateOfSaleTo', value)}
+                  placeholder="Max"
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Promise date & Callback date */}
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
+            <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+                {t('pages.clients.filters.promiseDate', 'Promise Date')}
+              </label>
+              <div className="flex w-full flex-1 items-center gap-2">
+                <DateSelect
+                  value={filters.promiseDateFrom || null}
+                  onChange={({ value }) => handleFilterDateChange('promiseDateFrom', value)}
+                  placeholder="Min"
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                  -
+                </span>
+                <DateSelect
+                  value={filters.promiseDateTo || null}
+                  onChange={({ value }) => handleFilterDateChange('promiseDateTo', value)}
+                  placeholder="Max"
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+              </div>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+                {t('pages.clients.filters.callbackDate', 'Callback Date')}
+              </label>
+              <div className="flex w-full flex-1 items-center gap-2">
+                <DateSelect
+                  value={filters.callbackDateFrom || null}
+                  onChange={({ value }) => handleFilterDateChange('callbackDateFrom', value)}
+                  placeholder="Min"
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                  -
+                </span>
+                <DateSelect
+                  value={filters.callbackDateTo || null}
+                  onChange={({ value }) => handleFilterDateChange('callbackDateTo', value)}
                   placeholder="Max"
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"

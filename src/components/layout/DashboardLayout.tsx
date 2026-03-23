@@ -446,8 +446,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         return
       }
 
-      // Only search if query or type actually changed
+      // Same query/type with cached results (e.g. user closed dropdown by clicking away):
+      // reopen the panel without blocking further explicit search actions.
       if (query === localSearchQuery && type === localSearchType && searchResults.length > 0) {
+        setShowSearchDropdown(true)
         return
       }
 

@@ -167,10 +167,12 @@ describe('AddNoteModal', () => {
       expect(screen.getByText('+380501234567')).toBeInTheDocument()
     })
 
-    it('should show only Type dropdown initially', () => {
+    it('should show Type and Channel by default (Outgoing pre-selected)', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
-      expect(screen.getByLabelText('Type')).toBeInTheDocument()
-      expect(screen.queryByLabelText('Channel')).not.toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByRole('combobox', { name: 'Type' })).toHaveTextContent('Outgoing')
+      })
+      expect(screen.getByRole('combobox', { name: 'Channel' })).toBeInTheDocument()
       expect(screen.queryByLabelText('Contact type')).not.toBeInTheDocument()
       expect(screen.queryByLabelText('Result')).not.toBeInTheDocument()
     })
@@ -180,13 +182,15 @@ describe('AddNoteModal', () => {
     it('should display type options from API', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
+      await waitFor(() => {
+        expect(screen.getByRole('combobox', { name: 'Type' })).toHaveTextContent('Outgoing')
+      })
+
       fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
 
-      await waitFor(() => {
-        expect(screen.getByText('Incoming')).toBeInTheDocument()
-        expect(screen.getByText('Outgoing')).toBeInTheDocument()
-        expect(screen.getByText('Searching')).toBeInTheDocument()
-      })
+      expect(await screen.findByRole('option', { name: 'Incoming' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'Outgoing' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'Searching' })).toBeInTheDocument()
     })
 
     it('should show loading state while fetching types', () => {
@@ -420,6 +424,11 @@ describe('AddNoteModal', () => {
 
   describe('Form Validation', () => {
     it('should not submit when type is not selected', async () => {
+      vi.mocked(useNoteInteractionModule.useInteractionTypes).mockReturnValue({
+        data: [],
+        isLoading: false,
+      } as never)
+
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
       fireEvent.click(screen.getByRole('button', { name: /save/i }))

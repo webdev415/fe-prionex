@@ -804,6 +804,8 @@
         "dpdRange": "Діапазон DPD",
         "amountOfDebtRange": "Сума окремого боргу",
         "dateOfSale": "Дата продажу боргу",
+        "promiseDate": "Обіцянка",
+        "callbackDate": "Зворотний дзвінок",
         "portfolio": "Кредитор/Продавець",
         "status": "Статус",
         "responsibleEmployee": "Відповідальний співробітник",
