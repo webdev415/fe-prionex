@@ -75,6 +75,13 @@ describe('CallDialogModal', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
+    // Mock useHangupCall hook
+    vi.mocked(useCallHook.useHangupCall).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
     // Mock useCallStore hook
     vi.mocked(callStoreModule.useCallStore).mockReturnValue({
       setMinimizedCall: mockSetMinimizedCall,
