@@ -146,6 +146,7 @@ export function ClientDetailPage() {
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
+  const activeProjectId = useAuthStore((state) => Number(state.user?.active_project_id ?? 1))
   const {
     user,
     isCallModalOpen,
@@ -1372,9 +1373,22 @@ export function ClientDetailPage() {
                 <div className="flex items-center justify-between gap-2 self-stretch">
                   <div className="flex flex-1 flex-wrap items-center gap-2">
                     {clientTags && clientTags.length > 0 ? (
-                      clientTags.map((tag) => (
-                        <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
-                      ))
+                      <>
+                        {clientTags.slice(0, 3).map((tag) => (
+                          <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
+                        ))}
+                        {clientTags.length > 3 && (
+                          <button
+                            type="button"
+                            onClick={() => setIsTagModalOpen(true)}
+                            className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200"
+                          >
+                            {t('pages.tags.showMore', '+{{count}} more', {
+                              count: clientTags.length - 3,
+                            })}
+                          </button>
+                        )}
+                      </>
                     ) : (
                       <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                         {t('pages.clients.detail.noTagsAssigned')}
@@ -1385,7 +1399,7 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setIsTagModalOpen(true)}
                       className="shrink-0 text-gray-500 transition-colors hover:text-gray-700"
-                      title="Manage tags"
+                      title={t('pages.tags.manageTags', 'Manage tags')}
                       type="button"
                     >
                       <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
@@ -3250,7 +3264,7 @@ export function ClientDetailPage() {
           open={isTagModalOpen}
           clientId={clientId}
           clientName={client.fullName}
-          projectId={1}
+          projectId={activeProjectId}
           onClose={() => setIsTagModalOpen(false)}
         />
 

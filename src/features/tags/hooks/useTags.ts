@@ -7,7 +7,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { tagsApi } from '../api/tagsApi'
-import type { TagCreate, TagUpdate } from '../types'
+import type {
+  TagCreate,
+  TagDefinitionCreate,
+  TagDefinitionUpdate,
+  TagRuleCreate,
+  TagRuleUpdate,
+  SegmentCreate,
+  SegmentUpdate,
+  SegmentCondition,
+} from '../types'
 
 /**
  * Query key factory for tags queries
@@ -18,6 +27,10 @@ export const tagsKeys = {
   list: (projectId?: number) => [...tagsKeys.lists(), { projectId }] as const,
   details: () => [...tagsKeys.all, 'detail'] as const,
   detail: (id: number) => [...tagsKeys.details(), id] as const,
+  rules: () => ['rules'] as const,
+  segments: () => ['segments'] as const,
+  clientState: (clientId: number) => ['clientState', clientId] as const,
+  clientHistory: (clientId: number) => ['clientTagHistory', clientId] as const,
 }
 
 /**
@@ -59,7 +72,8 @@ export function useUpdateTag() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: TagUpdate }) => tagsApi.updateTag(id, data),
+    mutationFn: ({ id, data }: { id: number; data: TagDefinitionUpdate }) =>
+      tagsApi.updateTag(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.lists() })
       toast.success('Tag updated successfully')
@@ -159,6 +173,190 @@ export function useBulkTagClients() {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to update tags')
+    },
+  })
+}
+
+// ============================================================================
+// Extended Hooks (Rules, Segments, State)
+// ============================================================================
+
+/**
+ * Create tag with extended fields
+ */
+export function useCreateTagExtended() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: TagDefinitionCreate) => tagsApi.createTagExtended(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tagsKeys.lists() })
+      toast.success('Tag created successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to create tag')
+    },
+  })
+}
+
+/**
+ * Get client tag history
+ */
+export function useClientTagHistory(clientId: number) {
+  return useQuery({
+    queryKey: tagsKeys.clientHistory(clientId),
+    queryFn: () => tagsApi.getClientTagHistory(clientId),
+    enabled: !!clientId,
+    staleTime: 2 * 60 * 1000,
+  })
+}
+
+/**
+ * Get client state (aggregated from active tags)
+ */
+export function useClientState(clientId: number) {
+  return useQuery({
+    queryKey: tagsKeys.clientState(clientId),
+    queryFn: () => tagsApi.getClientState(clientId),
+    enabled: !!clientId,
+    staleTime: 2 * 60 * 1000,
+  })
+}
+
+// --- Rules ---
+
+export function useTagRules(params?: {
+  trigger_type?: string
+  is_active?: boolean
+  enabled?: boolean
+}) {
+  const { enabled = true, ...queryParams } = params ?? {}
+  return useQuery({
+    queryKey: [...tagsKeys.rules(), queryParams],
+    queryFn: () => tagsApi.getRules(queryParams),
+    staleTime: 5 * 60 * 1000,
+    enabled,
+  })
+}
+
+export function useCreateRule() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: TagRuleCreate) => tagsApi.createRule(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tagsKeys.rules() })
+      toast.success('Rule created successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to create rule')
+    },
+  })
+}
+
+export function useUpdateRule() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: TagRuleUpdate }) => tagsApi.updateRule(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tagsKeys.rules() })
+      toast.success('Rule updated successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update rule')
+    },
+  })
+}
+
+export function useDeleteRule() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) => tagsApi.deleteRule(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tagsKeys.rules() })
+      toast.success('Rule deleted successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete rule')
+    },
+  })
+}
+
+// --- Segments ---
+
+export function useSegments(params?: { is_active?: boolean; enabled?: boolean }) {
+  const { enabled = true, ...queryParams } = params ?? {}
+  return useQuery({
+    queryKey: [...tagsKeys.segments(), queryParams],
+    queryFn: () => tagsApi.getSegments(queryParams),
+    staleTime: 5 * 60 * 1000,
+    enabled,
+  })
+}
+
+export function useCreateSegment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: SegmentCreate) => tagsApi.createSegment(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tagsKeys.segments() })
+      toast.success('Segment created successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to create segment')
+    },
+  })
+}
+
+export function useUpdateSegment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: SegmentUpdate }) =>
+      tagsApi.updateSegment(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tagsKeys.segments() })
+      toast.success('Segment updated successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update segment')
+    },
+  })
+}
+
+export function useDeleteSegment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) => tagsApi.deleteSegment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tagsKeys.segments() })
+      toast.success('Segment deleted successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete segment')
+    },
+  })
+}
+
+export function usePreviewSegment() {
+  return useMutation({
+    mutationFn: (conditions: Omit<SegmentCondition, 'id' | 'segment_id'>[]) =>
+      tagsApi.previewSegment(conditions),
+  })
+}
+
+export function useRefreshSegment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: number) => tagsApi.refreshSegment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tagsKeys.segments() })
+      toast.success('Segment refreshed')
     },
   })
 }
