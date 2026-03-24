@@ -43,6 +43,13 @@ export interface SearchResponse {
   search_type: string
 }
 
+export interface PhoneLinkedClient {
+  id: number
+  first_name: string
+  last_name: string
+  middle_name?: string | null
+}
+
 /**
  * Search params for the API call
  */
@@ -71,6 +78,18 @@ export async function searchClients(params: SearchParams): Promise<SearchRespons
       limit: params.limit || 10,
     },
   })
+  return response.data
+}
+
+/**
+ * Search clients by exact phone number match.
+ *
+ * Uses backend endpoint optimized for exact phone lookup in client contacts.
+ */
+export async function searchClientsByPhoneExact(phone: string): Promise<PhoneLinkedClient[]> {
+  const response = await api.get<PhoneLinkedClient[]>(
+    `/api/v1/clients/phone/${encodeURIComponent(phone)}`
+  )
   return response.data
 }
 

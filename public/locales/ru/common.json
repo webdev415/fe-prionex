@@ -949,6 +949,7 @@
         "addedBy": "Добавил",
         "addedDate": "Дата",
         "phoneType": "Тип",
+        "linkedContact": "Связанный контакт",
         "comment": "Комментарий",
         "registrationAddress": "Адрес регистрации",
         "personalAddress": "Личный адрес",
