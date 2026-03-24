@@ -14,6 +14,7 @@ export interface SearchResult {
   name: string
   debt: string
   phone: string
+  email: string
   priority: 'Critical' | 'High' | 'Medium' | 'Low'
   score: number
 }
@@ -122,6 +123,9 @@ export function SearchResults({
                   <div className="truncate">
                     {t('search.phone')}: {result.phone}
                   </div>
+                  {result.email && (
+                    <div className="max-w-[200px] truncate text-gray-400">{result.email}</div>
+                  )}
                 </div>
               </div>
               <div className="flex flex-row items-center gap-2 sm:flex-col sm:items-end sm:gap-2">
