@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
-import { formatDate } from '@/lib/formatters'
+import { formatDate, formatDateTime } from '@/lib/formatters'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
@@ -146,11 +146,13 @@ export function ClientDetailPage() {
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
+  const activeProjectId = useAuthStore((state) => Number(state.user?.active_project_id ?? 1))
   const {
     user,
     isCallModalOpen,
     setIsCallModalOpen,
     currentCallId,
+    activeCallType,
     callError,
     isOriginatingCall,
     handleOriginateCall,
@@ -347,26 +349,72 @@ export function ClientDetailPage() {
         status: d.status,
       })),
       // Payments mapped from PaymentResponse to UI shape
-      // Build a quick lookup from loan contract_number -> formatted sale date
-      // so payments can show the sale date when available.
-      payments: (() => {
+      // Split into system payments (payment_date >= purchase_date) and
+      // primary creditor payments (payment_date < purchase_date).
+      ...(() => {
+        // Build lookups from loan contract_number -> formatted sale date & raw purchase_date
         const loanSaleDateMap = new Map<string, string>()
+        const loanPurchaseDateMap = new Map<string, string>()
         ;(loans ?? []).forEach((d) => {
-          if (d.contract_number)
+          if (d.contract_number) {
             loanSaleDateMap.set(d.contract_number, formatDate(d.purchase_date ?? undefined))
+            if (d.purchase_date) loanPurchaseDateMap.set(d.contract_number, d.purchase_date)
+          }
         })
-        return (paymentsSection?.payments ?? []).map((p) => ({
-          id: p.id,
-          loanNumber: p.debt_contract_number ?? p.payment_number,
-          counterparty: p.seller_name ?? '-',
-          saleDate: loanSaleDateMap.get(p.debt_contract_number ?? '') ?? '-',
-          paymentDate: formatDate(p.payment_date ?? undefined),
-          amount: Number(p.amount),
-          paymentMethod: p.payment_method,
-          status: p.status,
-          paymentDistribution: p.payment_type ?? '-',
-          employee: p.recorded_by_username ?? '-',
-        }))
+
+        const systemPayments: Array<{
+          id: number
+          loanNumber: string
+          counterparty: string
+          saleDate: string
+          paymentDate: string
+          amount: number
+          paymentMethod: string
+          status: string
+          paymentDistribution: string
+          employee: string
+        }> = []
+        const creditorPayments: Array<{
+          id: number
+          loanNumber: string
+          counterparty: string
+          saleDate: string
+          paymentDate: string
+          amount: number
+          distributionMethod: string
+        }> = []
+
+        ;(paymentsSection?.payments ?? []).forEach((p) => {
+          const contractNum = p.debt_contract_number ?? ''
+          const purchaseDate = loanPurchaseDateMap.get(contractNum)
+          const isBeforePurchase = purchaseDate && p.payment_date && p.payment_date < purchaseDate
+
+          const mapped = {
+            id: p.id,
+            loanNumber: p.debt_contract_number ?? p.payment_number,
+            counterparty: p.seller_name ?? '-',
+            saleDate: loanSaleDateMap.get(contractNum) ?? '-',
+            paymentDate: formatDate(p.payment_date ?? undefined),
+            amount: Number(p.amount),
+          }
+
+          if (isBeforePurchase) {
+            creditorPayments.push({
+              ...mapped,
+              distributionMethod: p.payment_type ?? '-',
+            })
+          } else {
+            systemPayments.push({
+              ...mapped,
+              paymentMethod: p.payment_method,
+              status: p.status,
+              paymentDistribution: p.payment_type ?? '-',
+              employee: p.recorded_by_username ?? '-',
+            })
+          }
+        })
+
+        return { payments: systemPayments, paymentsToPrimaryCreditor: creditorPayments }
       })(),
       // Write-offs mapped
       writesOffs: (paymentsSection?.writesOffs ?? []).map((w) => ({
@@ -379,17 +427,6 @@ export function ClientDetailPage() {
         writeOffMethod: w.writeoff_type ?? '-',
         employee: w.submitted_by_name ?? '-',
       })),
-      // Primary Creditor Payments - Not yet implemented (Phase 8)
-      // Backend API endpoint pending - will be added when primary creditor payment service is implemented
-      paymentsToPrimaryCreditor: [] as Array<{
-        id: number
-        loanNumber: string
-        counterparty: string
-        saleDate: string
-        paymentDate: string
-        amount: number
-        distributionMethod: string
-      }>,
       callSmsHistory: callSmsHistory ?? { all: [], calls: [], sms: [] },
       // Tasks mapped from TaskResponse to UI shape
       tasks: (tasks ?? []).map((t) => ({
@@ -433,7 +470,7 @@ export function ClientDetailPage() {
         )
         .items.map((a) => ({
           id: a.id,
-          date: formatDate(a.interaction_date),
+          date: formatDateTime(a.created_at),
           type: a.type_code
             ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
             : (a.type_name ?? '-'),
@@ -868,9 +905,9 @@ export function ClientDetailPage() {
   const activityColumns: Column<(typeof client.activities)[0]>[] = [
     {
       key: 'date',
-      header: t('pages.clients.activity.tableHeaders.date'),
+      header: t('pages.clients.activity.tableHeaders.dateAndTime', 'Date & Time'),
       align: 'left',
-      className: 'w-[90px] overflow-hidden whitespace-normal',
+      className: 'min-w-[118px] w-[128px] overflow-hidden whitespace-normal',
     },
     {
       key: 'type',
@@ -936,7 +973,7 @@ export function ClientDetailPage() {
         <div className="flex flex-col gap-0.5">
           <span className="text-dark-500 text-xs font-medium">{activity.employee}</span>
           {activity.updated_at && (
-            <span className="text-[10px] text-gray-400">{formatDate(activity.updated_at)}</span>
+            <span className="text-[10px] text-gray-400">{formatDateTime(activity.updated_at)}</span>
           )}
         </div>
       ),
@@ -1336,9 +1373,22 @@ export function ClientDetailPage() {
                 <div className="flex items-center justify-between gap-2 self-stretch">
                   <div className="flex flex-1 flex-wrap items-center gap-2">
                     {clientTags && clientTags.length > 0 ? (
-                      clientTags.map((tag) => (
-                        <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
-                      ))
+                      <>
+                        {clientTags.slice(0, 3).map((tag) => (
+                          <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
+                        ))}
+                        {clientTags.length > 3 && (
+                          <button
+                            type="button"
+                            onClick={() => setIsTagModalOpen(true)}
+                            className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200"
+                          >
+                            {t('pages.tags.showMore', '+{{count}} more', {
+                              count: clientTags.length - 3,
+                            })}
+                          </button>
+                        )}
+                      </>
                     ) : (
                       <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                         {t('pages.clients.detail.noTagsAssigned')}
@@ -1349,7 +1399,7 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setIsTagModalOpen(true)}
                       className="shrink-0 text-gray-500 transition-colors hover:text-gray-700"
-                      title="Manage tags"
+                      title={t('pages.tags.manageTags', 'Manage tags')}
                       type="button"
                     >
                       <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
@@ -3148,6 +3198,7 @@ export function ClientDetailPage() {
           clientName={client.fullName}
           phoneNumber={selectedPhoneForCall || client.phones?.[0]?.number || ''}
           callId={currentCallId}
+          initialCallType={activeCallType}
           initialState="initial"
           error={callError}
           isLoading={isOriginatingCall}
@@ -3213,7 +3264,7 @@ export function ClientDetailPage() {
           open={isTagModalOpen}
           clientId={clientId}
           clientName={client.fullName}
-          projectId={1}
+          projectId={activeProjectId}
           onClose={() => setIsTagModalOpen(false)}
         />
 

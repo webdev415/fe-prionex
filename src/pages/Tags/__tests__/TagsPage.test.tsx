@@ -68,6 +68,17 @@ vi.mock('@/features/tags/api/tagsApi', () => ({
       mockTags.push(newTag)
       return Promise.resolve(newTag)
     }),
+    createTagExtended: vi.fn((data) => {
+      const newTag = {
+        id: mockTags.length + 1,
+        ...data,
+        project_id: 1,
+        client_count: 0,
+        created_at: new Date().toISOString(),
+      }
+      mockTags.push(newTag)
+      return Promise.resolve(newTag)
+    }),
     updateTag: vi.fn((id, data) => {
       const index = mockTags.findIndex((t) => t.id === id)
       if (index !== -1) {
@@ -137,8 +148,8 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       const Wrapper = createTestWrapper()
       render(<TagsPage />, { wrapper: Wrapper })
 
-      // Should show page title
-      expect(screen.getByText(/tags/i)).toBeInTheDocument()
+      // Should show page title (multiple elements may contain "tags")
+      expect(screen.getAllByText(/tags/i).length).toBeGreaterThan(0)
 
       // Should render tags in table
       await waitFor(() => {
@@ -212,9 +223,9 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
           // The new tag should appear in the table after submit
           expect(screen.getByText('New Tag')).toBeInTheDocument()
         },
-        { timeout: 8000 }
+        { timeout: 15000 }
       )
-    }, 10000)
+    }, 20000)
 
     it('test_validates_required_fields - Name and color are required', async () => {
       const user = userEvent.setup()

@@ -345,7 +345,15 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           onMinimize={handleMinimizeCall}
           clientName={minimizedCall.clientName}
           phoneNumber={minimizedCall.phoneNumber}
+          callId={minimizedCall.callId}
           initialState={minimizedCall.callState || 'initial'}
+          initialElapsedTime={minimizedCall.elapsedTime ?? 0}
+          minimizedAt={
+            minimizedCall.callState === 'dialing' || minimizedCall.callState === 'connected'
+              ? minimizedCall.timestamp
+              : undefined
+          }
+          initialCallType={minimizedCall.callType || 'white-line'}
         />
       )}
 
@@ -445,8 +453,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         return
       }
 
-      // Only search if query or type actually changed
+      // Same query/type with cached results (e.g. user closed dropdown by clicking away):
+      // reopen the panel without blocking further explicit search actions.
       if (query === localSearchQuery && type === localSearchType && searchResults.length > 0) {
+        setShowSearchDropdown(true)
         return
       }
 

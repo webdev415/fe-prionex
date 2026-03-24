@@ -17,9 +17,19 @@ export interface ModalProps {
   children: ReactNode
   className?: string
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full'
+  showCloseButton?: boolean
+  preventOutsideClose?: boolean
 }
 
-export function Modal({ open, onClose, children, className, maxWidth = 'md' }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  children,
+  className,
+  maxWidth = 'md',
+  showCloseButton = true,
+  preventOutsideClose = false,
+}: ModalProps) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(open) => !open && onClose()}>
       <DialogPrimitive.Portal>
@@ -30,6 +40,8 @@ export function Modal({ open, onClose, children, className, maxWidth = 'md' }: M
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
           <DialogPrimitive.Content
             aria-describedby={undefined}
+            onInteractOutside={preventOutsideClose ? (e) => e.preventDefault() : undefined}
+            onEscapeKeyDown={preventOutsideClose ? (e) => e.preventDefault() : undefined}
             className={cn(
               'bg-light-50 relative z-50 max-h-[90vh] w-full rounded-lg shadow-xl',
               'p-4 sm:p-6 md:p-8 lg:p-10', // Responsive padding
@@ -49,14 +61,16 @@ export function Modal({ open, onClose, children, className, maxWidth = 'md' }: M
               className
             )}
           >
-            <DialogPrimitive.Close asChild>
-              <button
-                className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100 sm:top-4 sm:right-4"
-                aria-label="Close modal"
-              >
-                <Icon icon={Cancel01Icon} size={18} className="text-dark-500" strokeWidth={1.5} />
-              </button>
-            </DialogPrimitive.Close>
+            {showCloseButton && (
+              <DialogPrimitive.Close asChild>
+                <button
+                  className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100 sm:top-4 sm:right-4"
+                  aria-label="Close modal"
+                >
+                  <Icon icon={Cancel01Icon} size={18} className="text-dark-500" strokeWidth={1.5} />
+                </button>
+              </DialogPrimitive.Close>
+            )}
             {children}
           </DialogPrimitive.Content>
         </div>

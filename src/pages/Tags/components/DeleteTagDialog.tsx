@@ -10,6 +10,7 @@ import type { Tag } from '@/features/tags'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
+import { TagBadge } from '@/components/ui/TagBadge'
 import { Icons } from '@/lib/icons'
 
 interface DeleteTagDialogProps {
@@ -52,17 +53,7 @@ export function DeleteTagDialog({ open, tag, onClose, onSuccess }: DeleteTagDial
           </p>
 
           {/* Tag Preview */}
-          <div
-            className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium"
-            style={{
-              backgroundColor: tag.color + '20',
-              borderColor: tag.color,
-              color: tag.color,
-            }}
-          >
-            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: tag.color }} />
-            <span>{tag.name}</span>
-          </div>
+          <TagBadge name={tag.name} color={tag.color} size="md" />
 
           {/* Usage Warning */}
           {hasClients && (

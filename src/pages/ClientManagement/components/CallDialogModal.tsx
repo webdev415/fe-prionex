@@ -30,8 +30,11 @@ export interface CallDialogModalProps {
   onClose: () => void
   clientName: string
   phoneNumber: string
+  initialCallType?: CallType
   callId?: string | null // Optional call ID for tracking real-time call state
   initialState?: CallState
+  initialElapsedTime?: number // Initial elapsed time in seconds (used when restoring from minimized)
+  minimizedAt?: number // Timestamp (ms) when call was minimized — used to compute extra elapsed time
   error?: string | null // Error message to display when call fails
   isLoading?: boolean // Loading state for call initiation
   onCallStart?: (callType: CallType) => void
@@ -68,8 +71,11 @@ export function CallDialogModal({
   onClose,
   clientName,
   phoneNumber,
+  initialCallType = 'white-line',
   callId,
   initialState = 'initial',
+  initialElapsedTime = 0,
+  minimizedAt,
   error,
   isLoading,
   onCallStart,
@@ -109,7 +115,14 @@ export function CallDialogModal({
   }, [open, setOpenCallModal, minimizedCall])
   const [callState, setCallState] = useState<CallState>(initialState)
   const [callType, setCallType] = useState<CallType>('white-line')
-  const [elapsedTime, setElapsedTime] = useState(0)
+  // Lazy initializer: runs once on mount. minimizedAt lets us resume the timer
+  // from where it left off when restoring a minimized call.
+  const [elapsedTime, setElapsedTime] = useState(() => {
+    if (minimizedAt) {
+      return initialElapsedTime + Math.floor((Date.now() - minimizedAt) / 1000)
+    }
+    return initialElapsedTime
+  })
   const [isMuted, setIsMuted] = useState(false)
   const [isOnHold, setIsOnHold] = useState(false)
   const [autoCloseCountdown, setAutoCloseCountdown] = useState(3)
@@ -122,7 +135,12 @@ export function CallDialogModal({
     if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCallState(initialState)
-      setElapsedTime(0)
+      // Account for time passed while minimized
+      const correctedTime = minimizedAt
+        ? (initialElapsedTime ?? 0) + Math.floor((Date.now() - minimizedAt) / 1000)
+        : (initialElapsedTime ?? 0)
+      setElapsedTime(correctedTime)
+      setCallType(initialCallType)
       setIsMuted(false)
       setIsOnHold(false)
       setAutoCloseCountdown(3)
@@ -141,7 +159,14 @@ export function CallDialogModal({
         dialingTimeoutRef.current = null
       }
     }
-  }, [open, initialState])
+  }, [open, initialState, initialElapsedTime, initialCallType, minimizedAt])
+
+  const callLineLabel = useMemo(() => {
+    if (callType === 'gray-line') {
+      return t('pages.clients.modals.callDialog.grayLine')
+    }
+    return t('pages.clients.modals.callDialog.whiteLine')
+  }, [callType, t])
 
   // Derive call state and elapsed time from backend state
   const derivedState = useMemo(() => {
@@ -264,6 +289,7 @@ export function CallDialogModal({
   }
 
   const handleReject = () => {
+    if (hangupMutation.isPending) return
     // Send hangup command to Asterisk to reject the incoming call
     if (callId) {
       hangupMutation.mutate(callId)
@@ -279,6 +305,7 @@ export function CallDialogModal({
   }
 
   const handleHangUp = () => {
+    if (hangupMutation.isPending) return
     const status: CallStatus = callState === 'connected' ? 'answered' : 'missed'
 
     // Send hangup command to Asterisk if we have a call ID
@@ -298,6 +325,7 @@ export function CallDialogModal({
       type: 'call-dialog',
       clientName,
       phoneNumber,
+      callId: callId || null,
       callState,
       callType,
       elapsedTime,
@@ -333,10 +361,20 @@ export function CallDialogModal({
     onClose()
   }
 
+  const isCallActive =
+    callState === 'dialing' || callState === 'connected' || callState === 'incoming'
+
   // Incoming call popup (different layout)
   if (callState === 'incoming') {
     return (
-      <Modal open={open} onClose={handleClose} maxWidth="xl" className="p-4 sm:p-6">
+      <Modal
+        open={open}
+        onClose={isCallActive ? handleMinimize : handleClose}
+        maxWidth="xl"
+        className="p-4 sm:p-6"
+        showCloseButton={false}
+        preventOutsideClose={isCallActive}
+      >
         {/* Minimize Button */}
         <button
           onClick={handleMinimize}
@@ -446,7 +484,14 @@ export function CallDialogModal({
 
   // Regular call dialog states
   return (
-    <Modal open={open} onClose={handleClose} maxWidth="xl" className="p-4 sm:p-6 md:p-10">
+    <Modal
+      open={open}
+      onClose={isCallActive ? handleMinimize : handleClose}
+      maxWidth="xl"
+      className="p-4 sm:p-6 md:p-10"
+      showCloseButton={false}
+      preventOutsideClose={isCallActive}
+    >
       {/* Minimize Button */}
       <button
         onClick={handleMinimize}
@@ -654,6 +699,12 @@ export function CallDialogModal({
                     ? t('pages.clients.modals.callDialog.dialing')
                     : t('pages.clients.modals.callDialog.activeCall')}
                 </div>
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Icons.Phone size={14} className="text-gray-500" />
+                  <span>
+                    {t('pages.clients.modals.callDialog.callType')}: {callLineLabel}
+                  </span>
+                </div>
               </div>
             )}
 
@@ -669,6 +720,12 @@ export function CallDialogModal({
                   </div>
                   <div className="text-success-500 mt-1 text-sm font-medium">
                     {t('pages.clients.modals.callDialog.answered')}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Icons.Phone size={14} className="text-gray-500" />
+                    <span>
+                      {t('pages.clients.modals.callDialog.callType')}: {callLineLabel}
+                    </span>
                   </div>
                 </div>
                 <div className="text-dark-500 mt-2 text-center text-sm">
@@ -753,6 +810,7 @@ export function CallDialogModal({
                   variant="primary"
                   size="sm"
                   onClick={handleHangUp}
+                  disabled={hangupMutation.isPending}
                   className="bg-primary-300 text-dark-500 hover:bg-primary-400 w-full rounded-md"
                 >
                   <Icons.Call02 size={18} className="mr-2 sm:size-5" />
