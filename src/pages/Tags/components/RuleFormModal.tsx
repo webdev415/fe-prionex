@@ -5,7 +5,7 @@
  * Supports event-based, schedule-based, and other trigger types.
  */
 
-import { useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -79,6 +79,17 @@ function CronPreview({
   if (humanized === expression) return null
   return <p className="text-xs text-green-600">{humanized}</p>
 }
+
+const AVAILABLE_EVENTS = [
+  { value: 'interaction.created', label: 'Створено взаємодію (ЦД)' },
+  { value: 'interaction.result.agreement', label: 'Результат ЦД: Agreement (обіцянка)' },
+  { value: 'interaction.result.refusal', label: 'Результат ЦД: Відмова від оплати' },
+  { value: 'interaction.result.no_contact', label: 'Результат ЦД: Недозвон' },
+  { value: 'payment.received', label: 'Надійшла оплата' },
+  { value: 'payment.debt_closed', label: 'Борг закрито' },
+  { value: 'scoring.calculated', label: 'Розрахований скоринг' },
+  { value: 'client.imported', label: 'Клієнта імпортовано' },
+] as const
 
 const TRIGGER_TYPE_VALUES: RuleTriggerType[] = [
   'event',
@@ -248,11 +259,14 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
     [t]
   )
 
+  const [isCustomEvent, setIsCustomEvent] = useState(false)
+
   const {
     register,
     handleSubmit,
     control,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<RuleFormData>({
@@ -299,6 +313,9 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
         priority: rule?.priority ?? 1,
         is_active: rule?.is_active ?? true,
       })
+      setIsCustomEvent(
+        rule?.trigger_event ? !AVAILABLE_EVENTS.some((e) => e.value === rule.trigger_event) : false
+      )
     }
   }, [open, rule, reset])
 
@@ -477,18 +494,48 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               {/* Trigger Event (if event) */}
               {triggerType === 'event' && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="rule-event">
-                    {t('pages.tags.rules.triggerEvent', 'Event Name')}
-                  </Label>
-                  <Input
-                    id="rule-event"
-                    {...register('trigger_event')}
-                    placeholder={t(
-                      'pages.tags.rules.triggerEventPlaceholder',
-                      'e.g. client.payment_missed'
-                    )}
-                    error={errors.trigger_event?.message}
-                  />
+                  <Label>{t('pages.tags.rules.eventName', 'Название события')}</Label>
+                  <select
+                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                    value={isCustomEvent ? '__custom__' : watch('trigger_event') || ''}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setIsCustomEvent(true)
+                        setValue('trigger_event', '')
+                      } else {
+                        setIsCustomEvent(false)
+                        setValue('trigger_event', e.target.value)
+                      }
+                    }}
+                  >
+                    <option value="">
+                      {t('pages.tags.rules.selectEvent', 'Выберите событие...')}
+                    </option>
+                    {AVAILABLE_EVENTS.map((ev) => (
+                      <option key={ev.value} value={ev.value}>
+                        {ev.label}
+                      </option>
+                    ))}
+                    <option value="__custom__">
+                      {t('pages.tags.rules.customEvent', 'Своё значение...')}
+                    </option>
+                  </select>
+                  {isCustomEvent && (
+                    <Input
+                      {...register('trigger_event')}
+                      placeholder={t(
+                        'pages.tags.fields.triggerEventPlaceholder',
+                        'напр. client.payment_missed'
+                      )}
+                      className="mt-2"
+                    />
+                  )}
+                  {errors.trigger_event?.message && (
+                    <p className="text-error-500 text-xs">{errors.trigger_event.message}</p>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    {t('pages.tags.rules.eventHint', 'Выберите системное событие или введите своё')}
+                  </p>
                 </div>
               )}
 

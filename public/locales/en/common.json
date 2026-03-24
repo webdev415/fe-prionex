@@ -2047,14 +2047,20 @@
       "tabs": {
         "dictionary": "Dictionary",
         "segments": "Segments",
-        "rules": "Rules"
+        "rules": "Rules",
+        "groups": "Groups"
       },
       "tableHeaders": {
         "name": "Tag Name",
         "project": "Project",
         "description": "Description",
         "clients": "Clients",
-        "actions": "Actions"
+        "actions": "Actions",
+        "code": "Code",
+        "category": "Category",
+        "visibility": "Visibility",
+        "origin": "Origin",
+        "active": "Active"
       },
       "fields": {
         "name": "Name",
@@ -2082,6 +2088,30 @@
         "protectedRoles": "Roles allowed to remove",
         "expiryType": "Expiry Type",
         "loanClosureNote": "Tag will be automatically removed when the client's loan is closed",
+        "expiryDate": "Expiry date and time",
+        "expiryDateHint": "Fixed date when the tag expires",
+        "mutexGroupNone": "None",
+        "mutexGroupCustom": "Custom group...",
+        "mutexGroupCustomPlaceholder": "Enter new group name",
+        "tooltips": {
+          "name": "Displayed name. Should be short and clear.",
+          "code": "Unique identifier for API and rules. Auto-generated from name.",
+          "category": "Groups by purpose: status, risk, communication, behavior, system, custom.",
+          "visibility": "UI = visible to operators, Analytics = reports only, System = hidden.",
+          "expiryType": "Permanent = forever. TTL = removed after set time. Loan closure = removed when loan is closed.",
+          "protectedTag": "Only selected roles can remove this tag.",
+          "mutexGroup": "Tags in the same group are mutually exclusive. Assigning one removes others."
+        },
+        "notificationTemplatePlaceholder": "e.g. Tag '{tag_name}' assigned to client {client_id}",
+        "codePlaceholder": "e.g. high_risk",
+        "ttlHoursPlaceholder": "e.g. 24, 48, 168, 720",
+        "orDurationInHours": "or duration in hours",
+        "availableVariables": "Available variables:",
+        "varClientId": "Client ID",
+        "varClientName": "Client name",
+        "varTagName": "Tag name",
+        "varTagCode": "Tag code",
+        "varAction": "Action (assigned/removed)",
         "validation": {
           "nameRequired": "Name is required",
           "nameMaxLength": "Name must be 50 characters or less",
@@ -2107,10 +2137,21 @@
         "requestedBy": "Requested by",
         "reason": "Reason"
       },
+      "origins": {
+        "system": "System",
+        "custom": "Custom"
+      },
       "actions": {
         "edit": "Edit",
-        "delete": "Delete"
+        "delete": "Delete",
+        "deactivate": "Deactivate",
+        "reactivate": "Reactivate"
       },
+      "deactivateTag": "Deactivate Tag",
+      "deactivateConfirmation": "Are you sure you want to deactivate tag \"{{name}}\"?",
+      "deactivateWarningMessage": "This tag is assigned to {{count}} client(s). Deactivating will hide it but preserve history.",
+      "deactivateNotice": "The tag can be reactivated later.",
+      "deactivating": "Deactivating...",
       "deleteTag": "Delete Tag",
       "deleteConfirmation": "Are you sure you want to delete this tag?",
       "usageWarning": "This tag is currently in use",
@@ -2190,6 +2231,25 @@
           "legal": "Legal Proceedings",
           "new_no_risk": "New Without Risk"
         }
+      },
+      "groups": {
+        "name": "Group",
+        "description": "Description",
+        "tags": "Tags in group",
+        "clients": "Clients",
+        "noGroups": "No mutex groups defined",
+        "mutexNote": "Only one tag from this group can be active per client at a time",
+        "createGroup": "Create Group",
+        "groupName": "Group name",
+        "groupNamePlaceholder": "e.g. payment_agreement",
+        "groupDescription": "Description (optional)",
+        "groupDescriptionPlaceholder": "e.g. Payment agreement type",
+        "selectTags": "Select tags for this group",
+        "tagAlreadyInGroup": "Already in group \"{{group}}\"",
+        "removeFromGroup": "Remove from group",
+        "creating": "Creating group...",
+        "onlyOneActive": "Only one tag from this group can be active per client at a time",
+        "groupNameRule": "Lowercase letters, numbers and underscores only"
       },
       "rules": {
         "name": "Name",
@@ -2310,7 +2370,13 @@
         "dictionaryBanner": "System tags for debt collection are pre-configured. You can also create custom tags.",
         "segmentsBanner": "Segments are saved client groups based on tag conditions. Example: \"High Risk + Active Debt\" = all clients with both tags. Conditions in a group are combined with AND, groups — with OR.",
         "rulesBanner": "Rules automatically add or remove tags when conditions are met. They can trigger on events (payment received), schedules (daily at 9:00), or scoring changes."
-      }
+      },
+      "mutexGroupDescriptions": {
+        "risk_level": "Risk Level",
+        "payment_status": "Payment Status"
+      },
+      "helpBanner": "Need help configuring tags?",
+      "helpLink": "View documentation"
     },
     "sellers": {
       "title": "Seller Management",

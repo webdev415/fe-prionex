@@ -38,6 +38,8 @@ export function Modal({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
           <DialogPrimitive.Content
             aria-describedby={undefined}
+            onPointerDownOutside={(e) => e.preventDefault()}
+            onInteractOutside={(e) => e.preventDefault()}
             className={cn(
               'bg-light-50 relative z-50 max-h-[90vh] w-full rounded-lg shadow-xl',
               'p-4 sm:p-6 md:p-8 lg:p-10', // Responsive padding

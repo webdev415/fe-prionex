@@ -9,8 +9,9 @@ Modern React-based frontend application for the Prionex CRM system, built with T
 - **Vite** - Fast build tool and dev server
 - **TanStack Query (React Query)** - Server state management
 - **Zustand** - Client state management
-- **React Router** - Routing
-- **Tailwind CSS** - Utility-first CSS
+- **React Router 7** - Routing
+- **Tailwind CSS 4** - Utility-first CSS
+- **i18next** - Internationalization (en, uk, ru)
 - **Radix UI** - Accessible component primitives
 - **React Hook Form** - Form management
 - **Zod** - Schema validation
@@ -26,7 +27,7 @@ Modern React-based frontend application for the Prionex CRM system, built with T
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/CRM-Prionex/fe-prionex.git
    cd fe-prionex
    ```
 
@@ -65,7 +66,17 @@ fe-prionex/
 │   │   ├── auth/            # Authentication
 │   │   ├── users/           # User management
 │   │   ├── roles/           # Role management
-│   │   └── projects/        # Project management
+│   │   ├── projects/        # Project management
+│   │   ├── clients/         # Client management
+│   │   ├── tags/            # Tag management
+│   │   ├── sms/             # SMS templates
+│   │   ├── imports/         # Data import
+│   │   ├── report/          # Reports dashboard
+│   │   ├── payments/        # Payment management
+│   │   ├── audit/           # Audit logs
+│   │   ├── calls/           # Call operations
+│   │   ├── departments/     # Department management
+│   │   └── sellers/         # Seller management
 │   ├── pages/               # Page components
 │   ├── routes/              # Route configuration
 │   ├── lib/                 # Utilities and helpers
@@ -118,27 +129,22 @@ docker-compose down
 
 The app will be available at `http://localhost:3000` with hot reload enabled.
 
-### Production
+### Server Deployment
+
+| Environment | Server | Port | URL |
+|-------------|--------|------|-----|
+| Pre-production | 72.62.17.132 | 8080 | dev.crm-prionex.online |
+| Production | 175.110.122.17 | 8080 | crm-prionex.online |
+
 ```bash
-# Build and start
-docker-compose -f docker-compose.prod.yml up --build -d
+# Build production image
+docker build -f Dockerfile.prod -t fe-prionex .
 
-# View logs
-docker-compose -f docker-compose.prod.yml logs -f frontend
-
-# Stop
-docker-compose -f docker-compose.prod.yml down
+# Deploy via docker-compose.server.yml (from api-prionex/)
+docker compose -f docker-compose.server.yml up -d fe-prionex
 ```
 
-The app will be available at `http://localhost:80` (or your configured port).
-
-**Environment Variables:**
-- Set `VITE_API_BASE_URL` in `.env` file or pass via environment:
-  ```bash
-  VITE_API_BASE_URL=http://your-api-url:8000 docker-compose -f docker-compose.prod.yml up -d
-  ```
-
-**Note:** For production, the build process happens inside the Docker container, so environment variables must be set at build time. You can use a `.env` file or pass them via `docker-compose` environment section.
+**Note:** `VITE_API_BASE_URL` must be set at build time. Use `.env` or pass via `docker-compose` environment.
 
 ## 📝 Available Scripts
 
@@ -157,16 +163,22 @@ The app will be available at `http://localhost:80` (or your configured port).
 ## 🎨 Features
 
 ### Implemented
-- ✅ User authentication (login, logout, session management)
-- ✅ User management (CRUD operations)
-- ✅ Role management (CRUD, permissions)
-- ✅ Project management (CRUD)
-- ✅ Toast notifications
-- ✅ Error boundaries
-- ✅ Consistent error handling
-- ✅ Loading states
-- ✅ Responsive design
-- ✅ Internationalization (i18n)
+- User authentication (login, logout, session management)
+- User management (CRUD operations)
+- Role management (CRUD, permissions)
+- Project management (CRUD)
+- Client management
+- Tag management (assign, remove, bulk operations)
+- SMS templates
+- Data import (CSV upload)
+- Reports dashboard (KPIs, operator performance)
+- Payment management
+- Scoring configuration
+- Audit logs
+- Call operations (dialer integration)
+- Department & seller management
+- Internationalization (i18n): English, Ukrainian, Russian
+- Toast notifications, error boundaries, responsive design
 
 ### Architecture Highlights
 - **Feature-based organization** - Code organized by domain
@@ -210,9 +222,9 @@ Required:
 
 ## 📄 License
 
-[Your License Here]
+Proprietary - CRM Prionex
 
 ## 🔗 Related
 
 - [Backend API Documentation](../api-prionex/README.md)
-- [Design System Documentation](../prionex-docs/docs/design/)
+- [Design Patterns](DESIGN_PATTERNS.md)

@@ -5,7 +5,7 @@
  * Uses react-hook-form + zod for validation.
  */
 
-import { useEffect, useCallback, useMemo, useState } from 'react'
+import { useEffect, useCallback, useMemo, useState, useRef } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -24,6 +24,7 @@ import {
   SelectItem,
 } from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/Tooltip'
 import { ConditionBuilder } from './ConditionBuilder'
 import { useCreateSegment, useUpdateSegment, usePreviewSegment } from '@/features/tags'
 import type { Segment, SegmentCondition, SegmentRefreshMode, Tag } from '@/features/tags'
@@ -189,6 +190,26 @@ type SegmentFormData = {
   refresh_mode: SegmentRefreshMode
 }
 
+/**
+ * Small info icon with tooltip for field labels
+ */
+function FieldTooltip({ text }: { text: string }) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="ml-1 inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-gray-200 text-[10px] font-bold text-gray-500">
+            ?
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
+          {text}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
+
 export function SegmentFormModal({
   open,
   segment,
@@ -201,6 +222,7 @@ export function SegmentFormModal({
 
   const [conditions, setConditions] = useState<SegmentCondition[]>([])
   const [previewCount, setPreviewCount] = useState<number | null>(null)
+  const codeManuallyEdited = useRef(false)
 
   const createMutation = useCreateSegment()
   const updateMutation = useUpdateSegment()
@@ -251,9 +273,9 @@ export function SegmentFormModal({
 
   const nameValue = watch('name') // eslint-disable-line react-hooks/incompatible-library
 
-  // Auto-generate code from name (only for create)
+  // Auto-generate code from name (only for create and when not manually edited)
   useEffect(() => {
-    if (!isEdit && nameValue) {
+    if (!isEdit && nameValue && !codeManuallyEdited.current) {
       setValue('code', generateCode(nameValue), { shouldValidate: true })
     }
   }, [nameValue, isEdit, setValue])
@@ -419,6 +441,12 @@ export function SegmentFormModal({
             <div className="space-y-1.5">
               <Label htmlFor="seg-code" required>
                 {t('pages.tags.segments.code', 'Code')}
+                <FieldTooltip
+                  text={t(
+                    'pages.tags.fields.tooltips.code',
+                    'Уникальный идентификатор для API. Генерируется автоматически из названия.'
+                  )}
+                />
               </Label>
               <Input
                 id="seg-code"

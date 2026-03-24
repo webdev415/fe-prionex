@@ -1,11 +1,12 @@
 /**
- * Delete Tag Dialog
+ * Deactivate Tag Dialog
  *
- * Confirmation dialog for deleting tags with usage warning.
+ * Confirmation dialog for deactivating tags (soft-disable, not delete).
+ * Tags can be reactivated later.
  */
 
 import { useTranslation } from 'react-i18next'
-import { useDeleteTag } from '@/features/tags'
+import { useUpdateTag } from '@/features/tags'
 import type { Tag } from '@/features/tags'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -13,23 +14,23 @@ import { Alert } from '@/components/ui/Alert'
 import { TagBadge } from '@/components/ui/TagBadge'
 import { Icons } from '@/lib/icons'
 
-interface DeleteTagDialogProps {
+interface DeactivateTagDialogProps {
   open: boolean
   tag: Tag
   onClose: () => void
   onSuccess: () => void
 }
 
-export function DeleteTagDialog({ open, tag, onClose, onSuccess }: DeleteTagDialogProps) {
+export function DeactivateTagDialog({ open, tag, onClose, onSuccess }: DeactivateTagDialogProps) {
   const { t } = useTranslation('common')
-  const deleteMutation = useDeleteTag()
+  const updateMutation = useUpdateTag()
 
-  const handleDelete = async () => {
+  const handleDeactivate = async () => {
     try {
-      await deleteMutation.mutateAsync(tag.id)
+      await updateMutation.mutateAsync({ id: tag.id, data: { is_active: false } })
       onSuccess()
     } catch (error) {
-      console.error('Failed to delete tag:', error)
+      console.error('Failed to deactivate tag:', error)
     }
   }
 
@@ -39,17 +40,21 @@ export function DeleteTagDialog({ open, tag, onClose, onSuccess }: DeleteTagDial
     <Modal open={open} onClose={onClose} maxWidth="lg">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Delete size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100">
+            <Icons.Cancel01 size={20} className="text-amber-600" strokeWidth={2} />
           </div>
         }
-        title={t('pages.tags.deleteTag', 'Delete Tag')}
+        title={t('pages.tags.deactivateTag', 'Деактивировать тег')}
       />
 
       <ModalContent>
         <div className="space-y-4">
           <p className="text-dark-500 text-base font-light">
-            {t('pages.tags.deleteConfirmation', 'Are you sure you want to delete this tag?')}
+            {t(
+              'pages.tags.deactivateConfirmation',
+              'Вы уверены, что хотите деактивировать тег "{{name}}"?',
+              { name: tag.name }
+            )}
           </p>
 
           {/* Tag Preview */}
@@ -64,8 +69,8 @@ export function DeleteTagDialog({ open, tag, onClose, onSuccess }: DeleteTagDial
                 </p>
                 <p className="text-sm">
                   {t(
-                    'pages.tags.deleteWarningMessage',
-                    'This tag is assigned to {{count}} client(s). Deleting it will remove the tag from all clients.',
+                    'pages.tags.deactivateWarningMessage',
+                    'Этот тег назначен {{count}} клиенту(ам). Деактивация скроет его, но сохранит историю.',
                     { count: tag.client_count }
                   )}
                 </p>
@@ -73,9 +78,11 @@ export function DeleteTagDialog({ open, tag, onClose, onSuccess }: DeleteTagDial
             </Alert>
           )}
 
-          <p className="text-dark-500 text-sm font-light">
-            {t('pages.tags.deleteNotice', 'This action cannot be undone.')}
-          </p>
+          <Alert variant="info">
+            <p className="text-sm">
+              {t('pages.tags.deactivateNotice', 'Тег можно будет активировать позже.')}
+            </p>
+          </Alert>
         </div>
       </ModalContent>
 
@@ -84,7 +91,7 @@ export function DeleteTagDialog({ open, tag, onClose, onSuccess }: DeleteTagDial
           type="button"
           variant="cancel"
           onClick={onClose}
-          disabled={deleteMutation.isPending}
+          disabled={updateMutation.isPending}
           className="h-[45px] flex-1 text-sm"
         >
           {t('actions.cancel')}
@@ -92,13 +99,18 @@ export function DeleteTagDialog({ open, tag, onClose, onSuccess }: DeleteTagDial
         <Button
           type="button"
           variant="danger"
-          onClick={handleDelete}
-          disabled={deleteMutation.isPending}
+          onClick={handleDeactivate}
+          disabled={updateMutation.isPending}
           className="h-[45px] flex-1 text-sm"
         >
-          {deleteMutation.isPending ? t('pages.tags.deleting', 'Deleting...') : t('actions.delete')}
+          {updateMutation.isPending
+            ? t('pages.tags.deactivating', 'Деактивация...')
+            : t('pages.tags.actions.deactivate', 'Деактивировать')}
         </Button>
       </ModalFooter>
     </Modal>
   )
 }
+
+// Keep backward-compatible export
+export { DeactivateTagDialog as DeleteTagDialog }

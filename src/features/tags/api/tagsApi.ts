@@ -6,7 +6,7 @@
  */
 
 import api from '@/lib/api'
-import type { Tag, TagDefinition, TagCreate, TagUpdate } from '../types'
+import type { Tag, TagDefinition, TagCreate, TagDefinitionUpdate } from '../types'
 
 /**
  * Fetch tags list for a project

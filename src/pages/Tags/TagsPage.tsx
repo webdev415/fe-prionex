@@ -30,8 +30,9 @@ import { TagFormModal } from './components/TagFormModal'
 import { DeleteTagDialog } from './components/DeleteTagDialog'
 import { SegmentFormModal } from './components/SegmentFormModal'
 import { RuleFormModal } from './components/RuleFormModal'
+import { MutexGroupFormModal } from './components/MutexGroupFormModal'
 
-type TabId = 'dictionary' | 'segments' | 'rules'
+type TabId = 'dictionary' | 'segments' | 'rules' | 'groups'
 
 /** Convert a cron expression to a human-readable string using i18n */
 function humanizeCron(
@@ -76,6 +77,7 @@ const TABS: { id: TabId; labelKey: string; fallback: string }[] = [
   { id: 'dictionary', labelKey: 'pages.tags.tabs.dictionary', fallback: 'Dictionary' },
   { id: 'segments', labelKey: 'pages.tags.tabs.segments', fallback: 'Segments' },
   { id: 'rules', labelKey: 'pages.tags.tabs.rules', fallback: 'Rules' },
+  { id: 'groups', labelKey: 'pages.tags.tabs.groups', fallback: 'Groups' },
 ]
 
 const CATEGORY_FILTERS = ['all', 'status', 'risk', 'communication', 'behavior', 'system', 'custom']
@@ -97,6 +99,7 @@ export function TagsPage() {
   const [editSegment, setEditSegment] = useState<Segment | null>(null)
   const [editRule, setEditRule] = useState<TagRule | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [showGroupModal, setShowGroupModal] = useState(false)
 
   // Tab switching
   const setActiveTab = (tab: TabId) => {
@@ -150,7 +153,7 @@ export function TagsPage() {
     setEditTag(tag)
   }
 
-  const handleDelete = (tagId: number) => {
+  const handleDeactivate = (tagId: number) => {
     setDeleteTagId(tagId)
   }
 
@@ -162,12 +165,28 @@ export function TagsPage() {
     setEditTag(null)
   }
 
-  const handleDeleteSuccess = () => {
+  const handleDeactivateSuccess = () => {
     setDeleteTagId(null)
   }
 
-  // Find the tag being deleted for display in dialog
-  const tagToDelete = tags.find((tag) => tag.id === deleteTagId)
+  // Find the tag being deactivated for display in dialog
+  const tagToDeactivate = tags.find((tag) => tag.id === deleteTagId)
+
+  // Compute mutex groups for Groups tab
+  const mutexGroups = useMemo(() => {
+    const map: Record<string, { tags: TagDefinition[]; totalClients: number }> = {}
+    tags.forEach((t) => {
+      const def = t as TagDefinition
+      if (def.mutex_group) {
+        if (!map[def.mutex_group]) {
+          map[def.mutex_group] = { tags: [], totalClients: 0 }
+        }
+        map[def.mutex_group].tags.push(def)
+        map[def.mutex_group].totalClients += def.client_count || 0
+      }
+    })
+    return map
+  }, [tags])
 
   // Table columns definition - recalculate when language changes
   const columns: Column<Tag>[] = useMemo(
@@ -193,9 +212,16 @@ export function TagsPage() {
         key: 'category',
         header: t('pages.tags.tableHeaders.category', 'Category'),
         render: (tag) => (
-          <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
-            {tag.category ? t(`pages.tags.categories.${tag.category}`, tag.category) : '-'}
-          </span>
+          <div>
+            <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+              {tag.category ? t(`pages.tags.categories.${tag.category}`, tag.category) : '-'}
+            </span>
+            {(tag as TagDefinition).mutex_group && (
+              <div className="mt-0.5 text-xs text-gray-400">
+                {(tag as TagDefinition).mutex_group}
+              </div>
+            )}
+          </div>
         ),
       },
       {
@@ -269,10 +295,12 @@ export function TagsPage() {
                 <LinkButton
                   variant="regular-black"
                   size="xs"
-                  onClick={() => handleDelete(tag.id)}
-                  leftIcon={<Icons.Delete size={16} color="#05040D" strokeWidth={1.5} />}
+                  onClick={() => handleDeactivate(tag.id)}
+                  leftIcon={<Icons.Cancel01 size={16} color="#05040D" strokeWidth={1.5} />}
                 >
-                  {t('pages.tags.actions.delete', 'Delete')}
+                  {(tag as TagDefinition).is_active !== false
+                    ? t('pages.tags.actions.deactivate', 'Деактивировать')
+                    : t('pages.tags.actions.reactivate', 'Активировать')}
                 </LinkButton>
               </PermissionGuard>
             </div>
@@ -309,13 +337,17 @@ export function TagsPage() {
                   <PermissionGuard permission={PERMISSIONS.TAGS.DELETE}>
                     <DropdownMenuItem
                       onClick={() => {
-                        handleDelete(tag.id)
+                        handleDeactivate(tag.id)
                         setOpenDropdownTagId(null)
                       }}
                       className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
                     >
-                      <Icons.Delete size={16} strokeWidth={1.5} />
-                      <span>{t('pages.tags.actions.delete', 'Delete')}</span>
+                      <Icons.Cancel01 size={16} strokeWidth={1.5} />
+                      <span>
+                        {(tag as TagDefinition).is_active !== false
+                          ? t('pages.tags.actions.deactivate', 'Деактивировать')
+                          : t('pages.tags.actions.reactivate', 'Активировать')}
+                      </span>
                     </DropdownMenuItem>
                   </PermissionGuard>
                 </DropdownMenuContent>
@@ -697,17 +729,23 @@ export function TagsPage() {
               size="md"
               icon={<Icons.Add size={20} strokeWidth={2} />}
               iconPosition="left"
-              onClick={() => setShowCreateModal(true)}
+              onClick={() =>
+                activeTab === 'groups' ? setShowGroupModal(true) : setShowCreateModal(true)
+              }
             >
               {activeTab === 'dictionary'
-                ? t('pages.tags.createTag', 'Create Tag')
+                ? t('pages.tags.createTag', 'Создать тег')
                 : activeTab === 'segments'
-                  ? t('pages.tags.createSegment', 'Create Segment')
-                  : t('pages.tags.createRule', 'Create Rule')}
+                  ? t('pages.tags.createSegment', 'Создать сегмент')
+                  : activeTab === 'rules'
+                    ? t('pages.tags.createRule', 'Создать правило')
+                    : t('pages.tags.groups.createGroup', 'Создать группу')}
             </DoubleButton>
           </div>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() =>
+              activeTab === 'groups' ? setShowGroupModal(true) : setShowCreateModal(true)
+            }
             className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
             aria-label={t('pages.tags.createTag', 'Create')}
           >
@@ -882,6 +920,61 @@ export function TagsPage() {
         </>
       )}
 
+      {/* Groups Tab */}
+      {activeTab === 'groups' && (
+        <>
+          <p className="text-dark-500 mb-4 text-sm font-light">
+            {t(
+              'pages.tags.groups.mutexNote',
+              'Только один тег из этой группы может быть активен у клиента одновременно'
+            )}
+          </p>
+
+          {Object.keys(mutexGroups).length === 0 && !isLoading && (
+            <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
+              <p className="text-gray-500">
+                {t('pages.tags.groups.noGroups', 'Нет групп взаимоисключения')}
+              </p>
+            </div>
+          )}
+
+          {Object.keys(mutexGroups).length > 0 && (
+            <div className="space-y-4">
+              {Object.entries(mutexGroups).map(([groupName, group]) => (
+                <div key={groupName} className="rounded-lg border border-gray-200 bg-white p-5">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">{groupName}</h3>
+                      <p className="text-sm text-gray-500">
+                        {t(`pages.tags.mutexGroupDescriptions.${groupName}`, groupName)}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-600">
+                      {t('pages.tags.groups.clients', 'Клиенты')}: {group.totalClients}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {group.tags.map((tag) => (
+                      <div
+                        key={tag.id}
+                        className="flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1.5"
+                      >
+                        <div
+                          className="h-3 w-3 shrink-0 rounded-full"
+                          style={{ backgroundColor: tag.color }}
+                        />
+                        <span className="text-sm font-medium text-gray-800">{tag.name}</span>
+                        <span className="text-xs text-gray-400">({tag.client_count || 0})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
       {/* Modals — Dictionary */}
       {showCreateModal && activeTab === 'dictionary' && (
         <TagFormModal
@@ -902,12 +995,12 @@ export function TagsPage() {
         />
       )}
 
-      {deleteTagId && tagToDelete && (
+      {deleteTagId && tagToDeactivate && (
         <DeleteTagDialog
           open={deleteTagId !== null}
-          tag={tagToDelete}
+          tag={tagToDeactivate}
           onClose={() => setDeleteTagId(null)}
-          onSuccess={handleDeleteSuccess}
+          onSuccess={handleDeactivateSuccess}
         />
       )}
 
@@ -948,6 +1041,16 @@ export function TagsPage() {
           tags={tags}
           onClose={() => setEditRule(null)}
           onSuccess={() => setEditRule(null)}
+        />
+      )}
+
+      {/* Modals — Groups */}
+      {showGroupModal && (
+        <MutexGroupFormModal
+          open={showGroupModal}
+          tags={tags as TagDefinition[]}
+          onClose={() => setShowGroupModal(false)}
+          onSuccess={() => setShowGroupModal(false)}
         />
       )}
     </div>

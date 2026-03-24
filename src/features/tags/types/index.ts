@@ -33,6 +33,7 @@ export interface TagDefinition extends Tag {
   origin: TagOrigin
   is_active: boolean
   default_ttl_hours?: number
+  default_expires_at?: string
   mutex_group?: string
   requires_payload: boolean
   payload_schema?: Record<string, unknown>
@@ -61,6 +62,7 @@ export interface TagDefinitionCreate extends TagCreate {
   visibility?: TagVisibility
   is_active?: boolean
   default_ttl_hours?: number
+  default_expires_at?: string
   mutex_group?: string
   requires_payload?: boolean
   payload_schema?: Record<string, unknown>
@@ -85,6 +87,7 @@ export interface TagDefinitionUpdate extends TagUpdate {
   visibility?: TagVisibility
   is_active?: boolean
   default_ttl_hours?: number
+  default_expires_at?: string | null
   mutex_group?: string
   requires_payload?: boolean
   payload_schema?: Record<string, unknown>
