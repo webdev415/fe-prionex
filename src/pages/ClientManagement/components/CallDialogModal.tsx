@@ -212,6 +212,21 @@ export function CallDialogModal({
     }
   }, [derivedState, callState, elapsedTime])
 
+  // Direct backend state detection: if the backend says COMPLETED/FAILED,
+  // force transition regardless of local state (handles Zoiper/remote hangup)
+  useEffect(() => {
+    if (!callDetails || !open) return
+    if (
+      (callDetails.state === 'COMPLETED' || callDetails.state === 'FAILED') &&
+      callState !== 'ended' &&
+      callState !== 'failed'
+    ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCallState(callDetails.state === 'COMPLETED' ? 'ended' : 'failed')
+      setElapsedTime(callDetails.total_duration || 0)
+    }
+  }, [callDetails]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Timer for dialing and connected states
   useEffect(() => {
     if ((callState === 'dialing' || callState === 'connected') && open) {
@@ -310,13 +325,23 @@ export function CallDialogModal({
 
     // Send hangup command to Asterisk if we have a call ID
     if (callId) {
-      hangupMutation.mutate(callId)
+      hangupMutation.mutate(callId, {
+        onSuccess: () => {
+          if (onCallEnd) onCallEnd(elapsedTime, status)
+          setCallState('ended')
+        },
+        onError: () => {
+          // Hangup failed (AMI unavailable, call already ended, etc.)
+          // Force end the call on the frontend regardless
+          if (onCallEnd) onCallEnd(elapsedTime, status)
+          setCallState('ended')
+        },
+      })
+    } else {
+      // No callId — just end locally
+      if (onCallEnd) onCallEnd(elapsedTime, status)
+      setCallState('ended')
     }
-
-    if (onCallEnd) {
-      onCallEnd(elapsedTime, status)
-    }
-    setCallState('ended')
   }
 
   const handleMinimize = () => {
