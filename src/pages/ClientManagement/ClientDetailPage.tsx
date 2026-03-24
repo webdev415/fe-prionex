@@ -804,14 +804,16 @@ export function ClientDetailPage() {
       align: 'center',
       render: (loan) =>
         loan.status === 'active' ? (
-          <button
-            onClick={() => setCloseLoanConfirm(loan.id)}
-            disabled={isClosingDebt}
-            className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
-            title={t('pages.clients.detail.closeLoan')}
-          >
-            <Icons.Success size={18} />
-          </button>
+          <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+            <button
+              onClick={() => setCloseLoanConfirm(loan.id)}
+              disabled={isClosingDebt}
+              className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+              title={t('pages.clients.detail.closeLoan')}
+            >
+              <Icons.Success size={18} />
+            </button>
+          </PermissionGuard>
         ) : null,
     },
   ]
