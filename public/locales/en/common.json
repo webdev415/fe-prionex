@@ -2078,12 +2078,34 @@
         "notifications": "Notifications",
         "enableNotifications": "Enable Notifications",
         "notificationTemplate": "Notification Template",
+        "isProtected": "Protected Tag",
+        "protectedRoles": "Roles allowed to remove",
+        "expiryType": "Expiry Type",
+        "loanClosureNote": "Tag will be automatically removed when the client's loan is closed",
         "validation": {
           "nameRequired": "Name is required",
           "nameMaxLength": "Name must be 50 characters or less",
           "colorFormat": "Please enter a valid color in hex format (#RRGGBB)",
           "descriptionMaxLength": "Description must be 200 characters or less"
         }
+      },
+      "expiryTypes": {
+        "permanent": "Permanent",
+        "ttl": "Time-based (TTL)",
+        "loanClosure": "Until loan closure",
+        "loan_closure": "Until loan closure"
+      },
+      "protectedWarning": "Removal requires manager approval",
+      "removalRequests": {
+        "title": "Removal Requests",
+        "approve": "Approve",
+        "reject": "Reject",
+        "pending": "Pending approval",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "noRequests": "No pending removal requests",
+        "requestedBy": "Requested by",
+        "reason": "Reason"
       },
       "actions": {
         "edit": "Edit",
@@ -2096,6 +2118,13 @@
       "deleteNotice": "This action cannot be undone.",
       "deleting": "Deleting...",
       "showMore": "+{{count}} more",
+      "tagBadge": {
+        "protectedLabel": "Protected tag — removal requires approval",
+        "systemLabel": "System tag",
+        "loanClosureTitle": "Active until loan closure",
+        "expiresPrefix": "Expires",
+        "removeLabel": "Remove {{name}} tag"
+      },
       "segments": {
         "name": "Name",
         "namePlaceholder": "e.g. High Risk Overdue",
@@ -2113,7 +2142,7 @@
         "addCondition": "Add AND condition",
         "addGroup": "Add OR group",
         "noConditions": "No conditions defined. Add a condition group to get started.",
-        "conditionHelp": "Conditions within a group are combined with AND. Groups are combined with OR.",
+        "conditionHelp": "Within a group — all conditions must match (AND). Between groups — any group can match (OR). Example: (High Risk AND Active) OR (DPD > 90)",
         "conditionType": "Condition type",
         "selectTag": "Select tag",
         "fieldName": "Field name",
@@ -2182,6 +2211,28 @@
         "triggerEventPlaceholder": "e.g. client.payment_missed",
         "cronExpression": "Cron Expression",
         "cronHelp": "Standard cron format: min hour dom mon dow (e.g. 0 9 * * * = daily at 9:00)",
+        "triggerHelpers": {
+          "event": "Fires when a specific system event occurs (e.g. payment.completed, client.created)",
+          "schedule": "Runs on a recurring schedule using cron syntax",
+          "scoring_change": "Fires when a client's risk score is recalculated",
+          "tag_expired": "Fires when a tag with TTL reaches expiry",
+          "import_complete": "Fires after a data import batch completes"
+        },
+        "conditionsHelp": "All conditions must be true for the rule to fire (AND logic). Leave empty to always fire.",
+        "cronHumanize": {
+          "everyNMin": "Every {{n}} min",
+          "dailyAt": "Daily at {{time}}",
+          "dayAt": "{{day}} at {{time}}",
+          "days": {
+            "0": "Sun",
+            "1": "Mon",
+            "2": "Tue",
+            "3": "Wed",
+            "4": "Thu",
+            "5": "Fri",
+            "6": "Sat"
+          }
+        },
         "actionType": "Action",
         "conditions": "Conditions",
         "isActive": "Active",
@@ -2221,7 +2272,9 @@
         "validation": {
           "nameRequired": "Name is required",
           "nameMax": "Max 100 characters",
-          "targetRequired": "Target tag is required"
+          "targetRequired": "Target tag is required",
+          "eventRequired": "Event name is required for event triggers",
+          "cronRequired": "Cron expression is required for schedule triggers"
         },
         "useTemplate": "Use Template",
         "selectTemplate": "Select a debt collection template...",
@@ -2254,7 +2307,9 @@
         "rulesTitle": "No automation rules yet",
         "rulesDescription": "Rules automatically assign or remove tags on events. For example: auto-tag high risk when scoring changes.",
         "createFromTemplate": "Create from template",
-        "dictionaryBanner": "System tags for debt collection are pre-configured. You can also create custom tags."
+        "dictionaryBanner": "System tags for debt collection are pre-configured. You can also create custom tags.",
+        "segmentsBanner": "Segments are saved client groups based on tag conditions. Example: \"High Risk + Active Debt\" = all clients with both tags. Conditions in a group are combined with AND, groups — with OR.",
+        "rulesBanner": "Rules automatically add or remove tags when conditions are met. They can trigger on events (payment received), schedules (daily at 9:00), or scoring changes."
       }
     },
     "sellers": {

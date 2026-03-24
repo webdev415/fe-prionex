@@ -33,6 +33,45 @@ import { RuleFormModal } from './components/RuleFormModal'
 
 type TabId = 'dictionary' | 'segments' | 'rules'
 
+/** Convert a cron expression to a human-readable string using i18n */
+function humanizeCron(
+  expr: string,
+  t: (key: string, fallback: string, opts?: Record<string, string>) => string
+): string {
+  const parts = expr.trim().split(/\s+/)
+  if (parts.length !== 5) return expr
+
+  const [min, hour, dom, mon, dow] = parts
+
+  // Every N minutes
+  if (min.startsWith('*/') && hour === '*' && dom === '*' && mon === '*' && dow === '*') {
+    return t('pages.tags.rules.cronHumanize.everyNMin', `Every ${min.slice(2)} min`, {
+      n: min.slice(2),
+    })
+  }
+
+  // Specific time
+  if (/^\d+$/.test(min) && /^\d+$/.test(hour)) {
+    const time = `${hour.padStart(2, '0')}:${min.padStart(2, '0')}`
+
+    // Daily
+    if (dom === '*' && mon === '*' && dow === '*') {
+      return t('pages.tags.rules.cronHumanize.dailyAt', `Daily at ${time}`, { time })
+    }
+
+    // Specific day of week
+    if (dom === '*' && mon === '*' && /^\d+$/.test(dow)) {
+      const dayName = t(`pages.tags.rules.cronHumanize.days.${dow}`, dow)
+      return t('pages.tags.rules.cronHumanize.dayAt', `${dayName} at ${time}`, {
+        day: dayName,
+        time,
+      })
+    }
+  }
+
+  return expr
+}
+
 const TABS: { id: TabId; labelKey: string; fallback: string }[] = [
   { id: 'dictionary', labelKey: 'pages.tags.tabs.dictionary', fallback: 'Dictionary' },
   { id: 'segments', labelKey: 'pages.tags.tabs.segments', fallback: 'Segments' },
@@ -309,6 +348,18 @@ export function TagsPage() {
         key: 'conditions',
         header: t('pages.tags.segments.conditions', 'Conditions'),
         render: (s) => {
+          const OPERATOR_SYMBOLS: Record<string, string> = {
+            eq: '=',
+            neq: '!=',
+            gt: '>',
+            gte: '\u2265',
+            lt: '<',
+            lte: '\u2264',
+            contains: '~',
+            in: 'in',
+            not_in: '!in',
+          }
+
           const groupedConditions = s.conditions.reduce<Record<number, typeof s.conditions>>(
             (acc, condition) => {
               if (!acc[condition.group_index]) {
@@ -320,39 +371,116 @@ export function TagsPage() {
             {}
           )
 
-          const formattedGroups = Object.values(groupedConditions).map((group) =>
-            group
-              .map((condition) => {
-                if (
-                  condition.condition_type === 'has_tag' ||
-                  condition.condition_type === 'not_has_tag'
-                ) {
-                  return `${t(
-                    `pages.tags.segments.conditionTypes.${condition.condition_type}`,
-                    condition.condition_type
-                  )}: ${condition.tag_code ?? '—'}`
-                }
+          // Build all pill entries first, then slice
+          const groups = Object.values(groupedConditions)
+          type PillEntry = {
+            type: 'pill' | 'and' | 'or'
+            key: string
+            node: React.ReactNode
+          }
+          const allEntries: PillEntry[] = []
 
-                const conditionLabel =
-                  condition.field_name ??
-                  condition.tag_code ??
-                  t(
-                    `pages.tags.segments.conditionTypes.${condition.condition_type}`,
-                    condition.condition_type
-                  )
-
-                return `${conditionLabel} ${t(
-                  `pages.tags.segments.operators.${condition.operator}`,
-                  condition.operator
-                )} ${condition.value ?? '—'}`
+          groups.forEach((group, groupIdx) => {
+            if (groupIdx > 0) {
+              allEntries.push({
+                type: 'or',
+                key: `or-${groupIdx}`,
+                node: (
+                  <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-600">
+                    {t('pages.tags.segments.orLabel', 'OR')}
+                  </span>
+                ),
               })
-              .join(` ${t('pages.tags.segments.andLabel', 'AND')} `)
-          )
+            }
+
+            group.forEach((condition, condIdx) => {
+              if (condIdx > 0) {
+                allEntries.push({
+                  type: 'and',
+                  key: `and-${groupIdx}-${condIdx}`,
+                  node: (
+                    <span className="text-[10px] text-gray-400">
+                      {t('pages.tags.segments.andLabel', 'AND')}
+                    </span>
+                  ),
+                })
+              }
+
+              if (condition.condition_type === 'has_tag') {
+                allEntries.push({
+                  type: 'pill',
+                  key: `pill-${groupIdx}-${condIdx}`,
+                  node: (
+                    <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">
+                      {condition.tag_code ?? '—'}
+                    </span>
+                  ),
+                })
+              } else if (condition.condition_type === 'not_has_tag') {
+                allEntries.push({
+                  type: 'pill',
+                  key: `pill-${groupIdx}-${condIdx}`,
+                  node: (
+                    <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] text-red-700">
+                      {t('pages.tags.segments.conditionTypes.not_has_tag', 'NOT')}{' '}
+                      {condition.tag_code ?? '—'}
+                    </span>
+                  ),
+                })
+              } else {
+                const label = condition.field_name ?? condition.tag_code ?? condition.condition_type
+                const op = OPERATOR_SYMBOLS[condition.operator] ?? condition.operator ?? '='
+                allEntries.push({
+                  type: 'pill',
+                  key: `pill-${groupIdx}-${condIdx}`,
+                  node: (
+                    <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-700">
+                      {label} {op} {condition.value ?? '—'}
+                    </span>
+                  ),
+                })
+              }
+            })
+          })
+
+          // Count actual pills (excluding connectors) and slice safely
+          const MAX_PILLS = 4
+          let pillCount = 0
+          let cutIndex = allEntries.length
+          for (let i = 0; i < allEntries.length; i++) {
+            if (allEntries[i].type === 'pill') {
+              pillCount++
+              if (pillCount > MAX_PILLS) {
+                // Cut before this pill's preceding connector (if any)
+                cutIndex = allEntries[i - 1]?.type !== 'pill' ? i - 1 : i
+                break
+              }
+            }
+          }
+
+          const visible = allEntries.slice(0, cutIndex)
+          // Remove trailing connector if last visible entry is AND/OR
+          while (visible.length > 0 && visible[visible.length - 1].type !== 'pill') {
+            visible.pop()
+          }
+
+          const totalConditions = s.conditions.length
+          const shownConditions = visible.filter((e) => e.type === 'pill').length
+          const overflow = totalConditions > shownConditions
 
           return (
-            <span className="line-clamp-2 text-xs text-gray-600">
-              {formattedGroups.join(` ${t('pages.tags.segments.orLabel', 'OR')} `)}
-            </span>
+            <div className="flex flex-wrap items-center gap-1">
+              {visible.map((entry) => (
+                <span key={entry.key}>{entry.node}</span>
+              ))}
+              {overflow && (
+                <span className="text-[10px] text-gray-400">
+                  {t('pages.tags.showMore', '+{{count}} more', {
+                    count: totalConditions - shownConditions,
+                  })}
+                </span>
+              )}
+            </div>
           )
         },
       },
@@ -415,13 +543,72 @@ export function TagsPage() {
         render: (r) => <span className="font-medium">{r.name}</span>,
       },
       {
+        key: 'description',
+        header: t('pages.tags.rules.description', 'Description'),
+        render: (r) => (
+          <span className="line-clamp-1 text-xs text-gray-600">{r.description || '—'}</span>
+        ),
+      },
+      {
         key: 'trigger_type',
         header: t('pages.tags.rules.trigger', 'Trigger'),
-        render: (r) => (
-          <span className="bg-information-50 text-information-700 rounded px-2 py-0.5 text-xs">
-            {t(`pages.tags.rules.triggerTypes.${r.trigger_type}`, r.trigger_type)}
-          </span>
-        ),
+        render: (r) => {
+          let triggerDetail = ''
+          if (r.trigger_type === 'event' && r.trigger_event) {
+            triggerDetail = r.trigger_event
+          } else if (r.trigger_type === 'schedule' && r.cron_expression) {
+            triggerDetail = humanizeCron(r.cron_expression, t)
+          }
+
+          return (
+            <div className="flex flex-col gap-0.5">
+              <span className="w-fit rounded bg-blue-50 px-2 py-0.5 text-xs text-blue-700">
+                {t(`pages.tags.rules.triggerTypes.${r.trigger_type}`, r.trigger_type)}
+              </span>
+              {triggerDetail && <span className="text-[10px] text-gray-500">{triggerDetail}</span>}
+            </div>
+          )
+        },
+      },
+      {
+        key: 'conditions',
+        header: t('pages.tags.rules.conditions', 'Conditions'),
+        render: (r) => {
+          if (!r.conditions || r.conditions.length === 0) {
+            return <span className="text-xs text-gray-400">—</span>
+          }
+
+          const OPERATOR_SYMBOLS: Record<string, string> = {
+            eq: '=',
+            neq: '!=',
+            gt: '>',
+            gte: '>=',
+            lt: '<',
+            lte: '<=',
+            contains: '~',
+            in: 'in',
+            not_in: '!in',
+          }
+
+          const summary = r.conditions
+            .slice(0, 2)
+            .map((c) => `${c.field} ${OPERATOR_SYMBOLS[c.op] ?? c.op} ${c.value}`)
+            .join(` ${t('pages.tags.segments.andLabel', 'AND')} `)
+
+          return (
+            <span className="line-clamp-2 text-xs text-gray-600">
+              {summary}
+              {r.conditions.length > 2 && (
+                <span className="text-gray-400">
+                  {' '}
+                  {t('pages.tags.showMore', '+{{count}} more', {
+                    count: r.conditions.length - 2,
+                  })}
+                </span>
+              )}
+            </span>
+          )
+        },
       },
       {
         key: 'action_type',
@@ -436,12 +623,6 @@ export function TagsPage() {
         key: 'target_tag_code',
         header: t('pages.tags.rules.targetTag', 'Target Tag'),
         render: (r) => <code className="text-xs">{r.target_tag_code}</code>,
-      },
-      {
-        key: 'priority',
-        header: t('pages.tags.rules.priority', 'Priority'),
-        align: 'center',
-        render: (r) => <span>{r.priority}</span>,
       },
       {
         key: 'execution_count',
@@ -614,6 +795,14 @@ export function TagsPage() {
       {/* Tab Content: Segments */}
       {activeTab === 'segments' && (
         <>
+          <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
+            <p className="text-xs text-blue-700">
+              {t(
+                'pages.tags.emptyStates.segmentsBanner',
+                'Segments are saved client groups based on tag conditions. Example: "High Risk + Active Debt" = all clients with both tags. Conditions in a group are combined with AND, groups — with OR.'
+              )}
+            </p>
+          </div>
           {segmentsLoading && <TableSkeleton columns={6} rows={5} />}
           {!segmentsLoading && segments.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">
@@ -651,6 +840,14 @@ export function TagsPage() {
       {/* Tab Content: Rules */}
       {activeTab === 'rules' && (
         <>
+          <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3">
+            <p className="text-xs text-blue-700">
+              {t(
+                'pages.tags.emptyStates.rulesBanner',
+                'Rules automatically add or remove tags when conditions are met. They can trigger on events (payment received), schedules (daily at 9:00), or scoring changes.'
+              )}
+            </p>
+          </div>
           {rulesLoading && <TableSkeleton columns={8} rows={5} />}
           {!rulesLoading && rules.length === 0 && (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center">

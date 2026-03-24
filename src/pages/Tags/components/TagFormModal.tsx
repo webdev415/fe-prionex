@@ -61,6 +61,9 @@ const CATEGORY_VALUES: TagCategory[] = [
 ]
 const VISIBILITY_VALUES: TagVisibility[] = ['ui', 'analytics', 'system']
 
+const EXPIRY_TYPES = ['permanent', 'ttl', 'loan_closure'] as const
+const AVAILABLE_ROLES = ['Admin', 'Manager', 'Supervisor', 'Operator']
+
 type TagFormData = {
   name: string
   color: string
@@ -73,6 +76,9 @@ type TagFormData = {
   requires_payload?: boolean
   notification_enabled?: boolean
   notification_template?: string
+  is_protected?: boolean
+  protected_removal_roles?: string[]
+  expiry_type?: string
 }
 
 export function TagFormModal({
@@ -155,6 +161,9 @@ export function TagFormModal({
       requires_payload: (tag as TagDefinition)?.requires_payload ?? false,
       notification_enabled: (tag as TagDefinition)?.notification_enabled ?? false,
       notification_template: (tag as TagDefinition)?.notification_template || '',
+      is_protected: (tag as TagDefinition)?.is_protected ?? false,
+      protected_removal_roles: (tag as TagDefinition)?.protected_removal_roles ?? [],
+      expiry_type: (tag as TagDefinition)?.expiry_type ?? 'permanent',
     },
   })
 
@@ -177,6 +186,9 @@ export function TagFormModal({
         requires_payload: tagDef?.requires_payload ?? false,
         notification_enabled: tagDef?.notification_enabled ?? false,
         notification_template: tagDef?.notification_template || '',
+        is_protected: tagDef?.is_protected ?? false,
+        protected_removal_roles: tagDef?.protected_removal_roles ?? [],
+        expiry_type: tagDef?.expiry_type ?? 'permanent',
       })
     }
   }, [open, tag, reset])
@@ -351,35 +363,100 @@ export function TagFormModal({
               </div>
             </div>
 
-            {/* Collapsible: TTL Settings */}
-            <div className="rounded-lg border border-gray-200">
-              <button
-                type="button"
-                onClick={() => toggleSection('ttl')}
-                className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <span>{t('pages.tags.fields.ttlSettings', 'TTL Settings')}</span>
-                <span className="text-gray-400">{expandedSections.ttl ? '−' : '+'}</span>
-              </button>
-              {expandedSections.ttl && (
-                <div className="border-t border-gray-200 px-4 py-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="default_ttl_hours">
-                      {t('pages.tags.fields.ttlHours', 'Default TTL (hours)')}
-                    </Label>
-                    <Input
-                      id="default_ttl_hours"
-                      type="number"
-                      {...register('default_ttl_hours', { valueAsNumber: true })}
-                      placeholder="e.g. 24, 48, 168"
+            {/* Expiry Type */}
+            <div className="rounded-lg border border-gray-200 px-4 py-3">
+              <Label className="mb-2 block">
+                {t('pages.tags.fields.expiryType', 'Expiry Type')}
+              </Label>
+              <div className="flex flex-wrap gap-4">
+                {EXPIRY_TYPES.map((type) => (
+                  <label key={type} className="flex cursor-pointer items-center gap-2">
+                    <input
+                      type="radio"
+                      value={type}
+                      {...register('expiry_type')}
+                      className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
                       disabled={isSystemTag}
                     />
-                    <p className="text-xs text-gray-500">
-                      {t(
-                        'pages.tags.fields.ttlNote',
-                        'Leave empty for no auto-expiration. Tag will be automatically removed after this many hours.'
-                      )}
-                    </p>
+                    <span className="text-sm text-gray-700">
+                      {t(`pages.tags.expiryTypes.${type}`, type)}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {watch('expiry_type') === 'ttl' && (
+                <div className="mt-3 space-y-2">
+                  <Label htmlFor="default_ttl_hours">
+                    {t('pages.tags.fields.ttlHours', 'Lifetime (hours)')}
+                  </Label>
+                  <Input
+                    id="default_ttl_hours"
+                    type="number"
+                    {...register('default_ttl_hours', { valueAsNumber: true })}
+                    placeholder="e.g. 24, 48, 168, 720"
+                    disabled={isSystemTag}
+                  />
+                  <p className="text-xs text-gray-500">
+                    {t(
+                      'pages.tags.fields.ttlNote',
+                      'Tag will be automatically removed after this period'
+                    )}
+                  </p>
+                </div>
+              )}
+              {watch('expiry_type') === 'loan_closure' && (
+                <p className="mt-2 text-xs text-amber-600">
+                  {t(
+                    'pages.tags.fields.loanClosureNote',
+                    "Tag will be automatically removed when the client's loan is closed"
+                  )}
+                </p>
+              )}
+            </div>
+
+            {/* Protected Tag */}
+            <div className="rounded-lg border border-gray-200 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="is_protected"
+                  {...register('is_protected')}
+                  className="h-4 w-4 rounded border-gray-300"
+                  disabled={isSystemTag}
+                />
+                <Label htmlFor="is_protected">
+                  {t('pages.tags.fields.isProtected', 'Protected Tag')}
+                </Label>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                {t('pages.tags.protectedWarning', 'Removal requires manager approval')}
+              </p>
+              {watch('is_protected') && (
+                <div className="mt-3 space-y-2">
+                  <Label>{t('pages.tags.fields.protectedRoles', 'Roles allowed to remove')}</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {AVAILABLE_ROLES.map((role) => (
+                      <label key={role} className="flex cursor-pointer items-center gap-1.5">
+                        <input
+                          type="checkbox"
+                          checked={(watch('protected_removal_roles') || []).includes(role)}
+                          onChange={(e) => {
+                            const current = watch('protected_removal_roles') || []
+                            if (e.target.checked) {
+                              setValue('protected_removal_roles', [...current, role])
+                            } else {
+                              setValue(
+                                'protected_removal_roles',
+                                current.filter((r: string) => r !== role)
+                              )
+                            }
+                          }}
+                          className="h-3.5 w-3.5 rounded border-gray-300"
+                          disabled={isSystemTag}
+                        />
+                        <span className="text-sm text-gray-700">{role}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
               )}

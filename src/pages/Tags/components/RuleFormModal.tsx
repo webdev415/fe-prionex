@@ -35,6 +35,51 @@ interface RuleFormModalProps {
   onSuccess: () => void
 }
 
+/** Convert a cron expression to a human-readable string using i18n */
+function humanizeCronLocal(
+  expr: string,
+  t: (key: string, fallback: string, opts?: Record<string, string>) => string
+): string {
+  const parts = expr.trim().split(/\s+/)
+  if (parts.length !== 5) return expr
+
+  const [min, hour, dom, mon, dow] = parts
+
+  if (min.startsWith('*/') && hour === '*' && dom === '*' && mon === '*' && dow === '*') {
+    return t('pages.tags.rules.cronHumanize.everyNMin', `Every ${min.slice(2)} min`, {
+      n: min.slice(2),
+    })
+  }
+
+  if (/^\d+$/.test(min) && /^\d+$/.test(hour)) {
+    const time = `${hour.padStart(2, '0')}:${min.padStart(2, '0')}`
+    if (dom === '*' && mon === '*' && dow === '*') {
+      return t('pages.tags.rules.cronHumanize.dailyAt', `Daily at ${time}`, { time })
+    }
+    if (dom === '*' && mon === '*' && /^\d+$/.test(dow)) {
+      const dayName = t(`pages.tags.rules.cronHumanize.days.${dow}`, dow)
+      return t('pages.tags.rules.cronHumanize.dayAt', `${dayName} at ${time}`, {
+        day: dayName,
+        time,
+      })
+    }
+  }
+
+  return expr
+}
+
+function CronPreview({
+  expression,
+  t,
+}: {
+  expression: string
+  t: (key: string, fallback: string, opts?: Record<string, string>) => string
+}) {
+  const humanized = humanizeCronLocal(expression, t)
+  if (humanized === expression) return null
+  return <p className="text-xs text-green-600">{humanized}</p>
+}
+
 const TRIGGER_TYPE_VALUES: RuleTriggerType[] = [
   'event',
   'schedule',
@@ -147,50 +192,59 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
 
   const ruleSchema = useMemo(
     () =>
-      z.object({
-        name: z
-          .string()
-          .min(1, t('pages.tags.rules.validation.nameRequired', 'Name is required'))
-          .max(100, t('pages.tags.rules.validation.nameMax', 'Max 100 characters')),
-        description: z.string().max(500).optional().default(''),
-        trigger_type: z.enum([
-          'event',
-          'schedule',
-          'tag_expired',
-          'scoring_change',
-          'import_complete',
-        ]),
-        trigger_event: z.string().optional().default(''),
-        cron_expression: z
-          .string()
-          .optional()
-          .default('')
-          .refine(
-            (val) => !val || /^(\S+\s){4}\S+$/.test(val.trim()),
-            t(
-              'pages.tags.rules.validation.cronInvalid',
-              'Invalid cron expression (expected 5-part format)'
-            )
+      z
+        .object({
+          name: z
+            .string()
+            .min(1, t('pages.tags.rules.validation.nameRequired', 'Name is required'))
+            .max(100, t('pages.tags.rules.validation.nameMax', 'Max 100 characters')),
+          description: z.string().max(500).optional().default(''),
+          trigger_type: z.enum([
+            'event',
+            'schedule',
+            'tag_expired',
+            'scoring_change',
+            'import_complete',
+          ]),
+          trigger_event: z.string().optional().default(''),
+          cron_expression: z.string().optional().default(''),
+          conditions: z.array(
+            z.object({
+              field: z.string().min(1, 'Field is required'),
+              op: z.string().min(1, 'Operator is required'),
+              value: z.string(),
+            })
           ),
-        conditions: z.array(
-          z.object({
-            field: z
-              .string()
-              .min(1, t('pages.tags.rules.validation.fieldRequired', 'Field is required')),
-            op: z
-              .string()
-              .min(1, t('pages.tags.rules.validation.operatorRequired', 'Operator is required')),
-            value: z.string(),
-          })
-        ),
-        action_type: z.enum(['add_tag', 'remove_tag', 'replace_tag']),
-        target_tag_code: z
-          .string()
-          .min(1, t('pages.tags.rules.validation.targetRequired', 'Target tag is required')),
-        replace_tag_code: z.string().optional().default(''),
-        priority: z.coerce.number().int().min(1).max(1000).default(100),
-        is_active: z.boolean().default(true),
-      }),
+          action_type: z.enum(['add_tag', 'remove_tag', 'replace_tag']),
+          target_tag_code: z
+            .string()
+            .min(1, t('pages.tags.rules.validation.targetRequired', 'Target tag is required')),
+          replace_tag_code: z.string().optional().default(''),
+          priority: z.coerce.number().int().min(1).max(1000).default(1),
+          is_active: z.boolean().default(true),
+        })
+        .superRefine((data, ctx) => {
+          if (data.trigger_type === 'event' && !data.trigger_event) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: t(
+                'pages.tags.rules.validation.eventRequired',
+                'Event name is required for event triggers'
+              ),
+              path: ['trigger_event'],
+            })
+          }
+          if (data.trigger_type === 'schedule' && !data.cron_expression) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: t(
+                'pages.tags.rules.validation.cronRequired',
+                'Cron expression is required for schedule triggers'
+              ),
+              path: ['cron_expression'],
+            })
+          }
+        }),
     [t]
   )
 
@@ -214,7 +268,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
       action_type: 'add_tag',
       target_tag_code: '',
       replace_tag_code: '',
-      priority: 100,
+      priority: 1,
       is_active: true,
     },
   })
@@ -223,6 +277,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
 
   const triggerType = watch('trigger_type') // eslint-disable-line react-hooks/incompatible-library
   const actionType = watch('action_type')
+  const cronValue = watch('cron_expression')
 
   // Reset form when modal opens
   useEffect(() => {
@@ -241,7 +296,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
         action_type: rule?.action_type ?? 'add_tag',
         target_tag_code: rule?.target_tag_code ?? '',
         replace_tag_code: rule?.replace_tag_code ?? '',
-        priority: rule?.priority ?? 0,
+        priority: rule?.priority ?? 1,
         is_active: rule?.is_active ?? true,
       })
     }
@@ -339,7 +394,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                         action_type: preset.action_type,
                         target_tag_code: preset.target_tag_code,
                         replace_tag_code: preset.replace_tag_code ?? '',
-                        priority: 100,
+                        priority: 1,
                         is_active: true,
                       })
                     }
@@ -414,6 +469,9 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                     </Select>
                   )}
                 />
+                <p className="text-xs text-gray-500">
+                  {t(`pages.tags.rules.triggerHelpers.${triggerType}`, '')}
+                </p>
               </div>
 
               {/* Trigger Event (if event) */}
@@ -450,6 +508,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       'Standard cron format (min hour dom mon dow)'
                     )}
                   />
+                  {cronValue && <CronPreview expression={cronValue} t={t} />}
                 </div>
               )}
             </div>
@@ -457,6 +516,12 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
             {/* Conditions */}
             <div className="space-y-1.5">
               <Label>{t('pages.tags.rules.conditions', 'Conditions')}</Label>
+              <p className="text-xs text-gray-500">
+                {t(
+                  'pages.tags.rules.conditionsHelp',
+                  'All conditions must be true for the rule to fire (AND logic). Leave empty to always fire.'
+                )}
+              </p>
               <div className="space-y-2">
                 {fields.map((field, index) => (
                   <div key={field.id} className="flex items-start gap-2">
@@ -627,12 +692,9 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                   id="rule-priority"
                   type="number"
                   {...register('priority', { valueAsNumber: true })}
-                  placeholder="0"
+                  placeholder="1"
                   error={errors.priority?.message}
-                  helperText={t(
-                    'pages.tags.rules.priorityHelp',
-                    '0-1000, lower number = higher priority'
-                  )}
+                  helperText={t('pages.tags.rules.priorityHelp', '1-1000, lower = higher priority')}
                 />
               </div>
 

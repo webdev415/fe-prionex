@@ -1375,7 +1375,14 @@ export function ClientDetailPage() {
                     {clientTags && clientTags.length > 0 ? (
                       <>
                         {clientTags.slice(0, 3).map((tag) => (
-                          <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
+                          <TagBadge
+                            key={tag.id}
+                            name={tag.name}
+                            color={tag.color}
+                            size="sm"
+                            isProtected={tag.is_protected}
+                            expiryType={tag.expiry_type}
+                          />
                         ))}
                         {clientTags.length > 3 && (
                           <button
