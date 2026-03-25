@@ -2612,6 +2612,23 @@
           "mark_paid_off": "Отметить погашенных",
           "broken_promise": "Нарушенное обещание оплаты (ежедневно)",
           "no_contact_retry": "Повторная попытка контакта"
+        },
+        "events": {
+          "interaction.created": "Создано взаимодействие",
+          "payment.verified": "Платёж подтверждён",
+          "sms.sent": "SMS отправлено",
+          "call.outcome.updated": "Результат звонка обновлён",
+          "scoring.completed": "Скоринг завершён",
+          "client.imported": "Клиент импортирован",
+          "debt.created": "Создан долг",
+          "debt.updated": "Долг обновлён",
+          "client.created": "Клиент создан",
+          "interaction.result.agreement": "Результат: Обещание оплаты",
+          "interaction.result.refusal": "Результат: Отказ от оплаты",
+          "interaction.result.no_contact": "Результат: Недозвон",
+          "payment.received": "Платёж получен",
+          "payment.debt_closed": "Долг закрыт",
+          "scoring.calculated": "Скоринг рассчитан"
         }
       },
       "categories": {
@@ -2657,6 +2674,24 @@
         "triggerTypes": "Типы триггеров",
         "events": "Доступные события",
         "eventsDesc": "Системные события, которые могут запускать правила",
+        "eventCode": "Код события",
+        "eventLabel": "Отображаемое имя",
+        "eventFields": "Поля",
+        "fieldCode": "Код поля",
+        "fieldsCount": "{{count}} полей",
+        "values": "Значения",
+        "valuesCount": "{{count}} значений",
+        "optionValue": "Значение",
+        "optionLabel": "Подпись",
+        "noFields": "Для этого события поля не настроены",
+        "noValues": "Значения не настроены",
+        "liveValuesFallback": "Живые значения будут подмешаны во время выполнения. Добавляйте вручную только переопределения или fallback-значения.",
+        "eventSources": {
+          "interactionResults": "Live: результаты взаимодействий",
+          "interactionTypes": "Live: типы взаимодействий",
+          "interactionChannels": "Live: каналы взаимодействий",
+          "interactionDirections": "Derived: направления взаимодействий"
+        },
         "actionTypes": "Типы действий",
         "conditionFields": "Поля условий",
         "conditionFieldsDesc": "Поля доступные для условий правил и сегментов",

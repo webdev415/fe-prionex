@@ -25,6 +25,7 @@ import {
   SelectItem,
 } from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
+import { generateCode } from '@/lib/utils'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/Tooltip'
 import { ConditionBuilder } from './ConditionBuilder'
 import { useCreateSegment, useUpdateSegment, usePreviewSegment } from '@/features/tags'
@@ -39,57 +40,6 @@ interface SegmentFormModalProps {
 }
 
 // REFRESH_MODE_VALUES and SEGMENT_PRESETS loaded from tagConfigStore inside component
-
-/** Generate a slug code from a name string */
-function generateCode(name: string): string {
-  const TRANSLIT: Record<string, string> = {
-    а: 'a',
-    б: 'b',
-    в: 'v',
-    г: 'g',
-    д: 'd',
-    е: 'e',
-    ё: 'yo',
-    ж: 'zh',
-    з: 'z',
-    и: 'i',
-    й: 'y',
-    к: 'k',
-    л: 'l',
-    м: 'm',
-    н: 'n',
-    о: 'o',
-    п: 'p',
-    р: 'r',
-    с: 's',
-    т: 't',
-    у: 'u',
-    ф: 'f',
-    х: 'kh',
-    ц: 'ts',
-    ч: 'ch',
-    ш: 'sh',
-    щ: 'shch',
-    ъ: '',
-    ы: 'y',
-    ь: '',
-    э: 'e',
-    ю: 'yu',
-    я: 'ya',
-    є: 'ye',
-    і: 'i',
-    ї: 'yi',
-    ґ: 'g',
-  }
-  return name
-    .toLowerCase()
-    .split('')
-    .map((ch) => TRANSLIT[ch] ?? ch)
-    .join('')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_|_$/g, '')
-    .slice(0, 50)
-}
 
 type SegmentFormData = {
   name: string

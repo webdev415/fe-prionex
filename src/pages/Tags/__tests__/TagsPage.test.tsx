@@ -301,7 +301,7 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       })
 
       // Click edit button (first tag)
-      const editButtons = screen.getAllByRole('button', { name: /edit/i })
+      const editButtons = screen.getAllByRole('button', { name: /edit|редактировать/i })
       await user.click(editButtons[0])
 
       // Modal should open with tag data
@@ -322,7 +322,7 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       })
 
       // Open edit modal
-      const editButtons = screen.getAllByRole('button', { name: /edit/i })
+      const editButtons = screen.getAllByRole('button', { name: /edit|редактировать/i })
       await user.click(editButtons[0])
 
       // Update name
@@ -356,7 +356,7 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       })
 
       // Click delete button
-      const deleteButtons = screen.getAllByRole('button', { name: /delete|деактив/i })
+      const deleteButtons = screen.getAllByRole('button', { name: /delete|удалить|деактив/i })
       await user.click(deleteButtons[0])
 
       // Confirmation dialog should appear
@@ -377,7 +377,7 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       })
 
       // Click deactivate on first tag
-      const deactivateButtons = screen.getAllByRole('button', { name: /delete|деактив/i })
+      const deactivateButtons = screen.getAllByRole('button', { name: /delete|удалить|деактив/i })
       await user.click(deactivateButtons[0])
 
       // Wait for confirmation dialog
@@ -386,13 +386,13 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       })
 
       // Find and click the confirmation deactivate button
-      const confirmButton = screen.getByRole('button', { name: /деактив/i })
+      const confirmButton = screen.getByRole('button', { name: /^удалить$|^delete$|деактив/i })
       expect(confirmButton).toBeInTheDocument()
       await user.click(confirmButton)
 
-      // updateTag should have been called with is_active: false
+      // deleteTag should have been called
       await waitFor(() => {
-        expect(tagsApi.updateTag).toHaveBeenCalledWith(1, { is_active: false })
+        expect(tagsApi.deleteTag).toHaveBeenCalledWith(1)
       })
     })
   })

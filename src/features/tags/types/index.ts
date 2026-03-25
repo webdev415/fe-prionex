@@ -172,6 +172,7 @@ export interface TagRule {
   id: number
   project_id: number
   name: string
+  code?: string
   description?: string
   trigger_type: RuleTriggerType
   trigger_event?: string
@@ -191,6 +192,7 @@ export interface TagRule {
 
 export interface TagRuleCreate {
   name: string
+  code?: string
   description?: string
   trigger_type: RuleTriggerType
   trigger_event?: string
@@ -205,6 +207,7 @@ export interface TagRuleCreate {
 
 export interface TagRuleUpdate {
   name?: string
+  code?: string
   description?: string
   trigger_type?: RuleTriggerType
   trigger_event?: string

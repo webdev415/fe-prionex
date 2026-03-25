@@ -2612,6 +2612,23 @@
           "mark_paid_off": "Позначити погашених",
           "broken_promise": "Порушена обіцянка оплати (щодня)",
           "no_contact_retry": "Повторна спроба контакту"
+        },
+        "events": {
+          "interaction.created": "Створено взаємодію",
+          "payment.verified": "Платіж підтверджено",
+          "sms.sent": "SMS надіслано",
+          "call.outcome.updated": "Результат дзвінка оновлено",
+          "scoring.completed": "Скоринг завершено",
+          "client.imported": "Клієнта імпортовано",
+          "debt.created": "Створено борг",
+          "debt.updated": "Борг оновлено",
+          "client.created": "Клієнта створено",
+          "interaction.result.agreement": "Результат: Обіцянка оплати",
+          "interaction.result.refusal": "Результат: Відмова від оплати",
+          "interaction.result.no_contact": "Результат: Недозвін",
+          "payment.received": "Платіж отримано",
+          "payment.debt_closed": "Борг закрито",
+          "scoring.calculated": "Скоринг розраховано"
         }
       },
       "categories": {
@@ -2657,6 +2674,24 @@
         "triggerTypes": "Типи тригерів",
         "events": "Доступні події",
         "eventsDesc": "Системні події, які можуть запускати правила",
+        "eventCode": "Код події",
+        "eventLabel": "Відображувана назва",
+        "eventFields": "Поля",
+        "fieldCode": "Код поля",
+        "fieldsCount": "{{count}} полів",
+        "values": "Значення",
+        "valuesCount": "{{count}} значень",
+        "optionValue": "Значення",
+        "optionLabel": "Підпис",
+        "noFields": "Для цієї події поля не налаштовані",
+        "noValues": "Значення не налаштовані",
+        "liveValuesFallback": "Живі значення будуть підмішані під час виконання. Додавайте вручну лише перевизначення або fallback-значення.",
+        "eventSources": {
+          "interactionResults": "Live: результати взаємодій",
+          "interactionTypes": "Live: типи взаємодій",
+          "interactionChannels": "Live: канали взаємодій",
+          "interactionDirections": "Derived: напрямки взаємодій"
+        },
         "actionTypes": "Типи дій",
         "conditionFields": "Поля умов",
         "conditionFieldsDesc": "Поля доступні для умов правил та сегментів",

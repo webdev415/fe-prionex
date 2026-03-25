@@ -4,6 +4,9 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_BUILD_TS': JSON.stringify(String(Date.now())),
+  },
   plugins: [react()],
   resolve: {
     alias: {

@@ -7,6 +7,7 @@
 
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useTagConfigStore } from '@/stores/tagConfigStore'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import {
@@ -28,7 +29,6 @@ export interface ConditionRowProps {
 
 // client_field is excluded until client-service adds a /filter endpoint
 const CONDITION_TYPE_VALUES: ConditionType[] = ['has_tag', 'not_has_tag', 'tag_payload_field']
-const OPERATOR_VALUES = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'contains', 'in', 'not_in']
 
 export const ConditionRow = memo(function ConditionRow({
   condition,
@@ -37,6 +37,7 @@ export const ConditionRow = memo(function ConditionRow({
   onRemove,
 }: ConditionRowProps) {
   const { t } = useTranslation('common')
+  const OPERATOR_VALUES = useTagConfigStore((s) => s.operators).map((i) => i.value)
 
   const isTagType =
     condition.condition_type === 'has_tag' || condition.condition_type === 'not_has_tag'

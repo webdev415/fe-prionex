@@ -2072,6 +2072,23 @@
           "mark_paid_off": "Mark Paid Off",
           "broken_promise": "Broken Promise to Pay (Daily)",
           "no_contact_retry": "Contact Retry"
+        },
+        "events": {
+          "interaction.created": "Interaction created",
+          "payment.verified": "Payment verified",
+          "sms.sent": "SMS sent",
+          "call.outcome.updated": "Call outcome updated",
+          "scoring.completed": "Scoring completed",
+          "client.imported": "Client imported",
+          "debt.created": "Debt created",
+          "debt.updated": "Debt updated",
+          "client.created": "Client created",
+          "interaction.result.agreement": "Result: Agreement (promise)",
+          "interaction.result.refusal": "Result: Refusal to pay",
+          "interaction.result.no_contact": "Result: No contact",
+          "payment.received": "Payment received",
+          "payment.debt_closed": "Debt closed",
+          "scoring.calculated": "Scoring calculated"
         }
       },
       "categories": {
@@ -2117,6 +2134,24 @@
         "triggerTypes": "Trigger types",
         "events": "Available events",
         "eventsDesc": "System events that can trigger rules",
+        "eventCode": "Event code",
+        "eventLabel": "Display name",
+        "eventFields": "Fields",
+        "fieldCode": "Field code",
+        "fieldsCount": "{{count}} fields",
+        "values": "Values",
+        "valuesCount": "{{count}} values",
+        "optionValue": "Value",
+        "optionLabel": "Label",
+        "noFields": "No fields configured for this event",
+        "noValues": "No values configured",
+        "liveValuesFallback": "Live values will be merged at runtime. Add manual values here only if you need overrides or fallbacks.",
+        "eventSources": {
+          "interactionResults": "Live: interaction results",
+          "interactionTypes": "Live: interaction types",
+          "interactionChannels": "Live: interaction channels",
+          "interactionDirections": "Derived: interaction directions"
+        },
         "actionTypes": "Action types",
         "conditionFields": "Condition fields",
         "conditionFieldsDesc": "Fields available for rule/segment conditions",

@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTagConfigStore } from '@/stores/tagConfigStore'
 import { ConfigListEditor } from './ConfigListEditor'
+import { EventConfigEditor } from './EventConfigEditor'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import type { TagDefinition } from '@/features/tags'
@@ -190,15 +191,7 @@ function RuleSettings() {
         onUpdate={(oldValue, newItem) => config.updateItem('triggerTypes', oldValue, newItem)}
         i18nPrefix="pages.tags.rules.triggerTypes"
       />
-      <ConfigListEditor
-        title={t('pages.tags.settings.events', 'Available events')}
-        description={t('pages.tags.settings.eventsDesc', 'System events that can trigger rules')}
-        items={config.availableEvents}
-        onAdd={(item) => config.addItem('availableEvents', item)}
-        onRemove={(value) => config.removeItem('availableEvents', value)}
-        onUpdate={(oldValue, newItem) => config.updateItem('availableEvents', oldValue, newItem)}
-        showLabel
-      />
+      <EventConfigEditor />
       <ConfigListEditor
         title={t('pages.tags.settings.actionTypes', 'Action types')}
         items={config.actionTypes}
@@ -276,8 +269,7 @@ function SegmentSettings() {
           badge: `${p.conditions.length} ${t('pages.tags.rules.conditions', 'условий')}`,
           badgeColor: 'bg-gray-50 text-gray-500',
           details: p.conditions.map(
-            (c) =>
-              `${c.condition_type}${c.tag_code ? ': ' + c.tag_code : ''}`
+            (c) => `${c.condition_type}${c.tag_code ? ': ' + c.tag_code : ''}`
           ),
         }))}
         onRemove={(key) => config.removePreset('segmentPresets', key)}
@@ -332,9 +324,7 @@ function PresetList({
                 <p className="truncate text-xs font-medium text-gray-900">{preset.name}</p>
                 <p className="truncate text-[10px] text-gray-400">{preset.description}</p>
               </button>
-              <code
-                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${preset.badgeColor}`}
-              >
+              <code className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${preset.badgeColor}`}>
                 {preset.badge}
               </code>
               <button

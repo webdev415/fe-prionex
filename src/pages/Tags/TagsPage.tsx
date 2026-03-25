@@ -329,6 +329,7 @@ export function TagsPage() {
         render: (s) => {
           const OPERATOR_SYMBOLS: Record<string, string> = {
             eq: '=',
+            ne: '!=',
             neq: '!=',
             gt: '>',
             gte: '\u2265',
@@ -586,6 +587,7 @@ export function TagsPage() {
 
           const OPERATOR_SYMBOLS: Record<string, string> = {
             eq: '=',
+            ne: '!=',
             neq: '!=',
             gt: '>',
             gte: '>=',

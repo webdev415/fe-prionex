@@ -14,6 +14,26 @@ export interface ConfigItem {
   label: string
 }
 
+export type EventFieldOptionsSource =
+  | 'interactionResults'
+  | 'interactionTypes'
+  | 'interactionChannels'
+  | 'interactionDirections'
+
+export interface EventField {
+  value: string
+  label: string
+  type: 'select' | 'text' | 'number'
+  options?: ConfigItem[]
+  optionsSource?: EventFieldOptionsSource
+}
+
+export interface EventConfig {
+  value: string
+  label: string
+  fields: EventField[]
+}
+
 export interface RulePreset {
   key: string
   name: string
@@ -50,7 +70,7 @@ interface TagConfigState {
 
   // Rule settings
   triggerTypes: ConfigItem[]
-  availableEvents: ConfigItem[]
+  availableEvents: EventConfig[]
   actionTypes: ConfigItem[]
   conditionFields: ConfigItem[]
   operators: ConfigItem[]
@@ -64,11 +84,233 @@ interface TagConfigState {
   addItem: (listKey: string, item: ConfigItem) => void
   removeItem: (listKey: string, value: string) => void
   updateItem: (listKey: string, oldValue: string, newItem: ConfigItem) => void
+  addEvent: (event: EventConfig) => void
+  removeEvent: (eventValue: string) => void
+  updateEvent: (oldEventValue: string, event: EventConfig) => void
+  addEventField: (eventValue: string, field: EventField) => void
+  removeEventField: (eventValue: string, fieldValue: string) => void
+  updateEventField: (eventValue: string, oldFieldValue: string, field: EventField) => void
+  addEventFieldOption: (eventValue: string, fieldValue: string, option: ConfigItem) => void
+  removeEventFieldOption: (eventValue: string, fieldValue: string, optionValue: string) => void
+  updateEventFieldOption: (
+    eventValue: string,
+    fieldValue: string,
+    oldOptionValue: string,
+    option: ConfigItem
+  ) => void
   addColor: (color: string) => void
   removeColor: (color: string) => void
   removePreset: (listKey: 'rulePresets' | 'segmentPresets', key: string) => void
   resetToDefaults: () => void
 }
+
+const DEFAULT_INTERACTION_RESULT_OPTIONS: ConfigItem[] = [
+  { value: 'No contact', label: 'No contact' },
+  { value: 'Refusal to pay', label: 'Refusal to pay' },
+  { value: 'Agreement', label: 'Agreement' },
+  { value: 'Call back by appointment', label: 'Call back by appointment' },
+  { value: 'Consent to interact', label: 'Consent to interact' },
+  { value: 'Waiting for a call', label: 'Waiting for a call' },
+  { value: 'Hanged up', label: 'Hanged up' },
+  { value: 'Request for documents', label: 'Request for documents' },
+  { value: 'Disconnected', label: 'Disconnected' },
+  { value: 'Refused payment', label: 'Refused payment' },
+  { value: 'Will provide information', label: 'Will provide information' },
+  { value: 'Will not provide information', label: 'Will not provide information' },
+  { value: 'Refused consent to interact', label: 'Refused consent to interact' },
+  { value: 'Threatens', label: 'Threatens' },
+  { value: 'Sent documents', label: 'Sent documents' },
+  { value: 'No numbers', label: 'No numbers' },
+  { value: 'Numbers found', label: 'Numbers found' },
+]
+
+const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
+  {
+    value: 'interaction.created',
+    label: 'Interaction created',
+    fields: [
+      {
+        value: 'result_name',
+        label: 'result_name',
+        type: 'select',
+        optionsSource: 'interactionResults',
+        options: DEFAULT_INTERACTION_RESULT_OPTIONS,
+      },
+      {
+        value: 'type_code',
+        label: 'type_code',
+        type: 'select',
+        optionsSource: 'interactionTypes',
+        options: [
+          { value: 'INCOMING', label: 'INCOMING' },
+          { value: 'OUTGOING', label: 'OUTGOING' },
+          { value: 'SEARCHING', label: 'SEARCHING' },
+        ],
+      },
+      {
+        value: 'channel',
+        label: 'channel',
+        type: 'select',
+        optionsSource: 'interactionChannels',
+        options: [
+          { value: 'call', label: 'call' },
+          { value: 'messenger', label: 'messenger' },
+          { value: 'mail', label: 'mail' },
+          { value: 'chat', label: 'chat' },
+        ],
+      },
+      {
+        value: 'direction',
+        label: 'direction',
+        type: 'select',
+        optionsSource: 'interactionDirections',
+        options: [
+          { value: 'inbound', label: 'inbound' },
+          { value: 'outbound', label: 'outbound' },
+          { value: 'system', label: 'system' },
+        ],
+      },
+    ],
+  },
+  {
+    value: 'payment.verified',
+    label: 'Payment verified',
+    fields: [
+      { value: 'payment_id', label: 'payment_id', type: 'number' },
+      { value: 'payment_number', label: 'payment_number', type: 'text' },
+      { value: 'debt_id', label: 'debt_id', type: 'number' },
+      { value: 'amount', label: 'amount', type: 'number' },
+      { value: 'payment_method', label: 'payment_method', type: 'text' },
+      { value: 'payment_date', label: 'payment_date', type: 'text' },
+      { value: 'status', label: 'status', type: 'text' },
+      { value: 'verified_by_user_id', label: 'verified_by_user_id', type: 'number' },
+      { value: 'verified_at', label: 'verified_at', type: 'text' },
+      { value: 'remaining_debt', label: 'remaining_debt', type: 'number' },
+    ],
+  },
+  {
+    value: 'sms.sent',
+    label: 'SMS sent',
+    fields: [
+      { value: 'sms_id', label: 'sms_id', type: 'number' },
+      { value: 'message_id', label: 'message_id', type: 'text' },
+      { value: 'phone_number', label: 'phone_number', type: 'text' },
+      { value: 'template_name', label: 'template_name', type: 'text' },
+      { value: 'segments', label: 'segments', type: 'number' },
+      { value: 'gateway_provider', label: 'gateway_provider', type: 'text' },
+      { value: 'status', label: 'status', type: 'text' },
+    ],
+  },
+  {
+    value: 'call.outcome.updated',
+    label: 'Call outcome updated',
+    fields: [
+      { value: 'call_id', label: 'call_id', type: 'text' },
+      { value: 'outcome', label: 'outcome', type: 'text' },
+      { value: 'disposition', label: 'disposition', type: 'text' },
+      { value: 'direction', label: 'direction', type: 'text' },
+      { value: 'agent_extension', label: 'agent_extension', type: 'text' },
+    ],
+  },
+  {
+    value: 'scoring.completed',
+    label: 'Scoring completed',
+    fields: [
+      { value: 'score', label: 'score', type: 'number' },
+      { value: 'risk_score', label: 'risk_score', type: 'number' },
+      { value: 'previous_score', label: 'previous_score', type: 'number' },
+      { value: 'score_change', label: 'score_change', type: 'number' },
+      { value: 'algorithm_version', label: 'algorithm_version', type: 'text' },
+      { value: 'calculation_reason', label: 'calculation_reason', type: 'text' },
+    ],
+  },
+  {
+    value: 'client.imported',
+    label: 'Client imported',
+    fields: [
+      { value: 'tax_id', label: 'tax_id', type: 'text' },
+      { value: 'status', label: 'status', type: 'text' },
+      { value: 'import_batch_id', label: 'import_batch_id', type: 'text' },
+    ],
+  },
+  {
+    value: 'debt.created',
+    label: 'Debt created',
+    fields: [
+      { value: 'debt_id', label: 'debt_id', type: 'number' },
+      { value: 'amount', label: 'amount', type: 'number' },
+      { value: 'contract_number', label: 'contract_number', type: 'text' },
+      { value: 'status', label: 'status', type: 'text' },
+    ],
+  },
+  {
+    value: 'debt.updated',
+    label: 'Debt updated',
+    fields: [
+      { value: 'debt_id', label: 'debt_id', type: 'number' },
+      { value: 'old_amount', label: 'old_amount', type: 'number' },
+      { value: 'new_amount', label: 'new_amount', type: 'number' },
+      { value: 'old_status', label: 'old_status', type: 'text' },
+      { value: 'new_status', label: 'new_status', type: 'text' },
+      { value: 'contract_number', label: 'contract_number', type: 'text' },
+    ],
+  },
+  {
+    value: 'client.created',
+    label: 'Client created',
+    fields: [
+      { value: 'tax_id', label: 'tax_id', type: 'text' },
+      { value: 'status', label: 'status', type: 'text' },
+      { value: 'source', label: 'source', type: 'text' },
+    ],
+  },
+  {
+    value: 'payment.received',
+    label: 'Payment received',
+    fields: [
+      { value: 'payment_id', label: 'payment_id', type: 'number' },
+      { value: 'payment_number', label: 'payment_number', type: 'text' },
+      { value: 'debt_id', label: 'debt_id', type: 'number' },
+      { value: 'amount', label: 'amount', type: 'number' },
+      { value: 'payment_method', label: 'payment_method', type: 'text' },
+      { value: 'payment_date', label: 'payment_date', type: 'text' },
+      { value: 'status', label: 'status', type: 'text' },
+      { value: 'recorded_by_user_id', label: 'recorded_by_user_id', type: 'number' },
+    ],
+  },
+  {
+    value: 'payment.debt_closed',
+    label: 'Debt closed',
+    fields: [
+      { value: 'payment_id', label: 'payment_id', type: 'number' },
+      { value: 'payment_number', label: 'payment_number', type: 'text' },
+      { value: 'debt_id', label: 'debt_id', type: 'number' },
+      { value: 'amount', label: 'amount', type: 'number' },
+      { value: 'payment_method', label: 'payment_method', type: 'text' },
+      { value: 'payment_date', label: 'payment_date', type: 'text' },
+      { value: 'status', label: 'status', type: 'text' },
+      { value: 'verified_by_user_id', label: 'verified_by_user_id', type: 'number' },
+      { value: 'verified_at', label: 'verified_at', type: 'text' },
+      { value: 'remaining_debt', label: 'remaining_debt', type: 'number' },
+    ],
+  },
+  {
+    value: 'scoring.calculated',
+    label: 'Scoring calculated',
+    fields: [
+      { value: 'score', label: 'score', type: 'number' },
+      { value: 'risk_score', label: 'risk_score', type: 'number' },
+      { value: 'previous_score', label: 'previous_score', type: 'number' },
+      { value: 'score_change', label: 'score_change', type: 'number' },
+      { value: 'algorithm_version', label: 'algorithm_version', type: 'text' },
+      { value: 'calculation_reason', label: 'calculation_reason', type: 'text' },
+    ],
+  },
+]
+
+export const DEFAULT_EVENT_LABELS = Object.fromEntries(
+  DEFAULT_AVAILABLE_EVENTS.map((event) => [event.value, event.label])
+) as Record<string, string>
 
 const DEFAULT_CONFIG = {
   categories: [
@@ -110,15 +352,8 @@ const DEFAULT_CONFIG = {
     { value: 'scoring_change', label: 'Scoring Change' },
     { value: 'import_complete', label: 'Import Complete' },
   ],
-  // Canonical event names — must match backend DomainEventPublisher routing keys
-  availableEvents: [
-    { value: 'interaction.created', label: 'Interaction created' },
-    { value: 'payment.verified', label: 'Payment verified' },
-    { value: 'sms.sent', label: 'SMS sent' },
-    { value: 'call.outcome.updated', label: 'Call outcome updated' },
-    { value: 'scoring.completed', label: 'Scoring completed' },
-    { value: 'client.imported', label: 'Client imported' },
-  ],
+  // Events with payload fields — must match backend DomainEventPublisher routing keys
+  availableEvents: DEFAULT_AVAILABLE_EVENTS,
   actionTypes: [
     { value: 'add_tag', label: 'Add tag' },
     { value: 'remove_tag', label: 'Remove tag' },
@@ -136,7 +371,7 @@ const DEFAULT_CONFIG = {
   ],
   operators: [
     { value: 'eq', label: '= (equals)' },
-    { value: 'neq', label: '!= (not equals)' },
+    { value: 'ne', label: '!= (not equals)' },
     { value: 'gt', label: '> (greater)' },
     { value: 'gte', label: '>= (greater or equal)' },
     { value: 'lt', label: '< (less)' },
@@ -286,19 +521,161 @@ type ListKey = keyof Omit<
   | 'presetColors'
   | 'rulePresets'
   | 'segmentPresets'
+  | 'availableEvents'
   | 'addItem'
   | 'removeItem'
   | 'updateItem'
+  | 'addEvent'
+  | 'removeEvent'
+  | 'updateEvent'
+  | 'addEventField'
+  | 'removeEventField'
+  | 'updateEventField'
+  | 'addEventFieldOption'
+  | 'removeEventFieldOption'
+  | 'updateEventFieldOption'
   | 'addColor'
   | 'removeColor'
   | 'removePreset'
   | 'resetToDefaults'
 >
 
+function cloneConfigItems(items: ConfigItem[] | undefined): ConfigItem[] {
+  return (items ?? []).map((item) => ({
+    value: String(item.value ?? '').trim(),
+    label: String(item.label ?? item.value ?? '').trim(),
+  }))
+}
+
+function normalizeEventField(field: EventField): EventField {
+  return {
+    value: String(field.value ?? '').trim(),
+    label: String(field.label ?? field.value ?? '').trim(),
+    type: field.type ?? 'text',
+    optionsSource: field.optionsSource,
+    options: cloneConfigItems(field.options),
+  }
+}
+
+function normalizeEventConfig(event: EventConfig): EventConfig {
+  const eventValue = String(event.value ?? '').trim()
+  const normalizedFields = (event.fields ?? [])
+    .map(normalizeEventField)
+    .filter((field) => field.value.length > 0)
+  const defaultFields =
+    DEFAULT_AVAILABLE_EVENTS.find((item) => item.value === eventValue)?.fields.map(
+      normalizeEventField
+    ) ?? []
+  const mergedFields = new Map(defaultFields.map((field) => [field.value, field]))
+
+  for (const field of normalizedFields) {
+    mergedFields.set(field.value, field)
+  }
+
+  return {
+    value: eventValue,
+    label: String(event.label ?? event.value ?? '').trim(),
+    fields: Array.from(mergedFields.values()),
+  }
+}
+
+function cloneEventConfigs(events: EventConfig[]): EventConfig[] {
+  return events.map(normalizeEventConfig)
+}
+
+function normalizeOperators(items: ConfigItem[]): ConfigItem[] {
+  const deduped = new Map<string, ConfigItem>()
+
+  for (const item of items) {
+    const value = item.value === 'neq' ? 'ne' : item.value
+    if (!deduped.has(value)) {
+      deduped.set(value, { ...item, value })
+    }
+  }
+
+  return Array.from(deduped.values())
+}
+
+function normalizeAvailableEventsState(rawAvailableEvents: unknown): EventConfig[] {
+  if (!Array.isArray(rawAvailableEvents)) {
+    return cloneEventConfigs(DEFAULT_AVAILABLE_EVENTS)
+  }
+
+  const normalized = rawAvailableEvents
+    .map((item) => {
+      if (typeof item !== 'object' || item === null) {
+        return null
+      }
+
+      const eventLike = item as Partial<EventConfig> & { fields?: unknown }
+      const fields = Array.isArray(eventLike.fields) ? eventLike.fields : []
+
+      if (
+        fields.length === 0 &&
+        typeof eventLike.value === 'string' &&
+        typeof eventLike.label === 'string'
+      ) {
+        const defaultEvent = DEFAULT_AVAILABLE_EVENTS.find(
+          (event) => event.value === eventLike.value
+        )
+        return normalizeEventConfig({
+          value: eventLike.value,
+          label: eventLike.label,
+          fields: defaultEvent?.fields ?? [],
+        })
+      }
+
+      return normalizeEventConfig({
+        value: String(eventLike.value ?? ''),
+        label: String(eventLike.label ?? eventLike.value ?? ''),
+        fields: fields as EventField[],
+      })
+    })
+    .filter((event): event is EventConfig => event !== null && event.value.length > 0)
+
+  if (normalized.length === 0) {
+    return cloneEventConfigs(DEFAULT_AVAILABLE_EVENTS)
+  }
+
+  const merged = new Map(
+    DEFAULT_AVAILABLE_EVENTS.map((event) => [event.value, normalizeEventConfig(event)])
+  )
+
+  for (const event of normalized) {
+    merged.set(event.value, normalizeEventConfig(event))
+  }
+
+  return Array.from(merged.values())
+}
+
+function cloneDefaultConfig() {
+  return {
+    ...DEFAULT_CONFIG,
+    categories: cloneConfigItems(DEFAULT_CONFIG.categories),
+    visibilities: cloneConfigItems(DEFAULT_CONFIG.visibilities),
+    expiryTypes: cloneConfigItems(DEFAULT_CONFIG.expiryTypes),
+    presetColors: [...DEFAULT_CONFIG.presetColors],
+    triggerTypes: cloneConfigItems(DEFAULT_CONFIG.triggerTypes),
+    availableEvents: cloneEventConfigs(DEFAULT_CONFIG.availableEvents),
+    actionTypes: cloneConfigItems(DEFAULT_CONFIG.actionTypes),
+    conditionFields: cloneConfigItems(DEFAULT_CONFIG.conditionFields),
+    operators: cloneConfigItems(DEFAULT_CONFIG.operators),
+    refreshModes: cloneConfigItems(DEFAULT_CONFIG.refreshModes),
+    rulePresets: DEFAULT_CONFIG.rulePresets.map((preset) => ({
+      ...preset,
+      conditions: preset.conditions.map((condition) => ({ ...condition })),
+    })),
+    segmentPresets: DEFAULT_CONFIG.segmentPresets.map((preset) => ({
+      ...preset,
+      conditions: preset.conditions.map((condition) => ({ ...condition })),
+    })),
+  }
+}
+
 export const useTagConfigStore = create<TagConfigState>()(
   persist(
     (set) => ({
-      ...DEFAULT_CONFIG,
+      ...cloneDefaultConfig(),
 
       addItem: (listKey: string, item: ConfigItem) =>
         set((state) => {
@@ -324,6 +701,176 @@ export const useTagConfigStore = create<TagConfigState>()(
           }
         }),
 
+      addEvent: (event: EventConfig) =>
+        set((state) => {
+          const normalized = normalizeEventConfig(event)
+          if (!normalized.value) return state
+          if (state.availableEvents.some((item) => item.value === normalized.value)) return state
+          return {
+            availableEvents: [...state.availableEvents, normalized],
+          }
+        }),
+
+      removeEvent: (eventValue: string) =>
+        set((state) => ({
+          availableEvents: state.availableEvents.filter((event) => event.value !== eventValue),
+        })),
+
+      updateEvent: (oldEventValue: string, event: EventConfig) =>
+        set((state) => {
+          const normalized = normalizeEventConfig(event)
+          if (!normalized.value) return state
+          if (
+            oldEventValue !== normalized.value &&
+            state.availableEvents.some((item) => item.value === normalized.value)
+          ) {
+            return state
+          }
+
+          return {
+            availableEvents: state.availableEvents.map((item) =>
+              item.value === oldEventValue ? normalized : item
+            ),
+          }
+        }),
+
+      addEventField: (eventValue: string, field: EventField) =>
+        set((state) => {
+          const normalized = normalizeEventField(field)
+          if (!normalized.value) return state
+
+          return {
+            availableEvents: state.availableEvents.map((event) => {
+              if (event.value !== eventValue) return event
+              if (event.fields.some((item) => item.value === normalized.value)) return event
+              return {
+                ...event,
+                fields: [...event.fields, normalized],
+              }
+            }),
+          }
+        }),
+
+      removeEventField: (eventValue: string, fieldValue: string) =>
+        set((state) => ({
+          availableEvents: state.availableEvents.map((event) =>
+            event.value === eventValue
+              ? {
+                  ...event,
+                  fields: event.fields.filter((field) => field.value !== fieldValue),
+                }
+              : event
+          ),
+        })),
+
+      updateEventField: (eventValue: string, oldFieldValue: string, field: EventField) =>
+        set((state) => {
+          const normalized = normalizeEventField(field)
+          if (!normalized.value) return state
+
+          return {
+            availableEvents: state.availableEvents.map((event) => {
+              if (event.value !== eventValue) return event
+              if (
+                oldFieldValue !== normalized.value &&
+                event.fields.some((item) => item.value === normalized.value)
+              ) {
+                return event
+              }
+
+              return {
+                ...event,
+                fields: event.fields.map((item) =>
+                  item.value === oldFieldValue ? normalized : item
+                ),
+              }
+            }),
+          }
+        }),
+
+      addEventFieldOption: (eventValue: string, fieldValue: string, option: ConfigItem) =>
+        set((state) => {
+          const normalizedOption = cloneConfigItems([option])[0]
+          if (!normalizedOption?.value) return state
+
+          return {
+            availableEvents: state.availableEvents.map((event) => {
+              if (event.value !== eventValue) return event
+
+              return {
+                ...event,
+                fields: event.fields.map((field) => {
+                  if (field.value !== fieldValue) return field
+                  const options = field.options ?? []
+                  if (options.some((item) => item.value === normalizedOption.value)) return field
+                  return {
+                    ...field,
+                    options: [...options, normalizedOption],
+                  }
+                }),
+              }
+            }),
+          }
+        }),
+
+      removeEventFieldOption: (eventValue: string, fieldValue: string, optionValue: string) =>
+        set((state) => ({
+          availableEvents: state.availableEvents.map((event) => {
+            if (event.value !== eventValue) return event
+
+            return {
+              ...event,
+              fields: event.fields.map((field) =>
+                field.value === fieldValue
+                  ? {
+                      ...field,
+                      options: (field.options ?? []).filter(
+                        (option) => option.value !== optionValue
+                      ),
+                    }
+                  : field
+              ),
+            }
+          }),
+        })),
+
+      updateEventFieldOption: (
+        eventValue: string,
+        fieldValue: string,
+        oldOptionValue: string,
+        option: ConfigItem
+      ) =>
+        set((state) => {
+          const normalizedOption = cloneConfigItems([option])[0]
+          if (!normalizedOption?.value) return state
+
+          return {
+            availableEvents: state.availableEvents.map((event) => {
+              if (event.value !== eventValue) return event
+
+              return {
+                ...event,
+                fields: event.fields.map((field) => {
+                  if (field.value !== fieldValue) return field
+                  if (
+                    oldOptionValue !== normalizedOption.value &&
+                    (field.options ?? []).some((item) => item.value === normalizedOption.value)
+                  ) {
+                    return field
+                  }
+
+                  return {
+                    ...field,
+                    options: (field.options ?? []).map((item) =>
+                      item.value === oldOptionValue ? normalizedOption : item
+                    ),
+                  }
+                }),
+              }
+            }),
+          }
+        }),
+
       addColor: (color: string) =>
         set((state) => {
           if (state.presetColors.includes(color)) return state
@@ -340,11 +887,24 @@ export const useTagConfigStore = create<TagConfigState>()(
           [listKey]: state[listKey].filter((p) => p.key !== key),
         })),
 
-      resetToDefaults: () => set(DEFAULT_CONFIG),
+      resetToDefaults: () => set(cloneDefaultConfig()),
     }),
     {
       name: 'tag-config-storage',
-      version: 1,
+      version: 3,
+      migrate: (persistedState) => {
+        const state = persistedState as Partial<TagConfigState> | undefined
+        if (!state) return cloneDefaultConfig()
+
+        return {
+          ...cloneDefaultConfig(),
+          ...state,
+          availableEvents: normalizeAvailableEventsState(state.availableEvents),
+          operators: Array.isArray(state.operators)
+            ? normalizeOperators(state.operators)
+            : cloneConfigItems(DEFAULT_CONFIG.operators),
+        }
+      },
     }
   )
 )

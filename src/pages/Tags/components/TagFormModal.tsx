@@ -29,6 +29,7 @@ import {
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { ColorPickerField } from '@/components/forms'
 import { Icons } from '@/lib/icons'
+import { generateCode } from '@/lib/utils'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/Tooltip'
 
 interface TagFormModalProps {
@@ -187,58 +188,7 @@ export function TagFormModal({
   const codeManuallyEdited = useRef(false)
   useEffect(() => {
     if (!tag && !codeManuallyEdited.current) {
-      if (!watchedName) {
-        setValue('code', '', { shouldValidate: false })
-        return
-      }
-      const TRANSLIT: Record<string, string> = {
-        а: 'a',
-        б: 'b',
-        в: 'v',
-        г: 'g',
-        д: 'd',
-        е: 'e',
-        ё: 'yo',
-        ж: 'zh',
-        з: 'z',
-        и: 'i',
-        й: 'y',
-        к: 'k',
-        л: 'l',
-        м: 'm',
-        н: 'n',
-        о: 'o',
-        п: 'p',
-        р: 'r',
-        с: 's',
-        т: 't',
-        у: 'u',
-        ф: 'f',
-        х: 'kh',
-        ц: 'ts',
-        ч: 'ch',
-        ш: 'sh',
-        щ: 'shch',
-        ъ: '',
-        ы: 'y',
-        ь: '',
-        э: 'e',
-        ю: 'yu',
-        я: 'ya',
-        є: 'ye',
-        і: 'i',
-        ї: 'yi',
-        ґ: 'g',
-      }
-      const slug = watchedName
-        .toLowerCase()
-        .split('')
-        .map((ch) => TRANSLIT[ch] ?? ch)
-        .join('')
-        .replace(/[^a-z0-9]+/g, '_')
-        .replace(/^_|_$/g, '')
-        .slice(0, 50)
-      setValue('code', slug, { shouldValidate: false })
+      setValue('code', watchedName ? generateCode(watchedName) : '', { shouldValidate: false })
     }
   }, [watchedName, tag, setValue])
 

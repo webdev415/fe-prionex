@@ -86,7 +86,13 @@ export function ConfigListEditor({
       LANGS.forEach((lang) => {
         const langLabel = newLangs[lang]?.trim()
         if (langLabel) {
-          i18n.addResourceBundle(lang, 'common', buildNestedObj(`${i18nPrefix}.${value}`, langLabel), true, true)
+          i18n.addResourceBundle(
+            lang,
+            'common',
+            buildNestedObj(`${i18nPrefix}.${value}`, langLabel),
+            true,
+            true
+          )
         }
       })
       onAdd({ value, label })
@@ -118,7 +124,13 @@ export function ConfigListEditor({
       LANGS.forEach((lang) => {
         const langLabel = editLangs[lang]?.trim()
         if (langLabel) {
-          i18n.addResourceBundle(lang, 'common', buildNestedObj(`${i18nPrefix}.${editValue.trim()}`, langLabel), true, true)
+          i18n.addResourceBundle(
+            lang,
+            'common',
+            buildNestedObj(`${i18nPrefix}.${editValue.trim()}`, langLabel),
+            true,
+            true
+          )
         }
       })
       onUpdate(editingValue, { value: editValue.trim(), label: editLangs.en || editValue.trim() })
