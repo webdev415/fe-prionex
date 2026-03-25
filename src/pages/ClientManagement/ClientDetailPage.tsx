@@ -5,7 +5,8 @@
  */
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useQueries } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { formatDate, formatDateTime } from '@/lib/formatters'
@@ -81,6 +82,7 @@ import { useUserDepartment } from '@/features/users'
 import { PermissionGuard } from '@/components/auth'
 import { useHasPermission } from '@/hooks/usePermissions'
 import { PERMISSIONS } from '@/constants/permissions'
+import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 
 // Extended types for SMS and Call items with API-specific properties
 type ExtendedSMSItem = {
@@ -146,7 +148,6 @@ export function ClientDetailPage() {
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
-  const activeProjectId = useAuthStore((state) => Number(state.user?.active_project_id ?? 1))
   const {
     user,
     isCallModalOpen,
@@ -521,6 +522,57 @@ export function ClientDetailPage() {
     t,
   ])
 
+  const normalizePhoneForLookup = (value: string) => value.replace(/[\s\-().]/g, '')
+
+  const phoneLookupValues = useMemo(() => {
+    const phones = client?.phones
+    if (!phones?.length) return []
+    return Array.from(
+      new Set(
+        phones
+          .map((phone) => normalizePhoneForLookup(phone.number))
+          .filter((phone) => phone.length > 0)
+      )
+    )
+  }, [client])
+
+  const linkedContactQueries = useQueries({
+    queries: phoneLookupValues.map((phone) => ({
+      queryKey: ['clients', 'linked-contacts', clientId, phone],
+      queryFn: async () => {
+        const results = await searchClientsByPhoneExact(phone)
+        return results.filter((linkedClient) => linkedClient.id !== clientId)
+      },
+      enabled: isValidClientId && !!phone,
+      staleTime: 60_000,
+    })),
+  })
+
+  const linkedContactsByPhone = useMemo(() => {
+    const map = new Map<string, Array<{ id: number; fullName: string }>>()
+
+    phoneLookupValues.forEach((phone, index) => {
+      const linkedClients = linkedContactQueries[index]?.data ?? []
+      const dedupedByClientId = new Map<number, { id: number; fullName: string }>()
+
+      linkedClients.forEach((linkedClient) => {
+        const fullName = [linkedClient.first_name, linkedClient.middle_name, linkedClient.last_name]
+          .filter(Boolean)
+          .join(' ')
+          .trim()
+
+        dedupedByClientId.set(linkedClient.id, {
+          id: linkedClient.id,
+          fullName: fullName || `ID ${linkedClient.id}`,
+        })
+      })
+
+      map.set(phone, Array.from(dedupedByClientId.values()))
+    })
+
+    return map
+  }, [linkedContactQueries, phoneLookupValues])
+
   // Tags are now fetched from useClientTags hook instead of local state
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
@@ -804,14 +856,16 @@ export function ClientDetailPage() {
       align: 'center',
       render: (loan) =>
         loan.status === 'active' ? (
-          <button
-            onClick={() => setCloseLoanConfirm(loan.id)}
-            disabled={isClosingDebt}
-            className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
-            title={t('pages.clients.detail.closeLoan')}
-          >
-            <Icons.Success size={18} />
-          </button>
+          <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+            <button
+              onClick={() => setCloseLoanConfirm(loan.id)}
+              disabled={isClosingDebt}
+              className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+              title={t('pages.clients.detail.closeLoan')}
+            >
+              <Icons.Success size={18} />
+            </button>
+          </PermissionGuard>
         ) : null,
     },
   ]
@@ -1373,22 +1427,9 @@ export function ClientDetailPage() {
                 <div className="flex items-center justify-between gap-2 self-stretch">
                   <div className="flex flex-1 flex-wrap items-center gap-2">
                     {clientTags && clientTags.length > 0 ? (
-                      <>
-                        {clientTags.slice(0, 3).map((tag) => (
-                          <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
-                        ))}
-                        {clientTags.length > 3 && (
-                          <button
-                            type="button"
-                            onClick={() => setIsTagModalOpen(true)}
-                            className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200"
-                          >
-                            {t('pages.tags.showMore', '+{{count}} more', {
-                              count: clientTags.length - 3,
-                            })}
-                          </button>
-                        )}
-                      </>
+                      clientTags.map((tag) => (
+                        <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
+                      ))
                     ) : (
                       <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                         {t('pages.clients.detail.noTagsAssigned')}
@@ -1399,7 +1440,7 @@ export function ClientDetailPage() {
                     <button
                       onClick={() => setIsTagModalOpen(true)}
                       className="shrink-0 text-gray-500 transition-colors hover:text-gray-700"
-                      title={t('pages.tags.manageTags', 'Manage tags')}
+                      title="Manage tags"
                       type="button"
                     >
                       <Icons.PencilEdit02 size={16} strokeWidth={1.5} />
@@ -1470,10 +1511,32 @@ export function ClientDetailPage() {
                 <div className="flex w-full flex-1 flex-col items-start justify-center gap-2">
                   {client.phones.map((phone, index) => (
                     <div key={index} className="flex items-center gap-2 self-stretch md:gap-3">
-                      <div className="flex flex-1 items-center justify-end gap-0.5">
-                        <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                          {phone.number}
-                        </span>
+                      <div className="flex flex-1 items-center justify-end gap-1.5">
+                        <div className="flex min-w-0 flex-col items-end gap-1">
+                          <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                            {phone.number}
+                          </span>
+                          {(() => {
+                            const phoneKey = normalizePhoneForLookup(phone.number)
+                            const linkedContacts = linkedContactsByPhone.get(phoneKey) ?? []
+                            if (linkedContacts.length === 0) return null
+
+                            return (
+                              <div className="flex flex-wrap items-center justify-end gap-1">
+                                {linkedContacts.map((linkedContact) => (
+                                  <Link
+                                    key={linkedContact.id}
+                                    to={`/dashboard/clients/${linkedContact.id}`}
+                                    className="border-primary-200 bg-primary-50 text-primary-700 hover:border-primary-300 hover:bg-primary-100 inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
+                                  >
+                                    {t('pages.clients.detail.linkedContact')}:{' '}
+                                    {linkedContact.fullName}
+                                  </Link>
+                                ))}
+                              </div>
+                            )
+                          })()}
+                        </div>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
@@ -3264,7 +3327,7 @@ export function ClientDetailPage() {
           open={isTagModalOpen}
           clientId={clientId}
           clientName={client.fullName}
-          projectId={activeProjectId}
+          projectId={1}
           onClose={() => setIsTagModalOpen(false)}
         />
 

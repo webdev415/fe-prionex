@@ -10,7 +10,7 @@ import { api } from '@/lib/api'
 /**
  * Search type enum matching backend
  */
-export type SearchType = 'phone' | 'name' | 'contract_number' | 'all'
+export type SearchType = 'phone' | 'name' | 'email' | 'contract_number' | 'all'
 
 /**
  * Priority level from backend
@@ -24,6 +24,7 @@ export interface EnhancedSearchResult {
   id: number
   full_name: string
   phone_primary: string | null
+  email_primary: string | null
   tax_id: string
   priority_score: number
   priority_level: PriorityLevel
@@ -41,6 +42,13 @@ export interface SearchResponse {
   total: number
   query: string
   search_type: string
+}
+
+export interface PhoneLinkedClient {
+  id: number
+  first_name: string
+  last_name: string
+  middle_name?: string | null
 }
 
 /**
@@ -71,6 +79,18 @@ export async function searchClients(params: SearchParams): Promise<SearchRespons
       limit: params.limit || 10,
     },
   })
+  return response.data
+}
+
+/**
+ * Search clients by exact phone number match.
+ *
+ * Uses backend endpoint optimized for exact phone lookup in client contacts.
+ */
+export async function searchClientsByPhoneExact(phone: string): Promise<PhoneLinkedClient[]> {
+  const response = await api.get<PhoneLinkedClient[]>(
+    `/api/v1/clients/phone/${encodeURIComponent(phone)}`
+  )
   return response.data
 }
 

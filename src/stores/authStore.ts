@@ -1,7 +1,35 @@
 import { create } from 'zustand'
 import { authApi } from '@/features/auth/api/authApi'
 import { setAccessToken, getAccessToken } from '@/lib/api'
-import type { User, LoginRequest, AuthErrorState } from '@/types/api'
+import type { User, LoginRequest, AuthErrorState, CurrentUserResponse } from '@/types/api'
+
+function mapBackendUserToUser(backendUser: CurrentUserResponse): User {
+  return {
+    id: String(backendUser.id),
+    username: backendUser.username,
+    email: backendUser.email,
+    firstName: backendUser.first_name,
+    lastName: backendUser.last_name,
+    projects:
+      backendUser.projects?.map((p) => ({
+        id: String(p.id),
+        name: p.name,
+        code: p.code,
+        roles: [{ id: String(p.id), name: p.role_name }],
+      })) || [],
+    active_project_id: backendUser.active_project ? String(backendUser.active_project.id) : null,
+    active_role_id: backendUser.role ? String(backendUser.role.id) : null,
+    active_role_name: backendUser.role?.name || null,
+    permissions: backendUser.permissions || [],
+    createdAt: backendUser.created_at,
+    updatedAt: backendUser.created_at,
+    asterisk_extension: backendUser.asterisk_extension,
+    is_agent: backendUser.is_agent,
+    agent_status: backendUser.agent_status,
+    timezone: backendUser.timezone,
+    mustChangePassword: backendUser.must_change_password ?? false,
+  }
+}
 
 interface AuthState {
   user: User | null
@@ -76,34 +104,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const userResponse = await authApi.me()
         const backendUser = userResponse.data
 
-        // Map backend user data to frontend User type with permissions
-        const user: User = {
-          id: String(backendUser.id),
-          username: backendUser.username,
-          email: backendUser.email,
-          firstName: backendUser.first_name,
-          lastName: backendUser.last_name,
-          projects:
-            backendUser.projects?.map((p) => ({
-              id: String(p.id),
-              name: p.name,
-              code: p.code, // Preserve project code from backend
-              roles: [{ id: String(p.id), name: p.role_name }],
-            })) || [],
-          active_project_id: backendUser.active_project
-            ? String(backendUser.active_project.id)
-            : null,
-          active_role_id: backendUser.role ? String(backendUser.role.id) : null,
-          active_role_name: backendUser.role?.name || null,
-          permissions: backendUser.permissions || [],
-          createdAt: backendUser.created_at,
-          updatedAt: backendUser.created_at,
-          asterisk_extension: backendUser.asterisk_extension,
-          is_agent: backendUser.is_agent,
-          agent_status: backendUser.agent_status,
-          timezone: backendUser.timezone,
-          mustChangePassword: backendUser.must_change_password ?? false,
-        }
+        const user = mapBackendUserToUser(backendUser)
 
         set({
           user,
@@ -247,34 +248,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const userResponse = await authApi.me()
         const backendUser = userResponse.data
 
-        // Map backend user data to frontend User type with permissions
-        const user: User = {
-          id: String(backendUser.id),
-          username: backendUser.username,
-          email: backendUser.email,
-          firstName: backendUser.first_name,
-          lastName: backendUser.last_name,
-          projects:
-            backendUser.projects?.map((p) => ({
-              id: String(p.id),
-              name: p.name,
-              code: p.code, // Preserve project code from backend
-              roles: [{ id: String(p.id), name: p.role_name }],
-            })) || [],
-          active_project_id: backendUser.active_project
-            ? String(backendUser.active_project.id)
-            : null,
-          active_role_id: backendUser.role ? String(backendUser.role.id) : null,
-          active_role_name: backendUser.role?.name || null,
-          permissions: backendUser.permissions || [],
-          createdAt: backendUser.created_at,
-          updatedAt: backendUser.created_at,
-          asterisk_extension: backendUser.asterisk_extension,
-          is_agent: backendUser.is_agent,
-          agent_status: backendUser.agent_status,
-          timezone: backendUser.timezone,
-          mustChangePassword: backendUser.must_change_password ?? false,
-        }
+        const user = mapBackendUserToUser(backendUser)
 
         set({
           user,
@@ -373,33 +347,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const userResponse = await authApi.me()
           const backendUser = userResponse.data
 
-          // Map backend user data to frontend User type
-          const user: User = {
-            id: String(backendUser.id),
-            username: backendUser.username,
-            email: backendUser.email,
-            firstName: backendUser.first_name,
-            lastName: backendUser.last_name,
-            projects:
-              backendUser.projects?.map((p) => ({
-                id: String(p.id),
-                name: p.name,
-                roles: [{ id: String(p.id), name: p.role_name }],
-              })) || [],
-            active_project_id: backendUser.active_project
-              ? String(backendUser.active_project.id)
-              : null,
-            active_role_id: backendUser.role ? String(backendUser.role.id) : null,
-            active_role_name: backendUser.role?.name || null,
-            permissions: backendUser.permissions || [],
-            createdAt: backendUser.created_at,
-            updatedAt: backendUser.created_at,
-            asterisk_extension: backendUser.asterisk_extension,
-            is_agent: backendUser.is_agent,
-            agent_status: backendUser.agent_status,
-            timezone: backendUser.timezone,
-            mustChangePassword: backendUser.must_change_password ?? false,
-          }
+          const user = mapBackendUserToUser(backendUser)
 
           if (isImpersonating) {
             // In impersonation mode - restore original admin from localStorage
@@ -560,33 +508,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const userResponse = await authApi.me()
       const backendUser = userResponse.data
 
-      // Map backend user data to frontend User type
-      const user: User = {
-        id: String(backendUser.id),
-        username: backendUser.username,
-        email: backendUser.email,
-        firstName: backendUser.first_name,
-        lastName: backendUser.last_name,
-        projects:
-          backendUser.projects?.map((p) => ({
-            id: String(p.id),
-            name: p.name,
-            roles: [{ id: String(p.id), name: p.role_name }],
-          })) || [],
-        active_project_id: backendUser.active_project
-          ? String(backendUser.active_project.id)
-          : null,
-        active_role_id: backendUser.role ? String(backendUser.role.id) : null,
-        active_role_name: backendUser.role?.name || null,
-        permissions: backendUser.permissions || [],
-        asterisk_extension: backendUser.asterisk_extension,
-        is_agent: backendUser.is_agent,
-        agent_status: backendUser.agent_status,
-        timezone: backendUser.timezone,
-        createdAt: backendUser.created_at,
-        updatedAt: backendUser.created_at,
-        mustChangePassword: backendUser.must_change_password ?? false,
-      }
+      const user = mapBackendUserToUser(backendUser)
 
       set({ user })
     } catch (error) {
