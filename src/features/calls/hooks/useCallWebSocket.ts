@@ -16,6 +16,7 @@ export function useCallWebSocket(agentExtension: string | null) {
     reconnecting: false,
     failedAttempts: 0,
     usingPollingFallback: false,
+    serviceUnavailable: false,
   })
 
   const enablePollingFallback = useCallback(() => {
@@ -23,6 +24,7 @@ export function useCallWebSocket(agentExtension: string | null) {
       ...prev,
       usingPollingFallback: true,
       reconnecting: false,
+      serviceUnavailable: true,
     }))
     toast.warning('Using fallback mode for call updates')
   }, [])
@@ -31,6 +33,7 @@ export function useCallWebSocket(agentExtension: string | null) {
     setConnectionStatus((prev) => ({
       ...prev,
       usingPollingFallback: false,
+      serviceUnavailable: false,
     }))
   }, [])
 
@@ -60,6 +63,7 @@ export function useCallWebSocket(agentExtension: string | null) {
         reconnecting: false,
         failedAttempts: 0,
         usingPollingFallback: false,
+        serviceUnavailable: false,
       })
 
       // Join room for this agent's calls
@@ -91,6 +95,7 @@ export function useCallWebSocket(agentExtension: string | null) {
       setConnectionStatus((prev) => ({
         ...prev,
         connected: false,
+        serviceUnavailable: true,
       }))
     })
 
@@ -101,6 +106,7 @@ export function useCallWebSocket(agentExtension: string | null) {
         ...prev,
         reconnecting: true,
         failedAttempts: attemptNumber,
+        serviceUnavailable: true,
       }))
 
       // Show reconnecting notification after 3 failed attempts
@@ -119,12 +125,23 @@ export function useCallWebSocket(agentExtension: string | null) {
     socket.io.on('reconnect', () => {
       reconnectAttempts.current = 0
       disablePollingFallback()
+      setConnectionStatus((prev) => ({
+        ...prev,
+        connected: true,
+        reconnecting: false,
+        serviceUnavailable: false,
+      }))
       toast.success('Connected to call service')
     })
 
     // Reconnection error
     socket.io.on('reconnect_error', (error: Error) => {
       console.error('Reconnection error:', error)
+      setConnectionStatus((prev) => ({
+        ...prev,
+        connected: false,
+        serviceUnavailable: true,
+      }))
     })
 
     // Reconnection failed
