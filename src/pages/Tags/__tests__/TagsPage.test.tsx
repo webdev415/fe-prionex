@@ -12,10 +12,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
 import { TagsPage } from '../TagsPage'
 
-// Mock i18next
+// Mock i18next — return key's last segment for stable English-ish labels
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: string) => defaultValue || key,
+    t: (key: string, fallback?: string | Record<string, unknown>) => {
+      // If second arg is an object (interpolation), there's no explicit fallback
+      const defaultValue = typeof fallback === 'string' ? fallback : undefined
+      // Return default value if provided, otherwise derive from key
+      return defaultValue || key
+    },
     i18n: {
       language: 'en',
       changeLanguage: vi.fn(),
@@ -91,6 +96,12 @@ vi.mock('@/features/tags/api/tagsApi', () => ({
       mockTags = mockTags.filter((t) => t.id !== id)
       return Promise.resolve({ success: true })
     }),
+    getRules: vi.fn(() => Promise.resolve([])),
+    getSegments: vi.fn(() => Promise.resolve([])),
+    deleteRule: vi.fn(() => Promise.resolve()),
+    deleteSegment: vi.fn(() => Promise.resolve()),
+    updateRule: vi.fn(() => Promise.resolve({})),
+    updateSegment: vi.fn(() => Promise.resolve({})),
   },
 }))
 
@@ -186,7 +197,7 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       render(<TagsPage />, { wrapper: Wrapper })
 
       // Click create button - use getAllByRole since there are two buttons (desktop and mobile)
-      const createButtons = screen.getAllByRole('button', { name: /create tag/i })
+      const createButtons = screen.getAllByRole('button', { name: /create|создать/i })
       await user.click(createButtons[0])
 
       // Modal should open
@@ -201,7 +212,7 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       render(<TagsPage />, { wrapper: Wrapper })
 
       // Open modal - use getAllByRole since there are two buttons (desktop and mobile)
-      const createButtons = screen.getAllByRole('button', { name: /create tag/i })
+      const createButtons = screen.getAllByRole('button', { name: /create|создать/i })
       await user.click(createButtons[0])
 
       // Fill form
@@ -233,7 +244,7 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       render(<TagsPage />, { wrapper: Wrapper })
 
       // Open modal - use getAllByRole since there are two buttons (desktop and mobile)
-      const createButtons = screen.getAllByRole('button', { name: /create tag/i })
+      const createButtons = screen.getAllByRole('button', { name: /create|создать/i })
       await user.click(createButtons[0])
 
       await waitFor(() => {
@@ -255,7 +266,7 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       render(<TagsPage />, { wrapper: Wrapper })
 
       // Open modal - use getAllByRole since there are two buttons (desktop and mobile)
-      const createButtons = screen.getAllByRole('button', { name: /create tag/i })
+      const createButtons = screen.getAllByRole('button', { name: /create|создать/i })
       await user.click(createButtons[0])
 
       await waitFor(() => {
@@ -345,16 +356,17 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
       })
 
       // Click delete button
-      const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
+      const deleteButtons = screen.getAllByRole('button', { name: /delete|деактив/i })
       await user.click(deleteButtons[0])
 
       // Confirmation dialog should appear
       await waitFor(() => {
-        expect(screen.getByText(/are you sure/i)).toBeInTheDocument()
+        expect(screen.getByText(/уверены|are you sure/i)).toBeInTheDocument()
       })
     })
 
-    it('test_deletes_tag - Confirming delete removes tag from list', async () => {
+    it('test_deactivates_tag - Confirming deactivation calls update API', async () => {
+      const { tagsApi } = await import('@/features/tags/api/tagsApi')
       const user = userEvent.setup()
       const Wrapper = createTestWrapper()
       render(<TagsPage />, { wrapper: Wrapper })
@@ -364,29 +376,23 @@ describe('TagsPage - TDD Phase 1 (RED)', () => {
         expect(screen.getByText('VIP')).toBeInTheDocument()
       })
 
-      // Get initial tag count
-      const initialTagCount = screen.getByText('2')
-      expect(initialTagCount).toBeInTheDocument()
-
-      // Click delete on first tag
-      const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
-      await user.click(deleteButtons[0])
+      // Click deactivate on first tag
+      const deactivateButtons = screen.getAllByRole('button', { name: /delete|деактив/i })
+      await user.click(deactivateButtons[0])
 
       // Wait for confirmation dialog
       await waitFor(() => {
-        expect(screen.getByText(/are you sure/i)).toBeInTheDocument()
+        expect(screen.getByText(/уверены|are you sure/i)).toBeInTheDocument()
       })
 
-      // Find and click the confirmation delete button
-      // The button name is "actions.delete" (translation key) in the mock
-      const deleteConfirmButton = screen.getByRole('button', { name: /actions\.delete|delete/i })
-      expect(deleteConfirmButton).toBeInTheDocument()
-      await user.click(deleteConfirmButton)
+      // Find and click the confirmation deactivate button
+      const confirmButton = screen.getByRole('button', { name: /деактив/i })
+      expect(confirmButton).toBeInTheDocument()
+      await user.click(confirmButton)
 
-      // Wait for tag to be removed and count to update
+      // updateTag should have been called with is_active: false
       await waitFor(() => {
-        expect(screen.queryByText('VIP')).not.toBeInTheDocument()
-        expect(screen.getByText('1')).toBeInTheDocument() // Count should now be 1
+        expect(tagsApi.updateTag).toHaveBeenCalledWith(1, { is_active: false })
       })
     })
   })

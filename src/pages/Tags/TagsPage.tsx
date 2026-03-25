@@ -8,7 +8,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
-import { useTags, useSegments, useTagRules } from '@/features/tags'
+import { useTags, useSegments, useTagRules, useUpdateRule, useUpdateSegment } from '@/features/tags'
 import type { Tag, TagDefinition, Segment, TagRule } from '@/features/tags'
 import { useAuth } from '@/features/auth'
 import { PermissionGuard } from '@/components/auth'
@@ -28,9 +28,12 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { TagFormModal } from './components/TagFormModal'
 import { DeleteTagDialog } from './components/DeleteTagDialog'
+import { DeleteRuleDialog } from './components/DeleteRuleDialog'
+import { DeleteSegmentDialog } from './components/DeleteSegmentDialog'
 import { SegmentFormModal } from './components/SegmentFormModal'
 import { RuleFormModal } from './components/RuleFormModal'
 import { MutexGroupFormModal } from './components/MutexGroupFormModal'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 
 type TabId = 'dictionary' | 'segments' | 'rules' | 'groups'
 
@@ -98,6 +101,8 @@ export function TagsPage() {
   const [openDropdownTagId, setOpenDropdownTagId] = useState<number | null>(null)
   const [editSegment, setEditSegment] = useState<Segment | null>(null)
   const [editRule, setEditRule] = useState<TagRule | null>(null)
+  const [deleteRuleId, setDeleteRuleId] = useState<number | null>(null)
+  const [deleteSegmentId, setDeleteSegmentId] = useState<number | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [showGroupModal, setShowGroupModal] = useState(false)
 
@@ -116,12 +121,8 @@ export function TagsPage() {
 
   // Fetch data (only load active tab's data)
   const { data: tags = [], isLoading, isError, error } = useTags()
-  const { data: segments = [], isLoading: segmentsLoading } = useSegments({
-    enabled: activeTab === 'segments' || activeTab === 'dictionary',
-  })
-  const { data: rules = [], isLoading: rulesLoading } = useTagRules({
-    enabled: activeTab === 'rules',
-  })
+  const { data: segments = [], isLoading: segmentsLoading } = useSegments()
+  const { data: rules = [], isLoading: rulesLoading } = useTagRules()
 
   const filteredTags = useMemo(() => {
     if (categoryFilter === 'all') return tags
@@ -168,6 +169,12 @@ export function TagsPage() {
   const handleDeactivateSuccess = () => {
     setDeleteTagId(null)
   }
+
+  // Rule & segment mutations
+  const updateRuleMutation = useUpdateRule()
+  const updateSegmentMutation = useUpdateSegment()
+  const ruleToDelete = rules.find((r) => r.id === deleteRuleId)
+  const segmentToDelete = segments.find((s) => s.id === deleteSegmentId)
 
   // Find the tag being deactivated for display in dialog
   const tagToDeactivate = tags.find((tag) => tag.id === deleteTagId)
@@ -533,14 +540,31 @@ export function TagsPage() {
       },
       {
         key: 'is_active',
-        header: t('pages.tags.segments.active', 'Active'),
+        header: t('pages.tags.segments.active', 'Status'),
         align: 'center',
         render: (s) => (
-          <span
-            className={`text-xs font-medium ${s.is_active ? 'text-success-600' : 'text-gray-400'}`}
+          <PermissionGuard
+            permission={PERMISSIONS.TAGS.EDIT}
+            fallback={
+              <span
+                className={`text-xs font-medium ${s.is_active ? 'text-success-600' : 'text-gray-400'}`}
+              >
+                {s.is_active ? t('common.yes', 'Yes') : t('common.no', 'No')}
+              </span>
+            }
           >
-            {s.is_active ? t('common.yes', 'Yes') : t('common.no', 'No')}
-          </span>
+            <ToggleSwitch
+              checked={s.is_active}
+              onChange={(checked) =>
+                updateSegmentMutation.mutate({ id: s.id, data: { is_active: checked } })
+              }
+              ariaLabel={
+                s.is_active
+                  ? t('pages.tags.deactivateSegment', 'Deactivate segment')
+                  : t('pages.tags.activateSegment', 'Activate segment')
+              }
+            />
+          </PermissionGuard>
         ),
       },
       {
@@ -559,11 +583,21 @@ export function TagsPage() {
                 {t('pages.tags.actions.edit', 'Edit')}
               </LinkButton>
             </PermissionGuard>
+            <PermissionGuard permission={PERMISSIONS.TAGS.DELETE}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => setDeleteSegmentId(s.id)}
+                leftIcon={<Icons.Cancel01 size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('actions.delete', 'Delete')}
+              </LinkButton>
+            </PermissionGuard>
           </div>
         ),
       },
     ],
-    [t]
+    [t, updateSegmentMutation]
   )
 
   // Rules columns
@@ -680,14 +714,31 @@ export function TagsPage() {
       },
       {
         key: 'is_active',
-        header: t('pages.tags.rules.active', 'Active'),
+        header: t('pages.tags.rules.active', 'Status'),
         align: 'center',
         render: (r) => (
-          <span
-            className={`text-xs font-medium ${r.is_active ? 'text-success-600' : 'text-gray-400'}`}
+          <PermissionGuard
+            permission={PERMISSIONS.TAGS.EDIT}
+            fallback={
+              <span
+                className={`text-xs font-medium ${r.is_active ? 'text-success-600' : 'text-gray-400'}`}
+              >
+                {r.is_active ? t('common.yes', 'Yes') : t('common.no', 'No')}
+              </span>
+            }
           >
-            {r.is_active ? t('common.yes', 'Yes') : t('common.no', 'No')}
-          </span>
+            <ToggleSwitch
+              checked={r.is_active}
+              onChange={(checked) =>
+                updateRuleMutation.mutate({ id: r.id, data: { is_active: checked } })
+              }
+              ariaLabel={
+                r.is_active
+                  ? t('pages.tags.deactivateRule', 'Deactivate rule')
+                  : t('pages.tags.activateRule', 'Activate rule')
+              }
+            />
+          </PermissionGuard>
         ),
       },
       {
@@ -706,11 +757,21 @@ export function TagsPage() {
                 {t('pages.tags.actions.edit', 'Edit')}
               </LinkButton>
             </PermissionGuard>
+            <PermissionGuard permission={PERMISSIONS.TAGS.DELETE}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => setDeleteRuleId(r.id)}
+                leftIcon={<Icons.Cancel01 size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('actions.delete', 'Delete')}
+              </LinkButton>
+            </PermissionGuard>
           </div>
         ),
       },
     ],
-    [dateLocale, t]
+    [dateLocale, t, updateRuleMutation]
   )
 
   return (
@@ -775,7 +836,9 @@ export function TagsPage() {
                     : tags.length
                   : tab.id === 'segments'
                     ? segments.length
-                    : rules.length}
+                    : tab.id === 'rules'
+                      ? rules.length
+                      : Object.keys(mutexGroups).length}
               </span>
             </button>
           ))}
@@ -1024,6 +1087,15 @@ export function TagsPage() {
         />
       )}
 
+      {deleteSegmentId && segmentToDelete && (
+        <DeleteSegmentDialog
+          open={deleteSegmentId !== null}
+          segment={segmentToDelete}
+          onClose={() => setDeleteSegmentId(null)}
+          onSuccess={() => setDeleteSegmentId(null)}
+        />
+      )}
+
       {/* Modals — Rules */}
       {showCreateModal && activeTab === 'rules' && (
         <RuleFormModal
@@ -1041,6 +1113,15 @@ export function TagsPage() {
           tags={tags}
           onClose={() => setEditRule(null)}
           onSuccess={() => setEditRule(null)}
+        />
+      )}
+
+      {deleteRuleId && ruleToDelete && (
+        <DeleteRuleDialog
+          open={deleteRuleId !== null}
+          rule={ruleToDelete}
+          onClose={() => setDeleteRuleId(null)}
+          onSuccess={() => setDeleteRuleId(null)}
         />
       )}
 
