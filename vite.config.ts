@@ -13,6 +13,17 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
+    proxy: {
+      '/api': {
+        target: 'http://72.62.17.132:8000',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: 'ws://72.62.17.132:8000',
+        ws: true,
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     rollupOptions: {

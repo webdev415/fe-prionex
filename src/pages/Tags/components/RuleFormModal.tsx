@@ -10,6 +10,7 @@ import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
+import { useTagConfigStore } from '@/stores/tagConfigStore'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
@@ -80,105 +81,9 @@ function CronPreview({
   return <p className="text-xs text-green-600">{humanized}</p>
 }
 
-const AVAILABLE_EVENTS = [
-  { value: 'interaction.created', label: 'Створено взаємодію (ЦД)' },
-  { value: 'interaction.result.agreement', label: 'Результат ЦД: Agreement (обіцянка)' },
-  { value: 'interaction.result.refusal', label: 'Результат ЦД: Відмова від оплати' },
-  { value: 'interaction.result.no_contact', label: 'Результат ЦД: Недозвон' },
-  { value: 'payment.received', label: 'Надійшла оплата' },
-  { value: 'payment.debt_closed', label: 'Борг закрито' },
-  { value: 'scoring.calculated', label: 'Розрахований скоринг' },
-  { value: 'client.imported', label: 'Клієнта імпортовано' },
-] as const
+// Dropdown options loaded from tagConfigStore (manageable via Settings tab)
 
-const TRIGGER_TYPE_VALUES: RuleTriggerType[] = [
-  'event',
-  'schedule',
-  'tag_expired',
-  'scoring_change',
-  'import_complete',
-]
-const ACTION_TYPE_VALUES: RuleActionType[] = ['add_tag', 'remove_tag', 'replace_tag']
-const RULE_OPERATOR_VALUES = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'contains', 'in', 'not_in']
-const CONDITION_FIELD_OPTIONS = [
-  { value: 'risk_score', label: 'risk_score' },
-  { value: 'days_past_due', label: 'days_past_due' },
-  { value: 'total_debt', label: 'total_debt' },
-  { value: 'remaining_debt', label: 'remaining_debt' },
-  { value: 'debt_count', label: 'debt_count' },
-  { value: 'status', label: 'status' },
-  { value: 'has_tag', label: 'has_tag' },
-  { value: 'not_has_tag', label: 'not_has_tag' },
-]
-
-const RULE_PRESETS = [
-  {
-    key: 'auto_high_risk',
-    name: 'Auto-tag High Risk',
-    description: 'Automatically tag clients as high risk when scoring exceeds threshold',
-    trigger_type: 'scoring_change' as RuleTriggerType,
-    conditions: [{ field: 'risk_score', op: 'gte', value: '80' }],
-    action_type: 'add_tag' as RuleActionType,
-    target_tag_code: 'high_risk',
-  },
-  {
-    key: 'remove_high_risk',
-    name: 'Remove High Risk',
-    description: 'Remove high risk tag when scoring drops below threshold',
-    trigger_type: 'scoring_change' as RuleTriggerType,
-    conditions: [{ field: 'risk_score', op: 'lt', value: '80' }],
-    action_type: 'remove_tag' as RuleActionType,
-    target_tag_code: 'high_risk',
-  },
-  {
-    key: 'mark_active_debtor',
-    name: 'Mark Active Debtors',
-    description: 'Daily: tag clients with past-due balances as active debtors',
-    trigger_type: 'schedule' as RuleTriggerType,
-    cron_expression: '0 6 * * *',
-    conditions: [{ field: 'days_past_due', op: 'gt', value: '0' }],
-    action_type: 'add_tag' as RuleActionType,
-    target_tag_code: 'active_debtor',
-  },
-  {
-    key: 'mark_paid_off',
-    name: 'Mark Paid Off',
-    description: 'Tag client as paid off when full payment is received',
-    trigger_type: 'event' as RuleTriggerType,
-    trigger_event: 'payment.completed',
-    conditions: [{ field: 'remaining_debt', op: 'eq', value: '0' }],
-    action_type: 'add_tag' as RuleActionType,
-    target_tag_code: 'paid_off',
-  },
-  {
-    key: 'broken_promise',
-    name: 'Broken Promise to Pay',
-    description:
-      'Daily: replace promise_to_pay with refuses_to_pay when client has promise tag and >30 days past due',
-    trigger_type: 'schedule' as RuleTriggerType,
-    cron_expression: '0 8 * * *',
-    conditions: [
-      { field: 'has_tag', op: 'eq', value: 'promise_to_pay' },
-      { field: 'days_past_due', op: 'gt', value: '30' },
-    ],
-    action_type: 'replace_tag' as RuleActionType,
-    target_tag_code: 'refuses_to_pay',
-    replace_tag_code: 'promise_to_pay',
-  },
-  {
-    key: 'no_contact_retry',
-    name: 'Retry No Contact',
-    description: 'Daily: clear no_contact tag after 7+ days past due to retry contact attempts',
-    trigger_type: 'schedule' as RuleTriggerType,
-    cron_expression: '0 9 * * *',
-    conditions: [
-      { field: 'has_tag', op: 'eq', value: 'no_contact' },
-      { field: 'days_past_due', op: 'gt', value: '7' },
-    ],
-    action_type: 'remove_tag' as RuleActionType,
-    target_tag_code: 'no_contact',
-  },
-]
+// Rule presets loaded from tagConfigStore (manageable via Settings tab)
 
 type RuleFormData = {
   name: string
@@ -197,6 +102,14 @@ type RuleFormData = {
 export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleFormModalProps) {
   const { t } = useTranslation('common')
   const isEdit = !!rule
+  const tagConfig = useTagConfigStore()
+
+  const TRIGGER_TYPE_VALUES = tagConfig.triggerTypes.map((i) => i.value) as RuleTriggerType[]
+  const ACTION_TYPE_VALUES = tagConfig.actionTypes.map((i) => i.value) as RuleActionType[]
+  const AVAILABLE_EVENTS = tagConfig.availableEvents
+  const RULE_OPERATOR_VALUES = tagConfig.operators.map((i) => i.value)
+  const CONDITION_FIELD_OPTIONS = tagConfig.conditionFields
+  const RULE_PRESETS = tagConfig.rulePresets
 
   const createMutation = useCreateRule()
   const updateMutation = useUpdateRule()
@@ -289,7 +202,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
 
   const { fields, append, remove } = useFieldArray({ control, name: 'conditions' })
 
-  const triggerType = watch('trigger_type') // eslint-disable-line react-hooks/incompatible-library
+  const triggerType = watch('trigger_type')
   const actionType = watch('action_type')
   const cronValue = watch('cron_expression')
 
@@ -317,6 +230,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
         rule?.trigger_event ? !AVAILABLE_EVENTS.some((e) => e.value === rule.trigger_event) : false
       )
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, rule, reset])
 
   const onSubmit = useCallback(
@@ -404,11 +318,11 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       reset({
                         name: preset.name,
                         description: preset.description,
-                        trigger_type: preset.trigger_type,
+                        trigger_type: preset.trigger_type as RuleTriggerType,
                         trigger_event: preset.trigger_event ?? '',
                         cron_expression: preset.cron_expression ?? '',
                         conditions: preset.conditions,
-                        action_type: preset.action_type,
+                        action_type: preset.action_type as RuleActionType,
                         target_tag_code: preset.target_tag_code,
                         replace_tag_code: preset.replace_tag_code ?? '',
                         priority: 1,
@@ -496,7 +410,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                 <div className="space-y-1.5">
                   <Label>{t('pages.tags.rules.eventName', 'Название события')}</Label>
                   <select
-                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
                     value={isCustomEvent ? '__custom__' : watch('trigger_event') || ''}
                     onChange={(e) => {
                       if (e.target.value === '__custom__') {

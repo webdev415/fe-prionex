@@ -5,10 +5,17 @@
  * Integrated with real API using React Query.
  */
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
-import { useTags, useSegments, useTagRules, useUpdateRule, useUpdateSegment } from '@/features/tags'
+import {
+  useTags,
+  useSegments,
+  useTagRules,
+  useUpdateTag,
+  useUpdateRule,
+  useUpdateSegment,
+} from '@/features/tags'
 import type { Tag, TagDefinition, Segment, TagRule } from '@/features/tags'
 import { useAuth } from '@/features/auth'
 import { PermissionGuard } from '@/components/auth'
@@ -20,12 +27,6 @@ import { ErrorState } from '@/components/ErrorState'
 import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { LinkButton } from '@/components/ui/LinkButton'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/DropdownMenu'
 import { TagFormModal } from './components/TagFormModal'
 import { DeleteTagDialog } from './components/DeleteTagDialog'
 import { DeleteRuleDialog } from './components/DeleteRuleDialog'
@@ -33,9 +34,10 @@ import { DeleteSegmentDialog } from './components/DeleteSegmentDialog'
 import { SegmentFormModal } from './components/SegmentFormModal'
 import { RuleFormModal } from './components/RuleFormModal'
 import { MutexGroupFormModal } from './components/MutexGroupFormModal'
+import { TagSettingsPanel } from './components/TagSettingsPanel'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 
-type TabId = 'dictionary' | 'segments' | 'rules' | 'groups'
+type TabId = 'dictionary' | 'segments' | 'rules' | 'settings'
 
 /** Convert a cron expression to a human-readable string using i18n */
 function humanizeCron(
@@ -80,7 +82,7 @@ const TABS: { id: TabId; labelKey: string; fallback: string }[] = [
   { id: 'dictionary', labelKey: 'pages.tags.tabs.dictionary', fallback: 'Dictionary' },
   { id: 'segments', labelKey: 'pages.tags.tabs.segments', fallback: 'Segments' },
   { id: 'rules', labelKey: 'pages.tags.tabs.rules', fallback: 'Rules' },
-  { id: 'groups', labelKey: 'pages.tags.tabs.groups', fallback: 'Groups' },
+  { id: 'settings', labelKey: 'pages.tags.tabs.settings', fallback: 'Settings' },
 ]
 
 const CATEGORY_FILTERS = ['all', 'status', 'risk', 'communication', 'behavior', 'system', 'custom']
@@ -98,7 +100,6 @@ export function TagsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editTag, setEditTag] = useState<Tag | null>(null)
   const [deleteTagId, setDeleteTagId] = useState<number | null>(null)
-  const [openDropdownTagId, setOpenDropdownTagId] = useState<number | null>(null)
   const [editSegment, setEditSegment] = useState<Segment | null>(null)
   const [editRule, setEditRule] = useState<TagRule | null>(null)
   const [deleteRuleId, setDeleteRuleId] = useState<number | null>(null)
@@ -131,31 +132,8 @@ export function TagsPage() {
 
   const dateLocale = DATE_LOCALE_BY_LANGUAGE[i18n.language] ?? 'ru-RU'
 
-  // Close dropdown when screen size crosses breakpoint (in either direction)
-  useEffect(() => {
-    let wasMobile = window.innerWidth < 1024 // lg breakpoint
-
-    const handleResize = () => {
-      const isMobile = window.innerWidth < 1024
-
-      // Close dropdown if transitioning across breakpoint (mobile <-> desktop)
-      if (wasMobile !== isMobile && openDropdownTagId !== null) {
-        setOpenDropdownTagId(null)
-      }
-
-      wasMobile = isMobile
-    }
-
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [openDropdownTagId])
-
   const handleEdit = (tag: Tag) => {
     setEditTag(tag)
-  }
-
-  const handleDeactivate = (tagId: number) => {
-    setDeleteTagId(tagId)
   }
 
   const handleCreateSuccess = () => {
@@ -170,7 +148,8 @@ export function TagsPage() {
     setDeleteTagId(null)
   }
 
-  // Rule & segment mutations
+  // Tag, rule & segment mutations
+  const updateTagMutation = useUpdateTag()
   const updateRuleMutation = useUpdateRule()
   const updateSegmentMutation = useUpdateSegment()
   const ruleToDelete = rules.find((r) => r.id === deleteRuleId)
@@ -260,114 +239,75 @@ export function TagsPage() {
         },
       },
       {
-        key: 'is_active',
-        header: t('pages.tags.tableHeaders.active', 'Active'),
-        align: 'center',
-        render: (tag) => {
-          const active = (tag as TagDefinition).is_active ?? true
-          return (
-            <span
-              className={`text-xs font-medium ${active ? 'text-success-600' : 'text-gray-400'}`}
-            >
-              {active ? t('common.yes', 'Yes') : t('common.no', 'No')}
-            </span>
-          )
-        },
-      },
-      {
         key: 'client_count',
         header: t('pages.tags.tableHeaders.clients', 'Clients'),
         align: 'center',
         render: (tag) => <span className="font-medium">{tag.client_count || 0}</span>,
       },
       {
+        key: 'is_active',
+        header: t('pages.tags.tableHeaders.active', 'Active'),
+        align: 'center',
+        render: (tag) => {
+          const active = (tag as TagDefinition).is_active ?? true
+          return (
+            <PermissionGuard
+              permission={PERMISSIONS.TAGS.EDIT}
+              fallback={
+                <span
+                  className={`text-xs font-medium ${active ? 'text-success-600' : 'text-gray-400'}`}
+                >
+                  {active ? t('common.yes', 'Yes') : t('common.no', 'No')}
+                </span>
+              }
+            >
+              <ToggleSwitch
+                checked={active}
+                onChange={(checked) =>
+                  updateTagMutation.mutate({ id: tag.id, data: { is_active: checked } })
+                }
+                ariaLabel={
+                  active
+                    ? t('pages.tags.deactivateTag', 'Deactivate tag')
+                    : t('pages.tags.activateTag', 'Activate tag')
+                }
+              />
+            </PermissionGuard>
+          )
+        },
+      },
+      {
         key: 'actions',
         header: t('pages.tags.tableHeaders.actions', 'Actions'),
         align: 'center',
         render: (tag) => (
-          <div className="flex items-center justify-center gap-2">
-            {/* Desktop: Individual link buttons */}
-            <div className="hidden items-center gap-4 lg:flex">
-              <PermissionGuard permission={PERMISSIONS.TAGS.EDIT}>
-                <LinkButton
-                  variant="regular-black"
-                  size="xs"
-                  onClick={() => handleEdit(tag)}
-                  leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
-                >
-                  {t('pages.tags.actions.edit', 'Edit')}
-                </LinkButton>
-              </PermissionGuard>
-              <PermissionGuard permission={PERMISSIONS.TAGS.DELETE}>
-                <LinkButton
-                  variant="regular-black"
-                  size="xs"
-                  onClick={() => handleDeactivate(tag.id)}
-                  leftIcon={<Icons.Cancel01 size={16} color="#05040D" strokeWidth={1.5} />}
-                >
-                  {(tag as TagDefinition).is_active !== false
-                    ? t('pages.tags.actions.deactivate', 'Деактивировать')
-                    : t('pages.tags.actions.reactivate', 'Активировать')}
-                </LinkButton>
-              </PermissionGuard>
-            </div>
-
-            {/* Mobile/Tablet: Dropdown button group */}
-            <div className="lg:hidden">
-              <DropdownMenu
-                modal={false}
-                open={openDropdownTagId === tag.id}
-                onOpenChange={(open) => setOpenDropdownTagId(open ? tag.id : null)}
+          <div className="flex items-center justify-center gap-4">
+            <PermissionGuard permission={PERMISSIONS.TAGS.EDIT}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => handleEdit(tag)}
+                leftIcon={<Icons.PencilEdit size={16} color="#05040D" strokeWidth={1.5} />}
               >
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="text-dark-500 flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white transition-colors hover:bg-gray-100 focus:outline-none"
-                    aria-label={t('pages.tags.tableHeaders.actions', 'Actions')}
-                  >
-                    <Icons.FilterVertical size={16} strokeWidth={1.5} />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-white">
-                  <PermissionGuard permission={PERMISSIONS.TAGS.EDIT}>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        handleEdit(tag)
-                        setOpenDropdownTagId(null)
-                      }}
-                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
-                    >
-                      <Icons.PencilEdit size={16} strokeWidth={1.5} />
-                      <span>{t('pages.tags.actions.edit', 'Edit')}</span>
-                    </DropdownMenuItem>
-                  </PermissionGuard>
-                  <PermissionGuard permission={PERMISSIONS.TAGS.DELETE}>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        handleDeactivate(tag.id)
-                        setOpenDropdownTagId(null)
-                      }}
-                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
-                    >
-                      <Icons.Cancel01 size={16} strokeWidth={1.5} />
-                      <span>
-                        {(tag as TagDefinition).is_active !== false
-                          ? t('pages.tags.actions.deactivate', 'Деактивировать')
-                          : t('pages.tags.actions.reactivate', 'Активировать')}
-                      </span>
-                    </DropdownMenuItem>
-                  </PermissionGuard>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                {t('pages.tags.actions.edit', 'Редактировать')}
+              </LinkButton>
+            </PermissionGuard>
+            <PermissionGuard permission={PERMISSIONS.TAGS.DELETE}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => setDeleteTagId(tag.id)}
+                leftIcon={<Icons.Cancel01 size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('actions.delete', 'Удалить')}
+              </LinkButton>
+            </PermissionGuard>
           </div>
         ),
       },
     ],
-    // i18n.language is needed to recalculate columns when language changes
-    // openDropdownTagId is needed to update dropdown state in render function
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, i18n?.language, openDropdownTagId]
+    [t, i18n?.language, updateTagMutation]
   )
 
   // Segments columns
@@ -784,35 +724,31 @@ export function TagsPage() {
           </h1>
         </div>
 
-        <PermissionGuard permission={PERMISSIONS.TAGS.CREATE}>
-          <div className="hidden sm:block">
-            <DoubleButton
-              size="md"
-              icon={<Icons.Add size={20} strokeWidth={2} />}
-              iconPosition="left"
-              onClick={() =>
-                activeTab === 'groups' ? setShowGroupModal(true) : setShowCreateModal(true)
-              }
+        {activeTab !== 'settings' && (
+          <PermissionGuard permission={PERMISSIONS.TAGS.CREATE}>
+            <div className="hidden sm:block">
+              <DoubleButton
+                size="md"
+                icon={<Icons.Add size={20} strokeWidth={2} />}
+                iconPosition="left"
+                onClick={() => setShowCreateModal(true)}
+              >
+                {activeTab === 'dictionary'
+                  ? t('pages.tags.createTag', 'Создать тег')
+                  : activeTab === 'segments'
+                    ? t('pages.tags.createSegment', 'Создать сегмент')
+                    : t('pages.tags.createRule', 'Создать правило')}
+              </DoubleButton>
+            </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
+              aria-label={t('pages.tags.createTag', 'Create')}
             >
-              {activeTab === 'dictionary'
-                ? t('pages.tags.createTag', 'Создать тег')
-                : activeTab === 'segments'
-                  ? t('pages.tags.createSegment', 'Создать сегмент')
-                  : activeTab === 'rules'
-                    ? t('pages.tags.createRule', 'Создать правило')
-                    : t('pages.tags.groups.createGroup', 'Создать группу')}
-            </DoubleButton>
-          </div>
-          <button
-            onClick={() =>
-              activeTab === 'groups' ? setShowGroupModal(true) : setShowCreateModal(true)
-            }
-            className="bg-primary-300 text-dark-500 hover:bg-primary-500 flex h-10 w-10 items-center justify-center rounded-full transition-colors focus:outline-none sm:hidden"
-            aria-label={t('pages.tags.createTag', 'Create')}
-          >
-            <Icons.Add size={20} strokeWidth={2} />
-          </button>
-        </PermissionGuard>
+              <Icons.Add size={20} strokeWidth={2} />
+            </button>
+          </PermissionGuard>
+        )}
       </div>
 
       {/* Tabs */}
@@ -838,7 +774,7 @@ export function TagsPage() {
                     ? segments.length
                     : tab.id === 'rules'
                       ? rules.length
-                      : Object.keys(mutexGroups).length}
+                      : null}
               </span>
             </button>
           ))}
@@ -983,59 +919,13 @@ export function TagsPage() {
         </>
       )}
 
-      {/* Groups Tab */}
-      {activeTab === 'groups' && (
-        <>
-          <p className="text-dark-500 mb-4 text-sm font-light">
-            {t(
-              'pages.tags.groups.mutexNote',
-              'Только один тег из этой группы может быть активен у клиента одновременно'
-            )}
-          </p>
-
-          {Object.keys(mutexGroups).length === 0 && !isLoading && (
-            <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
-              <p className="text-gray-500">
-                {t('pages.tags.groups.noGroups', 'Нет групп взаимоисключения')}
-              </p>
-            </div>
-          )}
-
-          {Object.keys(mutexGroups).length > 0 && (
-            <div className="space-y-4">
-              {Object.entries(mutexGroups).map(([groupName, group]) => (
-                <div key={groupName} className="rounded-lg border border-gray-200 bg-white p-5">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{groupName}</h3>
-                      <p className="text-sm text-gray-500">
-                        {t(`pages.tags.mutexGroupDescriptions.${groupName}`, groupName)}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-600">
-                      {t('pages.tags.groups.clients', 'Клиенты')}: {group.totalClients}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {group.tags.map((tag) => (
-                      <div
-                        key={tag.id}
-                        className="flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1.5"
-                      >
-                        <div
-                          className="h-3 w-3 shrink-0 rounded-full"
-                          style={{ backgroundColor: tag.color }}
-                        />
-                        <span className="text-sm font-medium text-gray-800">{tag.name}</span>
-                        <span className="text-xs text-gray-400">({tag.client_count || 0})</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
+      {/* Settings Tab */}
+      {activeTab === 'settings' && (
+        <TagSettingsPanel
+          mutexGroups={mutexGroups}
+          isLoading={isLoading}
+          onCreateGroup={() => setShowGroupModal(true)}
+        />
       )}
 
       {/* Modals — Dictionary */}

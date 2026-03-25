@@ -10,6 +10,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
+import { useTagConfigStore } from '@/stores/tagConfigStore'
 import { toast } from 'sonner'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
@@ -37,147 +38,54 @@ interface SegmentFormModalProps {
   onSuccess: () => void
 }
 
-const REFRESH_MODE_VALUES: SegmentRefreshMode[] = ['on_demand', 'scheduled', 'realtime']
-
-const SEGMENT_PRESETS = [
-  {
-    key: 'high_risk',
-    name: 'High Risk Active Debtors',
-    code: 'high_risk_active',
-    description: 'Clients with high risk and active debt status',
-    conditions: [
-      {
-        condition_type: 'has_tag' as const,
-        tag_code: 'high_risk',
-        group_index: 0,
-        operator: 'eq',
-        value: '',
-      },
-      {
-        condition_type: 'has_tag' as const,
-        tag_code: 'active_debtor',
-        group_index: 0,
-        operator: 'eq',
-        value: '',
-      },
-    ],
-  },
-  {
-    key: 'promise_to_pay',
-    name: 'Promise to Pay',
-    code: 'promise_to_pay',
-    description: 'Clients who promised to pay but have not paid off yet',
-    conditions: [
-      {
-        condition_type: 'has_tag' as const,
-        tag_code: 'promise_to_pay',
-        group_index: 0,
-        operator: 'eq',
-        value: '',
-      },
-      {
-        condition_type: 'not_has_tag' as const,
-        tag_code: 'paid_off',
-        group_index: 0,
-        operator: 'eq',
-        value: '',
-      },
-    ],
-  },
-  {
-    key: 'no_contact',
-    name: 'No Contact',
-    code: 'no_contact_active',
-    description: 'Active debtors who could not be reached',
-    conditions: [
-      {
-        condition_type: 'has_tag' as const,
-        tag_code: 'no_contact',
-        group_index: 0,
-        operator: 'eq',
-        value: '',
-      },
-      {
-        condition_type: 'has_tag' as const,
-        tag_code: 'active_debtor',
-        group_index: 0,
-        operator: 'eq',
-        value: '',
-      },
-    ],
-  },
-  {
-    key: 'refuses_to_pay',
-    name: 'Refuses to Pay',
-    code: 'refuses_to_pay',
-    description: 'Clients who refuse to pay, not yet in legal proceedings',
-    conditions: [
-      {
-        condition_type: 'has_tag' as const,
-        tag_code: 'refuses_to_pay',
-        group_index: 0,
-        operator: 'eq',
-        value: '',
-      },
-      {
-        condition_type: 'not_has_tag' as const,
-        tag_code: 'legal_proceedings',
-        group_index: 0,
-        operator: 'eq',
-        value: '',
-      },
-    ],
-  },
-  {
-    key: 'legal',
-    name: 'Legal Proceedings',
-    code: 'legal_proceedings',
-    description: 'Clients currently in legal proceedings',
-    conditions: [
-      {
-        condition_type: 'has_tag' as const,
-        tag_code: 'legal_proceedings',
-        group_index: 0,
-        operator: 'eq',
-        value: '',
-      },
-    ],
-  },
-  {
-    key: 'new_no_risk',
-    name: 'New Without Risk',
-    code: 'new_no_risk',
-    description: 'New clients without high or medium risk assessment',
-    conditions: [
-      {
-        condition_type: 'has_tag' as const,
-        tag_code: 'new_client',
-        group_index: 0,
-        operator: 'eq',
-        value: '',
-      },
-      {
-        condition_type: 'not_has_tag' as const,
-        tag_code: 'high_risk',
-        group_index: 0,
-        operator: 'eq',
-        value: '',
-      },
-      {
-        condition_type: 'not_has_tag' as const,
-        tag_code: 'medium_risk',
-        group_index: 0,
-        operator: 'eq',
-        value: '',
-      },
-    ],
-  },
-]
+// REFRESH_MODE_VALUES and SEGMENT_PRESETS loaded from tagConfigStore inside component
 
 /** Generate a slug code from a name string */
 function generateCode(name: string): string {
+  const TRANSLIT: Record<string, string> = {
+    а: 'a',
+    б: 'b',
+    в: 'v',
+    г: 'g',
+    д: 'd',
+    е: 'e',
+    ё: 'yo',
+    ж: 'zh',
+    з: 'z',
+    и: 'i',
+    й: 'y',
+    к: 'k',
+    л: 'l',
+    м: 'm',
+    н: 'n',
+    о: 'o',
+    п: 'p',
+    р: 'r',
+    с: 's',
+    т: 't',
+    у: 'u',
+    ф: 'f',
+    х: 'kh',
+    ц: 'ts',
+    ч: 'ch',
+    ш: 'sh',
+    щ: 'shch',
+    ъ: '',
+    ы: 'y',
+    ь: '',
+    э: 'e',
+    ю: 'yu',
+    я: 'ya',
+    є: 'ye',
+    і: 'i',
+    ї: 'yi',
+    ґ: 'g',
+  }
   return name
     .toLowerCase()
+    .split('')
+    .map((ch) => TRANSLIT[ch] ?? ch)
+    .join('')
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_|_$/g, '')
     .slice(0, 50)
@@ -218,6 +126,9 @@ export function SegmentFormModal({
   onSuccess,
 }: SegmentFormModalProps) {
   const { t } = useTranslation('common')
+  const tagConfig = useTagConfigStore()
+  const REFRESH_MODE_VALUES = tagConfig.refreshModes.map((i) => i.value) as SegmentRefreshMode[]
+  const SEGMENT_PRESETS = tagConfig.segmentPresets
   const isEdit = !!segment
 
   const [conditions, setConditions] = useState<SegmentCondition[]>([])
@@ -275,8 +186,8 @@ export function SegmentFormModal({
 
   // Auto-generate code from name (only for create and when not manually edited)
   useEffect(() => {
-    if (!isEdit && nameValue && !codeManuallyEdited.current) {
-      setValue('code', generateCode(nameValue), { shouldValidate: true })
+    if (!isEdit && !codeManuallyEdited.current) {
+      setValue('code', nameValue ? generateCode(nameValue) : '', { shouldValidate: true })
     }
   }, [nameValue, isEdit, setValue])
 

@@ -734,6 +734,10 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
                   onClick={() => {
                     setOpenSubmenuIndex(null)
                     setSubmenuPosition(null)
+                    // Collapse sidebar if it was opened by hover
+                    if (isHoverOpen && !isOpenSideBar) {
+                      setHoverOpen(false)
+                    }
                   }}
                   className={cn(
                     // Rounded submenu rows

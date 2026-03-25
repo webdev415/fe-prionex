@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
+import { useTagConfigStore } from '@/stores/tagConfigStore'
 import { Controller } from 'react-hook-form'
 import { useCreateTagExtended, useUpdateTag } from '@/features/tags'
 import type { Tag, TagDefinition, TagCategory, TagVisibility } from '@/features/tags'
@@ -38,32 +39,7 @@ interface TagFormModalProps {
   onSuccess: () => void
 }
 
-const PRESET_COLORS = [
-  '#FF6B6B',
-  '#4ECDC4',
-  '#45B7D1',
-  '#FFA07A',
-  '#98D8C8',
-  '#F7DC6F',
-  '#BB8FCE',
-  '#85C1E2',
-  '#80D80A',
-  '#FF9D00',
-  '#DC2626',
-  '#DFDFDF',
-]
-
-const CATEGORY_VALUES: TagCategory[] = [
-  'custom',
-  'status',
-  'risk',
-  'behavior',
-  'communication',
-  'system',
-]
-const VISIBILITY_VALUES: TagVisibility[] = ['ui', 'analytics', 'system']
-
-const EXPIRY_TYPES = ['permanent', 'ttl', 'loan_closure'] as const
+// Dropdown options loaded from tagConfigStore (manageable via Settings tab)
 
 type TagFormData = {
   name: string
@@ -111,8 +87,14 @@ export function TagFormModal({
   onSuccess,
 }: TagFormModalProps) {
   const { t, i18n } = useTranslation('common')
+  const tagConfig = useTagConfigStore()
   const isEdit = !!tag
   const isSystemTag = (tag as TagDefinition)?.origin === 'system'
+
+  const CATEGORY_VALUES = tagConfig.categories.map((i) => i.value) as TagCategory[]
+  const VISIBILITY_VALUES = tagConfig.visibilities.map((i) => i.value) as TagVisibility[]
+  const EXPIRY_TYPES = tagConfig.expiryTypes.map((i) => i.value)
+  const PRESET_COLORS = tagConfig.presetColors
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
   const templateRef = useRef<HTMLTextAreaElement>(null)
 
@@ -200,9 +182,70 @@ export function TagFormModal({
   // Watch color value for preview
   const selectedColor = watch('color')
 
+  // Auto-generate code from name (only for new tags, not editing)
+  const watchedName = watch('name')
+  const codeManuallyEdited = useRef(false)
+  useEffect(() => {
+    if (!tag && !codeManuallyEdited.current) {
+      if (!watchedName) {
+        setValue('code', '', { shouldValidate: false })
+        return
+      }
+      const TRANSLIT: Record<string, string> = {
+        а: 'a',
+        б: 'b',
+        в: 'v',
+        г: 'g',
+        д: 'd',
+        е: 'e',
+        ё: 'yo',
+        ж: 'zh',
+        з: 'z',
+        и: 'i',
+        й: 'y',
+        к: 'k',
+        л: 'l',
+        м: 'm',
+        н: 'n',
+        о: 'o',
+        п: 'p',
+        р: 'r',
+        с: 's',
+        т: 't',
+        у: 'u',
+        ф: 'f',
+        х: 'kh',
+        ц: 'ts',
+        ч: 'ch',
+        ш: 'sh',
+        щ: 'shch',
+        ъ: '',
+        ы: 'y',
+        ь: '',
+        э: 'e',
+        ю: 'yu',
+        я: 'ya',
+        є: 'ye',
+        і: 'i',
+        ї: 'yi',
+        ґ: 'g',
+      }
+      const slug = watchedName
+        .toLowerCase()
+        .split('')
+        .map((ch) => TRANSLIT[ch] ?? ch)
+        .join('')
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_|_$/g, '')
+        .slice(0, 50)
+      setValue('code', slug, { shouldValidate: false })
+    }
+  }, [watchedName, tag, setValue])
+
   // Reset form when modal opens/closes or tag changes
   useEffect(() => {
     if (open) {
+      codeManuallyEdited.current = !!tag // if editing, treat as manually set
       const tagDef = tag as TagDefinition | undefined
       reset({
         name: tag?.name || '',
@@ -345,6 +388,29 @@ export function TagFormModal({
               />
             </div>
 
+            {/* Code (auto-generated from name) */}
+            <div className="space-y-2">
+              <Label htmlFor="code">
+                {t('pages.tags.fields.code', 'Code')}
+                <FieldTooltip
+                  text={t(
+                    'pages.tags.fields.tooltips.code',
+                    'Unique ID for API. Auto-generated from name'
+                  )}
+                />
+              </Label>
+              <Input
+                id="code"
+                {...register('code', {
+                  onChange: () => {
+                    codeManuallyEdited.current = true
+                  },
+                })}
+                placeholder={t('pages.tags.fields.codePlaceholder', 'e.g. high_risk')}
+                disabled={isSystemTag}
+              />
+            </div>
+
             {/* Color Picker */}
             <ColorPickerField
               value={selectedColor}
@@ -369,25 +435,6 @@ export function TagFormModal({
                 error={errors.description?.message}
                 rows={3}
                 aria-label={t('pages.tags.fields.description', 'Description')}
-                disabled={isSystemTag}
-              />
-            </div>
-
-            {/* Code */}
-            <div className="space-y-2">
-              <Label htmlFor="code">
-                {t('pages.tags.fields.code', 'Code')}
-                <FieldTooltip
-                  text={t(
-                    'pages.tags.fields.tooltips.code',
-                    'Unique ID for API. Auto-generated from name'
-                  )}
-                />
-              </Label>
-              <Input
-                id="code"
-                {...register('code')}
-                placeholder={t('pages.tags.fields.codePlaceholder', 'e.g. high_risk')}
                 disabled={isSystemTag}
               />
             </div>
