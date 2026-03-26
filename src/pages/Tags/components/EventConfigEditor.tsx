@@ -215,7 +215,18 @@ function EventOptionRow({
           </button>
           <button
             type="button"
-            onClick={() => removeEventFieldOption(eventValue, fieldValue, option.value)}
+            onClick={() => {
+              if (
+                window.confirm(
+                  t(
+                    'pages.tags.settings.confirmRemove',
+                    'Are you sure you want to remove this item?'
+                  )
+                )
+              ) {
+                removeEventFieldOption(eventValue, fieldValue, option.value)
+              }
+            }}
             className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
             aria-label={t('actions.remove', 'Remove')}
           >
@@ -344,7 +355,18 @@ function EventFieldCard({ eventValue, field }: { eventValue: string; field: Even
           </button>
           <button
             type="button"
-            onClick={() => removeEventField(eventValue, field.value)}
+            onClick={() => {
+              if (
+                window.confirm(
+                  t(
+                    'pages.tags.settings.confirmRemove',
+                    'Are you sure you want to remove this item?'
+                  )
+                )
+              ) {
+                removeEventField(eventValue, field.value)
+              }
+            }}
             className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
             aria-label={t('actions.remove', 'Remove')}
           >
@@ -540,7 +562,18 @@ function EventCard({ event }: { event: EventConfig }) {
           </button>
           <button
             type="button"
-            onClick={() => removeEvent(event.value)}
+            onClick={() => {
+              if (
+                window.confirm(
+                  t(
+                    'pages.tags.settings.confirmRemove',
+                    'Are you sure you want to remove this item?'
+                  )
+                )
+              ) {
+                removeEvent(event.value)
+              }
+            }}
             className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
             aria-label={t('actions.remove', 'Remove')}
           >

@@ -924,6 +924,7 @@ export function TagsPage() {
       {/* Settings Tab */}
       {activeTab === 'settings' && (
         <TagSettingsPanel
+          tags={tags as TagDefinition[]}
           mutexGroups={mutexGroups}
           isLoading={isLoading}
           onCreateGroup={() => setShowGroupModal(true)}

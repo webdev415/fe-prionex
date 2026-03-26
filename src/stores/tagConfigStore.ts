@@ -52,9 +52,11 @@ export interface SegmentPreset {
   name: string
   code: string
   description: string
+  refresh_mode: string
   conditions: Array<{
     condition_type: string
     tag_code?: string
+    field_name?: string
     group_index: number
     operator?: string
     value?: string
@@ -101,6 +103,8 @@ interface TagConfigState {
   addColor: (color: string) => void
   removeColor: (color: string) => void
   removePreset: (listKey: 'rulePresets' | 'segmentPresets', key: string) => void
+  addSegmentPreset: (preset: SegmentPreset) => void
+  updateSegmentPreset: (oldKey: string, preset: SegmentPreset) => void
   resetToDefaults: () => void
 }
 
@@ -460,6 +464,7 @@ const DEFAULT_CONFIG = {
       name: 'High Risk Active Debtors',
       code: 'high_risk_active',
       description: 'Clients with high risk and active debt status',
+      refresh_mode: 'on_demand',
       conditions: [
         { condition_type: 'has_tag', tag_code: 'high_risk', group_index: 0 },
         { condition_type: 'has_tag', tag_code: 'active_debtor', group_index: 0 },
@@ -470,6 +475,7 @@ const DEFAULT_CONFIG = {
       name: 'Promise to Pay',
       code: 'promise_to_pay',
       description: 'Clients who promised to pay but have not paid off yet',
+      refresh_mode: 'on_demand',
       conditions: [
         { condition_type: 'has_tag', tag_code: 'promise_to_pay', group_index: 0 },
         { condition_type: 'not_has_tag', tag_code: 'paid_off', group_index: 0 },
@@ -480,6 +486,7 @@ const DEFAULT_CONFIG = {
       name: 'No Contact',
       code: 'no_contact_active',
       description: 'Active debtors who could not be reached',
+      refresh_mode: 'on_demand',
       conditions: [
         { condition_type: 'has_tag', tag_code: 'no_contact', group_index: 0 },
         { condition_type: 'has_tag', tag_code: 'active_debtor', group_index: 0 },
@@ -490,6 +497,7 @@ const DEFAULT_CONFIG = {
       name: 'Refuses to Pay',
       code: 'refuses_to_pay',
       description: 'Clients who refuse to pay, not yet in legal proceedings',
+      refresh_mode: 'on_demand',
       conditions: [
         { condition_type: 'has_tag', tag_code: 'refuses_to_pay', group_index: 0 },
         { condition_type: 'not_has_tag', tag_code: 'legal_proceedings', group_index: 0 },
@@ -500,6 +508,7 @@ const DEFAULT_CONFIG = {
       name: 'Legal Proceedings',
       code: 'legal_proceedings',
       description: 'Clients currently in legal proceedings',
+      refresh_mode: 'on_demand',
       conditions: [{ condition_type: 'has_tag', tag_code: 'legal_proceedings', group_index: 0 }],
     },
     {
@@ -507,6 +516,7 @@ const DEFAULT_CONFIG = {
       name: 'New Without Risk',
       code: 'new_no_risk',
       description: 'New clients without high or medium risk assessment',
+      refresh_mode: 'on_demand',
       conditions: [
         { condition_type: 'has_tag', tag_code: 'new_client', group_index: 0 },
         { condition_type: 'not_has_tag', tag_code: 'high_risk', group_index: 0 },
@@ -537,6 +547,8 @@ type ListKey = keyof Omit<
   | 'addColor'
   | 'removeColor'
   | 'removePreset'
+  | 'addSegmentPreset'
+  | 'updateSegmentPreset'
   | 'resetToDefaults'
 >
 
@@ -581,6 +593,52 @@ function normalizeEventConfig(event: EventConfig): EventConfig {
 
 function cloneEventConfigs(events: EventConfig[]): EventConfig[] {
   return events.map(normalizeEventConfig)
+}
+
+function normalizeSegmentPreset(preset: SegmentPreset): SegmentPreset {
+  const code = String(preset.code ?? '').trim()
+  const key = String(preset.key ?? code).trim() || code
+
+  return {
+    key,
+    name: String(preset.name ?? '').trim(),
+    code,
+    description: String(preset.description ?? '').trim(),
+    refresh_mode: String(preset.refresh_mode ?? 'on_demand').trim() || 'on_demand',
+    conditions: (preset.conditions ?? []).map((condition) => ({
+      condition_type: String(condition.condition_type ?? 'has_tag').trim() || 'has_tag',
+      tag_code: condition.tag_code ? String(condition.tag_code).trim() : undefined,
+      field_name: condition.field_name ? String(condition.field_name).trim() : undefined,
+      group_index: Number.isFinite(condition.group_index) ? condition.group_index : 0,
+      operator: condition.operator ? String(condition.operator).trim() : undefined,
+      value: condition.value ? String(condition.value).trim() : undefined,
+    })),
+  }
+}
+
+function normalizeSegmentPresets(rawSegmentPresets: unknown): SegmentPreset[] {
+  if (!Array.isArray(rawSegmentPresets)) {
+    return DEFAULT_CONFIG.segmentPresets.map(normalizeSegmentPreset)
+  }
+
+  const normalized = rawSegmentPresets
+    .map((item) => {
+      if (typeof item !== 'object' || item === null) {
+        return null
+      }
+
+      return normalizeSegmentPreset(item as SegmentPreset)
+    })
+    .filter(
+      (preset): preset is SegmentPreset =>
+        preset !== null && preset.key.length > 0 && preset.code.length > 0 && preset.name.length > 0
+    )
+
+  if (normalized.length === 0) {
+    return DEFAULT_CONFIG.segmentPresets.map(normalizeSegmentPreset)
+  }
+
+  return normalized
 }
 
 function normalizeOperators(items: ConfigItem[]): ConfigItem[] {
@@ -665,10 +723,7 @@ function cloneDefaultConfig() {
       ...preset,
       conditions: preset.conditions.map((condition) => ({ ...condition })),
     })),
-    segmentPresets: DEFAULT_CONFIG.segmentPresets.map((preset) => ({
-      ...preset,
-      conditions: preset.conditions.map((condition) => ({ ...condition })),
-    })),
+    segmentPresets: DEFAULT_CONFIG.segmentPresets.map(normalizeSegmentPreset),
   }
 }
 
@@ -887,11 +942,40 @@ export const useTagConfigStore = create<TagConfigState>()(
           [listKey]: state[listKey].filter((p) => p.key !== key),
         })),
 
+      addSegmentPreset: (preset: SegmentPreset) =>
+        set((state) => {
+          const normalized = normalizeSegmentPreset(preset)
+          if (!normalized.key || !normalized.code || !normalized.name) return state
+          if (state.segmentPresets.some((item) => item.key === normalized.key)) return state
+
+          return {
+            segmentPresets: [...state.segmentPresets, normalized],
+          }
+        }),
+
+      updateSegmentPreset: (oldKey: string, preset: SegmentPreset) =>
+        set((state) => {
+          const normalized = normalizeSegmentPreset(preset)
+          if (!normalized.key || !normalized.code || !normalized.name) return state
+          if (
+            oldKey !== normalized.key &&
+            state.segmentPresets.some((item) => item.key === normalized.key)
+          ) {
+            return state
+          }
+
+          return {
+            segmentPresets: state.segmentPresets.map((item) =>
+              item.key === oldKey ? normalized : item
+            ),
+          }
+        }),
+
       resetToDefaults: () => set(cloneDefaultConfig()),
     }),
     {
       name: 'tag-config-storage',
-      version: 3,
+      version: 4,
       migrate: (persistedState) => {
         const state = persistedState as Partial<TagConfigState> | undefined
         if (!state) return cloneDefaultConfig()
@@ -903,6 +987,7 @@ export const useTagConfigStore = create<TagConfigState>()(
           operators: Array.isArray(state.operators)
             ? normalizeOperators(state.operators)
             : cloneConfigItems(DEFAULT_CONFIG.operators),
+          segmentPresets: normalizeSegmentPresets(state.segmentPresets),
         }
       },
     }

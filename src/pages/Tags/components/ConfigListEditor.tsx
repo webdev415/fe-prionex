@@ -278,7 +278,18 @@ export function ConfigListEditor({
                   <Icons.PencilEdit size={12} strokeWidth={1.5} />
                 </button>
                 <button
-                  onClick={() => onRemove(item.value)}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        t(
+                          'pages.tags.settings.confirmRemove',
+                          'Are you sure you want to remove this item?'
+                        )
+                      )
+                    ) {
+                      onRemove(item.value)
+                    }
+                  }}
                   className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
                 >
                   <Icons.Cancel01 size={12} strokeWidth={1.5} />

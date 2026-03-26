@@ -10,11 +10,13 @@ import { useTranslation } from 'react-i18next'
 import { useTagConfigStore } from '@/stores/tagConfigStore'
 import { ConfigListEditor } from './ConfigListEditor'
 import { EventConfigEditor } from './EventConfigEditor'
+import { SegmentPresetManager } from './SegmentPresetManager'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import type { TagDefinition } from '@/features/tags'
 
 interface TagSettingsPanelProps {
+  tags: TagDefinition[]
   mutexGroups: Record<string, { tags: TagDefinition[]; totalClients: number }>
   isLoading: boolean
   onCreateGroup: () => void
@@ -22,7 +24,12 @@ interface TagSettingsPanelProps {
 
 type SectionId = 'dictionary' | 'rules' | 'segments' | 'groups'
 
-export function TagSettingsPanel({ mutexGroups, isLoading, onCreateGroup }: TagSettingsPanelProps) {
+export function TagSettingsPanel({
+  tags,
+  mutexGroups,
+  isLoading,
+  onCreateGroup,
+}: TagSettingsPanelProps) {
   const { t } = useTranslation('common')
   const [openSection, setOpenSection] = useState<SectionId | null>('dictionary')
 
@@ -58,7 +65,7 @@ export function TagSettingsPanel({ mutexGroups, isLoading, onCreateGroup }: TagS
       id: 'segments',
       title: t('pages.tags.settings.segmentSettings', 'Segments'),
       icon: <Icons.UserMultiple size={18} strokeWidth={1.5} />,
-      count: config.refreshModes.length,
+      count: config.refreshModes.length + config.segmentPresets.length,
     },
     {
       id: 'groups',
@@ -122,7 +129,7 @@ export function TagSettingsPanel({ mutexGroups, isLoading, onCreateGroup }: TagS
             <div className="border-t border-gray-100 px-4 py-4">
               {section.id === 'dictionary' && <DictionarySettings />}
               {section.id === 'rules' && <RuleSettings />}
-              {section.id === 'segments' && <SegmentSettings />}
+              {section.id === 'segments' && <SegmentSettings tags={tags} />}
               {section.id === 'groups' && (
                 <GroupsSettings
                   mutexGroups={mutexGroups}
@@ -244,7 +251,7 @@ function RuleSettings() {
   )
 }
 
-function SegmentSettings() {
+function SegmentSettings({ tags }: { tags: TagDefinition[] }) {
   const config = useTagConfigStore()
   const { t } = useTranslation('common')
 
@@ -259,22 +266,7 @@ function SegmentSettings() {
         i18nPrefix="pages.tags.segments.refreshModes"
       />
 
-      {/* Segment Presets */}
-      <PresetList
-        title={t('pages.tags.settings.segmentPresets', 'Шаблоны сегментов')}
-        presets={config.segmentPresets.map((p) => ({
-          key: p.key,
-          name: p.name,
-          description: p.description,
-          badge: `${p.conditions.length} ${t('pages.tags.rules.conditions', 'условий')}`,
-          badgeColor: 'bg-gray-50 text-gray-500',
-          details: p.conditions.map(
-            (c) => `${c.condition_type}${c.tag_code ? ': ' + c.tag_code : ''}`
-          ),
-        }))}
-        onRemove={(key) => config.removePreset('segmentPresets', key)}
-        t={t}
-      />
+      <SegmentPresetManager tags={tags} />
     </div>
   )
 }

@@ -259,7 +259,7 @@ export function SegmentFormModal({
                         name: preset.name,
                         code: preset.code,
                         description: preset.description,
-                        refresh_mode: 'on_demand',
+                        refresh_mode: (preset.refresh_mode as SegmentRefreshMode) ?? 'on_demand',
                       })
                       setConditions(preset.conditions as SegmentCondition[])
                       setPreviewCount(null)
