@@ -12,6 +12,7 @@ import { persist } from 'zustand/middleware'
 export interface ConfigItem {
   value: string
   label: string
+  translations?: Record<string, string>
 }
 
 export type EventFieldOptionsSource =

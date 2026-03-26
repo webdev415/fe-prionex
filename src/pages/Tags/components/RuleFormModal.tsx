@@ -155,7 +155,7 @@ type RuleFormData = {
 }
 
 export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleFormModalProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const isEdit = !!rule
   const tagConfig = useTagConfigStore()
 
@@ -304,43 +304,69 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
     if (field?.type !== 'select') return undefined
 
     const configuredOptions = field.options ?? []
+    const lang = i18n?.language || 'en'
+
+    // Apply persisted translations from store for current language
+    const applyTranslations = (items: ConfigItem[]): ConfigItem[] => {
+      if (lang === 'en') return items
+      return items.map((item) => {
+        const translated =
+          item.translations?.[lang] ||
+          t(`pages.tags.rules.eventOptions.${triggerEventValue}.${fieldName}.${item.value}`, '')
+        return translated ? { ...item, label: translated } : item
+      })
+    }
 
     switch (field.optionsSource) {
       case 'interactionResults':
-        return mergeOptions(
-          configuredOptions,
-          interactionResults.map((item) => ({
-            value: item.name,
-            label: item.name,
-          }))
+        return applyTranslations(
+          mergeOptions(
+            configuredOptions,
+            interactionResults.map((item) => ({
+              value: item.name,
+              label: item.name,
+            }))
+          )
         )
       case 'interactionTypes':
-        return mergeOptions(
-          configuredOptions,
-          interactionTypes.map((item) => ({
-            value: item.code,
-            label: item.code,
-          }))
+        return applyTranslations(
+          mergeOptions(
+            configuredOptions,
+            interactionTypes.map((item) => ({
+              value: item.code,
+              label: item.code,
+            }))
+          )
         )
       case 'interactionChannels':
-        return mergeOptions(
-          configuredOptions,
-          interactionSubtypes.map((item) => ({
-            value: item.code.toLowerCase(),
-            label: item.code.toLowerCase(),
-          }))
+        return applyTranslations(
+          mergeOptions(
+            configuredOptions,
+            interactionSubtypes.map((item) => ({
+              value: item.code.toLowerCase(),
+              label: item.code.toLowerCase(),
+            }))
+          )
         )
       case 'interactionDirections':
-        return mergeOptions(configuredOptions, [
-          { value: 'inbound', label: t('pages.tags.rules.eventPayloadFields.inbound', 'Входящий') },
-          {
-            value: 'outbound',
-            label: t('pages.tags.rules.eventPayloadFields.outbound', 'Исходящий'),
-          },
-          { value: 'system', label: t('pages.tags.rules.eventPayloadFields.system', 'Системный') },
-        ])
+        return applyTranslations(
+          mergeOptions(configuredOptions, [
+            {
+              value: 'inbound',
+              label: t('pages.tags.rules.eventPayloadFields.inbound', 'Входящий'),
+            },
+            {
+              value: 'outbound',
+              label: t('pages.tags.rules.eventPayloadFields.outbound', 'Исходящий'),
+            },
+            {
+              value: 'system',
+              label: t('pages.tags.rules.eventPayloadFields.system', 'Системный'),
+            },
+          ])
+        )
       default:
-        return configuredOptions
+        return applyTranslations(configuredOptions)
     }
   }
   const actionType = watch('action_type')

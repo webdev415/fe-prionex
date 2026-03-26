@@ -139,11 +139,29 @@ function EventOptionRow({
 
   const optionI18nKey = `${OPTION_PREFIX}.${eventValue}.${fieldValue}.${option.value}`
 
+  // Restore persisted translations into i18n runtime on mount
+  useEffect(() => {
+    if (option.translations) {
+      Object.entries(option.translations).forEach(([lang, label]) => {
+        if (label) {
+          i18n.addResourceBundle(lang, 'common', buildNestedObj(optionI18nKey, label), true, true)
+        }
+      })
+    }
+  }, [option.translations, optionI18nKey, i18n])
+
   const handleStartEdit = () => {
     setDraftValue(option.value)
     const langs: Record<string, string> = {}
     LANGS.forEach((lang) => {
-      langs[lang] = i18n.t(optionI18nKey, { lng: lang, defaultValue: '' }) || option.label
+      if (lang === 'en') {
+        langs[lang] = option.label || option.value
+      } else {
+        langs[lang] =
+          option.translations?.[lang] ||
+          i18n.t(optionI18nKey, { lng: lang, defaultValue: '' }) ||
+          ''
+      }
     })
     setEditLangs(langs)
     setEditing(true)
@@ -160,9 +178,17 @@ function EventOptionRow({
         i18n.addResourceBundle(lang, 'common', buildNestedObj(newKey, label), true, true)
       }
     })
+    const translations: Record<string, string> = {}
+    LANGS.forEach((lang) => {
+      if (lang !== 'en') {
+        const tr = editLangs[lang]?.trim()
+        if (tr) translations[lang] = tr
+      }
+    })
     updateEventFieldOption(eventValue, fieldValue, option.value, {
       value: normalized.value,
       label: editLangs.en?.trim() || normalized.label,
+      ...(Object.keys(translations).length > 0 ? { translations } : {}),
     })
     setEditing(false)
   }
