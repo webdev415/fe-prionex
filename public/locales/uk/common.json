@@ -2632,6 +2632,29 @@
           "payment.received": "Платіж отримано",
           "payment.debt_closed": "Борг закрито",
           "scoring.calculated": "Скоринг розраховано"
+        },
+        "eventOptions": {
+          "interaction.created": {
+            "result_name": {
+              "No contact": "Немає контакту",
+              "Refusal to pay": "Відмова від оплати",
+              "Agreement": "Обіцянка оплати",
+              "Call back by appointment": "Перезвонити за домовленістю",
+              "Consent to interact": "Згода на взаємодію",
+              "Waiting for a call": "Очікує дзвінка",
+              "Hanged up": "Поклав слухавку",
+              "Request for documents": "Запит документів",
+              "Disconnected": "Відключений",
+              "Refused payment": "Відмовився платити",
+              "Will provide information": "Надасть інформацію",
+              "Will not provide information": "Не надасть інформацію",
+              "Refused consent to interact": "Відмовив у згоді на взаємодію",
+              "Threatens": "Погрожує",
+              "Sent documents": "Надіслано документи",
+              "No numbers": "Немає номерів",
+              "Numbers found": "Номери знайдено"
+            }
+          }
         }
       },
       "categories": {

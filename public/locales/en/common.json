@@ -2092,6 +2092,29 @@
           "payment.received": "Payment received",
           "payment.debt_closed": "Debt closed",
           "scoring.calculated": "Scoring calculated"
+        },
+        "eventOptions": {
+          "interaction.created": {
+            "result_name": {
+              "No contact": "No contact",
+              "Refusal to pay": "Refusal to pay",
+              "Agreement": "Agreement",
+              "Call back by appointment": "Call back by appointment",
+              "Consent to interact": "Consent to interact",
+              "Waiting for a call": "Waiting for a call",
+              "Hanged up": "Hanged up",
+              "Request for documents": "Request for documents",
+              "Disconnected": "Disconnected",
+              "Refused payment": "Refused payment",
+              "Will provide information": "Will provide information",
+              "Will not provide information": "Will not provide information",
+              "Refused consent to interact": "Refused consent to interact",
+              "Threatens": "Threatens",
+              "Sent documents": "Sent documents",
+              "No numbers": "No numbers",
+              "Numbers found": "Numbers found"
+            }
+          }
         }
       },
       "categories": {
