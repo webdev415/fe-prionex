@@ -114,7 +114,7 @@ export function useClientTags(clientId: number) {
     queryKey: ['clients', clientId, 'tags'] as const,
     queryFn: () => tagsApi.getClientTags(clientId),
     enabled: !!clientId,
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 0, // Always refetch on invalidation (auto-tagging is async)
   })
 }
 
