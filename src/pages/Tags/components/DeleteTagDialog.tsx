@@ -1,7 +1,7 @@
 /**
  * Delete Tag Dialog
  *
- * Confirmation dialog for deleting tags with usage warning.
+ * Confirmation dialog for deleting tags with warning if tag is assigned to clients.
  */
 
 import { useTranslation } from 'react-i18next'
@@ -39,17 +39,21 @@ export function DeleteTagDialog({ open, tag, onClose, onSuccess }: DeleteTagDial
     <Modal open={open} onClose={onClose} maxWidth="lg">
       <ModalHeader
         icon={
-          <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
-            <Icons.Delete size={20} className="text-dark-500" strokeWidth={2} />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+            <Icons.Cancel01 size={20} className="text-red-600" strokeWidth={2} />
           </div>
         }
-        title={t('pages.tags.deleteTag', 'Delete Tag')}
+        title={t('pages.tags.deleteTag', 'Удалить тег')}
       />
 
       <ModalContent>
         <div className="space-y-4">
           <p className="text-dark-500 text-base font-light">
-            {t('pages.tags.deleteConfirmation', 'Are you sure you want to delete this tag?')}
+            {t(
+              'pages.tags.deleteTagConfirmation',
+              'Вы уверены, что хотите удалить тег "{{name}}"?',
+              { name: tag.name }
+            )}
           </p>
 
           {/* Tag Preview */}
@@ -60,12 +64,12 @@ export function DeleteTagDialog({ open, tag, onClose, onSuccess }: DeleteTagDial
             <Alert variant="warning">
               <div className="space-y-2">
                 <p className="font-medium">
-                  {t('pages.tags.usageWarning', 'This tag is currently in use')}
+                  {t('pages.tags.usageWarning', 'Этот тег используется')}
                 </p>
                 <p className="text-sm">
                   {t(
-                    'pages.tags.deleteWarningMessage',
-                    'This tag is assigned to {{count}} client(s). Deleting it will remove the tag from all clients.',
+                    'pages.tags.deleteTagWarningMessage',
+                    'Этот тег назначен {{count}} клиенту(ам). Удаление снимет тег со всех клиентов. Это действие необратимо.',
                     { count: tag.client_count }
                   )}
                 </p>
@@ -73,9 +77,16 @@ export function DeleteTagDialog({ open, tag, onClose, onSuccess }: DeleteTagDial
             </Alert>
           )}
 
-          <p className="text-dark-500 text-sm font-light">
-            {t('pages.tags.deleteNotice', 'This action cannot be undone.')}
-          </p>
+          {!hasClients && (
+            <Alert variant="info">
+              <p className="text-sm">
+                {t(
+                  'pages.tags.deleteTagNotice',
+                  'Это действие необратимо. Тег будет удалён из системы.'
+                )}
+              </p>
+            </Alert>
+          )}
         </div>
       </ModalContent>
 
@@ -87,7 +98,7 @@ export function DeleteTagDialog({ open, tag, onClose, onSuccess }: DeleteTagDial
           disabled={deleteMutation.isPending}
           className="h-[45px] flex-1 text-sm"
         >
-          {t('actions.cancel')}
+          {t('actions.cancel', 'Отмена')}
         </Button>
         <Button
           type="button"
@@ -96,7 +107,9 @@ export function DeleteTagDialog({ open, tag, onClose, onSuccess }: DeleteTagDial
           disabled={deleteMutation.isPending}
           className="h-[45px] flex-1 text-sm"
         >
-          {deleteMutation.isPending ? t('pages.tags.deleting', 'Deleting...') : t('actions.delete')}
+          {deleteMutation.isPending
+            ? t('pages.tags.deleting', 'Удаление...')
+            : t('actions.delete', 'Удалить')}
         </Button>
       </ModalFooter>
     </Modal>

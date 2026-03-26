@@ -6,6 +6,7 @@
  */
 
 import { memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +22,10 @@ interface TagBadgeProps {
   payload?: Record<string, unknown>
   /** System tag — shows lock icon */
   isSystem?: boolean
+  /** Protected tag — shows lock icon and disables remove */
+  isProtected?: boolean
+  /** Expiry type: 'permanent' | 'ttl' | 'loan_closure' */
+  expiryType?: 'permanent' | 'ttl' | 'loan_closure'
 }
 
 export const TagBadge = memo(function TagBadge({
@@ -32,7 +37,11 @@ export const TagBadge = memo(function TagBadge({
   expiresAt,
   payload,
   isSystem,
+  isProtected,
+  expiryType,
 }: TagBadgeProps) {
+  const { t } = useTranslation('common')
+  const showLock = isSystem || isProtected
   const sizeClasses = {
     sm: 'px-2 py-0.5 text-xs',
     md: 'px-3 py-1.5 text-sm',
@@ -69,11 +78,32 @@ export const TagBadge = memo(function TagBadge({
         color: textColor,
       }}
     >
-      {isSystem && <Icons.Lock size={size === 'sm' ? 10 : 12} className="opacity-70" />}
+      {showLock && (
+        <Icons.Lock
+          size={size === 'sm' ? 10 : 12}
+          className="opacity-70"
+          aria-label={
+            isProtected
+              ? t('pages.tags.tagBadge.protectedLabel', 'Protected tag — removal requires approval')
+              : t('pages.tags.tagBadge.systemLabel', 'System tag')
+          }
+        />
+      )}
       <span className={cn('rounded-full', dotSizes[size])} style={{ backgroundColor: color }} />
       <span>{name}</span>
+      {expiryType === 'loan_closure' && (
+        <span
+          className="opacity-70"
+          title={t('pages.tags.tagBadge.loanClosureTitle', 'Active until loan closure')}
+        >
+          <Icons.Money04 size={size === 'sm' ? 10 : 12} />
+        </span>
+      )}
       {expiresAt && (
-        <span className="opacity-70" title={`Expires: ${new Date(expiresAt).toLocaleString()}`}>
+        <span
+          className="opacity-70"
+          title={`${t('pages.tags.tagBadge.expiresPrefix', 'Expires')}: ${new Date(expiresAt).toLocaleString()}`}
+        >
           <Icons.Clock01 size={size === 'sm' ? 10 : 12} />
         </span>
       )}
@@ -82,12 +112,12 @@ export const TagBadge = memo(function TagBadge({
           <Icons.Info size={size === 'sm' ? 10 : 12} />
         </span>
       )}
-      {onRemove && !isSystem && (
+      {onRemove && !showLock && (
         <button
           type="button"
           onClick={onRemove}
           className="ml-1 transition-opacity hover:opacity-70"
-          aria-label={`Remove ${name} tag`}
+          aria-label={t('pages.tags.tagBadge.removeLabel', 'Remove {{name}} tag', { name })}
         >
           <Icons.Delete size={size === 'sm' ? 12 : size === 'md' ? 14 : 16} />
         </button>

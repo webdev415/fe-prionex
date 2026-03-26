@@ -5,11 +5,17 @@
  * Supports event-based, schedule-based, and other trigger types.
  */
 
-import { useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
+import {
+  useInteractionResults,
+  useInteractionSubtypes,
+  useInteractionTypes,
+} from '@/features/clients/hooks/useNoteInteraction'
+import { DEFAULT_EVENT_LABELS, useTagConfigStore, type ConfigItem } from '@/stores/tagConfigStore'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
@@ -24,6 +30,8 @@ import {
   SelectItem,
 } from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
+import { generateCode } from '@/lib/utils'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/Tooltip'
 import { useCreateRule, useUpdateRule } from '@/features/tags'
 import type { TagRule, RuleTriggerType, RuleActionType, Tag } from '@/features/tags'
 
@@ -35,97 +43,105 @@ interface RuleFormModalProps {
   onSuccess: () => void
 }
 
-const TRIGGER_TYPE_VALUES: RuleTriggerType[] = [
-  'event',
-  'schedule',
-  'tag_expired',
-  'scoring_change',
-  'import_complete',
-]
-const ACTION_TYPE_VALUES: RuleActionType[] = ['add_tag', 'remove_tag', 'replace_tag']
-const RULE_OPERATOR_VALUES = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'contains', 'in', 'not_in']
-const CONDITION_FIELD_OPTIONS = [
-  { value: 'risk_score', label: 'risk_score' },
-  { value: 'days_past_due', label: 'days_past_due' },
-  { value: 'total_debt', label: 'total_debt' },
-  { value: 'remaining_debt', label: 'remaining_debt' },
-  { value: 'debt_count', label: 'debt_count' },
-  { value: 'status', label: 'status' },
-  { value: 'has_tag', label: 'has_tag' },
-  { value: 'not_has_tag', label: 'not_has_tag' },
-]
+/** Convert a cron expression to a human-readable string using i18n */
+function humanizeCronLocal(
+  expr: string,
+  t: (key: string, fallback: string, opts?: Record<string, string>) => string
+): string {
+  const parts = expr.trim().split(/\s+/)
+  if (parts.length !== 5) return expr
 
-const RULE_PRESETS = [
-  {
-    key: 'auto_high_risk',
-    name: 'Auto-tag High Risk',
-    description: 'Automatically tag clients as high risk when scoring exceeds threshold',
-    trigger_type: 'scoring_change' as RuleTriggerType,
-    conditions: [{ field: 'risk_score', op: 'gte', value: '80' }],
-    action_type: 'add_tag' as RuleActionType,
-    target_tag_code: 'high_risk',
-  },
-  {
-    key: 'remove_high_risk',
-    name: 'Remove High Risk',
-    description: 'Remove high risk tag when scoring drops below threshold',
-    trigger_type: 'scoring_change' as RuleTriggerType,
-    conditions: [{ field: 'risk_score', op: 'lt', value: '80' }],
-    action_type: 'remove_tag' as RuleActionType,
-    target_tag_code: 'high_risk',
-  },
-  {
-    key: 'mark_active_debtor',
-    name: 'Mark Active Debtors',
-    description: 'Daily: tag clients with past-due balances as active debtors',
-    trigger_type: 'schedule' as RuleTriggerType,
-    cron_expression: '0 6 * * *',
-    conditions: [{ field: 'days_past_due', op: 'gt', value: '0' }],
-    action_type: 'add_tag' as RuleActionType,
-    target_tag_code: 'active_debtor',
-  },
-  {
-    key: 'mark_paid_off',
-    name: 'Mark Paid Off',
-    description: 'Tag client as paid off when full payment is received',
-    trigger_type: 'event' as RuleTriggerType,
-    trigger_event: 'payment.completed',
-    conditions: [{ field: 'remaining_debt', op: 'eq', value: '0' }],
-    action_type: 'add_tag' as RuleActionType,
-    target_tag_code: 'paid_off',
-  },
-  {
-    key: 'broken_promise',
-    name: 'Broken Promise to Pay',
-    description:
-      'Daily: replace promise_to_pay with refuses_to_pay when client has promise tag and >30 days past due',
-    trigger_type: 'schedule' as RuleTriggerType,
-    cron_expression: '0 8 * * *',
-    conditions: [
-      { field: 'has_tag', op: 'eq', value: 'promise_to_pay' },
-      { field: 'days_past_due', op: 'gt', value: '30' },
-    ],
-    action_type: 'replace_tag' as RuleActionType,
-    target_tag_code: 'refuses_to_pay',
-    replace_tag_code: 'promise_to_pay',
-  },
-  {
-    key: 'no_contact_retry',
-    name: 'Retry No Contact',
-    description: 'Daily: clear no_contact tag after 7+ days past due to retry contact attempts',
-    trigger_type: 'schedule' as RuleTriggerType,
-    cron_expression: '0 9 * * *',
-    conditions: [
-      { field: 'has_tag', op: 'eq', value: 'no_contact' },
-      { field: 'days_past_due', op: 'gt', value: '7' },
-    ],
-    action_type: 'remove_tag' as RuleActionType,
-    target_tag_code: 'no_contact',
-  },
-]
+  const [min, hour, dom, mon, dow] = parts
+
+  if (min.startsWith('*/') && hour === '*' && dom === '*' && mon === '*' && dow === '*') {
+    return t('pages.tags.rules.cronHumanize.everyNMin', `Every ${min.slice(2)} min`, {
+      n: min.slice(2),
+    })
+  }
+
+  if (/^\d+$/.test(min) && /^\d+$/.test(hour)) {
+    const time = `${hour.padStart(2, '0')}:${min.padStart(2, '0')}`
+    if (dom === '*' && mon === '*' && dow === '*') {
+      return t('pages.tags.rules.cronHumanize.dailyAt', `Daily at ${time}`, { time })
+    }
+    if (dom === '*' && mon === '*' && /^\d+$/.test(dow)) {
+      const dayName = t(`pages.tags.rules.cronHumanize.days.${dow}`, dow)
+      return t('pages.tags.rules.cronHumanize.dayAt', `${dayName} at ${time}`, {
+        day: dayName,
+        time,
+      })
+    }
+  }
+
+  return expr
+}
+
+function CronPreview({
+  expression,
+  t,
+}: {
+  expression: string
+  t: (key: string, fallback: string, opts?: Record<string, string>) => string
+}) {
+  const humanized = humanizeCronLocal(expression, t)
+  if (humanized === expression) return null
+  return <p className="text-xs text-green-600">{humanized}</p>
+}
+
+// Dropdown options loaded from tagConfigStore (manageable via Settings tab)
+
+// Rule presets loaded from tagConfigStore (manageable via Settings tab)
+
+function FieldTooltip({ text }: { text: string }) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="ml-1 inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-gray-200 text-[10px] font-bold text-gray-500">
+            ?
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
+          {text}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
+
+function getEventDisplayLabel(
+  eventValue: string,
+  eventLabel: string,
+  t: (key: string, fallback: string) => string
+): string {
+  const defaultLabel = DEFAULT_EVENT_LABELS[eventValue]
+  if (defaultLabel && eventLabel === defaultLabel) {
+    return t(`pages.tags.rules.events.${eventValue}`, eventLabel)
+  }
+
+  return eventLabel
+}
+
+function mergeOptions(...groups: Array<ConfigItem[] | undefined>): ConfigItem[] {
+  const deduped = new Map<string, ConfigItem>()
+
+  for (const group of groups) {
+    for (const item of group ?? []) {
+      const value = item.value.trim()
+      if (!value || deduped.has(value)) continue
+      deduped.set(value, {
+        value,
+        label: item.label.trim() || value,
+      })
+    }
+  }
+
+  return Array.from(deduped.values())
+}
 
 type RuleFormData = {
   name: string
+  code: string
   description: string
   trigger_type: RuleTriggerType
   trigger_event: string
@@ -141,64 +157,98 @@ type RuleFormData = {
 export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleFormModalProps) {
   const { t } = useTranslation('common')
   const isEdit = !!rule
+  const tagConfig = useTagConfigStore()
+
+  const TRIGGER_TYPE_VALUES = tagConfig.triggerTypes.map((i) => i.value) as RuleTriggerType[]
+  const ACTION_TYPE_VALUES = tagConfig.actionTypes.map((i) => i.value) as RuleActionType[]
+  const AVAILABLE_EVENTS = tagConfig.availableEvents
+  const RULE_OPERATOR_VALUES = tagConfig.operators.map((i) => i.value)
+  const RULE_PRESETS = tagConfig.rulePresets
 
   const createMutation = useCreateRule()
   const updateMutation = useUpdateRule()
+  const { data: interactionResults = [] } = useInteractionResults()
+  const { data: interactionTypes = [] } = useInteractionTypes()
+  const { data: interactionSubtypes = [] } = useInteractionSubtypes()
 
   const ruleSchema = useMemo(
     () =>
-      z.object({
-        name: z
-          .string()
-          .min(1, t('pages.tags.rules.validation.nameRequired', 'Name is required'))
-          .max(100, t('pages.tags.rules.validation.nameMax', 'Max 100 characters')),
-        description: z.string().max(500).optional().default(''),
-        trigger_type: z.enum([
-          'event',
-          'schedule',
-          'tag_expired',
-          'scoring_change',
-          'import_complete',
-        ]),
-        trigger_event: z.string().optional().default(''),
-        cron_expression: z
-          .string()
-          .optional()
-          .default('')
-          .refine(
-            (val) => !val || /^(\S+\s){4}\S+$/.test(val.trim()),
-            t(
-              'pages.tags.rules.validation.cronInvalid',
-              'Invalid cron expression (expected 5-part format)'
+      z
+        .object({
+          name: z
+            .string()
+            .min(1, t('pages.tags.rules.validation.nameRequired', 'Name is required'))
+            .max(100, t('pages.tags.rules.validation.nameMax', 'Max 100 characters')),
+          code: z
+            .string()
+            .max(100, t('pages.tags.rules.validation.codeMax', 'Max 100 characters'))
+            .regex(
+              /^[a-z0-9_]*$/,
+              t(
+                'pages.tags.rules.validation.codeFormat',
+                'Only lowercase letters, numbers, underscores'
+              )
             )
+            .optional()
+            .default(''),
+          description: z.string().max(500).optional().default(''),
+          trigger_type: z.enum([
+            'event',
+            'schedule',
+            'tag_expired',
+            'scoring_change',
+            'import_complete',
+          ]),
+          trigger_event: z.string().optional().default(''),
+          cron_expression: z.string().optional().default(''),
+          conditions: z.array(
+            z.object({
+              field: z.string().min(1, 'Field is required'),
+              op: z.string().min(1, 'Operator is required'),
+              value: z.string(),
+            })
           ),
-        conditions: z.array(
-          z.object({
-            field: z
-              .string()
-              .min(1, t('pages.tags.rules.validation.fieldRequired', 'Field is required')),
-            op: z
-              .string()
-              .min(1, t('pages.tags.rules.validation.operatorRequired', 'Operator is required')),
-            value: z.string(),
-          })
-        ),
-        action_type: z.enum(['add_tag', 'remove_tag', 'replace_tag']),
-        target_tag_code: z
-          .string()
-          .min(1, t('pages.tags.rules.validation.targetRequired', 'Target tag is required')),
-        replace_tag_code: z.string().optional().default(''),
-        priority: z.coerce.number().int().min(1).max(1000).default(100),
-        is_active: z.boolean().default(true),
-      }),
+          action_type: z.enum(['add_tag', 'remove_tag', 'replace_tag']),
+          target_tag_code: z
+            .string()
+            .min(1, t('pages.tags.rules.validation.targetRequired', 'Target tag is required')),
+          replace_tag_code: z.string().optional().default(''),
+          priority: z.coerce.number().int().min(1).max(1000).default(1),
+          is_active: z.boolean().default(true),
+        })
+        .superRefine((data, ctx) => {
+          if (data.trigger_type === 'event' && !data.trigger_event) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: t(
+                'pages.tags.rules.validation.eventRequired',
+                'Event name is required for event triggers'
+              ),
+              path: ['trigger_event'],
+            })
+          }
+          if (data.trigger_type === 'schedule' && !data.cron_expression) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: t(
+                'pages.tags.rules.validation.cronRequired',
+                'Cron expression is required for schedule triggers'
+              ),
+              path: ['cron_expression'],
+            })
+          }
+        }),
     [t]
   )
+
+  const [isCustomEvent, setIsCustomEvent] = useState(false)
 
   const {
     register,
     handleSubmit,
     control,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<RuleFormData>({
@@ -206,6 +256,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
     resolver: zodResolver(ruleSchema) as any,
     defaultValues: {
       name: '',
+      code: '',
       description: '',
       trigger_type: 'event',
       trigger_event: '',
@@ -214,21 +265,86 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
       action_type: 'add_tag',
       target_tag_code: '',
       replace_tag_code: '',
-      priority: 100,
+      priority: 1,
       is_active: true,
     },
   })
 
   const { fields, append, remove } = useFieldArray({ control, name: 'conditions' })
 
-  const triggerType = watch('trigger_type') // eslint-disable-line react-hooks/incompatible-library
+  const triggerType = watch('trigger_type')
+
+  // Dynamic condition fields — based on selected event's payload
+  const triggerEventValue = watch('trigger_event')
+  const selectedEventConfig = AVAILABLE_EVENTS.find((e) => e.value === triggerEventValue)
+  const CONDITION_FIELD_OPTIONS = selectedEventConfig?.fields?.length
+    ? selectedEventConfig.fields.map((field) => ({ value: field.value, label: field.value }))
+    : tagConfig.conditionFields
+
+  // Get possible values for a condition field (if it's a select type)
+  const getFieldOptions = (fieldName: string): ConfigItem[] | undefined => {
+    const field = selectedEventConfig?.fields?.find((f) => f.value === fieldName)
+    if (field?.type !== 'select') return undefined
+
+    const configuredOptions = field.options ?? []
+
+    switch (field.optionsSource) {
+      case 'interactionResults':
+        return mergeOptions(
+          interactionResults.map((item) => ({
+            value: item.name,
+            label: item.name,
+          })),
+          configuredOptions
+        )
+      case 'interactionTypes':
+        return mergeOptions(
+          interactionTypes.map((item) => ({
+            value: item.code,
+            label: item.code,
+          })),
+          configuredOptions
+        )
+      case 'interactionChannels':
+        return mergeOptions(
+          interactionSubtypes.map((item) => ({
+            value: item.code.toLowerCase(),
+            label: item.code.toLowerCase(),
+          })),
+          configuredOptions
+        )
+      case 'interactionDirections':
+        return mergeOptions(
+          [
+            { value: 'inbound', label: 'inbound' },
+            { value: 'outbound', label: 'outbound' },
+            { value: 'system', label: 'system' },
+          ],
+          configuredOptions
+        )
+      default:
+        return configuredOptions
+    }
+  }
   const actionType = watch('action_type')
+  const cronValue = watch('cron_expression')
+  const nameValue = watch('name')
+  const codeManuallyEdited = useRef(false)
+
+  // Auto-generate code from name (when not manually edited; also on edit if legacy rule has no code)
+  useEffect(() => {
+    if (!codeManuallyEdited.current) {
+      setValue('code', nameValue ? generateCode(nameValue) : '', { shouldValidate: !!nameValue })
+    }
+  }, [nameValue, setValue])
 
   // Reset form when modal opens
   useEffect(() => {
     if (open) {
+      codeManuallyEdited.current = !!rule?.code
       reset({
         name: rule?.name ?? '',
+        code: rule?.code ?? '',
         description: rule?.description ?? '',
         trigger_type: rule?.trigger_type ?? 'event',
         trigger_event: rule?.trigger_event ?? '',
@@ -241,16 +357,21 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
         action_type: rule?.action_type ?? 'add_tag',
         target_tag_code: rule?.target_tag_code ?? '',
         replace_tag_code: rule?.replace_tag_code ?? '',
-        priority: rule?.priority ?? 0,
+        priority: rule?.priority ?? 1,
         is_active: rule?.is_active ?? true,
       })
+      setIsCustomEvent(
+        rule?.trigger_event ? !AVAILABLE_EVENTS.some((e) => e.value === rule.trigger_event) : false
+      )
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, rule, reset])
 
   const onSubmit = useCallback(
     async (data: RuleFormData) => {
       const payload = {
         name: data.name,
+        code: data.code || undefined,
         description: data.description || undefined,
         trigger_type: data.trigger_type,
         trigger_event: data.trigger_type === 'event' ? data.trigger_event || undefined : undefined,
@@ -329,17 +450,24 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                   onValueChange={(key) => {
                     const preset = RULE_PRESETS.find((p) => p.key === key)
                     if (preset) {
+                      codeManuallyEdited.current = false
+                      setIsCustomEvent(
+                        preset.trigger_event
+                          ? !AVAILABLE_EVENTS.some((event) => event.value === preset.trigger_event)
+                          : false
+                      )
                       reset({
                         name: preset.name,
+                        code: generateCode(preset.name),
                         description: preset.description,
-                        trigger_type: preset.trigger_type,
+                        trigger_type: preset.trigger_type as RuleTriggerType,
                         trigger_event: preset.trigger_event ?? '',
                         cron_expression: preset.cron_expression ?? '',
                         conditions: preset.conditions,
-                        action_type: preset.action_type,
+                        action_type: preset.action_type as RuleActionType,
                         target_tag_code: preset.target_tag_code,
                         replace_tag_code: preset.replace_tag_code ?? '',
-                        priority: 100,
+                        priority: 1,
                         is_active: true,
                       })
                     }
@@ -372,8 +500,32 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               <Input
                 id="rule-name"
                 {...register('name')}
-                placeholder={t('pages.tags.rules.namePlaceholder', 'e.g. Auto-tag overdue clients')}
+                placeholder={t('pages.tags.rules.namePlaceholder', 'e.g. High risk of overdue')}
                 error={errors.name?.message}
+              />
+            </div>
+
+            {/* Code */}
+            <div className="space-y-1.5">
+              <Label htmlFor="rule-code" required>
+                {t('pages.tags.rules.code', 'Code')}
+                <FieldTooltip
+                  text={t(
+                    'pages.tags.fields.tooltips.code',
+                    'Unique API identifier. Auto-generated from name.'
+                  )}
+                />
+              </Label>
+              <Input
+                id="rule-code"
+                {...register('code', {
+                  onChange: () => {
+                    codeManuallyEdited.current = true
+                  },
+                })}
+                placeholder="vysokiy_risk_prosrochki"
+                error={errors.code?.message}
+                disabled={isEdit && !!rule?.code}
               />
             </div>
 
@@ -414,23 +566,56 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                     </Select>
                   )}
                 />
+                <p className="text-xs text-gray-500">
+                  {t(`pages.tags.rules.triggerHelpers.${triggerType}`, '')}
+                </p>
               </div>
 
               {/* Trigger Event (if event) */}
               {triggerType === 'event' && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="rule-event">
-                    {t('pages.tags.rules.triggerEvent', 'Event Name')}
-                  </Label>
-                  <Input
-                    id="rule-event"
-                    {...register('trigger_event')}
-                    placeholder={t(
-                      'pages.tags.rules.triggerEventPlaceholder',
-                      'e.g. client.payment_missed'
-                    )}
-                    error={errors.trigger_event?.message}
-                  />
+                  <Label>{t('pages.tags.rules.eventName', 'Название события')}</Label>
+                  <select
+                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
+                    value={isCustomEvent ? '__custom__' : watch('trigger_event') || ''}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setIsCustomEvent(true)
+                        setValue('trigger_event', '')
+                      } else {
+                        setIsCustomEvent(false)
+                        setValue('trigger_event', e.target.value)
+                      }
+                    }}
+                  >
+                    <option value="">
+                      {t('pages.tags.rules.selectEvent', 'Выберите событие...')}
+                    </option>
+                    {AVAILABLE_EVENTS.map((ev) => (
+                      <option key={ev.value} value={ev.value}>
+                        {getEventDisplayLabel(ev.value, ev.label, t)}
+                      </option>
+                    ))}
+                    <option value="__custom__">
+                      {t('pages.tags.rules.customEvent', 'Своё значение...')}
+                    </option>
+                  </select>
+                  {isCustomEvent && (
+                    <Input
+                      {...register('trigger_event')}
+                      placeholder={t(
+                        'pages.tags.fields.triggerEventPlaceholder',
+                        'напр. client.payment_missed'
+                      )}
+                      className="mt-2"
+                    />
+                  )}
+                  {errors.trigger_event?.message && (
+                    <p className="text-error-500 text-xs">{errors.trigger_event.message}</p>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    {t('pages.tags.rules.eventHint', 'Выберите системное событие или введите своё')}
+                  </p>
                 </div>
               )}
 
@@ -450,6 +635,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       'Standard cron format (min hour dom mon dow)'
                     )}
                   />
+                  {cronValue && <CronPreview expression={cronValue} t={t} />}
                 </div>
               )}
             </div>
@@ -457,6 +643,12 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
             {/* Conditions */}
             <div className="space-y-1.5">
               <Label>{t('pages.tags.rules.conditions', 'Conditions')}</Label>
+              <p className="text-xs text-gray-500">
+                {t(
+                  'pages.tags.rules.conditionsHelp',
+                  'All conditions must be true for the rule to fire (AND logic). Leave empty to always fire.'
+                )}
+              </p>
               <div className="space-y-2">
                 {fields.map((field, index) => (
                   <div key={field.id} className="flex items-start gap-2">
@@ -474,7 +666,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                             <SelectContent>
                               {CONDITION_FIELD_OPTIONS.map((opt) => (
                                 <SelectItem key={opt.value} value={opt.value}>
-                                  {t(`pages.tags.rules.conditionFields.${opt.value}`, opt.label)}
+                                  {opt.value}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -505,12 +697,48 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                         </Select>
                       )}
                     />
-                    <Input
-                      inputSize="sm"
-                      className="h-9 text-xs"
-                      placeholder={t('pages.tags.rules.valuePlaceholder', 'e.g. 80')}
-                      {...register(`conditions.${index}.value`)}
-                    />
+                    {(() => {
+                      const fieldName = watch(`conditions.${index}.field`)
+                      const opts = getFieldOptions(fieldName)
+                      if (opts && opts.length > 0) {
+                        return (
+                          <Controller
+                            name={`conditions.${index}.value`}
+                            control={control}
+                            render={({ field: valField }) => (
+                              <Select value={valField.value} onValueChange={valField.onChange}>
+                                <SelectTrigger className="h-9 min-w-[140px] flex-1 text-xs">
+                                  <SelectValue
+                                    placeholder={t(
+                                      'pages.tags.rules.valuePlaceholder',
+                                      'Выберите...'
+                                    )}
+                                  />
+                                </SelectTrigger>
+                                <SelectContent
+                                  searchable
+                                  searchPlaceholder={t('pages.tags.searchTags', 'Поиск...')}
+                                >
+                                  {opts.map((o) => (
+                                    <SelectItem key={o.value} value={o.value}>
+                                      {o.label || o.value}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          />
+                        )
+                      }
+                      return (
+                        <Input
+                          inputSize="sm"
+                          className="h-9 text-xs"
+                          placeholder={t('pages.tags.rules.valuePlaceholder', 'e.g. 80')}
+                          {...register(`conditions.${index}.value`)}
+                        />
+                      )
+                    })()}
                     <Button
                       type="button"
                       variant="ghost"
@@ -627,12 +855,9 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                   id="rule-priority"
                   type="number"
                   {...register('priority', { valueAsNumber: true })}
-                  placeholder="0"
+                  placeholder="1"
                   error={errors.priority?.message}
-                  helperText={t(
-                    'pages.tags.rules.priorityHelp',
-                    '0-1000, lower number = higher priority'
-                  )}
+                  helperText={t('pages.tags.rules.priorityHelp', '1-1000, lower = higher priority')}
                 />
               </div>
 

@@ -2316,14 +2316,21 @@
       "tabs": {
         "dictionary": "Довідник",
         "segments": "Сегменти",
-        "rules": "Правила"
+        "rules": "Правила",
+        "groups": "Групи",
+        "settings": "Налаштування"
       },
       "tableHeaders": {
         "name": "Назва тега",
         "project": "Проєкт",
         "description": "Опис",
         "clients": "Клієнти",
-        "actions": "Дії"
+        "actions": "Дії",
+        "code": "Код",
+        "category": "Категорія",
+        "visibility": "Видимість",
+        "origin": "Джерело",
+        "active": "Активний"
       },
       "fields": {
         "name": "Назва",
@@ -2347,6 +2354,34 @@
         "notifications": "Сповіщення",
         "enableNotifications": "Увімкнути сповіщення",
         "notificationTemplate": "Шаблон сповіщення",
+        "isProtected": "Захищений тег",
+        "protectedRoles": "Ролі для видалення",
+        "expiryType": "Тип закінчення",
+        "loanClosureNote": "Тег буде автоматично видалено при закритті кредиту клієнта",
+        "expiryDate": "Дата і час закінчення",
+        "expiryDateHint": "Фіксована дата закінчення тегу",
+        "mutexGroupNone": "Немає",
+        "mutexGroupCustom": "Своя група...",
+        "mutexGroupCustomPlaceholder": "Введіть назву групи",
+        "tooltips": {
+          "name": "Відображуване ім'я. Має бути коротким і зрозумілим.",
+          "code": "Унікальний ID для API та правил. Генерується з назви.",
+          "category": "Групування: статус, ризик, комунікація, поведінка, система, своя.",
+          "visibility": "UI = видно операторам, Аналітика = лише звіти, Система = прихований.",
+          "expiryType": "Постійний = назавжди. TTL = видаляється через час. До закриття = при закритті позики.",
+          "protectedTag": "Лише обрані ролі зможуть зняти цей тег.",
+          "mutexGroup": "Теги однієї групи взаємовиключні. Призначення одного знімає інші."
+        },
+        "notificationTemplatePlaceholder": "Напр.: Тег '{tag_name}' призначено клієнту {client_id}",
+        "codePlaceholder": "Напр.: high_risk",
+        "ttlHoursPlaceholder": "Напр.: 24, 48, 168, 720",
+        "orDurationInHours": "або тривалість у годинах",
+        "availableVariables": "Доступні змінні:",
+        "varClientId": "ID клієнта",
+        "varClientName": "Ім'я клієнта",
+        "varTagName": "Назва тегу",
+        "varTagCode": "Код тегу",
+        "varAction": "Дія (призначено/знято)",
         "validation": {
           "nameRequired": "Назва обов'язкова",
           "nameMaxLength": "Назва має бути не більше 50 символів",
@@ -2354,10 +2389,39 @@
           "descriptionMaxLength": "Опис має бути не більше 200 символів"
         }
       },
+      "expiryTypes": {
+        "permanent": "Безстроковий",
+        "ttl": "За часом (TTL)",
+        "loanClosure": "До закриття кредиту",
+        "loan_closure": "До закриття кредиту"
+      },
+      "protectedWarning": "Для видалення потрібне підтвердження керівника",
+      "removalRequests": {
+        "title": "Запити на видалення",
+        "approve": "Схвалити",
+        "reject": "Відхилити",
+        "pending": "Очікує підтвердження",
+        "approved": "Схвалено",
+        "rejected": "Відхилено",
+        "noRequests": "Немає очікуючих запитів на видалення",
+        "requestedBy": "Запитав",
+        "reason": "Причина"
+      },
+      "origins": {
+        "system": "Системний",
+        "custom": "Користувацький"
+      },
       "actions": {
         "edit": "Редагувати",
-        "delete": "Видалити"
+        "delete": "Видалити",
+        "deactivate": "Деактивувати",
+        "reactivate": "Активувати"
       },
+      "deactivateTag": "Деактивувати тег",
+      "deactivateConfirmation": "Ви впевнені, що хочете деактивувати тег \"{{name}}\"?",
+      "deactivateWarningMessage": "Цей тег призначено {{count}} клієнту(ам). Деактивація приховає його, але збереже історію.",
+      "deactivateNotice": "Тег можна буде активувати пізніше.",
+      "deactivating": "Деактивація...",
       "deleteTag": "Видалити тег",
       "deleteConfirmation": "Ви впевнені, що хочете видалити цей тег?",
       "usageWarning": "Цей тег використовується",
@@ -2365,6 +2429,13 @@
       "deleteNotice": "Цю дію неможливо скасувати.",
       "deleting": "Видалення...",
       "showMore": "+{{count}} ще",
+      "tagBadge": {
+        "protectedLabel": "Захищений тег — для видалення потрібне підтвердження",
+        "systemLabel": "Системний тег",
+        "loanClosureTitle": "Активний до закриття кредиту",
+        "expiresPrefix": "Закінчується",
+        "removeLabel": "Видалити тег {{name}}"
+      },
       "segments": {
         "name": "Назва",
         "namePlaceholder": "напр. Високий ризик прострочення",
@@ -2382,7 +2453,7 @@
         "addCondition": "Додати умову І",
         "addGroup": "Додати групу АБО",
         "noConditions": "Умови не задані. Додайте групу умов для початку.",
-        "conditionHelp": "Умови всередині групи об'єднуються через І. Групи об'єднуються через АБО.",
+        "conditionHelp": "Всередині групи — всі умови мають збігатися (І). Між групами — достатньо збігу будь-якої групи (АБО). Приклад: (Високий ризик І Активний) АБО (Прострочка > 90)",
         "conditionType": "Тип умови",
         "selectTag": "Оберіть тег",
         "fieldName": "Назва поля",
@@ -2431,6 +2502,25 @@
           "new_no_risk": "Нові без ризику"
         }
       },
+      "groups": {
+        "name": "Група",
+        "description": "Опис",
+        "tags": "Теги в групі",
+        "clients": "Клієнти",
+        "noGroups": "Немає груп взаємовиключення",
+        "mutexNote": "Тільки один тег з цієї групи може бути активним у клієнта одночасно",
+        "createGroup": "Створити групу",
+        "groupName": "Назва групи",
+        "groupNamePlaceholder": "Напр.: payment_agreement",
+        "groupDescription": "Опис (необов'язково)",
+        "groupDescriptionPlaceholder": "Напр.: Тип домовленості",
+        "selectTags": "Виберіть теги для групи",
+        "tagAlreadyInGroup": "Вже в групі \"{{group}}\"",
+        "removeFromGroup": "Видалити з групи",
+        "creating": "Створення групи...",
+        "onlyOneActive": "Тільки один тег з цієї групи може бути активним у клієнта одночасно",
+        "groupNameRule": "Тільки малі латинські літери, цифри та підкреслення"
+      },
       "rules": {
         "name": "Назва",
         "namePlaceholder": "напр. Авто-тег прострочених клієнтів",
@@ -2451,6 +2541,28 @@
         "triggerEventPlaceholder": "напр. client.payment_missed",
         "cronExpression": "Cron-вираз",
         "cronHelp": "Стандартний формат cron: хв год дом міс дн (напр. 0 9 * * * = щодня о 9:00)",
+        "triggerHelpers": {
+          "event": "Спрацьовує при системній події (напр. payment.completed, client.created)",
+          "schedule": "Запускається за розкладом у форматі cron",
+          "scoring_change": "Спрацьовує при перерахунку скорингу клієнта",
+          "tag_expired": "Спрацьовує коли закінчується TTL тега",
+          "import_complete": "Спрацьовує після завершення імпорту даних"
+        },
+        "conditionsHelp": "Усі умови мають бути істинними для спрацювання правила (логіка І). Залиште порожнім для постійного спрацювання.",
+        "cronHumanize": {
+          "everyNMin": "Кожні {{n}} хв",
+          "dailyAt": "Щодня о {{time}}",
+          "dayAt": "{{day}} о {{time}}",
+          "days": {
+            "0": "Нд",
+            "1": "Пн",
+            "2": "Вт",
+            "3": "Ср",
+            "4": "Чт",
+            "5": "Пт",
+            "6": "Сб"
+          }
+        },
         "actionType": "Дія",
         "conditions": "Умови",
         "isActive": "Активне",
@@ -2490,7 +2602,9 @@
         "validation": {
           "nameRequired": "Назва обов'язкова",
           "nameMax": "Максимум 100 символів",
-          "targetRequired": "Цільовий тег обов'язковий"
+          "targetRequired": "Цільовий тег обов'язковий",
+          "eventRequired": "Назва події обов'язкова для event-тригерів",
+          "cronRequired": "Cron-вираз обов'язковий для тригерів за розкладом"
         },
         "useTemplate": "Використати шаблон",
         "selectTemplate": "Оберіть шаблон для колекторських процесів...",
@@ -2501,6 +2615,23 @@
           "mark_paid_off": "Позначити погашених",
           "broken_promise": "Порушена обіцянка оплати (щодня)",
           "no_contact_retry": "Повторна спроба контакту"
+        },
+        "events": {
+          "interaction.created": "Створено взаємодію",
+          "payment.verified": "Платіж підтверджено",
+          "sms.sent": "SMS надіслано",
+          "call.outcome.updated": "Результат дзвінка оновлено",
+          "scoring.completed": "Скоринг завершено",
+          "client.imported": "Клієнта імпортовано",
+          "debt.created": "Створено борг",
+          "debt.updated": "Борг оновлено",
+          "client.created": "Клієнта створено",
+          "interaction.result.agreement": "Результат: Обіцянка оплати",
+          "interaction.result.refusal": "Результат: Відмова від оплати",
+          "interaction.result.no_contact": "Результат: Недозвін",
+          "payment.received": "Платіж отримано",
+          "payment.debt_closed": "Борг закрито",
+          "scoring.calculated": "Скоринг розраховано"
         }
       },
       "categories": {
@@ -2523,8 +2654,76 @@
         "rulesTitle": "Правил автоматизації поки немає",
         "rulesDescription": "Правила автоматично призначають або знімають теги при подіях. Наприклад: авто-тег при зміні скорингу.",
         "createFromTemplate": "Створити з шаблону",
-        "dictionaryBanner": "Системні теги для колекторських процесів вже налаштовані. Ви можете створити власні."
-      }
+        "dictionaryBanner": "Системні теги для колекторських процесів вже налаштовані. Ви можете створити власні.",
+        "segmentsBanner": "Сегменти — це збережені групи клієнтів на основі умов тегів. Приклад: «Високий ризик + Активний борг» = всі клієнти з обома тегами. Умови у групі об'єднуються через І, групи — через АБО.",
+        "rulesBanner": "Правила автоматично додають або знімають теги при виконанні умов. Можуть спрацьовувати за подіями (надійшла оплата), розкладом (щодня о 9:00) або при зміні скорингу."
+      },
+      "mutexGroupDescriptions": {
+        "risk_level": "Рівень ризику",
+        "payment_status": "Статус оплати"
+      },
+      "helpBanner": "Потрібна допомога з налаштуванням тегів?",
+      "helpLink": "Документація",
+      "settings": {
+        "description": "Управління випадаючими списками, подіями та умовами правил. Зміни застосовуються одразу до всіх форм.",
+        "dictionarySettings": "Довідник тегів",
+        "ruleSettings": "Правила",
+        "segmentSettings": "Сегменти",
+        "mutexGroups": "Групи взаємовиключення",
+        "categories": "Категорії",
+        "categoriesDesc": "Категорії групування тегів (статус, ризик тощо)",
+        "visibilities": "Рівні видимості",
+        "expiryTypes": "Типи закінчення",
+        "triggerTypes": "Типи тригерів",
+        "events": "Доступні події",
+        "eventsDesc": "Системні події, які можуть запускати правила",
+        "eventCode": "Код події",
+        "eventLabel": "Відображувана назва",
+        "eventFields": "Поля",
+        "fieldCode": "Код поля",
+        "fieldsCount": "{{count}} полів",
+        "values": "Значення",
+        "valuesCount": "{{count}} значень",
+        "optionValue": "Значення",
+        "optionLabel": "Підпис",
+        "noFields": "Для цієї події поля не налаштовані",
+        "noValues": "Значення не налаштовані",
+        "liveValuesFallback": "Живі значення будуть підмішані під час виконання. Додавайте вручну лише перевизначення або fallback-значення.",
+        "eventSources": {
+          "interactionResults": "Live: результати взаємодій",
+          "interactionTypes": "Live: типи взаємодій",
+          "interactionChannels": "Live: канали взаємодій",
+          "interactionDirections": "Derived: напрямки взаємодій"
+        },
+        "actionTypes": "Типи дій",
+        "conditionFields": "Поля умов",
+        "conditionFieldsDesc": "Поля доступні для умов правил та сегментів",
+        "operators": "Оператори",
+        "refreshModes": "Режими оновлення",
+        "noItems": "Немає елементів",
+        "resetDefaults": "Скинути за замовчуванням",
+        "confirmReset": "Скинути всі налаштування за замовчуванням?",
+        "rulePresets": "Шаблони правил",
+        "rulePresetsDesc": "Швидкий старт для створення правил",
+        "segmentPresets": "Шаблони сегментів"
+      },
+      "deleteRule": "Видалити правило",
+      "deleteRuleConfirmation": "Ви впевнені, що хочете видалити правило \"{{name}}\"?",
+      "deleteRuleWarningMessage": "Видалення активного правила зупинить всі автоматичні операції з тегами. Ця дія незворотна.",
+      "ruleActiveWarning": "Це правило зараз активне",
+      "deleteSegment": "Видалити сегмент",
+      "deleteSegmentConfirmation": "Ви впевнені, що хочете видалити сегмент \"{{name}}\"?",
+      "deleteSegmentWarningMessage": "Цей сегмент включає {{count}} клієнту(ів). Видалення видалить визначення сегмента. Ця дія незворотна.",
+      "deleteSegmentNotice": "Ця дія незворотна. Сегмент буде видалено з системи.",
+      "segmentInUse": "Цей сегмент містить клієнтів",
+      "deleteTagConfirmation": "Ви впевнені, що хочете видалити тег \"{{name}}\"?",
+      "deleteTagWarningMessage": "Цей тег призначено {{count}} клієнту(ам). Видалення зніме тег з усіх клієнтів. Ця дія незворотна.",
+      "deleteTagNotice": "Ця дія незворотна. Тег буде видалено з системи.",
+      "activateTag": "Активувати тег",
+      "activateRule": "Активувати правило",
+      "activateSegment": "Активувати сегмент",
+      "deactivateRule": "Деактивувати правило",
+      "deactivateSegment": "Деактивувати сегмент"
     },
     "forbidden": {
       "title": "Доступ заборонено",

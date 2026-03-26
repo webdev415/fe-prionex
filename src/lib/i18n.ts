@@ -3,6 +3,11 @@ import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import Backend from 'i18next-http-backend'
 
+/** Cache-bust locale files on each new page load (dev) or build (prod). */
+const BUILD_TIMESTAMP = import.meta.env.DEV
+  ? String(Date.now())
+  : (import.meta.env.VITE_BUILD_TS ?? '1')
+
 export const SUPPORTED_LANGUAGES = ['en', 'uk', 'ru'] as const
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 
@@ -45,6 +50,7 @@ i18n
 
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',
+      queryStringParams: { v: BUILD_TIMESTAMP },
     },
   })
 

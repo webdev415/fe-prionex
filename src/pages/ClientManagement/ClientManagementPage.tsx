@@ -52,7 +52,13 @@ interface DisplayClient {
   id: number
   fullName: string
   taxIdNumber: string
-  tags: Array<{ id: number; name: string; color: string }>
+  tags: Array<{
+    id: number
+    name: string
+    color: string
+    is_protected?: boolean
+    expiry_type?: 'permanent' | 'ttl' | 'loan_closure'
+  }>
   phoneNumber: string
   createdDate: string
   creditor: string
@@ -1114,17 +1120,43 @@ export function ClientManagementPage() {
       key: 'tags',
       header: t('pages.clients.tableHeaders.tags'),
       align: 'left',
-      render: (client) => (
-        <div className="flex flex-wrap gap-1">
-          {client.tags && client.tags.length > 0 ? (
-            client.tags.map((tag) => (
-              <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
-            ))
-          ) : (
-            <span className="text-xs text-gray-400">-</span>
-          )}
-        </div>
-      ),
+      render: (client) => {
+        const tags = client.tags || []
+        const visibleTags = tags.slice(0, 3)
+        const remainingCount = tags.length - 3
+
+        return (
+          <div className="flex flex-wrap items-center gap-1">
+            {tags.length > 0 ? (
+              <>
+                {visibleTags.map((tag) => (
+                  <TagBadge
+                    key={tag.id}
+                    name={tag.name}
+                    color={tag.color}
+                    size="sm"
+                    isProtected={tag.is_protected}
+                    expiryType={tag.expiry_type}
+                  />
+                ))}
+                {remainingCount > 0 && (
+                  <span
+                    className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600"
+                    title={tags
+                      .slice(3)
+                      .map((t) => t.name)
+                      .join(', ')}
+                  >
+                    +{remainingCount}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-xs text-gray-400">-</span>
+            )}
+          </div>
+        )
+      },
     },
     {
       key: 'phoneNumber',

@@ -31,6 +31,7 @@ export const tagsKeys = {
   segments: () => ['segments'] as const,
   clientState: (clientId: number) => ['clientState', clientId] as const,
   clientHistory: (clientId: number) => ['clientTagHistory', clientId] as const,
+  removalRequests: () => ['removalRequests'] as const,
 }
 
 /**
@@ -357,6 +358,74 @@ export function useRefreshSegment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.segments() })
       toast.success('Segment refreshed')
+    },
+  })
+}
+
+// ============================================================================
+// Removal Requests
+// ============================================================================
+
+export function useRemovalRequests() {
+  return useQuery({
+    queryKey: tagsKeys.removalRequests(),
+    queryFn: () => tagsApi.getRemovalRequests(),
+    staleTime: 60_000,
+  })
+}
+
+export function useRequestTagRemoval() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      tagId,
+      reason,
+    }: {
+      clientId: number
+      tagId: number
+      reason?: string
+    }) => tagsApi.requestTagRemoval(clientId, tagId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tagsKeys.removalRequests() })
+      toast.success('Removal request submitted')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to submit removal request')
+    },
+  })
+}
+
+export function useApproveRemoval() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ requestId, reason }: { requestId: number; reason?: string }) =>
+      tagsApi.approveRemovalRequest(requestId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tagsKeys.removalRequests() })
+      queryClient.invalidateQueries({ queryKey: tagsKeys.all })
+      toast.success('Tag removal approved')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to approve removal')
+    },
+  })
+}
+
+export function useRejectRemoval() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ requestId, reason }: { requestId: number; reason?: string }) =>
+      tagsApi.rejectRemovalRequest(requestId, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: tagsKeys.removalRequests() })
+      toast.success('Tag removal rejected')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to reject removal')
     },
   })
 }
