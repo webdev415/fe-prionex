@@ -277,9 +277,26 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
   // Dynamic condition fields — based on selected event's payload
   const triggerEventValue = watch('trigger_event')
   const selectedEventConfig = AVAILABLE_EVENTS.find((e) => e.value === triggerEventValue)
-  const CONDITION_FIELD_OPTIONS = selectedEventConfig?.fields?.length
-    ? selectedEventConfig.fields.map((field) => ({ value: field.value, label: field.value }))
-    : tagConfig.conditionFields
+  const CONDITION_FIELD_OPTIONS = useMemo(() => {
+    const TAG_CONDITION_FIELDS: ConfigItem[] = [
+      { value: 'has_tag', label: t('pages.tags.rules.conditionFields.has_tag', 'Has Tag') },
+      {
+        value: 'not_has_tag',
+        label: t('pages.tags.rules.conditionFields.not_has_tag', 'Not Has Tag'),
+      },
+    ]
+    if (selectedEventConfig?.fields?.length) {
+      const eventFields = selectedEventConfig.fields.map((field) => ({
+        value: field.value,
+        label: t(`pages.tags.rules.eventPayloadFields.${field.value}`, field.label || field.value),
+      }))
+      return [...eventFields, ...TAG_CONDITION_FIELDS]
+    }
+    return tagConfig.conditionFields.map((f) => ({
+      value: f.value,
+      label: t(`pages.tags.rules.conditionFields.${f.value}`, f.label),
+    }))
+  }, [selectedEventConfig, tagConfig.conditionFields, t])
 
   // Get possible values for a condition field (if it's a select type)
   const getFieldOptions = (fieldName: string): ConfigItem[] | undefined => {
@@ -666,7 +683,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                             <SelectContent>
                               {CONDITION_FIELD_OPTIONS.map((opt) => (
                                 <SelectItem key={opt.value} value={opt.value}>
-                                  {opt.value}
+                                  {opt.label}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -699,6 +716,34 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                     />
                     {(() => {
                       const fieldName = watch(`conditions.${index}.field`)
+                      // Tag selector for has_tag / not_has_tag
+                      if (fieldName === 'has_tag' || fieldName === 'not_has_tag') {
+                        return (
+                          <Controller
+                            name={`conditions.${index}.value`}
+                            control={control}
+                            render={({ field: valField }) => (
+                              <Select value={valField.value} onValueChange={valField.onChange}>
+                                <SelectTrigger className="h-9 min-w-[140px] flex-1 text-xs">
+                                  <SelectValue
+                                    placeholder={t('pages.tags.rules.selectTag', 'Select tag')}
+                                  />
+                                </SelectTrigger>
+                                <SelectContent
+                                  searchable
+                                  searchPlaceholder={t('pages.tags.searchTags', 'Поиск...')}
+                                >
+                                  {tagCodeOptions.map((o) => (
+                                    <SelectItem key={o.value} value={o.value}>
+                                      {o.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          />
+                        )
+                      }
                       const opts = getFieldOptions(fieldName)
                       if (opts && opts.length > 0) {
                         return (
