@@ -4,7 +4,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { CallStateEvent, ConnectionStatus } from '../types'
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8005'
+const WS_URL =
+  import.meta.env.VITE_WS_URL !== undefined ? import.meta.env.VITE_WS_URL : 'http://localhost:8005'
 const MAX_RECONNECT_ATTEMPTS = 10
 
 export function useCallWebSocket(agentExtension: string | null) {

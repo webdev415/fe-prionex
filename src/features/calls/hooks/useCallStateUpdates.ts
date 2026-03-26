@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useQueryClient } from '@tanstack/react-query'
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8005'
+const WS_URL =
+  import.meta.env.VITE_WS_URL !== undefined ? import.meta.env.VITE_WS_URL : 'http://localhost:8005'
 
 interface CallStateChangedEventData {
   call_id: string
