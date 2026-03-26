@@ -308,37 +308,37 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
     switch (field.optionsSource) {
       case 'interactionResults':
         return mergeOptions(
+          configuredOptions,
           interactionResults.map((item) => ({
             value: item.name,
             label: item.name,
-          })),
-          configuredOptions
+          }))
         )
       case 'interactionTypes':
         return mergeOptions(
+          configuredOptions,
           interactionTypes.map((item) => ({
             value: item.code,
             label: item.code,
-          })),
-          configuredOptions
+          }))
         )
       case 'interactionChannels':
         return mergeOptions(
+          configuredOptions,
           interactionSubtypes.map((item) => ({
             value: item.code.toLowerCase(),
             label: item.code.toLowerCase(),
-          })),
-          configuredOptions
+          }))
         )
       case 'interactionDirections':
-        return mergeOptions(
-          [
-            { value: 'inbound', label: 'inbound' },
-            { value: 'outbound', label: 'outbound' },
-            { value: 'system', label: 'system' },
-          ],
-          configuredOptions
-        )
+        return mergeOptions(configuredOptions, [
+          { value: 'inbound', label: t('pages.tags.rules.eventPayloadFields.inbound', 'Входящий') },
+          {
+            value: 'outbound',
+            label: t('pages.tags.rules.eventPayloadFields.outbound', 'Исходящий'),
+          },
+          { value: 'system', label: t('pages.tags.rules.eventPayloadFields.system', 'Системный') },
+        ])
       default:
         return configuredOptions
     }
