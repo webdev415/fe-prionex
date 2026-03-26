@@ -32,6 +32,8 @@ export const tagsKeys = {
   clientState: (clientId: number) => ['clientState', clientId] as const,
   clientHistory: (clientId: number) => ['clientTagHistory', clientId] as const,
   removalRequests: () => ['removalRequests'] as const,
+  segmentClients: (id: number, skip: number, limit: number) =>
+    ['segmentClients', id, skip, limit] as const,
 }
 
 /**
@@ -359,6 +361,15 @@ export function useRefreshSegment() {
       queryClient.invalidateQueries({ queryKey: tagsKeys.segments() })
       toast.success('Segment refreshed')
     },
+  })
+}
+
+export function useSegmentClients(segmentId: number | null, skip: number, limit: number) {
+  return useQuery({
+    queryKey: tagsKeys.segmentClients(segmentId ?? 0, skip, limit),
+    queryFn: () => tagsApi.getSegmentClients(segmentId!, skip, limit),
+    enabled: segmentId !== null,
+    staleTime: 30_000,
   })
 }
 

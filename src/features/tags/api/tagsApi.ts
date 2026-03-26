@@ -129,6 +129,7 @@ import type {
   SegmentCreate,
   SegmentUpdate,
   SegmentPreview,
+  SegmentClientsPage,
   ClientState,
   TagAssignmentLog,
   TagDefinitionCreate,
@@ -289,6 +290,17 @@ export async function refreshSegment(id: number): Promise<Segment> {
   return response.data
 }
 
+export async function getSegmentClients(
+  id: number,
+  skip = 0,
+  limit = 50
+): Promise<SegmentClientsPage> {
+  const response = await api.get<SegmentClientsPage>(`/api/v1/segments/${id}/clients`, {
+    params: { skip, limit },
+  })
+  return response.data
+}
+
 /**
  * Exported API object for easier importing
  */
@@ -321,6 +333,7 @@ export const tagsApi = {
   deleteSegment,
   previewSegment,
   refreshSegment,
+  getSegmentClients,
   // Removal Requests
   requestTagRemoval,
   getRemovalRequests,

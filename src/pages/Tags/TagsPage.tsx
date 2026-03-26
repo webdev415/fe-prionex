@@ -15,6 +15,7 @@ import {
   useUpdateTag,
   useUpdateRule,
   useUpdateSegment,
+  useRefreshSegment,
 } from '@/features/tags'
 import type { Tag, TagDefinition, Segment, TagRule } from '@/features/tags'
 import { useAuth } from '@/features/auth'
@@ -32,6 +33,7 @@ import { DeleteTagDialog } from './components/DeleteTagDialog'
 import { DeleteRuleDialog } from './components/DeleteRuleDialog'
 import { DeleteSegmentDialog } from './components/DeleteSegmentDialog'
 import { SegmentFormModal } from './components/SegmentFormModal'
+import { SegmentClientsDrawer } from './components/SegmentClientsDrawer'
 import { RuleFormModal } from './components/RuleFormModal'
 import { MutexGroupFormModal } from './components/MutexGroupFormModal'
 import { TagSettingsPanel } from './components/TagSettingsPanel'
@@ -106,6 +108,7 @@ export function TagsPage() {
   const [deleteSegmentId, setDeleteSegmentId] = useState<number | null>(null)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [showGroupModal, setShowGroupModal] = useState(false)
+  const [segmentClientsDrawer, setSegmentClientsDrawer] = useState<Segment | null>(null)
 
   // Tab switching
   const setActiveTab = (tab: TabId) => {
@@ -152,6 +155,7 @@ export function TagsPage() {
   const updateTagMutation = useUpdateTag()
   const updateRuleMutation = useUpdateRule()
   const updateSegmentMutation = useUpdateSegment()
+  const refreshSegmentMutation = useRefreshSegment()
   const ruleToDelete = rules.find((r) => r.id === deleteRuleId)
   const segmentToDelete = segments.find((s) => s.id === deleteSegmentId)
 
@@ -468,7 +472,15 @@ export function TagsPage() {
         key: 'cached_client_count',
         header: t('pages.tags.segments.clients', 'Clients'),
         align: 'center',
-        render: (s) => <span className="font-medium">{s.cached_client_count}</span>,
+        render: (s) => (
+          <button
+            onClick={() => setSegmentClientsDrawer(s)}
+            className="rounded px-2 py-0.5 font-medium text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-800"
+            title={t('pages.tags.segments.viewClients', 'View clients')}
+          >
+            {s.cached_client_count}
+          </button>
+        ),
       },
       {
         key: 'refresh_mode',
@@ -514,6 +526,17 @@ export function TagsPage() {
         align: 'center',
         render: (s) => (
           <div className="flex items-center justify-center gap-4">
+            <PermissionGuard permission={PERMISSIONS.TAGS.VIEW}>
+              <LinkButton
+                variant="regular-black"
+                size="xs"
+                onClick={() => refreshSegmentMutation.mutate(s.id)}
+                disabled={refreshSegmentMutation.isPending}
+                leftIcon={<Icons.Reload size={16} color="#05040D" strokeWidth={1.5} />}
+              >
+                {t('pages.tags.actions.refresh', 'Refresh')}
+              </LinkButton>
+            </PermissionGuard>
             <PermissionGuard permission={PERMISSIONS.TAGS.EDIT}>
               <LinkButton
                 variant="regular-black"
@@ -538,7 +561,7 @@ export function TagsPage() {
         ),
       },
     ],
-    [t, updateSegmentMutation]
+    [t, updateSegmentMutation, refreshSegmentMutation]
   )
 
   // Rules columns
@@ -986,6 +1009,13 @@ export function TagsPage() {
           segment={segmentToDelete}
           onClose={() => setDeleteSegmentId(null)}
           onSuccess={() => setDeleteSegmentId(null)}
+        />
+      )}
+
+      {segmentClientsDrawer && (
+        <SegmentClientsDrawer
+          segment={segmentClientsDrawer}
+          onClose={() => setSegmentClientsDrawer(null)}
         />
       )}
 

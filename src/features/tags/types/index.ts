@@ -271,6 +271,13 @@ export interface SegmentPreview {
   sample_client_ids: number[]
 }
 
+export interface SegmentClientsPage {
+  total: number
+  skip: number
+  limit: number
+  client_ids: number[]
+}
+
 // Client State
 export interface ClientState {
   client_id: number
