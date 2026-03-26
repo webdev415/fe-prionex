@@ -33,6 +33,7 @@
     "fullName": "Повне ім'я",
     "tin": "ІПН",
     "contractNumber": "Номер договору",
+    "email": "Емейл",
     "error": "Не вдалося виконати пошук клієнтів. Будь ласка, спробуйте ще раз.",
     "searching": "Пошук...",
     "noResults": "Клієнтів за запитом «{{query}}» не знайдено.",
@@ -853,6 +854,7 @@
         "resetFilters": "Скинути фільтри",
         "tableHeaders": {
           "date": "Дата",
+          "dateAndTime": "Дата та час",
           "number": "Номер",
           "loanNumber": "Номер позики",
           "phone": "Телефон",
@@ -948,6 +950,7 @@
         "addedBy": "Додав",
         "addedDate": "Дата",
         "phoneType": "Тип",
+        "linkedContact": "Пов'язаний контакт",
         "comment": "Коментар",
         "registrationAddress": "Адреса реєстрації",
         "personalAddress": "Особиста адреса",

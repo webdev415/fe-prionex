@@ -179,7 +179,7 @@ export function ActivityTimelinePage() {
   const activityColumns: Column<(typeof activitiesState)[0]>[] = [
     {
       key: 'date',
-      header: t('pages.clients.activity.tableHeaders.date'),
+      header: t('pages.clients.activity.tableHeaders.dateAndTime', 'Date & Time'),
       align: 'left',
       className: 'min-w-[118px] w-[128px] overflow-hidden whitespace-normal',
     },

@@ -182,6 +182,10 @@ jobs:
               echo "✅ Using latest image: $DOCKER_IMAGE"
             fi
 
+            # Stop and remove existing container to avoid name conflict
+            docker compose -f $COMPOSE_FILE down --remove-orphans 2>/dev/null || true
+            docker rm -f fe-prionex 2>/dev/null || true
+
             # Deploy
             if [ -f "$ENV_FILE" ]; then
               echo "Using env file: $ENV_FILE"

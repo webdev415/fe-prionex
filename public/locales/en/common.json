@@ -33,6 +33,7 @@
     "fullName": "Full name",
     "tin": "TIN",
     "contractNumber": "Contract number",
+    "email": "Email",
     "error": "Could not search clients. Please try again.",
     "searching": "Searching...",
     "noResults": "No clients found for '{{query}}'.",
@@ -1342,6 +1343,7 @@
         "resetFilters": "Reset filters",
         "tableHeaders": {
           "date": "Date",
+          "dateAndTime": "Date & Time",
           "number": "Number",
           "loanNumber": "Loan Number",
           "phone": "Phone",
@@ -1437,6 +1439,7 @@
         "addedBy": "Added by",
         "addedDate": "Date",
         "phoneType": "Type",
+        "linkedContact": "Linked contact",
         "comment": "Comment",
         "registrationAddress": "Registration address",
         "personalAddress": "Personal address",

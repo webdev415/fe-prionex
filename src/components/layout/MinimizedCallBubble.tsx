@@ -5,9 +5,11 @@
  * Displays call information on hover and restores the modal on click.
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCallStore } from '@/stores/callStore'
+import { useCallDetails } from '@/features/calls/hooks/useCall'
 import { Icons } from '@/lib/icons'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
@@ -15,16 +17,64 @@ import { CallRecordingModal } from '@/pages/ClientManagement/components/CallReco
 
 export function MinimizedCallBubble() {
   const { t } = useTranslation('common')
-  const { minimizedCall, clearMinimizedCall, setOpenCallModal } = useCallStore()
+  const { minimizedCall, setMinimizedCall, clearMinimizedCall, setOpenCallModal } = useCallStore()
+  const queryClient = useQueryClient()
   const [isRestored, setIsRestored] = useState(false)
+
+  const isActiveCall =
+    minimizedCall?.type === 'call-dialog' &&
+    (minimizedCall.callState === 'dialing' || minimizedCall.callState === 'connected')
+
+  // Poll backend call state while minimized and call is active
+  const activeCallId = isActiveCall && minimizedCall?.callId ? minimizedCall.callId : null
+  const { data: callDetails } = useCallDetails(activeCallId)
+
+  // Live elapsed time: compute from the snapshot + time passed since minimized
+  const [liveElapsedTime, setLiveElapsedTime] = useState(() => {
+    if (!minimizedCall) return 0
+    if (minimizedCall.timestamp && minimizedCall.elapsedTime !== undefined) {
+      return minimizedCall.elapsedTime + Math.floor((Date.now() - minimizedCall.timestamp) / 1000)
+    }
+    return minimizedCall.elapsedTime ?? 0
+  })
+
+  // Sync backend state: detect when call ends while minimized
+  useEffect(() => {
+    if (!callDetails || !minimizedCall || minimizedCall.type !== 'call-dialog') return
+
+    if (callDetails.state === 'COMPLETED' || callDetails.state === 'FAILED') {
+      const newState = callDetails.state === 'COMPLETED' ? 'ended' : 'failed'
+      if (minimizedCall.callState !== newState) {
+        setMinimizedCall({
+          ...minimizedCall,
+          callState: newState,
+          elapsedTime: callDetails.total_duration ?? liveElapsedTime,
+        })
+        // Invalidate call history so it shows the updated record
+        queryClient.invalidateQueries({ queryKey: ['callHistory'] })
+        queryClient.invalidateQueries({ queryKey: ['clients', 'detail'] })
+      }
+    }
+  }, [callDetails]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!minimizedCall || !isActiveCall) {
+      return
+    }
+    // Tick every second
+    const interval = setInterval(() => {
+      if (minimizedCall.timestamp && minimizedCall.elapsedTime !== undefined) {
+        setLiveElapsedTime(
+          minimizedCall.elapsedTime + Math.floor((Date.now() - minimizedCall.timestamp) / 1000)
+        )
+      }
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [isActiveCall, minimizedCall])
 
   if (!minimizedCall) {
     return null
   }
-
-  const isActiveCall =
-    minimizedCall.type === 'call-dialog' &&
-    (minimizedCall.callState === 'dialing' || minimizedCall.callState === 'connected')
 
   const handleRestore = () => {
     setIsRestored(true)
@@ -103,12 +153,11 @@ export function MinimizedCallBubble() {
                 </span>
               </div>
             )}
-            {minimizedCall.elapsedTime !== undefined && minimizedCall.elapsedTime > 0 && (
+            {liveElapsedTime > 0 && (
               <div className="flex items-center gap-2">
                 <Icons.StopWatch size={14} className="text-gray-400" strokeWidth={1.5} />
                 <span className="text-xs text-gray-300">
-                  {t('pages.clients.modals.callDialog.talkTime')}:{' '}
-                  {formatTime(minimizedCall.elapsedTime)}
+                  {t('pages.clients.modals.callDialog.talkTime')}: {formatTime(liveElapsedTime)}
                 </span>
               </div>
             )}

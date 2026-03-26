@@ -37,6 +37,9 @@ export interface CallDialogModalProps {
   minimizedAt?: number // Timestamp (ms) when call was minimized — used to compute extra elapsed time
   error?: string | null // Error message to display when call fails
   isLoading?: boolean // Loading state for call initiation
+  isCallCooldown?: boolean
+  cooldownSecondsRemaining?: number
+  telephonyUnavailable?: boolean
   onCallStart?: (callType: CallType) => void
   onCallEnd?: (duration: number, status: CallStatus) => void
   onAnswer?: () => void
@@ -78,6 +81,9 @@ export function CallDialogModal({
   minimizedAt,
   error,
   isLoading,
+  isCallCooldown = false,
+  cooldownSecondsRemaining = 0,
+  telephonyUnavailable = false,
   onCallStart,
   onCallEnd,
   onAnswer,
@@ -135,7 +141,11 @@ export function CallDialogModal({
     if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCallState(initialState)
-      setElapsedTime(initialElapsedTime ?? 0)
+      // Account for time passed while minimized
+      const correctedTime = minimizedAt
+        ? (initialElapsedTime ?? 0) + Math.floor((Date.now() - minimizedAt) / 1000)
+        : (initialElapsedTime ?? 0)
+      setElapsedTime(correctedTime)
       setCallType(initialCallType)
       setIsMuted(false)
       setIsOnHold(false)
@@ -155,7 +165,7 @@ export function CallDialogModal({
         dialingTimeoutRef.current = null
       }
     }
-  }, [open, initialState, initialElapsedTime, initialCallType])
+  }, [open, initialState, initialElapsedTime, initialCallType, minimizedAt])
 
   const callLineLabel = useMemo(() => {
     if (callType === 'gray-line') {
@@ -207,6 +217,21 @@ export function CallDialogModal({
       setElapsedTime(derivedState.time)
     }
   }, [derivedState, callState, elapsedTime])
+
+  // Direct backend state detection: if the backend says COMPLETED/FAILED,
+  // force transition regardless of local state (handles Zoiper/remote hangup)
+  useEffect(() => {
+    if (!callDetails || !open) return
+    if (
+      (callDetails.state === 'COMPLETED' || callDetails.state === 'FAILED') &&
+      callState !== 'ended' &&
+      callState !== 'failed'
+    ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCallState(callDetails.state === 'COMPLETED' ? 'ended' : 'failed')
+      setElapsedTime(callDetails.total_duration || 0)
+    }
+  }, [callDetails]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Timer for dialing and connected states
   useEffect(() => {
@@ -285,6 +310,7 @@ export function CallDialogModal({
   }
 
   const handleReject = () => {
+    if (hangupMutation.isPending) return
     // Send hangup command to Asterisk to reject the incoming call
     if (callId) {
       hangupMutation.mutate(callId)
@@ -300,17 +326,28 @@ export function CallDialogModal({
   }
 
   const handleHangUp = () => {
+    if (hangupMutation.isPending) return
     const status: CallStatus = callState === 'connected' ? 'answered' : 'missed'
 
     // Send hangup command to Asterisk if we have a call ID
     if (callId) {
-      hangupMutation.mutate(callId)
+      hangupMutation.mutate(callId, {
+        onSuccess: () => {
+          if (onCallEnd) onCallEnd(elapsedTime, status)
+          setCallState('ended')
+        },
+        onError: () => {
+          // Hangup failed (AMI unavailable, call already ended, etc.)
+          // Force end the call on the frontend regardless
+          if (onCallEnd) onCallEnd(elapsedTime, status)
+          setCallState('ended')
+        },
+      })
+    } else {
+      // No callId — just end locally
+      if (onCallEnd) onCallEnd(elapsedTime, status)
+      setCallState('ended')
     }
-
-    if (onCallEnd) {
-      onCallEnd(elapsedTime, status)
-    }
-    setCallState('ended')
   }
 
   const handleMinimize = () => {
@@ -355,15 +392,19 @@ export function CallDialogModal({
     onClose()
   }
 
+  const isCallActive =
+    callState === 'dialing' || callState === 'connected' || callState === 'incoming'
+
   // Incoming call popup (different layout)
   if (callState === 'incoming') {
     return (
       <Modal
         open={open}
-        onClose={handleClose}
+        onClose={isCallActive ? handleMinimize : handleClose}
         maxWidth="xl"
         className="p-4 sm:p-6"
         showCloseButton={false}
+        preventOutsideClose={isCallActive}
       >
         {/* Minimize Button */}
         <button
@@ -374,6 +415,15 @@ export function CallDialogModal({
           <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
         </button>
         <div className="flex flex-col gap-4 sm:gap-6">
+          {telephonyUnavailable && (
+            <div
+              role="alert"
+              className="border-warning-300 bg-warning-50 text-warning-900 rounded-lg border px-3 py-2 text-sm font-medium"
+            >
+              Telephony is temporarily unavailable
+            </div>
+          )}
+
           {/* Call Info */}
           <div className="flex flex-col items-center gap-2 sm:gap-3">
             <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-gray-300 bg-white sm:h-20 sm:w-20">
@@ -476,10 +526,11 @@ export function CallDialogModal({
   return (
     <Modal
       open={open}
-      onClose={handleClose}
+      onClose={isCallActive ? handleMinimize : handleClose}
       maxWidth="xl"
       className="p-4 sm:p-6 md:p-10"
       showCloseButton={false}
+      preventOutsideClose={isCallActive}
     >
       {/* Minimize Button */}
       <button
@@ -490,6 +541,15 @@ export function CallDialogModal({
         <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
       </button>
       <div className="flex flex-col gap-4 sm:gap-6">
+        {telephonyUnavailable && (
+          <div
+            role="alert"
+            className="border-warning-300 bg-warning-50 text-warning-900 rounded-lg border px-3 py-2 text-sm font-medium"
+          >
+            Telephony is temporarily unavailable
+          </div>
+        )}
+
         {/* Content based on state */}
         {callState === 'initial' && (
           <>
@@ -613,9 +673,13 @@ export function CallDialogModal({
                   leftIcon={
                     isLoading ? undefined : <Icons.Headset size={18} className="sm:size-5" />
                   }
-                  disabled={isLoading}
+                  disabled={isLoading || isCallCooldown}
                 >
-                  {isLoading ? t('status.loading') : t('pages.clients.modals.callDialog.callNow')}
+                  {isLoading
+                    ? t('status.loading')
+                    : isCallCooldown
+                      ? `Try again in ${cooldownSecondsRemaining || 1}s`
+                      : t('pages.clients.modals.callDialog.callNow')}
                 </Button>
               )}
             </ModalFooter>
@@ -799,6 +863,7 @@ export function CallDialogModal({
                   variant="primary"
                   size="sm"
                   onClick={handleHangUp}
+                  disabled={hangupMutation.isPending}
                   className="bg-primary-300 text-dark-500 hover:bg-primary-400 w-full rounded-md"
                 >
                   <Icons.Call02 size={18} className="mr-2 sm:size-5" />

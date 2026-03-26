@@ -345,7 +345,14 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           onMinimize={handleMinimizeCall}
           clientName={minimizedCall.clientName}
           phoneNumber={minimizedCall.phoneNumber}
+          callId={minimizedCall.callId}
           initialState={minimizedCall.callState || 'initial'}
+          initialElapsedTime={minimizedCall.elapsedTime ?? 0}
+          minimizedAt={
+            minimizedCall.callState === 'dialing' || minimizedCall.callState === 'connected'
+              ? minimizedCall.timestamp
+              : undefined
+          }
           initialCallType={minimizedCall.callType || 'white-line'}
         />
       )}
@@ -469,6 +476,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         } else if (type === 'name' || type === 'tin') {
           // Map name/tin to name search (backend name search includes TIN)
           backendSearchType = 'name'
+        } else if (type === 'email') {
+          backendSearchType = 'email'
         } else if (type === 'contract_number') {
           backendSearchType = 'contract_number'
         }
@@ -486,6 +495,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           name: item.full_name,
           debt: item.total_debt,
           phone: item.phone_primary ?? '',
+          email: item.email_primary ?? '',
           priority: mapPriorityLevel(item.priority_level),
           score: item.priority_score,
         }))
@@ -550,6 +560,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const searchOptions = [
     { value: 'phone', label: t('search.phoneNumber') },
     { value: 'name', label: t('search.fullName') },
+    { value: 'email', label: t('search.email') },
     { value: 'tin', label: t('search.tin') },
     { value: 'contract_number', label: t('search.contractNumber') },
   ]

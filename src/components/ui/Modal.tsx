@@ -18,6 +18,7 @@ export interface ModalProps {
   className?: string
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full'
   showCloseButton?: boolean
+  preventOutsideClose?: boolean
 }
 
 export function Modal({
@@ -27,6 +28,7 @@ export function Modal({
   className,
   maxWidth = 'md',
   showCloseButton = true,
+  preventOutsideClose = false,
 }: ModalProps) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(open) => !open && onClose()}>
@@ -38,8 +40,8 @@ export function Modal({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
           <DialogPrimitive.Content
             aria-describedby={undefined}
-            onPointerDownOutside={(e) => e.preventDefault()}
-            onInteractOutside={(e) => e.preventDefault()}
+            onInteractOutside={preventOutsideClose ? (e) => e.preventDefault() : undefined}
+            onEscapeKeyDown={preventOutsideClose ? (e) => e.preventDefault() : undefined}
             className={cn(
               'bg-light-50 relative z-50 max-h-[90vh] w-full rounded-lg shadow-xl',
               'p-4 sm:p-6 md:p-8 lg:p-10', // Responsive padding

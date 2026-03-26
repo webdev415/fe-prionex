@@ -168,6 +168,9 @@ export function DebtSummaryPage() {
     activeCallType,
     callError,
     isOriginatingCall,
+    isCallCooldown,
+    cooldownSecondsRemaining,
+    isTelephonyUnavailable,
     handleOriginateCall,
     handleClearCallError,
     handleCloseCallModal,
@@ -1440,6 +1443,9 @@ export function DebtSummaryPage() {
         initialState="initial"
         error={callError}
         isLoading={isOriginatingCall}
+        isCallCooldown={isCallCooldown}
+        cooldownSecondsRemaining={cooldownSecondsRemaining}
+        telephonyUnavailable={isTelephonyUnavailable}
         onCallStart={(callType: CallType) => {
           const phoneNumber = client?.phones?.[0]?.number
           if (!phoneNumber) return

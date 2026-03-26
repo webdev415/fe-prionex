@@ -5,18 +5,19 @@
  * These permissions control access to features, routes, and UI elements.
  *
  * Backend Source: /home/pst/dev/prionex/api-prionex/services/auth/alembic/versions/20251122_0002_002_seed_initial_data.py
- * Total Permissions: 37 (34 pre-existing + 3 interaction/task permissions)
+ * Total Permissions: 38 (34 pre-existing + 3 interaction/task + 1 close_client_debt)
  */
 
 export const PERMISSIONS = {
   /**
-   * Clients Category (7 permissions)
+   * Clients Category (9 permissions)
    * Controls access to client data and management
    */
   CLIENTS: {
     VIEW: 'view_clients',
     EDIT: 'edit_clients',
     EDIT_DEBT: 'edit_client_debt',
+    CLOSE_DEBT: 'close_client_debt',
     VERIFY_PAYMENT: 'verify_payment',
     DELETE: 'delete_clients',
     CREATE_INTERACTIONS: 'create_interactions',
@@ -199,6 +200,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   view_clients: 'View client data and information',
   edit_clients: 'Edit client information (except debt amounts)',
   edit_client_debt: 'Edit debt amounts and DPD (Days Past Due)',
+  close_client_debt: 'Close/finalize a client debt (irreversible)',
   verify_payment: 'Verify and cancel client payments',
   delete_clients: 'Delete client records (soft delete)',
   create_interactions: 'Create client interactions (add notes)',
