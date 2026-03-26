@@ -118,6 +118,16 @@ jobs:
       name: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'dev') }}
 
     steps:
+      - name: Notify Slack - Deployment Started
+        if: always()
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.SLACK_CD_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {"text": ":rocket: *Deployment Started*\nRepo: fe-prionex\nEnvironment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'dev') }}\nBranch: ${{ github.ref_name }}\nCommit: ${{ github.sha }}"}
+        continue-on-error: true
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -195,8 +205,48 @@ jobs:
               DOCKER_IMAGE=$DOCKER_IMAGE docker compose -f $COMPOSE_FILE up -d
             fi
 
+      - name: Post-deploy frontend health check
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ steps.set-env.outputs.DEPLOY_ENV == 'production' && secrets.PROD_SSH_HOST || secrets.DEV_SSH_HOST }}
+          username: ${{ steps.set-env.outputs.DEPLOY_ENV == 'production' && secrets.PROD_SSH_USER || secrets.DEV_SSH_USER }}
+          key: ${{ steps.set-env.outputs.DEPLOY_ENV == 'production' && secrets.PROD_SSH_KEY || secrets.DEV_SSH_KEY }}
+          port: 22
+          script: |
+            echo "Waiting for frontend to be healthy..."
+            for i in $(seq 1 12); do
+              if curl -sf http://localhost:3000 > /dev/null 2>&1; then
+                echo "✅ Frontend is healthy"
+                exit 0
+              fi
+              echo "  Attempt $i/12 - waiting 5s..."
+              sleep 5
+            done
+            echo "❌ Frontend failed to respond within 60s"
+            exit 1
+
       - name: Deploy notification
         if: always()
         run: |
           echo "Deployment completed for ${{ github.ref }}"
           echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+
+      - name: Notify Slack - Deployment Succeeded
+        if: success()
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.SLACK_CD_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {"text": ":white_check_mark: *Deployment Succeeded*\nRepo: fe-prionex\nEnvironment: ${{ steps.set-env.outputs.DEPLOY_ENV }}\nBranch: ${{ github.ref_name }}"}
+        continue-on-error: true
+
+      - name: Notify Slack - Deployment Failed
+        if: failure()
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          webhook: ${{ secrets.SLACK_CD_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {"text": ":x: *Deployment FAILED*\nRepo: fe-prionex\nEnvironment: ${{ steps.set-env.outputs.DEPLOY_ENV }}\nBranch: ${{ github.ref_name }}\nLogs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}
+        continue-on-error: true
