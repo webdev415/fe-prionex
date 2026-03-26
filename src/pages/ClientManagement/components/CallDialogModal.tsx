@@ -37,6 +37,9 @@ export interface CallDialogModalProps {
   minimizedAt?: number // Timestamp (ms) when call was minimized — used to compute extra elapsed time
   error?: string | null // Error message to display when call fails
   isLoading?: boolean // Loading state for call initiation
+  isCallCooldown?: boolean
+  cooldownSecondsRemaining?: number
+  telephonyUnavailable?: boolean
   onCallStart?: (callType: CallType) => void
   onCallEnd?: (duration: number, status: CallStatus) => void
   onAnswer?: () => void
@@ -78,6 +81,9 @@ export function CallDialogModal({
   minimizedAt,
   error,
   isLoading,
+  isCallCooldown = false,
+  cooldownSecondsRemaining = 0,
+  telephonyUnavailable = false,
   onCallStart,
   onCallEnd,
   onAnswer,
@@ -409,6 +415,15 @@ export function CallDialogModal({
           <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
         </button>
         <div className="flex flex-col gap-4 sm:gap-6">
+          {telephonyUnavailable && (
+            <div
+              role="alert"
+              className="border-warning-300 bg-warning-50 text-warning-900 rounded-lg border px-3 py-2 text-sm font-medium"
+            >
+              Telephony is temporarily unavailable
+            </div>
+          )}
+
           {/* Call Info */}
           <div className="flex flex-col items-center gap-2 sm:gap-3">
             <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-gray-300 bg-white sm:h-20 sm:w-20">
@@ -526,6 +541,15 @@ export function CallDialogModal({
         <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
       </button>
       <div className="flex flex-col gap-4 sm:gap-6">
+        {telephonyUnavailable && (
+          <div
+            role="alert"
+            className="border-warning-300 bg-warning-50 text-warning-900 rounded-lg border px-3 py-2 text-sm font-medium"
+          >
+            Telephony is temporarily unavailable
+          </div>
+        )}
+
         {/* Content based on state */}
         {callState === 'initial' && (
           <>
@@ -649,9 +673,13 @@ export function CallDialogModal({
                   leftIcon={
                     isLoading ? undefined : <Icons.Headset size={18} className="sm:size-5" />
                   }
-                  disabled={isLoading}
+                  disabled={isLoading || isCallCooldown}
                 >
-                  {isLoading ? t('status.loading') : t('pages.clients.modals.callDialog.callNow')}
+                  {isLoading
+                    ? t('status.loading')
+                    : isCallCooldown
+                      ? `Try again in ${cooldownSecondsRemaining || 1}s`
+                      : t('pages.clients.modals.callDialog.callNow')}
                 </Button>
               )}
             </ModalFooter>

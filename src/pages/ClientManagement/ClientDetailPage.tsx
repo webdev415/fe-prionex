@@ -156,6 +156,9 @@ export function ClientDetailPage() {
     activeCallType,
     callError,
     isOriginatingCall,
+    isCallCooldown,
+    cooldownSecondsRemaining,
+    isTelephonyUnavailable,
     handleOriginateCall,
     handleClearCallError,
     handleCloseCallModal,
@@ -3265,6 +3268,9 @@ export function ClientDetailPage() {
           initialState="initial"
           error={callError}
           isLoading={isOriginatingCall}
+          isCallCooldown={isCallCooldown}
+          cooldownSecondsRemaining={cooldownSecondsRemaining}
+          telephonyUnavailable={isTelephonyUnavailable}
           onCallStart={(callType: CallType) => {
             const phoneNumber = selectedPhoneForCall || client.phones?.[0]?.number
             if (!phoneNumber) return
