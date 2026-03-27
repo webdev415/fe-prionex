@@ -6,7 +6,7 @@
  */
 
 import api from '@/lib/api'
-import type { Tag, TagCreate, TagDefinitionUpdate } from '../types'
+import type { Tag, TagDefinition, TagCreate, TagDefinitionUpdate } from '../types'
 
 /**
  * Fetch tags list for a project
@@ -14,9 +14,9 @@ import type { Tag, TagCreate, TagDefinitionUpdate } from '../types'
  * @param projectId - Project ID to filter tags
  * @returns List of tags
  */
-export async function getTags(projectId?: number): Promise<Tag[]> {
+export async function getTags(projectId?: number): Promise<TagDefinition[]> {
   const params = projectId ? { project_id: projectId } : {}
-  const response = await api.get<Tag[]>('/api/v1/tags', { params })
+  const response = await api.get<TagDefinition[]>('/api/v1/tags', { params })
   return response.data
 }
 
@@ -60,8 +60,8 @@ export async function deleteTag(id: number): Promise<{ success: boolean; message
  * @param clientId - Client ID
  * @returns List of tags assigned to the client
  */
-export async function getClientTags(clientId: number): Promise<Tag[]> {
-  const response = await api.get<Tag[]>(`/api/v1/clients/${clientId}/tags`)
+export async function getClientTags(clientId: number): Promise<TagDefinition[]> {
+  const response = await api.get<TagDefinition[]>(`/api/v1/clients/${clientId}/tags`)
   return response.data
 }
 
@@ -129,9 +129,11 @@ import type {
   SegmentCreate,
   SegmentUpdate,
   SegmentPreview,
+  SegmentClientsPage,
   ClientState,
   TagAssignmentLog,
   TagDefinitionCreate,
+  RemovalRequest,
 } from '../types'
 
 /**
@@ -207,6 +209,49 @@ export async function deleteRule(id: number): Promise<void> {
   await api.delete(`/api/v1/rules/${id}`)
 }
 
+// --- Removal Requests ---
+
+export async function requestTagRemoval(
+  clientId: number,
+  tagId: number,
+  reason?: string
+): Promise<{ status: string; message: string }> {
+  const response = await api.post<{ status: string; message: string }>(
+    `/api/v1/clients/${clientId}/tags/${tagId}/request-removal`,
+    { reason }
+  )
+  return response.data
+}
+
+export async function getRemovalRequests(skip = 0, limit = 50): Promise<RemovalRequest[]> {
+  const response = await api.get<RemovalRequest[]>('/api/v1/tags/removal-requests', {
+    params: { skip, limit },
+  })
+  return response.data
+}
+
+export async function approveRemovalRequest(
+  requestId: number,
+  reason?: string
+): Promise<{ status: string; message: string }> {
+  const response = await api.post<{ status: string; message: string }>(
+    `/api/v1/tags/removal-requests/${requestId}/approve`,
+    { reason }
+  )
+  return response.data
+}
+
+export async function rejectRemovalRequest(
+  requestId: number,
+  reason?: string
+): Promise<{ status: string; message: string }> {
+  const response = await api.post<{ status: string; message: string }>(
+    `/api/v1/tags/removal-requests/${requestId}/reject`,
+    { reason }
+  )
+  return response.data
+}
+
 // --- Segments ---
 
 export async function getSegments(params?: { is_active?: boolean }): Promise<Segment[]> {
@@ -245,6 +290,17 @@ export async function refreshSegment(id: number): Promise<Segment> {
   return response.data
 }
 
+export async function getSegmentClients(
+  id: number,
+  skip = 0,
+  limit = 50
+): Promise<SegmentClientsPage> {
+  const response = await api.get<SegmentClientsPage>(`/api/v1/segments/${id}/clients`, {
+    params: { skip, limit },
+  })
+  return response.data
+}
+
 /**
  * Exported API object for easier importing
  */
@@ -277,4 +333,10 @@ export const tagsApi = {
   deleteSegment,
   previewSegment,
   refreshSegment,
+  getSegmentClients,
+  // Removal Requests
+  requestTagRemoval,
+  getRemovalRequests,
+  approveRemovalRequest,
+  rejectRemovalRequest,
 }

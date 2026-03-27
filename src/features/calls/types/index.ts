@@ -101,6 +101,7 @@ export interface ConnectionStatus {
   reconnecting: boolean
   failedAttempts: number
   usingPollingFallback: boolean
+  serviceUnavailable: boolean
 }
 
 // Incoming call types

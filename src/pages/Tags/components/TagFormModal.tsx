@@ -4,14 +4,16 @@
  * Modal for creating and editing tags with color picker.
  */
 
-import { useEffect, useCallback, useMemo, useState } from 'react'
+import { useEffect, useCallback, useMemo, useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTranslation } from 'react-i18next'
+import { useTagConfigStore } from '@/stores/tagConfigStore'
 import { Controller } from 'react-hook-form'
 import { useCreateTagExtended, useUpdateTag } from '@/features/tags'
 import type { Tag, TagDefinition, TagCategory, TagVisibility } from '@/features/tags'
+import { useRoles } from '@/features/roles'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
@@ -27,6 +29,8 @@ import {
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { ColorPickerField } from '@/components/forms'
 import { Icons } from '@/lib/icons'
+import { generateCode } from '@/lib/utils'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/Tooltip'
 
 interface TagFormModalProps {
   open: boolean
@@ -36,30 +40,7 @@ interface TagFormModalProps {
   onSuccess: () => void
 }
 
-const PRESET_COLORS = [
-  '#FF6B6B',
-  '#4ECDC4',
-  '#45B7D1',
-  '#FFA07A',
-  '#98D8C8',
-  '#F7DC6F',
-  '#BB8FCE',
-  '#85C1E2',
-  '#80D80A',
-  '#FF9D00',
-  '#DC2626',
-  '#DFDFDF',
-]
-
-const CATEGORY_VALUES: TagCategory[] = [
-  'custom',
-  'status',
-  'risk',
-  'behavior',
-  'communication',
-  'system',
-]
-const VISIBILITY_VALUES: TagVisibility[] = ['ui', 'analytics', 'system']
+// Dropdown options loaded from tagConfigStore (manageable via Settings tab)
 
 type TagFormData = {
   name: string
@@ -69,10 +50,34 @@ type TagFormData = {
   category?: string
   visibility?: string
   default_ttl_hours?: number
+  default_expires_at?: string
   mutex_group?: string
   requires_payload?: boolean
   notification_enabled?: boolean
   notification_template?: string
+  is_protected?: boolean
+  protected_removal_roles?: string[]
+  expiry_type?: string
+}
+
+/**
+ * Small info icon with tooltip for field labels
+ */
+function FieldTooltip({ text }: { text: string }) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="ml-1 inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-gray-200 text-[10px] font-bold text-gray-500">
+            ?
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
+          {text}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
 }
 
 export function TagFormModal({
@@ -83,9 +88,20 @@ export function TagFormModal({
   onSuccess,
 }: TagFormModalProps) {
   const { t, i18n } = useTranslation('common')
+  const tagConfig = useTagConfigStore()
   const isEdit = !!tag
   const isSystemTag = (tag as TagDefinition)?.origin === 'system'
+
+  const CATEGORY_VALUES = tagConfig.categories.map((i) => i.value) as TagCategory[]
+  const VISIBILITY_VALUES = tagConfig.visibilities.map((i) => i.value) as TagVisibility[]
+  const EXPIRY_TYPES = tagConfig.expiryTypes.map((i) => i.value)
+  const PRESET_COLORS = tagConfig.presetColors
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
+  const templateRef = useRef<HTMLTextAreaElement>(null)
+
+  // Fetch roles from API
+  const { data: rolesData } = useRoles({ is_active: true, page_size: 100 })
+  const availableRoles = (rolesData?.roles || []).filter((r) => r.is_active).map((r) => r.name)
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }))
@@ -122,6 +138,7 @@ export function TagFormModal({
               )
             )
             .optional(),
+          default_expires_at: z.string().optional(),
         })
         .passthrough(),
     // i18n.language is needed to recalculate schema when language changes
@@ -137,6 +154,7 @@ export function TagFormModal({
     handleSubmit,
     watch,
     setValue,
+    getValues,
     control,
     formState: { errors, isSubmitting },
     reset,
@@ -151,19 +169,33 @@ export function TagFormModal({
       category: (tag as TagDefinition)?.category || 'custom',
       visibility: (tag as TagDefinition)?.visibility || 'ui',
       default_ttl_hours: (tag as TagDefinition)?.default_ttl_hours ?? undefined,
+      default_expires_at: '',
       mutex_group: (tag as TagDefinition)?.mutex_group || '',
       requires_payload: (tag as TagDefinition)?.requires_payload ?? false,
       notification_enabled: (tag as TagDefinition)?.notification_enabled ?? false,
       notification_template: (tag as TagDefinition)?.notification_template || '',
+      is_protected: (tag as TagDefinition)?.is_protected ?? false,
+      protected_removal_roles: (tag as TagDefinition)?.protected_removal_roles ?? [],
+      expiry_type: (tag as TagDefinition)?.expiry_type ?? 'permanent',
     },
   })
 
   // Watch color value for preview
   const selectedColor = watch('color')
 
+  // Auto-generate code from name (only for new tags, not editing)
+  const watchedName = watch('name')
+  const codeManuallyEdited = useRef(false)
+  useEffect(() => {
+    if (!tag && !codeManuallyEdited.current) {
+      setValue('code', watchedName ? generateCode(watchedName) : '', { shouldValidate: false })
+    }
+  }, [watchedName, tag, setValue])
+
   // Reset form when modal opens/closes or tag changes
   useEffect(() => {
     if (open) {
+      codeManuallyEdited.current = !!tag // if editing, treat as manually set
       const tagDef = tag as TagDefinition | undefined
       reset({
         name: tag?.name || '',
@@ -173,17 +205,21 @@ export function TagFormModal({
         category: tagDef?.category || 'custom',
         visibility: tagDef?.visibility || 'ui',
         default_ttl_hours: tagDef?.default_ttl_hours ?? undefined,
+        default_expires_at: '',
         mutex_group: tagDef?.mutex_group || '',
         requires_payload: tagDef?.requires_payload ?? false,
         notification_enabled: tagDef?.notification_enabled ?? false,
         notification_template: tagDef?.notification_template || '',
+        is_protected: tagDef?.is_protected ?? false,
+        protected_removal_roles: tagDef?.protected_removal_roles ?? [],
+        expiry_type: tagDef?.expiry_type ?? 'permanent',
       })
     }
   }, [open, tag, reset])
 
   const onSubmit = useCallback(
     async (data: TagFormData) => {
-      // Clean empty strings → undefined so backend stores NULL not ""
+      // Clean empty strings -> undefined so backend stores NULL not ""
       const cleaned = {
         ...data,
         code: data.code || undefined,
@@ -194,6 +230,7 @@ export function TagFormModal({
           data.default_ttl_hours && !Number.isNaN(data.default_ttl_hours)
             ? data.default_ttl_hours
             : undefined,
+        default_expires_at: data.default_expires_at || undefined,
       }
 
       try {
@@ -217,6 +254,23 @@ export function TagFormModal({
     onClose()
   }, [reset, onClose])
 
+  const insertVariable = (variable: string) => {
+    const el = templateRef.current
+    if (!el) return
+    const start = el.selectionStart ?? 0
+    const end = el.selectionEnd ?? 0
+    const current = getValues('notification_template') || ''
+    const newValue = current.slice(0, start) + variable + current.slice(end)
+    setValue('notification_template', newValue, { shouldDirty: true })
+    setTimeout(() => {
+      el.focus()
+      el.setSelectionRange(start + variable.length, start + variable.length)
+    }, 0)
+  }
+
+  // Minimum datetime for the TTL datepicker (current time)
+  const minDatetime = new Date().toISOString().slice(0, 16)
+
   return (
     <Modal open={open} onClose={handleClose} className="max-w-3xl">
       <form onSubmit={handleSubmit(onSubmit)} className="min-w-0">
@@ -235,6 +289,20 @@ export function TagFormModal({
 
         <ModalContent className="overflow-x-hidden">
           <div className="min-w-0 space-y-6">
+            {/* Info Banner */}
+            <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
+              <span>ℹ️</span>
+              <span>{t('pages.tags.helpBanner', 'Нужна помощь с настройкой тегов?')}</span>
+              <a
+                href="https://prionex.atlassian.net/wiki"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-auto underline"
+              >
+                {t('pages.tags.helpLink', 'Документация')}
+              </a>
+            </div>
+
             {/* Project (Read-only) */}
             {(tag?.project_name || activeProjectName) && (
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
@@ -257,13 +325,39 @@ export function TagFormModal({
 
             {/* Tag Name */}
             <div className="space-y-2">
-              <Label htmlFor="name">{t('pages.tags.fields.name', 'Name')}</Label>
+              <Label htmlFor="name">
+                {t('pages.tags.fields.name', 'Name')}
+                <FieldTooltip text={t('pages.tags.fields.tooltips.name', 'Displayed tag name')} />
+              </Label>
               <Input
                 id="name"
                 {...register('name')}
                 placeholder={t('pages.tags.fields.namePlaceholder', 'Enter tag name')}
                 error={errors.name?.message}
                 aria-label={t('pages.tags.fields.name', 'Name')}
+              />
+            </div>
+
+            {/* Code (auto-generated from name) */}
+            <div className="space-y-2">
+              <Label htmlFor="code">
+                {t('pages.tags.fields.code', 'Code')}
+                <FieldTooltip
+                  text={t(
+                    'pages.tags.fields.tooltips.code',
+                    'Unique ID for API. Auto-generated from name'
+                  )}
+                />
+              </Label>
+              <Input
+                id="code"
+                {...register('code', {
+                  onChange: () => {
+                    codeManuallyEdited.current = true
+                  },
+                })}
+                placeholder={t('pages.tags.fields.codePlaceholder', 'e.g. high_risk')}
+                disabled={isSystemTag}
               />
             </div>
 
@@ -298,7 +392,15 @@ export function TagFormModal({
             {/* Category & Visibility */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t('pages.tags.fields.category', 'Category')}</Label>
+                <Label>
+                  {t('pages.tags.fields.category', 'Category')}
+                  <FieldTooltip
+                    text={t(
+                      'pages.tags.fields.tooltips.category',
+                      'Groups by purpose: status, risk, etc.'
+                    )}
+                  />
+                </Label>
                 <Controller
                   name="category"
                   control={control}
@@ -323,7 +425,15 @@ export function TagFormModal({
                 />
               </div>
               <div className="space-y-2">
-                <Label>{t('pages.tags.fields.visibility', 'Visibility')}</Label>
+                <Label>
+                  {t('pages.tags.fields.visibility', 'Visibility')}
+                  <FieldTooltip
+                    text={t(
+                      'pages.tags.fields.tooltips.visibility',
+                      'UI = operators, Analytics = reports, System = hidden'
+                    )}
+                  />
+                </Label>
                 <Controller
                   name="visibility"
                   control={control}
@@ -351,68 +461,137 @@ export function TagFormModal({
               </div>
             </div>
 
-            {/* Collapsible: TTL Settings */}
-            <div className="rounded-lg border border-gray-200">
-              <button
-                type="button"
-                onClick={() => toggleSection('ttl')}
-                className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <span>{t('pages.tags.fields.ttlSettings', 'TTL Settings')}</span>
-                <span className="text-gray-400">{expandedSections.ttl ? '−' : '+'}</span>
-              </button>
-              {expandedSections.ttl && (
-                <div className="border-t border-gray-200 px-4 py-3">
+            {/* Expiry Type */}
+            <div className="rounded-lg border border-gray-200 px-4 py-3">
+              <Label className="mb-2 block">
+                {t('pages.tags.fields.expiryType', 'Expiry Type')}
+                <FieldTooltip
+                  text={t(
+                    'pages.tags.fields.tooltips.expiryType',
+                    'Permanent = forever. TTL = auto-remove. Loan closure = on loan close'
+                  )}
+                />
+              </Label>
+              <div className="flex flex-wrap gap-4">
+                {EXPIRY_TYPES.map((type) => (
+                  <label key={type} className="flex cursor-pointer items-center gap-2">
+                    <input
+                      type="radio"
+                      value={type}
+                      {...register('expiry_type')}
+                      className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                      disabled={isSystemTag}
+                    />
+                    <span className="text-sm text-gray-700">
+                      {t(`pages.tags.expiryTypes.${type}`, type)}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {watch('expiry_type') === 'ttl' && (
+                <div className="mt-3 space-y-3">
+                  {/* Datetime picker for TTL */}
                   <div className="space-y-2">
-                    <Label htmlFor="default_ttl_hours">
-                      {t('pages.tags.fields.ttlHours', 'Default TTL (hours)')}
+                    <Label htmlFor="default_expires_at">
+                      {t('pages.tags.fields.expiresAt', 'Expires at')}
+                    </Label>
+                    <Input
+                      id="default_expires_at"
+                      type="datetime-local"
+                      {...register('default_expires_at')}
+                      min={minDatetime}
+                      disabled={isSystemTag}
+                    />
+                  </div>
+                  {/* Hours input as secondary option */}
+                  <div className="space-y-2">
+                    <Label htmlFor="default_ttl_hours" className="text-xs text-gray-500">
+                      {t('pages.tags.fields.ttlHoursAlt', 'or duration in hours')}
                     </Label>
                     <Input
                       id="default_ttl_hours"
                       type="number"
+                      className="max-w-48"
                       {...register('default_ttl_hours', { valueAsNumber: true })}
-                      placeholder="e.g. 24, 48, 168"
+                      placeholder={t(
+                        'pages.tags.fields.ttlHoursPlaceholder',
+                        'e.g. 24, 48, 168, 720'
+                      )}
                       disabled={isSystemTag}
                     />
-                    <p className="text-xs text-gray-500">
-                      {t(
-                        'pages.tags.fields.ttlNote',
-                        'Leave empty for no auto-expiration. Tag will be automatically removed after this many hours.'
-                      )}
-                    </p>
                   </div>
+                  <p className="text-xs text-gray-500">
+                    {t(
+                      'pages.tags.fields.ttlNote',
+                      'Tag will be automatically removed after this period'
+                    )}
+                  </p>
                 </div>
+              )}
+              {watch('expiry_type') === 'loan_closure' && (
+                <p className="mt-2 text-xs text-amber-600">
+                  {t(
+                    'pages.tags.fields.loanClosureNote',
+                    "Tag will be automatically removed when the client's loan is closed"
+                  )}
+                </p>
               )}
             </div>
 
-            {/* Collapsible: Mutex */}
-            <div className="rounded-lg border border-gray-200">
-              <button
-                type="button"
-                onClick={() => toggleSection('mutex')}
-                className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <span>{t('pages.tags.fields.mutexGroup', 'Mutual Exclusion Group')}</span>
-                <span className="text-gray-400">{expandedSections.mutex ? '−' : '+'}</span>
-              </button>
-              {expandedSections.mutex && (
-                <div className="border-t border-gray-200 px-4 py-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="mutex_group">
-                      {t('pages.tags.fields.mutexGroupName', 'Group Name')}
-                    </Label>
-                    <Input
-                      id="mutex_group"
-                      {...register('mutex_group')}
-                      placeholder="e.g. risk_level, payment_status"
-                      disabled={isSystemTag}
-                    />
-                    <p className="text-xs text-gray-500">
-                      {t(
-                        'pages.tags.fields.mutexNote',
-                        'Tags in the same mutex group are mutually exclusive — assigning one removes others in the group.'
-                      )}
-                    </p>
+            {/* Protected Tag */}
+            <div className="rounded-lg border border-gray-200 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="is_protected"
+                  {...register('is_protected')}
+                  className="h-4 w-4 rounded border-gray-300"
+                  disabled={isSystemTag}
+                />
+                <Label htmlFor="is_protected">
+                  {t('pages.tags.fields.isProtected', 'Protected Tag')}
+                  <FieldTooltip
+                    text={t(
+                      'pages.tags.fields.tooltips.protectedTag',
+                      'Only selected roles can remove'
+                    )}
+                  />
+                </Label>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                {t('pages.tags.protectedWarning', 'Removal requires manager approval')}
+              </p>
+              {watch('is_protected') && (
+                <div className="mt-3 space-y-2">
+                  <Label>{t('pages.tags.fields.protectedRoles', 'Roles allowed to remove')}</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {availableRoles.map((role) => (
+                      <label key={role} className="flex cursor-pointer items-center gap-1.5">
+                        <input
+                          type="checkbox"
+                          checked={(watch('protected_removal_roles') || []).includes(role)}
+                          onChange={(e) => {
+                            const current = watch('protected_removal_roles') || []
+                            if (e.target.checked) {
+                              setValue('protected_removal_roles', [...current, role])
+                            } else {
+                              setValue(
+                                'protected_removal_roles',
+                                current.filter((r: string) => r !== role)
+                              )
+                            }
+                          }}
+                          className="h-3.5 w-3.5 rounded border-gray-300"
+                          disabled={isSystemTag}
+                        />
+                        <span className="text-sm text-gray-700">{role}</span>
+                      </label>
+                    ))}
+                    {availableRoles.length === 0 && (
+                      <span className="text-xs text-gray-400">
+                        {t('pages.tags.fields.noRolesAvailable', 'No roles available')}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -452,11 +631,52 @@ export function TagFormModal({
                     </Label>
                     <Textarea
                       id="notification_template"
-                      {...register('notification_template')}
-                      placeholder="e.g. Tag '{tag_name}' assigned to client {client_id}"
+                      {...(() => {
+                        const { ref: registerRef, ...registerRest } =
+                          register('notification_template')
+                        return {
+                          ...registerRest,
+                          ref: (e: HTMLTextAreaElement | null) => {
+                            registerRef(e)
+                            templateRef.current = e
+                          },
+                        }
+                      })()}
+                      placeholder={t(
+                        'pages.tags.fields.notificationTemplatePlaceholder',
+                        "e.g. Tag '{tag_name}' assigned to client {client_id}"
+                      )}
                       rows={2}
                       disabled={isSystemTag}
                     />
+                    {/* Available variables */}
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs text-gray-500">
+                        {t('pages.tags.fields.availableVariables', 'Доступные переменные:')}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { var: '{client_id}', label: 'client_id' },
+                          { var: '{client_name}', label: 'client_name' },
+                          { var: '{tag_name}', label: 'tag_name' },
+                          { var: '{tag_code}', label: 'tag_code' },
+                          { var: '{action}', label: 'action' },
+                        ].map((v) => (
+                          <button
+                            key={v.var}
+                            type="button"
+                            className="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs text-gray-700 transition-colors hover:bg-gray-200"
+                            onClick={() => insertVariable(v.var)}
+                            title={t(
+                              `pages.tags.fields.var${v.label.charAt(0).toUpperCase() + v.label.slice(1).replace(/_([a-z])/g, (_, c: string) => c.toUpperCase())}`,
+                              v.label
+                            )}
+                          >
+                            {v.var}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

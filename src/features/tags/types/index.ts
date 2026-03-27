@@ -4,6 +4,11 @@
  * Type definitions for tags domain (backward-compatible + extended)
  */
 
+export type TagCategory = 'status' | 'risk' | 'behavior' | 'communication' | 'system' | 'custom'
+export type TagVisibility = 'ui' | 'analytics' | 'system'
+export type TagOrigin = 'system' | 'custom'
+export type ExpiryType = 'permanent' | 'ttl' | 'loan_closure'
+
 // Backward-compatible Tag interface
 export interface Tag {
   id: number
@@ -14,13 +19,12 @@ export interface Tag {
   project_name?: string
   client_count?: number
   category?: TagCategory
+  is_protected?: boolean
+  expiry_type?: ExpiryType
   created_at: string
 }
 
 // Extended tag definition (superset of Tag)
-export type TagCategory = 'status' | 'risk' | 'behavior' | 'communication' | 'system' | 'custom'
-export type TagVisibility = 'ui' | 'analytics' | 'system'
-export type TagOrigin = 'system' | 'custom'
 
 export interface TagDefinition extends Tag {
   code: string
@@ -29,6 +33,7 @@ export interface TagDefinition extends Tag {
   origin: TagOrigin
   is_active: boolean
   default_ttl_hours?: number
+  default_expires_at?: string
   mutex_group?: string
   requires_payload: boolean
   payload_schema?: Record<string, unknown>
@@ -36,6 +41,9 @@ export interface TagDefinition extends Tag {
   notification_template?: string
   notification_roles?: string[]
   auto_trigger_event?: string
+  is_protected: boolean
+  protected_removal_roles: string[]
+  expiry_type: ExpiryType
   updated_at?: string
   is_deleted?: boolean
 }
@@ -54,6 +62,7 @@ export interface TagDefinitionCreate extends TagCreate {
   visibility?: TagVisibility
   is_active?: boolean
   default_ttl_hours?: number
+  default_expires_at?: string
   mutex_group?: string
   requires_payload?: boolean
   payload_schema?: Record<string, unknown>
@@ -61,6 +70,9 @@ export interface TagDefinitionCreate extends TagCreate {
   notification_template?: string
   notification_roles?: string[]
   auto_trigger_event?: string
+  is_protected?: boolean
+  protected_removal_roles?: string[]
+  expiry_type?: ExpiryType
 }
 
 export interface TagUpdate {
@@ -75,6 +87,7 @@ export interface TagDefinitionUpdate extends TagUpdate {
   visibility?: TagVisibility
   is_active?: boolean
   default_ttl_hours?: number
+  default_expires_at?: string | null
   mutex_group?: string
   requires_payload?: boolean
   payload_schema?: Record<string, unknown>
@@ -82,6 +95,9 @@ export interface TagDefinitionUpdate extends TagUpdate {
   notification_template?: string
   notification_roles?: string[]
   auto_trigger_event?: string
+  is_protected?: boolean
+  protected_removal_roles?: string[]
+  expiry_type?: ExpiryType
 }
 
 export interface TagsListResponse {
@@ -98,12 +114,31 @@ export interface TagAssignment {
   assigned_by_id?: number
   assigned_by_type: string
   expires_at?: string
+  expiry_type: ExpiryType
   payload?: Record<string, unknown>
   is_active: boolean
   assigned_at: string
   tag_name?: string
   tag_color?: string
   tag_code?: string
+  removal_status?: 'pending' | 'approved' | 'rejected' | null
+  removal_requested_by?: number
+  removal_requested_at?: string
+  removal_request_reason?: string
+}
+
+export interface RemovalRequest {
+  id: number
+  client_id: number
+  tag_definition_id: number
+  project_id: number
+  tag_name?: string
+  tag_color?: string
+  tag_code?: string
+  removal_requested_by?: number
+  removal_requested_at?: string
+  removal_request_reason?: string
+  removal_status: string
 }
 
 export interface TagAssignmentLog {
@@ -137,6 +172,7 @@ export interface TagRule {
   id: number
   project_id: number
   name: string
+  code?: string
   description?: string
   trigger_type: RuleTriggerType
   trigger_event?: string
@@ -156,6 +192,7 @@ export interface TagRule {
 
 export interface TagRuleCreate {
   name: string
+  code?: string
   description?: string
   trigger_type: RuleTriggerType
   trigger_event?: string
@@ -170,6 +207,7 @@ export interface TagRuleCreate {
 
 export interface TagRuleUpdate {
   name?: string
+  code?: string
   description?: string
   trigger_type?: RuleTriggerType
   trigger_event?: string
@@ -231,6 +269,13 @@ export interface SegmentUpdate {
 export interface SegmentPreview {
   client_count: number
   sample_client_ids: number[]
+}
+
+export interface SegmentClientsPage {
+  total: number
+  skip: number
+  limit: number
+  client_ids: number[]
 }
 
 // Client State

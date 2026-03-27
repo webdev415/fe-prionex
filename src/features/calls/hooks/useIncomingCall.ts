@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
 import type { IncomingCallData, IncomingCallEvent } from '../types'
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8005'
+const WS_URL =
+  import.meta.env.VITE_WS_URL !== undefined ? import.meta.env.VITE_WS_URL : 'http://localhost:8005'
 
 export function useIncomingCall(agentExtension: string | null) {
   const socketRef = useRef<Socket | null>(null)

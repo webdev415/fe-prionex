@@ -97,6 +97,13 @@ export function useCreateInteraction() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.activities(variables.clientId) })
+      // Refetch client tags after delays — auto-tagging rules run async via RabbitMQ/Celery
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['clients', variables.clientId, 'tags'] })
+      }, 2000)
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['clients', variables.clientId, 'tags'] })
+      }, 5000)
       toast.success(
         t('pages.clients.modals.addNote.successMessage', 'Interaction added successfully')
       )
@@ -150,6 +157,12 @@ export function useUpdateInteraction() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.activities(variables.clientId) })
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['clients', variables.clientId, 'tags'] })
+      }, 2000)
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['clients', variables.clientId, 'tags'] })
+      }, 5000)
       toast.success('Interaction updated successfully')
     },
     onError: (error: AxiosError<{ detail?: string | Array<{ msg: string }> }>) => {

@@ -117,6 +117,13 @@ type ExtendedCallItem = {
 
 // Client data loaded via useClientProfile + section-specific hooks (real API endpoints)
 
+/** Strip formatting for phone match / API lookup (backend normalizes further). */
+const stripPhoneFormat = (value: string) => value.replace(/[\s\-().]/g, '')
+
+/** True if value looks like a Ukrainian mobile/phone number (incl. 380… without +). */
+const looksLikeUkrainePhone = (value: string) =>
+  /^(\+?38)?0\d{9}$/.test(stripPhoneFormat(value)) || /^380\d{9}$/.test(stripPhoneFormat(value))
+
 export function ClientDetailPage() {
   const { t, i18n } = useTranslation('common')
   const { isCallActive, setOpenCallModal } = useCallStore()
@@ -125,7 +132,7 @@ export function ClientDetailPage() {
 
   // Returns true if the value looks like a Ukrainian phone number,
   // regardless of the contact type's isPhone flag
-  const looksLikePhone = (value: string) => /^(\+?38)?0\d{9}$/.test(value.replace(/[\s\-().]/g, ''))
+  const looksLikePhone = (value: string) => looksLikeUkrainePhone(value)
   const [activeLoanTab, setActiveLoanTab] = useState<'process' | 'closed' | 'rr'>('process')
   const [selectedRaId, setSelectedRaId] = useState<number | null>(null)
   const [isConnectRrOpen, setIsConnectRrOpen] = useState(false)
@@ -156,6 +163,9 @@ export function ClientDetailPage() {
     activeCallType,
     callError,
     isOriginatingCall,
+    isCallCooldown,
+    cooldownSecondsRemaining,
+    isTelephonyUnavailable,
     handleOriginateCall,
     handleClearCallError,
     handleCloseCallModal,
@@ -522,18 +532,24 @@ export function ClientDetailPage() {
     t,
   ])
 
-  const normalizePhoneForLookup = (value: string) => value.replace(/[\s\-().]/g, '')
+  const normalizePhoneForLookup = (value: string) => stripPhoneFormat(value)
 
   const phoneLookupValues = useMemo(() => {
-    const phones = client?.phones
-    if (!phones?.length) return []
-    return Array.from(
-      new Set(
-        phones
-          .map((phone) => normalizePhoneForLookup(phone.number))
-          .filter((phone) => phone.length > 0)
-      )
-    )
+    if (!client) return []
+    const set = new Set<string>()
+    const add = (raw: string | null | undefined) => {
+      if (!raw) return
+      const k = normalizePhoneForLookup(raw)
+      if (k.length > 0) set.add(k)
+    }
+    client.phones?.forEach((p) => add(p.number))
+    // Recommenders / contacts: referrer, third-party phones, etc. (not only types 1,2,29)
+    client.recommenders?.forEach((r) => {
+      if (r.isPhone || looksLikeUkrainePhone(r.contactValue)) add(r.contactValue)
+    })
+    const wp = client.work?.workPhone
+    if (wp && wp !== '-' && looksLikeUkrainePhone(wp)) add(wp)
+    return Array.from(set)
   }, [client])
 
   const linkedContactQueries = useQueries({
@@ -572,6 +588,27 @@ export function ClientDetailPage() {
 
     return map
   }, [linkedContactQueries, phoneLookupValues])
+
+  const renderLinkedContactBadges = (rawPhone: string, align: 'end' | 'start' = 'end') => {
+    const phoneKey = normalizePhoneForLookup(rawPhone)
+    const linkedContacts = linkedContactsByPhone.get(phoneKey) ?? []
+    if (linkedContacts.length === 0) return null
+    return (
+      <div
+        className={cn('flex flex-wrap gap-1', align === 'end' ? 'justify-end' : 'justify-start')}
+      >
+        {linkedContacts.map((linkedContact) => (
+          <Link
+            key={linkedContact.id}
+            to={`/dashboard/clients/${linkedContact.id}`}
+            className="border-primary-200 bg-primary-50 text-primary-700 hover:border-primary-300 hover:bg-primary-100 inline-flex max-w-full items-center rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
+          >
+            {t('pages.clients.detail.linkedContact')}: {linkedContact.fullName}
+          </Link>
+        ))}
+      </div>
+    )
+  }
 
   // Tags are now fetched from useClientTags hook instead of local state
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
@@ -1427,9 +1464,29 @@ export function ClientDetailPage() {
                 <div className="flex items-center justify-between gap-2 self-stretch">
                   <div className="flex flex-1 flex-wrap items-center gap-2">
                     {clientTags && clientTags.length > 0 ? (
-                      clientTags.map((tag) => (
-                        <TagBadge key={tag.id} name={tag.name} color={tag.color} size="sm" />
-                      ))
+                      <>
+                        {clientTags.slice(0, 3).map((tag) => (
+                          <TagBadge
+                            key={tag.id}
+                            name={tag.name}
+                            color={tag.color}
+                            size="sm"
+                            isProtected={tag.is_protected}
+                            expiryType={tag.expiry_type}
+                          />
+                        ))}
+                        {clientTags.length > 3 && (
+                          <button
+                            type="button"
+                            onClick={() => setIsTagModalOpen(true)}
+                            className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200"
+                          >
+                            {t('pages.tags.showMore', '+{{count}} more', {
+                              count: clientTags.length - 3,
+                            })}
+                          </button>
+                        )}
+                      </>
                     ) : (
                       <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
                         {t('pages.clients.detail.noTagsAssigned')}
@@ -1516,26 +1573,7 @@ export function ClientDetailPage() {
                           <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
                             {phone.number}
                           </span>
-                          {(() => {
-                            const phoneKey = normalizePhoneForLookup(phone.number)
-                            const linkedContacts = linkedContactsByPhone.get(phoneKey) ?? []
-                            if (linkedContacts.length === 0) return null
-
-                            return (
-                              <div className="flex flex-wrap items-center justify-end gap-1">
-                                {linkedContacts.map((linkedContact) => (
-                                  <Link
-                                    key={linkedContact.id}
-                                    to={`/dashboard/clients/${linkedContact.id}`}
-                                    className="border-primary-200 bg-primary-50 text-primary-700 hover:border-primary-300 hover:bg-primary-100 inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
-                                  >
-                                    {t('pages.clients.detail.linkedContact')}:{' '}
-                                    {linkedContact.fullName}
-                                  </Link>
-                                ))}
-                              </div>
-                            )
-                          })()}
+                          {renderLinkedContactBadges(phone.number, 'end')}
                         </div>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -1946,9 +1984,15 @@ export function ClientDetailPage() {
                         </label>
                       </div>
                       <div className="flex flex-1 items-center justify-end gap-2 md:gap-3">
-                        <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                          {client.work?.workPhone || '-'}
-                        </span>
+                        <div className="flex min-w-0 flex-col items-end gap-1">
+                          <span className="text-dark-500 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                            {client.work?.workPhone || '-'}
+                          </span>
+                          {client.work?.workPhone &&
+                            client.work.workPhone !== '-' &&
+                            looksLikePhone(client.work.workPhone) &&
+                            renderLinkedContactBadges(client.work.workPhone, 'end')}
+                        </div>
                         {client.work?.workPhone && client.work.workPhone !== '-' && (
                           <div className="flex shrink-0 items-center gap-1 md:gap-2">
                             <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
@@ -2398,37 +2442,41 @@ export function ClientDetailPage() {
                           {client.recommenders.map((contact) => (
                             <tr key={contact.id} className="border-b border-gray-100 last:border-0">
                               <td className="py-2 pr-3">
-                                <div className="flex items-center gap-0.5">
-                                  <span className="text-dark-500 font-medium tracking-[-0.24px] break-all">
-                                    {contact.contactValue}
-                                  </span>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <button
-                                        type="button"
-                                        className="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
-                                      >
-                                        <Icons.Info size={14} strokeWidth={1.5} />
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="text-xs">
-                                      {contact.added_by_user_name && (
-                                        <div>
-                                          {t('pages.clients.detail.addedBy')}:{' '}
-                                          {contact.added_by_user_name}
-                                        </div>
-                                      )}
-                                      {contact.created_at && (
-                                        <div>
-                                          {t('pages.clients.detail.addedDate')}:{' '}
-                                          {formatDate(contact.created_at ?? undefined)}
-                                        </div>
-                                      )}
-                                      {!contact.added_by_user_name && !contact.created_at && (
-                                        <div>-</div>
-                                      )}
-                                    </TooltipContent>
-                                  </Tooltip>
+                                <div className="flex flex-col items-start gap-1">
+                                  <div className="flex items-center gap-0.5">
+                                    <span className="text-dark-500 font-medium tracking-[-0.24px] break-all">
+                                      {contact.contactValue}
+                                    </span>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          type="button"
+                                          className="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
+                                        >
+                                          <Icons.Info size={14} strokeWidth={1.5} />
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top" className="text-xs">
+                                        {contact.added_by_user_name && (
+                                          <div>
+                                            {t('pages.clients.detail.addedBy')}:{' '}
+                                            {contact.added_by_user_name}
+                                          </div>
+                                        )}
+                                        {contact.created_at && (
+                                          <div>
+                                            {t('pages.clients.detail.addedDate')}:{' '}
+                                            {formatDate(contact.created_at ?? undefined)}
+                                          </div>
+                                        )}
+                                        {!contact.added_by_user_name && !contact.created_at && (
+                                          <div>-</div>
+                                        )}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </div>
+                                  {(contact.isPhone || looksLikePhone(contact.contactValue)) &&
+                                    renderLinkedContactBadges(contact.contactValue, 'start')}
                                 </div>
                               </td>
                               <td className="py-2 pr-3">
@@ -3265,6 +3313,9 @@ export function ClientDetailPage() {
           initialState="initial"
           error={callError}
           isLoading={isOriginatingCall}
+          isCallCooldown={isCallCooldown}
+          cooldownSecondsRemaining={cooldownSecondsRemaining}
+          telephonyUnavailable={isTelephonyUnavailable}
           onCallStart={(callType: CallType) => {
             const phoneNumber = selectedPhoneForCall || client.phones?.[0]?.number
             if (!phoneNumber) return

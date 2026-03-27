@@ -4,6 +4,9 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_BUILD_TS': JSON.stringify(String(Date.now())),
+  },
   plugins: [react()],
   resolve: {
     alias: {
@@ -13,6 +16,17 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
+    proxy: {
+      '/api': {
+        target: 'http://72.62.17.132:8000',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: 'ws://72.62.17.132:8000',
+        ws: true,
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     rollupOptions: {

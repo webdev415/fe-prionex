@@ -109,23 +109,39 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
                 {t('pages.clients.modals.bulkTag.noTagsFound', 'No tags found')}
               </div>
             ) : (
-              filteredTags?.map((tag) => (
-                <label
-                  key={tag.id}
-                  className="flex cursor-pointer items-center gap-2 rounded p-2 hover:bg-gray-50"
-                >
-                  <Checkbox
-                    checked={selectedTagIds.includes(tag.id)}
-                    onCheckedChange={() => handleToggleTag(tag.id)}
-                  />
-                  <TagBadge name={tag.name} color={tag.color} size="sm" />
-                  {tag.description && (
-                    <span className="hidden text-xs text-gray-500 sm:inline">
-                      - {tag.description}
-                    </span>
-                  )}
-                </label>
-              ))
+              filteredTags?.map((tag) => {
+                const isProtected = !!tag.is_protected
+                const isDisabledRemove = action === 'remove' && isProtected
+
+                return (
+                  <label
+                    key={tag.id}
+                    className={`flex cursor-pointer items-center gap-2 rounded p-2 hover:bg-gray-50 ${isDisabledRemove ? 'opacity-50' : ''}`}
+                  >
+                    <Checkbox
+                      checked={selectedTagIds.includes(tag.id)}
+                      onCheckedChange={() => handleToggleTag(tag.id)}
+                      disabled={isDisabledRemove}
+                    />
+                    <TagBadge
+                      name={tag.name}
+                      color={tag.color}
+                      size="sm"
+                      isProtected={isProtected}
+                    />
+                    {isDisabledRemove && (
+                      <span className="text-xs text-amber-600">
+                        {t('pages.tags.protectedWarning', 'Requires approval')}
+                      </span>
+                    )}
+                    {tag.description && !isDisabledRemove && (
+                      <span className="hidden text-xs text-gray-500 sm:inline">
+                        - {tag.description}
+                      </span>
+                    )}
+                  </label>
+                )
+              })
             )}
           </div>
 
