@@ -48,6 +48,37 @@ export function getDateStringInTimezone(date: Date = new Date(), timezone?: stri
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
+/**
+ * Format a UTC Date object as a "YYYY-MM-DDTHH:mm" string in the given IANA timezone.
+ * Used for datetime fields (Promise date, Callback date) that include time component.
+ */
+export function getDateTimeStringInTimezone(
+  date: Date = new Date(),
+  timezone?: string | null
+): string {
+  if (timezone) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).formatToParts(date)
+
+      const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
+      return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`
+    } catch {
+      // Unknown/invalid timezone — fall through to local
+    }
+  }
+
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 // ---------------------------------------------------------------------------
 // Period range helper (used by dashboard, modals, and agent table)
 // ---------------------------------------------------------------------------

@@ -24,6 +24,9 @@ export interface DateSelectProps {
   min?: Date | string
   max?: Date | string
   format?: string
+  showTimeSelect?: boolean
+  timeFormat?: string
+  timeIntervals?: number
 }
 
 const parseDate = (date: Date | string | null | undefined): Date | null => {
@@ -49,6 +52,9 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       min,
       max,
       format = 'MM/dd/yyyy',
+      showTimeSelect,
+      timeFormat = 'HH:mm',
+      timeIntervals = 15,
     },
     ref
   ) => {
@@ -180,6 +186,9 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               aria-describedby={error ? errorId : helperText ? helperId : undefined}
               showPopperArrow={false}
               popperPlacement="bottom-start"
+              showTimeSelect={showTimeSelect}
+              timeFormat={timeFormat}
+              timeIntervals={timeIntervals}
             />
           </div>
         </div>
