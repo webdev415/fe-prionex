@@ -396,7 +396,49 @@ export function useClientTasks(clientId: number, enabled = true) {
     queryFn: () => taskApi.getClientTasks(clientId),
     enabled: enabled && clientId > 0,
     staleTime: 30000,
+    refetchInterval: 30_000,
     select: (data) => data.tasks ?? [],
+  })
+}
+
+/**
+ * Update a task (status, priority, etc.)
+ */
+export function useUpdateTask(clientId: number) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ taskId, data }: { taskId: number; data: Record<string, unknown> }) =>
+      taskApi.updateTask(taskId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.tasks(clientId) })
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
+      toast.success('Task updated successfully')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to update task'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Delete a task
+ */
+export function useDeleteTask(clientId: number) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (taskId: number) => taskApi.deleteTask(taskId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.tasks(clientId) })
+      queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
+      toast.success('Task deleted successfully')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to delete task'
+      toast.error(message)
+    },
   })
 }
 
@@ -623,8 +665,8 @@ export function useMyTasks() {
   return useQuery({
     queryKey: ['tasks', 'my-tasks'],
     queryFn: () => taskApi.getMyTasks(),
-    refetchInterval: 60_000,
-    staleTime: 30_000,
+    refetchInterval: 30_000,
+    staleTime: 15_000,
     select: (data) => data,
   })
 }

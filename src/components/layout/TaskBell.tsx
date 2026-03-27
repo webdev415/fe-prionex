@@ -118,7 +118,7 @@ export function TaskBell() {
         <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-            <span className="text-dark-500 text-sm font-semibold">Past Tasks</span>
+            <span className="text-dark-500 text-sm font-semibold">My Tasks</span>
             {hasTask && (
               <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
                 {count}
@@ -131,7 +131,7 @@ export function TaskBell() {
             {count === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 px-4 py-8 text-gray-300">
                 <Icons.Bell size={28} strokeWidth={1.5} />
-                <p className="text-xs text-gray-400">No past tasks</p>
+                <p className="text-xs text-gray-400">No active tasks</p>
               </div>
             ) : (
               <>
@@ -192,7 +192,7 @@ export function TaskBell() {
 
                 {tasks.length > 0 && (
                   <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold text-black">
-                    Past Tasks
+                    Tasks
                   </div>
                 )}
                 {tasks.map((task) => (

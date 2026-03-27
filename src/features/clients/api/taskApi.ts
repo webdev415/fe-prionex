@@ -40,14 +40,12 @@ export async function createTask(data: {
   client_id: number
   title: string
   description?: string
+  comment?: string
   priority?: string
   due_date?: string
   subject_id?: number
   assigned_to_user_id?: number
-  assigned_to_username?: string
   debt_id?: number
-  reminder_date?: string
-  internal_notes?: string
 }): Promise<TaskResponse> {
   const response = await api.post<TaskResponse>(BASE_URL + '/', data)
   return response.data

@@ -85,8 +85,6 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
   const handleSubmit = () => {
     if (!canSubmit) return
 
-    const selectedUser = userOptions.find((u) => u.id === assignedUserId)
-
     createTask.mutate(
       {
         client_id: clientId,
@@ -96,8 +94,7 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
         due_date: dueDate ? new Date(dueDate).toISOString() : undefined,
         subject_id: subjectId ? parseInt(subjectId) : undefined,
         assigned_to_user_id: parseInt(assignedUserId),
-        assigned_to_username: selectedUser?.name,
-        internal_notes: comment.trim() || undefined,
+        comment: comment.trim() || undefined,
       },
       {
         onSuccess: () => {
