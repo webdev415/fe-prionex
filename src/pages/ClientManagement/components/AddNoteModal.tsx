@@ -13,13 +13,16 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getDateStringInTimezone } from '@/lib/dateUtils'
+import { getDateTimeStringInTimezone } from '@/lib/dateUtils'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '../../../components/ui/Select'
@@ -360,11 +363,48 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {results?.map((result) => (
-                      <SelectItem key={result.id} value={result.id.toString()}>
-                        {t(`interactionResults.${result.code}`, { defaultValue: result.name })}
-                      </SelectItem>
-                    ))}
+                    {(() => {
+                      const agreementResults =
+                        results?.filter((r) => r.code.startsWith('agreement_')) ?? []
+                      const otherResults =
+                        results?.filter((r) => !r.code.startsWith('agreement_')) ?? []
+
+                      return (
+                        <>
+                          {agreementResults.length > 0 && (
+                            <SelectGroup>
+                              <SelectLabel className="text-xs font-semibold text-gray-500">
+                                {t('interactionResults.agreementGroup', 'Agreement')}
+                              </SelectLabel>
+                              {agreementResults.map((result) => (
+                                <SelectItem key={result.id} value={result.id.toString()}>
+                                  {t(`interactionResults.${result.code}`, {
+                                    defaultValue: result.name,
+                                  })}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          )}
+                          {agreementResults.length > 0 && otherResults.length > 0 && (
+                            <SelectSeparator />
+                          )}
+                          {otherResults.length > 0 && (
+                            <SelectGroup>
+                              <SelectLabel className="text-xs font-semibold text-gray-500">
+                                {t('interactionResults.otherGroup', 'Other')}
+                              </SelectLabel>
+                              {otherResults.map((result) => (
+                                <SelectItem key={result.id} value={result.id.toString()}>
+                                  {t(`interactionResults.${result.code}`, {
+                                    defaultValue: result.name,
+                                  })}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          )}
+                        </>
+                      )
+                    })()}
                   </SelectContent>
                 </Select>
               )}
@@ -377,9 +417,14 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
               label={`${t('pages.clients.modals.addNote.promiseDate', 'Promise date')}:`}
               id="promise-date"
               value={promiseDate || null}
-              onChange={({ value }) => setPromiseDate(value ? getDateStringInTimezone(value) : '')}
+              onChange={({ value }) =>
+                setPromiseDate(value ? getDateTimeStringInTimezone(value) : '')
+              }
               placeholder={t('pages.clients.modals.addNote.selectDate', 'Select date')}
-              format="dd/MM/yyyy"
+              format="dd/MM/yyyy HH:mm"
+              showTimeSelect
+              timeFormat="HH:mm"
+              timeIntervals={15}
             />
           )}
 
@@ -405,15 +450,20 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
             </div>
           )}
 
-          {/* Callback Date (conditional on result requires_followup flag) */}
+          {/* Callback Date (conditional on result code) */}
           {showCallbackDate && (
             <DateSelect
               label={`${t('pages.clients.modals.addNote.callbackDate', 'Callback date')}:`}
               id="callback-date"
               value={callbackDate || null}
-              onChange={({ value }) => setCallbackDate(value ? getDateStringInTimezone(value) : '')}
+              onChange={({ value }) =>
+                setCallbackDate(value ? getDateTimeStringInTimezone(value) : '')
+              }
               placeholder={t('pages.clients.modals.addNote.selectDate', 'Select date')}
-              format="dd/MM/yyyy"
+              format="dd/MM/yyyy HH:mm"
+              showTimeSelect
+              timeFormat="HH:mm"
+              timeIntervals={15}
             />
           )}
 

@@ -63,6 +63,8 @@ import {
   useCreateRestructuringAgreement,
   useCloseDebt,
   useCompleteRestructuringAgreement,
+  useUpdateTask,
+  useDeleteTask,
 } from '@/features/clients/hooks/useClients'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
 import {
@@ -223,6 +225,9 @@ export function ClientDetailPage() {
     isValidClientId
   )
   const { mutate: addSpamCall } = useAddSpamCallHistory(clientId)
+  const canCreateTasks = useHasPermission(PERMISSIONS.CLIENTS.CREATE_TASKS)
+  const updateTaskMutation = useUpdateTask(clientId)
+  const deleteTaskMutation = useDeleteTask(clientId)
   // Fetch client tags from API (real)
   const { data: clientTags } = useClientTags(clientId)
 
@@ -448,6 +453,8 @@ export function ClientDetailPage() {
         description: t.title + (t.description ? `: ${t.description}` : ''),
         reminderDate: formatDate(t.due_date ?? undefined),
         reminderRecipient: t.assigned_to_username ?? '-',
+        status: t.status,
+        priority: t.priority,
       })),
       // Operators/searchers from assignment history
       operators: (operatorsSection?.operators ?? []).map((o) => ({
@@ -1328,6 +1335,82 @@ export function ClientDetailPage() {
       header: t('pages.clients.detail.tableHeaders.whoWillReceiveReminder'),
       align: 'left',
     },
+    {
+      key: 'status',
+      header: t('pages.clients.detail.tableHeaders.status', 'Status'),
+      align: 'center',
+      render: (item) => (
+        <span
+          className={cn(
+            'inline-block rounded px-2 py-0.5 text-[10px] font-medium capitalize',
+            item.status === 'pending' && 'bg-yellow-100 text-yellow-600',
+            item.status === 'in_progress' && 'bg-blue-100 text-blue-600',
+            item.status === 'completed' && 'bg-green-100 text-green-600',
+            item.status === 'cancelled' && 'bg-gray-100 text-gray-500'
+          )}
+        >
+          {item.status.replace(/_/g, ' ')}
+        </span>
+      ),
+    },
+    ...(canCreateTasks
+      ? [
+          {
+            key: 'actions' as const,
+            header: t('pages.clients.detail.tableHeaders.actions', 'Actions'),
+            align: 'center' as const,
+            render: (item: (typeof client.tasks)[0]) => (
+              <div className="flex items-center justify-center gap-1">
+                {item.status !== 'completed' && item.status !== 'cancelled' && (
+                  <button
+                    type="button"
+                    title="Complete task"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      updateTaskMutation.mutate({
+                        taskId: item.id,
+                        data: { status: 'completed' },
+                      })
+                    }}
+                    className="flex h-6 w-6 items-center justify-center rounded text-green-500 transition-colors hover:bg-green-50 hover:text-green-700"
+                  >
+                    <Icons.Tick02 size={14} strokeWidth={2} />
+                  </button>
+                )}
+                {item.status !== 'cancelled' && item.status !== 'completed' && (
+                  <button
+                    type="button"
+                    title="Cancel task"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      updateTaskMutation.mutate({
+                        taskId: item.id,
+                        data: { status: 'cancelled' },
+                      })
+                    }}
+                    className="flex h-6 w-6 items-center justify-center rounded text-yellow-500 transition-colors hover:bg-yellow-50 hover:text-yellow-700"
+                  >
+                    <Icons.Cancel01 size={14} strokeWidth={2} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  title="Delete task"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (window.confirm('Are you sure you want to delete this task?')) {
+                      deleteTaskMutation.mutate(item.id)
+                    }
+                  }}
+                  className="flex h-6 w-6 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                >
+                  <Icons.Delete size={14} strokeWidth={2} />
+                </button>
+              </div>
+            ),
+          },
+        ]
+      : []),
   ]
 
   const documentColumns: Column<(typeof client.documents)[0]>[] = [

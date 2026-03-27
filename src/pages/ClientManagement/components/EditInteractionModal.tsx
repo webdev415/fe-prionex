@@ -13,13 +13,16 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getDateStringInTimezone } from '@/lib/dateUtils'
+import { getDateTimeStringInTimezone } from '@/lib/dateUtils'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
@@ -180,17 +183,45 @@ export function EditInteractionModal({
     setInitialized(true)
   }, [interaction, types, channels, contactTypes, initialized])
 
+  // Merge active results with the interaction's current result (may be inactive/hidden)
+  const effectiveResults = useMemo(() => {
+    if (!results) return undefined
+    if (!interaction?.result_id) return results
+    if (results.some((r) => r.id === interaction.result_id)) return results
+    // The interaction's result is not in the active list — include it as a legacy entry
+    const isAgreementLike =
+      interaction.result_code === 'agreement' ||
+      (interaction.result_code?.startsWith('agreement_') ?? false)
+    return [
+      {
+        id: interaction.result_id,
+        code: interaction.result_code ?? '',
+        name: interaction.result_name ?? 'Unknown',
+        requires_followup: false,
+        is_active: false,
+        sort_order: -1,
+        requires_promise_date: isAgreementLike,
+        requires_promise_amount: isAgreementLike,
+        creates_task: null,
+        is_positive: interaction.result_is_positive ?? null,
+        positive_score: null,
+        negative_score: null,
+      },
+      ...results,
+    ]
+  }, [results, interaction])
+
   // Set resultId once results list is loaded (only if it matches)
   const [resultInitialized, setResultInitialized] = useState(false)
   useEffect(() => {
-    if (!interaction || !results || resultInitialized) return
-    const matched = results.find((r) => r.id === interaction.result_id)
+    if (!interaction || !effectiveResults || resultInitialized) return
+    const matched = effectiveResults.find((r) => r.id === interaction.result_id)
     if (matched) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setResultId(matched.id)
     }
     setResultInitialized(true)
-  }, [interaction, results, resultInitialized])
+  }, [interaction, effectiveResults, resultInitialized])
 
   // Reset initialized flags when interaction changes
   useEffect(() => {
@@ -205,7 +236,10 @@ export function EditInteractionModal({
     () => channels?.find((c) => c.id === subtypeId),
     [channels, subtypeId]
   )
-  const selectedResult = useMemo(() => results?.find((r) => r.id === resultId), [results, resultId])
+  const selectedResult = useMemo(
+    () => effectiveResults?.find((r) => r.id === resultId),
+    [effectiveResults, resultId]
+  )
 
   const isSearching = selectedType?.code === 'SEARCHING'
   const isRelativeOnlyChannel =
@@ -313,7 +347,9 @@ export function EditInteractionModal({
       ? contactTypeId.toString()
       : undefined
   const safeResultValue =
-    resultId != null && results?.some((r) => r.id === resultId) ? resultId.toString() : undefined
+    resultId != null && effectiveResults?.some((r) => r.id === resultId)
+      ? resultId.toString()
+      : undefined
 
   const isLoading = isLoadingTypes || isLoadingChannels || isLoadingContactTypes
 
@@ -483,11 +519,52 @@ export function EditInteractionModal({
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {results?.map((result) => (
-                      <SelectItem key={result.id} value={result.id.toString()}>
-                        {t(`interactionResults.${result.code}`, { defaultValue: result.name })}
-                      </SelectItem>
-                    ))}
+                    {(() => {
+                      const agreementResults =
+                        effectiveResults?.filter(
+                          (r) => r.code === 'agreement' || r.code.startsWith('agreement_')
+                        ) ?? []
+                      const otherResults =
+                        effectiveResults?.filter(
+                          (r) => r.code !== 'agreement' && !r.code.startsWith('agreement_')
+                        ) ?? []
+
+                      return (
+                        <>
+                          {agreementResults.length > 0 && (
+                            <SelectGroup>
+                              <SelectLabel className="text-xs font-semibold text-gray-500">
+                                {t('interactionResults.agreementGroup', 'Agreement')}
+                              </SelectLabel>
+                              {agreementResults.map((result) => (
+                                <SelectItem key={result.id} value={result.id.toString()}>
+                                  {t(`interactionResults.${result.code}`, {
+                                    defaultValue: result.name,
+                                  })}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          )}
+                          {agreementResults.length > 0 && otherResults.length > 0 && (
+                            <SelectSeparator />
+                          )}
+                          {otherResults.length > 0 && (
+                            <SelectGroup>
+                              <SelectLabel className="text-xs font-semibold text-gray-500">
+                                {t('interactionResults.otherGroup', 'Other')}
+                              </SelectLabel>
+                              {otherResults.map((result) => (
+                                <SelectItem key={result.id} value={result.id.toString()}>
+                                  {t(`interactionResults.${result.code}`, {
+                                    defaultValue: result.name,
+                                  })}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          )}
+                        </>
+                      )
+                    })()}
                   </SelectContent>
                 </Select>
               )}
@@ -500,9 +577,14 @@ export function EditInteractionModal({
               label={`${t('pages.clients.modals.addNote.promiseDate', 'Promise date')}:`}
               id="edit-promise-date"
               value={promiseDate || null}
-              onChange={({ value }) => setPromiseDate(value ? getDateStringInTimezone(value) : '')}
+              onChange={({ value }) =>
+                setPromiseDate(value ? getDateTimeStringInTimezone(value) : '')
+              }
               placeholder={t('pages.clients.modals.addNote.selectDate', 'Select date')}
-              format="dd/MM/yyyy"
+              format="dd/MM/yyyy HH:mm"
+              showTimeSelect
+              timeFormat="HH:mm"
+              timeIntervals={15}
             />
           )}
 
@@ -534,9 +616,14 @@ export function EditInteractionModal({
               label={`${t('pages.clients.modals.addNote.callbackDate', 'Callback date')}:`}
               id="edit-callback-date"
               value={callbackDate || null}
-              onChange={({ value }) => setCallbackDate(value ? getDateStringInTimezone(value) : '')}
+              onChange={({ value }) =>
+                setCallbackDate(value ? getDateTimeStringInTimezone(value) : '')
+              }
               placeholder={t('pages.clients.modals.addNote.selectDate', 'Select date')}
-              format="dd/MM/yyyy"
+              format="dd/MM/yyyy HH:mm"
+              showTimeSelect
+              timeFormat="HH:mm"
+              timeIntervals={15}
             />
           )}
 
