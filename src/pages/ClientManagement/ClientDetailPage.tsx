@@ -572,11 +572,14 @@ export function ClientDetailPage() {
   })
 
   const linkedContactsByPhone = useMemo(() => {
-    const map = new Map<string, Array<{ id: number; fullName: string }>>()
+    const map = new Map<string, Array<{ id: number; fullName: string; clientNumber: string }>>()
 
     phoneLookupValues.forEach((phone, index) => {
       const linkedClients = linkedContactQueries[index]?.data ?? []
-      const dedupedByClientId = new Map<number, { id: number; fullName: string }>()
+      const dedupedByClientId = new Map<
+        number,
+        { id: number; fullName: string; clientNumber: string }
+      >()
 
       linkedClients.forEach((linkedClient) => {
         const fullName = [linkedClient.first_name, linkedClient.middle_name, linkedClient.last_name]
@@ -587,6 +590,7 @@ export function ClientDetailPage() {
         dedupedByClientId.set(linkedClient.id, {
           id: linkedClient.id,
           fullName: fullName || `ID ${linkedClient.id}`,
+          clientNumber: `№${linkedClient.legacy_id || linkedClient.id}`,
         })
       })
 
@@ -608,9 +612,11 @@ export function ClientDetailPage() {
           <Link
             key={linkedContact.id}
             to={`/dashboard/clients/${linkedContact.id}`}
-            className="border-primary-200 bg-primary-50 text-primary-700 hover:border-primary-300 hover:bg-primary-100 inline-flex max-w-full items-center rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
+            className="border-primary-200 bg-primary-50 text-primary-700 hover:border-primary-300 hover:bg-primary-100 inline-flex max-w-full items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
+            title={linkedContact.fullName}
           >
-            {t('pages.clients.detail.linkedContact')}: {linkedContact.fullName}
+            <span aria-hidden="true">🔗</span>
+            <span>{linkedContact.clientNumber}</span>
           </Link>
         ))}
       </div>
