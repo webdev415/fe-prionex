@@ -304,6 +304,44 @@ export function EditInteractionModal({
       return
     }
 
+    if (showCallbackDate && !callbackDate) {
+      toast.error(
+        t('pages.clients.modals.addNote.callbackDateRequired', 'Callback date is required')
+      )
+      return
+    }
+    if (showCallbackDate && callbackDate && new Date(callbackDate) <= new Date()) {
+      toast.error(
+        t(
+          'pages.clients.modals.addNote.callbackDateFuture',
+          'Callback date must be later than the current time'
+        )
+      )
+      return
+    }
+    if (showPromiseDate && !promiseDate) {
+      toast.error(t('pages.clients.modals.addNote.promiseDateRequired', 'Promise date is required'))
+      return
+    }
+    if (showPromiseDate && promiseDate && new Date(promiseDate) <= new Date()) {
+      toast.error(
+        t(
+          'pages.clients.modals.addNote.promiseDateFuture',
+          'Promise date must be later than the current time'
+        )
+      )
+      return
+    }
+    if (showPromiseAmount && (!promiseAmount || parseFloat(promiseAmount) <= 0)) {
+      toast.error(
+        t(
+          'pages.clients.modals.addNote.promiseAmountPositive',
+          'Promise amount must be greater than 0'
+        )
+      )
+      return
+    }
+
     onSave({
       type_id: typeId,
       subtype_id: isSearching ? null : subtypeId,

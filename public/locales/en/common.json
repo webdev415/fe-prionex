@@ -858,6 +858,11 @@
           "selectDate": "Select date",
           "promiseAmount": "Promise amount",
           "callbackDate": "Callback date",
+          "callbackDateRequired": "Callback date is required",
+          "callbackDateFuture": "Callback date must be later than the current time",
+          "promiseDateRequired": "Promise date is required",
+          "promiseDateFuture": "Promise date must be later than the current time",
+          "promiseAmountPositive": "Promise amount must be greater than 0",
           "successMessage": "Interaction added successfully",
           "errorMessage": "Failed to add interaction"
         },
