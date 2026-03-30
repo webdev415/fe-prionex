@@ -27,6 +27,7 @@ import { CallDialogModal, type CallType, type CallStatus } from './components/Ca
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
 import { formatDate, formatDateTime } from '@/lib/formatters'
+import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useCallStore } from '@/stores/callStore'
 import { useClientProfile, useClientActivitiesPaginated } from '@/features/clients/hooks/useClients'
 import {
@@ -45,6 +46,7 @@ export function ActivityTimelinePage() {
   const navigate = useNavigate()
   const { isCallActive, setOpenCallModal } = useCallStore()
   const { user } = useAuth()
+  const userTimezone = user?.timezone
   const clientId = Number(id) || 0
 
   // Fetch real data from API
@@ -94,13 +96,13 @@ export function ActivityTimelinePage() {
       params.type_id = Number(selectedTypeId)
     }
     if (dateFrom) {
-      params.date_from = dateFrom.toISOString().split('T')[0]
+      params.date_from = getDateStringInTimezone(dateFrom, userTimezone)
     }
     if (dateTo) {
-      params.date_to = dateTo.toISOString().split('T')[0]
+      params.date_to = getDateStringInTimezone(dateTo, userTimezone)
     }
     return params
-  }, [currentPage, rowsPerPage, selectedTypeId, dateFrom, dateTo])
+  }, [currentPage, rowsPerPage, selectedTypeId, dateFrom, dateTo, userTimezone])
 
   // Fetch interaction types for the filter dropdown
   const { data: interactionTypes } = useInteractionTypes()
