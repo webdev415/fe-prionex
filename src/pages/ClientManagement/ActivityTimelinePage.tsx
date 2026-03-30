@@ -188,12 +188,12 @@ export function ActivityTimelinePage() {
       key: 'phoneNumber',
       header: t('pages.clients.activity.tableHeaders.phoneNumber', 'Phone number'),
       align: 'left',
-      className: 'w-[12ch] min-w-[12ch] max-w-[12ch] overflow-hidden',
+      className: 'w-[180px] min-w-[180px] overflow-visible',
       render: (activity) => {
         const v = activity.phoneNumber
         return (
           <span
-            className="block truncate font-mono text-xs tabular-nums"
+            className="block font-mono text-xs whitespace-nowrap tabular-nums"
             title={v !== '-' ? v : undefined}
           >
             {v}
