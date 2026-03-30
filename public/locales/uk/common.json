@@ -855,6 +855,7 @@
         "tableHeaders": {
           "date": "Дата",
           "dateAndTime": "Дата та час",
+          "phoneNumber": "Номер телефону",
           "number": "Номер",
           "loanNumber": "Номер позики",
           "phone": "Телефон",
@@ -1209,6 +1210,9 @@
           "callClient": "Дзвінок клієнту",
           "clientName": "Ім'я клієнта",
           "phoneNumber": "Номер телефону",
+          "manualPhoneEntry": "Ввести номер вручну",
+          "manualPhoneHint": "Лише цифри: 12 символів, починається з 380.",
+          "manualPhonePlaceholder": "380XXXXXXXXX",
           "callType": "Тип дзвінка",
           "whiteLine": "Біла лінія",
           "grayLine": "Сіра лінія",

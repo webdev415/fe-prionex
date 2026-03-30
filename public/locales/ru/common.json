@@ -855,6 +855,7 @@
         "tableHeaders": {
           "date": "Дата",
           "dateAndTime": "Дата и время",
+          "phoneNumber": "Номер телефона",
           "number": "Номер",
           "loanNumber": "Номер займа",
           "phone": "Телефон",
@@ -1209,6 +1210,9 @@
           "callClient": "Звонок клиенту",
           "clientName": "Имя клиента",
           "phoneNumber": "Номер телефона",
+          "manualPhoneEntry": "Ввести номер вручную",
+          "manualPhoneHint": "Только цифры: 12 символов, начинается с 380.",
+          "manualPhonePlaceholder": "380XXXXXXXXX",
           "callType": "Тип звонка",
           "whiteLine": "Белая линия",
           "grayLine": "Серая линия",

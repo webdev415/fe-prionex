@@ -933,6 +933,9 @@
           "callClient": "Call Client",
           "clientName": "Client Name",
           "phoneNumber": "Phone Number",
+          "manualPhoneEntry": "Enter phone number manually",
+          "manualPhoneHint": "Digits only: 12 characters, starting with 380.",
+          "manualPhonePlaceholder": "380XXXXXXXXX",
           "callType": "Call Type",
           "whiteLine": "White Line",
           "grayLine": "Gray Line",
@@ -1344,6 +1347,7 @@
         "tableHeaders": {
           "date": "Date",
           "dateAndTime": "Date & Time",
+          "phoneNumber": "Phone number",
           "number": "Number",
           "loanNumber": "Loan Number",
           "phone": "Phone",

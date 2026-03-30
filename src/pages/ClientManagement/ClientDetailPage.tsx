@@ -489,6 +489,7 @@ export function ClientDetailPage() {
         .items.map((a) => ({
           id: a.id,
           date: formatDateTime(a.created_at),
+          phoneNumber: a.phone_used?.trim() ? a.phone_used : '-',
           type: a.type_code
             ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
             : (a.type_name ?? '-'),
@@ -1012,6 +1013,23 @@ export function ClientDetailPage() {
       header: t('pages.clients.activity.tableHeaders.dateAndTime', 'Date & Time'),
       align: 'left',
       className: 'min-w-[118px] w-[128px] overflow-hidden whitespace-normal',
+    },
+    {
+      key: 'phoneNumber',
+      header: t('pages.clients.activity.tableHeaders.phoneNumber', 'Phone number'),
+      align: 'left',
+      className: 'w-[12ch] min-w-[12ch] max-w-[12ch] overflow-hidden',
+      render: (activity) => {
+        const v = activity.phoneNumber
+        return (
+          <span
+            className="block truncate font-mono text-xs tabular-nums"
+            title={v !== '-' ? v : undefined}
+          >
+            {v}
+          </span>
+        )
+      },
     },
     {
       key: 'type',
@@ -3262,7 +3280,7 @@ export function ClientDetailPage() {
           {/* Content based on active tab */}
           {activeCommentTab === 'comments' &&
             (isActivitiesLoading ? (
-              <TableSkeleton columns={9} rows={3} className="w-full" />
+              <TableSkeleton columns={12} rows={3} className="w-full" />
             ) : client.activities.length === 0 ? (
               <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
@@ -3405,10 +3423,9 @@ export function ClientDetailPage() {
           isCallCooldown={isCallCooldown}
           cooldownSecondsRemaining={cooldownSecondsRemaining}
           telephonyUnavailable={isTelephonyUnavailable}
-          onCallStart={(callType: CallType) => {
-            const phoneNumber = selectedPhoneForCall || client.phones?.[0]?.number
-            if (!phoneNumber) return
-            handleOriginateCall(phoneNumber, client.fullName, client.id.toString(), callType)
+          onCallStart={(callType: CallType, dialPhone: string) => {
+            if (!dialPhone?.trim()) return
+            handleOriginateCall(dialPhone, client.fullName, client.id.toString(), callType)
           }}
           onCallEnd={(_duration: number, _status: CallStatus) => {
             handleCallEnd()

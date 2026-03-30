@@ -129,6 +129,7 @@ export function ActivityTimelinePage() {
     return items.map((a) => ({
       id: a.id,
       date: formatDateTime(a.created_at),
+      phoneNumber: a.phone_used?.trim() ? a.phone_used : '-',
       type_id: a.type_id,
       type: a.type_code
         ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
@@ -182,6 +183,23 @@ export function ActivityTimelinePage() {
       header: t('pages.clients.activity.tableHeaders.dateAndTime', 'Date & Time'),
       align: 'left',
       className: 'min-w-[118px] w-[128px] overflow-hidden whitespace-normal',
+    },
+    {
+      key: 'phoneNumber',
+      header: t('pages.clients.activity.tableHeaders.phoneNumber', 'Phone number'),
+      align: 'left',
+      className: 'w-[12ch] min-w-[12ch] max-w-[12ch] overflow-hidden',
+      render: (activity) => {
+        const v = activity.phoneNumber
+        return (
+          <span
+            className="block truncate font-mono text-xs tabular-nums"
+            title={v !== '-' ? v : undefined}
+          >
+            {v}
+          </span>
+        )
+      },
     },
     {
       key: 'type',
@@ -472,7 +490,7 @@ export function ActivityTimelinePage() {
         clientName={client?.fullName ?? ''}
         phoneNumber={client?.phones?.[0]?.number || ''}
         initialState="initial"
-        onCallStart={(_callType: CallType) => {}}
+        onCallStart={(_callType: CallType, _dialPhone: string) => {}}
         onCallEnd={(_duration: number, _status: CallStatus) => {
           setOpenCallModal(null)
         }}

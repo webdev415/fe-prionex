@@ -1446,11 +1446,10 @@ export function DebtSummaryPage() {
         isCallCooldown={isCallCooldown}
         cooldownSecondsRemaining={cooldownSecondsRemaining}
         telephonyUnavailable={isTelephonyUnavailable}
-        onCallStart={(callType: CallType) => {
-          const phoneNumber = client?.phones?.[0]?.number
-          if (!phoneNumber) return
+        onCallStart={(callType: CallType, dialPhone: string) => {
+          if (!dialPhone?.trim()) return
           handleOriginateCall(
-            phoneNumber,
+            dialPhone,
             client?.fullName || '',
             client?.id?.toString() || '',
             callType

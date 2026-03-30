@@ -120,7 +120,7 @@ describe('CallDialogModal', () => {
       const callNowButton = screen.getByRole('button', { name: 'Call Now' })
       fireEvent.click(callNowButton)
 
-      expect(mockOnCallStart).toHaveBeenCalledWith('white-line')
+      expect(mockOnCallStart).toHaveBeenCalledWith('white-line', '+380971234567')
     })
 
     it('should call onClose when Cancel button is clicked', () => {
@@ -143,7 +143,31 @@ describe('CallDialogModal', () => {
       const callNowButton = screen.getByRole('button', { name: 'Call Now' })
       fireEvent.click(callNowButton)
 
-      expect(mockOnCallStart).toHaveBeenCalledWith('gray-line')
+      expect(mockOnCallStart).toHaveBeenCalledWith('gray-line', '+380971234567')
+    })
+
+    it('disables Call Now when manual entry is enabled and the number is invalid', () => {
+      render(<CallDialogModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByRole('checkbox'))
+      const phoneInput = screen.getAllByRole('textbox')[1]
+      fireEvent.change(phoneInput, { target: { value: '38012' } })
+
+      expect(screen.getByRole('button', { name: 'Call Now' })).toBeDisabled()
+    })
+
+    it('enables Call Now and passes 12-digit 380 number when manual entry is valid', () => {
+      render(<CallDialogModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByRole('checkbox'))
+      const phoneInput = screen.getAllByRole('textbox')[1]
+      fireEvent.change(phoneInput, { target: { value: '380971234567' } })
+
+      const callNowButton = screen.getByRole('button', { name: 'Call Now' })
+      expect(callNowButton).not.toBeDisabled()
+      fireEvent.click(callNowButton)
+
+      expect(mockOnCallStart).toHaveBeenCalledWith('white-line', '380971234567')
     })
 
     it('should call minimize handler when minimize button is clicked', () => {
