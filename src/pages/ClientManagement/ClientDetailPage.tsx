@@ -1022,10 +1022,7 @@ export function ClientDetailPage() {
       render: (activity) => {
         const v = activity.phoneNumber
         return (
-          <span
-            className="block font-mono text-xs whitespace-nowrap tabular-nums"
-            title={v !== '-' ? v : undefined}
-          >
+          <span className="block whitespace-nowrap tabular-nums" title={v !== '-' ? v : undefined}>
             {v}
           </span>
         )
@@ -1081,7 +1078,7 @@ export function ClientDetailPage() {
       align: 'left',
       className: 'min-w-[300px] max-w-[500px] whitespace-normal break-words',
       render: (activity) => (
-        <div className="py-1 text-sm leading-tight break-words whitespace-normal">
+        <div className="py-1 leading-tight break-words whitespace-normal">
           {activity.comment || '-'}
         </div>
       ),
