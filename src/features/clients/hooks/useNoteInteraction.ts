@@ -139,6 +139,7 @@ export function useUpdateInteraction() {
       clientId: number
       interactionId: number
       data: {
+        debt_id?: number | null
         type_id?: number
         subtype_id?: number | null
         contact_type_id?: number | null

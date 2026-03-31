@@ -865,6 +865,8 @@
           "result": "Результат",
           "promisedAmount": "Обещанная сумма",
           "promisedDate": "Обещанная дата",
+          "callbackDate": "Дата обратного звонка",
+          "creditNumber": "Номер кредита",
           "comment": "Комментарий",
           "employee": "Сотрудник"
         }
@@ -1131,6 +1133,8 @@
           "selectContactType": "Выберите тип контакта",
           "result": "Результат",
           "selectResult": "Выберите результат (необязательно)",
+          "creditNumber": "Номер кредита",
+          "selectCreditNumber": "Выберите номер кредита",
           "promiseDate": "Дата обещания",
           "selectDate": "Выберите дату",
           "promiseAmount": "Сумма обещания",
@@ -2866,6 +2870,7 @@
   },
   "interactionResults": {
     "agreement": "Договорённость",
+    "payment_reminder": "Напоминание об оплате",
     "callback_by_appointment": "Перезвонить по договорённости",
     "refusal_to_pay": "Отказ от оплаты",
     "no_contact": "Нет контакта",

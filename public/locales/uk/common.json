@@ -865,6 +865,8 @@
           "result": "Результат",
           "promisedAmount": "Обіцяна сума",
           "promisedDate": "Обіцяна дата",
+          "callbackDate": "Дата зворотного дзвінка",
+          "creditNumber": "Номер кредиту",
           "comment": "Коментар",
           "employee": "Співробітник"
         }
@@ -1131,6 +1133,8 @@
           "selectContactType": "Виберіть тип контакту",
           "result": "Результат",
           "selectResult": "Виберіть результат (необов'язково)",
+          "creditNumber": "Номер кредиту",
+          "selectCreditNumber": "Виберіть номер кредиту",
           "promiseDate": "Дата обіцянки",
           "selectDate": "Виберіть дату",
           "promiseAmount": "Сума обіцянки",
@@ -2826,6 +2830,7 @@
   },
   "interactionResults": {
     "agreement": "Домовленість",
+    "payment_reminder": "Нагадування про оплату",
     "callback_by_appointment": "Передзвонити за домовленістю",
     "refusal_to_pay": "Відмова від оплати",
     "no_contact": "Немає контакту",

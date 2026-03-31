@@ -29,7 +29,11 @@ import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageS
 import { formatDate, formatDateTime } from '@/lib/formatters'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useCallStore } from '@/stores/callStore'
-import { useClientProfile, useClientActivitiesPaginated } from '@/features/clients/hooks/useClients'
+import {
+  useClientProfile,
+  useClientActivitiesPaginated,
+  useClientLoans,
+} from '@/features/clients/hooks/useClients'
 import {
   useCreateNoteInteraction,
   useUpdateInteraction,
@@ -51,6 +55,7 @@ export function ActivityTimelinePage() {
 
   // Fetch real data from API
   const { data: profile, isLoading: isProfileLoading } = useClientProfile(clientId, clientId > 0)
+  const { data: loans = [] } = useClientLoans(clientId, clientId > 0)
 
   // Build client object from profile
   const client = useMemo(() => {
@@ -128,6 +133,9 @@ export function ActivityTimelinePage() {
   // Map activities from API to display format
   const activitiesState = useMemo(() => {
     const items = activitiesResponse?.items ?? []
+    const loanNumberById = new Map(
+      loans.map((loan) => [loan.id, loan.contract_number ?? String(loan.id)])
+    )
     return items.map((a) => ({
       id: a.id,
       date: formatDateTime(a.created_at),
@@ -152,12 +160,13 @@ export function ActivityTimelinePage() {
       promisedAmount: a.promise_to_pay_amount ? parseFloat(a.promise_to_pay_amount) : 0,
       promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
       callbackDate: formatDate(a.next_action_date ?? undefined),
+      creditNumber: a.debt_id ? (loanNumberById.get(a.debt_id) ?? '-') : '-',
       comment: a.summary ?? a.notes ?? '-',
       employee: a.user_name ?? '-',
       updated_at: a.updated_at ?? a.created_at,
       _raw: a,
     }))
-  }, [activitiesResponse, t])
+  }, [activitiesResponse, loans, t])
 
   const totalCount = activitiesResponse?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage))
@@ -243,6 +252,12 @@ export function ActivityTimelinePage() {
       header: t('pages.clients.activity.tableHeaders.callbackDate', 'Callback Date'),
       align: 'left',
       className: 'w-[120px] overflow-hidden whitespace-normal break-words',
+    },
+    {
+      key: 'creditNumber',
+      header: t('pages.clients.activity.tableHeaders.creditNumber', 'Credit Number'),
+      align: 'left',
+      className: 'w-[140px] overflow-hidden whitespace-normal break-words',
     },
     {
       key: 'comment',
@@ -474,6 +489,12 @@ export function ActivityTimelinePage() {
         onClose={() => setIsNoteModalOpen(false)}
         phoneNumber={client?.phones?.[0]?.number || ''}
         clientId={clientId}
+        loanOptions={loans
+          .filter((loan) => loan.status.toLowerCase() !== 'closed')
+          .map((loan) => ({
+            id: loan.id,
+            contractNumber: loan.contract_number ?? String(loan.id),
+          }))}
         onSave={(data) => {
           createNote({ clientId, data })
         }}
@@ -503,6 +524,12 @@ export function ActivityTimelinePage() {
           setEditingInteraction(null)
         }}
         interaction={editingInteraction}
+        loanOptions={loans
+          .filter((loan) => loan.status.toLowerCase() !== 'closed')
+          .map((loan) => ({
+            id: loan.id,
+            contractNumber: loan.contract_number ?? String(loan.id),
+          }))}
         isSaving={isUpdating}
         onSave={(data) => {
           if (!editingInteraction) return

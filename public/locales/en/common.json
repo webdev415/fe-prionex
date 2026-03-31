@@ -854,6 +854,8 @@
           "selectContactType": "Select contact type",
           "result": "Result",
           "selectResult": "Select result (optional)",
+          "creditNumber": "Credit number",
+          "selectCreditNumber": "Select credit number",
           "promiseDate": "Promise date",
           "selectDate": "Select date",
           "promiseAmount": "Promise amount",
@@ -1362,6 +1364,8 @@
           "result": "Result",
           "promisedAmount": "Promised Amount",
           "promisedDate": "Promised Date",
+          "callbackDate": "Callback Date",
+          "creditNumber": "Credit Number",
           "comment": "Comment",
           "employee": "Employee"
         }
@@ -2798,6 +2802,7 @@
   },
   "interactionResults": {
     "agreement": "Agreement",
+    "payment_reminder": "Payment reminder",
     "callback_by_appointment": "Call back by appointment",
     "refusal_to_pay": "Refusal to pay",
     "no_contact": "No contact",
