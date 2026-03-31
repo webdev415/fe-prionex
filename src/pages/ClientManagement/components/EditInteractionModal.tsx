@@ -355,7 +355,9 @@ export function EditInteractionModal({
       return
     }
     if (showCreditNumberField && !debtId) {
-      toast.error(t('pages.clients.modals.addNote.selectCreditNumber', 'Please select a credit number'))
+      toast.error(
+        t('pages.clients.modals.addNote.selectCreditNumber', 'Please select a credit number')
+      )
       return
     }
 
@@ -365,7 +367,7 @@ export function EditInteractionModal({
       subtype_id: isSearching ? null : subtypeId,
       contact_type_id: isSearching ? null : resolvedContactTypeId,
       result_id: resultId ?? null,
-      summary: showCommentField ? (note || undefined) : undefined,
+      summary: showCommentField ? note || undefined : undefined,
       promise_to_pay_date: showPromiseDate && promiseDate ? promiseDate : null,
       promise_to_pay_amount: showPromiseAmount && promiseAmount ? parseFloat(promiseAmount) : null,
       next_action_date: showCallbackDate && callbackDate ? callbackDate : null,
@@ -637,7 +639,10 @@ export function EditInteractionModal({
               >
                 {t('pages.clients.modals.addNote.creditNumber', 'Credit number')}:
               </label>
-              <Select value={debtId?.toString()} onValueChange={(value) => setDebtId(Number(value))}>
+              <Select
+                value={debtId?.toString()}
+                onValueChange={(value) => setDebtId(Number(value))}
+              >
                 <SelectTrigger
                   className="w-full"
                   id="edit-interaction-credit-number"

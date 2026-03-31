@@ -228,7 +228,9 @@ export function AddNoteModal({
       return
     }
     if (showCreditNumberField && !debtId) {
-      toast.error(t('pages.clients.modals.addNote.selectCreditNumber', 'Please select a credit number'))
+      toast.error(
+        t('pages.clients.modals.addNote.selectCreditNumber', 'Please select a credit number')
+      )
       return
     }
 
@@ -481,7 +483,10 @@ export function AddNoteModal({
               >
                 {t('pages.clients.modals.addNote.creditNumber', 'Credit number')}:
               </label>
-              <Select value={debtId?.toString()} onValueChange={(value) => setDebtId(Number(value))}>
+              <Select
+                value={debtId?.toString()}
+                onValueChange={(value) => setDebtId(Number(value))}
+              >
                 <SelectTrigger
                   className="w-full"
                   id="interaction-credit-number"
