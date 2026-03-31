@@ -41,6 +41,7 @@ export interface AddNoteModalProps {
   onClose: () => void
   phoneNumber: string
   clientId: number
+  loanOptions?: Array<{ id: number; contractNumber: string }>
   onSave: (data: InteractionCreateData) => void
 }
 
@@ -49,7 +50,8 @@ export interface InteractionCreateData {
   subtype_id?: number
   contact_type_id?: number
   result_id?: number
-  summary: string
+  debt_id?: number
+  summary?: string
   promise_to_pay_date?: string
   promise_to_pay_amount?: number
   next_action_date?: string
@@ -63,13 +65,20 @@ const MAX_NOTE_LENGTH = 2000
 // Channel codes that restrict contact type to Relative only
 const RELATIVE_ONLY_CHANNELS = new Set(['MAIL', 'CHAT'])
 
-export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModalProps) {
+export function AddNoteModal({
+  open,
+  onClose,
+  phoneNumber,
+  loanOptions = [],
+  onSave,
+}: AddNoteModalProps) {
   const { t } = useTranslation('common')
 
   const [typeId, setTypeId] = useState<number | undefined>(undefined)
   const [subtypeId, setSubtypeId] = useState<number | undefined>(undefined)
   const [contactTypeId, setContactTypeId] = useState<number | undefined>(undefined)
   const [resultId, setResultId] = useState<number | undefined>(undefined)
+  const [debtId, setDebtId] = useState<number | undefined>(undefined)
   const [note, setNote] = useState<string>('')
   const [promiseDate, setPromiseDate] = useState<string>('')
   const [promiseAmount, setPromiseAmount] = useState<string>('')
@@ -127,6 +136,12 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
   const showPromiseDate = selectedResult?.requires_promise_date === true
   const showPromiseAmount = selectedResult?.requires_promise_amount === true
   const showCallbackDate = selectedResult?.code === 'callback_by_appointment'
+  const showCommentField = selectedResult?.code !== 'payment_reminder'
+  const showCreditNumberField =
+    selectedResult?.code === 'agreement_full_payment' ||
+    selectedResult?.code === 'agreement_partial_payment' ||
+    selectedResult?.code === 'agreement_restructuring' ||
+    selectedResult?.code === 'agreement_potential_payment'
 
   // --- Step handlers (each clears downstream) ---
 
@@ -150,9 +165,11 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
 
   const handleResultChange = (value: string) => {
     setResultId(Number(value))
+    setDebtId(undefined)
     setPromiseDate('')
     setPromiseAmount('')
     setCallbackDate('')
+    setNote('')
   }
 
   // --- Validation & submit ---
@@ -210,13 +227,20 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
       )
       return
     }
+    if (showCreditNumberField && !debtId) {
+      toast.error(
+        t('pages.clients.modals.addNote.selectCreditNumber', 'Please select a credit number')
+      )
+      return
+    }
 
     const data: InteractionCreateData = {
       type_id: resolvedTypeId,
       subtype_id: isSearching ? undefined : subtypeId,
       contact_type_id: isSearching ? undefined : resolvedContactTypeId,
       result_id: resultId,
-      summary: note,
+      debt_id: showCreditNumberField ? debtId : undefined,
+      summary: showCommentField ? note : undefined,
       promise_to_pay_date: showPromiseDate && promiseDate ? promiseDate : undefined,
       promise_to_pay_amount:
         showPromiseAmount && promiseAmount ? parseFloat(promiseAmount) : undefined,
@@ -233,6 +257,7 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
     setSubtypeId(undefined)
     setContactTypeId(undefined)
     setResultId(undefined)
+    setDebtId(undefined)
     setNote('')
     setPromiseDate('')
     setPromiseAmount('')
@@ -449,6 +474,42 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
             </div>
           )}
 
+          {/* Credit Number (shown for Agreement - * results only) */}
+          {showCreditNumberField && (
+            <div className="flex flex-col gap-2">
+              <label
+                className="text-dark-500 text-xs font-light sm:text-sm"
+                htmlFor="interaction-credit-number"
+              >
+                {t('pages.clients.modals.addNote.creditNumber', 'Credit number')}:
+              </label>
+              <Select
+                value={debtId?.toString()}
+                onValueChange={(value) => setDebtId(Number(value))}
+              >
+                <SelectTrigger
+                  className="w-full"
+                  id="interaction-credit-number"
+                  aria-label="Credit number"
+                >
+                  <SelectValue
+                    placeholder={t(
+                      'pages.clients.modals.addNote.selectCreditNumber',
+                      'Select credit number'
+                    )}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {loanOptions?.map((loan) => (
+                    <SelectItem key={loan.id} value={loan.id.toString()}>
+                      {loan.contractNumber}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Promise to Pay Date (conditional on result flag) */}
           {showPromiseDate && (
             <DateSelect
@@ -505,24 +566,26 @@ export function AddNoteModal({ open, onClose, phoneNumber, onSave }: AddNoteModa
             />
           )}
 
-          {/* Note Textarea */}
-          <div className="flex flex-col gap-2">
-            <label className="text-dark-500 text-xs font-light sm:text-sm">
-              {t('pages.clients.modals.addNote.note')}:
-            </label>
-            <div className="relative">
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder={t('pages.clients.modals.addNote.typeYourNoteHere')}
-                maxLength={MAX_NOTE_LENGTH}
-                className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[100px] w-full resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none sm:min-h-[120px] sm:text-sm"
-              />
-              <div className="absolute right-2 bottom-2 text-[10px] font-light text-gray-400 sm:text-xs">
-                {note.length}/{MAX_NOTE_LENGTH}
+          {/* Note / Comment (hidden for "Payment reminder") */}
+          {showCommentField && (
+            <div className="flex flex-col gap-2">
+              <label className="text-dark-500 text-xs font-light sm:text-sm">
+                {t('pages.clients.modals.addNote.note')}:
+              </label>
+              <div className="relative">
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder={t('pages.clients.modals.addNote.typeYourNoteHere')}
+                  maxLength={MAX_NOTE_LENGTH}
+                  className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[100px] w-full resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none sm:min-h-[120px] sm:text-sm"
+                />
+                <div className="absolute right-2 bottom-2 text-[10px] font-light text-gray-400 sm:text-xs">
+                  {note.length}/{MAX_NOTE_LENGTH}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </ModalContent>
       <ModalFooter className="flex-col gap-2 sm:flex-row sm:gap-3">
