@@ -28,8 +28,6 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
     switch (lang) {
       case 'uk':
         return t('language.uk')
-      case 'ru':
-        return t('language.ru')
       case 'en':
         return t('language.en')
       default:

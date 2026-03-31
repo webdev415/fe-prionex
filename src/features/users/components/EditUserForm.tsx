@@ -73,7 +73,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       last_name: user?.last_name || '',
       middle_name: user?.middle_name || '',
       phone: user?.phone || '',
-      language: (user?.language as 'uk' | 'ru' | 'en') || 'uk',
+      language: (user?.language as 'en' | 'uk') || 'uk',
       timezone: user?.timezone || 'Europe/Kyiv',
       asterisk_extension: user?.asterisk_extension || '',
       is_agent: user?.is_agent || false,
@@ -89,7 +89,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
         last_name: user.last_name || '',
         middle_name: user.middle_name || '',
         phone: user.phone || '',
-        language: (user.language as 'uk' | 'ru' | 'en') || 'uk',
+        language: (user.language as 'en' | 'uk') || 'uk',
         timezone: user.timezone || 'Europe/Kyiv',
         asterisk_extension: user.asterisk_extension || '',
         is_agent: user.is_agent || false,
@@ -264,7 +264,6 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
                   <SelectContent>
                     <SelectItem value="uk">Ukrainian</SelectItem>
                     <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="ru">Russian</SelectItem>
                   </SelectContent>
                 </Select>
               )}
