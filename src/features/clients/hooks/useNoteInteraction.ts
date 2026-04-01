@@ -84,6 +84,7 @@ export function useCreateInteraction() {
     mutationFn: async ({ clientId, data }: { clientId: number; data: InteractionCreateData }) => {
       return interactionApi.createInteraction({
         client_id: clientId,
+        debt_id: data.debt_id,
         type_id: data.type_id,
         subtype_id: data.subtype_id,
         contact_type_id: data.contact_type_id,
