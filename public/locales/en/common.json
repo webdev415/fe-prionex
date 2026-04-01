@@ -854,10 +854,17 @@
           "selectContactType": "Select contact type",
           "result": "Result",
           "selectResult": "Select result (optional)",
+          "creditNumber": "Credit number",
+          "selectCreditNumber": "Select credit number",
           "promiseDate": "Promise date",
           "selectDate": "Select date",
           "promiseAmount": "Promise amount",
           "callbackDate": "Callback date",
+          "callbackDateRequired": "Callback date is required",
+          "callbackDateFuture": "Callback date must be later than the current time",
+          "promiseDateRequired": "Promise date is required",
+          "promiseDateFuture": "Promise date must be later than the current time",
+          "promiseAmountPositive": "Promise amount must be greater than 0",
           "successMessage": "Interaction added successfully",
           "errorMessage": "Failed to add interaction"
         },
@@ -933,6 +940,9 @@
           "callClient": "Call Client",
           "clientName": "Client Name",
           "phoneNumber": "Phone Number",
+          "manualPhoneEntry": "Enter phone number manually",
+          "manualPhoneHint": "Digits only: 12 characters, starting with 380.",
+          "manualPhonePlaceholder": "380XXXXXXXXX",
           "callType": "Call Type",
           "whiteLine": "White Line",
           "grayLine": "Gray Line",
@@ -1344,6 +1354,7 @@
         "tableHeaders": {
           "date": "Date",
           "dateAndTime": "Date & Time",
+          "phoneNumber": "Phone number",
           "number": "Number",
           "loanNumber": "Loan Number",
           "phone": "Phone",
@@ -1353,6 +1364,8 @@
           "result": "Result",
           "promisedAmount": "Promised Amount",
           "promisedDate": "Promised Date",
+          "callbackDate": "Callback Date",
+          "creditNumber": "Credit Number",
           "comment": "Comment",
           "employee": "Employee"
         }
@@ -2789,6 +2802,7 @@
   },
   "interactionResults": {
     "agreement": "Agreement",
+    "payment_reminder": "Payment reminder",
     "callback_by_appointment": "Call back by appointment",
     "refusal_to_pay": "Refusal to pay",
     "no_contact": "No contact",

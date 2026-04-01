@@ -144,6 +144,7 @@ export async function addSpamCallHistory(
 export async function updateInteraction(data: {
   client_id: number
   interaction_id: number
+  debt_id?: number | null
   type_id?: number
   subtype_id?: number | null
   contact_type_id?: number | null

@@ -189,6 +189,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               showTimeSelect={showTimeSelect}
               timeFormat={timeFormat}
               timeIntervals={timeIntervals}
+              calendarStartDay={1}
             />
           </div>
         </div>

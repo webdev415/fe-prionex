@@ -13,6 +13,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '../../../components/ui/Modal'
 import { Button } from '../../../components/ui/Button'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { RadioGroup, RadioItem } from '../../../components/ui/Radio'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
@@ -40,7 +41,7 @@ export interface CallDialogModalProps {
   isCallCooldown?: boolean
   cooldownSecondsRemaining?: number
   telephonyUnavailable?: boolean
-  onCallStart?: (callType: CallType) => void
+  onCallStart?: (callType: CallType, dialPhoneNumber: string) => void
   onCallEnd?: (duration: number, status: CallStatus) => void
   onAnswer?: () => void
   onReject?: () => void
@@ -67,6 +68,11 @@ const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
   return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+}
+
+/** Manual entry: only digits, length 12, prefix 380 (Ukraine). */
+function isValidManualDialPhone(digits: string): boolean {
+  return digits.length === 12 && /^\d{12}$/.test(digits) && digits.startsWith('380')
 }
 
 export function CallDialogModal({
@@ -132,6 +138,10 @@ export function CallDialogModal({
   const [isMuted, setIsMuted] = useState(false)
   const [isOnHold, setIsOnHold] = useState(false)
   const [autoCloseCountdown, setAutoCloseCountdown] = useState(3)
+  const [manualPhoneEnabled, setManualPhoneEnabled] = useState(false)
+  const [manualPhoneDigits, setManualPhoneDigits] = useState('')
+  /** Number shown during / after outbound call (includes manual entry). */
+  const [dialDisplayPhone, setDialDisplayPhone] = useState<string | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const countdownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dialingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -150,6 +160,9 @@ export function CallDialogModal({
       setIsMuted(false)
       setIsOnHold(false)
       setAutoCloseCountdown(3)
+      setManualPhoneEnabled(false)
+      setManualPhoneDigits('')
+      setDialDisplayPhone(null)
     } else {
       // Cleanup intervals
       if (intervalRef.current) {
@@ -173,6 +186,16 @@ export function CallDialogModal({
     }
     return t('pages.clients.modals.callDialog.whiteLine')
   }, [callType, t])
+
+  const displayPhone = dialDisplayPhone ?? phoneNumber
+
+  const canPlaceCall = !manualPhoneEnabled
+    ? String(phoneNumber).trim().length > 0
+    : isValidManualDialPhone(manualPhoneDigits)
+
+  const handleManualPhoneChange = (raw: string) => {
+    setManualPhoneDigits(raw.replace(/\D/g, '').slice(0, 12))
+  }
 
   // Derive call state and elapsed time from backend state
   const derivedState = useMemo(() => {
@@ -294,8 +317,11 @@ export function CallDialogModal({
   }, [callState, open, initialState, onClose])
 
   const handleCallNow = () => {
+    if (!canPlaceCall) return
+    const dialPhone = manualPhoneEnabled ? manualPhoneDigits : String(phoneNumber).trim()
+    setDialDisplayPhone(dialPhone)
     if (onCallStart) {
-      onCallStart(callType)
+      onCallStart(callType, dialPhone)
     }
     setCallState('dialing')
     setElapsedTime(0)
@@ -355,7 +381,7 @@ export function CallDialogModal({
       id: `call-dialog-${Date.now()}`,
       type: 'call-dialog',
       clientName,
-      phoneNumber,
+      phoneNumber: displayPhone,
       callId: callId || null,
       callState,
       callType,
@@ -389,6 +415,9 @@ export function CallDialogModal({
     setIsMuted(false)
     setIsOnHold(false)
     setAutoCloseCountdown(3)
+    setManualPhoneEnabled(false)
+    setManualPhoneDigits('')
+    setDialDisplayPhone(null)
     onClose()
   }
 
@@ -583,10 +612,54 @@ export function CallDialogModal({
                   </label>
                   <input
                     type="text"
-                    value={phoneNumber}
-                    readOnly
-                    className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light focus:ring-2 focus:outline-none"
+                    inputMode={manualPhoneEnabled ? 'numeric' : undefined}
+                    autoComplete="tel"
+                    value={manualPhoneEnabled ? manualPhoneDigits : phoneNumber}
+                    readOnly={!manualPhoneEnabled}
+                    maxLength={manualPhoneEnabled ? 12 : undefined}
+                    onChange={
+                      manualPhoneEnabled
+                        ? (e) => handleManualPhoneChange(e.target.value)
+                        : undefined
+                    }
+                    placeholder={
+                      manualPhoneEnabled
+                        ? t('pages.clients.modals.callDialog.manualPhonePlaceholder')
+                        : undefined
+                    }
+                    aria-invalid={
+                      manualPhoneEnabled &&
+                      manualPhoneDigits.length > 0 &&
+                      !isValidManualDialPhone(manualPhoneDigits)
+                    }
+                    className={cn(
+                      'text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-sm font-light focus:ring-2 focus:outline-none',
+                      manualPhoneEnabled && 'font-mono tracking-wide tabular-nums',
+                      !manualPhoneEnabled && 'bg-gray-50'
+                    )}
                   />
+                  <label
+                    htmlFor="call-dialog-manual-phone"
+                    className="flex cursor-pointer items-center gap-2"
+                  >
+                    <Checkbox
+                      id="call-dialog-manual-phone"
+                      checked={manualPhoneEnabled}
+                      onCheckedChange={(v) => {
+                        const on = v === true
+                        setManualPhoneEnabled(on)
+                        if (!on) setManualPhoneDigits('')
+                      }}
+                    />
+                    <span className="text-dark-500 text-sm font-light">
+                      {t('pages.clients.modals.callDialog.manualPhoneEntry')}
+                    </span>
+                  </label>
+                  {manualPhoneEnabled && (
+                    <p className="text-xs text-gray-500">
+                      {t('pages.clients.modals.callDialog.manualPhoneHint')}
+                    </p>
+                  )}
                 </div>
 
                 {/* Call Type */}
@@ -656,10 +729,17 @@ export function CallDialogModal({
                   variant="primary"
                   size="sm"
                   onClick={() => {
-                    if (onSpamCall) onSpamCall(phoneNumber)
+                    const target = manualPhoneEnabled ? manualPhoneDigits : phoneNumber
+                    if (manualPhoneEnabled && !isValidManualDialPhone(manualPhoneDigits)) return
+                    if (onSpamCall) onSpamCall(target)
                     handleClose()
                   }}
                   className="w-full rounded-md"
+                  disabled={
+                    manualPhoneEnabled
+                      ? !isValidManualDialPhone(manualPhoneDigits)
+                      : !String(phoneNumber).trim()
+                  }
                   leftIcon={<Icons.Cancel01 size={18} className="sm:size-5" />}
                 >
                   {t('pages.clients.modals.callDialog.markAsSpam')}
@@ -673,7 +753,7 @@ export function CallDialogModal({
                   leftIcon={
                     isLoading ? undefined : <Icons.Headset size={18} className="sm:size-5" />
                   }
-                  disabled={isLoading || isCallCooldown}
+                  disabled={isLoading || isCallCooldown || !canPlaceCall}
                 >
                   {isLoading
                     ? t('status.loading')
@@ -732,7 +812,7 @@ export function CallDialogModal({
                         : t('pages.clients.modals.callDialog.callEnded')}
                 </span>
               </div>
-              <div className="text-dark-500 text-xs sm:text-sm">{phoneNumber}</div>
+              <div className="text-dark-500 text-xs sm:text-sm">{displayPhone}</div>
             </div>
 
             {/* Call Details Card */}
@@ -813,6 +893,7 @@ export function CallDialogModal({
                       variant="primary"
                       size="sm"
                       onClick={() => {
+                        setDialDisplayPhone(null)
                         setCallState('initial')
                         onRetry()
                       }}

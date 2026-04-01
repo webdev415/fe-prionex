@@ -855,6 +855,7 @@
         "tableHeaders": {
           "date": "Дата",
           "dateAndTime": "Дата и время",
+          "phoneNumber": "Номер телефона",
           "number": "Номер",
           "loanNumber": "Номер займа",
           "phone": "Телефон",
@@ -864,6 +865,8 @@
           "result": "Результат",
           "promisedAmount": "Обещанная сумма",
           "promisedDate": "Обещанная дата",
+          "callbackDate": "Дата обратного звонка",
+          "creditNumber": "Номер кредита",
           "comment": "Комментарий",
           "employee": "Сотрудник"
         }
@@ -1130,10 +1133,17 @@
           "selectContactType": "Выберите тип контакта",
           "result": "Результат",
           "selectResult": "Выберите результат (необязательно)",
+          "creditNumber": "Номер кредита",
+          "selectCreditNumber": "Выберите номер кредита",
           "promiseDate": "Дата обещания",
           "selectDate": "Выберите дату",
           "promiseAmount": "Сумма обещания",
           "callbackDate": "Дата обратного звонка",
+          "callbackDateRequired": "Дата обратного звонка обязательна",
+          "callbackDateFuture": "Дата обратного звонка должна быть позже текущего времени",
+          "promiseDateRequired": "Дата обещания обязательна",
+          "promiseDateFuture": "Дата обещания должна быть позже текущего времени",
+          "promiseAmountPositive": "Сумма обещания должна быть больше 0",
           "successMessage": "Взаимодействие успешно добавлено",
           "errorMessage": "Не удалось добавить взаимодействие"
         },
@@ -1209,6 +1219,9 @@
           "callClient": "Звонок клиенту",
           "clientName": "Имя клиента",
           "phoneNumber": "Номер телефона",
+          "manualPhoneEntry": "Ввести номер вручную",
+          "manualPhoneHint": "Только цифры: 12 символов, начинается с 380.",
+          "manualPhonePlaceholder": "380XXXXXXXXX",
           "callType": "Тип звонка",
           "whiteLine": "Белая линия",
           "grayLine": "Серая линия",
@@ -2857,6 +2870,7 @@
   },
   "interactionResults": {
     "agreement": "Договорённость",
+    "payment_reminder": "Напоминание об оплате",
     "callback_by_appointment": "Перезвонить по договорённости",
     "refusal_to_pay": "Отказ от оплаты",
     "no_contact": "Нет контакта",

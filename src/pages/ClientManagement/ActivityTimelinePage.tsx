@@ -27,8 +27,13 @@ import { CallDialogModal, type CallType, type CallStatus } from './components/Ca
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
 import { formatDate, formatDateTime } from '@/lib/formatters'
+import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useCallStore } from '@/stores/callStore'
-import { useClientProfile, useClientActivitiesPaginated } from '@/features/clients/hooks/useClients'
+import {
+  useClientProfile,
+  useClientActivitiesPaginated,
+  useClientLoans,
+} from '@/features/clients/hooks/useClients'
 import {
   useCreateNoteInteraction,
   useUpdateInteraction,
@@ -45,10 +50,12 @@ export function ActivityTimelinePage() {
   const navigate = useNavigate()
   const { isCallActive, setOpenCallModal } = useCallStore()
   const { user } = useAuth()
+  const userTimezone = user?.timezone
   const clientId = Number(id) || 0
 
   // Fetch real data from API
   const { data: profile, isLoading: isProfileLoading } = useClientProfile(clientId, clientId > 0)
+  const { data: loans = [] } = useClientLoans(clientId, clientId > 0)
 
   // Build client object from profile
   const client = useMemo(() => {
@@ -94,13 +101,13 @@ export function ActivityTimelinePage() {
       params.type_id = Number(selectedTypeId)
     }
     if (dateFrom) {
-      params.date_from = dateFrom.toISOString().split('T')[0]
+      params.date_from = getDateStringInTimezone(dateFrom, userTimezone)
     }
     if (dateTo) {
-      params.date_to = dateTo.toISOString().split('T')[0]
+      params.date_to = getDateStringInTimezone(dateTo, userTimezone)
     }
     return params
-  }, [currentPage, rowsPerPage, selectedTypeId, dateFrom, dateTo])
+  }, [currentPage, rowsPerPage, selectedTypeId, dateFrom, dateTo, userTimezone])
 
   // Fetch interaction types for the filter dropdown
   const { data: interactionTypes } = useInteractionTypes()
@@ -126,9 +133,13 @@ export function ActivityTimelinePage() {
   // Map activities from API to display format
   const activitiesState = useMemo(() => {
     const items = activitiesResponse?.items ?? []
+    const loanNumberById = new Map(
+      loans.map((loan) => [loan.id, loan.contract_number ?? String(loan.id)])
+    )
     return items.map((a) => ({
       id: a.id,
       date: formatDateTime(a.created_at),
+      phoneNumber: a.phone_used?.trim() ? a.phone_used : '-',
       type_id: a.type_id,
       type: a.type_code
         ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
@@ -149,12 +160,13 @@ export function ActivityTimelinePage() {
       promisedAmount: a.promise_to_pay_amount ? parseFloat(a.promise_to_pay_amount) : 0,
       promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
       callbackDate: formatDate(a.next_action_date ?? undefined),
+      creditNumber: a.debt_id ? (loanNumberById.get(a.debt_id) ?? '-') : '-',
       comment: a.summary ?? a.notes ?? '-',
       employee: a.user_name ?? '-',
       updated_at: a.updated_at ?? a.created_at,
       _raw: a,
     }))
-  }, [activitiesResponse, t])
+  }, [activitiesResponse, loans, t])
 
   const totalCount = activitiesResponse?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage))
@@ -182,6 +194,20 @@ export function ActivityTimelinePage() {
       header: t('pages.clients.activity.tableHeaders.dateAndTime', 'Date & Time'),
       align: 'left',
       className: 'min-w-[118px] w-[128px] overflow-hidden whitespace-normal',
+    },
+    {
+      key: 'phoneNumber',
+      header: t('pages.clients.activity.tableHeaders.phoneNumber', 'Phone number'),
+      align: 'left',
+      className: 'w-[180px] min-w-[180px] overflow-visible',
+      render: (activity) => {
+        const v = activity.phoneNumber
+        return (
+          <span className="block whitespace-nowrap tabular-nums" title={v !== '-' ? v : undefined}>
+            {v}
+          </span>
+        )
+      },
     },
     {
       key: 'type',
@@ -228,12 +254,18 @@ export function ActivityTimelinePage() {
       className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
+      key: 'creditNumber',
+      header: t('pages.clients.activity.tableHeaders.creditNumber', 'Credit Number'),
+      align: 'left',
+      className: 'w-[140px] overflow-hidden whitespace-normal break-words',
+    },
+    {
       key: 'comment',
       header: t('pages.clients.activity.tableHeaders.comment'),
       align: 'left',
       className: 'min-w-[300px] max-w-[500px] whitespace-normal break-words',
       render: (activity) => (
-        <div className="py-1 text-sm leading-tight break-words whitespace-normal">
+        <div className="py-1 leading-tight break-words whitespace-normal">
           {activity.comment || '-'}
         </div>
       ),
@@ -457,6 +489,12 @@ export function ActivityTimelinePage() {
         onClose={() => setIsNoteModalOpen(false)}
         phoneNumber={client?.phones?.[0]?.number || ''}
         clientId={clientId}
+        loanOptions={loans
+          .filter((loan) => loan.status.toLowerCase() !== 'closed')
+          .map((loan) => ({
+            id: loan.id,
+            contractNumber: loan.contract_number ?? String(loan.id),
+          }))}
         onSave={(data) => {
           createNote({ clientId, data })
         }}
@@ -472,7 +510,7 @@ export function ActivityTimelinePage() {
         clientName={client?.fullName ?? ''}
         phoneNumber={client?.phones?.[0]?.number || ''}
         initialState="initial"
-        onCallStart={(_callType: CallType) => {}}
+        onCallStart={(_callType: CallType, _dialPhone: string) => {}}
         onCallEnd={(_duration: number, _status: CallStatus) => {
           setOpenCallModal(null)
         }}
@@ -486,6 +524,12 @@ export function ActivityTimelinePage() {
           setEditingInteraction(null)
         }}
         interaction={editingInteraction}
+        loanOptions={loans
+          .filter((loan) => loan.status.toLowerCase() !== 'closed')
+          .map((loan) => ({
+            id: loan.id,
+            contractNumber: loan.contract_number ?? String(loan.id),
+          }))}
         isSaving={isUpdating}
         onSave={(data) => {
           if (!editingInteraction) return

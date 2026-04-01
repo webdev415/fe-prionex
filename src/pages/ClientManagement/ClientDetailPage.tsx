@@ -486,35 +486,40 @@ export function ClientDetailPage() {
           },
           { seen: new Set<string>(), items: [] }
         )
-        .items.map((a) => ({
-          id: a.id,
-          date: formatDateTime(a.created_at),
-          type: a.type_code
-            ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
-            : (a.type_name ?? '-'),
-          subtype: a.subtype_code
-            ? t(`interactionChannels.${a.subtype_code}`, {
-                defaultValue: a.subtype_name ?? '-',
-              })
-            : (a.subtype_name ?? '-'),
-          contactType: a.contact_type_code
-            ? t(`interactionContactTypes.${a.contact_type_code}`, {
-                defaultValue: a.contact_type_name ?? '-',
-              })
-            : (a.contact_type_name ?? '-'),
-          result: a.result_code
-            ? t(`interactionResults.${a.result_code}`, {
-                defaultValue: a.result_name ?? a.status,
-              })
-            : (a.result_name ?? a.status),
-          promisedAmount: a.promise_to_pay_amount ? Number(a.promise_to_pay_amount) : 0,
-          promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
-          callbackDate: formatDate(a.next_action_date ?? undefined),
-          comment: a.summary ?? a.notes ?? '-',
-          employee: a.user_name ?? '-',
-          updated_at: a.updated_at ?? a.created_at,
-          _raw: a,
-        })),
+        .items.map((a) => {
+          const loan = (loans ?? []).find((d) => d.id === a.debt_id)
+          return {
+            id: a.id,
+            date: formatDateTime(a.created_at),
+            phoneNumber: a.phone_used?.trim() ? a.phone_used : '-',
+            type: a.type_code
+              ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
+              : (a.type_name ?? '-'),
+            subtype: a.subtype_code
+              ? t(`interactionChannels.${a.subtype_code}`, {
+                  defaultValue: a.subtype_name ?? '-',
+                })
+              : (a.subtype_name ?? '-'),
+            contactType: a.contact_type_code
+              ? t(`interactionContactTypes.${a.contact_type_code}`, {
+                  defaultValue: a.contact_type_name ?? '-',
+                })
+              : (a.contact_type_name ?? '-'),
+            result: a.result_code
+              ? t(`interactionResults.${a.result_code}`, {
+                  defaultValue: a.result_name ?? a.status,
+                })
+              : (a.result_name ?? a.status),
+            promisedAmount: a.promise_to_pay_amount ? Number(a.promise_to_pay_amount) : 0,
+            promisedDate: formatDate(a.promise_to_pay_date ?? undefined),
+            callbackDate: formatDate(a.next_action_date ?? undefined),
+            creditNumber: loan?.contract_number ?? '-',
+            comment: a.summary ?? a.notes ?? '-',
+            employee: a.user_name ?? '-',
+            updated_at: a.updated_at ?? a.created_at,
+            _raw: a,
+          }
+        }),
       // Primary Creditor Payments - Not yet implemented (Phase 8)
       primaryCreditorPayments: [] as Array<{
         id: number
@@ -572,11 +577,14 @@ export function ClientDetailPage() {
   })
 
   const linkedContactsByPhone = useMemo(() => {
-    const map = new Map<string, Array<{ id: number; fullName: string }>>()
+    const map = new Map<string, Array<{ id: number; fullName: string; clientNumber: string }>>()
 
     phoneLookupValues.forEach((phone, index) => {
       const linkedClients = linkedContactQueries[index]?.data ?? []
-      const dedupedByClientId = new Map<number, { id: number; fullName: string }>()
+      const dedupedByClientId = new Map<
+        number,
+        { id: number; fullName: string; clientNumber: string }
+      >()
 
       linkedClients.forEach((linkedClient) => {
         const fullName = [linkedClient.first_name, linkedClient.middle_name, linkedClient.last_name]
@@ -587,6 +595,7 @@ export function ClientDetailPage() {
         dedupedByClientId.set(linkedClient.id, {
           id: linkedClient.id,
           fullName: fullName || `ID ${linkedClient.id}`,
+          clientNumber: `№${linkedClient.legacy_id || linkedClient.id}`,
         })
       })
 
@@ -608,9 +617,11 @@ export function ClientDetailPage() {
           <Link
             key={linkedContact.id}
             to={`/dashboard/clients/${linkedContact.id}`}
-            className="border-primary-200 bg-primary-50 text-primary-700 hover:border-primary-300 hover:bg-primary-100 inline-flex max-w-full items-center rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
+            className="border-primary-200 bg-primary-50 text-primary-700 hover:border-primary-300 hover:bg-primary-100 inline-flex max-w-full items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
+            title={linkedContact.fullName}
           >
-            {t('pages.clients.detail.linkedContact')}: {linkedContact.fullName}
+            <span aria-hidden="true">🔗</span>
+            <span>{linkedContact.clientNumber}</span>
           </Link>
         ))}
       </div>
@@ -1008,6 +1019,20 @@ export function ClientDetailPage() {
       className: 'min-w-[118px] w-[128px] overflow-hidden whitespace-normal',
     },
     {
+      key: 'phoneNumber',
+      header: t('pages.clients.activity.tableHeaders.phoneNumber', 'Phone number'),
+      align: 'left',
+      className: 'w-[180px] min-w-[180px] overflow-visible',
+      render: (activity) => {
+        const v = activity.phoneNumber
+        return (
+          <span className="block whitespace-nowrap tabular-nums" title={v !== '-' ? v : undefined}>
+            {v}
+          </span>
+        )
+      },
+    },
+    {
       key: 'type',
       header: t('pages.clients.activity.tableHeaders.type'),
       align: 'left',
@@ -1052,12 +1077,18 @@ export function ClientDetailPage() {
       className: 'w-[120px] overflow-hidden whitespace-normal break-words',
     },
     {
+      key: 'creditNumber',
+      header: t('pages.clients.activity.tableHeaders.creditNumber', 'Credit Number'),
+      align: 'left',
+      className: 'w-[140px] overflow-hidden whitespace-normal break-words',
+    },
+    {
       key: 'comment',
       header: t('pages.clients.activity.tableHeaders.comment'),
       align: 'left',
       className: 'min-w-[300px] max-w-[500px] whitespace-normal break-words',
       render: (activity) => (
-        <div className="py-1 text-sm leading-tight break-words whitespace-normal">
+        <div className="py-1 leading-tight break-words whitespace-normal">
           {activity.comment || '-'}
         </div>
       ),
@@ -3256,7 +3287,7 @@ export function ClientDetailPage() {
           {/* Content based on active tab */}
           {activeCommentTab === 'comments' &&
             (isActivitiesLoading ? (
-              <TableSkeleton columns={9} rows={3} className="w-full" />
+              <TableSkeleton columns={12} rows={3} className="w-full" />
             ) : client.activities.length === 0 ? (
               <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
@@ -3340,6 +3371,12 @@ export function ClientDetailPage() {
             setEditingInteraction(null)
           }}
           interaction={editingInteraction}
+          loanOptions={loans
+            .filter((loan) => loan.status.toLowerCase() !== 'closed')
+            .map((loan) => ({
+              id: loan.id,
+              contractNumber: loan.contract_number ?? String(loan.id),
+            }))}
           isSaving={isUpdating}
           onSave={(data) => {
             if (!editingInteraction) return
@@ -3364,6 +3401,12 @@ export function ClientDetailPage() {
           }}
           phoneNumber={selectedPhoneForNote || client.phones?.[0]?.number || ''}
           clientId={clientId}
+          loanOptions={loans
+            .filter((loan) => loan.status.toLowerCase() !== 'closed')
+            .map((loan) => ({
+              id: loan.id,
+              contractNumber: loan.contract_number ?? String(loan.id),
+            }))}
           onSave={(data) => {
             createNote({
               clientId,
@@ -3399,10 +3442,9 @@ export function ClientDetailPage() {
           isCallCooldown={isCallCooldown}
           cooldownSecondsRemaining={cooldownSecondsRemaining}
           telephonyUnavailable={isTelephonyUnavailable}
-          onCallStart={(callType: CallType) => {
-            const phoneNumber = selectedPhoneForCall || client.phones?.[0]?.number
-            if (!phoneNumber) return
-            handleOriginateCall(phoneNumber, client.fullName, client.id.toString(), callType)
+          onCallStart={(callType: CallType, dialPhone: string) => {
+            if (!dialPhone?.trim()) return
+            handleOriginateCall(dialPhone, client.fullName, client.id.toString(), callType)
           }}
           onCallEnd={(_duration: number, _status: CallStatus) => {
             handleCallEnd()

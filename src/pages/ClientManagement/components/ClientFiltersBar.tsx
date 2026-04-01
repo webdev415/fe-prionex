@@ -23,6 +23,7 @@ import { useSellers } from '@/features/sellers/hooks/useSellers'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { useAuthStore } from '@/stores/authStore'
+import { getDateStringInTimezone } from '@/lib/dateUtils'
 import type { ClientFilters } from '../ClientManagementPage'
 
 // Debounced number input component to avoid re-rendering on every keystroke
@@ -127,6 +128,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
 
   // Fetch active users for employee and searcher dropdowns
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const userTimezone = useAuthStore((s) => s.user?.timezone)
   const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
   // Map users to dropdown options (full name format)
@@ -141,7 +143,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   const handleFilterDateChange = (field: FilterDateField, date: Date | null) => {
     onFilterChange({
       ...filters,
-      [field]: date ? date.toISOString().split('T')[0] : undefined,
+      [field]: date ? getDateStringInTimezone(date, userTimezone) : undefined,
     })
   }
 

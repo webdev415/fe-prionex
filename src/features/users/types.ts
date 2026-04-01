@@ -35,7 +35,7 @@ export interface ApiUser {
   full_name: string
   middle_name?: string
   phone?: string
-  language: 'uk' | 'ru' | 'en'
+  language: 'uk' | 'en'
   timezone: string
   status: 'active' | 'inactive' | 'suspended'
   must_change_password: boolean
@@ -84,7 +84,7 @@ export interface CreateUserInput {
   last_name: string
   middle_name?: string
   phone?: string
-  language: 'uk' | 'ru' | 'en'
+  language: 'uk' | 'en'
   timezone: string
   must_change_password: boolean
   project_assignments: ProjectRoleAssignment[]
@@ -101,7 +101,7 @@ export interface UpdateUserInput {
   last_name?: string
   middle_name?: string
   phone?: string
-  language?: 'uk' | 'ru' | 'en'
+  language?: 'uk' | 'en'
   timezone?: string
   status?: 'active' | 'inactive' | 'suspended'
   project_assignments?: ProjectRoleAssignment[]

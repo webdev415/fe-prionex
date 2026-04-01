@@ -368,7 +368,6 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
                   <SelectContent>
                     <SelectItem value="uk">{t('language.uk')}</SelectItem>
                     <SelectItem value="en">{t('language.en')}</SelectItem>
-                    <SelectItem value="ru">{t('language.ru')}</SelectItem>
                   </SelectContent>
                 </Select>
               )}

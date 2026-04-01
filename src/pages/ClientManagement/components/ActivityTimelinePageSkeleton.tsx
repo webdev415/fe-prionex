@@ -7,7 +7,7 @@
 
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 
-const TABLE_COLUMNS = 8
+const TABLE_COLUMNS = 12
 const ITEMS_PER_PAGE = 10
 
 export function ActivityTimelinePageSkeleton() {

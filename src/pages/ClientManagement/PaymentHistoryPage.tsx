@@ -7,6 +7,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useAuthStore } from '@/stores/authStore'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -125,12 +126,14 @@ export function PaymentHistoryPage() {
   const setStatusFilter = (value: string) => setStatusFilterUrl(value)
   const setMethodFilter = (value: string) => setMethodFilterUrl(value)
   const setStartDate = useCallback(
-    (value: Date | null) => setStartDateUrl(value ? value.toISOString().split('T')[0] : ''),
-    [setStartDateUrl]
+    (value: Date | null) =>
+      setStartDateUrl(value ? getDateStringInTimezone(value, userTimezone) : ''),
+    [setStartDateUrl, userTimezone]
   )
   const setEndDate = useCallback(
-    (value: Date | null) => setEndDateUrl(value ? value.toISOString().split('T')[0] : ''),
-    [setEndDateUrl]
+    (value: Date | null) =>
+      setEndDateUrl(value ? getDateStringInTimezone(value, userTimezone) : ''),
+    [setEndDateUrl, userTimezone]
   )
 
   // Note: paymentHistory is computed from API data using useMemo (see line 299)
@@ -190,8 +193,8 @@ export function PaymentHistoryPage() {
       limit: pageSize,
       status: statusFilter !== 'All' ? (statusFilter as BackendPaymentStatus) : undefined,
       payment_method: methodFilter !== 'All' ? (methodFilter as BackendPaymentMethod) : undefined,
-      from_date: startDate ? startDate.toISOString().split('T')[0] : undefined,
-      to_date: endDate ? endDate.toISOString().split('T')[0] : undefined,
+      from_date: startDate ? getDateStringInTimezone(startDate, userTimezone) : undefined,
+      to_date: endDate ? getDateStringInTimezone(endDate, userTimezone) : undefined,
     },
     { enabled: !!clientId }
   )
@@ -508,8 +511,8 @@ export function PaymentHistoryPage() {
   }) => {
     exportPaymentsMutation({
       client_id: clientId,
-      from_date: data.startDate ? data.startDate.toISOString().split('T')[0] : undefined,
-      to_date: data.endDate ? data.endDate.toISOString().split('T')[0] : undefined,
+      from_date: data.startDate ? getDateStringInTimezone(data.startDate, userTimezone) : undefined,
+      to_date: data.endDate ? getDateStringInTimezone(data.endDate, userTimezone) : undefined,
       status:
         data.statuses.length === 1 && data.statuses[0] !== 'All'
           ? frontendToBackendPaymentStatus(data.statuses[0] as 'Verified' | 'Pending' | 'Cancelled')
@@ -1884,11 +1887,10 @@ export function PaymentHistoryPage() {
         isCallCooldown={isCallCooldown}
         cooldownSecondsRemaining={cooldownSecondsRemaining}
         telephonyUnavailable={isTelephonyUnavailable}
-        onCallStart={(callType: CallType) => {
-          const phoneNumber = client?.phones?.[0]?.number
-          if (!phoneNumber) return
+        onCallStart={(callType: CallType, dialPhone: string) => {
+          if (!dialPhone?.trim()) return
           handleOriginateCall(
-            phoneNumber,
+            dialPhone,
             client?.fullName || '',
             client?.id?.toString() || '',
             callType

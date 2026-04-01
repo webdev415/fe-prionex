@@ -8,25 +8,22 @@ const BUILD_TIMESTAMP = import.meta.env.DEV
   ? String(Date.now())
   : (import.meta.env.VITE_BUILD_TS ?? '1')
 
-export const SUPPORTED_LANGUAGES = ['en', 'uk', 'ru'] as const
+export const SUPPORTED_LANGUAGES = ['en', 'uk'] as const
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 
 export const LANGUAGE_NAMES: Record<SupportedLanguage, string> = {
   en: 'English',
   uk: 'Українська',
-  ru: 'Русский',
 }
 
 export const LANGUAGE_SHORT_NAMES: Record<SupportedLanguage, string> = {
   en: 'EN',
   uk: 'UA',
-  ru: 'RU',
 }
 
 export const LANGUAGE_FLAGS: Record<SupportedLanguage, string> = {
   en: '🇬🇧',
   uk: '🇺🇦',
-  ru: '🇷🇺',
 }
 
 i18n
