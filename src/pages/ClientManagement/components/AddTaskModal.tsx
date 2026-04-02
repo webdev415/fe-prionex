@@ -22,6 +22,8 @@ import { Textarea } from '@/components/ui/Textarea'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { Icons } from '@/lib/icons'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { DateSelect } from '@/components/ui/DateSelect'
+import { getDateTimeStringInTimezone } from '@/lib/dateUtils'
 import { useCreateTask, useTaskSubjects } from '@/features/clients/hooks/useClients'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
@@ -171,17 +173,17 @@ export function AddTaskModal({ open, clientId, onClose }: AddTaskModalProps) {
           </div>
 
           {/* Due Date */}
-          <div className="flex flex-col gap-1">
-            <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
-              {t('pages.clients.tasks.dueDate', 'Due Date')}
-            </Label>
-            <input
-              type="datetime-local"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="border-input text-dark-500 focus:ring-primary-500 h-[45px] w-full rounded-lg border border-gray-400 bg-white px-3 text-sm font-light focus:ring-2 focus:outline-none"
-            />
-          </div>
+          <DateSelect
+            label={t('pages.clients.tasks.dueDate', 'Due Date')}
+            id="task-due-date"
+            value={dueDate || null}
+            onChange={({ value }) => setDueDate(value ? getDateTimeStringInTimezone(value) : '')}
+            placeholder={t('pages.clients.tasks.selectDueDate', 'Select due date')}
+            format="dd/MM/yyyy HH:mm"
+            showTimeSelect
+            timeFormat="HH:mm"
+            timeIntervals={15}
+          />
 
           {/* Assigned To */}
           <div className="flex flex-col gap-1">
