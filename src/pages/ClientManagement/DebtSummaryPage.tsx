@@ -853,14 +853,10 @@ export function DebtSummaryPage() {
     }
 
     // Convert frontend format to backend format
-    // CRITICAL FIX: react-datepicker creates dates at midnight UTC
-    // When user selects Jan 26, it creates "2026-01-26T00:00:00Z"
-    // In GMT-0600, this appears as "Jan 25 2026 18:00:00" (6 PM previous day)
-    // We MUST use UTC methods to extract the date the user actually selected
-    // Extract UTC components (what user actually selected)
-    const year = data.date.getUTCFullYear()
-    const month = data.date.getUTCMonth() + 1 // 0-11 -> 1-12
-    const day = data.date.getUTCDate()
+    // react-datepicker creates dates in LOCAL time, so use local getters
+    const year = data.date.getFullYear()
+    const month = data.date.getMonth() + 1 // 0-11 -> 1-12
+    const day = data.date.getDate()
 
     // Format as YYYY-MM-DD string
     const paymentDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`

@@ -595,7 +595,7 @@ export function ClientDetailPage() {
         dedupedByClientId.set(linkedClient.id, {
           id: linkedClient.id,
           fullName: fullName || `ID ${linkedClient.id}`,
-          clientNumber: `№${linkedClient.legacy_id || linkedClient.id}`,
+          clientNumber: `№${linkedClient.id}`,
         })
       })
 
