@@ -152,7 +152,7 @@ export function SearchableSelect({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-50 rounded-lg border border-gray-200 bg-white shadow-lg">
+        <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-[200] rounded-lg border border-gray-200 bg-white shadow-lg">
           {/* Search input — sticky so it stays visible while scrolling */}
           <div className="sticky top-0 z-10 border-b border-gray-100 bg-white p-2">
             <div className="relative">

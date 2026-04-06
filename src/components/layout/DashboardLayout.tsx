@@ -16,7 +16,7 @@ import { TaskBell } from './TaskBell'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
@@ -380,6 +380,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { t, i18n } = useTranslation('common')
   const navigate = useNavigate()
+  const location = useLocation()
   const { logout, isImpersonating, impersonatedUser, exitImpersonation } = useAuth()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -398,6 +399,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [searchError, setSearchError] = useState<string | null>(null)
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const searchContainerRef = useRef<HTMLDivElement>(null)
+
+  // Close header search results when navigating so the panel cannot sit over other pages
+  useEffect(() => {
+    setShowSearchDropdown(false)
+  }, [location.pathname])
 
   // Automatically refresh permissions every 5 minutes
   usePermissionRefresh()

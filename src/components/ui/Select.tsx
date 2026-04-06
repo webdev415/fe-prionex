@@ -6,6 +6,18 @@ import { Icons } from '@/lib/icons'
 // Context to pass the search query down to SelectItem
 const SelectSearchContext = React.createContext<string>('')
 
+/** Plain text from item children for client-side filtering (handles i18n, fragments, etc.). */
+function getItemFilterText(node: React.ReactNode): string {
+  if (node == null || typeof node === 'boolean') return ''
+  if (typeof node === 'string' || typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(getItemFilterText).join(' ')
+  if (React.isValidElement(node)) {
+    const props = node.props as { children?: React.ReactNode }
+    if (props.children != null) return getItemFilterText(props.children)
+  }
+  return ''
+}
+
 const Select = SelectPrimitive.Root
 
 const SelectGroup = SelectPrimitive.Group
@@ -87,14 +99,19 @@ const SelectContent = React.forwardRef<
       position = 'popper',
       searchable,
       searchPlaceholder = 'Search...',
+      onCloseAutoFocus,
       ...props
     },
     ref
   ) => {
     const [query, setQuery] = React.useState('')
 
-    // Reset search when dropdown closes
-    const handleOpenChange = React.useCallback(() => {
+    const clearSearch = React.useCallback(() => {
+      setQuery('')
+    }, [])
+
+    // Radix unmounts content when closed — reset filter each time the menu opens
+    React.useLayoutEffect(() => {
       setQuery('')
     }, [])
 
@@ -103,13 +120,16 @@ const SelectContent = React.forwardRef<
         <SelectPrimitive.Content
           ref={ref}
           className={cn(
-            'text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 min-w-[8rem] origin-[--radix-select-content-transform-origin] rounded-md border bg-white shadow-md',
+            'text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-[200] min-w-[8rem] origin-[--radix-select-content-transform-origin] rounded-md border bg-white shadow-md',
             position === 'popper' &&
               'data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1',
             className
           )}
           position={position}
-          onCloseAutoFocus={handleOpenChange}
+          onCloseAutoFocus={(e) => {
+            clearSearch()
+            onCloseAutoFocus?.(e)
+          }}
           {...props}
         >
           {searchable && (
@@ -137,7 +157,6 @@ const SelectContent = React.forwardRef<
             className={cn(
               position === 'popper' && 'w-full min-w-[var(--radix-select-trigger-width)]'
             )}
-            style={{ overflow: 'visible', maxHeight: 'none' }}
           >
             <SelectSearchContext.Provider value={query}>
               <div className="select-scrollbar max-h-64 overflow-y-scroll p-1">{children}</div>
@@ -165,13 +184,13 @@ SelectLabel.displayName = SelectPrimitive.Label.displayName
 const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, ...props }, ref) => {
+>(({ className, children, textValue, ...props }, ref) => {
   const query = React.useContext(SelectSearchContext)
 
-  // Filter: hide item if search query doesn't match the text content
-  if (query) {
-    const text = typeof children === 'string' ? children : ''
-    if (!text.toLowerCase().includes(query.toLowerCase())) {
+  // Filter: hide item if search query doesn't match visible text
+  if (query.trim()) {
+    const text = (textValue ?? getItemFilterText(children)).trim()
+    if (!text.toLowerCase().includes(query.toLowerCase().trim())) {
       return null
     }
   }
