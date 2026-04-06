@@ -13,6 +13,7 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { convertUTCToUserTimezone } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
+import { PaymentDebtBreakdown } from './PaymentDebtBreakdown'
 // TODO: When backend API is ready, import: import api from '@/lib/api'
 
 export interface PaymentDetails {
@@ -410,6 +411,9 @@ export function PaymentDetailsModal({
               </div>
             </div>
           </div>
+
+          {/* Debt Breakdown Section */}
+          <PaymentDebtBreakdown paymentId={payment.paymentId} />
 
           {/* Audit Trail Section */}
           <div className="flex flex-col items-start gap-2 self-stretch">

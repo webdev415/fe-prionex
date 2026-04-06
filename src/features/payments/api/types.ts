@@ -50,6 +50,7 @@ export interface Payment {
   related_call_id?: number
   payment_plan_id?: number
   installment_id?: number
+  debt_id?: number
   // Recorded by
   recorded_by_user_id: number
   recorded_by_username?: string
@@ -186,4 +187,26 @@ export interface PendingPaymentItem {
 
 export interface PendingPaymentResponse {
   items: PendingPaymentItem[]
+}
+
+// Payment Debt Breakdown
+export interface PaymentAllocationItem {
+  component: 'principal' | 'interest' | 'fees' | 'penalties' | 'fines'
+  component_label: string
+  original_amount: number
+  allocated_amount: number
+  remaining_balance: number
+}
+
+export interface PaymentDebtBreakdownResponse {
+  payment_number: string
+  payment_amount: number
+  payment_status: string
+  debt_id: number
+  contract_number: string
+  allocation: PaymentAllocationItem[]
+  total_allocated: number
+  total_remaining_debt: number
+  allocation_method: 'computed' | 'stored'
+  computed_at: string
 }
