@@ -224,7 +224,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
       {/* Mobile overlay */}
       {isOpenSideBar && (
         <div
-          className="fixed inset-0 z-21 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-[25] bg-black/50 lg:hidden"
           onClick={() => toggleSidebar()}
           aria-hidden="true"
         />
