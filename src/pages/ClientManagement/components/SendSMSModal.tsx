@@ -176,9 +176,11 @@ export function SendSMSModal({
 
   // Calculate variable values from client data
   const variableValues = useMemo(() => {
-    // Get contract_number from first debt (if available)
+    // Prefer the currently selected loan for contract_number.
+    // Fallback to first debt for backwards-compatibility when loans aren't provided.
     const contractNumber =
-      clientData?.debts && clientData.debts.length > 0 ? clientData.debts[0].contract_number : ''
+      selectedLoan?.loanNumber ??
+      (clientData?.debts && clientData.debts.length > 0 ? clientData.debts[0].contract_number : '')
 
     // Get due_date from first debt's debt_close_date or calculate from debt_start_date
     // Use debt_close_date as due_date if available, otherwise calculate from debt_start_date + 30 days
