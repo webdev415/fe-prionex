@@ -1,0 +1,22 @@
+{
+  "breakdown": {
+    "title": "Debt Breakdown",
+    "principal": "Principal",
+    "interest": "Interest",
+    "fees": "Commissions/Fees",
+    "penalties": "Penalties",
+    "fines": "Fines",
+    "original": "Original Amount",
+    "allocated": "Allocated",
+    "remaining": "Remaining",
+    "total": "Total",
+    "no_debt": "No associated debt",
+    "pending_note": "Estimated (pending verification)",
+    "cancelled_note": "Payment cancelled",
+    "computed": "Computed allocation",
+    "component": "Component",
+    "verified_note": "Allocation applied",
+    "error": "Unable to load breakdown. Please try again.",
+    "retry": "Retry"
+  }
+}

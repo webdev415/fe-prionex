@@ -18,6 +18,7 @@ import type {
   PaymentStatsResponse,
   PendingPaymentResponse,
   ReceiptResponse,
+  PaymentDebtBreakdownResponse,
 } from './types'
 
 const BASE_URL = '/api/v1/payments'
@@ -144,6 +145,18 @@ export async function exportPaymentsCSV(params: PaymentListParams = {}): Promise
     params,
     responseType: 'blob',
   })
+  return response.data
+}
+
+/**
+ * Get payment debt component breakdown
+ */
+export async function getPaymentDebtBreakdown(
+  paymentId: string
+): Promise<PaymentDebtBreakdownResponse> {
+  const response = await api.get<PaymentDebtBreakdownResponse>(
+    `${BASE_URL}/${paymentId}/debt-breakdown`
+  )
   return response.data
 }
 

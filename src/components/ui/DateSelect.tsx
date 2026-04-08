@@ -169,7 +169,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               display: none;
             }
             .react-datepicker-popper {
-              z-index: 20 !important;
+              z-index: 200 !important;
             }
           `}</style>
           <div className="date-select-wrapper">

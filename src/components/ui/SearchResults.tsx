@@ -61,7 +61,7 @@ export function SearchResults({
 
   // Shared dropdown positioning: align with search bar, match its responsive width (w-full = parent = SearchBar)
   const dropdownBase =
-    'absolute left-0 top-full z-50 mt-2 w-full min-w-0 rounded-lg border border-gray-200 bg-white shadow-lg'
+    'absolute left-0 top-full z-[200] mt-2 w-full min-w-0 rounded-lg border border-gray-200 bg-white shadow-lg'
 
   // Loading State
   if (isLoading) {
