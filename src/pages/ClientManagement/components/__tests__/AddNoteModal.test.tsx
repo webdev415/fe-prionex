@@ -420,6 +420,37 @@ describe('AddNoteModal', () => {
         expect(screen.queryByLabelText(/promise amount/i)).not.toBeInTheDocument()
       })
     })
+
+    it('should show note/comment field when Payment reminder is selected', async () => {
+      vi.mocked(useNoteInteractionModule.useInteractionResults).mockReturnValue({
+        data: [
+          ...mockResults,
+          {
+            id: 99,
+            code: 'payment_reminder',
+            name: 'Payment reminder',
+            is_active: true,
+            sort_order: 3,
+            is_positive: false,
+            requires_promise_date: false,
+            requires_promise_amount: false,
+            requires_followup: false,
+            creates_task: false,
+          },
+        ],
+        isLoading: false,
+      } as never)
+
+      await selectFullPath()
+
+      fireEvent.click(screen.getByRole('combobox', { name: 'Result' }))
+      fireEvent.click(await screen.findByRole('option', { name: 'Payment reminder' }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('textbox')).toBeInTheDocument()
+        expect(screen.getByText('0/2000')).toBeInTheDocument()
+      })
+    })
   })
 
   describe('Form Validation', () => {
