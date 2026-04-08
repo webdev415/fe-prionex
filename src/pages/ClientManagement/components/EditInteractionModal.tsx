@@ -263,7 +263,6 @@ export function EditInteractionModal({
   const showPromiseDate = selectedResult?.requires_promise_date === true
   const showPromiseAmount = selectedResult?.requires_promise_amount === true
   const showCallbackDate = selectedResult?.code === 'callback_by_appointment'
-  const showCommentField = selectedResult?.code !== 'payment_reminder'
   const showCreditNumberField =
     selectedResult?.code === 'agreement_full_payment' ||
     selectedResult?.code === 'agreement_partial_payment' ||
@@ -367,7 +366,7 @@ export function EditInteractionModal({
       subtype_id: isSearching ? null : subtypeId,
       contact_type_id: isSearching ? null : resolvedContactTypeId,
       result_id: resultId ?? null,
-      summary: showCommentField ? note || undefined : undefined,
+      summary: note || undefined,
       promise_to_pay_date: showPromiseDate && promiseDate ? promiseDate : null,
       promise_to_pay_amount: showPromiseAmount && promiseAmount ? parseFloat(promiseAmount) : null,
       next_action_date: showCallbackDate && callbackDate ? callbackDate : null,
@@ -722,29 +721,27 @@ export function EditInteractionModal({
             />
           )}
 
-          {/* Note / Comment (hidden for "Payment reminder") */}
-          {showCommentField && (
-            <div className="flex flex-col gap-2">
-              <label className="text-dark-500 text-xs font-light sm:text-sm">
-                {t('pages.clients.modals.addNote.note', 'Note')}:
-              </label>
-              <div className="relative">
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder={t(
-                    'pages.clients.modals.addNote.typeYourNoteHere',
-                    'Type your note here...'
-                  )}
-                  maxLength={MAX_NOTE_LENGTH}
-                  className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[100px] w-full resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none sm:min-h-[120px] sm:text-sm"
-                />
-                <div className="absolute right-2 bottom-2 text-[10px] font-light text-gray-400 sm:text-xs">
-                  {note.length}/{MAX_NOTE_LENGTH}
-                </div>
+          {/* Note / Comment */}
+          <div className="flex flex-col gap-2">
+            <label className="text-dark-500 text-xs font-light sm:text-sm">
+              {t('pages.clients.modals.addNote.note', 'Note')}:
+            </label>
+            <div className="relative">
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder={t(
+                  'pages.clients.modals.addNote.typeYourNoteHere',
+                  'Type your note here...'
+                )}
+                maxLength={MAX_NOTE_LENGTH}
+                className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[100px] w-full resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none sm:min-h-[120px] sm:text-sm"
+              />
+              <div className="absolute right-2 bottom-2 text-[10px] font-light text-gray-400 sm:text-xs">
+                {note.length}/{MAX_NOTE_LENGTH}
               </div>
             </div>
-          )}
+          </div>
         </div>
       </ModalContent>
       <ModalFooter className="flex-col gap-2 sm:flex-row sm:gap-3">
