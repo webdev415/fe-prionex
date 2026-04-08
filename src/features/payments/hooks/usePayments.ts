@@ -12,12 +12,14 @@ import {
   getClientPaymentHistory,
   getPaymentStats,
   getPendingVerificationPayments,
+  getPaymentDebtBreakdown,
 } from '../api/paymentApi'
 import type {
   PaymentListParams,
   ClientPaymentHistoryParams,
   PaymentStatsParams,
   PendingPaymentResponse,
+  PaymentDebtBreakdownResponse,
 } from '../api/types'
 
 /**
@@ -62,6 +64,18 @@ export function usePaymentStats(params: PaymentStatsParams = {}) {
   return useQuery({
     queryKey: ['payment-stats', params],
     queryFn: () => getPaymentStats(params),
+  })
+}
+
+/**
+ * Get payment debt component breakdown
+ */
+export function usePaymentDebtBreakdown(paymentId: string | null, options?: { enabled?: boolean }) {
+  return useQuery<PaymentDebtBreakdownResponse>({
+    queryKey: ['payment-debt-breakdown', paymentId],
+    queryFn: () => getPaymentDebtBreakdown(paymentId!),
+    enabled: options?.enabled !== false && !!paymentId,
+    staleTime: 60_000,
   })
 }
 
