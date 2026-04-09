@@ -85,6 +85,7 @@ import { PermissionGuard } from '@/components/auth'
 import { useHasPermission } from '@/hooks/usePermissions'
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
+import { formatUkrainePhoneForDisplay, normalizeUkrainePhoneToDb } from '@/lib/phone'
 
 // Extended types for SMS and Call items with API-specific properties
 type ExtendedSMSItem = {
@@ -491,7 +492,7 @@ export function ClientDetailPage() {
           return {
             id: a.id,
             date: formatDateTime(a.created_at),
-            phoneNumber: a.phone_used?.trim() ? a.phone_used : '-',
+            phoneNumber: formatUkrainePhoneForDisplay(a.phone_used),
             type: a.type_code
               ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
               : (a.type_name ?? '-'),
@@ -3399,7 +3400,10 @@ export function ClientDetailPage() {
             setIsNoteModalOpen(false)
             setSelectedPhoneForNote('')
           }}
-          phoneNumber={selectedPhoneForNote || client.phones?.[0]?.number || ''}
+          phoneNumber={formatUkrainePhoneForDisplay(
+            selectedPhoneForNote || client.phones?.[0]?.number || '',
+            ''
+          )}
           clientId={clientId}
           loanOptions={loans
             .filter((loan) => loan.status.toLowerCase() !== 'closed')
@@ -3408,9 +3412,17 @@ export function ClientDetailPage() {
               contractNumber: loan.contract_number ?? String(loan.id),
             }))}
           onSave={(data) => {
+            const selectedPhone = selectedPhoneForNote || client.phones?.[0]?.number || ''
+            const fallbackPhone = selectedPhone.trim() || undefined
+            const normalizedPhoneForPayload =
+              normalizeUkrainePhoneToDb(selectedPhone) ?? fallbackPhone
             createNote({
               clientId,
-              data,
+              data: {
+                ...data,
+                // Persist phone in canonical DB format so interaction history always has it.
+                phone_used: normalizedPhoneForPayload,
+              },
             })
             setIsNoteModalOpen(false)
           }}

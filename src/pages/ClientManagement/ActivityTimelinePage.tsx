@@ -43,6 +43,7 @@ import type { InteractionResponse } from '@/features/clients/api/types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { formatUkrainePhoneForDisplay, normalizeUkrainePhoneToDb } from '@/lib/phone'
 
 export function ActivityTimelinePage() {
   const { t } = useTranslation('common')
@@ -139,7 +140,7 @@ export function ActivityTimelinePage() {
     return items.map((a) => ({
       id: a.id,
       date: formatDateTime(a.created_at),
-      phoneNumber: a.phone_used?.trim() ? a.phone_used : '-',
+      phoneNumber: formatUkrainePhoneForDisplay(a.phone_used),
       type_id: a.type_id,
       type: a.type_code
         ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
@@ -487,7 +488,7 @@ export function ActivityTimelinePage() {
       <AddNoteModal
         open={isNoteModalOpen}
         onClose={() => setIsNoteModalOpen(false)}
-        phoneNumber={client?.phones?.[0]?.number || ''}
+        phoneNumber={formatUkrainePhoneForDisplay(client?.phones?.[0]?.number || '', '')}
         clientId={clientId}
         loanOptions={loans
           .filter((loan) => loan.status.toLowerCase() !== 'closed')
@@ -496,7 +497,17 @@ export function ActivityTimelinePage() {
             contractNumber: loan.contract_number ?? String(loan.id),
           }))}
         onSave={(data) => {
-          createNote({ clientId, data })
+          const selectedPhone = client?.phones?.[0]?.number || ''
+          const fallbackPhone = selectedPhone.trim() || undefined
+          const normalizedPhoneForPayload =
+            normalizeUkrainePhoneToDb(selectedPhone) ?? fallbackPhone
+          createNote({
+            clientId,
+            data: {
+              ...data,
+              phone_used: normalizedPhoneForPayload,
+            },
+          })
         }}
       />
 

@@ -89,6 +89,7 @@ export function useCreateInteraction() {
         subtype_id: data.subtype_id,
         contact_type_id: data.contact_type_id,
         result_id: data.result_id,
+        phone_used: data.phone_used,
         summary: data.summary,
         interaction_date: new Date().toISOString(),
         promise_to_pay_date: data.promise_to_pay_date,
