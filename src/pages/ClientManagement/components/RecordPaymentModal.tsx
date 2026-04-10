@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import type { DebtDetail } from '@/features/clients/api/types'
 
 /**
@@ -65,17 +66,7 @@ export function RecordPaymentModal({
   canVerify = true,
   onSave,
 }: RecordPaymentModalProps) {
-  const { t, i18n } = useTranslation('common')
-
-  const formatCurrency = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    if (isNaN(num)) return '₴ 0,00'
-    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    return `₴ ${num.toLocaleString(locale, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`
-  }
+  const { t } = useTranslation('common')
   const [paymentAmount, setPaymentAmount] = useState<string>('')
   const [paymentDate, setPaymentDate] = useState<Date | null>(getTodayAtMidnight)
   const [paymentMethod, setPaymentMethod] = useState<'Bank Transfer' | 'Online Gateway' | 'Card'>(
@@ -163,7 +154,7 @@ export function RecordPaymentModal({
     if (numValue > currentDebt) {
       setAmountError(
         t('pages.clients.modals.recordPayment.validationPaymentExceedsDebt', {
-          amount: formatCurrency(currentDebt),
+          amount: formatMoneyUAHTwoDecimals(currentDebt),
         })
       )
       return
@@ -180,7 +171,7 @@ export function RecordPaymentModal({
     if (amountValue > currentDebt) {
       setAmountError(
         t('pages.clients.modals.recordPayment.validationPaymentExceedsDebt', {
-          amount: formatCurrency(currentDebt),
+          amount: formatMoneyUAHTwoDecimals(currentDebt),
         })
       )
       return
@@ -262,7 +253,7 @@ export function RecordPaymentModal({
           </div>
           <span className="text-dark-500 text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
             {t('pages.clients.modals.recordPayment.currentDebt')}{' '}
-            <span className="font-medium">{formatCurrency(currentDebt)}</span>
+            <span className="font-medium">{formatMoneyUAHTwoDecimals(currentDebt)}</span>
           </span>
         </div>
 
@@ -293,8 +284,10 @@ export function RecordPaymentModal({
                     <div className="flex items-center gap-2 self-stretch">
                       <Icons.Money01 size={20} className="text-gray-700" />
                       <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
-                        ({t('pages.clients.modals.recordPayment.min')} {formatCurrency(minAmount)},{' '}
-                        {t('pages.clients.modals.recordPayment.max')} {formatCurrency(maxAmount)})
+                        ({t('pages.clients.modals.recordPayment.min')}{' '}
+                        {formatMoneyUAHTwoDecimals(minAmount)},{' '}
+                        {t('pages.clients.modals.recordPayment.max')}{' '}
+                        {formatMoneyUAHTwoDecimals(maxAmount)})
                       </span>
                     </div>
                   )}
@@ -324,7 +317,7 @@ export function RecordPaymentModal({
                           <SelectItem key={debt.id} value={String(debt.id)}>
                             {debt.contract_number}
                             {debt.remaining_debt_amount
-                              ? ` • ${formatCurrency(debt.remaining_debt_amount)}`
+                              ? ` • ${formatMoneyUAHTwoDecimals(debt.remaining_debt_amount)}`
                               : ''}
                           </SelectItem>
                         ))}
@@ -419,7 +412,7 @@ export function RecordPaymentModal({
                   </span>
                   <div className="flex flex-1 items-start justify-end gap-2.5">
                     <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                      {formatCurrency(currentDebt)}
+                      {formatMoneyUAHTwoDecimals(currentDebt)}
                     </span>
                   </div>
                 </div>
@@ -431,7 +424,7 @@ export function RecordPaymentModal({
                       </span>
                       <div className="flex flex-1 items-center gap-2.5">
                         <span className="text-dark-500 flex-1 text-right text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                          - {formatCurrency(amountValue)}
+                          - {formatMoneyUAHTwoDecimals(amountValue)}
                         </span>
                       </div>
                     </div>
@@ -443,7 +436,7 @@ export function RecordPaymentModal({
                     </span>
                     <div className="flex flex-1 items-center gap-2.5">
                       <span className="text-dark-500 flex-1 text-right text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                        {formatCurrency(Math.max(0, newDebt))}
+                        {formatMoneyUAHTwoDecimals(Math.max(0, newDebt))}
                       </span>
                     </div>
                   </div>
