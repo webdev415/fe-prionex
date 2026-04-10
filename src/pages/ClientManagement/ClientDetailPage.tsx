@@ -3826,6 +3826,7 @@ export function ClientDetailPage() {
                   onChange={({ value }) =>
                     setConnectRrForm((prev) => ({ ...prev, connectionDate: value }))
                   }
+                  format="dd-MM-yyyy"
                   placeholder={t('pages.clients.detail.rrConnectionDate')}
                 />
                 <Input
@@ -3876,6 +3877,7 @@ export function ClientDetailPage() {
                             return { ...prev, payments }
                           })
                         }}
+                        format="dd-MM-yyyy"
                         placeholder={t('pages.clients.detail.rrPaymentDate')}
                       />
                       <Input
