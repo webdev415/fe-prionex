@@ -11,6 +11,7 @@ import { paymentApi } from '../api/paymentApi'
 import { taskApi } from '../api/taskApi'
 import { interactionApi } from '../api/interactionApi'
 import { callSmsApi } from '../api/callSmsApi'
+import { documentApi } from '../api/documentApi'
 import type {
   AssignClientRequest,
   BulkAssignClientRequest,
@@ -466,12 +467,12 @@ export function useClientOperatorsSection(clientId: number, enabled = true) {
 }
 
 /**
- * Get client documents. KEPT AS MOCK (no backend infrastructure exists).
+ * Get client documents from backend API.
  */
 export function useClientDocuments(clientId: number, enabled = true) {
   return useQuery({
     queryKey: clientKeys.documents(clientId),
-    queryFn: () => Promise.resolve([]), // No backend API yet - return empty array instead of mock data
+    queryFn: () => documentApi.list(clientId),
     enabled: enabled && clientId > 0,
     staleTime: 60000,
   })
