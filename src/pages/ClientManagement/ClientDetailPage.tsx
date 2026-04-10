@@ -9,7 +9,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueries } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
-import { formatDate, formatDateTime } from '@/lib/formatters'
+import { formatDate, formatDateTime, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
@@ -849,30 +849,6 @@ export function ClientDetailPage() {
     )
   }
 
-  const formatCurrency = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    if (isNaN(num)) return '0'
-    return new Intl.NumberFormat('uk-UA', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-      useGrouping: true,
-    })
-      .format(num)
-      .replace(/,/g, ' ')
-  }
-
-  const formatCurrencyWithDecimals = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    if (isNaN(num)) return '0'
-    return new Intl.NumberFormat('uk-UA', {
-      minimumFractionDigits: num % 1 !== 0 ? 1 : 0,
-      maximumFractionDigits: 1,
-      useGrouping: true,
-    })
-      .format(num)
-      .replace(/,/g, ' ')
-  }
-
   const loanColumns: Column<(typeof client.loans)[0]>[] = [
     { key: 'loanNumber', header: t('pages.clients.detail.tableHeaders.loanNumber'), align: 'left' },
     { key: 'issueDate', header: t('pages.clients.detail.tableHeaders.issueDate'), align: 'left' },
@@ -886,25 +862,25 @@ export function ClientDetailPage() {
       key: 'principalAmount',
       header: t('pages.clients.detail.tableHeaders.principalAmount'),
       align: 'right',
-      render: (loan) => `₴ ${formatCurrency(loan.principalAmount)}`,
+      render: (loan) => formatMoneyUAHTwoDecimals(loan.principalAmount),
     },
     {
       key: 'principalDebt',
       header: t('pages.clients.detail.tableHeaders.principalDebt'),
       align: 'right',
-      render: (loan) => `₴ ${formatCurrency(loan.principalDebt)}`,
+      render: (loan) => formatMoneyUAHTwoDecimals(loan.principalDebt),
     },
     {
       key: 'remainingDebtAmount',
       header: t('pages.clients.detail.tableHeaders.remainingDebtAmount'),
       align: 'right',
-      render: (loan) => `₴ ${formatCurrency(loan.remainingDebtAmount)}`,
+      render: (loan) => formatMoneyUAHTwoDecimals(loan.remainingDebtAmount),
     },
     {
       key: 'totalToReturn',
       header: t('pages.clients.detail.tableHeaders.totalToReturn'),
       align: 'right',
-      render: (loan) => `₴ ${formatCurrency(loan.totalToReturn)}`,
+      render: (loan) => formatMoneyUAHTwoDecimals(loan.totalToReturn),
     },
     {
       key: 'actions',
@@ -948,7 +924,7 @@ export function ClientDetailPage() {
       key: 'restructuring_amount',
       header: t('pages.clients.detail.tableHeaders.rrAmount'),
       align: 'right',
-      render: (row) => `₴ ${formatCurrency(Number(row.restructuring_amount ?? 0))}`,
+      render: (row) => formatMoneyUAHTwoDecimals(Number(row.restructuring_amount ?? 0)),
     },
     {
       key: 'first_payment_date',
@@ -960,7 +936,7 @@ export function ClientDetailPage() {
       key: 'remaining_debt_amount',
       header: t('pages.clients.detail.tableHeaders.totalToBeRepaid'),
       align: 'right',
-      render: (row) => `₴ ${formatCurrency(Number(row.remaining_debt_amount ?? 0))}`,
+      render: (row) => formatMoneyUAHTwoDecimals(Number(row.remaining_debt_amount ?? 0)),
     },
     {
       key: 'status_name',
@@ -1063,7 +1039,7 @@ export function ClientDetailPage() {
       align: 'right',
       className: 'w-[140px] overflow-hidden whitespace-normal break-words',
       render: (activity) =>
-        activity.promisedAmount ? `${formatCurrencyWithDecimals(activity.promisedAmount)}₴` : '-',
+        activity.promisedAmount ? formatMoneyUAHTwoDecimals(activity.promisedAmount) : '-',
     },
     {
       key: 'promisedDate',
@@ -1163,7 +1139,7 @@ export function ClientDetailPage() {
       key: 'amount',
       header: t('pages.clients.detail.tableHeaders.amount'),
       align: 'right',
-      render: (payment) => `₴ ${formatCurrency(payment.amount)}`,
+      render: (payment) => formatMoneyUAHTwoDecimals(payment.amount),
     },
     {
       key: 'paymentMethod',
@@ -1259,7 +1235,7 @@ export function ClientDetailPage() {
       key: 'amount',
       header: t('pages.clients.detail.tableHeaders.amount'),
       align: 'right',
-      render: (writeOff) => `₴ ${formatCurrency(writeOff.amount)}`,
+      render: (writeOff) => formatMoneyUAHTwoDecimals(writeOff.amount),
     },
     {
       key: 'writeOffMethod',
@@ -1290,7 +1266,7 @@ export function ClientDetailPage() {
       key: 'amount',
       header: t('pages.clients.detail.tableHeaders.amount'),
       align: 'right',
-      render: (payment) => `₴ ${formatCurrency(payment.amount)}`,
+      render: (payment) => formatMoneyUAHTwoDecimals(payment.amount),
     },
     {
       key: 'distributionMethod',
@@ -3125,7 +3101,7 @@ export function ClientDetailPage() {
                                       (sum, s) => sum + (s.cost || 0),
                                       0
                                     )
-                                    return `₴${totalCost.toFixed(2)} (${client.callSmsHistory.sms.length} ${t('pages.clients.modals.viewSMS.smsParts')})`
+                                    return `${formatMoneyUAHTwoDecimals(totalCost)} (${client.callSmsHistory.sms.length} ${t('pages.clients.modals.viewSMS.smsParts')})`
                                   })()}
                                 </div>
                               </div>
@@ -3639,7 +3615,7 @@ export function ClientDetailPage() {
                       {t('pages.clients.detail.rrRestructuringAmount')}
                     </span>
                     <span className="text-dark-500 text-xs font-medium sm:text-sm">
-                      ₴ {formatCurrency(Number(rrDetail.restructuring_amount ?? 0))}
+                      {formatMoneyUAHTwoDecimals(Number(rrDetail.restructuring_amount ?? 0))}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
@@ -3655,7 +3631,7 @@ export function ClientDetailPage() {
                       {t('pages.clients.detail.rrFirstPaymentAmount')}
                     </span>
                     <span className="text-dark-500 text-xs font-medium sm:text-sm">
-                      ₴ {formatCurrency(Number(rrDetail.first_payment_amount ?? 0))}
+                      {formatMoneyUAHTwoDecimals(Number(rrDetail.first_payment_amount ?? 0))}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
@@ -3685,7 +3661,7 @@ export function ClientDetailPage() {
                             key: 'amount',
                             header: t('pages.clients.detail.rrPaymentAmount'),
                             align: 'right',
-                            render: (p) => `₴ ${formatCurrency(Number(p.amount ?? 0))}`,
+                            render: (p) => formatMoneyUAHTwoDecimals(Number(p.amount ?? 0)),
                           },
                         ]}
                         data={rrDetail.payments.map((p, idx) => ({ ...p, id: idx }))}

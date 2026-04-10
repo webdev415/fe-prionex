@@ -21,6 +21,7 @@ import { useCallStore } from '@/stores/callStore'
 import { useCallDetails, useHangupCall } from '@/features/calls/hooks/useCall'
 import { useCallStateUpdates } from '@/features/calls/hooks/useCallStateUpdates'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 
 export type CallState = 'initial' | 'dialing' | 'connected' | 'ended' | 'failed' | 'incoming'
 export type CallType = 'white-line' | 'gray-line' | 'spam-calls'
@@ -978,15 +979,6 @@ function LoanCard({
   }
 }) {
   const { t } = useTranslation('common')
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('uk-UA', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-      useGrouping: true,
-    })
-      .format(amount)
-      .replace(/,/g, ' ')
-  }
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -1044,7 +1036,7 @@ function LoanCard({
             {t('pages.clients.modals.callDialog.loanPrincipal')}:
           </span>
           <span className="text-dark-500 text-sm font-medium">
-            ₴ {formatCurrency(loan.loanPrincipal)}
+            {formatMoneyUAHTwoDecimals(loan.loanPrincipal)}
           </span>
         </div>
         <div className="flex flex-col gap-1">
@@ -1057,7 +1049,9 @@ function LoanCard({
           <span className="text-xs text-gray-600">
             {t('pages.clients.detail.tableHeaders.debt')}:
           </span>
-          <span className="text-dark-500 text-sm font-medium">₴ {formatCurrency(loan.debt)}</span>
+          <span className="text-dark-500 text-sm font-medium">
+            {formatMoneyUAHTwoDecimals(loan.debt)}
+          </span>
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-xs text-gray-600">

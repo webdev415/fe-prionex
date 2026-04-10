@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { usePayment, usePaymentDebtBreakdown } from '@/features/payments/hooks/usePayments'
+import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 
 class BreakdownErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   state = { hasError: false }
@@ -33,7 +34,7 @@ export function PaymentDebtBreakdown({ paymentId }: PaymentDebtBreakdownProps) {
 }
 
 function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
-  const { t, i18n } = useTranslation('payments')
+  const { t } = useTranslation('payments')
   const { data: payment, isLoading: isLoadingPayment } = usePayment(paymentId)
 
   const isCancelled = payment?.status === 'cancelled'
@@ -47,16 +48,6 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
   } = usePaymentDebtBreakdown(paymentId, {
     enabled: hasDebtId && !isCancelled,
   })
-
-  const formatCurrency = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    if (isNaN(num)) return '₴ 0.00'
-    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    return `₴ ${num.toLocaleString(locale, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`
-  }
 
   const componentLabels: Record<string, string> = {
     principal: t('breakdown.principal'),
@@ -167,7 +158,7 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
                   {componentLabels[item.component] || item.component_label}
                 </td>
                 <td className="py-2 text-right text-gray-600 dark:text-gray-400">
-                  {formatCurrency(item.original_amount)}
+                  {formatMoneyUAHTwoDecimals(item.original_amount)}
                 </td>
                 <td
                   className={`py-2 text-right font-medium ${
@@ -176,17 +167,17 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
                       : 'text-green-600 dark:text-green-400'
                   }`}
                 >
-                  {formatCurrency(item.allocated_amount)}
+                  {formatMoneyUAHTwoDecimals(item.allocated_amount)}
                 </td>
                 <td className="py-2 text-right">
                   {Number(item.remaining_balance) === 0 ? (
                     <span className="inline-flex items-center gap-1 text-green-600 dark:text-green-400">
-                      {formatCurrency(0)}
+                      {formatMoneyUAHTwoDecimals(0)}
                       <Icons.Checkmark className="h-3.5 w-3.5" />
                     </span>
                   ) : (
                     <span className="text-gray-700 dark:text-gray-300">
-                      {formatCurrency(item.remaining_balance)}
+                      {formatMoneyUAHTwoDecimals(item.remaining_balance)}
                     </span>
                   )}
                 </td>
@@ -196,7 +187,7 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
             <tr className="border-t-2 border-gray-300 font-bold dark:border-gray-600">
               <td className="pt-2 text-gray-900 dark:text-gray-100">{t('breakdown.total')}</td>
               <td className="pt-2 text-right text-gray-900 dark:text-gray-100">
-                {formatCurrency(
+                {formatMoneyUAHTwoDecimals(
                   breakdown.allocation.reduce((sum, a) => sum + Number(a.original_amount), 0)
                 )}
               </td>
@@ -207,10 +198,10 @@ function PaymentDebtBreakdownInner({ paymentId }: PaymentDebtBreakdownProps) {
                     : 'text-green-700 dark:text-green-300'
                 }`}
               >
-                {formatCurrency(breakdown.total_allocated)}
+                {formatMoneyUAHTwoDecimals(breakdown.total_allocated)}
               </td>
               <td className="pt-2 text-right text-gray-900 dark:text-gray-100">
-                {formatCurrency(breakdown.total_remaining_debt)}
+                {formatMoneyUAHTwoDecimals(breakdown.total_remaining_debt)}
               </td>
             </tr>
           </tbody>
