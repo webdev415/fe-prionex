@@ -3619,7 +3619,7 @@ export function ClientDetailPage() {
                       {t('pages.clients.detail.rrFirstPaymentDate')}
                     </span>
                     <span className="text-dark-500 text-xs font-medium sm:text-sm">
-                      {rrDetail.first_payment_date ?? '-'}
+                      {formatDate(rrDetail.first_payment_date ?? undefined)}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
@@ -3651,7 +3651,7 @@ export function ClientDetailPage() {
                           {
                             key: 'date',
                             header: t('pages.clients.detail.rrPaymentDate'),
-                            render: (p) => p.date ?? '-',
+                            render: (p) => formatDate(p.date ?? undefined),
                           },
                           {
                             key: 'amount',
