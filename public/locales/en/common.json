@@ -118,7 +118,8 @@
         "impersonating": "Impersonating...",
         "status": "Status",
         "activate": "Activate",
-        "deactivate": "Deactivate"
+        "deactivate": "Deactivate",
+        "resetPassword": "Reset Password"
       },
       "messages": {
         "nowViewingAs": "Now viewing as {{username}}",
@@ -153,6 +154,14 @@
           "title": "View User",
           "loadingUserData": "Loading user data...",
           "userNotFound": "User not found"
+        },
+        "resetPassword": {
+          "title": "Reset Password",
+          "confirmTitle": "Reset this user's password?",
+          "confirmBody": "This will replace their current password with the system default. The action is recorded in the audit log.",
+          "confirmDetail": "The new password will be: {{password}}",
+          "failed": "Failed to reset password",
+          "resetting": "Resetting..."
         },
         "changeStatus": {
           "activateTitle": "Activate User",

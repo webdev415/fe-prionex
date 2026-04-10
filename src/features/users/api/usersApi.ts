@@ -95,12 +95,9 @@ export async function reactivateUser(
 }
 
 /**
- * Reset user password
+ * Admin reset user password
  *
- * Generates a temporary password and forces user to change it on next login.
- *
- * @param userId - User ID
- * @returns Temporary password to provide to user
+ * Sets password to the system default (hashed server-side); user must change it on next login.
  */
 export async function resetPassword(userId: number): Promise<ResetPasswordResponse> {
   const response = await api.post<ResetPasswordResponse>(
