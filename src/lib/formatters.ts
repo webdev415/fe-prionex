@@ -14,6 +14,14 @@ function toDMY(d: Date): string {
   return `${day}-${month}-${year}`
 }
 
+/** DD.MM.YYYY (e.g. SMS template {due_date}) */
+function toDMYDot(d: Date): string {
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const year = d.getFullYear()
+  return `${day}.${month}.${year}`
+}
+
 /**
  * Format period display (start - end dates)
  */
@@ -81,6 +89,16 @@ export function formatDate(dateStr?: string): string {
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return '—'
   return toDMY(d)
+}
+
+/**
+ * Format date for SMS variables → DD.MM.YYYY. Empty string if missing/invalid.
+ */
+export function formatDateDotDMY(dateStr?: string | null): string {
+  if (dateStr == null || dateStr === '') return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ''
+  return toDMYDot(d)
 }
 
 /**

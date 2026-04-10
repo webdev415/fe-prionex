@@ -1760,7 +1760,7 @@
         "currentDebtAmount": "Текущая сумма долга",
         "operatorName": "Имя оператора",
         "operatorPhone": "Телефон оператора",
-        "paymentDueDate": "Дата платежа",
+        "paymentDueDate": "Последняя дата обещания из взаимодействий (ДД.ММ.ГГГГ)",
         "contractLoanNumber": "Номер договора/Займа"
       },
       "forms": {

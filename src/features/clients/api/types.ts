@@ -137,6 +137,9 @@ export interface ClientDetail extends Client {
   // Additional manual priority fields
   manual_priority_set_at?: string | null
   manual_priority_set_by?: number | null
+
+  /** Max promise_to_pay_date over non-deleted interactions (ISO); used for SMS {due_date} */
+  max_promise_to_pay_date?: string | null
 }
 
 export interface CreateClientRequest {

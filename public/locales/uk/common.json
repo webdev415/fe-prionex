@@ -1755,7 +1755,7 @@
         "currentDebtAmount": "Поточна сума боргу",
         "operatorName": "Ім'я оператора",
         "operatorPhone": "Телефон оператора",
-        "paymentDueDate": "Дата платежу",
+        "paymentDueDate": "Найпізніша дата обіцянки з взаємодій (ДД.ММ.РРРР)",
         "contractLoanNumber": "Номер договору/Позики"
       },
       "forms": {
