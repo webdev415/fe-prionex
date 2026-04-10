@@ -47,7 +47,10 @@ export function usePaymentImportExecute() {
 export function useDownloadPaymentImportTemplate() {
   return useMutation({
     mutationFn: async () => {
-      const csvContent = 'loan_number,payment_amount,payment_date,payment_method,payment_type\n'
+      const csvContent =
+        'loan_number,tin,payment_amount,payment_date,payment_method,payment_type\n' +
+        'КД-2024-001234,1234567890,5000.00,2026-03-10,bank_transfer,основной долг\n' +
+        'LOAN-2024-005678,9876543210,2500.50,2026-03-11,cash,principal\n'
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
       return blob
     },

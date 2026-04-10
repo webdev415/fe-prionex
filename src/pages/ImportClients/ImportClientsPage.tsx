@@ -33,14 +33,17 @@ export function ImportClientsPage() {
   const lastShownJobIdRef = useRef<number | string | null>(null)
 
   // Fetch latest pending or in-progress import job (check both currentJobId and latest pending/in-progress)
+  // Filter to client import types only — exclude payment_import jobs
   const { data: importJobsData, refetch: refetchImportJobs } = useImportJobs({
     page: 1,
     page_size: 10, // Get more jobs to filter client-side
   })
 
-  // Get the latest pending or in-progress job
+  // Get the latest pending or in-progress job, excluding payment_import jobs
   const latestInProgressJob = importJobsData?.items?.find(
-    (job) => job.status === 'pending' || job.status === 'in_progress'
+    (job) =>
+      (job.status === 'pending' || job.status === 'in_progress') &&
+      job.import_type !== 'payment_import'
   )
 
   // Use currentJobId if set, otherwise use latest in-progress job ID
