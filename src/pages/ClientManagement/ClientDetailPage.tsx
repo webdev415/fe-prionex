@@ -1445,10 +1445,38 @@ export function ClientDetailPage() {
   ]
 
   const documentColumns: Column<(typeof client.documents)[0]>[] = [
-    { key: 'name', header: t('pages.clients.detail.tableHeaders.documentName'), align: 'left' },
-    { key: 'type', header: t('pages.clients.detail.tableHeaders.documentType'), align: 'left' },
-    { key: 'uploadDate', header: t('pages.clients.detail.tableHeaders.uploadDate'), align: 'left' },
-    { key: 'size', header: t('pages.clients.detail.tableHeaders.documentSize'), align: 'left' },
+    {
+      key: 'original_filename',
+      header: t('pages.clients.detail.tableHeaders.documentName'),
+      align: 'left',
+    },
+    {
+      key: 'document_type',
+      header: t('pages.clients.detail.tableHeaders.documentType'),
+      align: 'left',
+    },
+    {
+      key: 'created_at',
+      header: t('pages.clients.detail.tableHeaders.uploadDate'),
+      align: 'left',
+      render: (row) => {
+        const d = row.created_at
+        if (!d) return '-'
+        return new Date(d).toLocaleDateString()
+      },
+    },
+    {
+      key: 'file_size',
+      header: t('pages.clients.detail.tableHeaders.documentSize'),
+      align: 'left',
+      render: (row) => {
+        const bytes = row.file_size
+        if (!bytes) return '-'
+        if (bytes < 1024) return `${bytes} B`
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+      },
+    },
   ]
 
   return (
