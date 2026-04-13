@@ -9,6 +9,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueries } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
+import { DocumentsAccordion } from './components/DocumentsAccordion'
 import { formatDate, formatDateTime, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -1421,40 +1422,7 @@ export function ClientDetailPage() {
       : []),
   ]
 
-  const documentColumns: Column<(typeof client.documents)[0]>[] = [
-    {
-      key: 'original_filename',
-      header: t('pages.clients.detail.tableHeaders.documentName'),
-      align: 'left',
-    },
-    {
-      key: 'document_type',
-      header: t('pages.clients.detail.tableHeaders.documentType'),
-      align: 'left',
-    },
-    {
-      key: 'created_at',
-      header: t('pages.clients.detail.tableHeaders.uploadDate'),
-      align: 'left',
-      render: (row) => {
-        const d = row.created_at
-        if (!d) return '-'
-        return new Date(d).toLocaleDateString()
-      },
-    },
-    {
-      key: 'file_size',
-      header: t('pages.clients.detail.tableHeaders.documentSize'),
-      align: 'left',
-      render: (row) => {
-        const bytes = row.file_size
-        if (!bytes) return '-'
-        if (bytes < 1024) return `${bytes} B`
-        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-      },
-    },
-  ]
+  // documentColumns removed — replaced by DocumentsAccordion component
 
   return (
     <TooltipProvider>
@@ -3219,16 +3187,16 @@ export function ClientDetailPage() {
                   </div>
                 )}
 
-                {/* Tab 6: Documents (no backend infrastructure yet - shows empty) */}
+                {/* Tab 6: Documents — accordion grouped by debt */}
                 {activeRightCardTab === 'documents' && (
                   <div className="flex flex-1 flex-col items-start gap-2.5 self-stretch p-3 md:p-6">
                     {isDocumentsLoading ? (
                       <TableSkeleton columns={4} rows={3} />
                     ) : (
-                      <DataTable
-                        columns={documentColumns}
-                        data={client.documents}
-                        className="w-full"
+                      <DocumentsAccordion
+                        documents={client.documents}
+                        loans={client.loans}
+                        clientId={clientId}
                       />
                     )}
                   </div>
