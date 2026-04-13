@@ -12,7 +12,7 @@ import { Sidebar, type SidebarItem, type SidebarSubItem } from './Sidebar'
 import { SearchBar } from './SearchBar'
 import { UserProfile } from './UserProfile'
 import { MinimizedCallBubble } from './MinimizedCallBubble'
-import { TaskBell } from './TaskBell'
+import { NotificationBell } from './NotificationBell'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
@@ -799,12 +799,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Desktop: Project Selector, Language Switcher and User Profile */}
           <div className="hidden items-center gap-3 lg:flex">
             <MinimizedCallBubble />
-            <TaskBell />
+            <NotificationBell />
             <UserProfile onLogoutClick={handleLogoutClick} />
           </div>
 
-          {/* Mobile: Tree dropdown with all actions */}
-          <MobileHeaderMenu onLogoutClick={handleLogoutClick} />
+          {/* Mobile: Notification bell + dropdown menu */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <NotificationBell />
+            <MobileHeaderMenu onLogoutClick={handleLogoutClick} />
+          </div>
         </header>
 
         {/* Scrollable Page Content with top padding for fixed header */}

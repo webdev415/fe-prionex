@@ -76,6 +76,13 @@ function usePreviewColumns(): Column<PreviewRowWithId>[] {
         ),
       },
       {
+        key: 'tin',
+        header: 'TIN',
+        render: (row: PreviewRowWithId) => (
+          <span className="text-xs text-gray-600">{row.tin || '—'}</span>
+        ),
+      },
+      {
         key: 'client_name',
         header: 'Client',
         render: (row: PreviewRowWithId) => (
@@ -101,6 +108,28 @@ function usePreviewColumns(): Column<PreviewRowWithId>[] {
         render: (row: PreviewRowWithId) => (
           <span className="text-xs text-gray-600">{row.payment_method}</span>
         ),
+      },
+      {
+        key: 'has_pending_match',
+        header: 'Type',
+        render: (row: PreviewRowWithId) => {
+          if (row.status === 'error') return <span className="text-xs text-gray-400">—</span>
+          if (row.has_pending_match === true) {
+            return (
+              <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                Pending
+              </span>
+            )
+          }
+          if (row.has_pending_match === false) {
+            return (
+              <span className="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">
+                New
+              </span>
+            )
+          }
+          return <span className="text-xs text-gray-400">—</span>
+        },
       },
       {
         key: 'status',

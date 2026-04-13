@@ -14,6 +14,14 @@ function toDMY(d: Date): string {
   return `${day}-${month}-${year}`
 }
 
+/** DD.MM.YYYY (e.g. SMS template {due_date}) */
+function toDMYDot(d: Date): string {
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const year = d.getFullYear()
+  return `${day}.${month}.${year}`
+}
+
 /**
  * Format period display (start - end dates)
  */
@@ -66,6 +74,30 @@ export function formatCurrency(amount?: string | number | null): string {
 }
 
 /**
+ * UAH display for client profile / debt flows: `₴ ` prefix, space as thousands separator,
+ * period as decimal separator, always exactly two fraction digits (rounded via integer cents).
+ * Examples: 50 → "₴ 50.00", 50.5 → "₴ 50.50", 50.559 → "₴ 50.56"
+ */
+export function formatMoneyUAHTwoDecimals(amount: string | number | null | undefined): string {
+  if (amount === undefined || amount === null || amount === '') {
+    return '₴ 0.00'
+  }
+  const num = typeof amount === 'string' ? parseFloat(amount) : Number(amount)
+  if (Number.isNaN(num)) {
+    return '₴ 0.00'
+  }
+  const negative = num < 0
+  const abs = Math.abs(num)
+  const cents = Math.round(abs * 100 + Number.EPSILON)
+  const intPart = Math.floor(cents / 100)
+  const frac = cents % 100
+  const grouped = String(intPart).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  const fracStr = String(frac).padStart(2, '0')
+  const body = `${grouped}.${fracStr}`
+  return negative ? `₴ -${body}` : `₴ ${body}`
+}
+
+/**
  * Format number with thousand separators
  */
 export function formatNumber(num?: number): string {
@@ -81,6 +113,16 @@ export function formatDate(dateStr?: string): string {
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return '—'
   return toDMY(d)
+}
+
+/**
+ * Format date for SMS variables → DD.MM.YYYY. Empty string if missing/invalid.
+ */
+export function formatDateDotDMY(dateStr?: string | null): string {
+  if (dateStr == null || dateStr === '') return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ''
+  return toDMYDot(d)
 }
 
 /**

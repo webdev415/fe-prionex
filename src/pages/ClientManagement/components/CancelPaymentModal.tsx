@@ -6,7 +6,7 @@
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { convertUTCToUserTimezone, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -44,18 +44,8 @@ export interface CancelPaymentModalProps {
 }
 
 export function CancelPaymentModal({ open, onClose, payment, onConfirm }: CancelPaymentModalProps) {
-  const { t, i18n } = useTranslation('common')
+  const { t } = useTranslation('common')
   const userTimezone = useAuthStore((state) => state.user?.timezone)
-
-  const formatCurrency = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    if (isNaN(num)) return '₴ 0,00'
-    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    return `₴ ${num.toLocaleString(locale, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`
-  }
   const [reason, setReason] = useState<string>('')
   const [additionalDetails, setAdditionalDetails] = useState<string>('')
   const [isConfirmed, setIsConfirmed] = useState(false)
@@ -135,7 +125,9 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.amount')}{' '}
-                      <span className="font-medium">{formatCurrency(payment.amount)}</span>
+                      <span className="font-medium">
+                        {formatMoneyUAHTwoDecimals(payment.amount)}
+                      </span>
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
@@ -243,13 +235,17 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.currentDebt')}{' '}
-                      <span className="font-medium">{formatCurrency(payment.currentDebt)}</span>
+                      <span className="font-medium">
+                        {formatMoneyUAHTwoDecimals(payment.currentDebt)}
+                      </span>
                     </span>
                   </div>
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.cancelPayment.cancelledPayment')}{' '}
-                      <span className="font-medium">+{formatCurrency(cancelledAmount)}</span>
+                      <span className="font-medium">
+                        +{formatMoneyUAHTwoDecimals(cancelledAmount)}
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -272,7 +268,7 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
                       {t('pages.clients.modals.cancelPayment.newDebtAfterCancel')}
                     </span>
                     <span className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
-                      {formatCurrency(newDebtAfterCancel)}
+                      {formatMoneyUAHTwoDecimals(newDebtAfterCancel)}
                     </span>
                   </div>
                 </div>
@@ -282,7 +278,7 @@ export function CancelPaymentModal({ open, onClose, payment, onConfirm }: Cancel
                 <Icons.ArrowUp02 size={14} className="text-error-500 sm:size-4" />
                 <span className="text-error-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.cancelPayment.clientDebtWillIncrease')}{' '}
-                  {formatCurrency(debtIncrease)}
+                  {formatMoneyUAHTwoDecimals(debtIncrease)}
                 </span>
               </div>
             </div>

@@ -118,7 +118,8 @@
         "impersonating": "Перегляд...",
         "status": "Статус",
         "activate": "Активувати",
-        "deactivate": "Деактивувати"
+        "deactivate": "Деактивувати",
+        "resetPassword": "Скинути пароль"
       },
       "messages": {
         "nowViewingAs": "Тепер перегляд як {{username}}",
@@ -153,6 +154,14 @@
           "title": "Переглянути користувача",
           "loadingUserData": "Завантаження даних користувача...",
           "userNotFound": "Користувача не знайдено"
+        },
+        "resetPassword": {
+          "title": "Скинути пароль",
+          "confirmTitle": "Скинути пароль цього користувача?",
+          "confirmBody": "Поточний пароль буде замінено на стандартний системний. Дія фіксується в журналі аудиту.",
+          "confirmDetail": "Новий пароль буде: {{password}}",
+          "failed": "Не вдалося скинути пароль",
+          "resetting": "Скидання..."
         },
         "changeStatus": {
           "activateTitle": "Активувати користувача",
@@ -1746,7 +1755,7 @@
         "currentDebtAmount": "Поточна сума боргу",
         "operatorName": "Ім'я оператора",
         "operatorPhone": "Телефон оператора",
-        "paymentDueDate": "Дата платежу",
+        "paymentDueDate": "Найпізніша дата обіцянки з взаємодій (ДД.ММ.РРРР)",
         "contractLoanNumber": "Номер договору/Позики"
       },
       "forms": {

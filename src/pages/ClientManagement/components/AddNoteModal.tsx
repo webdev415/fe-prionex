@@ -51,6 +51,7 @@ export interface InteractionCreateData {
   contact_type_id?: number
   result_id?: number
   debt_id?: number
+  phone_used?: string
   summary?: string
   promise_to_pay_date?: string
   promise_to_pay_amount?: number

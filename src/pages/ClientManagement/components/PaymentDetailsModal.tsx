@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { convertUTCToUserTimezone, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
 import { PaymentDebtBreakdown } from './PaymentDebtBreakdown'
 // TODO: When backend API is ready, import: import api from '@/lib/api'
@@ -59,18 +59,8 @@ export function PaymentDetailsModal({
   onPrintReceipt,
   onDownloadReceipt,
 }: PaymentDetailsModalProps) {
-  const { t, i18n } = useTranslation('common')
+  const { t } = useTranslation('common')
   const userTimezone = useAuthStore((state) => state.user?.timezone)
-
-  const formatCurrency = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    if (isNaN(num)) return '₴ 0.00'
-    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    return `₴ ${num.toLocaleString(locale, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`
-  }
   const hasDebt = Number(payment.newDebt) > 0
 
   // Helper function to check if payment date is less than 7 days old
@@ -241,7 +231,9 @@ export function PaymentDetailsModal({
                   <div className="flex items-start gap-6 self-stretch">
                     <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                       {t('pages.clients.modals.paymentDetails.amount')}{' '}
-                      <span className="font-medium">{formatCurrency(payment.amount)}</span>
+                      <span className="font-medium">
+                        {formatMoneyUAHTwoDecimals(payment.amount)}
+                      </span>
                     </span>
                   </div>
                 </div>
@@ -350,7 +342,7 @@ export function PaymentDetailsModal({
                   {t('pages.clients.modals.paymentDetails.debtBefore')}
                 </span>
                 <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
-                  {formatCurrency(payment.currentDebt)}
+                  {formatMoneyUAHTwoDecimals(payment.currentDebt)}
                 </span>
               </div> */}
               <div className="flex flex-col items-start gap-1 self-stretch">
@@ -359,7 +351,7 @@ export function PaymentDetailsModal({
                     {t('pages.clients.modals.paymentDetails.paymentAmount')}
                   </span>
                   <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
-                    - {formatCurrency(payment.amount)}
+                    - {formatMoneyUAHTwoDecimals(payment.amount)}
                   </span>
                 </div>
 
@@ -370,7 +362,7 @@ export function PaymentDetailsModal({
                     {t('pages.clients.modals.paymentDetails.debtAfter')}
                   </span>
                   <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
-                    {formatCurrency(payment.newDebt)}
+                    {formatMoneyUAHTwoDecimals(payment.newDebt)}
                   </span>
                 </div> */}
               </div>

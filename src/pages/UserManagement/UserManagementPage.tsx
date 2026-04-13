@@ -18,6 +18,7 @@ import { CreateUserModal } from './components/CreateUserModal'
 import { UserDetailModal } from './components/UserDetailModal'
 import { EditUserModal } from './components/EditUserModal'
 import ChangeStatusModal from './components/ChangeStatusModal'
+import { ResetPasswordConfirmModal } from './components/ResetPasswordConfirmModal'
 import type { ApiUser } from '@/features/users/types'
 import { Icons } from '@/lib/icons'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -69,6 +70,7 @@ export function UserManagementPage() {
   const [newStatus, setNewStatus] = useState<'active' | 'inactive'>('active')
   const [impersonatingUserId, setImpersonatingUserId] = useState<number | null>(null)
   const [openDropdownUserId, setOpenDropdownUserId] = useState<number | null>(null)
+  const [resetPasswordUser, setResetPasswordUser] = useState<ApiUser | null>(null)
 
   // Close dropdown when screen size crosses breakpoint (in either direction)
   useEffect(() => {
@@ -274,6 +276,19 @@ export function UserManagementPage() {
               </LinkButton>
             </PermissionGuard>
 
+            <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+              {currentUser?.id !== String(user.id) && (
+                <LinkButton
+                  variant="regular-black"
+                  size="xs"
+                  onClick={() => setResetPasswordUser(user)}
+                  leftIcon={<Icons.LockSync01 size={16} color="#05040D" strokeWidth={1.5} />}
+                >
+                  {t('pages.users.actions.resetPassword')}
+                </LinkButton>
+              )}
+            </PermissionGuard>
+
             <PermissionGuard permission={PERMISSIONS.USERS.IMPERSONATE}>
               {currentUser?.id !== String(user.id) && (
                 <LinkButton
@@ -325,6 +340,20 @@ export function UserManagementPage() {
                     <Icons.PencilEdit size={16} strokeWidth={1.5} />
                     <span>{t('pages.users.actions.edit')}</span>
                   </DropdownMenuItem>
+                </PermissionGuard>
+                <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+                  {currentUser?.id !== String(user.id) && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setOpenDropdownUserId(null)
+                        setResetPasswordUser(user)
+                      }}
+                      className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                    >
+                      <Icons.LockSync01 size={16} strokeWidth={1.5} />
+                      <span>{t('pages.users.actions.resetPassword')}</span>
+                    </DropdownMenuItem>
+                  )}
                 </PermissionGuard>
                 <PermissionGuard permission={PERMISSIONS.USERS.IMPERSONATE}>
                   {currentUser?.id !== String(user.id) && (
@@ -498,6 +527,14 @@ export function UserManagementPage() {
           user={changeStatusUser}
           newStatus={newStatus}
           onClose={() => setChangeStatusUser(null)}
+        />
+      )}
+
+      {resetPasswordUser && (
+        <ResetPasswordConfirmModal
+          open={resetPasswordUser !== null}
+          user={resetPasswordUser}
+          onClose={() => setResetPasswordUser(null)}
         />
       )}
     </div>
