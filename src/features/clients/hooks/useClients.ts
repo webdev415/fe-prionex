@@ -505,6 +505,12 @@ export function useClientActivitiesPaginated(
     type_id?: number
     date_from?: string
     date_to?: string
+    promise_date_from?: string
+    promise_date_to?: string
+    callback_date_from?: string
+    callback_date_to?: string
+    interaction_user_id?: number
+    latest_only?: boolean
   } = {},
   enabled = true
 ) {

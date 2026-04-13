@@ -818,6 +818,7 @@
         "dateOfSale": "Дата продажу боргу",
         "promiseDate": "Обіцянка",
         "callbackDate": "Зворотний дзвінок",
+        "interactionCreatedBy": "Створено",
         "portfolio": "Кредитор/Продавець",
         "status": "Статус",
         "responsibleEmployee": "Відповідальний співробітник",
@@ -859,6 +860,7 @@
         "fromDate": "З дати",
         "toDate": "До дати",
         "clearAll": "Очистити все",
+        "latestOnly": "Показати лише останню взаємодію",
         "noActivityRecordedYet": "Активність ще не записана",
         "resetFilters": "Скинути фільтри",
         "tableHeaders": {
