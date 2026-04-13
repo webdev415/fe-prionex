@@ -6,7 +6,7 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { convertUTCToUserTimezone, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -44,28 +44,8 @@ export interface EditPaymentModalProps {
 }
 
 export function EditPaymentModal({ open, onClose, payment, onSave }: EditPaymentModalProps) {
-  const { t, i18n } = useTranslation('common')
+  const { t } = useTranslation('common')
   const userTimezone = useAuthStore((state) => state.user?.timezone)
-
-  const formatCurrency = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    if (isNaN(num)) return '₴ 0.00'
-    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    return `₴ ${num.toLocaleString(locale, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`
-  }
-
-  const formatCurrencySimple = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    if (isNaN(num)) return '₴ 0'
-    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    return `₴ ${num.toLocaleString(locale, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    })}`
-  }
   // Parse original payment date
   const originalDate = useMemo(() => {
     const date = new Date(payment.paymentDate)
@@ -158,7 +138,7 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
     if (numValue > maxAmount) {
       setAmountError(
         t('pages.clients.modals.recordPayment.validationPaymentExceedsDebt', {
-          amount: formatCurrency(maxAmount),
+          amount: formatMoneyUAHTwoDecimals(maxAmount),
         })
       )
       return
@@ -274,7 +254,7 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                 <div className="flex items-start gap-6 self-stretch">
                   <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                     {t('pages.clients.modals.editPayment.amount')}{' '}
-                    <span className="font-medium">{formatCurrency(payment.amount)}</span>
+                    <span className="font-medium">{formatMoneyUAHTwoDecimals(payment.amount)}</span>
                   </span>
                 </div>
                 <div className="flex items-start gap-6 self-stretch">
@@ -345,8 +325,10 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                   <div className="flex items-center gap-2 self-stretch">
                     <Icons.Money01 size={18} className="text-gray-700 sm:size-5" />
                     <span className="text-xs leading-[150%] font-light tracking-[-0.28px] text-gray-700 sm:text-sm">
-                      ({t('pages.clients.modals.recordPayment.min')} {formatCurrency(100)},{' '}
-                      {t('pages.clients.modals.recordPayment.max')} {formatCurrency(originalDebt)})
+                      ({t('pages.clients.modals.recordPayment.min')}{' '}
+                      {formatMoneyUAHTwoDecimals(100)},{' '}
+                      {t('pages.clients.modals.recordPayment.max')}{' '}
+                      {formatMoneyUAHTwoDecimals(originalDebt)})
                     </span>
                   </div>
                 )}
@@ -440,11 +422,11 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                 </span>
                 <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.editPayment.payment')}{' '}
-                  <span className="font-medium">{formatCurrency(originalAmount)}</span>
+                  <span className="font-medium">{formatMoneyUAHTwoDecimals(originalAmount)}</span>
                 </span>
                 <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.editPayment.debt')}{' '}
-                  <span className="font-medium">{formatCurrencySimple(originalDebt)}</span>
+                  <span className="font-medium">{formatMoneyUAHTwoDecimals(originalDebt)}</span>
                 </span>
               </div>
 
@@ -470,11 +452,11 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
                 </span>
                 <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.editPayment.payment')}{' '}
-                  <span className="font-medium">{formatCurrency(amountValue)}</span>
+                  <span className="font-medium">{formatMoneyUAHTwoDecimals(amountValue)}</span>
                 </span>
                 <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                   {t('pages.clients.modals.editPayment.debt')}{' '}
-                  <span className="font-medium">{formatCurrencySimple(newDebt)}</span>
+                  <span className="font-medium">{formatMoneyUAHTwoDecimals(newDebt)}</span>
                 </span>
               </div>
             </div>
@@ -485,7 +467,7 @@ export function EditPaymentModal({ open, onClose, payment, onSave }: EditPayment
             <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
               {t('pages.clients.modals.editPayment.change')}{' '}
               <span className="font-medium">
-                {formatCurrency(Math.abs(debtChange))}{' '}
+                {formatMoneyUAHTwoDecimals(Math.abs(debtChange))}{' '}
                 {debtChange > 0
                   ? t('pages.clients.modals.editPayment.less')
                   : t('pages.clients.modals.editPayment.more')}{' '}

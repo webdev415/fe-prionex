@@ -25,7 +25,7 @@ import { useClient } from '@/features/clients/hooks/useClients'
 import { authApi } from '@/features/auth/api/authApi'
 import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@/lib/errors'
-import { formatDateDotDMY } from '@/lib/formatters'
+import { formatDateDotDMY, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 
 export interface SendSMSModalProps {
   open: boolean
@@ -424,7 +424,7 @@ export function SendSMSModal({
                       <SelectContent>
                         {loans.map((loan) => (
                           <SelectItem key={loan.id} value={loan.id.toString()}>
-                            {loan.loanNumber} — ₴{Number(loan.totalToRepay).toFixed(2)}
+                            {loan.loanNumber} — {formatMoneyUAHTwoDecimals(loan.totalToRepay)}
                           </SelectItem>
                         ))}
                       </SelectContent>

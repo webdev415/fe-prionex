@@ -220,7 +220,9 @@ export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
                   <Icons.MoneyRemove01 size={14} className="text-gray-600 sm:size-4" />
                   <span className="text-xs font-light text-gray-700 sm:text-sm">
                     {t('pages.clients.modals.viewSMS.cost')}:{' '}
-                    <span className="text-dark-500 font-semibold">₴{cost.toFixed(2)}</span>
+                    <span className="text-dark-500 font-semibold">
+                      {formatMoneyUAHTwoDecimals(cost)}
+                    </span>
                   </span>
                 </div> */}
             </div>
