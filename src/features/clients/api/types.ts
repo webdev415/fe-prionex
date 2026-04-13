@@ -154,17 +154,17 @@ export interface CreateClientRequest {
 }
 
 export interface UpdateClientRequest {
-  tax_id?: string
   first_name?: string
   last_name?: string
-  middle_name?: string
+  middle_name?: string | null
   date_of_birth?: string
-  email?: string
+  email?: string | null
   address?: string
   postal_code?: string
-  marital_status?: string
-  family_members_count?: number
-  income_level?: string
+  marital_status?: string | null
+  family_members_count?: number | null
+  income_level?: string | null
+  tax_id?: string
 }
 
 export interface UpdateEmploymentRequest {
