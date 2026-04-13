@@ -4,10 +4,8 @@ import { useQueryClient } from '@tanstack/react-query'
 
 import type { NotificationItem } from '../types'
 
-const NOTIFICATION_WS_URL =
-  import.meta.env.VITE_NOTIFICATION_WS_URL !== undefined
-    ? import.meta.env.VITE_NOTIFICATION_WS_URL
-    : 'http://localhost:8013'
+const WS_URL =
+  import.meta.env.VITE_WS_URL !== undefined ? import.meta.env.VITE_WS_URL : 'http://localhost:8005'
 
 const MAX_RECONNECT_ATTEMPTS = 10
 
@@ -34,8 +32,8 @@ export function useNotificationSocket(
     const token = localStorage.getItem('prionex_token')
     if (!token) return
 
-    const socket = io(NOTIFICATION_WS_URL + '/notifications', {
-      path: '/ws/socket.io',
+    const socket = io(WS_URL + '/notifications', {
+      path: '/ws/notifications/socket.io',
       transports: ['websocket'],
       query: { token },
       autoConnect: true,
