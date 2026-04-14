@@ -132,7 +132,7 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
           {/* Preview */}
           <button
             onClick={() => setPreviewDoc(doc)}
-            className="hover:bg-secondary-100 rounded p-1 transition-colors"
+            className="text-secondary-500 hover:text-secondary-700 hover:bg-secondary-100 rounded p-1 transition-colors"
             title={t('common.preview', 'Preview')}
           >
             <svg
@@ -150,7 +150,7 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
           {/* Download */}
           <button
             onClick={() => handleDownload(doc)}
-            className="hover:bg-secondary-100 rounded p-1 transition-colors"
+            className="text-secondary-500 hover:text-secondary-700 hover:bg-secondary-100 rounded p-1 transition-colors"
             title={t('common.download', 'Download')}
           >
             <svg
@@ -218,7 +218,7 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
       <div key={key} className="overflow-hidden rounded-lg border bg-white">
         <button
           onClick={() => toggleSection(key)}
-          className="hover:bg-secondary-50 flex w-full items-center gap-2 px-4 py-3 text-left font-medium transition-colors"
+          className="hover:bg-secondary-50 text-secondary-900 flex w-full items-center gap-2 px-4 py-3 text-left font-medium transition-colors"
         >
           <svg
             width="16"
