@@ -10,6 +10,7 @@ import { useQueries } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { DocumentsAccordion } from './components/DocumentsAccordion'
+import { DocumentUploadModal } from './components/DocumentUploadModal'
 import { formatDate, formatDateTime, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -676,6 +677,7 @@ export function ClientDetailPage() {
   const [activeRightCardTab, setActiveRightCardTab] = useState<
     'loans' | 'payments' | 'recommenders' | 'operators' | 'call-sms-history' | 'tasks' | 'documents'
   >('loans')
+  const [isUploadDocModalOpen, setIsUploadDocModalOpen] = useState(false)
   const [activePaymentTab, setActivePaymentTab] = useState<
     'payments' | 'writes-off' | 'primary-creditor'
   >('payments')
@@ -2278,15 +2280,32 @@ export function ClientDetailPage() {
                   <button
                     type="button"
                     data-tab="documents"
-                    onClick={() => setActiveRightCardTab('documents')}
+                    onClick={() => {
+                      if (activeRightCardTab === 'documents') {
+                        setIsUploadDocModalOpen(true)
+                      } else {
+                        setActiveRightCardTab('documents')
+                      }
+                    }}
                     className={cn(
-                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      'group hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
                       activeRightCardTab === 'documents'
                         ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
                         : 'hover:text-secondary-800 border-transparent text-gray-600'
                     )}
                   >
-                    <Icons.File size={20} className="shrink-0 text-current" />
+                    {activeRightCardTab === 'documents' ? (
+                      <>
+                        <span className="group-hover:hidden">
+                          <Icons.File size={20} className="shrink-0 text-current" />
+                        </span>
+                        <span className="bg-primary-300 hidden h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white group-hover:flex">
+                          +
+                        </span>
+                      </>
+                    ) : (
+                      <Icons.File size={20} className="shrink-0 text-current" />
+                    )}
                     <span className="text-xs font-medium whitespace-nowrap md:text-sm">
                       {t('pages.clients.detail.tabs.docs')}
                     </span>
@@ -3991,6 +4010,13 @@ export function ClientDetailPage() {
           </ModalFooter>
         </Modal>
       </div>
+      {/* Document Upload Modal — opens on second click of Documents tab */}
+      <DocumentUploadModal
+        open={isUploadDocModalOpen}
+        onClose={() => setIsUploadDocModalOpen(false)}
+        clientId={clientId}
+        loans={client.loans}
+      />
     </TooltipProvider>
   )
 }

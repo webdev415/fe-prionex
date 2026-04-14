@@ -113,8 +113,8 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
   }
 
   const renderDocRow = (doc: ClientDocument) => (
-    <tr key={doc.id} className="hover:bg-secondary-50 border-b last:border-b-0">
-      <td className="text-secondary-900 px-3 py-2 text-sm font-medium">{doc.original_filename}</td>
+    <tr key={doc.id} className="border-b border-[#EBECE8] last:border-b-0 hover:bg-[#F9FAF8]">
+      <td className="px-3 py-2 text-sm font-medium text-[#05040D]">{doc.original_filename}</td>
       <td className="px-3 py-2">
         <span
           className={cn(
@@ -125,14 +125,14 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
           {TYPE_LABELS[doc.document_type] ?? doc.document_type}
         </span>
       </td>
-      <td className="text-secondary-600 px-3 py-2 text-sm">{formatDate(doc.created_at)}</td>
-      <td className="text-secondary-600 px-3 py-2 text-sm">{formatFileSize(doc.file_size)}</td>
+      <td className="px-3 py-2 text-sm text-[#6B7280]">{formatDate(doc.created_at)}</td>
+      <td className="px-3 py-2 text-sm text-[#6B7280]">{formatFileSize(doc.file_size)}</td>
       <td className="px-3 py-2">
         <div className="flex items-center gap-1">
           {/* Preview */}
           <button
             onClick={() => setPreviewDoc(doc)}
-            className="text-secondary-500 hover:text-secondary-700 hover:bg-secondary-100 rounded p-1 transition-colors"
+            className="hover:bg-primary-300/15 hover:text-primary-500 rounded-md p-1.5 text-[#6B7280] transition-colors"
             title={t('common.preview', 'Preview')}
           >
             <svg
@@ -150,7 +150,7 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
           {/* Download */}
           <button
             onClick={() => handleDownload(doc)}
-            className="text-secondary-500 hover:text-secondary-700 hover:bg-secondary-100 rounded p-1 transition-colors"
+            className="hover:bg-primary-300/15 hover:text-primary-500 rounded-md p-1.5 text-[#6B7280] transition-colors"
             title={t('common.download', 'Download')}
           >
             <svg
@@ -194,7 +194,7 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
   const renderDocTable = (docs: ClientDocument[]) => (
     <table className="w-full text-left">
       <thead>
-        <tr className="text-secondary-500 border-b text-xs font-medium uppercase">
+        <tr className="border-b border-[#EBECE8] text-xs font-medium text-[#05040D]">
           <th className="px-3 py-2">
             {t('pages.clients.detail.tableHeaders.documentName', 'Name')}
           </th>
@@ -215,28 +215,31 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
   const renderSection = (key: string, title: string, docs: ClientDocument[]) => {
     const isOpen = expanded.has(key)
     return (
-      <div key={key} className="overflow-hidden rounded-lg border bg-white">
+      <div
+        key={key}
+        className="overflow-hidden rounded-xl border border-[#EBECE8] bg-white shadow-sm"
+      >
         <button
           onClick={() => toggleSection(key)}
-          className="hover:bg-secondary-50 text-secondary-900 flex w-full items-center gap-2 px-4 py-3 text-left font-medium transition-colors"
+          className="flex w-full items-center gap-2 px-4 py-3 text-left font-medium text-[#05040D] transition-colors hover:bg-[#F9FAF8]"
         >
           <svg
             width="16"
             height="16"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="currentColor"
+            stroke="#374151"
             strokeWidth="2"
-            className={cn('transition-transform', isOpen ? 'rotate-90' : '')}
+            className={cn('shrink-0 transition-transform', isOpen ? 'rotate-90' : '')}
           >
             <polyline points="9 18 15 12 9 6" />
           </svg>
-          <span>{title}</span>
-          <span className="text-secondary-400 ml-auto text-sm">
-            {docs.length} {docs.length === 1 ? 'doc' : 'docs'}
+          <span className="text-sm">{title}</span>
+          <span className="ml-auto text-sm font-normal text-[#374151]">
+            {docs.length} {docs.length === 1 ? 'док.' : 'док.'}
           </span>
         </button>
-        {isOpen && <div className="border-t">{renderDocTable(docs)}</div>}
+        {isOpen && <div className="border-t border-[#EBECE8]">{renderDocTable(docs)}</div>}
       </div>
     )
   }
