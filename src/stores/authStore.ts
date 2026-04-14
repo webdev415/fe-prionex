@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { authApi } from '@/features/auth/api/authApi'
 import { setAccessToken, getAccessToken } from '@/lib/api'
+import { applyPersistedLanguageFromServer } from '@/lib/i18n'
 import type { User, LoginRequest, AuthErrorState, CurrentUserResponse } from '@/types/api'
 
 function mapBackendUserToUser(backendUser: CurrentUserResponse): User {
@@ -27,6 +28,7 @@ function mapBackendUserToUser(backendUser: CurrentUserResponse): User {
     is_agent: backendUser.is_agent,
     agent_status: backendUser.agent_status,
     timezone: backendUser.timezone,
+    language: backendUser.language,
     mustChangePassword: backendUser.must_change_password ?? false,
   }
 }
@@ -105,6 +107,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const backendUser = userResponse.data
 
         const user = mapBackendUserToUser(backendUser)
+        applyPersistedLanguageFromServer(backendUser.language)
 
         set({
           user,
@@ -249,6 +252,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const backendUser = userResponse.data
 
         const user = mapBackendUserToUser(backendUser)
+        applyPersistedLanguageFromServer(backendUser.language)
 
         set({
           user,
@@ -348,6 +352,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const backendUser = userResponse.data
 
           const user = mapBackendUserToUser(backendUser)
+          applyPersistedLanguageFromServer(backendUser.language)
 
           if (isImpersonating) {
             // In impersonation mode - restore original admin from localStorage
@@ -509,6 +514,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const backendUser = userResponse.data
 
       const user = mapBackendUserToUser(backendUser)
+      applyPersistedLanguageFromServer(backendUser.language)
 
       set({ user })
     } catch (error) {

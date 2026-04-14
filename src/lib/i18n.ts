@@ -51,4 +51,16 @@ i18n
     },
   })
 
+/** Map API `language` (uk|en|ru) to an i18n-supported UI code (ru → uk per product rules). */
+export function normalizeBackendLanguage(lang: string | undefined | null): SupportedLanguage {
+  if (lang === 'en' || lang === 'uk') return lang
+  if (lang === 'ru') return 'uk'
+  return 'en'
+}
+
+/** Apply server-stored language so UI matches the account after login/refresh (persists via i18n localStorage). */
+export function applyPersistedLanguageFromServer(lang: string | undefined | null): void {
+  void i18n.changeLanguage(normalizeBackendLanguage(lang))
+}
+
 export default i18n
