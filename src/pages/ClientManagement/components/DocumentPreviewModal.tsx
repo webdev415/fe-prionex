@@ -1,13 +1,12 @@
 /**
  * Document Preview Modal
  *
- * Full-screen modal for previewing documents:
- * - Images (jpeg, png, gif, bmp, webp): rendered as <img>
- * - PDF: rendered in <iframe>
+ * - Images: zoom in/out with buttons + mouse wheel, drag to pan
+ * - PDF: fullscreen iframe
  * - Other types: download-only prompt
  */
 
-import { useEffect } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Modal, ModalHeader, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -31,6 +30,10 @@ const PREVIEWABLE_IMAGE_TYPES = new Set([
   'image/webp',
 ])
 
+const ZOOM_STEP = 0.25
+const ZOOM_MIN = 0.25
+const ZOOM_MAX = 5
+
 export function DocumentPreviewModal({
   open,
   onClose,
@@ -45,6 +48,15 @@ export function DocumentPreviewModal({
   const isPdf = mimeType === 'application/pdf'
   const canPreview = isImage || isPdf
 
+  // Zoom + pan state for images
+  const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [dragging, setDragging] = useState(false)
+  const dragStart = useRef({ x: 0, y: 0 })
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // zoom/pan reset handled by parent via key prop on this component
+
   const {
     data: previewData,
     isLoading: loading,
@@ -58,7 +70,6 @@ export function DocumentPreviewModal({
 
   const blobUrl = previewData?.url ?? null
 
-  // Revoke blob URL on unmount
   useEffect(() => {
     return () => {
       if (previewData?.url) URL.revokeObjectURL(previewData.url)
@@ -69,11 +80,53 @@ export function DocumentPreviewModal({
     documentApi.download(clientId, documentId, filename)
   }
 
+  const zoomIn = () => setZoom((z) => Math.min(z + ZOOM_STEP, ZOOM_MAX))
+  const zoomOut = () => setZoom((z) => Math.max(z - ZOOM_STEP, ZOOM_MIN))
+  const zoomReset = () => {
+    setZoom(1)
+    setPan({ x: 0, y: 0 })
+  }
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault()
+    if (e.deltaY < 0) {
+      setZoom((z) => Math.min(z + ZOOM_STEP, ZOOM_MAX))
+    } else {
+      setZoom((z) => Math.max(z - ZOOM_STEP, ZOOM_MIN))
+    }
+  }, [])
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (zoom <= 1) return
+      setDragging(true)
+      dragStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y }
+    },
+    [zoom, pan]
+  )
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!dragging) return
+      setPan({
+        x: e.clientX - dragStart.current.x,
+        y: e.clientY - dragStart.current.y,
+      })
+    },
+    [dragging]
+  )
+
+  const handleMouseUp = useCallback(() => {
+    setDragging(false)
+  }, [])
+
+  const zoomPercent = Math.round(zoom * 100)
+
   return (
-    <Modal open={open} onClose={onClose} maxWidth={canPreview ? '2xl' : 'sm'}>
+    <Modal open={open} onClose={onClose} maxWidth={canPreview ? 'full' : 'sm'}>
       <ModalHeader title={filename} onClose={onClose} />
 
-      <div className="flex min-h-[200px] items-center justify-center p-4">
+      <div className="flex min-h-[300px] flex-col items-center justify-center overflow-hidden p-2">
         {loading && (
           <div className="text-secondary-500 flex items-center gap-2">
             <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
@@ -98,18 +151,68 @@ export function DocumentPreviewModal({
 
         {error && <div className="text-red-500">Failed to load document</div>}
 
+        {/* Image preview with zoom + pan */}
         {!loading && !error && isImage && blobUrl && (
-          <img
-            src={blobUrl}
-            alt={filename}
-            className="max-h-[70vh] max-w-full rounded-lg object-contain"
-          />
+          <>
+            {/* Zoom controls */}
+            <div className="mb-2 flex items-center gap-2">
+              <button
+                onClick={zoomOut}
+                className="text-secondary-600 hover:bg-secondary-100 rounded border px-2 py-1 text-sm"
+                title="Zoom out"
+              >
+                −
+              </button>
+              <button
+                onClick={zoomReset}
+                className="text-secondary-600 hover:bg-secondary-100 rounded border px-3 py-1 text-sm"
+                title="Reset zoom"
+              >
+                {zoomPercent}%
+              </button>
+              <button
+                onClick={zoomIn}
+                className="text-secondary-600 hover:bg-secondary-100 rounded border px-2 py-1 text-sm"
+                title="Zoom in"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Image container — eslint-disable for interactive image viewer */}
+            {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+            <div
+              ref={containerRef}
+              className="relative max-h-[80vh] w-full overflow-hidden rounded-lg"
+              style={{ cursor: zoom > 1 ? (dragging ? 'grabbing' : 'grab') : 'default' }}
+              onWheel={handleWheel}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+            >
+              <img
+                src={blobUrl}
+                alt={filename}
+                className="mx-auto block select-none"
+                style={{
+                  transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+                  transformOrigin: 'center center',
+                  maxHeight: '80vh',
+                  transition: dragging ? 'none' : 'transform 0.15s ease',
+                }}
+                draggable={false}
+              />
+            </div>
+          </>
         )}
 
+        {/* PDF preview — fullscreen iframe */}
         {!loading && !error && isPdf && blobUrl && (
-          <iframe src={blobUrl} title={filename} className="h-[70vh] w-full rounded-lg border-0" />
+          <iframe src={blobUrl} title={filename} className="h-[85vh] w-full rounded-lg border-0" />
         )}
 
+        {/* Non-previewable files */}
         {!loading && !error && !canPreview && (
           <div className="flex flex-col items-center gap-4 py-8">
             <div className="text-secondary-400 text-5xl">
