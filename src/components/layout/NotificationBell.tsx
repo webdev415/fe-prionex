@@ -18,6 +18,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/utils'
 
 import {
+  useMarkAsRead,
   useNotifications,
   useUnreadCount,
   useDismissNotification,
@@ -135,7 +136,16 @@ export function NotificationBell() {
       n.type === NotificationType.TAG_EXPIRED
   )
 
-  const handleNavigate = (clientId: number | undefined) => {
+  const markAsReadMutation = useMarkAsRead()
+
+  const handleNavigate = (
+    notificationId: string,
+    clientId: number | undefined,
+    isRead: boolean
+  ) => {
+    if (!isRead) {
+      markAsReadMutation.mutate(notificationId)
+    }
     if (clientId) {
       navigate(`/dashboard/clients/${clientId}`)
       setIsOpen(false)
@@ -282,7 +292,12 @@ export function NotificationBell() {
   )
 }
 
-// ─── Payment notification item (no dismiss, matches TaskBell) ──────
+// ─── Shared types for sub-components ─────────────────────────────
+
+type NavigateFn = (notificationId: string, clientId: number | undefined, isRead: boolean) => void
+type DismissFn = (e: React.MouseEvent, id: string) => void
+
+// ─── Payment notification item (no dismiss — auto-dismissed on verify/cancel) ──
 
 function PaymentNotificationItem({
   notification: n,
@@ -291,7 +306,7 @@ function PaymentNotificationItem({
 }: {
   notification: NotificationItem
   userTimezone?: string
-  onNavigate: (clientId: number | undefined) => void
+  onNavigate: NavigateFn
 }) {
   const meta = n.metadata
   return (
@@ -299,10 +314,11 @@ function PaymentNotificationItem({
       <button
         type="button"
         disabled={!meta.client_id}
-        onClick={() => onNavigate(meta.client_id)}
+        onClick={() => onNavigate(n.id, meta.client_id, n.read)}
         className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
       >
-        <div className="flex flex-wrap items-center gap-1.5 pr-5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
           <p className="line-clamp-1 text-xs font-semibold text-black">
             {meta.client_name ?? `Client #${meta.client_id}`}
             <span className="ml-1 font-normal text-black">(ID: {meta.client_id})</span>
@@ -330,7 +346,7 @@ function PaymentNotificationItem({
   )
 }
 
-// ─── Task notification item (with dismiss, matches TaskBell) ───────
+// ─── Task notification item ──────────────────────────────────────
 
 function TaskNotificationItem({
   notification: n,
@@ -340,8 +356,8 @@ function TaskNotificationItem({
 }: {
   notification: NotificationItem
   userTimezone?: string
-  onNavigate: (clientId: number | undefined) => void
-  onDismiss: (e: React.MouseEvent, id: string) => void
+  onNavigate: NavigateFn
+  onDismiss: DismissFn
 }) {
   const meta = n.metadata
   return (
@@ -349,10 +365,11 @@ function TaskNotificationItem({
       <button
         type="button"
         disabled={!meta.client_id}
-        onClick={() => onNavigate(meta.client_id)}
+        onClick={() => onNavigate(n.id, meta.client_id, n.read)}
         className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
       >
         <div className="flex flex-wrap items-center gap-1.5 pr-5">
+          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
           <p className="line-clamp-1 text-xs font-semibold text-black">
             {meta.client_name ?? `Client #${meta.client_id}`}
             {meta.client_id && (
@@ -416,8 +433,8 @@ function CallNotificationItem({
   onDismiss,
 }: {
   notification: NotificationItem
-  onNavigate: (clientId: number | undefined) => void
-  onDismiss: (e: React.MouseEvent, id: string) => void
+  onNavigate: NavigateFn
+  onDismiss: DismissFn
 }) {
   const meta = n.metadata
   return (
@@ -425,13 +442,13 @@ function CallNotificationItem({
       <button
         type="button"
         disabled={!meta.client_id}
-        onClick={() => onNavigate(meta.client_id)}
+        onClick={() => onNavigate(n.id, meta.client_id, n.read)}
         className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
       >
         <div className="flex items-center gap-2">
+          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
           <Icons.Phone size={14} strokeWidth={1.5} className="text-green-500" />
           <p className="text-xs font-semibold text-black">{n.title}</p>
-          {!n.read && <span className="h-2 w-2 rounded-full bg-blue-500" />}
         </div>
         <p className="text-xs text-black">{n.body}</p>
         <span className="text-[11px] text-gray-400">
@@ -458,8 +475,8 @@ function TagNotificationItem({
   onDismiss,
 }: {
   notification: NotificationItem
-  onNavigate: (clientId: number | undefined) => void
-  onDismiss: (e: React.MouseEvent, id: string) => void
+  onNavigate: NavigateFn
+  onDismiss: DismissFn
 }) {
   const meta = n.metadata
   return (
@@ -467,13 +484,13 @@ function TagNotificationItem({
       <button
         type="button"
         disabled={!meta.client_id}
-        onClick={() => onNavigate(meta.client_id)}
+        onClick={() => onNavigate(n.id, meta.client_id, n.read)}
         className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
       >
         <div className="flex items-center gap-2">
+          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
           <Icons.Bell size={14} strokeWidth={1.5} className="text-purple-500" />
           <p className="text-xs font-semibold text-black">{n.title}</p>
-          {!n.read && <span className="h-2 w-2 rounded-full bg-blue-500" />}
         </div>
         {n.body && <p className="text-xs text-black">{n.body}</p>}
         <span className="text-[11px] text-gray-400">

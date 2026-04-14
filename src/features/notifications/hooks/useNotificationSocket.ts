@@ -66,7 +66,7 @@ export function useNotificationSocket(
     })
 
     socket.on('notification.count', () => {
-      queryClient.invalidateQueries({ queryKey: ['notifications', 'unread-count'] })
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
     })
 
     socketRef.current = socket
