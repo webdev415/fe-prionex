@@ -7,6 +7,7 @@ import type {
   ImpersonationResponse,
   ExitImpersonationResponse,
   SwitchProjectResponse,
+  UpdateMyProfileInput,
 } from '@/types/api'
 
 export const authApi = {
@@ -19,6 +20,9 @@ export const authApi = {
   validate: () => api.post<TokenValidateResponse>('/api/v1/auth/validate'),
 
   me: () => api.get<CurrentUserResponse>('/api/v1/users/me'),
+
+  updateMyProfile: (data: UpdateMyProfileInput) =>
+    api.patch<CurrentUserResponse>('/api/v1/users/me', data),
 
   switchProject: (projectId: number) =>
     api.post<SwitchProjectResponse>('/api/v1/auth/switch-project', { project_id: projectId }),
