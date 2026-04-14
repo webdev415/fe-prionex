@@ -4,7 +4,7 @@
  * Modal for verifying pending payments with expandable payment cards.
  */
 
-import { useState, useMemo } from 'react'
+import { Fragment, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { convertUTCToUserTimezone, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
@@ -412,11 +412,8 @@ export function PaymentVerificationQueueModal({
             </span>
             <div className="flex flex-col items-start justify-center gap-0 self-stretch rounded-xl border border-white bg-white/50 p-3 px-6">
               {processedPayments.map((payment) => (
-                <>
-                  <div
-                    key={payment.id}
-                    className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-center sm:gap-5"
-                  >
+                <Fragment key={payment.id}>
+                  <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-center sm:gap-5">
                     <div className="flex items-center gap-2">
                       <span
                         className={cn(
@@ -462,7 +459,7 @@ export function PaymentVerificationQueueModal({
                   {payment.id !== processedPayments[processedPayments.length - 1].id && (
                     <div className="h-px w-full bg-gray-200" />
                   )}
-                </>
+                </Fragment>
               ))}
             </div>
           </div>
