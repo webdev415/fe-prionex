@@ -818,6 +818,7 @@
         "dateOfSale": "Debt Sale Date",
         "promiseDate": "Promise Date",
         "callbackDate": "Callback Date",
+        "interactionCreatedBy": "Created by",
         "portfolio": "Creditor/Seller",
         "status": "Status",
         "tags": "Tags",
@@ -1358,6 +1359,7 @@
         "fromDate": "From date",
         "toDate": "To date",
         "clearAll": "Clear All",
+        "latestOnly": "Show latest interaction only",
         "noActivityRecordedYet": "No activity recorded yet",
         "resetFilters": "Reset filters",
         "tableHeaders": {
