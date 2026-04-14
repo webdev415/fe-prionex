@@ -114,7 +114,7 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
 
   const renderDocRow = (doc: ClientDocument) => (
     <tr key={doc.id} className="hover:bg-secondary-50 border-b last:border-b-0">
-      <td className="px-3 py-2 text-sm font-medium">{doc.original_filename}</td>
+      <td className="text-secondary-900 px-3 py-2 text-sm font-medium">{doc.original_filename}</td>
       <td className="px-3 py-2">
         <span
           className={cn(
