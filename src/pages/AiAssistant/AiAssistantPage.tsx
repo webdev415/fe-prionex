@@ -772,7 +772,9 @@ export function AiAssistantPage() {
       <div
         ref={dockRef}
         className={cn(
-          'from-light-50 via-light-50/95 pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center bg-gradient-to-t to-transparent px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[left] duration-300 sm:px-8 sm:pt-6 md:px-10 lg:left-18 lg:px-14 xl:px-20',
+          'from-light-50 via-light-50/95 pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center bg-gradient-to-t to-transparent px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[left] duration-300 sm:px-8 sm:pt-6 md:px-10 lg:left-9',
+          /* Match DashboardLayout <main> lg:px-[28px] + this page's horizontal padding so composer lines up with chat */
+          'lg:px-[calc(28px+3.5rem)] xl:px-[calc(28px+5rem)]',
           isOpenSideBar && 'lg:left-60'
         )}
       >
@@ -786,7 +788,7 @@ export function AiAssistantPage() {
             <Icons.ArrowDown size={16} strokeWidth={1.5} />
           </button>
         )}
-        <div className="pointer-events-auto w-full max-w-5xl 2xl:max-w-6xl">
+        <div className="pointer-events-auto mx-auto w-full max-w-5xl min-w-0 2xl:max-w-6xl">
           <div className="border-light-200 shadow-dark-500/5 rounded-2xl border border-white/60 bg-white/95 p-3 shadow-lg sm:rounded-3xl sm:p-5">
             <Textarea
               value={message}
