@@ -142,6 +142,17 @@ export interface ClientFilters {
   callbackDateFrom?: string
   callbackDateTo?: string
 
+  // Interaction Created By
+  interactionUserId?: string
+
+  // Promise Creation Date
+  promiseCreatedFrom?: string
+  promiseCreatedTo?: string
+
+  // Callback Creation Date
+  callbackCreatedFrom?: string
+  callbackCreatedTo?: string
+
   // Portfolio/Sellers Filter (now stores IDs only)
   portfolio?: number[]
 
@@ -216,6 +227,26 @@ export function ClientManagementPage() {
     ''
   )
   const [callbackDateToFilter, setCallbackDateToFilter] = useURLState<string>('callbackDateTo', '')
+  const [interactionUserIdFilter, setInteractionUserIdFilter] = useURLState<string>(
+    'interactionUserId',
+    ''
+  )
+  const [promiseCreatedFromFilter, setPromiseCreatedFromFilter] = useURLState<string>(
+    'promiseCreatedFrom',
+    ''
+  )
+  const [promiseCreatedToFilter, setPromiseCreatedToFilter] = useURLState<string>(
+    'promiseCreatedTo',
+    ''
+  )
+  const [callbackCreatedFromFilter, setCallbackCreatedFromFilter] = useURLState<string>(
+    'callbackCreatedFrom',
+    ''
+  )
+  const [callbackCreatedToFilter, setCallbackCreatedToFilter] = useURLState<string>(
+    'callbackCreatedTo',
+    ''
+  )
 
   // Compute filters object from URL state
   const filters: ClientFilters = useMemo(
@@ -240,6 +271,11 @@ export function ClientManagementPage() {
       promiseDateTo: promiseDateToFilter || undefined,
       callbackDateFrom: callbackDateFromFilter || undefined,
       callbackDateTo: callbackDateToFilter || undefined,
+      interactionUserId: interactionUserIdFilter || undefined,
+      promiseCreatedFrom: promiseCreatedFromFilter || undefined,
+      promiseCreatedTo: promiseCreatedToFilter || undefined,
+      callbackCreatedFrom: callbackCreatedFromFilter || undefined,
+      callbackCreatedTo: callbackCreatedToFilter || undefined,
     }),
     [
       portfolioFilter,
@@ -262,6 +298,11 @@ export function ClientManagementPage() {
       promiseDateToFilter,
       callbackDateFromFilter,
       callbackDateToFilter,
+      interactionUserIdFilter,
+      promiseCreatedFromFilter,
+      promiseCreatedToFilter,
+      callbackCreatedFromFilter,
+      callbackCreatedToFilter,
     ]
   )
 
@@ -317,6 +358,11 @@ export function ClientManagementPage() {
       promiseDateToFilter,
       callbackDateFromFilter,
       callbackDateToFilter,
+      interactionUserIdFilter,
+      promiseCreatedFromFilter,
+      promiseCreatedToFilter,
+      callbackCreatedFromFilter,
+      callbackCreatedToFilter,
       searchQuery,
       searchType,
     }
@@ -337,6 +383,11 @@ export function ClientManagementPage() {
       promiseDateToFilter !== '' ||
       callbackDateFromFilter !== '' ||
       callbackDateToFilter !== '' ||
+      interactionUserIdFilter !== '' ||
+      promiseCreatedFromFilter !== '' ||
+      promiseCreatedToFilter !== '' ||
+      callbackCreatedFromFilter !== '' ||
+      callbackCreatedToFilter !== '' ||
       debtRangeFromFilter > 0 ||
       debtRangeToFilter > 0 ||
       principalRangeFromFilter > 0 ||
@@ -380,6 +431,11 @@ export function ClientManagementPage() {
     promiseDateToFilter,
     callbackDateFromFilter,
     callbackDateToFilter,
+    interactionUserIdFilter,
+    promiseCreatedFromFilter,
+    promiseCreatedToFilter,
+    callbackCreatedFromFilter,
+    callbackCreatedToFilter,
     searchQuery,
     searchType,
   ])
@@ -403,6 +459,11 @@ export function ClientManagementPage() {
       promiseDateToFilter !== '' ||
       callbackDateFromFilter !== '' ||
       callbackDateToFilter !== '' ||
+      interactionUserIdFilter !== '' ||
+      promiseCreatedFromFilter !== '' ||
+      promiseCreatedToFilter !== '' ||
+      callbackCreatedFromFilter !== '' ||
+      callbackCreatedToFilter !== '' ||
       debtRangeFromFilter > 0 ||
       principalRangeFromFilter > 0
 
@@ -442,6 +503,16 @@ export function ClientManagementPage() {
             if (parsed.callbackDateFromFilter)
               setCallbackDateFromFilter(parsed.callbackDateFromFilter)
             if (parsed.callbackDateToFilter) setCallbackDateToFilter(parsed.callbackDateToFilter)
+            if (parsed.interactionUserIdFilter)
+              setInteractionUserIdFilter(parsed.interactionUserIdFilter)
+            if (parsed.promiseCreatedFromFilter)
+              setPromiseCreatedFromFilter(parsed.promiseCreatedFromFilter)
+            if (parsed.promiseCreatedToFilter)
+              setPromiseCreatedToFilter(parsed.promiseCreatedToFilter)
+            if (parsed.callbackCreatedFromFilter)
+              setCallbackCreatedFromFilter(parsed.callbackCreatedFromFilter)
+            if (parsed.callbackCreatedToFilter)
+              setCallbackCreatedToFilter(parsed.callbackCreatedToFilter)
             if (parsed.currentPage) setCurrentPage(parsed.currentPage)
             if (parsed.rowsPerPage) setRowsPerPage(parsed.rowsPerPage)
             if (parsed.sortBy) setSortBy(parsed.sortBy)
@@ -613,7 +684,31 @@ export function ClientManagementPage() {
       params.callback_date_to = filters.callbackDateTo
     }
 
-    // FILTER 13: Search (from global header search)
+    // FILTER 13: Interaction Created By
+    if (filters.interactionUserId) {
+      const parsed = parseInt(filters.interactionUserId, 10)
+      if (!isNaN(parsed)) {
+        params.interaction_user_id = parsed
+      }
+    }
+
+    // FILTER 14: Promise Creation Date
+    if (filters.promiseCreatedFrom) {
+      params.promise_created_from = filters.promiseCreatedFrom
+    }
+    if (filters.promiseCreatedTo) {
+      params.promise_created_to = filters.promiseCreatedTo
+    }
+
+    // FILTER 15: Callback Creation Date
+    if (filters.callbackCreatedFrom) {
+      params.callback_created_from = filters.callbackCreatedFrom
+    }
+    if (filters.callbackCreatedTo) {
+      params.callback_created_to = filters.callbackCreatedTo
+    }
+
+    // FILTER 16: Search (from global header search)
     if (searchQuery.trim()) {
       params.q = searchQuery.trim()
       params.search_type = searchType
@@ -676,6 +771,9 @@ export function ClientManagementPage() {
     if (filters.dateOfSaleFrom || filters.dateOfSaleTo) count++
     if (filters.promiseDateFrom || filters.promiseDateTo) count++
     if (filters.callbackDateFrom || filters.callbackDateTo) count++
+    if (filters.interactionUserId) count++
+    if (filters.promiseCreatedFrom || filters.promiseCreatedTo) count++
+    if (filters.callbackCreatedFrom || filters.callbackCreatedTo) count++
     if (filters.portfolio && filters.portfolio.length > 0) count++
     if (filters.tagIds && filters.tagIds.length > 0) count++
     if (filters.status && filters.status.length > 0) count++
@@ -1040,6 +1138,11 @@ export function ClientManagementPage() {
     setPromiseDateToFilter('')
     setCallbackDateFromFilter('')
     setCallbackDateToFilter('')
+    setInteractionUserIdFilter('')
+    setPromiseCreatedFromFilter('')
+    setPromiseCreatedToFilter('')
+    setCallbackCreatedFromFilter('')
+    setCallbackCreatedToFilter('')
 
     // Reset to first page
     setCurrentPage(1)

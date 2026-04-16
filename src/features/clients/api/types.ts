@@ -233,6 +233,17 @@ export interface GetClientsParams {
   callback_date_from?: string // YYYY-MM-DD format
   callback_date_to?: string // YYYY-MM-DD format
 
+  // Filter: Interaction operator
+  interaction_user_id?: number
+
+  // Filter: Promise creation date
+  promise_created_from?: string // YYYY-MM-DD format
+  promise_created_to?: string // YYYY-MM-DD format
+
+  // Filter: Callback creation date
+  callback_created_from?: string // YYYY-MM-DD format
+  callback_created_to?: string // YYYY-MM-DD format
+
   // Filter: Status
   status?: string // Comma-separated statuses (e.g., "active,new")
 }

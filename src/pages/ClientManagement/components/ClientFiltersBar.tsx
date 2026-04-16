@@ -96,6 +96,10 @@ type FilterDateField =
   | 'promiseDateTo'
   | 'callbackDateFrom'
   | 'callbackDateTo'
+  | 'promiseCreatedFrom'
+  | 'promiseCreatedTo'
+  | 'callbackCreatedFrom'
+  | 'callbackCreatedTo'
 
 // Status options matching backend Client.status field (services/client/app/routers/clients.py:440)
 // Valid statuses: new, active, closed
@@ -371,6 +375,101 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 />
               </div>
             </div>
+          </div>
+
+          {/* Promise logged date & Callback logged date */}
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
+            <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+                {t('pages.clients.filters.promiseLoggedDateFrom', 'Promise Logged')}
+              </label>
+              <div className="flex w-full flex-1 items-center gap-2">
+                <DateSelect
+                  value={filters.promiseCreatedFrom || null}
+                  onChange={({ value }) => handleFilterDateChange('promiseCreatedFrom', value)}
+                  placeholder="Min"
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                  -
+                </span>
+                <DateSelect
+                  value={filters.promiseCreatedTo || null}
+                  onChange={({ value }) => handleFilterDateChange('promiseCreatedTo', value)}
+                  placeholder="Max"
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+              </div>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+                {t('pages.clients.filters.callbackLoggedDateFrom', 'Callback Logged')}
+              </label>
+              <div className="flex w-full flex-1 items-center gap-2">
+                <DateSelect
+                  value={filters.callbackCreatedFrom || null}
+                  onChange={({ value }) => handleFilterDateChange('callbackCreatedFrom', value)}
+                  placeholder="Min"
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                  -
+                </span>
+                <DateSelect
+                  value={filters.callbackCreatedTo || null}
+                  onChange={({ value }) => handleFilterDateChange('callbackCreatedTo', value)}
+                  placeholder="Max"
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Created by (interaction operator) */}
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-start lg:gap-10">
+            <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-auto sm:text-sm sm:tracking-[-0.28px]">
+                {t('pages.clients.filters.interactionCreatedBy', 'Created by')}
+              </label>
+              <div className="flex w-full flex-1 flex-col items-start gap-2">
+                <Select
+                  value={filters.interactionUserId || undefined}
+                  onValueChange={(value) =>
+                    onFilterChange({
+                      ...filters,
+                      interactionUserId: value === 'none' ? undefined : value,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={t('pages.clients.filters.selectOperator', 'Select operator')}
+                    />
+                  </SelectTrigger>
+                  <SelectContent searchable>
+                    <SelectItem value="none">
+                      {t('pages.clients.filters.selectOperator', 'Select operator')}
+                    </SelectItem>
+                    {userOptions.length === 0 ? (
+                      <div className="px-2 py-6 text-center text-sm text-gray-500">
+                        {t('pages.clients.filters.noUsersAvailable')}
+                      </div>
+                    ) : (
+                      userOptions.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
           </div>
 
           {/* Third Row: Portfolio & Status */}
