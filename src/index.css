@@ -211,6 +211,55 @@
   .select-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #9a9a9a;
   }
+
+  /* AI assistant composer — thin thumb, transparent track, no arrow buttons */
+  .ai-chat-input-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #c8c8c8 transparent;
+    overflow-y: auto;
+  }
+  .ai-chat-input-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  /* Hide stepper arrows (all WebKit button variants) */
+  .ai-chat-input-scrollbar::-webkit-scrollbar-button,
+  .ai-chat-input-scrollbar::-webkit-scrollbar-button:vertical:start:decrement,
+  .ai-chat-input-scrollbar::-webkit-scrollbar-button:vertical:end:increment,
+  .ai-chat-input-scrollbar::-webkit-scrollbar-button:horizontal:start:decrement,
+  .ai-chat-input-scrollbar::-webkit-scrollbar-button:horizontal:end:increment {
+    display: none !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .ai-chat-input-scrollbar::-webkit-scrollbar-track,
+  .ai-chat-input-scrollbar::-webkit-scrollbar-track-piece {
+    margin-block: 4px;
+    border-radius: 9999px;
+    background: transparent !important;
+    -webkit-box-shadow: none;
+    box-shadow: none;
+  }
+  .ai-chat-input-scrollbar::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  .ai-chat-input-scrollbar::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-color: #c8c8c8;
+    background-clip: padding-box;
+    min-height: 28px;
+  }
+  .ai-chat-input-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #90947b;
+  }
+  .ai-chat-input-scrollbar::-webkit-scrollbar-thumb:active {
+    background-color: #80d80a;
+  }
+
   /* Dashboard background image */
   .bg-dashboard-light {
     background-image: url(/assets/images/dashboard-light-bg.svg);
