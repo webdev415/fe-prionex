@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/DropdownMenu'
 
 const QUICK_ACTION_KEYS = ['quickClientData', 'quickDebt', 'quickReport', 'quickEmployee'] as const
+type QuickActionKey = (typeof QUICK_ACTION_KEYS)[number]
 
 type AssistDropdownProps = {
   ariaLabel: string
@@ -34,6 +35,15 @@ type AssistantSettings = {
   rememberConversationContext: boolean
   showQuickSuggestionsAfterResponse: boolean
   autoScrollToLatestAnswer: boolean
+}
+
+type ChatRole = 'user' | 'assistant'
+
+type ChatMessage = {
+  id: string
+  role: ChatRole
+  content: string
+  isLoading?: boolean
 }
 
 const DEFAULT_SETTINGS: AssistantSettings = {
@@ -86,6 +96,44 @@ function resolveSpeechLang(language?: string): string {
   return 'en-US'
 }
 
+function buildMockAssistantReply(
+  input: string,
+  settings: AssistantSettings,
+  t: (key: string) => string
+): string {
+  const summaryPrefix =
+    settings.responseMode === 'short'
+      ? t('pages.aiAssistant.mockSummaryShort')
+      : t('pages.aiAssistant.mockSummaryDetailed')
+
+  if (settings.outputFormat === 'tableFirst' || input.toLowerCase().includes('report')) {
+    return [
+      `${summaryPrefix} ${t('pages.aiAssistant.mockDetectedRequest')}: "${input}".`,
+      '',
+      t('pages.aiAssistant.mockTableHeader'),
+      '| Metric | Value |',
+      '| --- | --- |',
+      '| Clients | 42 |',
+      '| Debt at risk | $128,450 |',
+      '| Overdue ratio | 17.4% |',
+      '',
+      t('pages.aiAssistant.mockTableFooter'),
+    ].join('\n')
+  }
+
+  if (settings.outputFormat === 'mixed' && settings.responseMode === 'detailed') {
+    return [
+      `${summaryPrefix} ${t('pages.aiAssistant.mockDetectedRequest')}: "${input}".`,
+      '',
+      `1) ${t('pages.aiAssistant.mockMixedPointOne')}`,
+      `2) ${t('pages.aiAssistant.mockMixedPointTwo')}`,
+      `3) ${t('pages.aiAssistant.mockMixedPointThree')}`,
+    ].join('\n')
+  }
+
+  return `${summaryPrefix} ${t('pages.aiAssistant.mockDetectedRequest')}: "${input}". ${t('pages.aiAssistant.mockPlainTail')}`
+}
+
 function AssistFilterDropdown({
   ariaLabel,
   value,
@@ -131,7 +179,8 @@ function AssistFilterDropdown({
 export function AiAssistantPage() {
   const { t, i18n } = useTranslation('common')
   const [message, setMessage] = useState('')
-  const [chatHistory, setChatHistory] = useState<string[]>([])
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [isAssistantResponding, setIsAssistantResponding] = useState(false)
   const [clientScope, setClientScope] = useState('all')
   const [period, setPeriod] = useState('all')
   const [assistantSettings, setAssistantSettings] = useState<AssistantSettings>(DEFAULT_SETTINGS)
@@ -139,9 +188,15 @@ export function AiAssistantPage() {
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => window.innerWidth < 1024)
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening'>('idle')
   const [interimTranscript, setInterimTranscript] = useState('')
+  const [showScrollToLatest, setShowScrollToLatest] = useState(false)
   const settingsPanelRef = useRef<HTMLDivElement>(null)
   const settingsTriggerRef = useRef<HTMLButtonElement>(null)
+  const pageRootRef = useRef<HTMLDivElement>(null)
+  const chatBottomRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLElement | null>(null)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
+  const responseTokenRef = useRef(0)
+  const hasConversation = chatMessages.length > 0
 
   useEffect(() => {
     const onResize = () => setIsMobileOrTablet(window.innerWidth < 1024)
@@ -278,6 +333,84 @@ export function AiAssistantPage() {
       }
     }
   }, [])
+
+  useEffect(() => {
+    if (!assistantSettings.autoScrollToLatestAnswer) return
+    chatBottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [assistantSettings.autoScrollToLatestAnswer, chatMessages])
+
+  useEffect(() => {
+    if (!pageRootRef.current) return
+    scrollContainerRef.current = pageRootRef.current.closest('main')
+  }, [])
+
+  const scrollToConversationBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    const scrollToEnd = () => {
+      const scrollContainer = scrollContainerRef.current
+      chatBottomRef.current?.scrollIntoView({ behavior, block: 'end' })
+      if (scrollContainer) {
+        scrollContainer.scrollTo({
+          top: scrollContainer.scrollHeight,
+          behavior,
+        })
+      }
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior,
+      })
+    }
+
+    scrollToEnd()
+    // Run again on next paint so late layout updates don't block reaching true bottom.
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(scrollToEnd)
+    })
+  }, [])
+
+  const updateScrollToLatestVisibility = useCallback(() => {
+    const scrollContainer = scrollContainerRef.current
+    if (!hasConversation) {
+      setShowScrollToLatest(false)
+      return
+    }
+
+    const mainHasOverflow = scrollContainer
+      ? scrollContainer.scrollHeight - scrollContainer.clientHeight > 8
+      : false
+    const mainDistanceFromBottom = scrollContainer
+      ? scrollContainer.scrollHeight - (scrollContainer.scrollTop + scrollContainer.clientHeight)
+      : 0
+
+    const doc = document.documentElement
+    const pageHasOverflow = doc.scrollHeight - window.innerHeight > 8
+    const pageDistanceFromBottom = doc.scrollHeight - (window.scrollY + window.innerHeight)
+
+    const shouldShowFromMain = mainHasOverflow && mainDistanceFromBottom > 48
+    const shouldShowFromPage = pageHasOverflow && pageDistanceFromBottom > 48
+    setShowScrollToLatest(shouldShowFromMain || shouldShowFromPage)
+  }, [hasConversation])
+
+  useEffect(() => {
+    if (!hasConversation) return
+
+    const onScroll = () => updateScrollToLatestVisibility()
+    const scrollContainer = scrollContainerRef.current
+
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', onScroll, { passive: true })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    window.requestAnimationFrame(onScroll)
+
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', onScroll)
+      }
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [hasConversation, updateScrollToLatestVisibility])
 
   const clientOptions = useMemo(
     () => [
@@ -452,10 +585,12 @@ export function AiAssistantPage() {
               type="button"
               onClick={() => {
                 stopVoiceRecognition()
+                responseTokenRef.current += 1
                 setMessage('')
-                if (chatHistory.length > 0) {
-                  setChatHistory([])
+                if (chatMessages.length > 0) {
+                  setChatMessages([])
                 }
+                setIsAssistantResponding(false)
               }}
               className="text-error-600 border-error-200 hover:bg-error-50 inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-light transition-colors"
             >
@@ -480,27 +615,131 @@ export function AiAssistantPage() {
     [t]
   )
 
+  const quickActionPrompts = useMemo<Record<QuickActionKey, string>>(
+    () => ({
+      quickClientData: t('pages.aiAssistant.quickPromptClientData'),
+      quickDebt: t('pages.aiAssistant.quickPromptDebt'),
+      quickReport: t('pages.aiAssistant.quickPromptReport'),
+      quickEmployee: t('pages.aiAssistant.quickPromptEmployee'),
+    }),
+    [t]
+  )
+
+  const appendChatMessage = useCallback((payload: Omit<ChatMessage, 'id'>) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const next: ChatMessage = { id, ...payload }
+    setChatMessages((current) => [...current, next])
+    return id
+  }, [])
+
+  const submitPrompt = useCallback(
+    async (rawPrompt: string) => {
+      const prompt = rawPrompt.trim()
+      if (!prompt || isAssistantResponding) return
+
+      setMessage('')
+      appendChatMessage({ role: 'user', content: prompt })
+      setIsAssistantResponding(true)
+
+      const loadingId = appendChatMessage({
+        role: 'assistant',
+        content: t('pages.aiAssistant.assistantTyping'),
+        isLoading: true,
+      })
+      window.setTimeout(() => scrollToConversationBottom('smooth'), 0)
+
+      const waitMs = 900 + Math.floor(Math.random() * 900)
+      const requestToken = ++responseTokenRef.current
+      await new Promise((resolve) => window.setTimeout(resolve, waitMs))
+      if (requestToken !== responseTokenRef.current) {
+        return
+      }
+      const mockedResponse = buildMockAssistantReply(prompt, assistantSettings, t)
+
+      setChatMessages((current) =>
+        current.map((item) =>
+          item.id === loadingId ? { ...item, content: mockedResponse, isLoading: false } : item
+        )
+      )
+      setIsAssistantResponding(false)
+      window.setTimeout(() => scrollToConversationBottom('smooth'), 0)
+    },
+    [appendChatMessage, assistantSettings, isAssistantResponding, scrollToConversationBottom, t]
+  )
+
   return (
     <div
+      ref={pageRootRef}
       className={cn(
-        'flex min-h-[calc(100vh-5.5rem)] w-full flex-1 flex-col self-stretch supports-[height:100dvh]:min-h-[calc(100dvh-5.5rem)]'
+        'relative flex min-h-[calc(100vh-5.5rem)] w-full flex-1 flex-col self-stretch supports-[height:100dvh]:min-h-[calc(100dvh-5.5rem)]'
       )}
     >
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 pt-6 sm:px-12 lg:px-20">
-        <div className="flex flex-col items-center justify-center gap-10">
-          <img src="/logo.svg" alt={t('app.name')} className="h-12 w-auto" />
-          <span className="text-dark-500 text-center text-[30px] leading-[129%] font-light tracking-[-0.6px]">
-            {t('pages.aiAssistant.greeting')}
-          </span>
+      {hasConversation ? (
+        <div className="relative min-h-0 flex-1 px-4 pt-4 pb-72 sm:px-12 sm:pt-6 sm:pb-80 lg:px-20">
+          <div className="mx-auto w-full max-w-5xl">
+            <div className="mx-auto w-full max-w-4xl space-y-4">
+              {chatMessages.map((item) => (
+                <div
+                  key={item.id}
+                  className={cn('flex', item.role === 'user' ? 'justify-end' : 'justify-start')}
+                >
+                  <div
+                    className={cn(
+                      'max-w-[85%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap shadow-sm',
+                      item.role === 'user'
+                        ? 'bg-secondary-800 text-white'
+                        : 'text-dark-500 border border-gray-100 bg-white'
+                    )}
+                  >
+                    {item.isLoading ? (
+                      <span className="inline-flex items-center gap-1.5 py-1">
+                        <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.2s]" />
+                        <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.1s]" />
+                        <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full" />
+                      </span>
+                    ) : (
+                      item.content
+                    )}
+                  </div>
+                </div>
+              ))}
+              <div ref={chatBottomRef} />
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 pb-72 sm:px-12 sm:pb-80 lg:px-20">
+          <div className="mx-auto flex w-full max-w-xl flex-col items-center justify-center gap-5 text-center">
+            <img src="/logo.svg" alt={t('app.name')} className="mx-auto h-12 w-auto" />
+            <span className="text-dark-500 text-center text-[30px] leading-[129%] font-light tracking-[-0.6px]">
+              {t('pages.aiAssistant.greeting')}
+            </span>
+          </div>
+        </div>
+      )}
 
-      <div className="mt-auto flex w-full shrink-0 flex-col items-center px-4 pt-4 pb-6 sm:px-12 sm:pb-8 lg:px-20">
-        <div className="w-full max-w-5xl">
+      <div className="from-light-50 via-light-50/95 pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full shrink-0 flex-col items-center bg-gradient-to-t to-transparent px-4 pt-6 pb-4 sm:px-12 lg:px-20">
+        {hasConversation && showScrollToLatest && (
+          <button
+            type="button"
+            aria-label="Scroll to latest"
+            onClick={() => scrollToConversationBottom('smooth')}
+            className="border-light-200 text-dark-500 hover:bg-light-50 pointer-events-auto absolute -top-4 left-1/2 z-30 flex h-9 w-9 -translate-x-1/2 items-center justify-center rounded-full border bg-white shadow-md transition-colors"
+          >
+            <Icons.ArrowDown size={16} strokeWidth={1.5} />
+          </button>
+        )}
+        <div className="pointer-events-auto w-full max-w-5xl">
           <div className="border-light-200 shadow-dark-500/5 rounded-3xl border border-white/60 bg-white/95 p-4 shadow-lg sm:p-5">
             <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault()
+                  void submitPrompt(message)
+                }
+              }}
               placeholder={t('pages.aiAssistant.inputPlaceholder')}
               className={cn(
                 'min-h-[120px] resize-none border-0 bg-transparent px-1 py-2 text-base shadow-none',
@@ -600,6 +839,9 @@ export function AiAssistantPage() {
                 </button>
               </div>
             </div>
+            <p className="mt-2 text-right text-[11px] text-gray-400">
+              {t('pages.aiAssistant.inputHint')}
+            </p>
           </div>
 
           {assistantSettings.showQuickSuggestionsAfterResponse && (
@@ -608,14 +850,13 @@ export function AiAssistantPage() {
                 <button
                   key={key}
                   type="button"
+                  disabled={isAssistantResponding}
                   className={cn(
                     'text-secondary-800 cursor-pointer rounded-full border border-white bg-white/70 px-5 py-3 text-center text-base leading-[155%] font-light tracking-[-0.32px]',
-                    'hover:border-primary-300 hover:bg-primary-50/40 transition-colors'
+                    'hover:border-primary-300 hover:bg-primary-50/40 transition-colors disabled:cursor-not-allowed disabled:opacity-60'
                   )}
                   onClick={() => {
-                    const prompt = t(`pages.aiAssistant.${key}`)
-                    setChatHistory((current) => [...current, prompt])
-                    setMessage((prev) => (prev ? `${prev}\n${prompt}` : prompt))
+                    void submitPrompt(quickActionPrompts[key])
                   }}
                 >
                   {t(`pages.aiAssistant.${key}`)}
