@@ -65,9 +65,10 @@ export function CallRecordingModal({
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0)
   const [showSpeedMenu, setShowSpeedMenu] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
-
-  // Get recording URL from call service
-  const recordingUrl = callData.call_id ? callService.getRecordingUrl(callData.call_id) : null
+  const recordingBlobRef = useRef<Blob | null>(null)
+  const recordingObjectUrlRef = useRef<string | null>(null)
+  const [audioObjectUrl, setAudioObjectUrl] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   // Format date for display
   const formatDate = (dateStr: string, timeStr: string) => {
@@ -96,13 +97,66 @@ export function CallRecordingModal({
     }
   }
 
-  // Audio event handlers (inline on <audio> element to avoid race conditions)
+  // Load recording with Bearer auth — <audio src="..."> cannot send Authorization headers.
+  useEffect(() => {
+    if (!open || !callData.call_id) {
+      if (recordingObjectUrlRef.current) {
+        URL.revokeObjectURL(recordingObjectUrlRef.current)
+        recordingObjectUrlRef.current = null
+      }
+      recordingBlobRef.current = null
+      setAudioObjectUrl(null)
+      setLoadError(null)
+      setIsAudioLoading(false)
+      return
+    }
 
-  // Reset when modal closes
+    let cancelled = false
+    const callId = callData.call_id
+    setIsAudioLoading(true)
+    setLoadError(null)
+
+    if (recordingObjectUrlRef.current) {
+      URL.revokeObjectURL(recordingObjectUrlRef.current)
+      recordingObjectUrlRef.current = null
+    }
+    setAudioObjectUrl(null)
+    recordingBlobRef.current = null
+    ;(async () => {
+      try {
+        const blob = await callService.fetchRecordingBlob(callId)
+        if (cancelled) return
+        recordingBlobRef.current = blob
+        const url = URL.createObjectURL(blob)
+        if (cancelled) {
+          URL.revokeObjectURL(url)
+          return
+        }
+        recordingObjectUrlRef.current = url
+        setAudioObjectUrl(url)
+      } catch {
+        if (cancelled) return
+        recordingBlobRef.current = null
+        setLoadError(t('pages.clients.modals.callRecording.loadFailed'))
+        setIsAudioLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      if (recordingObjectUrlRef.current) {
+        URL.revokeObjectURL(recordingObjectUrlRef.current)
+        recordingObjectUrlRef.current = null
+      }
+      recordingBlobRef.current = null
+      setAudioObjectUrl(null)
+    }
+  }, [open, callData.call_id, t])
+
+  // Reset playback UI when modal closes
   useEffect(() => {
     if (!open) {
       setIsPlaying(false)
-      setIsAudioLoading(true)
       setIsDownloading(false)
       setCurrentTime(0)
       setDuration(0)
@@ -110,6 +164,15 @@ export function CallRecordingModal({
       setShowSpeedMenu(false)
     }
   }, [open])
+
+  const recordingExtensionFromBlob = (blob: Blob): string => {
+    const m = blob.type
+    if (m.includes('mpeg')) return '.mp3'
+    if (m.includes('wav')) return '.wav'
+    if (m.includes('ogg')) return '.ogg'
+    if (m.includes('gsm')) return '.gsm'
+    return '.wav'
+  }
 
   const handlePlayPause = () => {
     const audio = audioRef.current
@@ -132,7 +195,7 @@ export function CallRecordingModal({
 
   const handleSkipForward = () => {
     const audio = audioRef.current
-    if (!audio) return
+    if (!audio || !Number.isFinite(audio.duration)) return
     audio.currentTime = Math.min(audio.duration, audio.currentTime + 10)
   }
 
@@ -146,7 +209,7 @@ export function CallRecordingModal({
 
   const handleProgressChange = (e: React.MouseEvent<HTMLDivElement>) => {
     const audio = audioRef.current
-    if (!audio) return
+    if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) return
     const rect = e.currentTarget.getBoundingClientRect()
     const x = e.clientX - rect.left
     const percentage = x / rect.width
@@ -176,19 +239,27 @@ export function CallRecordingModal({
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="xl" className="p-4 sm:p-6">
-      {/* Hidden audio element for playback */}
-      {recordingUrl && (
+      {/* Hidden audio element for playback (blob URL from authenticated fetch) */}
+      {audioObjectUrl && (
         <audio
           ref={audioRef}
-          src={recordingUrl}
+          key={audioObjectUrl}
+          src={audioObjectUrl}
           preload="metadata"
           className="hidden"
           onLoadedMetadata={(e) => {
-            setDuration(e.currentTarget.duration)
+            const d = e.currentTarget.duration
+            if (Number.isFinite(d)) setDuration(d)
             setIsAudioLoading(false)
           }}
+          onCanPlay={() => setIsAudioLoading(false)}
           onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
           onEnded={() => setIsPlaying(false)}
+          onError={() => {
+            setLoadError(t('pages.clients.modals.callRecording.loadFailed'))
+            setIsAudioLoading(false)
+            setIsPlaying(false)
+          }}
         >
           <track kind="captions" />
         </audio>
@@ -253,7 +324,8 @@ export function CallRecordingModal({
 
         {/* Audio Player */}
         <div className="relative">
-          {isAudioLoading && (
+          {loadError && <p className="text-error-600 mb-2 text-center text-sm">{loadError}</p>}
+          {isAudioLoading && !loadError && (
             <div className="absolute inset-0 z-10 flex items-center justify-center rounded-full bg-white/80">
               <Icons.Spinner className="h-6 w-6" />
             </div>
@@ -261,7 +333,7 @@ export function CallRecordingModal({
           <div className="flex items-center gap-2 self-stretch rounded-full bg-white px-2 py-2 sm:gap-3 sm:px-[14px] sm:py-[15px]">
             <button
               onClick={handlePlayPause}
-              disabled={isAudioLoading}
+              disabled={isAudioLoading || !!loadError}
               className="shrink-0 cursor-pointer disabled:opacity-40"
             >
               {isPlaying ? (
@@ -314,6 +386,7 @@ export function CallRecordingModal({
           <Button
             variant="secondary"
             onClick={handleSkipBackward}
+            disabled={isAudioLoading || !!loadError}
             className="flex h-[40px] min-w-[calc(50%-4px)] rounded-md text-xs sm:h-[45px] sm:min-w-0 sm:text-sm"
             size="sm"
           >
@@ -323,6 +396,7 @@ export function CallRecordingModal({
           <Button
             variant="secondary"
             onClick={handlePlayPause}
+            disabled={isAudioLoading || !!loadError}
             className="flex h-[40px] min-w-[calc(50%-4px)] rounded-md text-xs sm:h-[45px] sm:min-w-0 sm:text-sm"
             size="sm"
           >
@@ -341,6 +415,7 @@ export function CallRecordingModal({
           <Button
             variant="secondary"
             onClick={handleSkipForward}
+            disabled={isAudioLoading || !!loadError}
             className="flex h-[40px] min-w-[calc(50%-4px)] rounded-md text-xs sm:h-[45px] sm:min-w-0 sm:text-sm"
             size="sm"
           >
@@ -351,6 +426,7 @@ export function CallRecordingModal({
             <Button
               variant="secondary"
               onClick={() => setShowSpeedMenu(!showSpeedMenu)}
+              disabled={isAudioLoading || !!loadError}
               className="flex h-[40px] w-full rounded-md text-xs sm:h-[45px] sm:text-sm"
               size="sm"
             >
@@ -386,15 +462,18 @@ export function CallRecordingModal({
             size="sm"
             className="w-full rounded-md"
             onClick={async () => {
-              if (!recordingUrl || isDownloading) return
+              if (!callData.call_id || isDownloading) return
               setIsDownloading(true)
               try {
-                const resp = await fetch(recordingUrl)
-                const blob = await resp.blob()
+                let blob = recordingBlobRef.current
+                if (!blob) {
+                  blob = await callService.fetchRecordingBlob(callData.call_id)
+                }
+                const ext = recordingExtensionFromBlob(blob)
                 const url = URL.createObjectURL(blob)
                 const link = document.createElement('a')
                 link.href = url
-                link.download = `call-${callData.call_id || 'recording'}.wav`
+                link.download = `call-${callData.call_id}${ext}`
                 document.body.appendChild(link)
                 link.click()
                 document.body.removeChild(link)
@@ -405,7 +484,7 @@ export function CallRecordingModal({
                 setIsDownloading(false)
               }
             }}
-            disabled={!recordingUrl || isDownloading}
+            disabled={!callData.call_id || isDownloading || !!loadError}
             leftIcon={
               isDownloading ? (
                 <Icons.Spinner className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
