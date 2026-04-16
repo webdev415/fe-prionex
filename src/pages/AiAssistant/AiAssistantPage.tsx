@@ -108,15 +108,17 @@ function buildMockAssistantReply(
       : t('pages.aiAssistant.mockSummaryDetailed')
 
   if (settings.outputFormat === 'tableFirst' || input.toLowerCase().includes('report')) {
+    const colMetric = t('pages.aiAssistant.mockTableColMetric')
+    const colValue = t('pages.aiAssistant.mockTableColValue')
     return [
       `${summaryPrefix} ${t('pages.aiAssistant.mockDetectedRequest')}: "${input}".`,
       '',
       t('pages.aiAssistant.mockTableHeader'),
-      '| Metric | Value |',
+      `| ${colMetric} | ${colValue} |`,
       '| --- | --- |',
-      '| Clients | 42 |',
-      '| Debt at risk | $128,450 |',
-      '| Overdue ratio | 17.4% |',
+      `| ${t('pages.aiAssistant.mockTableRowClients')} | 42 |`,
+      `| ${t('pages.aiAssistant.mockTableRowDebt')} | $128,450 |`,
+      `| ${t('pages.aiAssistant.mockTableRowOverdue')} | 17.4% |`,
       '',
       t('pages.aiAssistant.mockTableFooter'),
     ].join('\n')
@@ -452,26 +454,26 @@ export function AiAssistantPage() {
   )
 
   const settingsPanel = (
-    <div className="border-light-200/80 mx-auto w-full max-w-lg overflow-hidden rounded-2xl border bg-white shadow-2xl ring-1 ring-black/[0.04]">
-      <header className="from-light-50/80 border-b border-gray-100 bg-gradient-to-b to-white px-5 pt-5 pb-4">
-        <h2 className="text-dark-500 text-base font-semibold tracking-tight">
+    <div className="border-light-200/80 mx-auto flex max-h-full min-h-0 w-full max-w-lg flex-col overflow-hidden rounded-2xl border bg-white shadow-2xl ring-1 ring-black/[0.04]">
+      <header className="from-light-50/80 shrink-0 border-b border-gray-100 bg-gradient-to-b to-white px-4 pt-3 pb-2">
+        <h2 className="text-dark-500 text-sm font-semibold tracking-tight">
           {t('pages.aiAssistant.settingsTitle')}
         </h2>
-        <p className="mt-1.5 text-sm leading-relaxed font-light text-gray-600">
+        <p className="mt-1 text-xs leading-snug font-light text-gray-600">
           {t('pages.aiAssistant.settingsDescription')}
         </p>
       </header>
 
-      <div className="divide-y divide-gray-100">
-        <section className="px-5 py-4">
-          <h3 className="text-dark-500 mb-3 text-sm font-semibold tracking-tight">
+      <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto overscroll-y-contain">
+        <section className="px-4 py-2.5">
+          <h3 className="text-dark-500 mb-2 text-xs font-semibold tracking-tight">
             {t('pages.aiAssistant.assistantPreferences')}
           </h3>
-          <p className="mb-2 text-xs font-medium text-gray-500">
+          <p className="mb-1.5 text-[11px] font-medium text-gray-500">
             {t('pages.aiAssistant.responseMode')}
           </p>
           <div
-            className="bg-light-100/80 flex w-full rounded-xl p-1"
+            className="bg-light-100/80 flex w-full rounded-lg p-0.5"
             role="group"
             aria-label={t('pages.aiAssistant.responseMode')}
           >
@@ -479,7 +481,7 @@ export function AiAssistantPage() {
               type="button"
               onClick={() => applySettings((s) => ({ ...s, responseMode: 'short' }))}
               className={cn(
-                'min-h-9 flex-1 rounded-lg px-3 py-2 text-xs font-medium transition-all',
+                'min-h-8 flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-all',
                 assistantSettings.responseMode === 'short'
                   ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
                   : 'hover:text-dark-500 text-gray-600'
@@ -491,7 +493,7 @@ export function AiAssistantPage() {
               type="button"
               onClick={() => applySettings((s) => ({ ...s, responseMode: 'detailed' }))}
               className={cn(
-                'min-h-9 flex-1 rounded-lg px-3 py-2 text-xs font-medium transition-all',
+                'min-h-8 flex-1 rounded-md px-2 py-1.5 text-[11px] font-medium transition-all',
                 assistantSettings.responseMode === 'detailed'
                   ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
                   : 'hover:text-dark-500 text-gray-600'
@@ -501,11 +503,11 @@ export function AiAssistantPage() {
             </button>
           </div>
 
-          <p className="mt-4 mb-2 text-xs font-medium text-gray-500">
+          <p className="mt-2.5 mb-1.5 text-[11px] font-medium text-gray-500">
             {t('pages.aiAssistant.outputFormat')}
           </p>
           <div
-            className="bg-light-100/80 grid w-full grid-cols-3 gap-0.5 rounded-xl p-1"
+            className="bg-light-100/80 grid w-full grid-cols-3 gap-0.5 rounded-lg p-0.5"
             role="group"
             aria-label={t('pages.aiAssistant.outputFormat')}
           >
@@ -515,7 +517,7 @@ export function AiAssistantPage() {
                 type="button"
                 onClick={() => applySettings((s) => ({ ...s, outputFormat: format }))}
                 className={cn(
-                  'min-h-[2.75rem] rounded-lg px-1.5 py-2 text-center text-[11px] leading-tight font-medium transition-all sm:px-2 sm:text-xs',
+                  'min-h-8 rounded-md px-1 py-1.5 text-center text-[10px] leading-tight font-medium transition-all sm:px-1.5 sm:text-[11px]',
                   assistantSettings.outputFormat === format
                     ? 'text-dark-500 bg-white shadow-sm ring-1 ring-gray-200/80'
                     : 'hover:text-dark-500 text-gray-600'
@@ -528,8 +530,8 @@ export function AiAssistantPage() {
             ))}
           </div>
 
-          <div className="bg-light-50/60 mt-4 flex items-center justify-between gap-4 rounded-xl border border-gray-200/70 px-3 py-3">
-            <span className="text-dark-500 min-w-0 flex-1 text-sm leading-snug font-light">
+          <div className="bg-light-50/60 mt-2.5 flex items-center justify-between gap-3 rounded-lg border border-gray-200/70 px-2.5 py-2">
+            <span className="text-dark-500 min-w-0 flex-1 text-xs leading-snug font-light">
               {t('pages.aiAssistant.voiceInput')}
             </span>
             <ToggleSwitch
@@ -545,13 +547,13 @@ export function AiAssistantPage() {
           </div>
         </section>
 
-        <section className="px-5 py-4">
-          <h3 className="text-dark-500 mb-3 text-sm font-semibold tracking-tight">
+        <section className="px-4 py-2.5">
+          <h3 className="text-dark-500 mb-2 text-xs font-semibold tracking-tight">
             {t('pages.aiAssistant.contextBehavior')}
           </h3>
           <ul className="space-y-0">
-            <li className="flex items-center justify-between gap-4 py-2.5 first:pt-0">
-              <span className="text-dark-500 min-w-0 flex-1 text-sm leading-snug font-light">
+            <li className="flex items-center justify-between gap-3 py-1.5 first:pt-0">
+              <span className="text-dark-500 min-w-0 flex-1 text-xs leading-snug font-light">
                 {t('pages.aiAssistant.useSelectedClientAutomatically')}
               </span>
               <ToggleSwitch
@@ -562,8 +564,8 @@ export function AiAssistantPage() {
                 ariaLabel={t('pages.aiAssistant.useSelectedClientAutomatically')}
               />
             </li>
-            <li className="flex items-center justify-between gap-4 border-t border-gray-100 py-2.5">
-              <span className="text-dark-500 min-w-0 flex-1 text-sm leading-snug font-light">
+            <li className="flex items-center justify-between gap-3 border-t border-gray-100 py-1.5">
+              <span className="text-dark-500 min-w-0 flex-1 text-xs leading-snug font-light">
                 {t('pages.aiAssistant.useSelectedPeriodAutomatically')}
               </span>
               <ToggleSwitch
@@ -574,8 +576,8 @@ export function AiAssistantPage() {
                 ariaLabel={t('pages.aiAssistant.useSelectedPeriodAutomatically')}
               />
             </li>
-            <li className="flex items-center justify-between gap-4 border-t border-gray-100 py-2.5">
-              <span className="text-dark-500 min-w-0 flex-1 text-sm leading-snug font-light">
+            <li className="flex items-center justify-between gap-3 border-t border-gray-100 py-1.5">
+              <span className="text-dark-500 min-w-0 flex-1 text-xs leading-snug font-light">
                 {t('pages.aiAssistant.rememberConversationContext')}
               </span>
               <ToggleSwitch
@@ -589,13 +591,13 @@ export function AiAssistantPage() {
           </ul>
         </section>
 
-        <section className="px-5 py-4">
-          <h3 className="text-dark-500 mb-3 text-sm font-semibold tracking-tight">
+        <section className="px-4 py-2.5">
+          <h3 className="text-dark-500 mb-2 text-xs font-semibold tracking-tight">
             {t('pages.aiAssistant.suggestedActions')}
           </h3>
           <ul className="space-y-0">
-            <li className="flex items-center justify-between gap-4 py-2.5 first:pt-0">
-              <span className="text-dark-500 min-w-0 flex-1 text-sm leading-snug font-light">
+            <li className="flex items-center justify-between gap-3 py-1.5 first:pt-0">
+              <span className="text-dark-500 min-w-0 flex-1 text-xs leading-snug font-light">
                 {t('pages.aiAssistant.showQuickSuggestionsAfterResponse')}
               </span>
               <ToggleSwitch
@@ -606,8 +608,8 @@ export function AiAssistantPage() {
                 ariaLabel={t('pages.aiAssistant.showQuickSuggestionsAfterResponse')}
               />
             </li>
-            <li className="flex items-center justify-between gap-4 border-t border-gray-100 py-2.5">
-              <span className="text-dark-500 min-w-0 flex-1 text-sm leading-snug font-light">
+            <li className="flex items-center justify-between gap-3 border-t border-gray-100 py-1.5">
+              <span className="text-dark-500 min-w-0 flex-1 text-xs leading-snug font-light">
                 {t('pages.aiAssistant.autoScrollToLatestAnswer')}
               </span>
               <ToggleSwitch
@@ -621,8 +623,8 @@ export function AiAssistantPage() {
           </ul>
         </section>
 
-        <section className="bg-light-50/40 px-5 py-4">
-          <h3 className="text-dark-500 mb-3 text-sm font-semibold tracking-tight">
+        <section className="bg-light-50/40 px-4 py-2.5">
+          <h3 className="text-dark-500 mb-2 text-xs font-semibold tracking-tight">
             {t('pages.aiAssistant.advanced')}
           </h3>
           <button
@@ -636,9 +638,9 @@ export function AiAssistantPage() {
               }
               setIsAssistantResponding(false)
             }}
-            className="text-error-700 border-error-200/80 bg-error-50/50 hover:bg-error-50 focus-visible:ring-error-400 flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="text-error-700 border-error-200/80 bg-error-50/50 hover:bg-error-50 focus-visible:ring-error-400 flex w-full items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
-            <Icons.Delete size={16} strokeWidth={1.5} />
+            <Icons.Delete size={14} strokeWidth={1.5} />
             {t('pages.aiAssistant.clearConversation')}
           </button>
         </section>
@@ -777,7 +779,7 @@ export function AiAssistantPage() {
         {hasConversation && showScrollToLatest && (
           <button
             type="button"
-            aria-label="Scroll to latest"
+            aria-label={t('pages.aiAssistant.scrollToLatestAria')}
             onClick={() => scrollToConversationBottom('smooth')}
             className="border-light-200 text-dark-500 hover:bg-light-50 pointer-events-auto absolute -top-3 left-1/2 z-30 flex h-9 w-9 -translate-x-1/2 items-center justify-center rounded-full border bg-white shadow-md transition-colors sm:-top-4"
           >
@@ -834,7 +836,7 @@ export function AiAssistantPage() {
                 {!isMobileOrTablet && isSettingsOpen && (
                   <div
                     ref={settingsPanelRef}
-                    className="absolute bottom-full left-0 z-30 mb-3 w-[min(calc(100vw-1.5rem),28rem)]"
+                    className="absolute bottom-full left-0 z-30 mb-3 flex max-h-[min(52vh,calc(100dvh-11rem))] w-[min(calc(100vw-1.5rem),28rem)] min-w-0 flex-col"
                   >
                     {settingsPanel}
                   </div>
@@ -931,7 +933,7 @@ export function AiAssistantPage() {
         <div className="fixed inset-0 z-40">
           <button
             type="button"
-            aria-label="Close settings"
+            aria-label={t('pages.aiAssistant.closeSettingsAria')}
             className="absolute inset-0 bg-black/30"
             onClick={() => setIsSettingsOpen(false)}
           />

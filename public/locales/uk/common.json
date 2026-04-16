@@ -158,7 +158,14 @@
       "quickClientData": "Перевірити дані клієнта",
       "quickDebt": "Аналіз боргу",
       "quickReport": "Звіт",
-      "quickEmployee": "Перевірити співробітника"
+      "quickEmployee": "Перевірити співробітника",
+      "scrollToLatestAria": "Прокрутити до останнього повідомлення",
+      "closeSettingsAria": "Закрити налаштування",
+      "mockTableColMetric": "Показник",
+      "mockTableColValue": "Значення",
+      "mockTableRowClients": "Клієнти",
+      "mockTableRowDebt": "Борг у зоні ризику",
+      "mockTableRowOverdue": "Частка прострочених"
     },
     "users": {
       "title": "Управління користувачами",

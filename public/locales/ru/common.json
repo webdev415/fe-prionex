@@ -158,7 +158,14 @@
       "quickClientData": "Проверить данные клиента",
       "quickDebt": "Анализ долга",
       "quickReport": "Отчёт",
-      "quickEmployee": "Проверить сотрудника"
+      "quickEmployee": "Проверить сотрудника",
+      "scrollToLatestAria": "Прокрутить к последнему сообщению",
+      "closeSettingsAria": "Закрыть настройки",
+      "mockTableColMetric": "Показатель",
+      "mockTableColValue": "Значение",
+      "mockTableRowClients": "Клиенты",
+      "mockTableRowDebt": "Долг в зоне риска",
+      "mockTableRowOverdue": "Доля просрочки"
     },
     "users": {
       "title": "Управление пользователями",

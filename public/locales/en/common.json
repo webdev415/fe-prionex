@@ -158,7 +158,14 @@
       "quickClientData": "Check Client Data",
       "quickDebt": "Analyze Debt",
       "quickReport": "Generate Report",
-      "quickEmployee": "Check Employee"
+      "quickEmployee": "Check Employee",
+      "scrollToLatestAria": "Scroll to latest message",
+      "closeSettingsAria": "Close settings",
+      "mockTableColMetric": "Metric",
+      "mockTableColValue": "Value",
+      "mockTableRowClients": "Clients",
+      "mockTableRowDebt": "Debt at risk",
+      "mockTableRowOverdue": "Overdue ratio"
     },
     "users": {
       "title": "User Management",
