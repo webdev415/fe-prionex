@@ -110,20 +110,12 @@ function mapFiltersToAPIParams(
     }
   }
 
-  // FILTER: Promise Logged Date (creation date)
-  if (filters.promiseCreatedFrom) {
-    params.promise_created_from = filters.promiseCreatedFrom
+  // FILTER: Interaction Logged Date (applies to promise/callback subqueries)
+  if (filters.interactionDateFrom) {
+    params.interaction_date_from = filters.interactionDateFrom
   }
-  if (filters.promiseCreatedTo) {
-    params.promise_created_to = filters.promiseCreatedTo
-  }
-
-  // FILTER: Callback Logged Date (creation date)
-  if (filters.callbackCreatedFrom) {
-    params.callback_created_from = filters.callbackCreatedFrom
-  }
-  if (filters.callbackCreatedTo) {
-    params.callback_created_to = filters.callbackCreatedTo
+  if (filters.interactionDateTo) {
+    params.interaction_date_to = filters.interactionDateTo
   }
 
   return params
@@ -534,42 +526,28 @@ describe('Client Management Filter Integration', () => {
     })
   })
 
-  describe('Promise Logged Date (Creation Date) Filter', () => {
-    it('should map promiseCreatedFrom/To to promise_created_from/to', () => {
+  describe('Interaction Logged Date Filter', () => {
+    it('should map interactionDateFrom/To to interaction_date_from/to', () => {
       const filters: ClientFilters = {
-        promiseCreatedFrom: '2026-04-01',
-        promiseCreatedTo: '2026-04-15',
+        interactionDateFrom: '2026-04-01',
+        interactionDateTo: '2026-04-15',
       }
 
       const params = mapFiltersToAPIParams(filters)
 
-      expect(params.promise_created_from).toBe('2026-04-01')
-      expect(params.promise_created_to).toBe('2026-04-15')
+      expect(params.interaction_date_from).toBe('2026-04-01')
+      expect(params.interaction_date_to).toBe('2026-04-15')
     })
 
-    it('should handle only promiseCreatedFrom', () => {
+    it('should handle only interactionDateFrom', () => {
       const filters: ClientFilters = {
-        promiseCreatedFrom: '2026-04-01',
+        interactionDateFrom: '2026-04-01',
       }
 
       const params = mapFiltersToAPIParams(filters)
 
-      expect(params.promise_created_from).toBe('2026-04-01')
-      expect(params.promise_created_to).toBeUndefined()
-    })
-  })
-
-  describe('Callback Logged Date (Creation Date) Filter', () => {
-    it('should map callbackCreatedFrom/To to callback_created_from/to', () => {
-      const filters: ClientFilters = {
-        callbackCreatedFrom: '2026-03-01',
-        callbackCreatedTo: '2026-03-31',
-      }
-
-      const params = mapFiltersToAPIParams(filters)
-
-      expect(params.callback_created_from).toBe('2026-03-01')
-      expect(params.callback_created_to).toBe('2026-03-31')
+      expect(params.interaction_date_from).toBe('2026-04-01')
+      expect(params.interaction_date_to).toBeUndefined()
     })
   })
 
@@ -581,10 +559,8 @@ describe('Client Management Filter Integration', () => {
         callbackDateFrom: '2026-05-01',
         callbackDateTo: '2026-05-31',
         interactionUserId: '12',
-        promiseCreatedFrom: '2026-03-15',
-        promiseCreatedTo: '2026-04-15',
-        callbackCreatedFrom: '2026-04-01',
-        callbackCreatedTo: '2026-05-01',
+        interactionDateFrom: '2026-03-15',
+        interactionDateTo: '2026-05-01',
       }
 
       const params = mapFiltersToAPIParams(filters)
@@ -594,10 +570,8 @@ describe('Client Management Filter Integration', () => {
       expect(params.callback_date_from).toBe('2026-05-01')
       expect(params.callback_date_to).toBe('2026-05-31')
       expect(params.interaction_user_id).toBe(12)
-      expect(params.promise_created_from).toBe('2026-03-15')
-      expect(params.promise_created_to).toBe('2026-04-15')
-      expect(params.callback_created_from).toBe('2026-04-01')
-      expect(params.callback_created_to).toBe('2026-05-01')
+      expect(params.interaction_date_from).toBe('2026-03-15')
+      expect(params.interaction_date_to).toBe('2026-05-01')
     })
 
     it('should not set new filter params when not provided', () => {
@@ -606,10 +580,8 @@ describe('Client Management Filter Integration', () => {
       const params = mapFiltersToAPIParams(filters)
 
       expect(params.interaction_user_id).toBeUndefined()
-      expect(params.promise_created_from).toBeUndefined()
-      expect(params.promise_created_to).toBeUndefined()
-      expect(params.callback_created_from).toBeUndefined()
-      expect(params.callback_created_to).toBeUndefined()
+      expect(params.interaction_date_from).toBeUndefined()
+      expect(params.interaction_date_to).toBeUndefined()
     })
   })
 })
