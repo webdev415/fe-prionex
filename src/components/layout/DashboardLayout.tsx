@@ -758,8 +758,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { navItems, bottomNavItems } = navItemsResult
   const { toggleSidebar } = useSidebarStore()
 
+  const isAiAssistantRoute =
+    location.pathname === '/dashboard/ai-assistant' ||
+    location.pathname === '/dashboard/ai-assistant/'
+
   return (
-    <div className="bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center bg-no-repeat">
+    <div
+      className={cn(
+        'bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center',
+        /* Long scroll (chat): fixed attachment paints vs viewport so the SVG does not “run out” mid-page */
+        isAiAssistantRoute ? '[background-attachment:fixed]' : 'bg-no-repeat'
+      )}
+    >
       {/* Sidebar */}
       <Sidebar items={navItems} bottomItems={bottomNavItems} />
 
