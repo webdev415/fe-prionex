@@ -94,6 +94,25 @@
     "confirmMessage": "Вы уверены, что хотите выйти? Вам нужно будет снова войти, чтобы получить доступ к системе."
   },
   "pages": {
+    "aiAssistant": {
+      "headerButtonAria": "Открыть AI-ассистента",
+      "greeting": "Здравствуйте! Я AI-ассистент Prionex.",
+      "inputPlaceholder": "Поиск по имени, коду, клиентам",
+      "settings": "Настройки",
+      "client": "Клиент",
+      "period": "Период",
+      "allClients": "Все клиенты",
+      "recentClients": "Недавние клиенты",
+      "periodAll": "Всё время",
+      "periodMonth": "Этот месяц",
+      "periodQuarter": "Этот квартал",
+      "periodYear": "Этот год",
+      "voiceInput": "Голосовой ввод",
+      "quickClientData": "Проверить данные клиента",
+      "quickDebt": "Анализ долга",
+      "quickReport": "Отчёт",
+      "quickEmployee": "Проверить сотрудника"
+    },
     "users": {
       "title": "Управление пользователями",
       "addNewUser": "Новый пользователь",

@@ -94,6 +94,25 @@
     "confirmMessage": "Ви впевнені, що хочете вийти? Вам потрібно буде знову увійти, щоб отримати доступ до системи."
   },
   "pages": {
+    "aiAssistant": {
+      "headerButtonAria": "Відкрити AI-асистента",
+      "greeting": "Вітаю! Я AI-асистент Prionex.",
+      "inputPlaceholder": "Пошук за ім'ям, кодом, клієнтами",
+      "settings": "Налаштування",
+      "client": "Клієнт",
+      "period": "Період",
+      "allClients": "Усі клієнти",
+      "recentClients": "Нещодавні клієнти",
+      "periodAll": "Увесь час",
+      "periodMonth": "Цей місяць",
+      "periodQuarter": "Цей квартал",
+      "periodYear": "Цей рік",
+      "voiceInput": "Голосовий ввід",
+      "quickClientData": "Перевірити дані клієнта",
+      "quickDebt": "Аналіз боргу",
+      "quickReport": "Звіт",
+      "quickEmployee": "Перевірити співробітника"
+    },
     "users": {
       "title": "Управління користувачами",
       "addNewUser": "Новий користувач",

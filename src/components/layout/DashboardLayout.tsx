@@ -37,6 +37,31 @@ interface DashboardLayoutProps {
   children: ReactNode
 }
 
+function AiAssistantHeaderButton() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { t } = useTranslation('common')
+  const isActive = location.pathname === '/dashboard/ai-assistant'
+
+  return (
+    <button
+      type="button"
+      aria-label={t('pages.aiAssistant.headerButtonAria')}
+      onClick={() => navigate('/dashboard/ai-assistant')}
+      className={cn(
+        'relative flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100 focus:outline-none',
+        isActive && 'bg-gray-100'
+      )}
+    >
+      <Icons.AiBrain03
+        size={20}
+        strokeWidth={1.5}
+        className={cn('transition-colors', isActive ? 'text-primary-600' : 'text-gray-300')}
+      />
+    </button>
+  )
+}
+
 // Extend SidebarItem interface to support permission checking
 interface ExtendedSidebarItem extends SidebarItem {
   requiredPermission?: Permission
@@ -800,12 +825,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="hidden items-center gap-3 lg:flex">
             <MinimizedCallBubble />
             <NotificationBell />
+            <AiAssistantHeaderButton />
             <UserProfile onLogoutClick={handleLogoutClick} />
           </div>
 
           {/* Mobile: Notification bell + dropdown menu */}
           <div className="flex items-center gap-2 lg:hidden">
             <NotificationBell />
+            <AiAssistantHeaderButton />
             <MobileHeaderMenu onLogoutClick={handleLogoutClick} />
           </div>
         </header>

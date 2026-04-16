@@ -94,6 +94,25 @@
     "confirmMessage": "Are you sure you want to logout? You will need to login again to access the system."
   },
   "pages": {
+    "aiAssistant": {
+      "headerButtonAria": "Open AI assistant",
+      "greeting": "Hello! I'm the Prionex AI Assistant.",
+      "inputPlaceholder": "Search by name, code, clients",
+      "settings": "Settings",
+      "client": "Client",
+      "period": "Period",
+      "allClients": "All clients",
+      "recentClients": "Recent clients",
+      "periodAll": "All time",
+      "periodMonth": "This month",
+      "periodQuarter": "This quarter",
+      "periodYear": "This year",
+      "voiceInput": "Voice input",
+      "quickClientData": "Check Client Data",
+      "quickDebt": "Analyze Debt",
+      "quickReport": "Generate Report",
+      "quickEmployee": "Check Employee"
+    },
     "users": {
       "title": "User Management",
       "addNewUser": "New User",
