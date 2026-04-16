@@ -71,7 +71,7 @@ export function AiAssistantPage() {
   const clientOptions = useMemo(
     () => [
       { value: 'all', label: t('pages.aiAssistant.allClients') },
-      { value: 'recent', label: t('pages.aiAssistant.recentClients') },
+      { value: 'my', label: t('pages.aiAssistant.myClients') },
     ],
     [t]
   )
@@ -79,9 +79,11 @@ export function AiAssistantPage() {
   const periodOptions = useMemo(
     () => [
       { value: 'all', label: t('pages.aiAssistant.periodAll') },
+      { value: 'today', label: t('pages.aiAssistant.periodToday') },
+      { value: 'last7Days', label: t('pages.aiAssistant.periodLast7Days') },
+      { value: 'last30Days', label: t('pages.aiAssistant.periodLast30Days') },
       { value: 'month', label: t('pages.aiAssistant.periodMonth') },
       { value: 'quarter', label: t('pages.aiAssistant.periodQuarter') },
-      { value: 'year', label: t('pages.aiAssistant.periodYear') },
     ],
     [t]
   )
