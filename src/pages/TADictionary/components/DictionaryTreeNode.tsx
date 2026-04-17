@@ -35,11 +35,16 @@ export function DictionaryTreeNode({ node, depth, selectedId, onSelect }: Props)
   return (
     <li className="flex flex-col select-none">
       <div
+        role="button"
+        tabIndex={0}
         className={`flex cursor-pointer items-center gap-2 rounded-md py-1.5 pr-2 transition-colors ${
           isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
         } ${isHidden ? 'opacity-50' : ''}`}
         style={{ paddingLeft: `${depth * 24 + 8}px` }}
         onClick={() => onSelect(node)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') onSelect(node)
+        }}
       >
         {/* Expand/collapse triangle or leaf dot */}
         {!node.is_leaf ? (

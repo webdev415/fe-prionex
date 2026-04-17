@@ -52,6 +52,7 @@ export function NodeSettingsPanel({ node, chainId }: Props) {
   const [childIsLeaf, setChildIsLeaf] = useState(false)
 
   // Sync local state when the selected node changes.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setName(node.name)
     setNodeType(node.is_leaf ? 'leaf' : 'intermediate')
@@ -67,7 +68,9 @@ export function NodeSettingsPanel({ node, chainId }: Props) {
     node.require_promise_date,
     node.require_promise_amount,
     node.is_positive,
+    node.require_credit,
   ])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const save = async () => {
     try {
@@ -232,6 +235,7 @@ export function NodeSettingsPanel({ node, chainId }: Props) {
             onKeyDown={(e) => {
               if (e.key === 'Enter') addChild()
             }}
+            // eslint-disable-next-line jsx-a11y/no-autofocus
             autoFocus
           />
           <label className="flex items-center gap-2 text-sm text-gray-700">

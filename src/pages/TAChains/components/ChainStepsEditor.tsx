@@ -40,7 +40,7 @@ export function ChainStepsEditor({
   // which subset is contextually relevant; we still allow any active TA so
   // an admin can re-use generic TAs across departments).
   const { data } = useTargetActions({ include_hidden: false })
-  const allTAs = data?.items ?? []
+  const allTAs = useMemo(() => data?.items ?? [], [data])
 
   const tasInDept = useMemo(() => {
     if (departmentId == null) return allTAs

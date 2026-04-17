@@ -142,6 +142,7 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
   const cancelMut = useCancelChainInstance()
 
   // Reset form when chain changes (not on step advance — we keep collectedStepData)
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setCollectedStepData({})
     setStepValue('')
@@ -153,6 +154,7 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     setCreditId('')
     setNotes('')
   }, [activeInstance?.id])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleStart = async () => {
     const chainId = parseInt(selectedChainId, 10)
@@ -248,7 +250,7 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
   }
 
   // Steps for progress timeline
-  const steps: TAChainStep[] = activeChain?.steps ?? []
+  const steps = useMemo<TAChainStep[]>(() => activeChain?.steps ?? [], [activeChain])
   const currentStep = steps.find((s) => s.step_order === (activeInstance?.current_step_order ?? 1))
   const currentTA = currentStep ? taById.get(currentStep.target_action_id) : null
   const isLastStep = (activeInstance?.current_step_order ?? 1) >= steps.length
@@ -256,6 +258,7 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
   // Delay enforcement with live countdown
   const [delaySecondsLeft, setDelaySecondsLeft] = useState(0)
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!currentStep || currentStep.delay_minutes <= 0 || !activeInstance) {
       setDelaySecondsLeft(0)
@@ -279,7 +282,13 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     tick()
     const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
-  }, [currentStep, activeInstance?.last_step_completed_at, activeInstance?.started_at])
+  }, [
+    currentStep,
+    activeInstance,
+    activeInstance?.last_step_completed_at,
+    activeInstance?.started_at,
+  ])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const isDelayBlocked = delaySecondsLeft > 0
   const delayMinutesLeft = Math.ceil(delaySecondsLeft / 60)

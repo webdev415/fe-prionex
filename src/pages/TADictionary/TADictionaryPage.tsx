@@ -173,6 +173,7 @@ export function TADictionaryPage() {
                       if (e.key === 'Enter') addRoot()
                       if (e.key === 'Escape') setAddingRoot(false)
                     }}
+                    // eslint-disable-next-line jsx-a11y/no-autofocus
                     autoFocus
                   />
                   <label className="flex items-center gap-1 text-[10px] whitespace-nowrap text-gray-600">

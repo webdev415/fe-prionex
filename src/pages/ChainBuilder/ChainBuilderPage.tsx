@@ -208,6 +208,7 @@ export function ChainBuilderPage() {
 
     setNodes(flowNodes)
     setEdges(flowEdges)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chain, builderData, selectedStepId])
 
   const onNodeClick = useCallback((_: unknown, node: Node) => {

@@ -34,6 +34,8 @@ export function DictionaryPicker({ nodes, onSelect, selectedId }: Props) {
     return (
       <li key={node.id} className="flex flex-col">
         <div
+          role="button"
+          tabIndex={0}
           className={`flex cursor-pointer items-center gap-2 rounded py-1.5 pr-2 transition-colors ${
             isSelected ? 'bg-primary-300/20 font-medium' : 'hover:bg-gray-50'
           }`}
@@ -43,6 +45,12 @@ export function DictionaryPicker({ nodes, onSelect, selectedId }: Props) {
               onSelect(node)
             } else {
               toggle(node.id)
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              if (node.is_leaf) onSelect(node)
+              else toggle(node.id)
             }
           }}
         >
