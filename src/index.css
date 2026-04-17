@@ -184,6 +184,26 @@
   }
 }
 
+/* React Flow controls: force dark icons regardless of @layer ordering */
+.react-flow__controls-button {
+  color: #374151 !important;
+  background: #ffffff !important;
+  border-color: #e5e7eb !important;
+}
+.react-flow__controls-button svg {
+  fill: #374151 !important;
+  color: #374151 !important;
+}
+.react-flow__controls-button:hover {
+  background: #f3f4f6 !important;
+}
+/* Override the CSS variable React Flow uses for icon color */
+.react-flow__controls {
+  --xy-controls-button-color-default: #374151;
+  --xy-controls-button-color: #374151;
+  --xy-controls-button-color-hover-default: #111827;
+}
+
 @layer utilities {
   .scrollbar-hide::-webkit-scrollbar {
     display: none;

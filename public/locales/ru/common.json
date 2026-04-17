@@ -18,6 +18,12 @@
     "roles": "Роли",
     "departments": "Отделы",
     "smsTemplates": "SMS Шаблоны",
+    "targetActions": "Целевые действия",
+    "taChains": "Цепочки TA",
+    "taDictionary": "Словарь",
+    "chainBuilder": "Конструктор цепочек",
+    "taManagement": "Целевые действия",
+    "interactionLog": "Журнал взаимодействий",
     "transactions": "Транзакции",
     "operations": "Операции",
     "bulkOperatorAssignment": "Массовое назначение операторов",
@@ -1081,7 +1087,8 @@
           "loans": "Займы",
           "tasks": "Задания",
           "docs": "Документы",
-          "callSms": "Звонок / SMS"
+          "callSms": "Звонок / SMS",
+          "taChains": "Цепочки TA"
         },
         "maritalStatuses": {
           "1": "Холост/Не замужем",
@@ -1721,6 +1728,147 @@
         "selectUser": "Выберите пользователя...",
         "comment": "Комментарий",
         "commentPlaceholder": "Необязательный комментарий..."
+      }
+    },
+    "taDictionary": {
+      "title": "Словарь",
+      "selectChain": "Выберите цепочку",
+      "selectChainPlaceholder": "Выберите цепочку...",
+      "noChainSelected": "Выберите цепочку выше для управления деревом категорий.",
+      "emptyTree": "У этой цепочки пока нет категорий. Добавьте корневой узел.",
+      "addRootNode": "Добавить корневую категорию",
+      "addChild": "Добавить дочерний",
+      "newNodeName": "Имя узла...",
+      "leaf": "Лист",
+      "hide": "Скрыть",
+      "unhide": "Восстановить",
+      "requirePromiseDate": "Требовать дату обещания",
+      "requirePromiseAmount": "Требовать сумму обещания",
+      "isPositive": "Положительный результат"
+    },
+    "taChains": {
+      "title": "Цепочки TA",
+      "createButton": "Создать цепочку",
+      "searchPlaceholder": "Поиск цепочек...",
+      "showInactive": "Показывать неактивные",
+      "empty": "Цепочки TA не найдены. Нажмите «Создать цепочку», чтобы создать первую.",
+      "noTargetActionsHint": "Сначала создайте хотя бы одно активное целевое действие в Системных настройках → Целевые действия.",
+      "table": {
+        "department": "Отдел"
+      },
+      "chainTypes": {
+        "manual": "Ручная",
+        "automatic": "Автоматическая"
+      },
+      "status": {
+        "active": "Активна",
+        "deactivated": "Деактивирована",
+        "systemHidden": "Системная (скрытая)"
+      },
+      "actions": {
+        "clone": "Копия",
+        "activate": "Активировать",
+        "deactivate": "Деактивировать"
+      },
+      "form": {
+        "name": "Название",
+        "description": "Описание",
+        "chainType": "Тип цепочки",
+        "department": "Отдел",
+        "departmentPlaceholder": "Выберите отдел",
+        "systemHidden": "Системная (скрытая) — запускается только системой или админом"
+      },
+      "steps": {
+        "title": "Шаги",
+        "label": "шагов",
+        "add": "Добавить шаг",
+        "empty": "Шагов пока нет. Нажмите «Добавить шаг», чтобы создать первый.",
+        "stepLabel": "Шаг {{index}}",
+        "targetAction": "Целевое действие",
+        "selectTA": "Выберите TA",
+        "delayMinutes": "Задержка (мин)",
+        "required": "Обязательно",
+        "notInPast": "Дата не может быть в прошлом"
+      },
+      "modals": {
+        "create": { "title": "Создание цепочки TA" },
+        "edit": { "title": "Редактирование цепочки TA" }
+      },
+      "errors": {
+        "nameRequired": "Название обязательно",
+        "departmentRequired": "Выберите отдел"
+      },
+      "toasts": {
+        "created": "Цепочка TA создана",
+        "updated": "Цепочка TA обновлена",
+        "cloned": "Цепочка TA скопирована",
+        "activated": "Цепочка TA активирована",
+        "deactivated": "Цепочка TA деактивирована"
+      }
+    },
+    "taManagement": {
+      "tabs": {
+        "targetActions": "Целевые действия",
+        "taChains": "Цепочки TA",
+        "dictionary": "Словарь",
+        "chainBuilder": "Конструктор цепочек"
+      }
+    },
+    "targetActions": {
+      "title": "Целевые действия",
+      "createButton": "Создать TA",
+      "searchPlaceholder": "Поиск TA...",
+      "showHidden": "Показывать скрытые",
+      "empty": "Целевые действия не найдены",
+      "lockedHint": "Это целевое действие уже используется в одной или нескольких цепочках и больше не редактируется. Создайте копию.",
+      "table": {
+        "name": "Название",
+        "type": "Тип",
+        "department": "Отдел",
+        "usedInChains": "Используется в цепочках",
+        "chainsSuffix": "цеп.",
+        "status": "Статус",
+        "actions": "Действия"
+      },
+      "fieldTypes": {
+        "text": "Текст",
+        "dropdown": "Список",
+        "date": "Дата",
+        "amount": "Сумма"
+      },
+      "status": {
+        "active": "Активно",
+        "hidden": "Скрыто"
+      },
+      "actions": {
+        "clone": "Копия",
+        "hide": "Скрыть",
+        "unhide": "Восстановить"
+      },
+      "form": {
+        "name": "Название",
+        "fieldType": "Тип поля",
+        "department": "Отдел",
+        "departmentPlaceholder": "Выберите отдел",
+        "dropdownValues": "Значения списка",
+        "addValuePlaceholder": "Добавить значение..."
+      },
+      "modals": {
+        "create": { "title": "Создание целевого действия" },
+        "edit": { "title": "Редактирование целевого действия" }
+      },
+      "errors": {
+        "nameRequired": "Название обязательно",
+        "departmentRequired": "Выберите отдел",
+        "dropdownEmpty": "Список должен содержать хотя бы одно значение",
+        "duplicateValue": "Такое значение уже существует"
+      },
+      "toasts": {
+        "created": "Целевое действие создано",
+        "updated": "Целевое действие обновлено",
+        "cloned": "Целевое действие скопировано",
+        "hidden": "Целевое действие скрыто",
+        "unhidden": "Целевое действие восстановлено"
       }
     },
     "smsTemplates": {

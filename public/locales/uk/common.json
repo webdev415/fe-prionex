@@ -18,6 +18,12 @@
     "roles": "Ролі",
     "departments": "Відділи",
     "smsTemplates": "SMS Шаблони",
+    "targetActions": "Цільові дії",
+    "taChains": "Ланцюжки TA",
+    "taDictionary": "Словник",
+    "chainBuilder": "Конструктор ланцюжків",
+    "taManagement": "Цільові дії",
+    "interactionLog": "Журнал взаємодій",
     "transactions": "Транзакції",
     "operations": "Операції",
     "bulkOperatorAssignment": "Масове призначення операторів",
@@ -1081,7 +1087,8 @@
           "loans": "Позики",
           "tasks": "Завдання",
           "docs": "Документи",
-          "callSms": "Дзвінок / SMS"
+          "callSms": "Дзвінок / SMS",
+          "taChains": "Ланцюжки TA"
         },
         "maritalStatuses": {
           "1": "Неодружений/Незаміжня",
@@ -1716,6 +1723,147 @@
         "selectUser": "Виберіть користувача...",
         "comment": "Коментар",
         "commentPlaceholder": "Необов'язковий коментар..."
+      }
+    },
+    "taDictionary": {
+      "title": "Словник",
+      "selectChain": "Оберіть ланцюжок",
+      "selectChainPlaceholder": "Оберіть ланцюжок...",
+      "noChainSelected": "Оберіть ланцюжок вище для керування деревом категорій.",
+      "emptyTree": "У цього ланцюжка ще немає категорій. Додайте кореневий вузол.",
+      "addRootNode": "Додати кореневу категорію",
+      "addChild": "Додати дочірній",
+      "newNodeName": "Назва вузла...",
+      "leaf": "Лист",
+      "hide": "Приховати",
+      "unhide": "Відновити",
+      "requirePromiseDate": "Вимагати дату обіцянки",
+      "requirePromiseAmount": "Вимагати суму обіцянки",
+      "isPositive": "Позитивний результат"
+    },
+    "taChains": {
+      "title": "Ланцюжки TA",
+      "createButton": "Створити ланцюжок",
+      "searchPlaceholder": "Пошук ланцюжків...",
+      "showInactive": "Показати неактивні",
+      "empty": "Ланцюжки TA не знайдено. Натисніть «Створити ланцюжок», щоб створити перший.",
+      "noTargetActionsHint": "Спочатку створіть хоча б одну активну цільову дію в Системних налаштуваннях → Цільові дії.",
+      "table": {
+        "department": "Відділ"
+      },
+      "chainTypes": {
+        "manual": "Ручний",
+        "automatic": "Автоматичний"
+      },
+      "status": {
+        "active": "Активний",
+        "deactivated": "Деактивований",
+        "systemHidden": "Системний (прихований)"
+      },
+      "actions": {
+        "clone": "Копія",
+        "activate": "Активувати",
+        "deactivate": "Деактивувати"
+      },
+      "form": {
+        "name": "Назва",
+        "description": "Опис",
+        "chainType": "Тип ланцюжка",
+        "department": "Відділ",
+        "departmentPlaceholder": "Оберіть відділ",
+        "systemHidden": "Системний (прихований) — запускається лише системою або адміном"
+      },
+      "steps": {
+        "title": "Кроки",
+        "label": "кроків",
+        "add": "Додати крок",
+        "empty": "Кроків ще немає. Натисніть «Додати крок», щоб створити перший.",
+        "stepLabel": "Крок {{index}}",
+        "targetAction": "Цільова дія",
+        "selectTA": "Оберіть TA",
+        "delayMinutes": "Затримка (хв)",
+        "required": "Обов'язково",
+        "notInPast": "Дата не може бути в минулому"
+      },
+      "modals": {
+        "create": { "title": "Створення ланцюжка TA" },
+        "edit": { "title": "Редагування ланцюжка TA" }
+      },
+      "errors": {
+        "nameRequired": "Назва обов'язкова",
+        "departmentRequired": "Оберіть відділ"
+      },
+      "toasts": {
+        "created": "Ланцюжок TA створено",
+        "updated": "Ланцюжок TA оновлено",
+        "cloned": "Ланцюжок TA скопійовано",
+        "activated": "Ланцюжок TA активовано",
+        "deactivated": "Ланцюжок TA деактивовано"
+      }
+    },
+    "taManagement": {
+      "tabs": {
+        "targetActions": "Цільові дії",
+        "taChains": "Ланцюжки TA",
+        "dictionary": "Словник",
+        "chainBuilder": "Конструктор ланцюжків"
+      }
+    },
+    "targetActions": {
+      "title": "Цільові дії",
+      "createButton": "Створити TA",
+      "searchPlaceholder": "Пошук TA...",
+      "showHidden": "Показати приховані",
+      "empty": "Цільові дії не знайдено",
+      "lockedHint": "Цю цільову дію вже використано в одному або декількох ланцюжках і її більше не можна редагувати. Створіть копію.",
+      "table": {
+        "name": "Назва",
+        "type": "Тип",
+        "department": "Відділ",
+        "usedInChains": "Використано в ланцюжках",
+        "chainsSuffix": "ланц.",
+        "status": "Статус",
+        "actions": "Дії"
+      },
+      "fieldTypes": {
+        "text": "Текст",
+        "dropdown": "Список",
+        "date": "Дата",
+        "amount": "Сума"
+      },
+      "status": {
+        "active": "Активна",
+        "hidden": "Прихована"
+      },
+      "actions": {
+        "clone": "Копія",
+        "hide": "Приховати",
+        "unhide": "Відновити"
+      },
+      "form": {
+        "name": "Назва",
+        "fieldType": "Тип поля",
+        "department": "Відділ",
+        "departmentPlaceholder": "Оберіть відділ",
+        "dropdownValues": "Значення списку",
+        "addValuePlaceholder": "Додати значення..."
+      },
+      "modals": {
+        "create": { "title": "Створення цільової дії" },
+        "edit": { "title": "Редагування цільової дії" }
+      },
+      "errors": {
+        "nameRequired": "Назва обов'язкова",
+        "departmentRequired": "Оберіть відділ",
+        "dropdownEmpty": "Список повинен мати щонайменше одне значення",
+        "duplicateValue": "Таке значення вже існує"
+      },
+      "toasts": {
+        "created": "Цільову дію створено",
+        "updated": "Цільову дію оновлено",
+        "cloned": "Цільову дію скопійовано",
+        "hidden": "Цільову дію приховано",
+        "unhidden": "Цільову дію відновлено"
       }
     },
     "smsTemplates": {

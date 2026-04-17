@@ -18,6 +18,12 @@
     "roles": "Roles",
     "departments": "Departments",
     "smsTemplates": "SMS Templates",
+    "targetActions": "Target Actions",
+    "taChains": "TA Chains",
+    "taDictionary": "Dictionary",
+    "chainBuilder": "Chain Builder",
+    "taManagement": "Target Actions",
+    "interactionLog": "Interaction Log",
     "transactions": "Transactions",
     "operations": "Operations",
     "bulkOperatorAssignment": "Bulk Operator Assignment",
@@ -1577,7 +1583,8 @@
           "loans": "Loans",
           "tasks": "Tasks",
           "docs": "Docs",
-          "callSms": "Call / SMS"
+          "callSms": "Call / SMS",
+          "taChains": "TA Chains"
         }
       },
       "debtSummary": {
@@ -1688,6 +1695,287 @@
         "selectUser": "Select user...",
         "comment": "Comment",
         "commentPlaceholder": "Optional comment..."
+      }
+    },
+    "clientChains": {
+      "logInteraction": "Log interaction",
+      "taChainLabel": "TA Chain",
+      "startChain": "Start a chain",
+      "selectChain": "Chain",
+      "selectChainPlaceholder": "Pick a chain...",
+      "noChains": "No active chains available.",
+      "steps": "steps",
+      "start": "Start",
+      "activeLabel": "in progress",
+      "cancel": "Cancel chain",
+      "selectValue": "Select a value...",
+      "selectResult": "Select a result",
+      "selected": "Selected",
+      "requiredByLeaf": "Required by leaf node config",
+      "promiseDate": "Promise date",
+      "promiseAmount": "Promise amount",
+      "promiseAmountUAH": "Promise amount (UAH)",
+      "credit": "Credit",
+      "creditPlaceholder": "Select a credit...",
+      "notes": "Notes",
+      "notesPlaceholder": "Optional notes...",
+      "stepLabel": "Step {{order}}",
+      "delayWaiting": "This step is available in {{minutes}} minute(s)",
+      "delayWaitingSeconds": "This step is available in {{seconds}} second(s)",
+      "delayHint": "The previous step was just completed. Please wait for the delay to pass.",
+      "saveInteraction": "Save interaction",
+      "chainProgress": "Chain progress",
+      "stepOf": "step {{current}} of {{total}}",
+      "current": "current",
+      "branch": "branch",
+      "effectsOnSave": "Effects on save",
+      "effectTag": "Tag",
+      "effectRemoveTag": "Remove tag",
+      "effectTask": "Task: Callback created",
+      "effectSMS": "Event: SMS sent",
+      "effectSpam": "Added to spam list",
+      "dictionary": {
+        "level1": "Level 1 — Interaction type",
+        "level2": "Level 2 — Category",
+        "level3": "Level 3 — Result",
+        "selectPlaceholder": "Select..."
+      },
+      "errors": {
+        "selectResult": "Please select a result from the tree.",
+        "promiseDateRequired": "This result requires a promise date.",
+        "promiseAmountRequired": "This result requires a promise amount.",
+        "creditRequired": "This result requires selecting a credit."
+      },
+      "toasts": {
+        "started": "Chain started",
+        "completed": "Interaction saved and chain completed",
+        "advanced": "Saved — advanced to step {{step}}",
+        "cancelled": "Chain cancelled"
+      },
+      "history": {
+        "title": "Interaction history",
+        "date": "Date",
+        "chain": "Chain",
+        "result": "Result",
+        "dictionaryPath": "Category path",
+        "promise": "Promise",
+        "notes": "Notes",
+        "operator": "Operator",
+        "promiseDate": "Promise date",
+        "promiseAmount": "Amount",
+        "credit": "Credit number",
+        "empty": "No interactions recorded yet.",
+        "filterChain": "Chain",
+        "allChains": "All chains",
+        "from": "From",
+        "to": "To",
+        "searchNotes": "Notes",
+        "searchNotesPlaceholder": "Search notes..."
+      }
+    },
+    "chainBuilder": {
+      "title": "Chain Builder",
+      "selectChain": "Select a chain...",
+      "selectChainHint": "Select a chain above to open the visual builder.",
+      "steps": "steps",
+      "triggers": "Triggers",
+      "blockers": "Blockers",
+      "effects": "Effects",
+      "branches": "Branches",
+      "stepConfig": "Step config",
+      "delay": "Delay",
+      "required": "Required",
+      "selectStepHint": "Click a step on the canvas to configure it.",
+      "branchTo": "Branch to step..."
+    },
+    "interactionLog": {
+      "title": "Interaction Log",
+      "export": "Export CSV",
+      "empty": "No interactions found matching your filters.",
+      "columns": {
+        "date": "Date",
+        "clientId": "Client",
+        "chain": "Chain",
+        "dictionaryPath": "Category path",
+        "promise": "Promise",
+        "promiseDate": "Promise date",
+        "promiseAmount": "Amount",
+        "creditNumber": "Credit number",
+        "notes": "Notes",
+        "operator": "Operator"
+      },
+      "filters": {
+        "clientId": "Client ID",
+        "chain": "Chain",
+        "allChains": "All chains",
+        "from": "From",
+        "to": "To",
+        "notes": "Notes",
+        "notesPlaceholder": "Search notes..."
+      }
+    },
+    "taDictionary": {
+      "title": "Dictionary",
+      "pageTitle": "Admin Dictionary",
+      "treeTitle": "Dictionary tree",
+      "selectChain": "Select a chain",
+      "selectChainPlaceholder": "Pick a chain...",
+      "noChainSelected": "Select a chain above to manage its category tree.",
+      "emptyTree": "This chain has no categories yet. Add a root node to start building the tree.",
+      "addRootNode": "Add root node",
+      "addChild": "Add child node",
+      "newNodeName": "Node name...",
+      "leaf": "leaf",
+      "intermediate": "intermediate",
+      "childrenSuffix": "children",
+      "inactive": "inactive",
+      "active": "Active",
+      "hide": "Hide",
+      "unhide": "Unhide",
+      "nodeSettings": "Node settings",
+      "selectedLabel": "Selected",
+      "selectNodeHint": "Click a node on the left to view and edit its settings.",
+      "requirePromiseDate": "Require promise date",
+      "requirePromiseAmount": "Require promise amount",
+      "requireCredit": "Require credit selection",
+      "isPositive": "Positive result",
+      "form": {
+        "name": "Name",
+        "nodeType": "Node type",
+        "leafSelectable": "Leaf (selectable result)",
+        "intermediateCategory": "Intermediate (category)",
+        "leafConfig": "Leaf node config"
+      },
+      "toasts": {
+        "saved": "Node saved",
+        "hidden": "Node hidden",
+        "unhidden": "Node restored",
+        "childAdded": "Child node added"
+      }
+    },
+    "taChains": {
+      "title": "TA Chains",
+      "createButton": "Create chain",
+      "searchPlaceholder": "Search chains...",
+      "showInactive": "Show inactive",
+      "empty": "No TA Chains found. Click \"Create chain\" to build the first one.",
+      "noTargetActionsHint": "You need at least one active Target Action before you can build a chain. Create one in System Settings → Target Actions.",
+      "table": {
+        "department": "Department"
+      },
+      "chainTypes": {
+        "manual": "Manual",
+        "automatic": "Automatic"
+      },
+      "status": {
+        "active": "Active",
+        "deactivated": "Deactivated",
+        "systemHidden": "System (hidden)"
+      },
+      "actions": {
+        "clone": "Clone",
+        "activate": "Activate",
+        "deactivate": "Deactivate"
+      },
+      "form": {
+        "name": "Name",
+        "description": "Description",
+        "chainType": "Chain type",
+        "department": "Department",
+        "departmentPlaceholder": "Select a department",
+        "systemHidden": "System (hidden) — only the system or an admin can launch"
+      },
+      "steps": {
+        "title": "Steps",
+        "label": "steps",
+        "add": "Add step",
+        "empty": "No steps yet. Click \"Add step\" to add the first one.",
+        "stepLabel": "Step {{index}}",
+        "targetAction": "Target Action",
+        "selectTA": "Select a TA",
+        "delayMinutes": "Delay (minutes)",
+        "required": "Required",
+        "notInPast": "Date cannot be in the past"
+      },
+      "modals": {
+        "create": { "title": "Create TA Chain" },
+        "edit": { "title": "Edit TA Chain" }
+      },
+      "errors": {
+        "nameRequired": "Name is required",
+        "departmentRequired": "Select a department"
+      },
+      "toasts": {
+        "created": "TA Chain created",
+        "updated": "TA Chain updated",
+        "cloned": "TA Chain cloned",
+        "activated": "TA Chain activated",
+        "deactivated": "TA Chain deactivated"
+      }
+    },
+    "taManagement": {
+      "tabs": {
+        "targetActions": "Target Actions",
+        "taChains": "TA Chains",
+        "dictionary": "Dictionary",
+        "chainBuilder": "Chain Builder"
+      }
+    },
+    "targetActions": {
+      "title": "Target Actions",
+      "createButton": "Create TA",
+      "searchPlaceholder": "Search TAs...",
+      "empty": "No Target Actions found",
+      "lockedHint": "This Target Action is already used in one or more chains and cannot be edited. Clone it to create a new editable copy.",
+      "table": {
+        "name": "Name",
+        "type": "Type",
+        "department": "Department",
+        "usedInChains": "Used in chains",
+        "chainsSuffix": "chains",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "fieldTypes": {
+        "text": "Text",
+        "dropdown": "Dropdown",
+        "date": "Date",
+        "amount": "Amount"
+      },
+      "status": {
+        "active": "Active",
+        "hidden": "Hidden"
+      },
+      "actions": {
+        "clone": "Clone",
+        "hide": "Hide",
+        "unhide": "Unhide"
+      },
+      "showHidden": "Show hidden",
+      "form": {
+        "name": "Name",
+        "fieldType": "Field type",
+        "department": "Department",
+        "departmentPlaceholder": "Select a department",
+        "dropdownValues": "Dropdown values",
+        "addValuePlaceholder": "Add a value..."
+      },
+      "modals": {
+        "create": { "title": "Create Target Action" },
+        "edit": { "title": "Edit Target Action" }
+      },
+      "errors": {
+        "nameRequired": "Name is required",
+        "departmentRequired": "A valid Department ID is required",
+        "dropdownEmpty": "Dropdown TAs need at least one value",
+        "duplicateValue": "This value already exists"
+      },
+      "toasts": {
+        "created": "Target Action created",
+        "updated": "Target Action updated",
+        "cloned": "Target Action cloned",
+        "hidden": "Target Action hidden",
+        "unhidden": "Target Action restored"
       }
     },
     "smsTemplates": {

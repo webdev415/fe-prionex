@@ -669,6 +669,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: 'mail-send-01',
             requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
           },
+          {
+            path: '/dashboard/system-settings/target-actions',
+            label: t('navigation.taManagement', 'Target Actions'),
+            icon: 'file-01',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+          },
+          {
+            path: '/dashboard/system-settings/interaction-log',
+            label: t('navigation.interactionLog', 'Interaction Log'),
+            icon: 'file-01',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+          },
         ],
       },
     ]
