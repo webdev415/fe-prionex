@@ -133,6 +133,8 @@ import {
   ChatIcon,
   CallOutgoing04Icon,
   CallIncoming04Icon,
+  AiBrain03Icon,
+  Mic02Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -322,6 +324,8 @@ export const Icons = {
   Chat: (props: Omit<IconProps, 'icon'>) => <Icon icon={ChatIcon} {...props} />,
   CallOutgoing04: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallOutgoing04Icon} {...props} />,
   CallIncoming04: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallIncoming04Icon} {...props} />,
+  AiBrain03: (props: Omit<IconProps, 'icon'>) => <Icon icon={AiBrain03Icon} {...props} />,
+  Mic02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Mic02Icon} {...props} />,
 }
 
 /**
@@ -446,6 +450,8 @@ export {
   ChatIcon,
   CallOutgoing04Icon,
   CallIncoming04Icon,
+  AiBrain03Icon,
+  Mic02Icon,
 }
 
 /**
