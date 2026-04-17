@@ -68,10 +68,15 @@ vi.mock('react-i18next', () => ({
         'pages.clients.editModal.deleteAddress': 'Delete address',
         'pages.clients.editModal.editContact': 'Edit contact',
         'pages.clients.editModal.deleteContact': 'Delete contact',
+        'pages.clients.detail.tabs.passport': 'Passport',
       }
       return translations[key] || key
     },
   }),
+  initReactI18next: {
+    type: '3rdParty',
+    init: vi.fn(),
+  },
 }))
 
 function createWrapper() {
@@ -156,7 +161,10 @@ const mockProfileData = {
 
 describe('EditClientModal', () => {
   const mockOnClose = vi.fn()
-  const mockMutate = vi.fn()
+  const mockUpdateClientAsync = vi.fn().mockResolvedValue(undefined)
+  const mockCreateContactAsync = vi.fn().mockResolvedValue(undefined)
+  const mockUpdateContactAsync = vi.fn().mockResolvedValue(undefined)
+  const mockDeleteContactAsync = vi.fn().mockResolvedValue(undefined)
   const mockCreateAddress = vi.fn()
   const mockUpdateAddress = vi.fn()
   const mockDeleteAddress = vi.fn()
@@ -184,7 +192,7 @@ describe('EditClientModal', () => {
     } as unknown as ReturnType<typeof useClientsModule.useClientProfile>)
 
     vi.mocked(useClientsModule.useUpdateClient).mockReturnValue({
-      mutate: mockMutate,
+      mutateAsync: mockUpdateClientAsync,
       isPending: false,
       isError: false,
       error: null,
@@ -211,18 +219,21 @@ describe('EditClientModal', () => {
 
     vi.mocked(useClientsModule.useCreateContact).mockReturnValue({
       mutate: mockCreateContact,
+      mutateAsync: mockCreateContactAsync,
       isPending: false,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     vi.mocked(useClientsModule.useUpdateContact).mockReturnValue({
       mutate: mockUpdateContact,
+      mutateAsync: mockUpdateContactAsync,
       isPending: false,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
     vi.mocked(useClientsModule.useDeleteContact).mockReturnValue({
       mutate: mockDeleteContact,
+      mutateAsync: mockDeleteContactAsync,
       isPending: false,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
@@ -305,30 +316,17 @@ describe('EditClientModal', () => {
     it('should call updateClient when saving personal info', async () => {
       render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      const saveButtons = screen.getAllByText('Save Changes')
-      fireEvent.click(saveButtons[1])
+      fireEvent.click(screen.getByTestId('edit-client-save-personal'))
 
       await waitFor(() => {
-        expect(mockMutate).toHaveBeenCalled()
+        expect(mockUpdateClientAsync).toHaveBeenCalled()
       })
     })
 
     it('should show success toast on successful save', async () => {
-      let onSuccessCallback: (() => void) | undefined
-
-      mockMutate.mockImplementation(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (_data: unknown, options: Record<string, any>) => {
-          onSuccessCallback = options?.onSuccess
-        }
-      )
-
       render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      const saveButtons = screen.getAllByText('Save Changes')
-      fireEvent.click(saveButtons[1])
-
-      onSuccessCallback?.()
+      fireEvent.click(screen.getByTestId('edit-client-save-personal'))
 
       await waitFor(() => {
         expect(toast.success).toHaveBeenCalled()
@@ -336,23 +334,13 @@ describe('EditClientModal', () => {
     })
 
     it('should show inline error on failed save', async () => {
-      let onErrorCallback:
-        | ((error: { response?: { data?: { detail?: string } } }) => void)
-        | undefined
-
-      mockMutate.mockImplementation(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (_data: unknown, options: Record<string, any>) => {
-          onErrorCallback = options?.onError
-        }
-      )
+      mockUpdateClientAsync.mockRejectedValueOnce({
+        response: { data: { detail: 'Validation failed' } },
+      })
 
       render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      const saveButtons = screen.getAllByText('Save Changes')
-      fireEvent.click(saveButtons[1])
-
-      onErrorCallback?.({ response: { data: { detail: 'Validation failed' } } })
+      fireEvent.click(screen.getByTestId('edit-client-save-personal'))
 
       await waitFor(() => {
         expect(screen.getByText('Validation failed')).toBeInTheDocument()
@@ -371,17 +359,31 @@ describe('EditClientModal', () => {
     it('should include date_of_birth in save payload', async () => {
       render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      const saveButtons = screen.getAllByText('Save Changes')
-      fireEvent.click(saveButtons[1])
+      fireEvent.click(screen.getByTestId('edit-client-save-personal'))
 
       await waitFor(() => {
-        expect(mockMutate).toHaveBeenCalledWith(
+        expect(mockUpdateClientAsync).toHaveBeenCalledWith(
           expect.objectContaining({
             data: expect.objectContaining({
               date_of_birth: '1990-01-15',
             }),
-          }),
-          expect.anything()
+          })
+        )
+      })
+    })
+
+    it('should include tax_id in save payload', async () => {
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByTestId('edit-client-save-personal'))
+
+      await waitFor(() => {
+        expect(mockUpdateClientAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              tax_id: '1234567890',
+            }),
+          })
         )
       })
     })
@@ -599,8 +601,9 @@ describe('EditClientModal', () => {
       it('should hide document and work save buttons for operators', () => {
         render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
 
-        const saveButtons = screen.getAllByText('Save Changes')
-        expect(saveButtons).toHaveLength(1)
+        expect(screen.queryByTestId('edit-client-save-personal')).not.toBeInTheDocument()
+        expect(screen.queryByTestId('edit-client-save-passport')).not.toBeInTheDocument()
+        expect(screen.getByTestId('edit-client-save-phones')).toBeInTheDocument()
       })
 
       it('should allow contact CRUD for operators', () => {
@@ -622,11 +625,10 @@ describe('EditClientModal', () => {
       it('should not call updateClient for operators (phones saved via contacts)', async () => {
         render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
 
-        const saveButton = screen.getByText('Save Changes')
-        fireEvent.click(saveButton)
+        fireEvent.click(screen.getByTestId('edit-client-save-phones'))
 
         await waitFor(() => {
-          expect(mockMutate).not.toHaveBeenCalled()
+          expect(mockUpdateClientAsync).not.toHaveBeenCalled()
         })
       })
     })
@@ -652,8 +654,9 @@ describe('EditClientModal', () => {
       it('should show all save buttons', () => {
         render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
 
-        const saveButtons = screen.getAllByText('Save Changes')
-        expect(saveButtons).toHaveLength(3)
+        expect(screen.getByTestId('edit-client-save-personal')).toBeInTheDocument()
+        expect(screen.getByTestId('edit-client-save-passport')).toBeInTheDocument()
+        expect(screen.getByTestId('edit-client-save-phones')).toBeInTheDocument()
       })
 
       it('should show address management buttons', () => {

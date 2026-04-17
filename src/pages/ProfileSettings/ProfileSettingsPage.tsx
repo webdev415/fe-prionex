@@ -3,11 +3,9 @@ import { toast } from 'sonner'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import { useAuth } from '@/features/auth'
+import { useAuth, useUpdateMyProfile, ChangePasswordModal } from '@/features/auth'
 import { authApi } from '@/features/auth/api/authApi'
-import { useUpdateUser } from '@/features/users/hooks/useUpdateUser'
 import { timezoneOptions } from '@/features/users/schemas/userSchemas'
-import { useAuthStore } from '@/stores/authStore'
 import { Input } from '@/components/ui/Input'
 import { ProjectSelector } from '@/components/layout/ProjectSelector'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
@@ -21,22 +19,23 @@ import {
 import { Label } from '@/components/ui/Label'
 import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
-import { ChangePasswordModal } from '@/features/auth'
+import { normalizeBackendLanguage } from '@/lib/i18n'
+import type { UpdateMyProfileInput } from '@/types/api'
 export function ProfileSettingsPage() {
   const { user, isLoading: authLoading } = useAuth()
-  const refreshUser = useAuthStore((state) => state.refreshUser)
   const { t, i18n } = useTranslation('common')
-  const { mutateAsync: updateUserMutateAsync } = useUpdateUser()
+  const { mutateAsync: updateMyProfileMutateAsync } = useUpdateMyProfile()
   const [isUpdatingLocal, setIsUpdatingLocal] = useState(false)
   const [isChangingLocal, setIsChangingLocal] = useState(false)
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
 
   // Local form state initialized from store user
   const initialForm = useMemo(() => {
-    // Get current language from i18n (which reads from localStorage via LanguageDetector)
-    // If user has 'ru' stored, fall back to 'uk' per KAN-347
     const raw = i18n.language as 'en' | 'uk' | 'ru'
-    const currentLanguage: 'en' | 'uk' = raw === 'ru' ? 'uk' : (raw as 'en' | 'uk') || 'en'
+    const fromI18n: 'en' | 'uk' = raw === 'ru' ? 'uk' : (raw as 'en' | 'uk') || 'en'
+    const currentLanguage: 'en' | 'uk' = user?.language
+      ? normalizeBackendLanguage(user.language)
+      : fromI18n
     return {
       username: user?.username || '',
       email: user?.email || '',
@@ -54,14 +53,15 @@ export function ProfileSettingsPage() {
 
   const [form, setForm] = useState(initialForm)
 
-  // Sync form language with i18n language when it changes externally (e.g., from header)
+  // Sync when i18n changes externally only (e.g. header switcher). Do not depend on form.language —
+  // i18n.changeLanguage is async; including form.language would revert the profile dropdown immediately.
   useEffect(() => {
     const raw = i18n.language as 'en' | 'uk' | 'ru'
     const currentLanguage: 'en' | 'uk' = raw === 'ru' ? 'uk' : (raw as 'en' | 'uk') || 'en'
-    if (form.language !== currentLanguage) {
-      setForm((prev) => ({ ...prev, language: currentLanguage }))
-    }
-  }, [i18n.language, form.language])
+    setForm((prev) =>
+      prev.language === currentLanguage ? prev : { ...prev, language: currentLanguage }
+    )
+  }, [i18n.language])
 
   const { mutateAsync: changePassword } = useMutation({
     mutationFn: (payload: { current_password: string; new_password: string }) =>
@@ -96,7 +96,7 @@ export function ProfileSettingsPage() {
       }
     }
 
-    const updatePayload: Record<string, unknown> = {
+    const updatePayload: UpdateMyProfileInput = {
       email: form.email,
       first_name: form.first_name,
       last_name: form.last_name,
@@ -109,10 +109,7 @@ export function ProfileSettingsPage() {
 
     try {
       setIsUpdatingLocal(true)
-      await updateUserMutateAsync({ userId: Number(user.id), data: updatePayload })
-
-      // Refresh user data from backend to get updated timezone
-      await refreshUser()
+      await updateMyProfileMutateAsync(updatePayload)
 
       setForm((f) => ({ ...f, currentPassword: '', newPassword: '' }))
     } finally {
