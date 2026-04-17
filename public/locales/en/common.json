@@ -1613,7 +1613,8 @@
         "viewAll": "View All",
         "showLess": "Show Less",
         "tableHeaders": {
-          "date": "Date",
+          "date": "Payment Added Date",
+          "paymentConfirmationDate": "Payment Confirmation Date",
           "amount": "Amount",
           "method": "Method",
           "status": "Status",
