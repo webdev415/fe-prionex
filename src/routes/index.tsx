@@ -56,6 +56,16 @@ const SmsTemplatesPage = lazy(() =>
     default: m.SmsTemplatesPage,
   }))
 )
+const TAManagementPage = lazy(() =>
+  import('@/pages/TAManagement').then((m) => ({
+    default: m.TAManagementPage,
+  }))
+)
+const InteractionLogPage = lazy(() =>
+  import('@/pages/InteractionLog').then((m) => ({
+    default: m.InteractionLogPage,
+  }))
+)
 const ReportsDashboardPage = lazy(() =>
   import('@/pages/ReportsDashboard').then((m) => ({
     default: m.ReportsDashboardPage,
@@ -243,6 +253,22 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
             {withSuspense(<SmsTemplatesPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/target-actions',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            {withSuspense(<TAManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/interaction-log',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            {withSuspense(<InteractionLogPage />)}
           </PermissionRoute>
         ),
       },

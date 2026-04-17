@@ -87,6 +87,7 @@ import { PermissionGuard } from '@/components/auth'
 import { useHasPermission } from '@/hooks/usePermissions'
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
+import { ChainExecutor, TAInteractionHistory } from './components/taChains'
 import { formatUkrainePhoneForDisplay, normalizeUkrainePhoneToDb } from '@/lib/phone'
 
 // Extended types for SMS and Call items with API-specific properties
@@ -675,7 +676,14 @@ export function ClientDetailPage() {
     'personal'
   )
   const [activeRightCardTab, setActiveRightCardTab] = useState<
-    'loans' | 'payments' | 'recommenders' | 'operators' | 'call-sms-history' | 'tasks' | 'documents'
+    | 'loans'
+    | 'payments'
+    | 'recommenders'
+    | 'operators'
+    | 'call-sms-history'
+    | 'tasks'
+    | 'documents'
+    | 'ta-chains'
   >('loans')
   const [isUploadDocModalOpen, setIsUploadDocModalOpen] = useState(false)
   const [activePaymentTab, setActivePaymentTab] = useState<
@@ -2310,6 +2318,23 @@ export function ClientDetailPage() {
                       {t('pages.clients.detail.tabs.docs')}
                     </span>
                   </button>
+                  {/* Tab 7: TA Chains (KAN-361) */}
+                  <button
+                    type="button"
+                    data-tab="ta-chains"
+                    onClick={() => setActiveRightCardTab('ta-chains')}
+                    className={cn(
+                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                      activeRightCardTab === 'ta-chains'
+                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
+                        : 'hover:text-secondary-800 border-transparent text-gray-600'
+                    )}
+                  >
+                    <Icons.CheckmarkBadge02 size={20} className="shrink-0 text-current" />
+                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                      {t('pages.clients.detail.tabs.taChains')}
+                    </span>
+                  </button>
                 </div>
               </div>
 
@@ -3218,6 +3243,19 @@ export function ClientDetailPage() {
                         clientId={clientId}
                       />
                     )}
+                  </div>
+                )}
+
+                {/* Tab 7: TA Chains (KAN-361) */}
+                {activeRightCardTab === 'ta-chains' && (
+                  <div className="flex flex-1 flex-col items-start gap-6 self-stretch p-3 md:p-6">
+                    <ChainExecutor clientId={clientId} debts={loans} />
+                    <div className="w-full border-t border-gray-200 pt-4">
+                      <h3 className="text-dark-500 mb-3 text-sm font-semibold">
+                        {t('pages.clientChains.history.title')}
+                      </h3>
+                      <TAInteractionHistory clientId={clientId} debts={loans} />
+                    </div>
                   </div>
                 )}
               </div>
