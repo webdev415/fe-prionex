@@ -1670,7 +1670,9 @@
           "all": "All"
         },
         "tableHeaders": {
-          "date": "Date",
+          "date": "Payment Added Date",
+          "paymentConfirmationDate": "Payment Confirmation Date",
+          "cancelledDate": "Cancelled Date",
           "amount": "Amount",
           "method": "Method",
           "reference": "Reference",

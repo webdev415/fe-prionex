@@ -1702,7 +1702,9 @@
           "all": "Все"
         },
         "tableHeaders": {
-          "date": "Дата",
+          "date": "Дата добавления платежа",
+          "paymentConfirmationDate": "Дата подтверждения платежа",
+          "cancelledDate": "Дата отмены",
           "amount": "Сумма",
           "method": "Способ",
           "reference": "Номер ссылки",

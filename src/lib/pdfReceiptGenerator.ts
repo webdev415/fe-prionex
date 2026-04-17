@@ -453,9 +453,19 @@ const renderCurrency = (
   }
 }
 
+const BARE_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
 const formatDate = (dateString: string, timezone?: string): string => {
   try {
-    // Append Z if missing to ensure UTC parsing
+    // Bare ISO dates (YYYY-MM-DD) must NOT be parsed through new Date().
+    // Date() interprets them as UTC midnight; timezone-formatting then shifts
+    // to the previous day west of UTC. A calendar date has no time component
+    // — return it unchanged.
+    if (BARE_DATE_RE.test(dateString)) {
+      return dateString
+    }
+
+    // Datetime strings — existing logic unchanged.
     let dateStr = dateString
     if (
       (dateStr.includes('T') || dateStr.includes(' ')) &&

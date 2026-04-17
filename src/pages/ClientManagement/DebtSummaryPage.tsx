@@ -328,7 +328,7 @@ export function DebtSummaryPage() {
             ? p.verified_at
             : p.status === 'cancelled' && p.reversed_at
               ? p.reversed_at
-              : p.recorded_at,
+              : (p.recorded_at ?? ''),
         amount: Number(p.amount),
         contractNumber: p.debt_contract_number || undefined,
         method: p.payment_method,
@@ -1490,7 +1490,9 @@ export function DebtSummaryPage() {
             paymentDate: (() => {
               const bp = paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
               if (!bp) return selectedPayment.date
-              return bp.status === 'verified' && bp.verified_at ? bp.verified_at : bp.recorded_at
+              return bp.status === 'verified' && bp.verified_at
+                ? bp.verified_at
+                : (bp.recorded_at ?? bp.payment_date)
             })(),
             method: normalizePaymentMethod(selectedPayment.method),
             reference:
