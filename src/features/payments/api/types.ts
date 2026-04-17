@@ -38,7 +38,7 @@ export interface Payment {
   bank_transaction_id?: string
   bank_reference?: string
   // Receipt
-  payment_confirmation_date?: string // ISO date — bank confirmation date
+  payment_confirmation_date?: string | null // ISO date — bank confirmation date
   receipt_number?: string
   receipt_url?: string
   receipt_generated_at?: string
