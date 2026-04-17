@@ -4,9 +4,9 @@
  * Modal for verifying pending payments with expandable payment cards.
  */
 
-import { useState, useMemo } from 'react'
+import { Fragment, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { convertUTCToUserTimezone, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
 import { Modal, ModalHeader, ModalContent } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -66,18 +66,8 @@ export function PaymentVerificationQueueModal({
   onRefresh,
   initialExpandedPaymentId,
 }: PaymentVerificationQueueModalProps) {
-  const { t, i18n } = useTranslation('common')
+  const { t } = useTranslation('common')
   const userTimezone = useAuthStore((state) => state.user?.timezone)
-
-  const formatCurrency = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    if (isNaN(num)) return '₴ 0.00'
-    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    return `₴ ${num.toLocaleString(locale, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`
-  }
 
   const formatTimeAgo = (timeString: string) => {
     // Convert UTC datetime to user's timezone
@@ -303,7 +293,7 @@ export function PaymentVerificationQueueModal({
                           {t('pages.clients.modals.paymentVerificationQueue.amount')}
                         </span>
                         <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
-                          {formatCurrency(payment.amount)}
+                          {formatMoneyUAHTwoDecimals(payment.amount)}
                         </span>
                       </div>
                       <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
@@ -335,7 +325,7 @@ export function PaymentVerificationQueueModal({
                           {t('pages.clients.modals.paymentVerificationQueue.currentDebt')}
                         </span>
                         <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
-                          {formatCurrency(payment.currentDebt)}
+                          {formatMoneyUAHTwoDecimals(payment.currentDebt)}
                         </span>
                       </div>
                       <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
@@ -343,7 +333,7 @@ export function PaymentVerificationQueueModal({
                           {t('pages.clients.modals.paymentVerificationQueue.newDebt')}
                         </span>
                         <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
-                          {formatCurrency(payment.newDebt)}
+                          {formatMoneyUAHTwoDecimals(payment.newDebt)}
                         </span>
                       </div>
                     </div>
@@ -386,7 +376,7 @@ export function PaymentVerificationQueueModal({
                           {t('pages.clients.modals.paymentVerificationQueue.amount')}
                         </span>
                         <span className="text-dark-500 flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
-                          {formatCurrency(payment.amount)}
+                          {formatMoneyUAHTwoDecimals(payment.amount)}
                         </span>
                       </div>
                       <div className="flex flex-col items-start gap-1 self-stretch sm:flex-row sm:gap-6">
@@ -422,11 +412,8 @@ export function PaymentVerificationQueueModal({
             </span>
             <div className="flex flex-col items-start justify-center gap-0 self-stretch rounded-xl border border-white bg-white/50 p-3 px-6">
               {processedPayments.map((payment) => (
-                <>
-                  <div
-                    key={payment.id}
-                    className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-center sm:gap-5"
-                  >
+                <Fragment key={payment.id}>
+                  <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:items-center sm:gap-5">
                     <div className="flex items-center gap-2">
                       <span
                         className={cn(
@@ -457,7 +444,7 @@ export function PaymentVerificationQueueModal({
                     </span>
                     <div className="flex flex-1 items-start justify-center gap-2.5">
                       <span className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
-                        {formatCurrency(payment.amount)}
+                        {formatMoneyUAHTwoDecimals(payment.amount)}
                       </span>
                     </div>
                     <div className="flex flex-1 flex-col items-start gap-1">
@@ -472,7 +459,7 @@ export function PaymentVerificationQueueModal({
                   {payment.id !== processedPayments[processedPayments.length - 1].id && (
                     <div className="h-px w-full bg-gray-200" />
                   )}
-                </>
+                </Fragment>
               ))}
             </div>
           </div>

@@ -6,5 +6,5 @@ export {
   ImpersonationBanner,
   ChangePasswordModal,
 } from './components'
-export { useAuth } from './hooks'
+export { useAuth, useUpdateMyProfile } from './hooks'
 export { authApi } from './api/authApi'

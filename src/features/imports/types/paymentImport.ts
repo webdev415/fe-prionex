@@ -7,6 +7,7 @@ export type PaymentRowStatus = 'ready' | 'warning' | 'error'
 export interface PaymentPreviewRow {
   row_number: number
   loan_number: string
+  tin: string | null
   client_name: string | null
   debt_id: number | null
   client_id: number | null
@@ -15,6 +16,7 @@ export interface PaymentPreviewRow {
   payment_method: string
   payment_type: string | null
   status: PaymentRowStatus
+  has_pending_match: boolean | null
   error: string | null
   warning: string | null
 }

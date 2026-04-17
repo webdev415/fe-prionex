@@ -95,6 +95,11 @@ const ProfileSettingsPage = lazy(() =>
     default: m.ProfileSettingsPage,
   }))
 )
+const AiAssistantPage = lazy(() =>
+  import('@/pages/AiAssistant/AiAssistantPage').then((m) => ({
+    default: m.AiAssistantPage,
+  }))
+)
 const BulkOperatorAssignmentPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
     default: m.BulkOperatorAssignmentPage,
@@ -142,6 +147,10 @@ export const router = createBrowserRouter([
       {
         path: 'profile',
         element: withSuspense(<ProfileSettingsPage />),
+      },
+      {
+        path: 'ai-assistant',
+        element: withSuspense(<AiAssistantPage />),
       },
       {
         path: 'users',

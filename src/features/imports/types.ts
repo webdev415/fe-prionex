@@ -8,7 +8,7 @@
 export type ImportJobStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled'
 
 // Import Type
-export type ImportType = 'simple' | 'vendor' | 'operator_assignment'
+export type ImportType = 'simple' | 'vendor' | 'operator_assignment' | 'payment_import'
 
 // Import Job (from GET /api/import/jobs)
 export interface ImportJob {

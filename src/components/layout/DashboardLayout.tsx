@@ -12,11 +12,11 @@ import { Sidebar, type SidebarItem, type SidebarSubItem } from './Sidebar'
 import { SearchBar } from './SearchBar'
 import { UserProfile } from './UserProfile'
 import { MinimizedCallBubble } from './MinimizedCallBubble'
-import { TaskBell } from './TaskBell'
+import { NotificationBell } from './NotificationBell'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
@@ -35,6 +35,31 @@ import { searchClients, mapPriorityLevel, type SearchType } from '@/api/clientSe
 
 interface DashboardLayoutProps {
   children: ReactNode
+}
+
+function AiAssistantHeaderButton() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { t } = useTranslation('common')
+  const isActive = location.pathname === '/dashboard/ai-assistant'
+
+  return (
+    <button
+      type="button"
+      aria-label={t('pages.aiAssistant.headerButtonAria')}
+      onClick={() => navigate('/dashboard/ai-assistant')}
+      className={cn(
+        'relative flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100 focus:outline-none',
+        isActive && 'bg-gray-100'
+      )}
+    >
+      <Icons.AiBrain03
+        size={20}
+        strokeWidth={1.5}
+        className={cn('transition-colors', isActive ? 'text-primary-600' : 'text-gray-300')}
+      />
+    </button>
+  )
 }
 
 // Extend SidebarItem interface to support permission checking
@@ -380,6 +405,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { t, i18n } = useTranslation('common')
   const navigate = useNavigate()
+  const location = useLocation()
   const { logout, isImpersonating, impersonatedUser, exitImpersonation } = useAuth()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -398,6 +424,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [searchError, setSearchError] = useState<string | null>(null)
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const searchContainerRef = useRef<HTMLDivElement>(null)
+
+  // Close header search results when navigating so the panel cannot sit over other pages
+  useEffect(() => {
+    setShowSearchDropdown(false)
+  }, [location.pathname])
 
   // Automatically refresh permissions every 5 minutes
   usePermissionRefresh()
@@ -739,8 +770,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { navItems, bottomNavItems } = navItemsResult
   const { toggleSidebar } = useSidebarStore()
 
+  const isAiAssistantRoute =
+    location.pathname === '/dashboard/ai-assistant' ||
+    location.pathname === '/dashboard/ai-assistant/'
+
   return (
-    <div className="bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center bg-no-repeat">
+    <div
+      className={cn(
+        'bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center',
+        /* Long scroll (chat): fixed attachment paints vs viewport so the SVG does not “run out” mid-page */
+        isAiAssistantRoute ? '[background-attachment:fixed]' : 'bg-no-repeat'
+      )}
+    >
       {/* Sidebar */}
       <Sidebar items={navItems} bottomItems={bottomNavItems} />
 
@@ -805,12 +846,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Desktop: Project Selector, Language Switcher and User Profile */}
           <div className="hidden items-center gap-3 lg:flex">
             <MinimizedCallBubble />
-            <TaskBell />
+            <NotificationBell />
+            <AiAssistantHeaderButton />
             <UserProfile onLogoutClick={handleLogoutClick} />
           </div>
 
-          {/* Mobile: Tree dropdown with all actions */}
-          <MobileHeaderMenu onLogoutClick={handleLogoutClick} />
+          {/* Mobile: Notification bell + dropdown menu */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <NotificationBell />
+            <AiAssistantHeaderButton />
+            <MobileHeaderMenu onLogoutClick={handleLogoutClick} />
+          </div>
         </header>
 
         {/* Scrollable Page Content with top padding for fixed header */}

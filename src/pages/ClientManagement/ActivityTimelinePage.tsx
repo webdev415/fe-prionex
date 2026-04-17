@@ -10,6 +10,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { DateSelect } from '@/components/ui/DateSelect'
 import {
@@ -43,6 +44,9 @@ import type { InteractionResponse } from '@/features/clients/api/types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { useOperators } from '@/features/users/hooks/useUsers'
+import { useAuthStore } from '@/stores/authStore'
+import { formatUkrainePhoneForDisplay, normalizeUkrainePhoneToDb } from '@/lib/phone'
 
 export function ActivityTimelinePage() {
   const { t } = useTranslation('common')
@@ -84,6 +88,20 @@ export function ActivityTimelinePage() {
   const [selectedTypeId, setSelectedTypeId] = useState<string>('all')
   const [dateFrom, setDateFrom] = useState<Date | null>(null)
   const [dateTo, setDateTo] = useState<Date | null>(null)
+  const [promiseDateFrom, setPromiseDateFrom] = useState<Date | null>(null)
+  const [promiseDateTo, setPromiseDateTo] = useState<Date | null>(null)
+  const [callbackDateFrom, setCallbackDateFrom] = useState<Date | null>(null)
+  const [callbackDateTo, setCallbackDateTo] = useState<Date | null>(null)
+  const [selectedOperatorId, setSelectedOperatorId] = useState<string>('all')
+  const [latestOnly, setLatestOnly] = useState<boolean>(false)
+
+  // Fetch operators for "Created by" dropdown
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
+  const operatorOptions = useMemo(() => {
+    if (!operators) return []
+    return operators.map((u) => ({ id: u.id.toString(), name: u.full_name }))
+  }, [operators])
 
   // Build API params from filter/pagination state
   const apiParams = useMemo(() => {
@@ -93,6 +111,12 @@ export function ActivityTimelinePage() {
       type_id?: number
       date_from?: string
       date_to?: string
+      promise_date_from?: string
+      promise_date_to?: string
+      callback_date_from?: string
+      callback_date_to?: string
+      interaction_user_id?: number
+      latest_only?: boolean
     } = {
       page: currentPage,
       page_size: rowsPerPage,
@@ -106,8 +130,42 @@ export function ActivityTimelinePage() {
     if (dateTo) {
       params.date_to = getDateStringInTimezone(dateTo, userTimezone)
     }
+    if (promiseDateFrom) {
+      params.promise_date_from = getDateStringInTimezone(promiseDateFrom, userTimezone)
+    }
+    if (promiseDateTo) {
+      params.promise_date_to = getDateStringInTimezone(promiseDateTo, userTimezone)
+    }
+    if (callbackDateFrom) {
+      params.callback_date_from = getDateStringInTimezone(callbackDateFrom, userTimezone)
+    }
+    if (callbackDateTo) {
+      params.callback_date_to = getDateStringInTimezone(callbackDateTo, userTimezone)
+    }
+    if (selectedOperatorId !== 'all') {
+      const parsed = parseInt(selectedOperatorId, 10)
+      if (!isNaN(parsed)) {
+        params.interaction_user_id = parsed
+      }
+    }
+    if (latestOnly) {
+      params.latest_only = true
+    }
     return params
-  }, [currentPage, rowsPerPage, selectedTypeId, dateFrom, dateTo, userTimezone])
+  }, [
+    currentPage,
+    rowsPerPage,
+    selectedTypeId,
+    dateFrom,
+    dateTo,
+    promiseDateFrom,
+    promiseDateTo,
+    callbackDateFrom,
+    callbackDateTo,
+    selectedOperatorId,
+    latestOnly,
+    userTimezone,
+  ])
 
   // Fetch interaction types for the filter dropdown
   const { data: interactionTypes } = useInteractionTypes()
@@ -139,7 +197,7 @@ export function ActivityTimelinePage() {
     return items.map((a) => ({
       id: a.id,
       date: formatDateTime(a.created_at),
-      phoneNumber: a.phone_used?.trim() ? a.phone_used : '-',
+      phoneNumber: formatUkrainePhoneForDisplay(a.phone_used),
       type_id: a.type_id,
       type: a.type_code
         ? t(`interactionTypes.${a.type_code}`, { defaultValue: a.type_name ?? '-' })
@@ -185,6 +243,12 @@ export function ActivityTimelinePage() {
     setSelectedTypeId('all')
     setDateFrom(null)
     setDateTo(null)
+    setPromiseDateFrom(null)
+    setPromiseDateTo(null)
+    setCallbackDateFrom(null)
+    setCallbackDateTo(null)
+    setSelectedOperatorId('all')
+    setLatestOnly(false)
     setCurrentPage(1)
   }
 
@@ -306,7 +370,16 @@ export function ActivityTimelinePage() {
     },
   ]
 
-  const hasFilters = selectedTypeId !== 'all' || dateFrom || dateTo
+  const hasFilters =
+    selectedTypeId !== 'all' ||
+    dateFrom ||
+    dateTo ||
+    promiseDateFrom ||
+    promiseDateTo ||
+    callbackDateFrom ||
+    callbackDateTo ||
+    selectedOperatorId !== 'all' ||
+    latestOnly
 
   // Show loading skeleton while loading or if client data not available
   if (isLoading || !client) {
@@ -375,11 +448,11 @@ export function ActivityTimelinePage() {
       </div>
 
       <div className="flex flex-col items-start gap-5 self-stretch rounded-xl bg-white/50 p-3 md:p-6">
-        <div className="flex flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:justify-between">
-          {/* Type filter */}
-          <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center lg:flex-1">
-            <label className="text-dark-500 shrink-0 text-xs leading-[140%] font-medium tracking-[-0.24px]">
-              {t('pages.clients.activity.tableHeaders.type', 'Type')}:
+        {/* Row 1: Type & Date range */}
+        <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
+          <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+            <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+              {t('pages.clients.activity.tableHeaders.type', 'Type')}
             </label>
             <Select
               value={selectedTypeId}
@@ -388,7 +461,7 @@ export function ActivityTimelinePage() {
                 setCurrentPage(1)
               }}
             >
-              <SelectTrigger className="w-full sm:w-[200px]" aria-label="Type">
+              <SelectTrigger aria-label="Type">
                 <SelectValue placeholder={t('pages.clients.activity.all')} />
               </SelectTrigger>
               <SelectContent>
@@ -401,35 +474,149 @@ export function ActivityTimelinePage() {
               </SelectContent>
             </Select>
           </div>
-
-          {/* Date range */}
-          <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center lg:flex-1 lg:justify-end">
-            <label className="text-dark-500 shrink-0 text-xs leading-[140%] font-medium tracking-[-0.24px]">
-              {t('pages.clients.activity.dateRange')}:
+          <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+            <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+              {t('pages.clients.activity.dateRange')}
             </label>
-            <div className="flex flex-1 items-center gap-2">
+            <div className="flex w-full flex-1 items-center gap-2">
               <DateSelect
                 value={dateFrom}
                 onChange={({ value }) => {
                   setDateFrom(value)
                   setCurrentPage(1)
                 }}
-                placeholder={t('pages.clients.activity.fromDate')}
+                placeholder="Min"
                 format="yyyy-MM-dd"
+                className="flex flex-1 flex-col gap-2"
               />
-              <span className="text-dark-500 shrink-0">-</span>
+              <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                -
+              </span>
               <DateSelect
                 value={dateTo}
                 onChange={({ value }) => {
                   setDateTo(value)
                   setCurrentPage(1)
                 }}
-                placeholder={t('pages.clients.activity.toDate')}
+                placeholder="Max"
                 format="yyyy-MM-dd"
+                className="flex flex-1 flex-col gap-2"
               />
             </div>
           </div>
-          <div className="flex items-center justify-end gap-2 self-stretch sm:justify-end lg:w-auto lg:flex-none">
+        </div>
+
+        {/* Row 2: Promise Date & Callback Date */}
+        <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
+          <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+            <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+              {t('pages.clients.filters.promiseDate', 'Promise Date')}
+            </label>
+            <div className="flex w-full flex-1 items-center gap-2">
+              <DateSelect
+                value={promiseDateFrom}
+                onChange={({ value }) => {
+                  setPromiseDateFrom(value)
+                  setCurrentPage(1)
+                }}
+                placeholder="Min"
+                format="yyyy-MM-dd"
+                className="flex flex-1 flex-col gap-2"
+              />
+              <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                -
+              </span>
+              <DateSelect
+                value={promiseDateTo}
+                onChange={({ value }) => {
+                  setPromiseDateTo(value)
+                  setCurrentPage(1)
+                }}
+                placeholder="Max"
+                format="yyyy-MM-dd"
+                className="flex flex-1 flex-col gap-2"
+              />
+            </div>
+          </div>
+          <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+            <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+              {t('pages.clients.filters.callbackDate', 'Callback Date')}
+            </label>
+            <div className="flex w-full flex-1 items-center gap-2">
+              <DateSelect
+                value={callbackDateFrom}
+                onChange={({ value }) => {
+                  setCallbackDateFrom(value)
+                  setCurrentPage(1)
+                }}
+                placeholder="Min"
+                format="yyyy-MM-dd"
+                className="flex flex-1 flex-col gap-2"
+              />
+              <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                -
+              </span>
+              <DateSelect
+                value={callbackDateTo}
+                onChange={({ value }) => {
+                  setCallbackDateTo(value)
+                  setCurrentPage(1)
+                }}
+                placeholder="Max"
+                format="yyyy-MM-dd"
+                className="flex flex-1 flex-col gap-2"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Row 3: Created by & Latest only + Clear all */}
+        <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
+          <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+            <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+              {t('pages.clients.filters.interactionCreatedBy', 'Created by')}
+            </label>
+            <div className="flex w-full flex-1 flex-col items-start gap-2">
+              <Select
+                value={selectedOperatorId}
+                onValueChange={(value) => {
+                  setSelectedOperatorId(value)
+                  setCurrentPage(1)
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('pages.clients.activity.all')} />
+                </SelectTrigger>
+                <SelectContent searchable>
+                  <SelectItem value="all">{t('pages.clients.activity.all')}</SelectItem>
+                  {operatorOptions.length === 0 ? (
+                    <div className="px-2 py-6 text-center text-sm text-gray-500">
+                      {t('pages.clients.filters.noUsersAvailable', 'No users available')}
+                    </div>
+                  ) : (
+                    operatorOptions.map((op) => (
+                      <SelectItem key={op.id} value={op.id}>
+                        {op.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <label className="flex cursor-pointer items-center gap-2">
+              <Checkbox
+                checked={latestOnly}
+                onCheckedChange={(checked) => {
+                  setLatestOnly(checked === true)
+                  setCurrentPage(1)
+                }}
+              />
+              <span className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                {t('pages.clients.activity.latestOnly', 'Show latest interaction only')}
+              </span>
+            </label>
             {hasFilters && (
               <button
                 onClick={handleClearFilters}
@@ -441,6 +628,7 @@ export function ActivityTimelinePage() {
             )}
           </div>
         </div>
+
         {/* Activity Table or Empty State */}
         {activitiesState.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 self-stretch md:gap-6">
@@ -487,7 +675,7 @@ export function ActivityTimelinePage() {
       <AddNoteModal
         open={isNoteModalOpen}
         onClose={() => setIsNoteModalOpen(false)}
-        phoneNumber={client?.phones?.[0]?.number || ''}
+        phoneNumber={formatUkrainePhoneForDisplay(client?.phones?.[0]?.number || '', '')}
         clientId={clientId}
         loanOptions={loans
           .filter((loan) => loan.status.toLowerCase() !== 'closed')
@@ -496,7 +684,17 @@ export function ActivityTimelinePage() {
             contractNumber: loan.contract_number ?? String(loan.id),
           }))}
         onSave={(data) => {
-          createNote({ clientId, data })
+          const selectedPhone = client?.phones?.[0]?.number || ''
+          const fallbackPhone = selectedPhone.trim() || undefined
+          const normalizedPhoneForPayload =
+            normalizeUkrainePhoneToDb(selectedPhone) ?? fallbackPhone
+          createNote({
+            clientId,
+            data: {
+              ...data,
+              phone_used: normalizedPhoneForPayload,
+            },
+          })
         }}
       />
 

@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { convertUTCToUserTimezone, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -138,7 +138,7 @@ const calculateDaysPastDue = (
 // It has been removed now that the page uses real backend data.
 
 export function DebtSummaryPage() {
-  const { t, i18n } = useTranslation('common')
+  const { t } = useTranslation('common')
   const userTimezone = useAuthStore((state) => state.user?.timezone)
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -795,19 +795,6 @@ export function DebtSummaryPage() {
     )
   }
 
-  const formatCurrency = (amount: string | number) => {
-    const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    if (isNaN(num)) return '₴ 0'
-    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
-    // Format with spaces as thousands separator, no decimals (e.g., "₴ 10 080")
-    return `₴ ${num
-      .toLocaleString(locale, {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      })
-      .replace(/,/g, ' ')}`
-  }
-
   const getStatusDot = (status: Payment['status']) => {
     const statusColors = {
       verified: 'bg-success-500',
@@ -1039,7 +1026,9 @@ export function DebtSummaryPage() {
             <div className="flex flex-col items-center gap-5 self-stretch">
               <span className="text-dark-500 text-center text-base leading-[132%] font-light tracking-[-0.4px] sm:text-xl">
                 {t('pages.clients.debtSummary.totalPaid')}{' '}
-                <span className="font-medium">{formatCurrency(debtSummary.totalPaid)}</span>
+                <span className="font-medium">
+                  {formatMoneyUAHTwoDecimals(debtSummary.totalPaid)}
+                </span>
               </span>
               <LinkButton
                 variant="regular-secondary"
@@ -1129,7 +1118,7 @@ export function DebtSummaryPage() {
             </div>
             <div className="flex flex-row items-center justify-between gap-2 self-stretch">
               <span className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
-                {formatCurrency(debtSummary.lastPayment.amount)}
+                {formatMoneyUAHTwoDecimals(debtSummary.lastPayment.amount)}
               </span>
               <span className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                 {convertUTCToUserTimezone(debtSummary.lastPayment.date, userTimezone)}
@@ -1152,7 +1141,7 @@ export function DebtSummaryPage() {
             </div>
             <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 sm:px-6 sm:py-0">
               <span className="text-dark-500 text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
-                {formatCurrency(debtSummary.totalDebt)}
+                {formatMoneyUAHTwoDecimals(debtSummary.totalDebt)}
               </span>
               <span className="text-dark-500 text-center text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                 {debtSummary.daysPastDue}
@@ -1235,7 +1224,7 @@ export function DebtSummaryPage() {
                               {convertUTCToUserTimezone(payment.date, userTimezone)}
                             </td>
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
-                              {formatCurrency(payment.amount)}
+                              {formatMoneyUAHTwoDecimals(payment.amount)}
                             </td>
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
                               {payment.contractNumber || '-'}
@@ -1398,7 +1387,7 @@ export function DebtSummaryPage() {
                     {t('pages.clients.debtSummary.summary.totalVerified')}
                   </span>
                   <span className="text-dark-500 line-clamp-1 flex-1 overflow-hidden text-left text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
-                    {formatCurrency(debtSummary.totalVerified)}
+                    {formatMoneyUAHTwoDecimals(debtSummary.totalVerified)}
                   </span>
                 </div>
                 <div className="flex flex-1 flex-col items-start gap-1 px-4 py-3 sm:flex-row sm:items-center sm:px-6 sm:py-4">
@@ -1406,7 +1395,7 @@ export function DebtSummaryPage() {
                     {t('pages.clients.debtSummary.summary.pendingVerification')}
                   </span>
                   <span className="text-dark-500 line-clamp-1 flex-1 overflow-hidden text-left text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
-                    {formatCurrency(debtSummary.pendingVerification)}
+                    {formatMoneyUAHTwoDecimals(debtSummary.pendingVerification)}
                   </span>
                 </div>
               </div>

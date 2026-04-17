@@ -137,6 +137,9 @@ export interface ClientDetail extends Client {
   // Additional manual priority fields
   manual_priority_set_at?: string | null
   manual_priority_set_by?: number | null
+
+  /** Max promise_to_pay_date over non-deleted interactions (ISO); used for SMS {due_date} */
+  max_promise_to_pay_date?: string | null
 }
 
 export interface CreateClientRequest {
@@ -151,17 +154,17 @@ export interface CreateClientRequest {
 }
 
 export interface UpdateClientRequest {
-  tax_id?: string
   first_name?: string
   last_name?: string
-  middle_name?: string
+  middle_name?: string | null
   date_of_birth?: string
-  email?: string
+  email?: string | null
   address?: string
   postal_code?: string
-  marital_status?: string
-  family_members_count?: number
-  income_level?: string
+  marital_status?: string | null
+  family_members_count?: number | null
+  income_level?: string | null
+  tax_id?: string
 }
 
 export interface UpdateEmploymentRequest {
@@ -229,6 +232,13 @@ export interface GetClientsParams {
   // Filter: Callback/Next-action Date
   callback_date_from?: string // YYYY-MM-DD format
   callback_date_to?: string // YYYY-MM-DD format
+
+  // Filter: Interaction operator
+  interaction_user_id?: number
+
+  // Filter: Interaction logged date (applies to promise and callback subqueries)
+  interaction_date_from?: string // YYYY-MM-DD format
+  interaction_date_to?: string // YYYY-MM-DD format
 
   // Filter: Status
   status?: string // Comma-separated statuses (e.g., "active,new")

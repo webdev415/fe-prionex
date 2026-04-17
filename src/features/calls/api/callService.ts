@@ -45,6 +45,15 @@ class CallService {
     return `${API_BASE_URL}/api/v1/calls/${callId}/recording`
   }
 
+  /** Fetches recording bytes with auth headers (required — native <audio src> cannot send Bearer tokens). */
+  async fetchRecordingBlob(callId: string): Promise<Blob> {
+    const response = await api.get(`/api/v1/calls/${callId}/recording`, {
+      responseType: 'blob',
+      timeout: 120_000,
+    })
+    return response.data
+  }
+
   async getAMIHealth(): Promise<AMIHealthResponse> {
     const response = await api.get(`${API_BASE_URL}/health/ami`)
     return response.data

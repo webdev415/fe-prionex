@@ -102,6 +102,22 @@ function mapFiltersToAPIParams(
     params.callback_date_to = filters.callbackDateTo
   }
 
+  // FILTER: Interaction Created By (operator)
+  if (filters.interactionUserId) {
+    const parsed = parseInt(filters.interactionUserId, 10)
+    if (!isNaN(parsed)) {
+      params.interaction_user_id = parsed
+    }
+  }
+
+  // FILTER: Interaction Logged Date (applies to promise/callback subqueries)
+  if (filters.interactionDateFrom) {
+    params.interaction_date_from = filters.interactionDateFrom
+  }
+  if (filters.interactionDateTo) {
+    params.interaction_date_to = filters.interactionDateTo
+  }
+
   return params
 }
 
@@ -474,6 +490,98 @@ describe('Client Management Filter Integration', () => {
 
       expect(params.principal_min).toBeUndefined()
       expect(params.principal_max).toBeUndefined()
+    })
+  })
+
+  describe('Interaction Created By (Operator) Filter', () => {
+    it('should map interactionUserId to interaction_user_id as number', () => {
+      const filters: ClientFilters = {
+        interactionUserId: '7',
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.interaction_user_id).toBe(7)
+      expect(typeof params.interaction_user_id).toBe('number')
+    })
+
+    it('should not set interaction_user_id for invalid string', () => {
+      const filters: ClientFilters = {
+        interactionUserId: 'abc',
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.interaction_user_id).toBeUndefined()
+    })
+
+    it('should not set interaction_user_id when empty string', () => {
+      const filters: ClientFilters = {
+        interactionUserId: '',
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.interaction_user_id).toBeUndefined()
+    })
+  })
+
+  describe('Interaction Logged Date Filter', () => {
+    it('should map interactionDateFrom/To to interaction_date_from/to', () => {
+      const filters: ClientFilters = {
+        interactionDateFrom: '2026-04-01',
+        interactionDateTo: '2026-04-15',
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.interaction_date_from).toBe('2026-04-01')
+      expect(params.interaction_date_to).toBe('2026-04-15')
+    })
+
+    it('should handle only interactionDateFrom', () => {
+      const filters: ClientFilters = {
+        interactionDateFrom: '2026-04-01',
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.interaction_date_from).toBe('2026-04-01')
+      expect(params.interaction_date_to).toBeUndefined()
+    })
+  })
+
+  describe('Combined New Filters with Existing Filters', () => {
+    it('should map all new interaction filters together with date filters', () => {
+      const filters: ClientFilters = {
+        promiseDateFrom: '2026-04-01',
+        promiseDateTo: '2026-04-30',
+        callbackDateFrom: '2026-05-01',
+        callbackDateTo: '2026-05-31',
+        interactionUserId: '12',
+        interactionDateFrom: '2026-03-15',
+        interactionDateTo: '2026-05-01',
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.promise_date_from).toBe('2026-04-01')
+      expect(params.promise_date_to).toBe('2026-04-30')
+      expect(params.callback_date_from).toBe('2026-05-01')
+      expect(params.callback_date_to).toBe('2026-05-31')
+      expect(params.interaction_user_id).toBe(12)
+      expect(params.interaction_date_from).toBe('2026-03-15')
+      expect(params.interaction_date_to).toBe('2026-05-01')
+    })
+
+    it('should not set new filter params when not provided', () => {
+      const filters: ClientFilters = {}
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.interaction_user_id).toBeUndefined()
+      expect(params.interaction_date_from).toBeUndefined()
+      expect(params.interaction_date_to).toBeUndefined()
     })
   })
 })

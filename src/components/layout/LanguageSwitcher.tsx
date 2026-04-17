@@ -35,9 +35,9 @@ export function LanguageSwitcher({
   const currentLanguage =
     (value as SupportedLanguage) || (i18n.language as SupportedLanguage) || 'en'
 
-  const handleLanguageChange = (lang: string) => {
-    i18n.changeLanguage(lang as SupportedLanguage)
-    if (onValueChange) onValueChange(lang)
+  const handleLanguageChange = async (lang: string) => {
+    await i18n.changeLanguage(lang as SupportedLanguage)
+    onValueChange?.(lang)
   }
 
   useEffect(() => {

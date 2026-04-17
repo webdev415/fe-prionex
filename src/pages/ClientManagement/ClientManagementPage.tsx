@@ -142,6 +142,13 @@ export interface ClientFilters {
   callbackDateFrom?: string
   callbackDateTo?: string
 
+  // Interaction Created By
+  interactionUserId?: string
+
+  // Interaction Logged Date (applies to promise and callback subqueries)
+  interactionDateFrom?: string
+  interactionDateTo?: string
+
   // Portfolio/Sellers Filter (now stores IDs only)
   portfolio?: number[]
 
@@ -216,6 +223,18 @@ export function ClientManagementPage() {
     ''
   )
   const [callbackDateToFilter, setCallbackDateToFilter] = useURLState<string>('callbackDateTo', '')
+  const [interactionUserIdFilter, setInteractionUserIdFilter] = useURLState<string>(
+    'interactionUserId',
+    ''
+  )
+  const [interactionDateFromFilter, setInteractionDateFromFilter] = useURLState<string>(
+    'interactionDateFrom',
+    ''
+  )
+  const [interactionDateToFilter, setInteractionDateToFilter] = useURLState<string>(
+    'interactionDateTo',
+    ''
+  )
 
   // Compute filters object from URL state
   const filters: ClientFilters = useMemo(
@@ -240,6 +259,9 @@ export function ClientManagementPage() {
       promiseDateTo: promiseDateToFilter || undefined,
       callbackDateFrom: callbackDateFromFilter || undefined,
       callbackDateTo: callbackDateToFilter || undefined,
+      interactionUserId: interactionUserIdFilter || undefined,
+      interactionDateFrom: interactionDateFromFilter || undefined,
+      interactionDateTo: interactionDateToFilter || undefined,
     }),
     [
       portfolioFilter,
@@ -262,6 +284,9 @@ export function ClientManagementPage() {
       promiseDateToFilter,
       callbackDateFromFilter,
       callbackDateToFilter,
+      interactionUserIdFilter,
+      interactionDateFromFilter,
+      interactionDateToFilter,
     ]
   )
 
@@ -317,6 +342,9 @@ export function ClientManagementPage() {
       promiseDateToFilter,
       callbackDateFromFilter,
       callbackDateToFilter,
+      interactionUserIdFilter,
+      interactionDateFromFilter,
+      interactionDateToFilter,
       searchQuery,
       searchType,
     }
@@ -337,6 +365,9 @@ export function ClientManagementPage() {
       promiseDateToFilter !== '' ||
       callbackDateFromFilter !== '' ||
       callbackDateToFilter !== '' ||
+      interactionUserIdFilter !== '' ||
+      interactionDateFromFilter !== '' ||
+      interactionDateToFilter !== '' ||
       debtRangeFromFilter > 0 ||
       debtRangeToFilter > 0 ||
       principalRangeFromFilter > 0 ||
@@ -380,6 +411,9 @@ export function ClientManagementPage() {
     promiseDateToFilter,
     callbackDateFromFilter,
     callbackDateToFilter,
+    interactionUserIdFilter,
+    interactionDateFromFilter,
+    interactionDateToFilter,
     searchQuery,
     searchType,
   ])
@@ -403,6 +437,9 @@ export function ClientManagementPage() {
       promiseDateToFilter !== '' ||
       callbackDateFromFilter !== '' ||
       callbackDateToFilter !== '' ||
+      interactionUserIdFilter !== '' ||
+      interactionDateFromFilter !== '' ||
+      interactionDateToFilter !== '' ||
       debtRangeFromFilter > 0 ||
       principalRangeFromFilter > 0
 
@@ -442,6 +479,12 @@ export function ClientManagementPage() {
             if (parsed.callbackDateFromFilter)
               setCallbackDateFromFilter(parsed.callbackDateFromFilter)
             if (parsed.callbackDateToFilter) setCallbackDateToFilter(parsed.callbackDateToFilter)
+            if (parsed.interactionUserIdFilter)
+              setInteractionUserIdFilter(parsed.interactionUserIdFilter)
+            if (parsed.interactionDateFromFilter)
+              setInteractionDateFromFilter(parsed.interactionDateFromFilter)
+            if (parsed.interactionDateToFilter)
+              setInteractionDateToFilter(parsed.interactionDateToFilter)
             if (parsed.currentPage) setCurrentPage(parsed.currentPage)
             if (parsed.rowsPerPage) setRowsPerPage(parsed.rowsPerPage)
             if (parsed.sortBy) setSortBy(parsed.sortBy)
@@ -613,7 +656,23 @@ export function ClientManagementPage() {
       params.callback_date_to = filters.callbackDateTo
     }
 
-    // FILTER 13: Search (from global header search)
+    // FILTER 13: Interaction Created By
+    if (filters.interactionUserId) {
+      const parsed = parseInt(filters.interactionUserId, 10)
+      if (!isNaN(parsed)) {
+        params.interaction_user_id = parsed
+      }
+    }
+
+    // FILTER 14: Interaction Logged Date (applies to promise/callback subqueries)
+    if (filters.interactionDateFrom) {
+      params.interaction_date_from = filters.interactionDateFrom
+    }
+    if (filters.interactionDateTo) {
+      params.interaction_date_to = filters.interactionDateTo
+    }
+
+    // FILTER 15: Search (from global header search)
     if (searchQuery.trim()) {
       params.q = searchQuery.trim()
       params.search_type = searchType
@@ -676,6 +735,8 @@ export function ClientManagementPage() {
     if (filters.dateOfSaleFrom || filters.dateOfSaleTo) count++
     if (filters.promiseDateFrom || filters.promiseDateTo) count++
     if (filters.callbackDateFrom || filters.callbackDateTo) count++
+    if (filters.interactionUserId) count++
+    if (filters.interactionDateFrom || filters.interactionDateTo) count++
     if (filters.portfolio && filters.portfolio.length > 0) count++
     if (filters.tagIds && filters.tagIds.length > 0) count++
     if (filters.status && filters.status.length > 0) count++
@@ -1012,6 +1073,15 @@ export function ClientManagementPage() {
     if (newFilters.callbackDateTo !== callbackDateToFilter) {
       setCallbackDateToFilter(newFilters.callbackDateTo || '')
     }
+    if (newFilters.interactionUserId !== interactionUserIdFilter) {
+      setInteractionUserIdFilter(newFilters.interactionUserId || '')
+    }
+    if (newFilters.interactionDateFrom !== interactionDateFromFilter) {
+      setInteractionDateFromFilter(newFilters.interactionDateFrom || '')
+    }
+    if (newFilters.interactionDateTo !== interactionDateToFilter) {
+      setInteractionDateToFilter(newFilters.interactionDateTo || '')
+    }
 
     // Reset to page 1 when filters change
     setCurrentPage(1)
@@ -1040,6 +1110,9 @@ export function ClientManagementPage() {
     setPromiseDateToFilter('')
     setCallbackDateFromFilter('')
     setCallbackDateToFilter('')
+    setInteractionUserIdFilter('')
+    setInteractionDateFromFilter('')
+    setInteractionDateToFilter('')
 
     // Reset to first page
     setCurrentPage(1)

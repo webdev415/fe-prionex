@@ -165,11 +165,41 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
             .react-datepicker__navigation:hover *::before {
               border-color: #05040D;
             }
+            .react-datepicker__year-dropdown-container {
+              margin: 0 4px;
+            }
+            .react-datepicker__year-read-view {
+              font-size: 13px;
+              font-weight: 500;
+              color: #05040D;
+              visibility: visible !important;
+            }
+            .react-datepicker__year-read-view--down-arrow {
+              border-color: #6B7280;
+              top: 3px;
+            }
+            .react-datepicker__year-dropdown {
+              background-color: white;
+              border: 1px solid #E5E7EB;
+              border-radius: 0.5rem;
+              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            }
+            .react-datepicker__year-option {
+              font-size: 13px;
+              padding: 4px 8px;
+            }
+            .react-datepicker__year-option:hover {
+              background-color: #F3F4F6;
+            }
+            .react-datepicker__year-option--selected_year {
+              font-weight: 600;
+              color: var(--color-primary-500);
+            }
             .react-datepicker__triangle {
               display: none;
             }
             .react-datepicker-popper {
-              z-index: 20 !important;
+              z-index: 200 !important;
             }
           `}</style>
           <div className="date-select-wrapper">
@@ -190,6 +220,9 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               timeFormat={timeFormat}
               timeIntervals={timeIntervals}
               calendarStartDay={1}
+              showYearDropdown
+              scrollableYearDropdown
+              yearDropdownItemNumber={10}
             />
           </div>
         </div>

@@ -25,7 +25,7 @@ import { useClient } from '@/features/clients/hooks/useClients'
 import { authApi } from '@/features/auth/api/authApi'
 import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@/lib/errors'
-import { formatDate } from '@/lib/formatters'
+import { formatDateDotDMY, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 
 export interface SendSMSModalProps {
   open: boolean
@@ -96,7 +96,7 @@ export function SendSMSModal({
   )
   const sendSMSMutation = useSendSMS()
 
-  // Fetch client details to get debt information (contract_number, due_date)
+  // Fetch client details (debts, contract_number, max promise date for SMS {due_date})
   const { data: clientData } = useClient(clientId, !!clientId && open)
 
   // Fetch current user details to get operator phone
@@ -176,59 +176,14 @@ export function SendSMSModal({
 
   // Calculate variable values from client data
   const variableValues = useMemo(() => {
-    // Get contract_number from first debt (if available)
+    // Prefer the currently selected loan for contract_number.
+    // Fallback to first debt for backwards-compatibility when loans aren't provided.
     const contractNumber =
-      clientData?.debts && clientData.debts.length > 0 ? clientData.debts[0].contract_number : ''
+      selectedLoan?.loanNumber ??
+      (clientData?.debts && clientData.debts.length > 0 ? clientData.debts[0].contract_number : '')
 
-    // Get due_date from first debt's debt_close_date or calculate from debt_start_date
-    // Use debt_close_date as due_date if available, otherwise calculate from debt_start_date + 30 days
-    // Fallback to purchase_date + 30 days if other dates are not available
-    let dueDate = ''
-    if (clientData?.debts && clientData.debts.length > 0) {
-      const firstDebt = clientData.debts[0]
-
-      // Try debt_close_date first (this is the actual due date)
-      if (firstDebt.debt_close_date) {
-        try {
-          const date = new Date(firstDebt.debt_close_date)
-          if (!isNaN(date.getTime())) {
-            dueDate = formatDate(firstDebt.debt_close_date)
-          }
-        } catch {
-          // ignore parse errors, will fall back to other dates
-        }
-      }
-
-      // If debt_close_date is not available, try debt_start_date + 30 days
-      if (!dueDate && firstDebt.debt_start_date) {
-        try {
-          const startDate = new Date(firstDebt.debt_start_date)
-          if (!isNaN(startDate.getTime())) {
-            const dueDateObj = new Date(startDate)
-            dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
-            dueDate = formatDate(dueDateObj.toISOString())
-          }
-        } catch {
-          // ignore parse errors, will fall back to other dates
-        }
-      }
-
-      // Fallback to purchase_date + 30 days if other dates are not available
-      if (!dueDate && firstDebt.purchase_date) {
-        try {
-          const purchaseDate = new Date(firstDebt.purchase_date)
-          if (!isNaN(purchaseDate.getTime())) {
-            const dueDateObj = new Date(purchaseDate)
-            dueDateObj.setDate(dueDateObj.getDate() + 30) // Add 30 days as default
-            dueDate = formatDate(dueDateObj.toISOString())
-          }
-        } catch {
-          // ignore parse errors, will fall back to defaults
-        }
-      }
-    } else {
-      // no debt data available for due_date calculation
-    }
+    // {due_date} = max promise_to_pay_date across this client's interactions (DD.MM.YYYY)
+    const dueDate = formatDateDotDMY(clientData?.max_promise_to_pay_date ?? null)
 
     // Get operator_phone from user API response
     const operatorPhone = currentUserData?.data?.phone || ''
@@ -469,7 +424,7 @@ export function SendSMSModal({
                       <SelectContent>
                         {loans.map((loan) => (
                           <SelectItem key={loan.id} value={loan.id.toString()}>
-                            {loan.loanNumber} — ₴{Number(loan.totalToRepay).toFixed(2)}
+                            {loan.loanNumber} — {formatMoneyUAHTwoDecimals(loan.totalToRepay)}
                           </SelectItem>
                         ))}
                       </SelectContent>
