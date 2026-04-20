@@ -98,6 +98,8 @@ export async function getClientPaymentHistory(
         payment_method: params.payment_method,
         from_date: params.from_date,
         to_date: params.to_date,
+        date_field: params.date_field,
+        tz: params.tz,
       },
     }
   )

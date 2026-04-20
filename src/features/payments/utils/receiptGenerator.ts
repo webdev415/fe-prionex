@@ -72,7 +72,15 @@ export function convertPaymentToReceiptData(
   return {
     receiptNumber,
     paymentId: payment.payment_number,
-    dateIssued: payment.receipt_generated_at || payment.recorded_at || new Date().toISOString(),
+    // CHANGED — NEVER fall back to new Date() for dateIssued. Priority:
+    //   receipt_generated_at -> payment_confirmation_date -> recorded_at -> verified_at -> payment_date
+    // payment_date is always present (NOT NULL in the model).
+    dateIssued:
+      payment.receipt_generated_at ||
+      payment.payment_confirmation_date ||
+      payment.recorded_at ||
+      payment.verified_at ||
+      payment.payment_date,
     clientName: clientData?.fullName || `Client #${payment.client_id}`,
     clientId: payment.client_id.toString(),
     phone: clientData?.phone || 'N/A',
@@ -86,7 +94,17 @@ export function convertPaymentToReceiptData(
     outstandingBalanceBefore: Number(payment.debt_before) || 0,
     paymentApplied,
     remainingBalance: Number(payment.debt_after) || 0,
-    receivedBy: payment.recorded_by_username || `User #${payment.recorded_by_user_id}`,
+    // CHANGED — branch on recorded_by_user_id presence. For auto-created rows
+    // fall back to the verified-by user with an "(import)" suffix.
+    receivedBy:
+      payment.recorded_by_username ??
+      (payment.recorded_by_user_id !== null && payment.recorded_by_user_id !== undefined
+        ? `User #${payment.recorded_by_user_id}`
+        : payment.verified_by_username
+          ? `${payment.verified_by_username} (import)`
+          : payment.verified_by_user_id !== null && payment.verified_by_user_id !== undefined
+            ? `User #${payment.verified_by_user_id} (import)`
+            : '—'),
     verifiedBy: payment.verified_by_username,
     verifiedOn: payment.verified_at,
     companyName: companyData?.name || '-',

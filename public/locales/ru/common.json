@@ -1645,7 +1645,8 @@
         "viewAll": "Просмотреть все",
         "showLess": "Показать меньше",
         "tableHeaders": {
-          "date": "Дата",
+          "date": "Дата добавления платежа",
+          "paymentConfirmationDate": "Дата подтверждения платежа",
           "amount": "Сумма",
           "method": "Способ",
           "status": "Статус",
@@ -1702,7 +1703,9 @@
           "all": "Все"
         },
         "tableHeaders": {
-          "date": "Дата",
+          "date": "Дата добавления платежа",
+          "paymentConfirmationDate": "Дата подтверждения платежа",
+          "cancelledDate": "Дата отмены",
           "amount": "Сумма",
           "method": "Способ",
           "reference": "Номер ссылки",

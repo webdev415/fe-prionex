@@ -6,7 +6,11 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { convertUTCToUserTimezone, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
+import {
+  convertUTCToUserTimezone,
+  formatIsoDate,
+  formatMoneyUAHTwoDecimals,
+} from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -319,16 +323,7 @@ export function DebtSummaryPage() {
       })
       .map((p) => ({
         id: p.id,
-        // Use appropriate datetime based on status:
-        // - verified: verified_at (when verified)
-        // - cancelled: reversed_at (when cancelled)
-        // - pending: recorded_at (when recorded)
-        date:
-          p.status === 'verified' && p.verified_at
-            ? p.verified_at
-            : p.status === 'cancelled' && p.reversed_at
-              ? p.reversed_at
-              : p.recorded_at,
+        date: p.recorded_at ?? '',
         amount: Number(p.amount),
         contractNumber: p.debt_contract_number || undefined,
         method: p.payment_method,
@@ -1174,6 +1169,9 @@ export function DebtSummaryPage() {
                       <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
                         {t('pages.clients.debtSummary.tableHeaders.date')}
                       </th>
+                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                        {t('pages.clients.debtSummary.tableHeaders.paymentConfirmationDate')}
+                      </th>
                       <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
                         {t('pages.clients.debtSummary.tableHeaders.amount')}
                       </th>
@@ -1206,7 +1204,7 @@ export function DebtSummaryPage() {
                       return displayedPayments.length === 0 ? (
                         <tr>
                           <td
-                            colSpan={7}
+                            colSpan={8}
                             className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium"
                           >
                             {t('pages.clients.debtSummary.noPaymentHistory')}
@@ -1222,6 +1220,12 @@ export function DebtSummaryPage() {
                           >
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
                               {convertUTCToUserTimezone(payment.date, userTimezone)}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              {formatIsoDate(
+                                paymentHistoryData?.payments.find((p) => p.id === payment.id)
+                                  ?.payment_confirmation_date
+                              )}
                             </td>
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
                               {formatMoneyUAHTwoDecimals(payment.amount)}
@@ -1490,7 +1494,9 @@ export function DebtSummaryPage() {
             paymentDate: (() => {
               const bp = paymentHistoryData?.payments.find((p) => p.id === selectedPayment.id)
               if (!bp) return selectedPayment.date
-              return bp.status === 'verified' && bp.verified_at ? bp.verified_at : bp.recorded_at
+              return bp.status === 'verified' && bp.verified_at
+                ? bp.verified_at
+                : (bp.recorded_at ?? bp.payment_date)
             })(),
             method: normalizePaymentMethod(selectedPayment.method),
             reference:

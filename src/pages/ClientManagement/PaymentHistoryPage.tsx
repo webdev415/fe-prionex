@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { convertUTCToUserTimezone, formatIsoDate } from '@/lib/formatters'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useAuthStore } from '@/stores/authStore'
 import { useParams, useNavigate } from 'react-router-dom'
@@ -195,6 +195,8 @@ export function PaymentHistoryPage() {
       payment_method: methodFilter !== 'All' ? (methodFilter as BackendPaymentMethod) : undefined,
       from_date: startDate ? getDateStringInTimezone(startDate, userTimezone) : undefined,
       to_date: endDate ? getDateStringInTimezone(endDate, userTimezone) : undefined,
+      date_field: 'recorded_at',
+      tz: userTimezone,
     },
     { enabled: !!clientId }
   )
@@ -225,16 +227,10 @@ export function PaymentHistoryPage() {
   const convertBackendPayment = useCallback((backendPayment: BackendPayment): Payment => {
     return {
       id: backendPayment.id,
-      // Use appropriate datetime based on status:
-      // - verified: verified_at (when verified)
-      // - cancelled: reversed_at (when cancelled)
-      // - pending: recorded_at (when recorded)
-      date:
-        backendPayment.status === 'verified' && backendPayment.verified_at
-          ? backendPayment.verified_at
-          : backendPayment.status === 'cancelled' && backendPayment.reversed_at
-            ? backendPayment.reversed_at
-            : backendPayment.recorded_at,
+      // Always use recorded_at — see requirements CHANGE 11.0.
+      // Rows with NULL recorded_at (auto-created verified) yield an empty string;
+      // downstream sort pushes them to the end, filter excludes them.
+      date: backendPayment.recorded_at ?? '',
       amount: Number(backendPayment.amount),
       contractNumber: backendPayment.debt_contract_number || undefined,
       method: backendPayment.payment_method,
@@ -693,11 +689,11 @@ export function PaymentHistoryPage() {
         if (payment.method !== methodFilter) return false
       }
 
-      // Date range filtering
+      // Date range filtering (defense-in-depth — backend CHANGE 13 already filters server-side)
       if (startDate || endDate) {
-        // Parse payment date in format MM/DD/YYYY
-        const [month, day, year] = payment.date.split('/')
-        const paymentDate = new Date(Number(year), Number(month) - 1, Number(day))
+        if (!payment.date) return false // Exclude NULL recorded_at rows
+        const paymentDate = new Date(payment.date) // ISO timestamp — safe to use Date()
+        if (isNaN(paymentDate.getTime())) return false
 
         if (startDate) {
           const fromDate = new Date(startDate)
@@ -723,11 +719,15 @@ export function PaymentHistoryPage() {
 
         switch (sortConfig.key) {
           case 'date': {
-            // Parse dates in format MM/DD/YYYY
-            const [aMonth, aDay, aYear] = a.date.split('/')
-            const [bMonth, bDay, bYear] = b.date.split('/')
-            aValue = new Date(Number(aYear), Number(aMonth) - 1, Number(aDay)).getTime()
-            bValue = new Date(Number(bYear), Number(bMonth) - 1, Number(bDay)).getTime()
+            // Empty date (auto-created verified with NULL recorded_at) always sorts last.
+            const aEmpty = !a.date
+            const bEmpty = !b.date
+            if (aEmpty && bEmpty) return 0
+            if (aEmpty) return 1
+            if (bEmpty) return -1
+            // recorded_at is a full ISO timestamp — Date.parse preserves chronological order.
+            aValue = Date.parse(a.date)
+            bValue = Date.parse(b.date)
             break
           }
           case 'amount':
@@ -1346,6 +1346,12 @@ export function PaymentHistoryPage() {
                           {getSortIcon('date')}
                         </span>
                       </th>
+                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                        {t('pages.clients.paymentHistory.tableHeaders.paymentConfirmationDate')}
+                      </th>
+                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                        {t('pages.clients.paymentHistory.tableHeaders.cancelledDate')}
+                      </th>
                       <th
                         className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-right text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
                         onClick={() => handleSort('amount')}
@@ -1400,7 +1406,7 @@ export function PaymentHistoryPage() {
                     {paginatedPayments.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={7}
+                          colSpan={9}
                           className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium"
                         >
                           {t('pages.clients.paymentHistory.noPaymentHistory')}
@@ -1409,20 +1415,12 @@ export function PaymentHistoryPage() {
                     ) : (
                       paginatedPayments.map((payment, index) => {
                         // Always get backend payment to use the same date source as the modal
-                        // This ensures consistency - the date displayed matches what's stored in the database
-                        // Use both id and payment_number to ensure we find the correct payment
                         const backendPayment = paymentHistoryData?.payments.find(
                           (p) => p.id === payment.id || p.payment_number === payment.reference
                         )
 
-                        // Use appropriate datetime based on status
-                        const displayDate = backendPayment
-                          ? backendPayment.status === 'verified' && backendPayment.verified_at
-                            ? backendPayment.verified_at
-                            : backendPayment.status === 'cancelled' && backendPayment.reversed_at
-                              ? backendPayment.reversed_at
-                              : backendPayment.recorded_at
-                          : payment.date // Fallback only if backend payment not found (shouldn't happen)
+                        // "Payment Added Date" — always recorded_at (CHANGE 11.1)
+                        const paymentAddedDate = backendPayment?.recorded_at ?? null
 
                         return (
                           <tr
@@ -1432,7 +1430,17 @@ export function PaymentHistoryPage() {
                             }`}
                           >
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
-                              {convertUTCToUserTimezone(displayDate, userTimezone)}
+                              {paymentAddedDate
+                                ? convertUTCToUserTimezone(paymentAddedDate, userTimezone)
+                                : '—'}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              {formatIsoDate(backendPayment?.payment_confirmation_date)}
+                            </td>
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                              {backendPayment?.status === 'cancelled' && backendPayment?.reversed_at
+                                ? convertUTCToUserTimezone(backendPayment.reversed_at, userTimezone)
+                                : '—'}
                             </td>
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
                               {formatCurrency(payment.amount)}
@@ -1704,7 +1712,7 @@ export function PaymentHistoryPage() {
             paymentDate: paymentDetails
               ? paymentDetails.status === 'verified' && paymentDetails.verified_at
                 ? paymentDetails.verified_at
-                : paymentDetails.recorded_at
+                : (paymentDetails.recorded_at ?? paymentDetails.payment_date)
               : selectedPayment.date,
             method: (() => {
               const rawMethod = paymentDetails

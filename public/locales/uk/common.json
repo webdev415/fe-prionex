@@ -1641,7 +1641,8 @@
         "viewAll": "Переглянути всі",
         "showLess": "Показати менше",
         "tableHeaders": {
-          "date": "Дата",
+          "date": "Дата додавання платежу",
+          "paymentConfirmationDate": "Дата підтвердження платежу",
           "amount": "Сума",
           "method": "Спосіб",
           "status": "Статус",
@@ -1698,7 +1699,9 @@
           "all": "Всі"
         },
         "tableHeaders": {
-          "date": "Дата",
+          "date": "Дата додавання платежу",
+          "paymentConfirmationDate": "Дата підтвердження платежу",
+          "cancelledDate": "Дата скасування",
           "amount": "Сума",
           "method": "Спосіб",
           "reference": "Номер посилання",
