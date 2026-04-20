@@ -22,18 +22,12 @@ import { useTargetActions } from '@/features/targetActions/hooks/useTargetAction
 import type { TAChainStepIn } from '@/features/taChains/api/types'
 
 interface ChainStepsEditorProps {
-  departmentId: number | null
   steps: TAChainStepIn[]
   onChange: (next: TAChainStepIn[]) => void
   disabled?: boolean
 }
 
-export function ChainStepsEditor({
-  departmentId,
-  steps,
-  onChange,
-  disabled,
-}: ChainStepsEditorProps) {
+export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditorProps) {
   const { t } = useTranslation('common')
 
   // Pull the full list of active TAs (the form's department picker decides
@@ -41,11 +35,6 @@ export function ChainStepsEditor({
   // an admin can re-use generic TAs across departments).
   const { data } = useTargetActions({ include_hidden: false })
   const allTAs = useMemo(() => data?.items ?? [], [data])
-
-  const tasInDept = useMemo(() => {
-    if (departmentId == null) return allTAs
-    return allTAs.filter((ta) => ta.department_id === departmentId || allTAs.length === 0)
-  }, [allTAs, departmentId])
 
   const update = (index: number, patch: Partial<TAChainStepIn>) => {
     const next = steps.map((s, i) => (i === index ? { ...s, ...patch } : s))
@@ -67,7 +56,7 @@ export function ChainStepsEditor({
   }
 
   const addStep = () => {
-    const firstTA = tasInDept[0]
+    const firstTA = allTAs[0]
     if (!firstTA) return
     onChange([
       ...steps,

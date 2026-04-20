@@ -20,7 +20,6 @@ export interface TargetAction {
   id: number
   name: string
   field_type: TAFieldType
-  department_id: number
   is_hidden: boolean
   usage_count: number
   dropdown_values: TADropdownValueOut[]
@@ -37,19 +36,16 @@ export interface TargetActionListResponse {
 export interface TargetActionCreate {
   name: string
   field_type: TAFieldType
-  department_id: number
   dropdown_values?: TADropdownValueIn[]
 }
 
 export interface TargetActionUpdate {
   name?: string
-  department_id?: number
   dropdown_values?: TADropdownValueIn[]
 }
 
 export interface TargetActionListParams {
   search?: string
-  department_id?: number
   field_type?: TAFieldType
   include_hidden?: boolean
 }

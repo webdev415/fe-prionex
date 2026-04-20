@@ -27,8 +27,6 @@ import type {
   TargetAction,
   TADropdownValueIn,
 } from '@/features/targetActions/api/types'
-import { useDepartments } from '@/features/departments/hooks/useDepartments'
-import { useAuthStore } from '@/stores/authStore'
 import { getErrorMessage } from '@/lib/errors'
 
 interface TargetActionFormProps {
@@ -41,23 +39,11 @@ const FIELD_TYPES: TAFieldType[] = ['text', 'dropdown', 'date', 'amount']
 
 export function TargetActionForm({ formId, initial, onSuccess }: TargetActionFormProps) {
   const { t } = useTranslation('common')
-  const { user } = useAuthStore()
   const createMut = useCreateTargetAction()
   const updateMut = useUpdateTargetAction()
 
-  const projectId = user?.active_project_id ? parseInt(user.active_project_id) : undefined
-  const { data: departmentsData, isLoading: departmentsLoading } = useDepartments({
-    project_id: projectId,
-    is_active: true,
-    page_size: 100,
-  })
-  const departments = departmentsData?.departments ?? []
-
   const [name, setName] = useState(initial?.name ?? '')
   const [fieldType, setFieldType] = useState<TAFieldType>(initial?.field_type ?? 'text')
-  const [departmentId, setDepartmentId] = useState<string>(
-    initial?.department_id ? String(initial.department_id) : ''
-  )
   const [dropdownValues, setDropdownValues] = useState<TADropdownValueIn[]>(
     initial?.dropdown_values?.map((v) => ({
       value: v.value,
@@ -84,16 +70,14 @@ export function TargetActionForm({ formId, initial, onSuccess }: TargetActionFor
     setDropdownValues((prev) => prev.filter((v) => v.value !== value))
   }
 
+  const isBusy = createMut.isPending || updateMut.isPending
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isBusy) return
 
     if (!name.trim()) {
       toast.error(t('pages.targetActions.errors.nameRequired'))
-      return
-    }
-    const deptId = parseInt(departmentId, 10)
-    if (!deptId || Number.isNaN(deptId)) {
-      toast.error(t('pages.targetActions.errors.departmentRequired'))
       return
     }
     if (fieldType === 'dropdown' && dropdownValues.length === 0) {
@@ -107,7 +91,6 @@ export function TargetActionForm({ formId, initial, onSuccess }: TargetActionFor
           id: initial.id,
           payload: {
             name: name.trim(),
-            department_id: deptId,
             ...(fieldType === 'dropdown' ? { dropdown_values: dropdownValues } : {}),
           },
         })
@@ -116,7 +99,6 @@ export function TargetActionForm({ formId, initial, onSuccess }: TargetActionFor
         await createMut.mutateAsync({
           name: name.trim(),
           field_type: fieldType,
-          department_id: deptId,
           ...(fieldType === 'dropdown' ? { dropdown_values: dropdownValues } : {}),
         })
         toast.success(t('pages.targetActions.toasts.created'))
@@ -160,32 +142,6 @@ export function TargetActionForm({ formId, initial, onSuccess }: TargetActionFor
             {FIELD_TYPES.map((ft) => (
               <SelectItem key={ft} value={ft}>
                 {t(`pages.targetActions.fieldTypes.${ft}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <Label>{t('pages.targetActions.form.department')}</Label>
-        <Select
-          value={departmentId}
-          onValueChange={(v) => setDepartmentId(v)}
-          disabled={isLocked || departmentsLoading}
-        >
-          <SelectTrigger>
-            <SelectValue
-              placeholder={
-                departmentsLoading
-                  ? t('common.loading')
-                  : t('pages.targetActions.form.departmentPlaceholder')
-              }
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {departments.map((d) => (
-              <SelectItem key={d.id} value={String(d.id)}>
-                {d.name}
               </SelectItem>
             ))}
           </SelectContent>

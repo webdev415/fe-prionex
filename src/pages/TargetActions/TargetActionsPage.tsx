@@ -22,8 +22,6 @@ import {
   useHideTargetAction,
   useUnhideTargetAction,
 } from '@/features/targetActions/hooks/useTargetActions'
-import { useDepartments } from '@/features/departments/hooks/useDepartments'
-import { useAuthStore } from '@/stores/authStore'
 import type { TargetAction } from '@/features/targetActions/api/types'
 import { CreateTargetActionModal, EditTargetActionModal } from './components'
 import { getErrorMessage } from '@/lib/errors'
@@ -37,8 +35,6 @@ const TYPE_BADGE: Record<string, string> = {
 
 export function TargetActionsPage() {
   const { t } = useTranslation('common')
-  const { user } = useAuthStore()
-  const projectId = user?.active_project_id ? parseInt(user.active_project_id) : undefined
 
   const [search, setSearch] = useState('')
   const [showHidden, setShowHidden] = useState(true)
@@ -46,15 +42,6 @@ export function TargetActionsPage() {
   const [editId, setEditId] = useState<number | null>(null)
 
   const { data, isLoading } = useTargetActions({ include_hidden: showHidden })
-  const { data: departmentsData } = useDepartments({
-    project_id: projectId,
-    page_size: 100,
-  })
-  const deptNameById = useMemo(() => {
-    const map = new Map<number, string>()
-    for (const d of departmentsData?.departments ?? []) map.set(d.id, d.name)
-    return map
-  }, [departmentsData])
   const cloneMut = useCloneTargetAction()
   const hideMut = useHideTargetAction()
   const unhideMut = useUnhideTargetAction()
@@ -117,19 +104,6 @@ export function TargetActionsPage() {
           {t(`pages.targetActions.fieldTypes.${ta.field_type}`)}
         </span>
       ),
-    },
-    {
-      key: 'department_id',
-      header: t('pages.targetActions.table.department'),
-      align: 'left',
-      render: (ta) => {
-        const normalizedDepartmentId = Number(ta.department_id)
-        const departmentName = Number.isNaN(normalizedDepartmentId)
-          ? undefined
-          : deptNameById.get(normalizedDepartmentId)
-
-        return <span className="text-sm">{departmentName ?? `#${ta.department_id}`}</span>
-      },
     },
     {
       key: 'usage_count',

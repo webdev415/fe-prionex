@@ -170,11 +170,7 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
         {t('pages.taChains.form.systemHidden')}
       </label>
 
-      <ChainStepsEditor
-        departmentId={departmentId ? parseInt(departmentId, 10) : null}
-        steps={steps}
-        onChange={setSteps}
-      />
+      <ChainStepsEditor steps={steps} onChange={setSteps} />
     </form>
   )
 }
