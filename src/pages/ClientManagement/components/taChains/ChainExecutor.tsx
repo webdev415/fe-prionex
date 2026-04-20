@@ -255,39 +255,26 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
   const currentTA = currentStep ? taById.get(currentStep.target_action_id) : null
   const isLastStep = (activeInstance?.current_step_order ?? 1) >= steps.length
 
-  // Delay enforcement with live countdown
+  // Delay enforcement with live countdown (server-computed, clock-skew-proof)
   const [delaySecondsLeft, setDelaySecondsLeft] = useState(0)
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (!currentStep || currentStep.delay_minutes <= 0 || !activeInstance) {
+    const serverSeconds = activeInstance?.delay_seconds_left ?? 0
+    if (serverSeconds <= 0) {
       setDelaySecondsLeft(0)
       return
     }
-    // For non-first steps: count from when the previous step was completed.
-    // For the first step (no prior step): count from when the chain instance started.
-    // Server returns naive UTC timestamps (no 'Z' suffix) — force UTC parsing.
-    const rawAnchor = activeInstance.last_step_completed_at ?? activeInstance.started_at
-    if (!rawAnchor) {
-      setDelaySecondsLeft(0)
-      return
-    }
-    const anchorAt = new Date(rawAnchor.endsWith('Z') ? rawAnchor : rawAnchor + 'Z').getTime()
-    const unlockAt = anchorAt + currentStep.delay_minutes * 60 * 1000
-
+    // Start from the server-provided value and count down locally.
+    const startedAt = Date.now()
     const tick = () => {
-      const remaining = Math.max(0, Math.ceil((unlockAt - Date.now()) / 1000))
-      setDelaySecondsLeft(remaining)
+      const elapsed = Math.floor((Date.now() - startedAt) / 1000)
+      setDelaySecondsLeft(Math.max(0, serverSeconds - elapsed))
     }
     tick()
     const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
-  }, [
-    currentStep,
-    activeInstance,
-    activeInstance?.last_step_completed_at,
-    activeInstance?.started_at,
-  ])
+  }, [activeInstance?.id, activeInstance?.current_step_order, activeInstance?.delay_seconds_left])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const isDelayBlocked = delaySecondsLeft > 0
