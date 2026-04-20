@@ -29,7 +29,7 @@ export interface Payment {
   seller_name?: string
   status: PaymentStatus
   payment_date: string // ISO date string
-  recorded_at: string // ISO datetime string
+  recorded_at: string | null // ISO datetime string — nullable for auto-created verified rows
   verified_at?: string // ISO datetime string
   completed_at?: string // ISO datetime string
   // Bank details
@@ -38,6 +38,7 @@ export interface Payment {
   bank_transaction_id?: string
   bank_reference?: string
   // Receipt
+  payment_confirmation_date?: string | null // ISO date — bank confirmation date
   receipt_number?: string
   receipt_url?: string
   receipt_generated_at?: string
@@ -52,7 +53,7 @@ export interface Payment {
   installment_id?: number
   debt_id?: number
   // Recorded by
-  recorded_by_user_id: number
+  recorded_by_user_id: number | null
   recorded_by_username?: string
   verified_by_user_id?: number
   verified_by_username?: string
@@ -132,6 +133,8 @@ export interface ClientPaymentHistoryParams {
   payment_method?: PaymentMethod
   from_date?: string // ISO date string
   to_date?: string // ISO date string
+  date_field?: 'payment_date' | 'recorded_at'
+  tz?: string // IANA timezone for date boundaries when date_field=recorded_at
 }
 
 export interface ClientPaymentHistoryResponse {

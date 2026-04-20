@@ -106,6 +106,23 @@ export function formatNumber(num?: number): string {
 }
 
 /**
+ * Format a calendar-date ISO string (YYYY-MM-DD) for display → DD-MM-YYYY.
+ * Timezone-safe: splits the string directly without instantiating Date(),
+ * so the rendered calendar date is identical in every browser timezone.
+ * Accepts YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS... (datetime is truncated to its
+ * date portion). Returns '—' for null/empty/invalid input.
+ */
+export function formatIsoDate(dateStr?: string | null): string {
+  if (!dateStr) return '—'
+  // Accept "2026-04-16" and "2026-04-16T00:00:00Z" alike — take the date part only.
+  const datePart = dateStr.slice(0, 10)
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datePart)
+  if (!match) return '—'
+  const [, year, month, day] = match
+  return `${day}-${month}-${year}`
+}
+
+/**
  * Format date for display → DD-MM-YYYY
  */
 export function formatDate(dateStr?: string): string {
