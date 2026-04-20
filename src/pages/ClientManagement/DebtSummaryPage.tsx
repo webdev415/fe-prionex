@@ -323,16 +323,7 @@ export function DebtSummaryPage() {
       })
       .map((p) => ({
         id: p.id,
-        // Use appropriate datetime based on status:
-        // - verified: verified_at (when verified)
-        // - cancelled: reversed_at (when cancelled)
-        // - pending: recorded_at (when recorded)
-        date:
-          p.status === 'verified' && p.verified_at
-            ? p.verified_at
-            : p.status === 'cancelled' && p.reversed_at
-              ? p.reversed_at
-              : (p.recorded_at ?? ''),
+        date: p.recorded_at ?? '',
         amount: Number(p.amount),
         contractNumber: p.debt_contract_number || undefined,
         method: p.payment_method,
