@@ -1829,7 +1829,17 @@
       "unhide": "Відновити",
       "requirePromiseDate": "Вимагати дату обіцянки",
       "requirePromiseAmount": "Вимагати суму обіцянки",
-      "isPositive": "Позитивний результат"
+      "isPositive": "Позитивний результат",
+      "form": {
+        "name": "Назва",
+        "step": "Крок",
+        "allSteps": "Усі кроки (спільний)",
+        "stepLabel": "Крок {{order}}",
+        "nodeType": "Тип вузла",
+        "leafSelectable": "Лист (результат для вибору)",
+        "intermediateCategory": "Проміжний (категорія)",
+        "leafConfig": "Налаштування листа"
+      }
     },
     "taChains": {
       "title": "Ланцюжки TA",

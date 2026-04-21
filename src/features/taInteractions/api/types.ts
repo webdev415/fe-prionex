@@ -63,6 +63,7 @@ export interface ChainInstance {
   started_at: string
   completed_at: string | null
   last_step_completed_at: string | null
+  delay_seconds_left: number
 }
 
 export interface ChainInstanceCreate {

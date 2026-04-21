@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/Select'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { useTAChains } from '@/features/taChains/hooks/useTAChains'
+import { useTAChains, useTAChain } from '@/features/taChains/hooks/useTAChains'
 import {
   useDictionaryTree,
   useCreateDictionaryNode,
@@ -38,6 +38,8 @@ export function TADictionaryPage() {
   const chains = chainsData?.items ?? []
 
   const [selectedChainId, setSelectedChainId] = useState<number | null>(null)
+  const { data: chainDetail } = useTAChain(selectedChainId)
+  const chainSteps = chainDetail?.steps ?? []
   const { data: treeData, isLoading: treeLoading } = useDictionaryTree(selectedChainId)
 
   const [selectedNode, setSelectedNode] = useState<TADictionaryNode | null>(null)
@@ -47,6 +49,7 @@ export function TADictionaryPage() {
   const [addingRoot, setAddingRoot] = useState(false)
   const [newRootName, setNewRootName] = useState('')
   const [newRootIsLeaf, setNewRootIsLeaf] = useState(false)
+  const [newRootStepId, setNewRootStepId] = useState<string>('all')
 
   const addRoot = async () => {
     if (!newRootName.trim() || selectedChainId === null) return
@@ -55,12 +58,14 @@ export function TADictionaryPage() {
         chainId: selectedChainId,
         payload: {
           chain_id: selectedChainId,
+          step_id: newRootStepId !== 'all' ? parseInt(newRootStepId, 10) : null,
           name: newRootName.trim(),
           is_leaf: newRootIsLeaf,
         },
       })
       setNewRootName('')
       setNewRootIsLeaf(false)
+      setNewRootStepId('all')
       setAddingRoot(false)
     } catch (err) {
       toast.error(getErrorMessage(err))
@@ -163,37 +168,54 @@ export function TADictionaryPage() {
 
               {/* Add root form */}
               {addingRoot && (
-                <div className="mt-2 flex items-center gap-2 px-2">
-                  <Input
-                    value={newRootName}
-                    onChange={(e) => setNewRootName(e.target.value)}
-                    placeholder={t('pages.taDictionary.newNodeName')}
-                    className="h-8 w-48 text-xs"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') addRoot()
-                      if (e.key === 'Escape') setAddingRoot(false)
-                    }}
-                    // eslint-disable-next-line jsx-a11y/no-autofocus
-                    autoFocus
-                  />
-                  <label className="flex items-center gap-1 text-[10px] whitespace-nowrap text-gray-600">
-                    <input
-                      type="checkbox"
-                      checked={newRootIsLeaf}
-                      onChange={(e) => setNewRootIsLeaf(e.target.checked)}
+                <div className="mt-2 flex flex-col gap-2 px-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={newRootName}
+                      onChange={(e) => setNewRootName(e.target.value)}
+                      placeholder={t('pages.taDictionary.newNodeName')}
+                      className="h-8 w-48 text-xs"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') addRoot()
+                        if (e.key === 'Escape') setAddingRoot(false)
+                      }}
+                      // eslint-disable-next-line jsx-a11y/no-autofocus
+                      autoFocus
                     />
-                    {t('pages.taDictionary.leaf')}
-                  </label>
-                  <button type="button" onClick={addRoot} className="text-sm text-green-600">
-                    ✓
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAddingRoot(false)}
-                    className="text-sm text-red-500"
-                  >
-                    ✗
-                  </button>
+                    <label className="flex items-center gap-1 text-[10px] whitespace-nowrap text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={newRootIsLeaf}
+                        onChange={(e) => setNewRootIsLeaf(e.target.checked)}
+                      />
+                      {t('pages.taDictionary.leaf')}
+                    </label>
+                    <button type="button" onClick={addRoot} className="text-sm text-green-600">
+                      ✓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAddingRoot(false)}
+                      className="text-sm text-red-500"
+                    >
+                      ✗
+                    </button>
+                  </div>
+                  {chainSteps.length > 0 && (
+                    <select
+                      value={newRootStepId}
+                      onChange={(e) => setNewRootStepId(e.target.value)}
+                      className="h-7 w-48 rounded border border-gray-200 px-2 text-xs text-gray-700"
+                    >
+                      <option value="all">{t('pages.taDictionary.form.allSteps')}</option>
+                      {chainSteps.map((s) => (
+                        <option key={s.id} value={String(s.id)}>
+                          {t('pages.taDictionary.form.stepLabel', { order: s.step_order })} —{' '}
+                          {s.target_action_name ?? `TA #${s.target_action_id}`}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               )}
             </div>

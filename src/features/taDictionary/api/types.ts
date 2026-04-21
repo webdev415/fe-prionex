@@ -1,6 +1,7 @@
 export interface TADictionaryNode {
   id: number
   chain_id: number
+  step_id: number | null
   parent_id: number | null
   name: string
   sort_order: number
@@ -22,6 +23,7 @@ export interface TADictionaryTreeResponse {
 
 export interface TADictionaryNodeCreate {
   chain_id: number
+  step_id?: number | null
   parent_id?: number | null
   name: string
   sort_order?: number
@@ -34,6 +36,7 @@ export interface TADictionaryNodeCreate {
 
 export interface TADictionaryNodeUpdate {
   name?: string
+  step_id?: number | null
   sort_order?: number
   is_leaf?: boolean
   require_promise_date?: boolean

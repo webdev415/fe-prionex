@@ -91,8 +91,15 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     return null
   }, [activeInstance, chainsData])
 
+  // Steps for progress timeline (computed early so dictionary can filter by step)
+  const steps = useMemo<TAChainStep[]>(() => activeChain?.steps ?? [], [activeChain])
+  const currentStep = steps.find((s) => s.step_order === (activeInstance?.current_step_order ?? 1))
+  const currentTA = currentStep ? taById.get(currentStep.target_action_id) : null
+  const isLastStep = (activeInstance?.current_step_order ?? 1) >= steps.length
+
   const chainForTree = activeChain?.id ?? (selectedChainId ? parseInt(selectedChainId, 10) : null)
-  const { data: treeData } = useDictionaryTree(chainForTree)
+  const currentStepId = currentStep?.id ?? null
+  const { data: treeData } = useDictionaryTree(chainForTree, currentStepId)
   const { data: builderData } = useBuilderData(chainForTree)
 
   // Dictionary cascading selection
@@ -125,11 +132,17 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
 
   // Accumulated step data across all steps (persists until chain completes)
   const [collectedStepData, setCollectedStepData] = useState<Record<string, string>>({})
+  // Accumulated leaf selections per step (step_order → leaf_id)
+  const [collectedLeaves, setCollectedLeaves] = useState<Record<string, number>>({})
+  // First promise/credit values collected (kept across steps for final interaction)
+  const [collectedPromiseDate, setCollectedPromiseDate] = useState('')
+  const [collectedPromiseAmount, setCollectedPromiseAmount] = useState('')
+  const [collectedCreditId, setCollectedCreditId] = useState('')
 
   // Current step's TA field value
   const [stepValue, setStepValue] = useState('')
 
-  // Form fields (last step only)
+  // Current step's form fields
   const [promiseDate, setPromiseDate] = useState('')
   const [promiseAmount, setPromiseAmount] = useState('')
   const [creditId, setCreditId] = useState<string>('')
@@ -145,6 +158,10 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setCollectedStepData({})
+    setCollectedLeaves({})
+    setCollectedPromiseDate('')
+    setCollectedPromiseAmount('')
+    setCollectedCreditId('')
     setStepValue('')
     setLevel1('')
     setLevel2('')
@@ -154,6 +171,15 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     setCreditId('')
     setNotes('')
   }, [activeInstance?.id])
+
+  // Reset dictionary selection when advancing to a new step
+  useEffect(() => {
+    setLevel1('')
+    setLevel2('')
+    setLevel3('')
+    setPromiseDate('')
+    setPromiseAmount('')
+  }, [activeInstance?.current_step_order])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleStart = async () => {
@@ -177,23 +203,13 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     }
     setCollectedStepData(updatedStepData)
 
-    if (!isLastStep) {
-      // NOT last step → just advance, no interaction created
-      try {
-        const result = await advanceMut.mutateAsync(activeInstance.id)
-        toast.success(t('pages.clientChains.toasts.advanced', { step: result.current_step_order }))
-        setStepValue('')
-      } catch (err) {
-        toast.error(getErrorMessage(err))
-      }
-      return
-    }
-
-    // LAST step → validate dictionary + promise, create interaction, complete
+    // Validate dictionary result is selected (if dictionary nodes exist for this step)
     if (rootNodes.length > 0 && !selectedLeaf) {
       toast.error(t('pages.clientChains.errors.selectResult'))
       return
     }
+
+    // Validate leaf-conditional fields (applies to all steps)
     if (selectedLeaf?.require_promise_date && !promiseDate) {
       toast.error(t('pages.clientChains.errors.promiseDateRequired'))
       return
@@ -207,19 +223,51 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
       return
     }
 
+    if (!isLastStep) {
+      // Accumulate leaf + promise + credit from this step for the final interaction
+      if (selectedLeaf) {
+        setCollectedLeaves((prev) => ({
+          ...prev,
+          [String(activeInstance.current_step_order ?? 1)]: selectedLeaf.id,
+        }))
+      }
+      if (promiseDate && !collectedPromiseDate) setCollectedPromiseDate(promiseDate)
+      if (promiseAmount && !collectedPromiseAmount) setCollectedPromiseAmount(promiseAmount)
+      if (creditId && !collectedCreditId) setCollectedCreditId(creditId)
+
+      try {
+        // Pass leaf selection to advance so backend can evaluate branches
+        const result = await advanceMut.mutateAsync({
+          id: activeInstance.id,
+          leafNodeId: selectedLeaf?.id ?? null,
+        })
+        toast.success(t('pages.clientChains.toasts.advanced', { step: result.current_step_order }))
+        setStepValue('')
+      } catch (err) {
+        toast.error(getErrorMessage(err))
+      }
+      return
+    }
+
+    // LAST step → create interaction with all accumulated data + complete
+    const finalLeafId = selectedLeaf?.id ?? Object.values(collectedLeaves)[0] ?? undefined
+    const finalPromiseDate = promiseDate || collectedPromiseDate
+    const finalPromiseAmount = promiseAmount || collectedPromiseAmount
+    const finalCreditId = creditId || collectedCreditId
+
     try {
       await createIntMut.mutateAsync({
         client_id: clientId,
-        credit_id: creditId ? parseInt(creditId, 10) : undefined,
+        credit_id: finalCreditId ? parseInt(finalCreditId, 10) : undefined,
         chain_id: activeChain.id,
         chain_instance_id: activeInstance.id,
-        leaf_node_id: selectedLeaf?.id ?? undefined,
-        promise_date: promiseDate ? `${promiseDate}T00:00:00` : undefined,
-        promise_amount: promiseAmount ? parseFloat(promiseAmount) : undefined,
+        leaf_node_id: finalLeafId,
+        promise_date: finalPromiseDate ? `${finalPromiseDate}T00:00:00` : undefined,
+        promise_amount: finalPromiseAmount ? parseFloat(finalPromiseAmount) : undefined,
         notes: notes || undefined,
         step_data: Object.keys(updatedStepData).length > 0 ? updatedStepData : undefined,
       })
-      const result = await advanceMut.mutateAsync(activeInstance.id)
+      const result = await advanceMut.mutateAsync({ id: activeInstance.id })
       if (result.status === 'completed') {
         toast.success(t('pages.clientChains.toasts.completed'))
       } else {
@@ -249,45 +297,26 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     }
   }
 
-  // Steps for progress timeline
-  const steps = useMemo<TAChainStep[]>(() => activeChain?.steps ?? [], [activeChain])
-  const currentStep = steps.find((s) => s.step_order === (activeInstance?.current_step_order ?? 1))
-  const currentTA = currentStep ? taById.get(currentStep.target_action_id) : null
-  const isLastStep = (activeInstance?.current_step_order ?? 1) >= steps.length
-
-  // Delay enforcement with live countdown
+  // Delay enforcement with live countdown (server-computed, clock-skew-proof)
   const [delaySecondsLeft, setDelaySecondsLeft] = useState(0)
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (!currentStep || currentStep.delay_minutes <= 0 || !activeInstance) {
+    const serverSeconds = activeInstance?.delay_seconds_left ?? 0
+    if (serverSeconds <= 0) {
       setDelaySecondsLeft(0)
       return
     }
-    // For non-first steps: count from when the previous step was completed.
-    // For the first step (no prior step): count from when the chain instance started.
-    // Server returns naive UTC timestamps (no 'Z' suffix) — force UTC parsing.
-    const rawAnchor = activeInstance.last_step_completed_at ?? activeInstance.started_at
-    if (!rawAnchor) {
-      setDelaySecondsLeft(0)
-      return
-    }
-    const anchorAt = new Date(rawAnchor.endsWith('Z') ? rawAnchor : rawAnchor + 'Z').getTime()
-    const unlockAt = anchorAt + currentStep.delay_minutes * 60 * 1000
-
+    // Start from the server-provided value and count down locally.
+    const startedAt = Date.now()
     const tick = () => {
-      const remaining = Math.max(0, Math.ceil((unlockAt - Date.now()) / 1000))
-      setDelaySecondsLeft(remaining)
+      const elapsed = Math.floor((Date.now() - startedAt) / 1000)
+      setDelaySecondsLeft(Math.max(0, serverSeconds - elapsed))
     }
     tick()
     const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
-  }, [
-    currentStep,
-    activeInstance,
-    activeInstance?.last_step_completed_at,
-    activeInstance?.started_at,
-  ])
+  }, [activeInstance?.id, activeInstance?.current_step_order, activeInstance?.delay_seconds_left])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const isDelayBlocked = delaySecondsLeft > 0
@@ -431,7 +460,7 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
         )}
 
         {/* Cascading dictionary dropdowns — only on last step */}
-        {isLastStep && rootNodes.length > 0 && (
+        {rootNodes.length > 0 && (
           <>
             {/* Level 1 */}
             <div className="flex flex-col gap-1">
@@ -553,7 +582,7 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
           )}
 
         {/* Credit picker — only on last step AND when leaf requires it */}
-        {isLastStep && debts.length > 0 && selectedLeaf?.require_credit && (
+        {debts.length > 0 && selectedLeaf?.require_credit && (
           <div className="flex flex-col gap-1">
             <Label className="text-sm text-gray-700">
               {t('pages.clientChains.credit')}

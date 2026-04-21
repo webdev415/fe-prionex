@@ -8,7 +8,7 @@
  * Admin picks a chain from a dropdown, the canvas renders its steps and branches.
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import {
@@ -43,6 +43,8 @@ import {
 } from '@/features/chainBuilder/hooks/useChainBuilder'
 import type { TAChainStep } from '@/features/taChains/api/types'
 import { useTags } from '@/features/tags/hooks/useTags'
+import { useDictionaryTree } from '@/features/taDictionary/hooks/useTADictionary'
+import type { TADictionaryNode } from '@/features/taDictionary/api/types'
 import { useSMSTemplates } from '@/features/sms'
 import { useAuthStore } from '@/stores/authStore'
 import { getErrorMessage } from '@/lib/errors'
@@ -135,6 +137,7 @@ export function ChainBuilderPage() {
   const [newEffectType, setNewEffectType] = useState(EFFECT_TYPES[0])
   const [newEffectConfig, setNewEffectConfig] = useState<Record<string, string>>({})
   const [newBranchTo, setNewBranchTo] = useState('')
+  const [newBranchLeaf, setNewBranchLeaf] = useState('')
 
   const steps: TAChainStep[] = chain?.steps ?? []
   const selectedStep = steps.find((s) => s.id === selectedStepId)
@@ -218,6 +221,27 @@ export function ChainBuilderPage() {
 
   const stepEffects = builderData?.effects.filter((e) => e.step_id === selectedStepId) ?? []
   const stepBranches = builderData?.branches.filter((b) => b.from_step_id === selectedStepId) ?? []
+
+  // Dictionary leaves for the selected step (for branch condition picker)
+  const { data: stepTreeData } = useDictionaryTree(selectedChainId, selectedStepId)
+  const stepLeaves = useMemo(() => {
+    const leaves: TADictionaryNode[] = []
+    const collect = (nodes: TADictionaryNode[]) => {
+      for (const n of nodes) {
+        if (n.is_leaf && !n.is_hidden) leaves.push(n)
+        if (n.children.length > 0) collect(n.children)
+      }
+    }
+    collect(stepTreeData?.nodes ?? [])
+    return leaves
+  }, [stepTreeData])
+
+  // Map leaf IDs to names for display
+  const leafNameById = useMemo(() => {
+    const m = new Map<number, string>()
+    for (const l of stepLeaves) m.set(l.id, l.name)
+    return m
+  }, [stepLeaves])
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -740,11 +764,14 @@ export function ChainBuilderPage() {
                             className="flex items-center justify-between rounded-md border border-purple-200 bg-purple-50 px-2.5 py-1.5"
                           >
                             <span className="text-xs font-medium text-purple-800">
-                              → step #{br.to_step_id}{' '}
+                              →{' '}
+                              {steps.find((s) => s.id === br.to_step_id)
+                                ? `${steps.find((s) => s.id === br.to_step_id)!.step_order}. ${steps.find((s) => s.id === br.to_step_id)!.target_action_name}`
+                                : `step #${br.to_step_id}`}{' '}
                               <span className="font-normal text-purple-600">
                                 {br.condition_leaf_id === null
                                   ? '(else)'
-                                  : `(leaf #${br.condition_leaf_id})`}
+                                  : `if "${leafNameById.get(br.condition_leaf_id) ?? `#${br.condition_leaf_id}`}"`}
                               </span>
                             </span>
                             <button
@@ -764,40 +791,68 @@ export function ChainBuilderPage() {
                           </div>
                         ))}
                       </div>
-                      <div className="flex gap-1.5">
-                        <Select value={newBranchTo} onValueChange={setNewBranchTo}>
-                          <SelectTrigger className="h-8 flex-1 text-xs">
-                            <SelectValue placeholder={t('pages.chainBuilder.branchTo')} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {steps
-                              .filter((s) => s.id !== selectedStep.id)
-                              .map((s) => (
-                                <SelectItem key={s.id} value={String(s.id)}>
-                                  {s.step_order}. {s.target_action_name}
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex gap-1.5">
+                          <Select value={newBranchTo} onValueChange={setNewBranchTo}>
+                            <SelectTrigger className="h-8 flex-1 text-xs">
+                              <SelectValue placeholder={t('pages.chainBuilder.branchTo')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {steps
+                                .filter((s) => s.id !== selectedStep.id)
+                                .map((s) => (
+                                  <SelectItem key={s.id} value={String(s.id)}>
+                                    {s.step_order}. {s.target_action_name}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!newBranchTo) return
+                              try {
+                                await createBranch.mutateAsync({
+                                  from_step_id: selectedStep.id,
+                                  to_step_id: parseInt(newBranchTo, 10),
+                                  condition_leaf_id:
+                                    newBranchLeaf && newBranchLeaf !== 'else'
+                                      ? parseInt(newBranchLeaf, 10)
+                                      : undefined,
+                                })
+                                toast.success(
+                                  newBranchLeaf
+                                    ? t('pages.chainBuilder.branchAddedCondition')
+                                    : t('pages.chainBuilder.branchAddedElse')
+                                )
+                                setNewBranchTo('')
+                                setNewBranchLeaf('')
+                              } catch (e) {
+                                toast.error(getErrorMessage(e))
+                              }
+                            }}
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100"
+                          >
+                            +
+                          </button>
+                        </div>
+                        {stepLeaves.length > 0 && (
+                          <Select value={newBranchLeaf} onValueChange={setNewBranchLeaf}>
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder={t('pages.chainBuilder.conditionLeaf')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="else">
+                                {t('pages.chainBuilder.conditionElse')}
+                              </SelectItem>
+                              {stepLeaves.map((leaf) => (
+                                <SelectItem key={leaf.id} value={String(leaf.id)}>
+                                  {leaf.name}
                                 </SelectItem>
                               ))}
-                          </SelectContent>
-                        </Select>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!newBranchTo) return
-                            try {
-                              await createBranch.mutateAsync({
-                                from_step_id: selectedStep.id,
-                                to_step_id: parseInt(newBranchTo, 10),
-                              })
-                              toast.success('Branch added (else)')
-                              setNewBranchTo('')
-                            } catch (e) {
-                              toast.error(getErrorMessage(e))
-                            }
-                          }}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100"
-                        >
-                          +
-                        </button>
+                            </SelectContent>
+                          </Select>
+                        )}
                       </div>
                     </div>
                   </section>

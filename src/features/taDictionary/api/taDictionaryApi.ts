@@ -6,8 +6,14 @@ import type {
   TADictionaryTreeResponse,
 } from './types'
 
-export async function getDictionaryTree(chainId: number): Promise<TADictionaryTreeResponse> {
-  const r = await api.get<TADictionaryTreeResponse>(`/api/v1/ta-chains/${chainId}/dictionary`)
+export async function getDictionaryTree(
+  chainId: number,
+  stepId?: number | null
+): Promise<TADictionaryTreeResponse> {
+  const params = stepId != null ? { step_id: stepId } : undefined
+  const r = await api.get<TADictionaryTreeResponse>(`/api/v1/ta-chains/${chainId}/dictionary`, {
+    params,
+  })
   return r.data
 }
 

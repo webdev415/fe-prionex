@@ -1833,7 +1833,17 @@
       "unhide": "Восстановить",
       "requirePromiseDate": "Требовать дату обещания",
       "requirePromiseAmount": "Требовать сумму обещания",
-      "isPositive": "Положительный результат"
+      "isPositive": "Положительный результат",
+      "form": {
+        "name": "Название",
+        "step": "Шаг",
+        "allSteps": "Все шаги (общий)",
+        "stepLabel": "Шаг {{order}}",
+        "nodeType": "Тип узла",
+        "leafSelectable": "Лист (выбираемый результат)",
+        "intermediateCategory": "Промежуточный (категория)",
+        "leafConfig": "Настройки листа"
+      }
     },
     "taChains": {
       "title": "Цепочки TA",
