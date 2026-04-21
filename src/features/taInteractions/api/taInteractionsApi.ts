@@ -40,8 +40,12 @@ export async function completeChainInstance(id: number): Promise<ChainInstance> 
   return r.data
 }
 
-export async function advanceChainInstance(id: number): Promise<ChainInstance> {
-  const r = await api.post<ChainInstance>(`/api/v1/chain-instances/${id}/advance`)
+export async function advanceChainInstance(
+  id: number,
+  leafNodeId?: number | null
+): Promise<ChainInstance> {
+  const body = leafNodeId != null ? { leaf_node_id: leafNodeId } : undefined
+  const r = await api.post<ChainInstance>(`/api/v1/chain-instances/${id}/advance`, body)
   return r.data
 }
 

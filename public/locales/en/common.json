@@ -1873,7 +1873,11 @@
       "delay": "Delay",
       "required": "Required",
       "selectStepHint": "Click a step on the canvas to configure it.",
-      "branchTo": "Branch to step..."
+      "branchTo": "Branch to step...",
+      "conditionLeaf": "If result is... (else = default)",
+      "conditionElse": "else (default / no condition)",
+      "branchAddedCondition": "Conditional branch added",
+      "branchAddedElse": "Default branch added (else)"
     },
     "interactionLog": {
       "title": "Interaction Log",
@@ -1928,6 +1932,9 @@
       "isPositive": "Positive result",
       "form": {
         "name": "Name",
+        "step": "Step",
+        "allSteps": "All steps (shared)",
+        "stepLabel": "Step {{order}}",
         "nodeType": "Node type",
         "leafSelectable": "Leaf (selectable result)",
         "intermediateCategory": "Intermediate (category)",

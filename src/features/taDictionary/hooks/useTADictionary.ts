@@ -10,10 +10,10 @@ import type { TADictionaryNodeCreate, TADictionaryNodeUpdate } from '../api/type
 
 const KEY = ['ta-dictionary'] as const
 
-export function useDictionaryTree(chainId: number | null) {
+export function useDictionaryTree(chainId: number | null, stepId?: number | null) {
   return useQuery({
-    queryKey: [...KEY, chainId],
-    queryFn: () => getDictionaryTree(chainId!),
+    queryKey: [...KEY, chainId, stepId ?? null],
+    queryFn: () => getDictionaryTree(chainId!, stepId),
     enabled: chainId !== null,
   })
 }

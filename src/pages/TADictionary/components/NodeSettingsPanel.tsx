@@ -22,6 +22,7 @@ import {
   useUnhideDictionaryNode,
   useCreateDictionaryNode,
 } from '@/features/taDictionary/hooks/useTADictionary'
+import { useTAChain } from '@/features/taChains/hooks/useTAChains'
 import type { TADictionaryNode } from '@/features/taDictionary/api/types'
 import { getErrorMessage } from '@/lib/errors'
 
@@ -36,8 +37,11 @@ export function NodeSettingsPanel({ node, chainId }: Props) {
   const hideMut = useHideDictionaryNode()
   const unhideMut = useUnhideDictionaryNode()
   const createMut = useCreateDictionaryNode()
+  const { data: chainData } = useTAChain(chainId)
+  const chainSteps = chainData?.steps ?? []
 
   const [name, setName] = useState(node.name)
+  const [stepId, setStepId] = useState<string>(node.step_id != null ? String(node.step_id) : 'all')
   const [nodeType, setNodeType] = useState<'leaf' | 'intermediate'>(
     node.is_leaf ? 'leaf' : 'intermediate'
   )
@@ -50,11 +54,13 @@ export function NodeSettingsPanel({ node, chainId }: Props) {
   const [addingChild, setAddingChild] = useState(false)
   const [childName, setChildName] = useState('')
   const [childIsLeaf, setChildIsLeaf] = useState(false)
+  const [childStepId, setChildStepId] = useState<string>(stepId)
 
   // Sync local state when the selected node changes.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setName(node.name)
+    setStepId(node.step_id != null ? String(node.step_id) : 'all')
     setNodeType(node.is_leaf ? 'leaf' : 'intermediate')
     setPromiseDate(node.require_promise_date)
     setPromiseAmount(node.require_promise_amount)
@@ -64,6 +70,7 @@ export function NodeSettingsPanel({ node, chainId }: Props) {
   }, [
     node.id,
     node.name,
+    node.step_id,
     node.is_leaf,
     node.require_promise_date,
     node.require_promise_amount,
@@ -78,6 +85,7 @@ export function NodeSettingsPanel({ node, chainId }: Props) {
         id: node.id,
         payload: {
           name: name.trim() || undefined,
+          step_id: stepId !== 'all' ? parseInt(stepId, 10) : null,
           is_leaf: nodeType === 'leaf',
           require_promise_date: promiseDate,
           require_promise_amount: promiseAmount,
@@ -112,6 +120,7 @@ export function NodeSettingsPanel({ node, chainId }: Props) {
         chainId,
         payload: {
           chain_id: chainId,
+          step_id: childStepId !== 'all' ? parseInt(childStepId, 10) : null,
           parent_id: node.id,
           name: childName.trim(),
           is_leaf: childIsLeaf,
@@ -140,6 +149,27 @@ export function NodeSettingsPanel({ node, chainId }: Props) {
         <Label>{t('pages.taDictionary.form.name')}</Label>
         <Input value={name} onChange={(e) => setName(e.target.value)} />
       </div>
+
+      {/* Step scope */}
+      {chainSteps.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <Label>{t('pages.taDictionary.form.step')}</Label>
+          <Select value={stepId} onValueChange={setStepId}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('pages.taDictionary.form.allSteps')}</SelectItem>
+              {chainSteps.map((s) => (
+                <SelectItem key={s.id} value={String(s.id)}>
+                  {t('pages.taDictionary.form.stepLabel', { order: s.step_order })} —{' '}
+                  {s.target_action_name ?? `TA #${s.target_action_id}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Node type */}
       <div className="flex flex-col gap-1">
@@ -246,6 +276,24 @@ export function NodeSettingsPanel({ node, chainId }: Props) {
             />
             {t('pages.taDictionary.form.leafSelectable')}
           </label>
+          {chainSteps.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">{t('pages.taDictionary.form.step')}</Label>
+              <select
+                value={childStepId}
+                onChange={(e) => setChildStepId(e.target.value)}
+                className="h-8 rounded border border-gray-200 px-2 text-xs text-gray-700"
+              >
+                <option value="all">{t('pages.taDictionary.form.allSteps')}</option>
+                {chainSteps.map((s) => (
+                  <option key={s.id} value={String(s.id)}>
+                    {t('pages.taDictionary.form.stepLabel', { order: s.step_order })} —{' '}
+                    {s.target_action_name ?? `TA #${s.target_action_id}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="flex gap-2">
             <Button variant="primary" size="sm" onClick={addChild}>
               {t('actions.save')}
