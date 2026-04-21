@@ -5,6 +5,7 @@ import { ProtectedRoute } from './ProtectedRoute'
 import { PermissionRoute } from './PermissionRoute'
 import { GuestRoute } from './GuestRoute'
 import { DashboardLayout } from '@/components/layout'
+import { RouteErrorElement } from '@/components/RouteErrorElement'
 import { PERMISSIONS } from '@/constants/permissions'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
@@ -127,14 +128,17 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <GuestRoute>{withSuspense(<LoginPage />)}</GuestRoute>,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '/change-password',
     element: <ProtectedRoute>{withSuspense(<ForceChangePasswordPage />)}</ProtectedRoute>,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '/dashboard',
     element: <DashboardLayoutRoute />,
+    errorElement: <RouteErrorElement />,
     children: [
       {
         index: true,
@@ -334,21 +338,26 @@ export const router = createBrowserRouter([
   {
     path: '/dashboard/scoring-configuration',
     element: <Navigate to="/dashboard/system-settings/scoring-configuration" replace />,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '/dashboard/scoring-configuration/history',
     element: <Navigate to="/dashboard/system-settings/scoring-configuration/history" replace />,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '/dashboard/sms-templates',
     element: <Navigate to="/dashboard/system-settings/sms-templates" replace />,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '/',
     element: <Navigate to="/dashboard" replace />,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '*',
     element: <Navigate to="/dashboard" replace />,
+    errorElement: <RouteErrorElement />,
   },
 ])
