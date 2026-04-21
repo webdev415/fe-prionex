@@ -267,7 +267,10 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
         notes: notes || undefined,
         step_data: Object.keys(updatedStepData).length > 0 ? updatedStepData : undefined,
       })
-      const result = await advanceMut.mutateAsync({ id: activeInstance.id })
+      const result = await advanceMut.mutateAsync({
+        id: activeInstance.id,
+        leafNodeId: selectedLeaf?.id ?? null,
+      })
       if (result.status === 'completed') {
         toast.success(t('pages.clientChains.toasts.completed'))
       } else {
