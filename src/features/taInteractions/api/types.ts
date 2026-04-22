@@ -44,6 +44,7 @@ export interface TAInteractionCreate {
   chain_id: number
   chain_instance_id?: number | null
   leaf_node_id?: number | null
+  dropdown_value_id?: number | null
   promise_date?: string | null
   promise_amount?: number | null
   notes?: string | null

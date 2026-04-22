@@ -11,7 +11,12 @@ export async function getBuilderData(chainId: number): Promise<ChainBuilderData>
 // Branches
 export async function createBranch(
   chainId: number,
-  payload: { from_step_id: number; to_step_id: number; condition_leaf_id?: number | null }
+  payload: {
+    from_step_id: number
+    to_step_id: number
+    condition_leaf_id?: number | null
+    condition_dropdown_value_id?: number | null
+  }
 ): Promise<BranchOut> {
   return (await api.post<BranchOut>(`${base(chainId)}/branches`, payload)).data
 }

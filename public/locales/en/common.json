@@ -2066,7 +2066,11 @@
         "department": "Department",
         "departmentPlaceholder": "Select a department",
         "dropdownValues": "Dropdown values",
-        "addValuePlaceholder": "Add a value..."
+        "addValuePlaceholder": "Add a value...",
+        "promiseDate": "Promise date",
+        "promiseAmount": "Promise amount",
+        "credit": "Credit",
+        "positive": "Positive"
       },
       "modals": {
         "create": { "title": "Create Target Action" },

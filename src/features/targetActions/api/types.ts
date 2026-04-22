@@ -7,6 +7,10 @@ export type TAFieldType = 'text' | 'dropdown' | 'date' | 'amount'
 export interface TADropdownValueIn {
   value: string
   sort_order?: number
+  require_promise_date?: boolean
+  require_promise_amount?: boolean
+  require_credit?: boolean
+  is_positive?: boolean
 }
 
 export interface TADropdownValueOut {
@@ -14,6 +18,10 @@ export interface TADropdownValueOut {
   value: string
   sort_order: number
   is_hidden: boolean
+  require_promise_date: boolean
+  require_promise_amount: boolean
+  require_credit: boolean
+  is_positive: boolean
 }
 
 export interface TargetAction {
