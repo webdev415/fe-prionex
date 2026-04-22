@@ -16,6 +16,7 @@ export const PERMISSIONS = {
   CLIENTS: {
     VIEW: 'view_clients',
     EDIT: 'edit_clients',
+    ASSIGN_TAGS: 'assign_client_tags',
     EDIT_DEBT: 'edit_client_debt',
     CLOSE_DEBT: 'close_client_debt',
     VERIFY_PAYMENT: 'verify_payment',
@@ -198,7 +199,8 @@ export const PERMISSION_CATEGORIES = {
 export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Clients
   view_clients: 'View client data and information',
-  edit_clients: 'Edit client information (except debt amounts)',
+  edit_clients: 'Edit client information (except debt amounts and tags)',
+  assign_client_tags: 'Assign and remove tags on client profiles',
   edit_client_debt: 'Edit debt amounts and DPD (Days Past Due)',
   close_client_debt: 'Close/finalize a client debt (irreversible)',
   verify_payment: 'Verify and cancel client payments',
