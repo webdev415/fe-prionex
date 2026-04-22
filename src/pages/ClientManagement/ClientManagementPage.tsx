@@ -1509,7 +1509,7 @@ export function ClientManagementPage() {
                         </span>
                       </DropdownMenuItem>
                     </PermissionGuard>
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
                       <DropdownMenuItem
                         onClick={handleBulkAddTags}
                         className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
@@ -1524,7 +1524,7 @@ export function ClientManagementPage() {
                         </span>
                       </DropdownMenuItem>
                     </PermissionGuard>
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                    <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
                       <DropdownMenuItem
                         onClick={handleBulkRemoveTags}
                         className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"

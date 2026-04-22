@@ -22,6 +22,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { useDebounce } from '@/hooks/useDebounce'
+import { useHasPermission } from '@/hooks'
+import { PERMISSIONS } from '@/constants/permissions'
 
 interface TagSelectorModalProps {
   clientId: number
@@ -39,6 +41,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
   onClose,
 }: TagSelectorModalProps) {
   const queryClient = useQueryClient()
+  const canAssignTags = useHasPermission(PERMISSIONS.CLIENTS.ASSIGN_TAGS)
   const { data: allTags, isLoading: tagsLoading } = useTags(projectId)
   const { data: clientTags, isLoading: clientTagsLoading } = useClientTags(clientId)
   const assignMutation = useAssignClientTag()
@@ -80,6 +83,10 @@ export const TagSelectorModal = memo(function TagSelectorModal({
 
   // Memoize handleSave to prevent re-creating function on every render
   const handleSave = useCallback(async () => {
+    if (!canAssignTags) {
+      return
+    }
+
     setIsSaving(true)
 
     const currentTagIds = new Set(clientTags?.map((t) => t.id) || [])
@@ -117,6 +124,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
     removeMutation,
     clientName,
     onClose,
+    canAssignTags,
   ])
 
   const isLoading = tagsLoading || clientTagsLoading
@@ -159,6 +167,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
                     <Checkbox
                       checked={selectedTagIds.has(tag.id)}
                       onCheckedChange={() => handleToggleTag(tag.id)}
+                      disabled={!canAssignTags}
                     />
                     <TagBadge name={tag.name} color={tag.color} size="sm" />
                     {tag.description && (
@@ -192,7 +201,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
         <Button
           onClick={handleSave}
           isLoading={isSaving}
-          disabled={isLoading}
+          disabled={isLoading || !canAssignTags}
           className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
           Save Tags
