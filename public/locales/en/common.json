@@ -1814,6 +1814,8 @@
       "delayWaitingSeconds": "This step is available in {{seconds}} second(s)",
       "delayHint": "The previous step was just completed. Please wait for the delay to pass.",
       "saveInteraction": "Save interaction",
+      "continueToNext": "Continue →",
+      "quickPicks": "Quick start",
       "chainProgress": "Chain progress",
       "stepOf": "step {{current}} of {{total}}",
       "current": "current",
@@ -1881,6 +1883,18 @@
       "conditionElse": "else (default / no condition)",
       "branchAddedCondition": "Conditional branch added",
       "branchAddedElse": "Default branch added (else)"
+    },
+    "quickPicks": {
+      "title": "Quick Picks",
+      "description": "Configure preset chain shortcuts that operators see as one-click buttons.",
+      "selectDepartment": "Select department...",
+      "selectDepartmentHint": "Select a department to manage its quick picks.",
+      "selectChain": "Select chain to add...",
+      "empty": "No quick picks configured for this department yet.",
+      "toasts": {
+        "added": "Quick pick added",
+        "removed": "Quick pick removed"
+      }
     },
     "interactionLog": {
       "title": "Interaction Log",
@@ -2055,7 +2069,11 @@
         "department": "Department",
         "departmentPlaceholder": "Select a department",
         "dropdownValues": "Dropdown values",
-        "addValuePlaceholder": "Add a value..."
+        "addValuePlaceholder": "Add a value...",
+        "promiseDate": "Promise date",
+        "promiseAmount": "Promise amount",
+        "credit": "Credit",
+        "positive": "Positive"
       },
       "modals": {
         "create": { "title": "Create Target Action" },

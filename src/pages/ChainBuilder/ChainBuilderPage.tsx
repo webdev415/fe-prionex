@@ -43,8 +43,8 @@ import {
 } from '@/features/chainBuilder/hooks/useChainBuilder'
 import type { TAChainStep } from '@/features/taChains/api/types'
 import { useTags } from '@/features/tags/hooks/useTags'
-import { useDictionaryTree } from '@/features/taDictionary/hooks/useTADictionary'
-import type { TADictionaryNode } from '@/features/taDictionary/api/types'
+import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
+import type { TargetAction } from '@/features/targetActions/api/types'
 import { useSMSTemplates } from '@/features/sms'
 import { useAuthStore } from '@/stores/authStore'
 import { getErrorMessage } from '@/lib/errors'
@@ -195,15 +195,26 @@ export function ChainBuilderPage() {
           type: 'smoothstep',
           animated: true,
           style: {
-            stroke: br.condition_leaf_id === null ? '#f59e0b' : '#8b5cf6',
+            stroke:
+              br.condition_leaf_id === null && br.condition_dropdown_value_id === null
+                ? '#f59e0b'
+                : '#8b5cf6',
             strokeWidth: 2,
             strokeDasharray: '5,5',
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color: br.condition_leaf_id === null ? '#f59e0b' : '#8b5cf6',
+            color:
+              br.condition_leaf_id === null && br.condition_dropdown_value_id === null
+                ? '#f59e0b'
+                : '#8b5cf6',
           },
-          label: br.condition_leaf_id === null ? 'else' : `leaf #${br.condition_leaf_id}`,
+          label:
+            br.condition_dropdown_value_id != null
+              ? `if #${br.condition_dropdown_value_id}`
+              : br.condition_leaf_id != null
+                ? `leaf #${br.condition_leaf_id}`
+                : 'else',
           labelStyle: { fontSize: 10, fill: '#6b7280' },
         })
       }
@@ -222,26 +233,28 @@ export function ChainBuilderPage() {
   const stepEffects = builderData?.effects.filter((e) => e.step_id === selectedStepId) ?? []
   const stepBranches = builderData?.branches.filter((b) => b.from_step_id === selectedStepId) ?? []
 
-  // Dictionary leaves for the selected step (for branch condition picker)
-  const { data: stepTreeData } = useDictionaryTree(selectedChainId, selectedStepId)
-  const stepLeaves = useMemo(() => {
-    const leaves: TADictionaryNode[] = []
-    const collect = (nodes: TADictionaryNode[]) => {
-      for (const n of nodes) {
-        if (n.is_leaf && !n.is_hidden) leaves.push(n)
-        if (n.children.length > 0) collect(n.children)
-      }
-    }
-    collect(stepTreeData?.nodes ?? [])
-    return leaves
-  }, [stepTreeData])
-
-  // Map leaf IDs to names for display
-  const leafNameById = useMemo(() => {
-    const m = new Map<number, string>()
-    for (const l of stepLeaves) m.set(l.id, l.name)
+  // Full TA data for dropdown values
+  const { data: tasData } = useTargetActions({ include_hidden: false })
+  const taById = useMemo(() => {
+    const m = new Map<number, TargetAction>()
+    for (const ta of tasData?.items ?? []) m.set(ta.id, ta)
     return m
-  }, [stepLeaves])
+  }, [tasData])
+
+  // Dropdown values for the selected step's TA (for branch condition picker)
+  const stepDropdownValues = useMemo(() => {
+    if (!selectedStep) return []
+    const ta = taById.get(selectedStep.target_action_id)
+    if (!ta || ta.field_type !== 'dropdown') return []
+    return ta.dropdown_values.filter((dv) => !dv.is_hidden)
+  }, [selectedStep, taById])
+
+  // Map dropdown value IDs to names for display
+  const dvNameById = useMemo(() => {
+    const m = new Map<number, string>()
+    for (const dv of stepDropdownValues) m.set(dv.id, dv.value)
+    return m
+  }, [stepDropdownValues])
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -769,9 +782,11 @@ export function ChainBuilderPage() {
                                 ? `${steps.find((s) => s.id === br.to_step_id)!.step_order}. ${steps.find((s) => s.id === br.to_step_id)!.target_action_name}`
                                 : `step #${br.to_step_id}`}{' '}
                               <span className="font-normal text-purple-600">
-                                {br.condition_leaf_id === null
-                                  ? '(else)'
-                                  : `if "${leafNameById.get(br.condition_leaf_id) ?? `#${br.condition_leaf_id}`}"`}
+                                {br.condition_dropdown_value_id != null
+                                  ? `if "${dvNameById.get(br.condition_dropdown_value_id) ?? `#${br.condition_dropdown_value_id}`}"`
+                                  : br.condition_leaf_id != null
+                                    ? `if leaf #${br.condition_leaf_id}`
+                                    : '(else)'}
                               </span>
                             </span>
                             <button
@@ -815,13 +830,13 @@ export function ChainBuilderPage() {
                                 await createBranch.mutateAsync({
                                   from_step_id: selectedStep.id,
                                   to_step_id: parseInt(newBranchTo, 10),
-                                  condition_leaf_id:
+                                  condition_dropdown_value_id:
                                     newBranchLeaf && newBranchLeaf !== 'else'
                                       ? parseInt(newBranchLeaf, 10)
                                       : undefined,
                                 })
                                 toast.success(
-                                  newBranchLeaf
+                                  newBranchLeaf && newBranchLeaf !== 'else'
                                     ? t('pages.chainBuilder.branchAddedCondition')
                                     : t('pages.chainBuilder.branchAddedElse')
                                 )
@@ -836,7 +851,7 @@ export function ChainBuilderPage() {
                             +
                           </button>
                         </div>
-                        {stepLeaves.length > 0 && (
+                        {stepDropdownValues.length > 0 && (
                           <Select value={newBranchLeaf} onValueChange={setNewBranchLeaf}>
                             <SelectTrigger className="h-8 text-xs">
                               <SelectValue placeholder={t('pages.chainBuilder.conditionLeaf')} />
@@ -845,9 +860,9 @@ export function ChainBuilderPage() {
                               <SelectItem value="else">
                                 {t('pages.chainBuilder.conditionElse')}
                               </SelectItem>
-                              {stepLeaves.map((leaf) => (
-                                <SelectItem key={leaf.id} value={String(leaf.id)}>
-                                  {leaf.name}
+                              {stepDropdownValues.map((dv) => (
+                                <SelectItem key={dv.id} value={String(dv.id)}>
+                                  {dv.value}
                                 </SelectItem>
                               ))}
                             </SelectContent>

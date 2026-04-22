@@ -73,8 +73,15 @@ export function useCompleteChainInstance() {
 export function useAdvanceChainInstance() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, leafNodeId }: { id: number; leafNodeId?: number | null }) =>
-      advanceChainInstance(id, leafNodeId),
+    mutationFn: ({
+      id,
+      leafNodeId,
+      dropdownValueId,
+    }: {
+      id: number
+      leafNodeId?: number | null
+      dropdownValueId?: number | null
+    }) => advanceChainInstance(id, { leafNodeId, dropdownValueId }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: INST_KEY })
       // Refresh data that effects may have changed

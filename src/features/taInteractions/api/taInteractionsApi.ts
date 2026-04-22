@@ -42,10 +42,15 @@ export async function completeChainInstance(id: number): Promise<ChainInstance> 
 
 export async function advanceChainInstance(
   id: number,
-  leafNodeId?: number | null
+  opts?: { leafNodeId?: number | null; dropdownValueId?: number | null }
 ): Promise<ChainInstance> {
-  const body = leafNodeId != null ? { leaf_node_id: leafNodeId } : undefined
-  const r = await api.post<ChainInstance>(`/api/v1/chain-instances/${id}/advance`, body)
+  const body: Record<string, unknown> = {}
+  if (opts?.leafNodeId != null) body.leaf_node_id = opts.leafNodeId
+  if (opts?.dropdownValueId != null) body.dropdown_value_id = opts.dropdownValueId
+  const r = await api.post<ChainInstance>(
+    `/api/v1/chain-instances/${id}/advance`,
+    Object.keys(body).length > 0 ? body : undefined
+  )
   return r.data
 }
 

@@ -3,6 +3,7 @@ export interface BranchOut {
   from_step_id: number
   to_step_id: number
   condition_leaf_id: number | null
+  condition_dropdown_value_id: number | null
 }
 
 export interface TriggerOut {

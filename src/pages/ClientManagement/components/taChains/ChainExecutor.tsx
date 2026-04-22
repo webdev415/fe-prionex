@@ -1,10 +1,11 @@
 /**
- * ChainExecutor — Operator UI matching the mockup design.
+ * ChainExecutor — Operator UI for executing TA Chains.
  *
- * Two-column layout:
- *   Left:  "Log interaction" form with cascading dictionary dropdowns,
- *          leaf-conditional promise fields, credit picker, notes
- *   Right: "Chain progress" timeline + "Effects on save" preview
+ * Unified flow: each step is a TA field (text/dropdown/date/amount).
+ * Dropdown options carry flags (require_promise_date, etc.) replacing
+ * the old dictionary tree. Auto-advance on dropdown/date selection;
+ * "Continue" button for text/amount fields. One "Save interaction"
+ * button at the last step commits the whole chain.
  */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -23,11 +24,9 @@ import {
 } from '@/components/ui/Select'
 import { useTAChains } from '@/features/taChains/hooks/useTAChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
-import type { TargetAction } from '@/features/targetActions/api/types'
-import { useDictionaryTree } from '@/features/taDictionary/hooks/useTADictionary'
+import type { TargetAction, TADropdownValueOut } from '@/features/targetActions/api/types'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { useAuthStore } from '@/stores/authStore'
-import type { TADictionaryNode } from '@/features/taDictionary/api/types'
 import { useBuilderData } from '@/features/chainBuilder/hooks/useChainBuilder'
 import {
   useStartChainInstance,
@@ -37,6 +36,7 @@ import {
   useCancelChainInstance,
 } from '@/features/taInteractions/hooks/useTAInteractions'
 import type { TAChainStep } from '@/features/taChains/api/types'
+import { useQuickPicks } from '@/features/quickPicks/hooks/useQuickPicks'
 import { getErrorMessage } from '@/lib/errors'
 
 interface Props {
@@ -60,7 +60,7 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     [chainsData]
   )
 
-  // Full TA data (for dropdown values)
+  // Full TA data (for dropdown values + flags)
   const { data: tasData } = useTargetActions({ include_hidden: false })
   const taById = useMemo(() => {
     const m = new Map<number, TargetAction>()
@@ -78,11 +78,19 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     return m
   }, [tagsList])
 
+  // Quick picks
+  const { data: quickPicksData } = useQuickPicks(
+    manualChains.length > 0 ? manualChains[0]?.department_id : undefined
+  )
+  const quickPicks = useMemo(() => {
+    const manualIds = new Set(manualChains.map((c) => c.id))
+    return (quickPicksData ?? []).filter((qp) => manualIds.has(qp.chain_id))
+  }, [quickPicksData, manualChains])
+
   // Active instance
   const { data: instances } = useClientChainInstances(clientId)
   const activeInstance = instances?.find((i) => i.status === 'active') ?? null
 
-  // Selected chain
   const [selectedChainId, setSelectedChainId] = useState<string>('')
 
   const activeChain = useMemo(() => {
@@ -91,58 +99,43 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     return null
   }, [activeInstance, chainsData])
 
-  // Steps for progress timeline (computed early so dictionary can filter by step)
+  // Steps
   const steps = useMemo<TAChainStep[]>(() => activeChain?.steps ?? [], [activeChain])
   const currentStep = steps.find((s) => s.step_order === (activeInstance?.current_step_order ?? 1))
   const currentTA = currentStep ? taById.get(currentStep.target_action_id) : null
   const isLastStep = (activeInstance?.current_step_order ?? 1) >= steps.length
 
-  const chainForTree = activeChain?.id ?? (selectedChainId ? parseInt(selectedChainId, 10) : null)
-  const currentStepId = currentStep?.id ?? null
-  const { data: treeData } = useDictionaryTree(chainForTree, currentStepId)
-  const { data: builderData } = useBuilderData(chainForTree)
+  const chainForBuilder =
+    activeChain?.id ?? (selectedChainId ? parseInt(selectedChainId, 10) : null)
+  const { data: builderData } = useBuilderData(chainForBuilder)
 
-  // Dictionary cascading selection
-  const [level1, setLevel1] = useState<string>('')
-  const [level2, setLevel2] = useState<string>('')
-  const [level3, setLevel3] = useState<string>('')
+  // Selected dropdown value for the current step (replaces dictionary leaf)
+  const [stepValue, setStepValue] = useState('')
 
-  // Flatten helpers
-  const rootNodes = useMemo(() => (treeData?.nodes ?? []).filter((n) => !n.is_hidden), [treeData])
+  const selectedDropdownValue: TADropdownValueOut | null = useMemo(() => {
+    if (!currentTA || currentTA.field_type !== 'dropdown' || !stepValue) return null
+    return currentTA.dropdown_values.find((dv) => dv.value === stepValue) ?? null
+  }, [currentTA, stepValue])
 
-  const level1Node = rootNodes.find((n) => String(n.id) === level1) ?? null
-  const level2Nodes = useMemo(
-    () => (level1Node?.children ?? []).filter((n) => !n.is_hidden),
-    [level1Node]
-  )
-  const level2Node = level2Nodes.find((n) => String(n.id) === level2) ?? null
-  const level3Nodes = useMemo(
-    () => (level2Node?.children ?? []).filter((n) => !n.is_hidden),
-    [level2Node]
-  )
-  const level3Node = level3Nodes.find((n) => String(n.id) === level3) ?? null
-
-  // Find the deepest selected leaf
-  const selectedLeaf: TADictionaryNode | null = useMemo(() => {
-    if (level3Node?.is_leaf) return level3Node
-    if (level2Node?.is_leaf) return level2Node
-    if (level1Node?.is_leaf) return level1Node
-    return null
-  }, [level1Node, level2Node, level3Node])
-
-  // Accumulated step data across all steps (persists until chain completes)
+  // Accumulated data across steps
   const [collectedStepData, setCollectedStepData] = useState<Record<string, string>>({})
-  // Accumulated leaf selections per step (step_order → leaf_id)
-  const [collectedLeaves, setCollectedLeaves] = useState<Record<string, number>>({})
-  // First promise/credit values collected (kept across steps for final interaction)
+  const [collectedDropdownValueIds, setCollectedDropdownValueIds] = useState<
+    Record<string, number>
+  >({})
   const [collectedPromiseDate, setCollectedPromiseDate] = useState('')
   const [collectedPromiseAmount, setCollectedPromiseAmount] = useState('')
   const [collectedCreditId, setCollectedCreditId] = useState('')
 
-  // Current step's TA field value
-  const [stepValue, setStepValue] = useState('')
+  // Completed steps summaries
+  interface CompletedStep {
+    stepOrder: number
+    taName: string
+    taValue: string
+  }
+  const [completedSteps, setCompletedSteps] = useState<CompletedStep[]>([])
+  const [isAutoAdvancing, setIsAutoAdvancing] = useState(false)
 
-  // Current step's form fields
+  // Current step form fields
   const [promiseDate, setPromiseDate] = useState('')
   const [promiseAmount, setPromiseAmount] = useState('')
   const [creditId, setCreditId] = useState<string>('')
@@ -154,33 +147,28 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
   const advanceMut = useAdvanceChainInstance()
   const cancelMut = useCancelChainInstance()
 
-  // Reset form when chain changes (not on step advance — we keep collectedStepData)
-  /* eslint-disable react-hooks/set-state-in-effect */
+  // Reset on chain change
   useEffect(() => {
     setCollectedStepData({})
-    setCollectedLeaves({})
+    setCollectedDropdownValueIds({})
     setCollectedPromiseDate('')
     setCollectedPromiseAmount('')
     setCollectedCreditId('')
+    setCompletedSteps([])
+    setIsAutoAdvancing(false)
     setStepValue('')
-    setLevel1('')
-    setLevel2('')
-    setLevel3('')
     setPromiseDate('')
     setPromiseAmount('')
     setCreditId('')
     setNotes('')
   }, [activeInstance?.id])
 
-  // Reset dictionary selection when advancing to a new step
+  // Reset current step fields on step change
   useEffect(() => {
-    setLevel1('')
-    setLevel2('')
-    setLevel3('')
+    setStepValue('')
     setPromiseDate('')
     setPromiseAmount('')
   }, [activeInstance?.current_step_order])
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleStart = async () => {
     const chainId = parseInt(selectedChainId, 10)
@@ -193,64 +181,113 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     }
   }
 
-  const handleSave = async () => {
-    if (!activeInstance || !activeChain) return
+  // Check if current step is fully filled
+  const isStepComplete = () => {
+    if (!currentStep || !currentTA) return false
+    // TA field filled (if required)
+    if (currentStep.is_required && !stepValue.trim()) return false
+    // Dropdown promise flags
+    if (selectedDropdownValue?.require_promise_date && !promiseDate) return false
+    if (selectedDropdownValue?.require_promise_amount && !promiseAmount) return false
+    if (selectedDropdownValue?.require_credit && !creditId) return false
+    return true
+  }
 
-    // Accumulate current step value
+  // Auto-advance for non-last steps
+  const handleAutoAdvance = async () => {
+    if (!activeInstance || !activeChain || !currentStep || isLastStep || isAutoAdvancing) return
+    if (!isStepComplete()) return
+
+    setIsAutoAdvancing(true)
+
+    // Accumulate data
     const updatedStepData = { ...collectedStepData }
-    if (currentStep && stepValue) {
+    if (stepValue) {
       updatedStepData[String(currentStep.target_action_id)] = stepValue
     }
     setCollectedStepData(updatedStepData)
 
-    // Validate dictionary result is selected (if dictionary nodes exist for this step)
-    if (rootNodes.length > 0 && !selectedLeaf) {
-      toast.error(t('pages.clientChains.errors.selectResult'))
-      return
+    if (selectedDropdownValue) {
+      setCollectedDropdownValueIds((prev) => ({
+        ...prev,
+        [String(activeInstance.current_step_order ?? 1)]: selectedDropdownValue.id,
+      }))
+    }
+    if (promiseDate && !collectedPromiseDate) setCollectedPromiseDate(promiseDate)
+    if (promiseAmount && !collectedPromiseAmount) setCollectedPromiseAmount(promiseAmount)
+    if (creditId && !collectedCreditId) setCollectedCreditId(creditId)
+
+    setCompletedSteps((prev) => [
+      ...prev,
+      {
+        stepOrder: currentStep.step_order,
+        taName: currentTA?.name ?? '',
+        taValue: stepValue,
+      },
+    ])
+
+    try {
+      await advanceMut.mutateAsync({
+        id: activeInstance.id,
+        dropdownValueId: selectedDropdownValue?.id ?? null,
+      })
+      setStepValue('')
+    } catch (err) {
+      toast.error(getErrorMessage(err))
+      setCompletedSteps((prev) => prev.filter((s) => s.stepOrder !== currentStep.step_order))
+    } finally {
+      setIsAutoAdvancing(false)
+    }
+  }
+
+  // Auto-advance for dropdown/date — but NOT when the selected option requires
+  // additional fields (promise date/amount/credit). In that case, wait for those.
+  const needsExtraFields =
+    selectedDropdownValue?.require_promise_date ||
+    selectedDropdownValue?.require_promise_amount ||
+    selectedDropdownValue?.require_credit
+  const canAutoAdvance =
+    currentTA &&
+    (currentTA.field_type === 'dropdown' || currentTA.field_type === 'date') &&
+    !needsExtraFields
+
+  useEffect(() => {
+    if (!isLastStep && !isAutoAdvancing && activeInstance && canAutoAdvance) {
+      handleAutoAdvance()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepValue, selectedDropdownValue?.id, promiseDate, promiseAmount, creditId])
+
+  // handleSave — LAST step only
+  const handleSave = async () => {
+    if (!activeInstance || !activeChain) return
+
+    const updatedStepData = { ...collectedStepData }
+    if (currentStep && stepValue) {
+      updatedStepData[String(currentStep.target_action_id)] = stepValue
     }
 
-    // Validate leaf-conditional fields (applies to all steps)
-    if (selectedLeaf?.require_promise_date && !promiseDate) {
+    // Validate
+    if (currentStep?.is_required && !stepValue.trim()) {
+      toast.error(t('pages.clientChains.errors.stepRequired'))
+      return
+    }
+    if (selectedDropdownValue?.require_promise_date && !promiseDate) {
       toast.error(t('pages.clientChains.errors.promiseDateRequired'))
       return
     }
-    if (selectedLeaf?.require_promise_amount && !promiseAmount) {
+    if (selectedDropdownValue?.require_promise_amount && !promiseAmount) {
       toast.error(t('pages.clientChains.errors.promiseAmountRequired'))
       return
     }
-    if (selectedLeaf?.require_credit && !creditId) {
+    if (selectedDropdownValue?.require_credit && !creditId) {
       toast.error(t('pages.clientChains.errors.creditRequired'))
       return
     }
 
-    if (!isLastStep) {
-      // Accumulate leaf + promise + credit from this step for the final interaction
-      if (selectedLeaf) {
-        setCollectedLeaves((prev) => ({
-          ...prev,
-          [String(activeInstance.current_step_order ?? 1)]: selectedLeaf.id,
-        }))
-      }
-      if (promiseDate && !collectedPromiseDate) setCollectedPromiseDate(promiseDate)
-      if (promiseAmount && !collectedPromiseAmount) setCollectedPromiseAmount(promiseAmount)
-      if (creditId && !collectedCreditId) setCollectedCreditId(creditId)
-
-      try {
-        // Pass leaf selection to advance so backend can evaluate branches
-        const result = await advanceMut.mutateAsync({
-          id: activeInstance.id,
-          leafNodeId: selectedLeaf?.id ?? null,
-        })
-        toast.success(t('pages.clientChains.toasts.advanced', { step: result.current_step_order }))
-        setStepValue('')
-      } catch (err) {
-        toast.error(getErrorMessage(err))
-      }
-      return
-    }
-
-    // LAST step → create interaction with all accumulated data + complete
-    const finalLeafId = selectedLeaf?.id ?? Object.values(collectedLeaves)[0] ?? undefined
+    // Use current step's dropdown value or first collected one
+    const finalDropdownValueId =
+      selectedDropdownValue?.id ?? Object.values(collectedDropdownValueIds)[0] ?? undefined
     const finalPromiseDate = promiseDate || collectedPromiseDate
     const finalPromiseAmount = promiseAmount || collectedPromiseAmount
     const finalCreditId = creditId || collectedCreditId
@@ -261,7 +298,7 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
         credit_id: finalCreditId ? parseInt(finalCreditId, 10) : undefined,
         chain_id: activeChain.id,
         chain_instance_id: activeInstance.id,
-        leaf_node_id: finalLeafId,
+        dropdown_value_id: finalDropdownValueId,
         promise_date: finalPromiseDate ? `${finalPromiseDate}T00:00:00` : undefined,
         promise_amount: finalPromiseAmount ? parseFloat(finalPromiseAmount) : undefined,
         notes: notes || undefined,
@@ -269,19 +306,17 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
       })
       const result = await advanceMut.mutateAsync({
         id: activeInstance.id,
-        leafNodeId: selectedLeaf?.id ?? null,
+        dropdownValueId: selectedDropdownValue?.id ?? null,
       })
       if (result.status === 'completed') {
         toast.success(t('pages.clientChains.toasts.completed'))
       } else {
         toast.success(t('pages.clientChains.toasts.advanced', { step: result.current_step_order }))
       }
-      // Full reset
       setCollectedStepData({})
+      setCollectedDropdownValueIds({})
+      setCompletedSteps([])
       setStepValue('')
-      setLevel1('')
-      setLevel2('')
-      setLevel3('')
       setPromiseDate('')
       setPromiseAmount('')
       setNotes('')
@@ -300,17 +335,15 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     }
   }
 
-  // Delay enforcement with live countdown (server-computed, clock-skew-proof)
+  // Delay enforcement
   const [delaySecondsLeft, setDelaySecondsLeft] = useState(0)
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const serverSeconds = activeInstance?.delay_seconds_left ?? 0
     if (serverSeconds <= 0) {
       setDelaySecondsLeft(0)
       return
     }
-    // Start from the server-provided value and count down locally.
     const startedAt = Date.now()
     const tick = () => {
       const elapsed = Math.floor((Date.now() - startedAt) / 1000)
@@ -320,7 +353,6 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
   }, [activeInstance?.id, activeInstance?.current_step_order, activeInstance?.delay_seconds_left])
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const isDelayBlocked = delaySecondsLeft > 0
   const delayMinutesLeft = Math.ceil(delaySecondsLeft / 60)
@@ -328,13 +360,13 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
   // Effects for preview
   const currentStepEffects = useMemo(() => {
     if (!builderData || !activeInstance?.current_step_order) return []
-    const currentStep = steps.find((s) => s.step_order === activeInstance.current_step_order)
-    if (!currentStep) return []
-    return builderData.effects.filter((e) => e.step_id === currentStep.id)
+    const cs = steps.find((s) => s.step_order === activeInstance.current_step_order)
+    if (!cs) return []
+    return builderData.effects.filter((e) => e.step_id === cs.id)
   }, [builderData, activeInstance, steps])
 
   // Branches for progress display
-  const stepBranches = useMemo(() => {
+  const stepBranchSet = useMemo(() => {
     if (!builderData) return new Set<number>()
     const branched = new Set<number>()
     for (const br of builderData.branches) branched.add(br.from_step_id)
@@ -352,6 +384,34 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
           <p className="text-sm text-gray-500">{t('pages.clientChains.noChains')}</p>
         ) : (
           <>
+            {quickPicks.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-medium text-gray-500 uppercase">
+                  {t('pages.clientChains.quickPicks')}
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {quickPicks.map((qp) => (
+                    <Button
+                      key={qp.id}
+                      variant="cancel"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          await startMut.mutateAsync({ chain_id: qp.chain_id, client_id: clientId })
+                          toast.success(t('pages.clientChains.toasts.started'))
+                        } catch (err) {
+                          toast.error(getErrorMessage(err))
+                        }
+                      }}
+                      disabled={startMut.isPending}
+                      className="whitespace-nowrap"
+                    >
+                      {qp.chain_name ?? `Chain #${qp.chain_id}`}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex flex-col gap-1">
               <Label className="text-sm text-gray-700">
                 {t('pages.clientChains.taChainLabel')}
@@ -403,6 +463,24 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
             {activeChain?.name}
           </div>
         </div>
+
+        {/* Completed steps (read-only summaries) */}
+        {completedSteps.map((cs) => (
+          <div
+            key={cs.stepOrder}
+            className="flex flex-col gap-1 rounded-lg border border-green-200 bg-green-50/50 p-3"
+          >
+            <span className="text-xs font-semibold text-green-700">
+              {t('pages.clientChains.stepLabel', { order: cs.stepOrder })} — {cs.taName}
+            </span>
+            <span className="text-xs text-green-800">{cs.taValue}</span>
+          </div>
+        ))}
+
+        {/* Auto-advancing indicator */}
+        {isAutoAdvancing && (
+          <div className="text-center text-xs text-gray-500">{t('common.loading')}</div>
+        )}
 
         {/* Delay enforcement */}
         {isDelayBlocked && (
@@ -462,98 +540,16 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
           </div>
         )}
 
-        {/* Cascading dictionary dropdowns — only on last step */}
-        {rootNodes.length > 0 && (
-          <>
-            {/* Level 1 */}
-            <div className="flex flex-col gap-1">
-              <Label className="text-sm text-gray-700">
-                {t('pages.clientChains.dictionary.level1')}
-              </Label>
-              <Select
-                value={level1}
-                onValueChange={(v) => {
-                  setLevel1(v)
-                  setLevel2('')
-                  setLevel3('')
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('pages.clientChains.dictionary.selectPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {rootNodes.map((n) => (
-                    <SelectItem key={n.id} value={String(n.id)}>
-                      {n.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Level 2 */}
-            {level1 && level2Nodes.length > 0 && (
-              <div className="flex flex-col gap-1">
-                <Label className="text-sm text-gray-700">
-                  {t('pages.clientChains.dictionary.level2')}
-                </Label>
-                <Select
-                  value={level2}
-                  onValueChange={(v) => {
-                    setLevel2(v)
-                    setLevel3('')
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={t('pages.clientChains.dictionary.selectPlaceholder')}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {level2Nodes.map((n) => (
-                      <SelectItem key={n.id} value={String(n.id)}>
-                        {n.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Level 3 */}
-            {level2 && level3Nodes.length > 0 && (
-              <div className="flex flex-col gap-1">
-                <Label className="text-sm text-gray-700">
-                  {t('pages.clientChains.dictionary.level3')}
-                </Label>
-                <Select value={level3} onValueChange={setLevel3}>
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={t('pages.clientChains.dictionary.selectPlaceholder')}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {level3Nodes.map((n) => (
-                      <SelectItem key={n.id} value={String(n.id)}>
-                        {n.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Leaf-conditional promise fields */}
-        {selectedLeaf &&
-          (selectedLeaf.require_promise_date || selectedLeaf.require_promise_amount) && (
+        {/* Dropdown-conditional promise fields (replaces old dictionary leaf flags) */}
+        {selectedDropdownValue &&
+          (selectedDropdownValue.require_promise_date ||
+            selectedDropdownValue.require_promise_amount) && (
             <div className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3">
               <span className="text-xs font-medium text-blue-700 italic">
                 {t('pages.clientChains.requiredByLeaf')}
               </span>
               <div className="flex flex-col gap-3 sm:flex-row">
-                {selectedLeaf.require_promise_date && (
+                {selectedDropdownValue.require_promise_date && (
                   <div className="flex flex-1 flex-col gap-1">
                     <Label className="text-sm text-gray-700">
                       {t('pages.clientChains.promiseDate')} *
@@ -565,7 +561,7 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
                     />
                   </div>
                 )}
-                {selectedLeaf.require_promise_amount && (
+                {selectedDropdownValue.require_promise_amount && (
                   <div className="flex flex-1 flex-col gap-1">
                     <Label className="text-sm text-gray-700">
                       {t('pages.clientChains.promiseAmountUAH')} *
@@ -584,12 +580,11 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
             </div>
           )}
 
-        {/* Credit picker — only on last step AND when leaf requires it */}
-        {debts.length > 0 && selectedLeaf?.require_credit && (
+        {/* Credit picker — when dropdown option requires it */}
+        {debts.length > 0 && selectedDropdownValue?.require_credit && (
           <div className="flex flex-col gap-1">
             <Label className="text-sm text-gray-700">
-              {t('pages.clientChains.credit')}
-              {selectedLeaf?.require_credit && <span className="ml-1 text-red-500">*</span>}
+              {t('pages.clientChains.credit')} <span className="text-red-500">*</span>
             </Label>
             <Select value={creditId} onValueChange={setCreditId}>
               <SelectTrigger>
@@ -624,8 +619,20 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
           </div>
         )}
 
-        {/* Save button — hidden during delay */}
-        {!isDelayBlocked && (
+        {/* Continue button — non-last steps with text/amount fields */}
+        {!isDelayBlocked && !isLastStep && !canAutoAdvance && (
+          <Button
+            variant="cancel"
+            onClick={handleAutoAdvance}
+            disabled={advanceMut.isPending || isAutoAdvancing}
+            className="w-full"
+          >
+            {t('pages.clientChains.continueToNext')}
+          </Button>
+        )}
+
+        {/* Save button — only at last step */}
+        {!isDelayBlocked && isLastStep && (
           <Button
             variant="primary"
             onClick={handleSave}
@@ -639,7 +646,6 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
 
       {/* ===== RIGHT: Chain progress + Effects preview ===== */}
       <div className="flex w-full flex-col gap-6 lg:w-[280px]">
-        {/* Chain progress */}
         <div className="flex flex-col gap-3">
           <h3 className="text-dark-500 text-base font-semibold">
             {t('pages.clientChains.chainProgress')}
@@ -656,7 +662,7 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
             {steps.map((step, idx) => {
               const isCurrent = step.step_order === (activeInstance.current_step_order ?? 1)
               const isPast = step.step_order < (activeInstance.current_step_order ?? 1)
-              const hasBranch = stepBranches.has(step.id)
+              const hasBranch = stepBranchSet.has(step.id)
               const isLast = idx === steps.length - 1
 
               const formatDelay = (minutes: number): string => {
@@ -667,7 +673,6 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
 
               return (
                 <li key={step.id} className="relative flex items-start gap-3">
-                  {/* Step circle + connector line */}
                   <div className="flex flex-col items-center">
                     <div
                       className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
@@ -682,8 +687,6 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
                     </div>
                     {!isLast && <div className="my-1 h-6 border-l border-dashed border-gray-300" />}
                   </div>
-
-                  {/* Name + right-aligned badge */}
                   <div className="flex flex-1 items-center justify-between gap-2 pt-1">
                     <span
                       className={`text-sm ${
@@ -716,7 +719,7 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
           </ol>
         </div>
 
-        {/* Effects preview — matches mockup with → arrows + named tags */}
+        {/* Effects preview */}
         {currentStepEffects.length > 0 && (
           <div className="flex flex-col gap-2 border-t border-gray-100 pt-4">
             <h3 className="text-dark-500 text-base font-semibold">

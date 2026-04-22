@@ -4,8 +4,8 @@
  * Single tabbed page combining all TA-related admin sections:
  *   - Target Actions (KAN-317)
  *   - TA Chains      (KAN-318)
- *   - Dictionary     (KAN-327)
  *   - Chain Builder
+ *   - Quick Picks
  *
  * Tab selection is persisted in the URL `?tab=` query param.
  */
@@ -14,10 +14,10 @@ import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { TargetActionsPage } from '@/pages/TargetActions'
 import { TAChainsPage } from '@/pages/TAChains'
-import { TADictionaryPage } from '@/pages/TADictionary'
 import { ChainBuilderPage } from '@/pages/ChainBuilder'
+import { QuickPicksPage } from '@/pages/QuickPicks'
 
-type TabId = 'target-actions' | 'ta-chains' | 'dictionary' | 'chain-builder'
+type TabId = 'target-actions' | 'ta-chains' | 'chain-builder' | 'quick-picks'
 
 const TABS: { id: TabId; labelKey: string; fallback: string }[] = [
   {
@@ -26,11 +26,15 @@ const TABS: { id: TabId; labelKey: string; fallback: string }[] = [
     fallback: 'Target Actions',
   },
   { id: 'ta-chains', labelKey: 'pages.taManagement.tabs.taChains', fallback: 'TA Chains' },
-  { id: 'dictionary', labelKey: 'pages.taManagement.tabs.dictionary', fallback: 'Dictionary' },
   {
     id: 'chain-builder',
     labelKey: 'pages.taManagement.tabs.chainBuilder',
     fallback: 'Chain Builder',
+  },
+  {
+    id: 'quick-picks',
+    labelKey: 'pages.taManagement.tabs.quickPicks',
+    fallback: 'Quick Picks',
   },
 ]
 
@@ -68,8 +72,8 @@ export function TAManagementPage() {
       {/* Tab content */}
       {activeTab === 'target-actions' && <TargetActionsPage />}
       {activeTab === 'ta-chains' && <TAChainsPage />}
-      {activeTab === 'dictionary' && <TADictionaryPage />}
       {activeTab === 'chain-builder' && <ChainBuilderPage />}
+      {activeTab === 'quick-picks' && <QuickPicksPage />}
     </div>
   )
 }

@@ -48,6 +48,10 @@ export function TargetActionForm({ formId, initial, onSuccess }: TargetActionFor
     initial?.dropdown_values?.map((v) => ({
       value: v.value,
       sort_order: v.sort_order,
+      require_promise_date: v.require_promise_date,
+      require_promise_amount: v.require_promise_amount,
+      require_credit: v.require_credit,
+      is_positive: v.is_positive,
     })) ?? []
   )
   const [newValue, setNewValue] = useState('')
@@ -173,22 +177,78 @@ export function TargetActionForm({ formId, initial, onSuccess }: TargetActionFor
               <Icons.Add size={16} strokeWidth={2} />
             </button>
           </div>
-          <ul className="flex flex-col gap-1">
-            {dropdownValues.map((v) => (
+          <ul className="flex flex-col gap-2">
+            {dropdownValues.map((v, idx) => (
               <li
                 key={v.value}
-                className="text-dark-500 flex items-center justify-between rounded border border-gray-200 bg-white px-2 py-1 text-sm"
+                className="flex flex-col gap-1 rounded border border-gray-200 bg-white px-2 py-2"
               >
-                <span className="text-dark-500">{v.value}</span>
-                {!isLocked && (
-                  <button
-                    type="button"
-                    onClick={() => removeValue(v.value)}
-                    className="text-xs text-red-600 hover:underline"
-                  >
-                    {t('actions.delete')}
-                  </button>
-                )}
+                <div className="flex items-center justify-between">
+                  <span className="text-dark-500 text-sm font-medium">{v.value}</span>
+                  {!isLocked && (
+                    <button
+                      type="button"
+                      onClick={() => removeValue(v.value)}
+                      className="text-xs text-red-600 hover:underline"
+                    >
+                      {t('actions.delete')}
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-3 text-[11px] text-gray-600">
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={v.require_promise_date ?? false}
+                      disabled={isLocked}
+                      onChange={(e) => {
+                        const next = [...dropdownValues]
+                        next[idx] = { ...next[idx], require_promise_date: e.target.checked }
+                        setDropdownValues(next)
+                      }}
+                    />
+                    {t('pages.targetActions.form.promiseDate')}
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={v.require_promise_amount ?? false}
+                      disabled={isLocked}
+                      onChange={(e) => {
+                        const next = [...dropdownValues]
+                        next[idx] = { ...next[idx], require_promise_amount: e.target.checked }
+                        setDropdownValues(next)
+                      }}
+                    />
+                    {t('pages.targetActions.form.promiseAmount')}
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={v.require_credit ?? false}
+                      disabled={isLocked}
+                      onChange={(e) => {
+                        const next = [...dropdownValues]
+                        next[idx] = { ...next[idx], require_credit: e.target.checked }
+                        setDropdownValues(next)
+                      }}
+                    />
+                    {t('pages.targetActions.form.credit')}
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={v.is_positive ?? false}
+                      disabled={isLocked}
+                      onChange={(e) => {
+                        const next = [...dropdownValues]
+                        next[idx] = { ...next[idx], is_positive: e.target.checked }
+                        setDropdownValues(next)
+                      }}
+                    />
+                    {t('pages.targetActions.form.positive')}
+                  </label>
+                </div>
               </li>
             ))}
           </ul>
