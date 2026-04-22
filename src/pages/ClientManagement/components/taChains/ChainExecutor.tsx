@@ -8,7 +8,7 @@
  * button at the last step commits the whole chain.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
@@ -117,14 +117,12 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     return currentTA.dropdown_values.find((dv) => dv.value === stepValue) ?? null
   }, [currentTA, stepValue])
 
-  // Accumulated data across steps
-  const [collectedStepData, setCollectedStepData] = useState<Record<string, string>>({})
-  const [collectedDropdownValueIds, setCollectedDropdownValueIds] = useState<
-    Record<string, number>
-  >({})
-  const [collectedPromiseDate, setCollectedPromiseDate] = useState('')
-  const [collectedPromiseAmount, setCollectedPromiseAmount] = useState('')
-  const [collectedCreditId, setCollectedCreditId] = useState('')
+  // Accumulated data across steps — refs for synchronous access (no React batching issues)
+  const collectedStepDataRef = useRef<Record<string, string>>({})
+  const collectedDropdownValueIdsRef = useRef<Record<string, number>>({})
+  const collectedPromiseDateRef = useRef('')
+  const collectedPromiseAmountRef = useRef('')
+  const collectedCreditIdRef = useRef('')
 
   // Completed steps summaries
   interface CompletedStep {
@@ -149,11 +147,11 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
 
   // Reset on chain change
   useEffect(() => {
-    setCollectedStepData({})
-    setCollectedDropdownValueIds({})
-    setCollectedPromiseDate('')
-    setCollectedPromiseAmount('')
-    setCollectedCreditId('')
+    collectedStepDataRef.current = {}
+    collectedDropdownValueIdsRef.current = {}
+    collectedPromiseDateRef.current = ''
+    collectedPromiseAmountRef.current = ''
+    collectedCreditIdRef.current = ''
     setCompletedSteps([])
     setIsAutoAdvancing(false)
     setStepValue('')
@@ -200,22 +198,19 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
 
     setIsAutoAdvancing(true)
 
-    // Accumulate data
-    const updatedStepData = { ...collectedStepData }
+    // Accumulate data synchronously via refs
     if (stepValue) {
-      updatedStepData[String(currentStep.target_action_id)] = stepValue
+      collectedStepDataRef.current[String(currentStep.target_action_id)] = stepValue
     }
-    setCollectedStepData(updatedStepData)
-
     if (selectedDropdownValue) {
-      setCollectedDropdownValueIds((prev) => ({
-        ...prev,
-        [String(activeInstance.current_step_order ?? 1)]: selectedDropdownValue.id,
-      }))
+      collectedDropdownValueIdsRef.current[String(activeInstance.current_step_order ?? 1)] =
+        selectedDropdownValue.id
     }
-    if (promiseDate && !collectedPromiseDate) setCollectedPromiseDate(promiseDate)
-    if (promiseAmount && !collectedPromiseAmount) setCollectedPromiseAmount(promiseAmount)
-    if (creditId && !collectedCreditId) setCollectedCreditId(creditId)
+    if (promiseDate && !collectedPromiseDateRef.current)
+      collectedPromiseDateRef.current = promiseDate
+    if (promiseAmount && !collectedPromiseAmountRef.current)
+      collectedPromiseAmountRef.current = promiseAmount
+    if (creditId && !collectedCreditIdRef.current) collectedCreditIdRef.current = creditId
 
     setCompletedSteps((prev) => [
       ...prev,
@@ -262,10 +257,19 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
   const handleSave = async () => {
     if (!activeInstance || !activeChain) return
 
-    const updatedStepData = { ...collectedStepData }
+    // Accumulate current step's data into refs
     if (currentStep && stepValue) {
-      updatedStepData[String(currentStep.target_action_id)] = stepValue
+      collectedStepDataRef.current[String(currentStep.target_action_id)] = stepValue
     }
+    if (selectedDropdownValue) {
+      collectedDropdownValueIdsRef.current[String(activeInstance.current_step_order ?? 1)] =
+        selectedDropdownValue.id
+    }
+    if (promiseDate && !collectedPromiseDateRef.current)
+      collectedPromiseDateRef.current = promiseDate
+    if (promiseAmount && !collectedPromiseAmountRef.current)
+      collectedPromiseAmountRef.current = promiseAmount
+    if (creditId && !collectedCreditIdRef.current) collectedCreditIdRef.current = creditId
 
     // Validate
     if (currentStep?.is_required && !stepValue.trim()) {
@@ -287,10 +291,12 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
 
     // Use current step's dropdown value or first collected one
     const finalDropdownValueId =
-      selectedDropdownValue?.id ?? Object.values(collectedDropdownValueIds)[0] ?? undefined
-    const finalPromiseDate = promiseDate || collectedPromiseDate
-    const finalPromiseAmount = promiseAmount || collectedPromiseAmount
-    const finalCreditId = creditId || collectedCreditId
+      selectedDropdownValue?.id ??
+      Object.values(collectedDropdownValueIdsRef.current)[0] ??
+      undefined
+    const finalPromiseDate = promiseDate || collectedPromiseDateRef.current
+    const finalPromiseAmount = promiseAmount || collectedPromiseAmountRef.current
+    const finalCreditId = creditId || collectedCreditIdRef.current
 
     try {
       await createIntMut.mutateAsync({
@@ -302,7 +308,10 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
         promise_date: finalPromiseDate ? `${finalPromiseDate}T00:00:00` : undefined,
         promise_amount: finalPromiseAmount ? parseFloat(finalPromiseAmount) : undefined,
         notes: notes || undefined,
-        step_data: Object.keys(updatedStepData).length > 0 ? updatedStepData : undefined,
+        step_data:
+          Object.keys(collectedStepDataRef.current).length > 0
+            ? collectedStepDataRef.current
+            : undefined,
       })
       const result = await advanceMut.mutateAsync({
         id: activeInstance.id,
@@ -313,8 +322,11 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
       } else {
         toast.success(t('pages.clientChains.toasts.advanced', { step: result.current_step_order }))
       }
-      setCollectedStepData({})
-      setCollectedDropdownValueIds({})
+      collectedStepDataRef.current = {}
+      collectedDropdownValueIdsRef.current = {}
+      collectedPromiseDateRef.current = ''
+      collectedPromiseAmountRef.current = ''
+      collectedCreditIdRef.current = ''
       setCompletedSteps([])
       setStepValue('')
       setPromiseDate('')

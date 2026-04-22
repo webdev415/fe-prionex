@@ -74,14 +74,41 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       ),
     },
     {
-      key: 'dictionary_path',
-      header: t('pages.clientChains.history.dictionaryPath'),
+      key: 'result',
+      header: t('pages.clientChains.history.result'),
       align: 'left',
-      render: (row) => (
-        <span className="text-xs text-gray-700">
-          {row.dictionary_path.length > 0 ? row.dictionary_path.join(' > ') : '-'}
-        </span>
-      ),
+      render: (row) => {
+        // Show all step values from step_data, ordered by chain step_order
+        if (row.step_data && Object.keys(row.step_data).length > 0) {
+          const chain = chains.find((c) => c.id === row.chain_id)
+          const stepsOrdered = chain?.steps
+            ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
+            : []
+          // Build ordered values: walk steps in order, look up value by TA ID
+          const orderedValues: string[] = []
+          if (stepsOrdered.length > 0) {
+            for (const step of stepsOrdered) {
+              const val = (row.step_data as Record<string, string>)[String(step.target_action_id)]
+              if (val) orderedValues.push(val)
+            }
+          } else {
+            // Fallback if chain steps not available
+            orderedValues.push(
+              ...Object.values(row.step_data as Record<string, string>).filter(Boolean)
+            )
+          }
+          if (orderedValues.length > 0) {
+            return <span className="text-xs text-gray-700">{orderedValues.join(' -> ')}</span>
+          }
+        }
+        // Fallback to single dropdown_value_name or legacy dictionary_path
+        return (
+          <span className="text-xs text-gray-700">
+            {row.dropdown_value_name ??
+              (row.dictionary_path.length > 0 ? row.dictionary_path.join(' > ') : '-')}
+          </span>
+        )
+      },
     },
     {
       key: 'promise_date',
