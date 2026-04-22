@@ -1595,7 +1595,7 @@ export function ClientDetailPage() {
                       </span>
                     )}
                   </div>
-                  <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                  <PermissionGuard permission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
                     <button
                       onClick={() => setIsTagModalOpen(true)}
                       className="shrink-0 text-gray-500 transition-colors hover:text-gray-700"
