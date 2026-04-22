@@ -37,6 +37,7 @@ import {
   useCancelChainInstance,
 } from '@/features/taInteractions/hooks/useTAInteractions'
 import type { TAChainStep } from '@/features/taChains/api/types'
+import { useQuickPicks } from '@/features/quickPicks/hooks/useQuickPicks'
 import { getErrorMessage } from '@/lib/errors'
 
 interface Props {
@@ -77,6 +78,15 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     for (const tg of tagsList ?? []) m.set(tg.id, tg.name)
     return m
   }, [tagsList])
+
+  // Quick picks — fetch all, filter to manual chains client-side
+  const { data: quickPicksData } = useQuickPicks(
+    manualChains.length > 0 ? manualChains[0]?.department_id : undefined
+  )
+  const quickPicks = useMemo(() => {
+    const manualIds = new Set(manualChains.map((c) => c.id))
+    return (quickPicksData ?? []).filter((qp) => manualIds.has(qp.chain_id))
+  }, [quickPicksData, manualChains])
 
   // Active instance
   const { data: instances } = useClientChainInstances(clientId)
@@ -139,6 +149,17 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
   const [collectedPromiseAmount, setCollectedPromiseAmount] = useState('')
   const [collectedCreditId, setCollectedCreditId] = useState('')
 
+  // Completed steps summaries (for read-only display above current step)
+  interface CompletedStep {
+    stepOrder: number
+    taName: string
+    taValue: string
+    leafName?: string
+  }
+  const [completedSteps, setCompletedSteps] = useState<CompletedStep[]>([])
+  // Flag to prevent double auto-advance
+  const [isAutoAdvancing, setIsAutoAdvancing] = useState(false)
+
   // Current step's TA field value
   const [stepValue, setStepValue] = useState('')
 
@@ -155,13 +176,14 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
   const cancelMut = useCancelChainInstance()
 
   // Reset form when chain changes (not on step advance — we keep collectedStepData)
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setCollectedStepData({})
     setCollectedLeaves({})
     setCollectedPromiseDate('')
     setCollectedPromiseAmount('')
     setCollectedCreditId('')
+    setCompletedSteps([])
+    setIsAutoAdvancing(false)
     setStepValue('')
     setLevel1('')
     setLevel2('')
@@ -180,7 +202,6 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     setPromiseDate('')
     setPromiseAmount('')
   }, [activeInstance?.current_step_order])
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleStart = async () => {
     const chainId = parseInt(selectedChainId, 10)
@@ -193,23 +214,91 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     }
   }
 
-  const handleSave = async () => {
-    if (!activeInstance || !activeChain) return
+  // Auto-advance: when operator completes a non-last step, advance automatically
+  const handleAutoAdvance = async () => {
+    if (!activeInstance || !activeChain || !currentStep || isLastStep || isAutoAdvancing) return
 
-    // Accumulate current step value
+    // Check step is complete: TA field filled (if required) + leaf selected (if dictionary exists)
+    const taFilled = !currentStep.is_required || stepValue.trim()
+    const dictFilled = rootNodes.length === 0 || selectedLeaf != null
+    if (!taFilled || !dictFilled) return
+
+    // Check leaf-conditional fields
+    if (selectedLeaf?.require_promise_date && !promiseDate) return
+    if (selectedLeaf?.require_promise_amount && !promiseAmount) return
+    if (selectedLeaf?.require_credit && !creditId) return
+
+    setIsAutoAdvancing(true)
+
+    // Accumulate data
     const updatedStepData = { ...collectedStepData }
-    if (currentStep && stepValue) {
+    if (stepValue) {
       updatedStepData[String(currentStep.target_action_id)] = stepValue
     }
     setCollectedStepData(updatedStepData)
 
-    // Validate dictionary result is selected (if dictionary nodes exist for this step)
+    if (selectedLeaf) {
+      setCollectedLeaves((prev) => ({
+        ...prev,
+        [String(activeInstance.current_step_order ?? 1)]: selectedLeaf.id,
+      }))
+    }
+    if (promiseDate && !collectedPromiseDate) setCollectedPromiseDate(promiseDate)
+    if (promiseAmount && !collectedPromiseAmount) setCollectedPromiseAmount(promiseAmount)
+    if (creditId && !collectedCreditId) setCollectedCreditId(creditId)
+
+    // Record completed step for read-only display
+    setCompletedSteps((prev) => [
+      ...prev,
+      {
+        stepOrder: currentStep.step_order,
+        taName: currentTA?.name ?? '',
+        taValue: stepValue,
+        leafName: selectedLeaf?.name,
+      },
+    ])
+
+    try {
+      await advanceMut.mutateAsync({
+        id: activeInstance.id,
+        leafNodeId: selectedLeaf?.id ?? null,
+      })
+      setStepValue('')
+    } catch (err) {
+      toast.error(getErrorMessage(err))
+      // Rollback completed step display on error
+      setCompletedSteps((prev) => prev.filter((s) => s.stepOrder !== currentStep.step_order))
+    } finally {
+      setIsAutoAdvancing(false)
+    }
+  }
+
+  // Auto-advance for dropdown/date TA fields (single-action = done).
+  // Text/amount fields need explicit "Continue" button since user is still typing.
+  const canAutoAdvance =
+    currentTA && (currentTA.field_type === 'dropdown' || currentTA.field_type === 'date')
+
+  useEffect(() => {
+    if (!isLastStep && !isAutoAdvancing && activeInstance && canAutoAdvance) {
+      handleAutoAdvance()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepValue, selectedLeaf?.id, promiseDate, promiseAmount, creditId])
+
+  // handleSave — only used at the LAST step
+  const handleSave = async () => {
+    if (!activeInstance || !activeChain) return
+
+    const updatedStepData = { ...collectedStepData }
+    if (currentStep && stepValue) {
+      updatedStepData[String(currentStep.target_action_id)] = stepValue
+    }
+
+    // Validate
     if (rootNodes.length > 0 && !selectedLeaf) {
       toast.error(t('pages.clientChains.errors.selectResult'))
       return
     }
-
-    // Validate leaf-conditional fields (applies to all steps)
     if (selectedLeaf?.require_promise_date && !promiseDate) {
       toast.error(t('pages.clientChains.errors.promiseDateRequired'))
       return
@@ -223,33 +312,6 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
       return
     }
 
-    if (!isLastStep) {
-      // Accumulate leaf + promise + credit from this step for the final interaction
-      if (selectedLeaf) {
-        setCollectedLeaves((prev) => ({
-          ...prev,
-          [String(activeInstance.current_step_order ?? 1)]: selectedLeaf.id,
-        }))
-      }
-      if (promiseDate && !collectedPromiseDate) setCollectedPromiseDate(promiseDate)
-      if (promiseAmount && !collectedPromiseAmount) setCollectedPromiseAmount(promiseAmount)
-      if (creditId && !collectedCreditId) setCollectedCreditId(creditId)
-
-      try {
-        // Pass leaf selection to advance so backend can evaluate branches
-        const result = await advanceMut.mutateAsync({
-          id: activeInstance.id,
-          leafNodeId: selectedLeaf?.id ?? null,
-        })
-        toast.success(t('pages.clientChains.toasts.advanced', { step: result.current_step_order }))
-        setStepValue('')
-      } catch (err) {
-        toast.error(getErrorMessage(err))
-      }
-      return
-    }
-
-    // LAST step → create interaction with all accumulated data + complete
     const finalLeafId = selectedLeaf?.id ?? Object.values(collectedLeaves)[0] ?? undefined
     const finalPromiseDate = promiseDate || collectedPromiseDate
     const finalPromiseAmount = promiseAmount || collectedPromiseAmount
@@ -276,8 +338,8 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
       } else {
         toast.success(t('pages.clientChains.toasts.advanced', { step: result.current_step_order }))
       }
-      // Full reset
       setCollectedStepData({})
+      setCompletedSteps([])
       setStepValue('')
       setLevel1('')
       setLevel2('')
@@ -303,7 +365,6 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
   // Delay enforcement with live countdown (server-computed, clock-skew-proof)
   const [delaySecondsLeft, setDelaySecondsLeft] = useState(0)
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const serverSeconds = activeInstance?.delay_seconds_left ?? 0
     if (serverSeconds <= 0) {
@@ -320,7 +381,6 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
   }, [activeInstance?.id, activeInstance?.current_step_order, activeInstance?.delay_seconds_left])
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   const isDelayBlocked = delaySecondsLeft > 0
   const delayMinutesLeft = Math.ceil(delaySecondsLeft / 60)
@@ -352,6 +412,37 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
           <p className="text-sm text-gray-500">{t('pages.clientChains.noChains')}</p>
         ) : (
           <>
+            {/* Quick-pick buttons */}
+            {quickPicks.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-medium text-gray-500 uppercase">
+                  {t('pages.clientChains.quickPicks')}
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {quickPicks.map((qp) => (
+                    <Button
+                      key={qp.id}
+                      variant="cancel"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          await startMut.mutateAsync({ chain_id: qp.chain_id, client_id: clientId })
+                          toast.success(t('pages.clientChains.toasts.started'))
+                        } catch (err) {
+                          toast.error(getErrorMessage(err))
+                        }
+                      }}
+                      disabled={startMut.isPending}
+                      className="whitespace-nowrap"
+                    >
+                      {qp.chain_name ?? `Chain #${qp.chain_id}`}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Full chain dropdown */}
             <div className="flex flex-col gap-1">
               <Label className="text-sm text-gray-700">
                 {t('pages.clientChains.taChainLabel')}
@@ -403,6 +494,31 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
             {activeChain?.name}
           </div>
         </div>
+
+        {/* Completed steps (read-only summaries) */}
+        {completedSteps.map((cs) => (
+          <div
+            key={cs.stepOrder}
+            className="flex flex-col gap-1 rounded-lg border border-green-200 bg-green-50/50 p-3"
+          >
+            <span className="text-xs font-semibold text-green-700">
+              {t('pages.clientChains.stepLabel', { order: cs.stepOrder })} — {cs.taName}
+            </span>
+            <div className="flex flex-wrap gap-3 text-xs text-green-800">
+              {cs.taValue && <span>{cs.taValue}</span>}
+              {cs.leafName && (
+                <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium">
+                  {cs.leafName}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {/* Auto-advancing indicator */}
+        {isAutoAdvancing && (
+          <div className="text-center text-xs text-gray-500">{t('common.loading')}</div>
+        )}
 
         {/* Delay enforcement */}
         {isDelayBlocked && (
@@ -624,8 +740,20 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
           </div>
         )}
 
-        {/* Save button — hidden during delay */}
-        {!isDelayBlocked && (
+        {/* Continue button — non-last steps with text/amount fields */}
+        {!isDelayBlocked && !isLastStep && !canAutoAdvance && (
+          <Button
+            variant="cancel"
+            onClick={handleAutoAdvance}
+            disabled={advanceMut.isPending || isAutoAdvancing}
+            className="w-full"
+          >
+            {t('pages.clientChains.continueToNext')}
+          </Button>
+        )}
+
+        {/* Save button — only at last step, hidden during delay */}
+        {!isDelayBlocked && isLastStep && (
           <Button
             variant="primary"
             onClick={handleSave}

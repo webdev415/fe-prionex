@@ -16,8 +16,9 @@ import { TargetActionsPage } from '@/pages/TargetActions'
 import { TAChainsPage } from '@/pages/TAChains'
 import { TADictionaryPage } from '@/pages/TADictionary'
 import { ChainBuilderPage } from '@/pages/ChainBuilder'
+import { QuickPicksPage } from '@/pages/QuickPicks'
 
-type TabId = 'target-actions' | 'ta-chains' | 'dictionary' | 'chain-builder'
+type TabId = 'target-actions' | 'ta-chains' | 'dictionary' | 'chain-builder' | 'quick-picks'
 
 const TABS: { id: TabId; labelKey: string; fallback: string }[] = [
   {
@@ -31,6 +32,11 @@ const TABS: { id: TabId; labelKey: string; fallback: string }[] = [
     id: 'chain-builder',
     labelKey: 'pages.taManagement.tabs.chainBuilder',
     fallback: 'Chain Builder',
+  },
+  {
+    id: 'quick-picks',
+    labelKey: 'pages.taManagement.tabs.quickPicks',
+    fallback: 'Quick Picks',
   },
 ]
 
@@ -70,6 +76,7 @@ export function TAManagementPage() {
       {activeTab === 'ta-chains' && <TAChainsPage />}
       {activeTab === 'dictionary' && <TADictionaryPage />}
       {activeTab === 'chain-builder' && <ChainBuilderPage />}
+      {activeTab === 'quick-picks' && <QuickPicksPage />}
     </div>
   )
 }
