@@ -29,7 +29,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTAChains, useTAChain } from '@/features/taChains/hooks/useTAChains'
+import { updateStepPositions } from '@/features/taChains/api/taChainsApi'
 import {
   useBuilderData,
   useCreateBranch,
@@ -153,7 +155,10 @@ export function ChainBuilderPage() {
     const flowNodes: Node[] = steps.map((step, idx) => ({
       id: `step-${step.id}`,
       type: 'default',
-      position: { x: 250, y: idx * 120 + 50 },
+      position: {
+        x: step.position_x ?? 250,
+        y: step.position_y ?? idx * 120 + 50,
+      },
       data: {
         label: `${step.step_order}. ${step.target_action_name ?? 'TA #' + step.target_action_id}`,
       },
@@ -224,6 +229,24 @@ export function ChainBuilderPage() {
     setEdges(flowEdges)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chain, builderData, selectedStepId])
+
+  const qc = useQueryClient()
+  const onNodeDragStop = useCallback(
+    (_: unknown, node: Node) => {
+      if (!selectedChainId) return
+      const stepId = parseInt(node.id.replace('step-', ''), 10)
+      updateStepPositions(selectedChainId, [
+        {
+          step_id: stepId,
+          position_x: Math.round(node.position.x),
+          position_y: Math.round(node.position.y),
+        },
+      ])
+        .then(() => qc.invalidateQueries({ queryKey: ['ta-chains', selectedChainId] }))
+        .catch(() => {})
+    },
+    [selectedChainId, qc]
+  )
 
   const onNodeClick = useCallback((_: unknown, node: Node) => {
     const stepId = parseInt(node.id.replace('step-', ''), 10)
@@ -298,6 +321,7 @@ export function ChainBuilderPage() {
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onNodeClick={onNodeClick}
+              onNodeDragStop={onNodeDragStop}
               fitView
               fitViewOptions={{ padding: 0.3 }}
               proOptions={{ hideAttribution: true }}
