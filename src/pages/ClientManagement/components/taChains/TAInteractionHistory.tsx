@@ -3,7 +3,7 @@
  * Shows full dictionary path, filters by date/chain/notes, pagination.
  */
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Input } from '@/components/ui/Input'
@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/Select'
 import { useClientTAInteractions } from '@/features/taInteractions/hooks/useTAInteractions'
 import { useTAChains } from '@/features/taChains/hooks/useTAChains'
+import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
+import type { TargetAction } from '@/features/targetActions/api/types'
 import type { TAInteraction } from '@/features/taInteractions/api/types'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 
@@ -42,6 +44,14 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
 
   const { data: chainsData } = useTAChains({ include_inactive: true })
   const chains = chainsData?.items ?? []
+
+  // TA lookup for identifying credit-type steps
+  const { data: tasData } = useTargetActions({ include_hidden: true })
+  const taById = useMemo(() => {
+    const m = new Map<number, TargetAction>()
+    for (const ta of tasData?.items ?? []) m.set(ta.id, ta)
+    return m
+  }, [tasData])
 
   const { data, isLoading } = useClientTAInteractions(clientId, {
     chain_id: chainFilter ? parseInt(chainFilter, 10) : undefined,
@@ -84,7 +94,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
           const stepsOrdered = chain?.steps
             ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
             : []
-          // Build ordered values: walk steps in order, look up value by TA ID
+          // Build ordered values: walk steps in order
           const orderedValues: string[] = []
           if (stepsOrdered.length > 0) {
             for (const step of stepsOrdered) {
@@ -92,7 +102,6 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               if (val) orderedValues.push(val)
             }
           } else {
-            // Fallback if chain steps not available
             orderedValues.push(
               ...Object.values(row.step_data as Record<string, string>).filter(Boolean)
             )
@@ -130,11 +139,38 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       key: 'credit_id',
       header: t('pages.clientChains.history.credit'),
       align: 'left',
-      render: (row) => (
-        <span className="text-xs text-gray-700">
-          {row.credit_id ? (debtContractMap.get(row.credit_id) ?? `#${row.credit_id}`) : '-'}
-        </span>
-      ),
+      render: (row) => {
+        // Collect credit IDs from: credit_id field + credit-type steps in step_data
+        const creditIds: string[] = []
+        if (row.credit_id) {
+          creditIds.push(debtContractMap.get(row.credit_id) ?? `#${row.credit_id}`)
+        }
+        // Check step_data for credit-type step values
+        if (row.step_data) {
+          const chain = chains.find((c) => c.id === row.chain_id)
+          const stepsOrdered = chain?.steps ?? []
+          for (const step of stepsOrdered) {
+            const ta = taById.get(step.target_action_id)
+            if (ta?.field_type === 'credit') {
+              const val = (row.step_data as Record<string, string>)[String(step.target_action_id)]
+              if (val) {
+                // val is comma-separated credit IDs like "125844,55138"
+                for (const id of val.split(',')) {
+                  const numId = parseInt(id.trim(), 10)
+                  if (!Number.isNaN(numId)) {
+                    creditIds.push(debtContractMap.get(numId) ?? `#${numId}`)
+                  }
+                }
+              }
+            }
+          }
+        }
+        return (
+          <span className="text-xs text-gray-700">
+            {creditIds.length > 0 ? creditIds.join(', ') : '-'}
+          </span>
+        )
+      },
     },
     {
       key: 'notes',

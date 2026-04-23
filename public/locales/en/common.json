@@ -1791,6 +1791,7 @@
       "selectChain": "Chain",
       "selectChainPlaceholder": "Pick a chain...",
       "noChains": "No active chains available.",
+      "noCredits": "No open credits found for this client.",
       "steps": "steps",
       "start": "Start",
       "activeLabel": "in progress",
@@ -2048,7 +2049,8 @@
         "text": "Text",
         "dropdown": "Dropdown",
         "date": "Date",
-        "amount": "Amount"
+        "amount": "Amount",
+        "credit": "Credit"
       },
       "status": {
         "active": "Active",

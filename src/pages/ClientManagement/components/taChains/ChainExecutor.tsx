@@ -541,6 +541,43 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
                 value={stepValue}
                 onChange={(e) => setStepValue(e.target.value)}
               />
+            ) : currentTA.field_type === 'credit' ? (
+              <div className="flex flex-col gap-2">
+                {debts.length === 0 ? (
+                  <span className="text-xs text-gray-500">{t('pages.clientChains.noCredits')}</span>
+                ) : (
+                  debts.map((d) => {
+                    const creditKey = String(d.id)
+                    const selectedIds = stepValue ? stepValue.split(',') : []
+                    const isChecked = selectedIds.includes(creditKey)
+                    return (
+                      <label
+                        key={d.id}
+                        className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            const next = e.target.checked
+                              ? [...selectedIds, creditKey]
+                              : selectedIds.filter((id) => id !== creditKey)
+                            setStepValue(next.filter(Boolean).join(','))
+                          }}
+                        />
+                        <span>
+                          #{d.contract_number ?? d.id}
+                          {d.seller_company ? ` — ${d.seller_company}` : ''}
+                          {d.remaining_debt_amount
+                            ? ` — ${d.remaining_debt_amount.toLocaleString()} UAH`
+                            : ''}
+                          {d.days_past_due ? ` — overdue ${d.days_past_due}d` : ''}
+                        </span>
+                      </label>
+                    )
+                  })
+                )}
+              </div>
             ) : (
               <Input
                 type="text"
