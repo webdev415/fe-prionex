@@ -2,7 +2,7 @@
  * Target Actions (KAN-317) — API types
  */
 
-export type TAFieldType = 'text' | 'dropdown' | 'date' | 'amount'
+export type TAFieldType = 'text' | 'dropdown' | 'date' | 'amount' | 'credit'
 
 export interface TADropdownValueIn {
   value: string

@@ -47,3 +47,10 @@ export async function activateTAChain(id: number): Promise<TAChain> {
   const response = await api.post<TAChain>(`${BASE_URL}/${id}/activate`)
   return response.data
 }
+
+export async function updateStepPositions(
+  chainId: number,
+  positions: Array<{ step_id: number; position_x: number; position_y: number }>
+): Promise<void> {
+  await api.put(`${BASE_URL}/${chainId}/step-positions`, { positions })
+}

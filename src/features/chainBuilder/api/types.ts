@@ -4,6 +4,7 @@ export interface BranchOut {
   to_step_id: number
   condition_leaf_id: number | null
   condition_dropdown_value_id: number | null
+  condition_dropdown_value_ids: number[]
 }
 
 export interface TriggerOut {
@@ -25,6 +26,7 @@ export interface EffectOut {
   step_id: number
   effect_type: string
   config: Record<string, unknown>
+  condition_dropdown_value_ids: number[]
 }
 
 export interface ChainBuilderData {

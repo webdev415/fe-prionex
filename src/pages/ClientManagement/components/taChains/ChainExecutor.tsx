@@ -8,7 +8,7 @@
  * button at the last step commits the whole chain.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
@@ -117,14 +117,15 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     return currentTA.dropdown_values.find((dv) => dv.value === stepValue) ?? null
   }, [currentTA, stepValue])
 
-  // Accumulated data across steps
-  const [collectedStepData, setCollectedStepData] = useState<Record<string, string>>({})
-  const [collectedDropdownValueIds, setCollectedDropdownValueIds] = useState<
-    Record<string, number>
-  >({})
-  const [collectedPromiseDate, setCollectedPromiseDate] = useState('')
-  const [collectedPromiseAmount, setCollectedPromiseAmount] = useState('')
-  const [collectedCreditId, setCollectedCreditId] = useState('')
+  // Template preset values (from quick pick)
+  const presetValuesRef = useRef<Record<string, string>>({})
+
+  // Accumulated data across steps — refs for synchronous access (no React batching issues)
+  const collectedStepDataRef = useRef<Record<string, string>>({})
+  const collectedDropdownValueIdsRef = useRef<Record<string, number>>({})
+  const collectedPromiseDateRef = useRef('')
+  const collectedPromiseAmountRef = useRef('')
+  const collectedCreditIdRef = useRef('')
 
   // Completed steps summaries
   interface CompletedStep {
@@ -149,26 +150,28 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
 
   // Reset on chain change
   useEffect(() => {
-    setCollectedStepData({})
-    setCollectedDropdownValueIds({})
-    setCollectedPromiseDate('')
-    setCollectedPromiseAmount('')
-    setCollectedCreditId('')
+    collectedStepDataRef.current = {}
+    collectedDropdownValueIdsRef.current = {}
+    collectedPromiseDateRef.current = ''
+    collectedPromiseAmountRef.current = ''
+    collectedCreditIdRef.current = ''
     setCompletedSteps([])
     setIsAutoAdvancing(false)
-    setStepValue('')
+    // Don't reset stepValue here — step-change effect handles it with preset support
     setPromiseDate('')
     setPromiseAmount('')
     setCreditId('')
     setNotes('')
   }, [activeInstance?.id])
 
-  // Reset current step fields on step change
+  // Reset current step fields on step change + pre-fill from template
   useEffect(() => {
-    setStepValue('')
+    const taId = currentStep?.target_action_id
+    const preset = taId ? presetValuesRef.current[String(taId)] : undefined
+    setStepValue(preset ?? '')
     setPromiseDate('')
     setPromiseAmount('')
-  }, [activeInstance?.current_step_order])
+  }, [activeInstance?.id, activeInstance?.current_step_order, currentStep?.target_action_id])
 
   const handleStart = async () => {
     const chainId = parseInt(selectedChainId, 10)
@@ -200,22 +203,19 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
 
     setIsAutoAdvancing(true)
 
-    // Accumulate data
-    const updatedStepData = { ...collectedStepData }
+    // Accumulate data synchronously via refs
     if (stepValue) {
-      updatedStepData[String(currentStep.target_action_id)] = stepValue
+      collectedStepDataRef.current[String(currentStep.target_action_id)] = stepValue
     }
-    setCollectedStepData(updatedStepData)
-
     if (selectedDropdownValue) {
-      setCollectedDropdownValueIds((prev) => ({
-        ...prev,
-        [String(activeInstance.current_step_order ?? 1)]: selectedDropdownValue.id,
-      }))
+      collectedDropdownValueIdsRef.current[String(activeInstance.current_step_order ?? 1)] =
+        selectedDropdownValue.id
     }
-    if (promiseDate && !collectedPromiseDate) setCollectedPromiseDate(promiseDate)
-    if (promiseAmount && !collectedPromiseAmount) setCollectedPromiseAmount(promiseAmount)
-    if (creditId && !collectedCreditId) setCollectedCreditId(creditId)
+    if (promiseDate && !collectedPromiseDateRef.current)
+      collectedPromiseDateRef.current = promiseDate
+    if (promiseAmount && !collectedPromiseAmountRef.current)
+      collectedPromiseAmountRef.current = promiseAmount
+    if (creditId && !collectedCreditIdRef.current) collectedCreditIdRef.current = creditId
 
     setCompletedSteps((prev) => [
       ...prev,
@@ -262,10 +262,19 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
   const handleSave = async () => {
     if (!activeInstance || !activeChain) return
 
-    const updatedStepData = { ...collectedStepData }
+    // Accumulate current step's data into refs
     if (currentStep && stepValue) {
-      updatedStepData[String(currentStep.target_action_id)] = stepValue
+      collectedStepDataRef.current[String(currentStep.target_action_id)] = stepValue
     }
+    if (selectedDropdownValue) {
+      collectedDropdownValueIdsRef.current[String(activeInstance.current_step_order ?? 1)] =
+        selectedDropdownValue.id
+    }
+    if (promiseDate && !collectedPromiseDateRef.current)
+      collectedPromiseDateRef.current = promiseDate
+    if (promiseAmount && !collectedPromiseAmountRef.current)
+      collectedPromiseAmountRef.current = promiseAmount
+    if (creditId && !collectedCreditIdRef.current) collectedCreditIdRef.current = creditId
 
     // Validate
     if (currentStep?.is_required && !stepValue.trim()) {
@@ -287,10 +296,12 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
 
     // Use current step's dropdown value or first collected one
     const finalDropdownValueId =
-      selectedDropdownValue?.id ?? Object.values(collectedDropdownValueIds)[0] ?? undefined
-    const finalPromiseDate = promiseDate || collectedPromiseDate
-    const finalPromiseAmount = promiseAmount || collectedPromiseAmount
-    const finalCreditId = creditId || collectedCreditId
+      selectedDropdownValue?.id ??
+      Object.values(collectedDropdownValueIdsRef.current)[0] ??
+      undefined
+    const finalPromiseDate = promiseDate || collectedPromiseDateRef.current
+    const finalPromiseAmount = promiseAmount || collectedPromiseAmountRef.current
+    const finalCreditId = creditId || collectedCreditIdRef.current
 
     try {
       await createIntMut.mutateAsync({
@@ -302,7 +313,10 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
         promise_date: finalPromiseDate ? `${finalPromiseDate}T00:00:00` : undefined,
         promise_amount: finalPromiseAmount ? parseFloat(finalPromiseAmount) : undefined,
         notes: notes || undefined,
-        step_data: Object.keys(updatedStepData).length > 0 ? updatedStepData : undefined,
+        step_data:
+          Object.keys(collectedStepDataRef.current).length > 0
+            ? collectedStepDataRef.current
+            : undefined,
       })
       const result = await advanceMut.mutateAsync({
         id: activeInstance.id,
@@ -313,8 +327,11 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
       } else {
         toast.success(t('pages.clientChains.toasts.advanced', { step: result.current_step_order }))
       }
-      setCollectedStepData({})
-      setCollectedDropdownValueIds({})
+      collectedStepDataRef.current = {}
+      collectedDropdownValueIdsRef.current = {}
+      collectedPromiseDateRef.current = ''
+      collectedPromiseAmountRef.current = ''
+      collectedCreditIdRef.current = ''
       setCompletedSteps([])
       setStepValue('')
       setPromiseDate('')
@@ -397,16 +414,19 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
                       size="sm"
                       onClick={async () => {
                         try {
+                          // Store preset values before starting chain
+                          presetValuesRef.current = qp.preset_values ?? {}
                           await startMut.mutateAsync({ chain_id: qp.chain_id, client_id: clientId })
                           toast.success(t('pages.clientChains.toasts.started'))
                         } catch (err) {
+                          presetValuesRef.current = {}
                           toast.error(getErrorMessage(err))
                         }
                       }}
                       disabled={startMut.isPending}
                       className="whitespace-nowrap"
                     >
-                      {qp.chain_name ?? `Chain #${qp.chain_id}`}
+                      {qp.name ?? qp.chain_name ?? `Chain #${qp.chain_id}`}
                     </Button>
                   ))}
                 </div>
@@ -529,6 +549,43 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
                 value={stepValue}
                 onChange={(e) => setStepValue(e.target.value)}
               />
+            ) : currentTA.field_type === 'credit' ? (
+              <div className="flex flex-col gap-2">
+                {debts.length === 0 ? (
+                  <span className="text-xs text-gray-500">{t('pages.clientChains.noCredits')}</span>
+                ) : (
+                  debts.map((d) => {
+                    const creditKey = String(d.id)
+                    const selectedIds = stepValue ? stepValue.split(',') : []
+                    const isChecked = selectedIds.includes(creditKey)
+                    return (
+                      <label
+                        key={d.id}
+                        className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            const next = e.target.checked
+                              ? [...selectedIds, creditKey]
+                              : selectedIds.filter((id) => id !== creditKey)
+                            setStepValue(next.filter(Boolean).join(','))
+                          }}
+                        />
+                        <span>
+                          #{d.contract_number ?? d.id}
+                          {d.seller_company ? ` — ${d.seller_company}` : ''}
+                          {d.remaining_debt_amount
+                            ? ` — ${d.remaining_debt_amount.toLocaleString()} UAH`
+                            : ''}
+                          {d.days_past_due ? ` — overdue ${d.days_past_due}d` : ''}
+                        </span>
+                      </label>
+                    )
+                  })
+                )}
+              </div>
             ) : (
               <Input
                 type="text"
@@ -540,47 +597,38 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
           </div>
         )}
 
-        {/* Dropdown-conditional promise fields (replaces old dictionary leaf flags) */}
-        {selectedDropdownValue &&
-          (selectedDropdownValue.require_promise_date ||
-            selectedDropdownValue.require_promise_amount) && (
-            <div className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3">
-              <span className="text-xs font-medium text-blue-700 italic">
-                {t('pages.clientChains.requiredByLeaf')}
-              </span>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                {selectedDropdownValue.require_promise_date && (
-                  <div className="flex flex-1 flex-col gap-1">
-                    <Label className="text-sm text-gray-700">
-                      {t('pages.clientChains.promiseDate')} *
-                    </Label>
-                    <Input
-                      type="date"
-                      value={promiseDate}
-                      onChange={(e) => setPromiseDate(e.target.value)}
-                    />
-                  </div>
-                )}
-                {selectedDropdownValue.require_promise_amount && (
-                  <div className="flex flex-1 flex-col gap-1">
-                    <Label className="text-sm text-gray-700">
-                      {t('pages.clientChains.promiseAmountUAH')} *
-                    </Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      placeholder="0.00"
-                      value={promiseAmount}
-                      onChange={(e) => setPromiseAmount(e.target.value)}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+        {/* Promise date */}
+        {selectedDropdownValue?.require_promise_date && (
+          <div className="flex flex-col gap-1">
+            <Label className="text-sm text-gray-700">
+              {t('pages.clientChains.promiseDate')} <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              type="date"
+              value={promiseDate}
+              onChange={(e) => setPromiseDate(e.target.value)}
+            />
+          </div>
+        )}
 
-        {/* Credit picker — when dropdown option requires it */}
+        {/* Promise amount */}
+        {selectedDropdownValue?.require_promise_amount && (
+          <div className="flex flex-col gap-1">
+            <Label className="text-sm text-gray-700">
+              {t('pages.clientChains.promiseAmountUAH')} <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              placeholder="0.00"
+              value={promiseAmount}
+              onChange={(e) => setPromiseAmount(e.target.value)}
+            />
+          </div>
+        )}
+
+        {/* Credit picker */}
         {debts.length > 0 && selectedDropdownValue?.require_credit && (
           <div className="flex flex-col gap-1">
             <Label className="text-sm text-gray-700">

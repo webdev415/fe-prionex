@@ -7,6 +7,8 @@ export interface TAInteraction {
   chain_instance_id: number | null
   leaf_node_id: number | null
   leaf_node_name: string | null
+  dropdown_value_id: number | null
+  dropdown_value_name: string | null
   dictionary_path: string[]
   promise_date: string | null
   promise_amount: string | null

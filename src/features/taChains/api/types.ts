@@ -21,6 +21,8 @@ export interface TAChainStep {
   is_required: boolean
   delay_minutes: number
   not_in_the_past: boolean
+  position_x: number | null
+  position_y: number | null
 }
 
 export interface TAChain {
