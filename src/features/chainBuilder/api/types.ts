@@ -26,6 +26,7 @@ export interface EffectOut {
   step_id: number
   effect_type: string
   config: Record<string, unknown>
+  condition_dropdown_value_ids: number[]
 }
 
 export interface ChainBuilderData {

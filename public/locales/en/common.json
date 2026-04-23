@@ -1880,6 +1880,7 @@
       "conditionLeaf": "If result is... (else = default)",
       "conditionElse": "else (default / no condition)",
       "branchAddedCondition": "Conditional branch added",
+      "effectCondition": "Always (or select conditions...)",
       "branchAddedElse": "Default branch added (else)"
     },
     "quickPicks": {

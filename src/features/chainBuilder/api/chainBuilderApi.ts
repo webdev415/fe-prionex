@@ -50,7 +50,12 @@ export async function deleteBlocker(chainId: number, blockerId: number): Promise
 // Effects
 export async function createEffect(
   chainId: number,
-  payload: { step_id: number; effect_type: string; config: Record<string, unknown> }
+  payload: {
+    step_id: number
+    effect_type: string
+    config: Record<string, unknown>
+    condition_dropdown_value_ids?: number[]
+  }
 ): Promise<EffectOut> {
   return (await api.post<EffectOut>(`${base(chainId)}/effects`, payload)).data
 }

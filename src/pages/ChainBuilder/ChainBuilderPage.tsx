@@ -137,6 +137,8 @@ export function ChainBuilderPage() {
   const [newBlockerType, setNewBlockerType] = useState(BLOCKER_TYPES[0])
   const [newBlockerConfig, setNewBlockerConfig] = useState<Record<string, string>>({})
   const [newEffectType, setNewEffectType] = useState(EFFECT_TYPES[0])
+  const [newEffectConditions, setNewEffectConditions] = useState<Set<number>>(new Set())
+  const [effectCondDropdownOpen, setEffectCondDropdownOpen] = useState(false)
   const [newEffectConfig, setNewEffectConfig] = useState<Record<string, string>>({})
   const [newBranchTo, setNewBranchTo] = useState('')
   const [newBranchConditions, setNewBranchConditions] = useState<Set<number>>(new Set())
@@ -652,6 +654,15 @@ export function ChainBuilderPage() {
                             <div className="flex flex-col">
                               <span className="text-xs font-medium text-green-800">
                                 {ef.effect_type}
+                                {ef.condition_dropdown_value_ids.length > 0 && (
+                                  <span className="font-normal text-green-600">
+                                    {' '}
+                                    if{' '}
+                                    {ef.condition_dropdown_value_ids
+                                      .map((id) => `"${dvNameById.get(id) ?? `#${id}`}"`)
+                                      .join(' or ')}
+                                  </span>
+                                )}
                               </span>
                               {Object.keys(ef.config).length > 0 && (
                                 <span className="text-[10px] text-green-600">
@@ -756,6 +767,53 @@ export function ChainBuilderPage() {
                             </select>
                           </>
                         )}
+                        {stepDropdownValues.length > 0 && (
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setEffectCondDropdownOpen(!effectCondDropdownOpen)}
+                              className="flex h-9 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 text-xs text-gray-700 hover:bg-gray-50"
+                            >
+                              <span className="truncate">
+                                {newEffectConditions.size > 0
+                                  ? `if ${Array.from(newEffectConditions)
+                                      .map((id) => dvNameById.get(id) ?? `#${id}`)
+                                      .join(', ')}`
+                                  : t('pages.chainBuilder.effectCondition')}
+                              </span>
+                              <span
+                                className={`ml-2 text-gray-400 transition-transform ${effectCondDropdownOpen ? 'rotate-180' : ''}`}
+                              >
+                                ▾
+                              </span>
+                            </button>
+                            {effectCondDropdownOpen && (
+                              <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white py-1 shadow-lg">
+                                <div className="max-h-48 overflow-y-auto">
+                                  {stepDropdownValues.map((dv) => {
+                                    const checked = newEffectConditions.has(dv.id)
+                                    return (
+                                      <button
+                                        key={dv.id}
+                                        type="button"
+                                        onClick={() => {
+                                          const next = new Set(newEffectConditions)
+                                          if (checked) next.delete(dv.id)
+                                          else next.add(dv.id)
+                                          setNewEffectConditions(next)
+                                        }}
+                                        className="flex w-full items-center justify-between px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
+                                      >
+                                        <span>{dv.value}</span>
+                                        {checked && <span className="text-gray-500">✓</span>}
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         <button
                           type="button"
                           onClick={async () => {
@@ -771,9 +829,15 @@ export function ChainBuilderPage() {
                                 step_id: selectedStep.id,
                                 effect_type: newEffectType,
                                 config: cfg,
+                                condition_dropdown_value_ids:
+                                  newEffectConditions.size > 0
+                                    ? Array.from(newEffectConditions)
+                                    : undefined,
                               })
                               toast.success('Effect added')
                               setNewEffectConfig({})
+                              setNewEffectConditions(new Set())
+                              setEffectCondDropdownOpen(false)
                             } catch (e) {
                               toast.error(getErrorMessage(e))
                             }
