@@ -117,6 +117,9 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     return currentTA.dropdown_values.find((dv) => dv.value === stepValue) ?? null
   }, [currentTA, stepValue])
 
+  // Template preset values (from quick pick)
+  const presetValuesRef = useRef<Record<string, string>>({})
+
   // Accumulated data across steps — refs for synchronous access (no React batching issues)
   const collectedStepDataRef = useRef<Record<string, string>>({})
   const collectedDropdownValueIdsRef = useRef<Record<string, number>>({})
@@ -154,19 +157,21 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     collectedCreditIdRef.current = ''
     setCompletedSteps([])
     setIsAutoAdvancing(false)
-    setStepValue('')
+    // Don't reset stepValue here — step-change effect handles it with preset support
     setPromiseDate('')
     setPromiseAmount('')
     setCreditId('')
     setNotes('')
   }, [activeInstance?.id])
 
-  // Reset current step fields on step change
+  // Reset current step fields on step change + pre-fill from template
   useEffect(() => {
-    setStepValue('')
+    const taId = currentStep?.target_action_id
+    const preset = taId ? presetValuesRef.current[String(taId)] : undefined
+    setStepValue(preset ?? '')
     setPromiseDate('')
     setPromiseAmount('')
-  }, [activeInstance?.current_step_order])
+  }, [activeInstance?.id, activeInstance?.current_step_order, currentStep?.target_action_id])
 
   const handleStart = async () => {
     const chainId = parseInt(selectedChainId, 10)
@@ -409,16 +414,19 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
                       size="sm"
                       onClick={async () => {
                         try {
+                          // Store preset values before starting chain
+                          presetValuesRef.current = qp.preset_values ?? {}
                           await startMut.mutateAsync({ chain_id: qp.chain_id, client_id: clientId })
                           toast.success(t('pages.clientChains.toasts.started'))
                         } catch (err) {
+                          presetValuesRef.current = {}
                           toast.error(getErrorMessage(err))
                         }
                       }}
                       disabled={startMut.isPending}
                       className="whitespace-nowrap"
                     >
-                      {qp.chain_name ?? `Chain #${qp.chain_id}`}
+                      {qp.name ?? qp.chain_name ?? `Chain #${qp.chain_id}`}
                     </Button>
                   ))}
                 </div>

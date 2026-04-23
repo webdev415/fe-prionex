@@ -1884,14 +1884,21 @@
     },
     "quickPicks": {
       "title": "Quick Picks",
-      "description": "Configure preset chain shortcuts that operators see as one-click buttons.",
+      "description": "Create named templates with pre-filled step values. Operators pick a template and the chain auto-fills.",
       "selectDepartment": "Select department...",
-      "selectDepartmentHint": "Select a department to manage its quick picks.",
-      "selectChain": "Select chain to add...",
-      "empty": "No quick picks configured for this department yet.",
+      "selectDepartmentHint": "Select a department to manage its templates.",
+      "selectChain": "Select chain...",
+      "empty": "No templates configured for this department yet.",
+      "addTemplate": "Add template",
+      "templateName": "Template name",
+      "templateNamePlaceholder": "e.g. PTP - standard",
+      "presetValues": "Pre-fill step values (leave empty to skip)",
+      "leaveEmpty": "Leave empty...",
+      "creditAutoFill": "Credit is selected by operator from client data",
+      "addButton": "Add template",
       "toasts": {
-        "added": "Quick pick added",
-        "removed": "Quick pick removed"
+        "added": "Template added",
+        "removed": "Template removed"
       }
     },
     "interactionLog": {
