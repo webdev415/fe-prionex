@@ -188,6 +188,11 @@ export function ClientDetailPage() {
     error: profileError,
   } = useClientProfile(clientId, isValidClientId)
   const { data: loans = [], isLoading: isLoansLoading } = useClientLoans(clientId, isValidClientId)
+  const eligibleLoansForRr = useMemo(
+    () => (loans ?? []).filter((loan) => (loan.status ?? '').trim().toLowerCase() !== 'closed'),
+    [loans]
+  )
+  const hasEligibleLoansForRr = eligibleLoansForRr.length > 0
   const { data: restructuringAgreements = [], isLoading: isRrLoading } =
     useClientRestructuringAgreements(clientId, isValidClientId)
   const { data: rrDetail } = useRestructuringAgreementDetail(
@@ -2437,7 +2442,7 @@ export function ClientDetailPage() {
                         size="sm"
                         onClick={() => {
                           setConnectRrForm({
-                            debtId: '',
+                            debtId: eligibleLoansForRr[0] ? String(eligibleLoansForRr[0].id) : '',
                             connectionDate: null,
                             totalAmount: '',
                             numPayments: 1,
@@ -3796,16 +3801,26 @@ export function ClientDetailPage() {
                 <Select
                   value={connectRrForm.debtId}
                   onValueChange={(val) => setConnectRrForm((prev) => ({ ...prev, debtId: val }))}
+                  disabled={!hasEligibleLoansForRr}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={t('pages.clients.detail.rrSelectLoanPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
-                    {loans.map((loan) => (
-                      <SelectItem key={loan.id} value={String(loan.id)}>
-                        {loan.contract_number} — {loan.seller_company}
-                      </SelectItem>
-                    ))}
+                    {eligibleLoansForRr.length > 0 ? (
+                      eligibleLoansForRr.map((loan) => (
+                        <SelectItem key={loan.id} value={String(loan.id)}>
+                          {loan.contract_number} — {loan.seller_company}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="text-dark-300 px-2 py-1 text-sm">
+                        {t(
+                          'pages.clients.detail.rrNoEligibleCredits',
+                          'No active credits available for restructuring'
+                        )}
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -3909,7 +3924,7 @@ export function ClientDetailPage() {
             <Button
               variant="primary"
               size="sm"
-              disabled={isCreatingRr}
+              disabled={isCreatingRr || !hasEligibleLoansForRr}
               onClick={() => {
                 const d = 'pages.clients.detail'
                 setConnectRrError(null)
