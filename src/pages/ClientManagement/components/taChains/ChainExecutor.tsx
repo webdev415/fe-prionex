@@ -552,47 +552,38 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
           </div>
         )}
 
-        {/* Dropdown-conditional promise fields (replaces old dictionary leaf flags) */}
-        {selectedDropdownValue &&
-          (selectedDropdownValue.require_promise_date ||
-            selectedDropdownValue.require_promise_amount) && (
-            <div className="flex flex-col gap-3 rounded-lg border border-blue-200 bg-blue-50/50 p-3">
-              <span className="text-xs font-medium text-blue-700 italic">
-                {t('pages.clientChains.requiredByLeaf')}
-              </span>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                {selectedDropdownValue.require_promise_date && (
-                  <div className="flex flex-1 flex-col gap-1">
-                    <Label className="text-sm text-gray-700">
-                      {t('pages.clientChains.promiseDate')} *
-                    </Label>
-                    <Input
-                      type="date"
-                      value={promiseDate}
-                      onChange={(e) => setPromiseDate(e.target.value)}
-                    />
-                  </div>
-                )}
-                {selectedDropdownValue.require_promise_amount && (
-                  <div className="flex flex-1 flex-col gap-1">
-                    <Label className="text-sm text-gray-700">
-                      {t('pages.clientChains.promiseAmountUAH')} *
-                    </Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      placeholder="0.00"
-                      value={promiseAmount}
-                      onChange={(e) => setPromiseAmount(e.target.value)}
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+        {/* Promise date */}
+        {selectedDropdownValue?.require_promise_date && (
+          <div className="flex flex-col gap-1">
+            <Label className="text-sm text-gray-700">
+              {t('pages.clientChains.promiseDate')} <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              type="date"
+              value={promiseDate}
+              onChange={(e) => setPromiseDate(e.target.value)}
+            />
+          </div>
+        )}
 
-        {/* Credit picker — when dropdown option requires it */}
+        {/* Promise amount */}
+        {selectedDropdownValue?.require_promise_amount && (
+          <div className="flex flex-col gap-1">
+            <Label className="text-sm text-gray-700">
+              {t('pages.clientChains.promiseAmountUAH')} <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              placeholder="0.00"
+              value={promiseAmount}
+              onChange={(e) => setPromiseAmount(e.target.value)}
+            />
+          </div>
+        )}
+
+        {/* Credit picker */}
         {debts.length > 0 && selectedDropdownValue?.require_credit && (
           <div className="flex flex-col gap-1">
             <Label className="text-sm text-gray-700">

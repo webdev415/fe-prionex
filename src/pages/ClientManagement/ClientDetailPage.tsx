@@ -155,9 +155,10 @@ export function ClientDetailPage() {
   const [connectRrError, setConnectRrError] = useState<string | null>(null)
   const [closeLoanConfirm, setCloseLoanConfirm] = useState<number | null>(null) // debtId to close
   const [completeRrConfirm, setCompleteRrConfirm] = useState<number | null>(null) // raId to complete
-  const [activeCommentTab, setActiveCommentTab] = useState<'comments' | 'primary' | 'dial-history'>(
-    'comments'
-  )
+  const [activeCommentTab, setActiveCommentTab] = useState<
+    'ta-chains' | 'comments' | 'primary' | 'dial-history'
+  >('ta-chains')
+  const [isChainExecutorOpen, setIsChainExecutorOpen] = useState(false)
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
@@ -2318,23 +2319,6 @@ export function ClientDetailPage() {
                       {t('pages.clients.detail.tabs.docs')}
                     </span>
                   </button>
-                  {/* Tab 7: TA Chains (KAN-361) */}
-                  <button
-                    type="button"
-                    data-tab="ta-chains"
-                    onClick={() => setActiveRightCardTab('ta-chains')}
-                    className={cn(
-                      'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
-                      activeRightCardTab === 'ta-chains'
-                        ? 'border-primary-300 text-secondary-800 bg-primary-300/10'
-                        : 'hover:text-secondary-800 border-transparent text-gray-600'
-                    )}
-                  >
-                    <Icons.CheckmarkBadge02 size={20} className="shrink-0 text-current" />
-                    <span className="text-xs font-medium whitespace-nowrap md:text-sm">
-                      {t('pages.clients.detail.tabs.taChains')}
-                    </span>
-                  </button>
                 </div>
               </div>
 
@@ -3245,19 +3229,6 @@ export function ClientDetailPage() {
                     )}
                   </div>
                 )}
-
-                {/* Tab 7: TA Chains (KAN-361) */}
-                {activeRightCardTab === 'ta-chains' && (
-                  <div className="flex flex-1 flex-col items-start gap-6 self-stretch p-3 md:p-6">
-                    <ChainExecutor clientId={clientId} debts={loans} />
-                    <div className="w-full border-t border-gray-200 pt-4">
-                      <h3 className="text-dark-500 mb-3 text-sm font-semibold">
-                        {t('pages.clientChains.history.title')}
-                      </h3>
-                      <TAInteractionHistory clientId={clientId} debts={loans} />
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -3269,6 +3240,17 @@ export function ClientDetailPage() {
           <div className="flex w-full flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
             {/* Tabs */}
             <div className="flex items-center rounded-lg border border-white bg-white p-1 shadow-sm">
+              <button
+                onClick={() => setActiveCommentTab('ta-chains')}
+                className={cn(
+                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  activeCommentTab === 'ta-chains'
+                    ? 'bg-secondary-800 text-white'
+                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                )}
+              >
+                {t('pages.clients.detail.tabs.taChains')}
+              </button>
               <button
                 onClick={() => setActiveCommentTab('comments')}
                 className={cn(
@@ -3315,6 +3297,30 @@ export function ClientDetailPage() {
           </div>
 
           {/* Content based on active tab */}
+          {activeCommentTab === 'ta-chains' && (
+            <div className="flex w-full flex-col gap-4">
+              <button
+                type="button"
+                onClick={() => setIsChainExecutorOpen(true)}
+                className="bg-primary-300 text-dark-500 hover:bg-primary-500 w-full rounded-lg px-4 py-3 text-sm font-medium transition-colors sm:w-auto sm:self-start"
+              >
+                {t('pages.clientChains.logInteraction')}
+              </button>
+              <TAInteractionHistory clientId={clientId} debts={loans} />
+            </div>
+          )}
+
+          {/* Chain Executor Modal */}
+          <Modal
+            open={isChainExecutorOpen}
+            onClose={() => setIsChainExecutorOpen(false)}
+            maxWidth="xl"
+          >
+            <ModalContent>
+              <ChainExecutor clientId={clientId} debts={loans} />
+            </ModalContent>
+          </Modal>
+
           {activeCommentTab === 'comments' &&
             (isActivitiesLoading ? (
               <TableSkeleton columns={12} rows={3} className="w-full" />
