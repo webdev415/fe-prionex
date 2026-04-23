@@ -139,7 +139,8 @@ export function ChainBuilderPage() {
   const [newEffectType, setNewEffectType] = useState(EFFECT_TYPES[0])
   const [newEffectConfig, setNewEffectConfig] = useState<Record<string, string>>({})
   const [newBranchTo, setNewBranchTo] = useState('')
-  const [newBranchLeaf, setNewBranchLeaf] = useState('')
+  const [newBranchConditions, setNewBranchConditions] = useState<Set<number>>(new Set())
+  const [branchCondDropdownOpen, setBranchCondDropdownOpen] = useState(false)
 
   const steps: TAChainStep[] = chain?.steps ?? []
   const selectedStep = steps.find((s) => s.id === selectedStepId)
@@ -806,11 +807,13 @@ export function ChainBuilderPage() {
                                 ? `${steps.find((s) => s.id === br.to_step_id)!.step_order}. ${steps.find((s) => s.id === br.to_step_id)!.target_action_name}`
                                 : `step #${br.to_step_id}`}{' '}
                               <span className="font-normal text-purple-600">
-                                {br.condition_dropdown_value_id != null
-                                  ? `if "${dvNameById.get(br.condition_dropdown_value_id) ?? `#${br.condition_dropdown_value_id}`}"`
-                                  : br.condition_leaf_id != null
-                                    ? `if leaf #${br.condition_leaf_id}`
-                                    : '(else)'}
+                                {br.condition_dropdown_value_ids.length > 0
+                                  ? `if ${br.condition_dropdown_value_ids.map((id) => `"${dvNameById.get(id) ?? `#${id}`}"`).join(' or ')}`
+                                  : br.condition_dropdown_value_id != null
+                                    ? `if "${dvNameById.get(br.condition_dropdown_value_id) ?? `#${br.condition_dropdown_value_id}`}"`
+                                    : br.condition_leaf_id != null
+                                      ? `if leaf #${br.condition_leaf_id}`
+                                      : '(else)'}
                               </span>
                             </span>
                             <button
@@ -854,18 +857,19 @@ export function ChainBuilderPage() {
                                 await createBranch.mutateAsync({
                                   from_step_id: selectedStep.id,
                                   to_step_id: parseInt(newBranchTo, 10),
-                                  condition_dropdown_value_id:
-                                    newBranchLeaf && newBranchLeaf !== 'else'
-                                      ? parseInt(newBranchLeaf, 10)
+                                  condition_dropdown_value_ids:
+                                    newBranchConditions.size > 0
+                                      ? Array.from(newBranchConditions)
                                       : undefined,
                                 })
                                 toast.success(
-                                  newBranchLeaf && newBranchLeaf !== 'else'
+                                  newBranchConditions.size > 0
                                     ? t('pages.chainBuilder.branchAddedCondition')
                                     : t('pages.chainBuilder.branchAddedElse')
                                 )
                                 setNewBranchTo('')
-                                setNewBranchLeaf('')
+                                setNewBranchConditions(new Set())
+                                setBranchCondDropdownOpen(false)
                               } catch (e) {
                                 toast.error(getErrorMessage(e))
                               }
@@ -875,23 +879,60 @@ export function ChainBuilderPage() {
                             +
                           </button>
                         </div>
-                        {stepDropdownValues.length > 0 && (
-                          <Select value={newBranchLeaf} onValueChange={setNewBranchLeaf}>
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder={t('pages.chainBuilder.conditionLeaf')} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="else">
-                                {t('pages.chainBuilder.conditionElse')}
-                              </SelectItem>
-                              {stepDropdownValues.map((dv) => (
-                                <SelectItem key={dv.id} value={String(dv.id)}>
-                                  {dv.value}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
+                        {stepDropdownValues.length > 0 &&
+                          (() => {
+                            const [open, setOpen] = [
+                              branchCondDropdownOpen,
+                              setBranchCondDropdownOpen,
+                            ]
+                            return (
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onClick={() => setOpen(!open)}
+                                  className="flex h-9 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 text-xs text-gray-700 hover:bg-gray-50"
+                                >
+                                  <span className="truncate">
+                                    {newBranchConditions.size > 0
+                                      ? Array.from(newBranchConditions)
+                                          .map((id) => dvNameById.get(id) ?? `#${id}`)
+                                          .join(', ')
+                                      : t('pages.chainBuilder.conditionLeaf')}
+                                  </span>
+                                  <span
+                                    className={`ml-2 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+                                  >
+                                    ▾
+                                  </span>
+                                </button>
+                                {open && (
+                                  <div className="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white py-1 shadow-lg">
+                                    <div className="max-h-48 overflow-y-auto">
+                                      {stepDropdownValues.map((dv) => {
+                                        const checked = newBranchConditions.has(dv.id)
+                                        return (
+                                          <button
+                                            key={dv.id}
+                                            type="button"
+                                            onClick={() => {
+                                              const next = new Set(newBranchConditions)
+                                              if (checked) next.delete(dv.id)
+                                              else next.add(dv.id)
+                                              setNewBranchConditions(next)
+                                            }}
+                                            className="flex w-full items-center justify-between px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100"
+                                          >
+                                            <span>{dv.value}</span>
+                                            {checked && <span className="text-gray-500">✓</span>}
+                                          </button>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })()}
                       </div>
                     </div>
                   </section>
