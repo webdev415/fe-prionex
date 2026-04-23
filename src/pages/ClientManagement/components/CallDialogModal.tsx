@@ -113,6 +113,7 @@ export function CallDialogModal({
 
   // Hangup mutation
   const hangupMutation = useHangupCall()
+  const callDetailsState = callDetails?.state
 
   // Track modal open state
   useEffect(() => {
@@ -144,8 +145,13 @@ export function CallDialogModal({
   /** Number shown during / after outbound call (includes manual entry). */
   const [dialDisplayPhone, setDialDisplayPhone] = useState<string | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const countdownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const dialingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** Parents often pass inline `onClose` handlers; keep latest in a ref so auto-close timers are stable. */
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -257,6 +263,13 @@ export function CallDialogModal({
     }
   }, [callDetails]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const { reset: resetHangupMutation } = hangupMutation
+  useEffect(() => {
+    if (callDetailsState === 'COMPLETED' || callDetailsState === 'FAILED') {
+      resetHangupMutation()
+    }
+  }, [callDetailsState, resetHangupMutation])
+
   // Timer for dialing and connected states
   useEffect(() => {
     if ((callState === 'dialing' || callState === 'connected') && open) {
@@ -277,13 +290,12 @@ export function CallDialogModal({
     }
   }, [callState, open])
 
-  // Auto-close countdown for ended state
+  // Auto-close countdown for ended state (do not depend on `onClose` identity — see onCloseRef)
   useEffect(() => {
     if (callState === 'ended' && open) {
       countdownRef.current = setInterval(() => {
         setAutoCloseCountdown((prev) => {
           if (prev <= 1) {
-            // Close modal when countdown reaches 0
             if (intervalRef.current) {
               clearInterval(intervalRef.current)
               intervalRef.current = null
@@ -297,7 +309,7 @@ export function CallDialogModal({
             setIsMuted(false)
             setIsOnHold(false)
             setAutoCloseCountdown(3)
-            onClose()
+            onCloseRef.current()
             return 0
           }
           return prev - 1
@@ -315,7 +327,7 @@ export function CallDialogModal({
         clearInterval(countdownRef.current)
       }
     }
-  }, [callState, open, initialState, onClose])
+  }, [callState, open, initialState])
 
   const handleCallNow = () => {
     if (!canPlaceCall) return
@@ -867,6 +879,14 @@ export function CallDialogModal({
                   <span className="font-semibold">{autoCloseCountdown}</span>{' '}
                   {t('pages.clients.modals.callDialog.seconds')}...
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClose}
+                  className="text-dark-500 mt-3 w-full rounded-md border-gray-400"
+                >
+                  {t('actions.close')}
+                </Button>
               </>
             )}
 
