@@ -116,6 +116,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
       if (minimizedCall.callState === 'connected') return 'bg-success-500'
       if (minimizedCall.callState === 'dialing') return 'bg-primary-500'
       if (minimizedCall.callState === 'ended') return 'bg-gray-500'
+      if (minimizedCall.callState === 'initial') return 'bg-gray-400'
     }
     return 'bg-primary-500'
   }
@@ -127,6 +128,8 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
       if (minimizedCall.callState === 'connected')
         return t('pages.clients.modals.callDialog.connected')
       if (minimizedCall.callState === 'ended') return t('pages.clients.modals.callDialog.callEnded')
+      if (minimizedCall.callState === 'initial')
+        return t('pages.clients.modals.callDialog.readyToCall')
       return t('pages.clients.modals.callDialog.callClient')
     }
     return t('pages.clients.modals.callRecording.title')
@@ -160,26 +163,28 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
             <span className="text-xs font-medium text-white">{getStatusText()}</span>
           </div>
 
-          {/* Call details */}
-          <div className="flex flex-col gap-2 border-t border-gray-700 pt-2">
-            {minimizedCall.callType && (
-              <div className="flex items-center gap-2">
-                <Icons.Phone size={14} className="text-gray-400" strokeWidth={1.5} />
-                <span className="text-xs text-gray-300 capitalize">
-                  {minimizedCall.callType.replace('-', ' ')}
-                </span>
-              </div>
-            )}
-            {minimizedCall.elapsedTime !== undefined && minimizedCall.elapsedTime > 0 && (
-              <div className="flex items-center gap-2">
-                <Icons.StopWatch size={14} className="text-gray-400" strokeWidth={1.5} />
-                <span className="text-xs text-gray-300">
-                  {t('pages.clients.modals.callDialog.talkTime')}:{' '}
-                  {formatTime(minimizedCall.elapsedTime)}
-                </span>
-              </div>
-            )}
-          </div>
+          {/* Call details — hidden in 'initial' state since nothing has been committed yet */}
+          {minimizedCall.callState !== 'initial' && (
+            <div className="flex flex-col gap-2 border-t border-gray-700 pt-2">
+              {minimizedCall.callType && (
+                <div className="flex items-center gap-2">
+                  <Icons.Phone size={14} className="text-gray-400" strokeWidth={1.5} />
+                  <span className="text-xs text-gray-300 capitalize">
+                    {minimizedCall.callType.replace('-', ' ')}
+                  </span>
+                </div>
+              )}
+              {minimizedCall.elapsedTime !== undefined && minimizedCall.elapsedTime > 0 && (
+                <div className="flex items-center gap-2">
+                  <Icons.StopWatch size={14} className="text-gray-400" strokeWidth={1.5} />
+                  <span className="text-xs text-gray-300">
+                    {t('pages.clients.modals.callDialog.talkTime')}:{' '}
+                    {formatTime(minimizedCall.elapsedTime)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )
     } else {
@@ -354,6 +359,8 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
               : undefined
           }
           initialCallType={minimizedCall.callType || 'white-line'}
+          initialManualPhoneEnabled={minimizedCall.manualPhoneEnabled ?? false}
+          initialManualPhoneDigits={minimizedCall.manualPhoneDigits ?? ''}
         />
       )}
 

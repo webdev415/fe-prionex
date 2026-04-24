@@ -950,6 +950,7 @@
           "reject": "Reject",
           "answerCall": "Answer Call",
           "callClient": "Call Client",
+          "readyToCall": "Ready to call",
           "clientName": "Client Name",
           "phoneNumber": "Phone Number",
           "manualPhoneEntry": "Enter phone number manually",

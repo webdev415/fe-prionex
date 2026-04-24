@@ -18,6 +18,8 @@ export interface MinimizedCallInfo {
   callState?: 'initial' | 'dialing' | 'connected' | 'ended' | 'failed' | 'incoming'
   callType?: 'white-line' | 'gray-line' | 'spam-calls'
   elapsedTime?: number
+  manualPhoneEnabled?: boolean
+  manualPhoneDigits?: string
   // For call recording
   callData?: {
     type: string
