@@ -1225,6 +1225,7 @@
           "reject": "Відхилити",
           "answerCall": "Відповісти на дзвінок",
           "callClient": "Дзвінок клієнту",
+          "readyToCall": "Готовий до дзвінка",
           "clientName": "Ім'я клієнта",
           "phoneNumber": "Номер телефону",
           "manualPhoneEntry": "Ввести номер вручну",

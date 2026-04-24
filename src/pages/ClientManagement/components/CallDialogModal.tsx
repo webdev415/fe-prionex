@@ -37,6 +37,8 @@ export interface CallDialogModalProps {
   initialState?: CallState
   initialElapsedTime?: number // Initial elapsed time in seconds (used when restoring from minimized)
   minimizedAt?: number // Timestamp (ms) when call was minimized — used to compute extra elapsed time
+  initialManualPhoneEnabled?: boolean // Restored manual-phone toggle when re-opening from minimized
+  initialManualPhoneDigits?: string // Restored manually-typed digits when re-opening from minimized
   error?: string | null // Error message to display when call fails
   isLoading?: boolean // Loading state for call initiation
   isCallCooldown?: boolean
@@ -86,6 +88,8 @@ export function CallDialogModal({
   initialState = 'initial',
   initialElapsedTime = 0,
   minimizedAt,
+  initialManualPhoneEnabled = false,
+  initialManualPhoneDigits = '',
   error,
   isLoading,
   isCallCooldown = false,
@@ -140,8 +144,8 @@ export function CallDialogModal({
   const [isMuted, setIsMuted] = useState(false)
   const [isOnHold, setIsOnHold] = useState(false)
   const [autoCloseCountdown, setAutoCloseCountdown] = useState(3)
-  const [manualPhoneEnabled, setManualPhoneEnabled] = useState(false)
-  const [manualPhoneDigits, setManualPhoneDigits] = useState('')
+  const [manualPhoneEnabled, setManualPhoneEnabled] = useState(initialManualPhoneEnabled)
+  const [manualPhoneDigits, setManualPhoneDigits] = useState(initialManualPhoneDigits)
   /** Number shown during / after outbound call (includes manual entry). */
   const [dialDisplayPhone, setDialDisplayPhone] = useState<string | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -167,8 +171,8 @@ export function CallDialogModal({
       setIsMuted(false)
       setIsOnHold(false)
       setAutoCloseCountdown(3)
-      setManualPhoneEnabled(false)
-      setManualPhoneDigits('')
+      setManualPhoneEnabled(initialManualPhoneEnabled)
+      setManualPhoneDigits(initialManualPhoneDigits)
       setDialDisplayPhone(null)
     } else {
       // Cleanup intervals
@@ -185,7 +189,15 @@ export function CallDialogModal({
         dialingTimeoutRef.current = null
       }
     }
-  }, [open, initialState, initialElapsedTime, initialCallType, minimizedAt])
+  }, [
+    open,
+    initialState,
+    initialElapsedTime,
+    initialCallType,
+    minimizedAt,
+    initialManualPhoneEnabled,
+    initialManualPhoneDigits,
+  ])
 
   const callLineLabel = useMemo(() => {
     if (callType === 'gray-line') {
@@ -194,7 +206,11 @@ export function CallDialogModal({
     return t('pages.clients.modals.callDialog.whiteLine')
   }, [callType, t])
 
-  const displayPhone = dialDisplayPhone ?? phoneNumber
+  // Prefer the number already dialed; else what the user has typed in manual
+  // mode (if any); else the client's default. Used by the minimize snapshot
+  // and the active-call layout.
+  const displayPhone =
+    dialDisplayPhone ?? (manualPhoneEnabled && manualPhoneDigits ? manualPhoneDigits : phoneNumber)
 
   const canPlaceCall = !manualPhoneEnabled
     ? String(phoneNumber).trim().length > 0
@@ -394,11 +410,17 @@ export function CallDialogModal({
       id: `call-dialog-${Date.now()}`,
       type: 'call-dialog',
       clientName,
-      phoneNumber: displayPhone,
+      // Always store the ORIGINAL client phone here so restoring and
+      // un-checking "manual phone entry" falls back to the correct number.
+      phoneNumber,
+      // Separate field for what the minimized-bubble tooltip should show.
+      displayPhone,
       callId: callId || null,
       callState,
       callType,
       elapsedTime,
+      manualPhoneEnabled,
+      manualPhoneDigits,
       timestamp: Date.now(),
     })
     // If onMinimize is provided, use it instead of onClose
