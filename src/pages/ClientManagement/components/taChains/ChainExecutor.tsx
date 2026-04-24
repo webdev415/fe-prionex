@@ -246,10 +246,7 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
     selectedDropdownValue?.require_promise_date ||
     selectedDropdownValue?.require_promise_amount ||
     selectedDropdownValue?.require_credit
-  const canAutoAdvance =
-    currentTA &&
-    (currentTA.field_type === 'dropdown' || currentTA.field_type === 'date') &&
-    !needsExtraFields
+  const canAutoAdvance = currentTA && currentTA.field_type === 'dropdown' && !needsExtraFields
 
   useEffect(() => {
     if (!isLastStep && !isAutoAdvancing && activeInstance && canAutoAdvance) {
@@ -539,7 +536,11 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
                 </SelectContent>
               </Select>
             ) : currentTA.field_type === 'date' ? (
-              <Input type="date" value={stepValue} onChange={(e) => setStepValue(e.target.value)} />
+              <Input
+                type="datetime-local"
+                value={stepValue}
+                onChange={(e) => setStepValue(e.target.value)}
+              />
             ) : currentTA.field_type === 'amount' ? (
               <Input
                 type="number"
