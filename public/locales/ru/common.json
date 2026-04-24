@@ -1309,6 +1309,7 @@
           "reject": "Отклонить",
           "answerCall": "Ответить на звонок",
           "callClient": "Звонок клиенту",
+          "readyToCall": "Готов к звонку",
           "clientName": "Имя клиента",
           "phoneNumber": "Номер телефона",
           "manualPhoneEntry": "Ввести номер вручную",

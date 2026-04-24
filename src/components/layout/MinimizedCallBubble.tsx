@@ -29,13 +29,19 @@ export function MinimizedCallBubble() {
   const activeCallId = isActiveCall && minimizedCall?.callId ? minimizedCall.callId : null
   const { data: callDetails } = useCallDetails(activeCallId)
 
-  // Live elapsed time: compute from the snapshot + time passed since minimized
+  // Live elapsed time: compute from the snapshot + time passed since minimized.
+  // Only advance the timer for dialing/connected — otherwise 'initial' or 'ended'
+  // states would accrue a fake "talk time" after a page refresh.
   const [liveElapsedTime, setLiveElapsedTime] = useState(() => {
     if (!minimizedCall) return 0
-    if (minimizedCall.timestamp && minimizedCall.elapsedTime !== undefined) {
-      return minimizedCall.elapsedTime + Math.floor((Date.now() - minimizedCall.timestamp) / 1000)
+    const base = minimizedCall.elapsedTime ?? 0
+    const isLive =
+      minimizedCall.type === 'call-dialog' &&
+      (minimizedCall.callState === 'dialing' || minimizedCall.callState === 'connected')
+    if (isLive && minimizedCall.timestamp) {
+      return base + Math.floor((Date.now() - minimizedCall.timestamp) / 1000)
     }
-    return minimizedCall.elapsedTime ?? 0
+    return base
   })
 
   // Sync backend state: detect when call ends while minimized
@@ -103,6 +109,7 @@ export function MinimizedCallBubble() {
       if (minimizedCall.callState === 'connected') return 'bg-success-500'
       if (minimizedCall.callState === 'dialing') return 'bg-primary-500'
       if (minimizedCall.callState === 'ended') return 'bg-gray-500'
+      if (minimizedCall.callState === 'initial') return 'bg-gray-400'
     }
     return 'bg-primary-500'
   }
@@ -113,6 +120,8 @@ export function MinimizedCallBubble() {
       if (minimizedCall.callState === 'connected')
         return t('pages.clients.modals.callDialog.connected')
       if (minimizedCall.callState === 'ended') return t('pages.clients.modals.callDialog.callEnded')
+      if (minimizedCall.callState === 'initial')
+        return t('pages.clients.modals.callDialog.readyToCall')
       return t('pages.clients.modals.callDialog.callClient')
     }
     return t('pages.clients.modals.callRecording.title')
@@ -133,7 +142,9 @@ export function MinimizedCallBubble() {
               <div className="truncate text-sm font-semibold text-white">
                 {minimizedCall.clientName}
               </div>
-              <div className="text-xs text-gray-300">{minimizedCall.phoneNumber}</div>
+              <div className="text-xs text-gray-300">
+                {minimizedCall.displayPhone || minimizedCall.phoneNumber}
+              </div>
             </div>
           </div>
 
@@ -143,25 +154,27 @@ export function MinimizedCallBubble() {
             <span className="text-xs font-medium text-white">{getStatusText()}</span>
           </div>
 
-          {/* Call details */}
-          <div className="flex flex-col gap-2 border-t border-gray-700 pt-2">
-            {minimizedCall.callType && (
-              <div className="flex items-center gap-2">
-                <Icons.Phone size={14} className="text-gray-400" strokeWidth={1.5} />
-                <span className="text-xs text-gray-300 capitalize">
-                  {minimizedCall.callType.replace('-', ' ')}
-                </span>
-              </div>
-            )}
-            {liveElapsedTime > 0 && (
-              <div className="flex items-center gap-2">
-                <Icons.StopWatch size={14} className="text-gray-400" strokeWidth={1.5} />
-                <span className="text-xs text-gray-300">
-                  {t('pages.clients.modals.callDialog.talkTime')}: {formatTime(liveElapsedTime)}
-                </span>
-              </div>
-            )}
-          </div>
+          {/* Call details — hidden in 'initial' state since the user hasn't confirmed a call type or started dialing */}
+          {minimizedCall.callState !== 'initial' && (
+            <div className="flex flex-col gap-2 border-t border-gray-700 pt-2">
+              {minimizedCall.callType && (
+                <div className="flex items-center gap-2">
+                  <Icons.Phone size={14} className="text-gray-400" strokeWidth={1.5} />
+                  <span className="text-xs text-gray-300 capitalize">
+                    {minimizedCall.callType.replace('-', ' ')}
+                  </span>
+                </div>
+              )}
+              {liveElapsedTime > 0 && (
+                <div className="flex items-center gap-2">
+                  <Icons.StopWatch size={14} className="text-gray-400" strokeWidth={1.5} />
+                  <span className="text-xs text-gray-300">
+                    {t('pages.clients.modals.callDialog.talkTime')}: {formatTime(liveElapsedTime)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )
     } else {
@@ -282,6 +295,8 @@ export function MinimizedCallBubble() {
           initialElapsedTime={minimizedCall.elapsedTime ?? 0}
           minimizedAt={isActiveCall ? minimizedCall.timestamp : undefined}
           initialCallType={minimizedCall.callType || 'white-line'}
+          initialManualPhoneEnabled={minimizedCall.manualPhoneEnabled ?? false}
+          initialManualPhoneDigits={minimizedCall.manualPhoneDigits ?? ''}
         />
       )}
 
