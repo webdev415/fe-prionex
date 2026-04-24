@@ -80,15 +80,18 @@ export function usePaymentDebtBreakdown(paymentId: string | null, options?: { en
 }
 
 /**
- * Get pending verification payments (bell notifications)
- * Only fires if user has edit_client_debt — Operators see pending payments,
- * Supervisors do NOT. Admins also see it (superuser).
+ * Pending payments that exceeded the verification SLA (days).
+ * Enabled only for users with edit_client_debt. By default the API returns only
+ * payments recorded by the current user (My Tasks / operator fixation).
  */
-export function usePendingVerificationPayments(params: { days?: number } = {}) {
+export function usePendingVerificationPayments(
+  params: { days?: number; only_recorded_by_me?: boolean } = {}
+) {
   const canViewPending = useHasPermission(PERMISSIONS.CLIENTS.EDIT_DEBT)
+  const queryParams = { only_recorded_by_me: true, ...params }
   return useQuery<PendingPaymentResponse>({
-    queryKey: ['payments', 'pending-verifications', params],
-    queryFn: () => getPendingVerificationPayments(params),
+    queryKey: ['payments', 'pending-verifications', queryParams],
+    queryFn: () => getPendingVerificationPayments(queryParams),
     enabled: canViewPending,
     refetchInterval: canViewPending ? 60_000 : false,
     staleTime: 30_000,

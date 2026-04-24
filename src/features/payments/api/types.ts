@@ -186,6 +186,8 @@ export interface PendingPaymentItem {
   payment_date: string
   recorded_at: string
   days_pending: number
+  /** User who recorded the payment (operator / fixation). */
+  recorded_by_user_id?: number | null
 }
 
 export interface PendingPaymentResponse {
