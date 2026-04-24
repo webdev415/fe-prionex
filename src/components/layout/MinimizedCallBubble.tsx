@@ -142,7 +142,9 @@ export function MinimizedCallBubble() {
               <div className="truncate text-sm font-semibold text-white">
                 {minimizedCall.clientName}
               </div>
-              <div className="text-xs text-gray-300">{minimizedCall.phoneNumber}</div>
+              <div className="text-xs text-gray-300">
+                {minimizedCall.displayPhone || minimizedCall.phoneNumber}
+              </div>
             </div>
           </div>
 

@@ -12,7 +12,8 @@ export interface MinimizedCallInfo {
   id: string
   type: CallModalType
   clientName: string
-  phoneNumber: string
+  phoneNumber: string // ORIGINAL client phone — used as the restored modal's phoneNumber prop
+  displayPhone?: string // What the bubble tooltip should show (manual/dialed number if any)
   // For call dialog
   callId?: string | null // SIP call ID for hangup/state tracking
   callState?: 'initial' | 'dialing' | 'connected' | 'ended' | 'failed' | 'incoming'

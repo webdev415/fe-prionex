@@ -206,7 +206,11 @@ export function CallDialogModal({
     return t('pages.clients.modals.callDialog.whiteLine')
   }, [callType, t])
 
-  const displayPhone = dialDisplayPhone ?? phoneNumber
+  // Prefer the number already dialed; else what the user has typed in manual
+  // mode (if any); else the client's default. Used by the minimize snapshot
+  // and the active-call layout.
+  const displayPhone =
+    dialDisplayPhone ?? (manualPhoneEnabled && manualPhoneDigits ? manualPhoneDigits : phoneNumber)
 
   const canPlaceCall = !manualPhoneEnabled
     ? String(phoneNumber).trim().length > 0
@@ -406,7 +410,11 @@ export function CallDialogModal({
       id: `call-dialog-${Date.now()}`,
       type: 'call-dialog',
       clientName,
-      phoneNumber: displayPhone,
+      // Always store the ORIGINAL client phone here so restoring and
+      // un-checking "manual phone entry" falls back to the correct number.
+      phoneNumber,
+      // Separate field for what the minimized-bubble tooltip should show.
+      displayPhone,
       callId: callId || null,
       callState,
       callType,
