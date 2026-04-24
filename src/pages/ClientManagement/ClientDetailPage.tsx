@@ -159,6 +159,7 @@ export function ClientDetailPage() {
     'ta-chains' | 'comments' | 'primary' | 'dial-history'
   >('ta-chains')
   const [isChainExecutorOpen, setIsChainExecutorOpen] = useState(false)
+  const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
@@ -3315,9 +3316,34 @@ export function ClientDetailPage() {
             open={isChainExecutorOpen}
             onClose={() => setIsChainExecutorOpen(false)}
             maxWidth="xl"
+            showCloseButton={false}
           >
+            {/* Minimize & Close buttons */}
+            <div className="absolute top-2 right-2 flex items-center gap-1 sm:top-4 sm:right-12">
+              <button
+                onClick={() => chainExecutorMinimizeRef.current?.()}
+                className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+                aria-label="Minimize modal"
+              >
+                <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
+              </button>
+              <button
+                onClick={() => setIsChainExecutorOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+                aria-label="Close modal"
+              >
+                <Icons.Cancel01 size={20} className="text-dark-500" strokeWidth={1.5} />
+              </button>
+            </div>
             <ModalContent>
-              <ChainExecutor clientId={clientId} debts={loans} />
+              <ChainExecutor
+                clientId={clientId}
+                clientName={client?.fullName ?? `Client #${clientId}`}
+                debts={loans}
+                onSave={() => setIsChainExecutorOpen(false)}
+                onMinimize={() => setIsChainExecutorOpen(false)}
+                onMinimizeRef={chainExecutorMinimizeRef}
+              />
             </ModalContent>
           </Modal>
 

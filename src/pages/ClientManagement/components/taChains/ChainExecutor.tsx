@@ -38,9 +38,11 @@ import {
 import type { TAChainStep } from '@/features/taChains/api/types'
 import { useQuickPicks } from '@/features/quickPicks/hooks/useQuickPicks'
 import { getErrorMessage } from '@/lib/errors'
+import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 
 interface Props {
   clientId: number
+  clientName?: string
   debts?: Array<{
     id: number
     contract_number?: string
@@ -48,9 +50,19 @@ interface Props {
     days_past_due?: number | null
     seller_company?: string | null
   }>
+  onSave?: () => void
+  onMinimize?: () => void
+  onMinimizeRef?: React.MutableRefObject<(() => void) | null>
 }
 
-export function ChainExecutor({ clientId, debts = [] }: Props) {
+export function ChainExecutor({
+  clientId,
+  clientName,
+  debts = [],
+  onSave,
+  onMinimize,
+  onMinimizeRef,
+}: Props) {
   const { t } = useTranslation('common')
 
   // Available chains (manual only, active)
@@ -142,6 +154,64 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
   const [creditId, setCreditId] = useState<string>('')
   const [notes, setNotes] = useState('')
 
+  // Minimize / restore
+  const { minimized: minimizedState, setMinimized, clear: clearMinimized } = useChainExecutorStore()
+  const restoredRef = useRef(false)
+
+  // Restore form state from minimized store on mount
+  useEffect(() => {
+    if (minimizedState?.clientId === clientId && minimizedState.formState) {
+      const fs = minimizedState.formState
+      setStepValue(fs.stepValue)
+      setPromiseDate(fs.promiseDate)
+      setPromiseAmount(fs.promiseAmount)
+      setCreditId(fs.creditId)
+      setNotes(fs.notes)
+      setCompletedSteps(fs.completedSteps)
+      collectedStepDataRef.current = fs.collectedStepData
+      collectedDropdownValueIdsRef.current = fs.collectedDropdownValueIds
+      collectedPromiseDateRef.current = fs.collectedPromiseDate
+      collectedPromiseAmountRef.current = fs.collectedPromiseAmount
+      collectedCreditIdRef.current = fs.collectedCreditId
+      restoredRef.current = true
+      clearMinimized()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleMinimize = () => {
+    setMinimized({
+      clientId,
+      clientName: clientName ?? `Client #${clientId}`,
+      chainName: activeChain?.name ?? null,
+      currentStepOrder: activeInstance?.current_step_order ?? 1,
+      totalSteps: steps.length || 1,
+      timestamp: Date.now(),
+      debts,
+      formState: {
+        stepValue,
+        promiseDate,
+        promiseAmount,
+        creditId,
+        notes,
+        completedSteps,
+        collectedStepData: { ...collectedStepDataRef.current },
+        collectedDropdownValueIds: { ...collectedDropdownValueIdsRef.current },
+        collectedPromiseDate: collectedPromiseDateRef.current,
+        collectedPromiseAmount: collectedPromiseAmountRef.current,
+        collectedCreditId: collectedCreditIdRef.current,
+      },
+    })
+    onMinimize?.()
+  }
+
+  // Expose handleMinimize to parent via ref
+  useEffect(() => {
+    if (onMinimizeRef) onMinimizeRef.current = handleMinimize
+    return () => {
+      if (onMinimizeRef) onMinimizeRef.current = null
+    }
+  })
+
   // Mutations
   const startMut = useStartChainInstance()
   const createIntMut = useCreateTAInteraction()
@@ -166,6 +236,11 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
 
   // Reset current step fields on step change + pre-fill from template
   useEffect(() => {
+    // Skip the first reset when restoring from minimized state
+    if (restoredRef.current) {
+      restoredRef.current = false
+      return
+    }
     const taId = currentStep?.target_action_id
     const preset = taId ? presetValuesRef.current[String(taId)] : undefined
     setStepValue(preset ?? '')
@@ -334,6 +409,7 @@ export function ChainExecutor({ clientId, debts = [] }: Props) {
       setPromiseDate('')
       setPromiseAmount('')
       setNotes('')
+      onSave?.()
     } catch (err) {
       toast.error(getErrorMessage(err))
     }
