@@ -103,27 +103,29 @@ export function InteractionLogPage() {
       key: 'dictionary_path',
       header: t('pages.interactionLog.columns.dictionaryPath'),
       align: 'left',
-      render: (row) => (
-        <span className="text-xs text-gray-700">
-          {row.dictionary_path.length > 0 ? row.dictionary_path.join(' > ') : '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'promise_date',
-      header: t('pages.interactionLog.columns.promiseDate'),
-      align: 'left',
-      render: (row) => (
-        <span className="text-xs text-gray-700">
-          {row.promise_date ? new Date(row.promise_date).toLocaleDateString() : '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'promise_amount',
-      header: t('pages.interactionLog.columns.promiseAmount'),
-      align: 'left',
-      render: (row) => <span className="text-xs text-gray-700">{row.promise_amount ?? '-'}</span>,
+      render: (row) => {
+        const base = row.dictionary_path.length > 0 ? row.dictionary_path.join(' > ') : '-'
+        // Promise date/amount live as top-level interaction fields. Surface
+        // them inside the result so the dedicated columns aren't needed.
+        const promiseSuffix: string[] = []
+        if (row.promise_date) {
+          promiseSuffix.push(
+            `${t('pages.interactionLog.columns.promiseDate')}: ${new Date(row.promise_date).toLocaleDateString()}`
+          )
+        }
+        if (row.promise_amount) {
+          promiseSuffix.push(
+            `${t('pages.interactionLog.columns.promiseAmount')}: ${row.promise_amount}`
+          )
+        }
+        const suffix = promiseSuffix.length > 0 ? ` — ${promiseSuffix.join(', ')}` : ''
+        return (
+          <span className="text-xs text-gray-700">
+            {base}
+            {suffix}
+          </span>
+        )
+      },
     },
     {
       key: 'credit_id',

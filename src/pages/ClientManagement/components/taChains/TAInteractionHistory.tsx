@@ -88,6 +88,22 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       header: t('pages.clientChains.history.result'),
       align: 'left',
       render: (row) => {
+        // Promise date/amount live as top-level interaction fields (filled
+        // via dropdown-triggered prompts), not in step_data. Append them so
+        // the result column carries everything the dedicated columns used to.
+        const promiseSuffix: string[] = []
+        if (row.promise_date) {
+          promiseSuffix.push(
+            `${t('pages.clientChains.history.promiseDate')}: ${new Date(row.promise_date).toLocaleDateString()}`
+          )
+        }
+        if (row.promise_amount) {
+          promiseSuffix.push(
+            `${t('pages.clientChains.history.promiseAmount')}: ${row.promise_amount}`
+          )
+        }
+        const suffix = promiseSuffix.length > 0 ? ` — ${promiseSuffix.join(', ')}` : ''
+
         // Show all step values from step_data, ordered by chain step_order
         if (row.step_data && Object.keys(row.step_data).length > 0) {
           const chain = chains.find((c) => c.id === row.chain_id)
@@ -107,33 +123,25 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             )
           }
           if (orderedValues.length > 0) {
-            return <span className="text-xs text-gray-700">{orderedValues.join(' -> ')}</span>
+            return (
+              <span className="text-xs text-gray-700">
+                {orderedValues.join(' -> ')}
+                {suffix}
+              </span>
+            )
           }
         }
         // Fallback to single dropdown_value_name or legacy dictionary_path
+        const fallback =
+          row.dropdown_value_name ??
+          (row.dictionary_path.length > 0 ? row.dictionary_path.join(' > ') : '-')
         return (
           <span className="text-xs text-gray-700">
-            {row.dropdown_value_name ??
-              (row.dictionary_path.length > 0 ? row.dictionary_path.join(' > ') : '-')}
+            {fallback}
+            {suffix}
           </span>
         )
       },
-    },
-    {
-      key: 'promise_date',
-      header: t('pages.clientChains.history.promiseDate'),
-      align: 'left',
-      render: (row) => (
-        <span className="text-xs text-gray-700">
-          {row.promise_date ? new Date(row.promise_date).toLocaleDateString() : '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'promise_amount',
-      header: t('pages.clientChains.history.promiseAmount'),
-      align: 'left',
-      render: (row) => <span className="text-xs text-gray-700">{row.promise_amount ?? '-'}</span>,
     },
     {
       key: 'credit_id',
