@@ -1870,8 +1870,12 @@
         "name": "Название",
         "description": "Описание",
         "chainType": "Тип цепочки",
-        "department": "Отдел",
-        "departmentPlaceholder": "Выберите отдел",
+        "department": "Отделы",
+        "departmentPlaceholder": "Выберите отделы",
+        "departmentSearchPlaceholder": "Поиск отделов…",
+        "departmentNoneFound": "Отделы не найдены",
+        "departmentSelectedCount": "Выбрано: {{count}}",
+        "departmentClear": "Очистить",
         "systemHidden": "Системная (скрытая) — запускается только системой или админом"
       },
       "steps": {
@@ -1892,7 +1896,7 @@
       },
       "errors": {
         "nameRequired": "Название обязательно",
-        "departmentRequired": "Выберите отдел"
+        "departmentRequired": "Выберите хотя бы один отдел"
       },
       "toasts": {
         "created": "Цепочка TA создана",

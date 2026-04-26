@@ -30,7 +30,7 @@ export interface TAChain {
   name: string
   description: string | null
   chain_type: ChainType
-  department_id: number
+  department_ids: number[]
   is_active: boolean
   is_system_hidden: boolean
   steps: TAChainStep[]
@@ -49,7 +49,7 @@ export interface TAChainCreate {
   name: string
   description?: string
   chain_type: ChainType
-  department_id: number
+  department_ids: number[]
   is_system_hidden?: boolean
   steps?: TAChainStepIn[]
 }
@@ -58,7 +58,7 @@ export interface TAChainUpdate {
   name?: string
   description?: string
   chain_type?: ChainType
-  department_id?: number
+  department_ids?: number[]
   is_system_hidden?: boolean
   is_active?: boolean
   steps?: TAChainStepIn[]
@@ -67,6 +67,7 @@ export interface TAChainUpdate {
 export interface TAChainListParams {
   search?: string
   department_id?: number
+  department_ids?: number[]
   chain_type?: ChainType
   include_inactive?: boolean
 }

@@ -176,9 +176,20 @@ export function TAChainsPage() {
                   <span>
                     <strong>{chain.step_count}</strong> {t('pages.taChains.steps.label')}
                   </span>
-                  <span>
-                    {t('pages.taChains.table.department')}:{' '}
-                    {deptNameById.get(chain.department_id) ?? `#${chain.department_id}`}
+                  <span className="flex flex-wrap items-center gap-1">
+                    <span>{t('pages.taChains.table.department')}:</span>
+                    {chain.department_ids.length === 0 ? (
+                      <span className="text-gray-400">—</span>
+                    ) : (
+                      chain.department_ids.map((id) => (
+                        <span
+                          key={id}
+                          className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700"
+                        >
+                          {deptNameById.get(id) ?? `#${id}`}
+                        </span>
+                      ))
+                    )}
                   </span>
                 </div>
               </div>

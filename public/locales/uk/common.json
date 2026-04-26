@@ -1866,8 +1866,12 @@
         "name": "Назва",
         "description": "Опис",
         "chainType": "Тип ланцюжка",
-        "department": "Відділ",
-        "departmentPlaceholder": "Оберіть відділ",
+        "department": "Відділи",
+        "departmentPlaceholder": "Оберіть відділи",
+        "departmentSearchPlaceholder": "Пошук відділів…",
+        "departmentNoneFound": "Відділи не знайдено",
+        "departmentSelectedCount": "Обрано: {{count}}",
+        "departmentClear": "Очистити",
         "systemHidden": "Системний (прихований) — запускається лише системою або адміном"
       },
       "steps": {
@@ -1888,7 +1892,7 @@
       },
       "errors": {
         "nameRequired": "Назва обов'язкова",
-        "departmentRequired": "Оберіть відділ"
+        "departmentRequired": "Оберіть хоча б один відділ"
       },
       "toasts": {
         "created": "Ланцюжок TA створено",

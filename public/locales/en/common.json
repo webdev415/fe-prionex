@@ -1998,8 +1998,12 @@
         "name": "Name",
         "description": "Description",
         "chainType": "Chain type",
-        "department": "Department",
-        "departmentPlaceholder": "Select a department",
+        "department": "Departments",
+        "departmentPlaceholder": "Select departments",
+        "departmentSearchPlaceholder": "Search departments…",
+        "departmentNoneFound": "No departments found",
+        "departmentSelectedCount": "{{count}} selected",
+        "departmentClear": "Clear",
         "systemHidden": "System (hidden) — only the system or an admin can launch"
       },
       "steps": {
@@ -2020,7 +2024,7 @@
       },
       "errors": {
         "nameRequired": "Name is required",
-        "departmentRequired": "Select a department"
+        "departmentRequired": "Select at least one department"
       },
       "toasts": {
         "created": "TA Chain created",

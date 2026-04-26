@@ -65,12 +65,23 @@ export function ChainExecutor({
 }: Props) {
   const { t } = useTranslation('common')
 
-  // Available chains (manual only, active)
-  const { data: chainsData } = useTAChains({ include_inactive: false })
-  const manualChains = useMemo(
-    () => (chainsData?.items ?? []).filter((c) => c.chain_type === 'manual'),
-    [chainsData]
-  )
+  // Operator's department drives chain visibility — they should only
+  // see chains assigned to their own department.
+  const { user } = useAuthStore()
+  const operatorDepartmentId = user?.active_department_id ?? undefined
+
+  // Available chains (manual only, active, scoped to operator's department).
+  // Uses the backend's single-id query param (no array serialization concerns).
+  const { data: chainsData } = useTAChains({
+    include_inactive: false,
+    department_id: operatorDepartmentId,
+  })
+  const manualChains = useMemo(() => {
+    // Hide everything if we don't know the operator's department — better
+    // than leaking other departments' chains via a missing filter.
+    if (operatorDepartmentId === undefined) return []
+    return (chainsData?.items ?? []).filter((c) => c.chain_type === 'manual')
+  }, [chainsData, operatorDepartmentId])
 
   // Full TA data (for dropdown values + flags)
   const { data: tasData } = useTargetActions({ include_hidden: false })
@@ -81,7 +92,6 @@ export function ChainExecutor({
   }, [tasData])
 
   // Tag names for the "Effects on save" panel
-  const { user } = useAuthStore()
   const projectId = user?.active_project_id ? parseInt(user.active_project_id) : undefined
   const { data: tagsList } = useTags(projectId)
   const tagNameById = useMemo(() => {
@@ -90,9 +100,10 @@ export function ChainExecutor({
     return m
   }, [tagsList])
 
-  // Quick picks
+  // Quick picks — keyed by department. A chain may now have several
+  // departments; pick the first as the canonical one for fetching picks.
   const { data: quickPicksData } = useQuickPicks(
-    manualChains.length > 0 ? manualChains[0]?.department_id : undefined
+    manualChains.length > 0 ? manualChains[0]?.department_ids?.[0] : undefined
   )
   const quickPicks = useMemo(() => {
     const manualIds = new Set(manualChains.map((c) => c.id))
