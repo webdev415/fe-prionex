@@ -1092,6 +1092,7 @@ export function ChainExecutor({
                         min={0}
                         step="0.01"
                         placeholder="0.00"
+                        leftIcon={<span className="text-gray-700">₴</span>}
                         value={stepValue}
                         onChange={(e) => setStepValue(e.target.value)}
                       />
@@ -1213,6 +1214,7 @@ export function ChainExecutor({
                       min={0}
                       step="0.01"
                       placeholder="0.00"
+                      leftIcon={<span className="text-gray-700">₴</span>}
                       value={promiseAmount}
                       onChange={(e) => setPromiseAmount(e.target.value)}
                     />
@@ -1622,6 +1624,7 @@ function InstantStepCard({
           min={0}
           step="0.01"
           placeholder="0.00"
+          leftIcon={<span className="text-gray-700">₴</span>}
           value={value.value}
           onChange={(e) => onChange({ value: e.target.value })}
         />
@@ -1732,6 +1735,7 @@ function InstantStepCard({
             min={0}
             step="0.01"
             placeholder="0.00"
+            leftIcon={<span className="text-gray-700">₴</span>}
             value={value.promiseAmount}
             onChange={(e) => onChange({ promiseAmount: e.target.value })}
           />

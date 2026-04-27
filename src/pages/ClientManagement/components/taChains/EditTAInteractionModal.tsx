@@ -263,6 +263,7 @@ export function EditTAInteractionModal({
                       min={0}
                       step="0.01"
                       placeholder="0.00"
+                      leftIcon={<span className="text-gray-700">₴</span>}
                       value={value}
                       onChange={(e) => setStepValue(step.target_action_id, e.target.value)}
                     />
@@ -308,6 +309,7 @@ export function EditTAInteractionModal({
                   min={0}
                   step="0.01"
                   placeholder="0.00"
+                  leftIcon={<span className="text-gray-700">₴</span>}
                   value={promiseAmount}
                   onChange={(e) => setPromiseAmount(e.target.value)}
                 />

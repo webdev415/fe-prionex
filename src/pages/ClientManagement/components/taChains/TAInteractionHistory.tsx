@@ -20,7 +20,7 @@ import { useTargetActions } from '@/features/targetActions/hooks/useTargetAction
 import type { TargetAction } from '@/features/targetActions/api/types'
 import type { TAInteraction } from '@/features/taInteractions/api/types'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { formatMoneyKopeckTight } from '@/lib/formatters'
+import { formatDate, formatDateTime, formatMoneyKopeckTight } from '@/lib/formatters'
 import { Icons } from '@/lib/icons'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -94,57 +94,114 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       header: t('pages.clientChains.history.result'),
       align: 'left',
       render: (row) => {
-        // Promise date/amount live as top-level interaction fields (filled
-        // via dropdown-triggered prompts), not in step_data. Append them so
-        // the result column carries everything the dedicated columns used to.
-        const promiseSuffix: string[] = []
-        if (row.promise_date) {
-          promiseSuffix.push(
-            `${t('pages.clientChains.history.promiseDate')}: ${new Date(row.promise_date).toLocaleDateString()}`
-          )
+        const formatStepValue = (fieldType: string | undefined, val: string): string => {
+          if (fieldType === 'credit') {
+            return val
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+              .map((id) => {
+                const numId = parseInt(id, 10)
+                if (Number.isNaN(numId)) return id
+                return debtContractMap.get(numId) ?? `#${numId}`
+              })
+              .join(', ')
+          }
+          if (fieldType === 'amount') return formatMoneyKopeckTight(val)
+          if (fieldType === 'date') return formatDateTime(val)
+          return val
         }
-        if (row.promise_amount) {
-          promiseSuffix.push(
-            `${t('pages.clientChains.history.promiseAmount')}: ${formatMoneyKopeckTight(row.promise_amount)}`
-          )
-        }
-        const suffix = promiseSuffix.length > 0 ? ` — ${promiseSuffix.join(', ')}` : ''
 
-        // Show all step values from step_data, ordered by chain step_order
+        // Build step entries in chain order. Each dropdown step that
+        // requested follow-ups gets them inline as `(date, amount, credit)`.
+        const entries: { value: string; followUps: string[] }[] = []
+        let consumedPromiseDate = false
+        let consumedPromiseAmount = false
+        let consumedCredit = false
+
         if (row.step_data && Object.keys(row.step_data).length > 0) {
           const chain = chains.find((c) => c.id === row.chain_id)
           const stepsOrdered = chain?.steps
             ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
             : []
-          // Build ordered values: walk steps in order
-          const orderedValues: string[] = []
+
           if (stepsOrdered.length > 0) {
             for (const step of stepsOrdered) {
               const val = (row.step_data as Record<string, string>)[String(step.target_action_id)]
-              if (val) orderedValues.push(val)
+              if (!val) continue
+              const ta = taById.get(step.target_action_id)
+              const followUps: string[] = []
+
+              // Attach top-level promise/credit fields to the dropdown step
+              // whose picked value triggered them (matched via require_* flags).
+              if (ta?.field_type === 'dropdown') {
+                const picked = ta.dropdown_values.find((dv) => dv.value === val)
+                if (picked) {
+                  if (picked.require_promise_date && row.promise_date && !consumedPromiseDate) {
+                    followUps.push(formatDate(row.promise_date))
+                    consumedPromiseDate = true
+                  }
+                  if (
+                    picked.require_promise_amount &&
+                    row.promise_amount &&
+                    !consumedPromiseAmount
+                  ) {
+                    followUps.push(formatMoneyKopeckTight(row.promise_amount))
+                    consumedPromiseAmount = true
+                  }
+                  if (picked.require_credit && row.credit_id && !consumedCredit) {
+                    followUps.push(debtContractMap.get(row.credit_id) ?? `#${row.credit_id}`)
+                    consumedCredit = true
+                  }
+                }
+              }
+
+              entries.push({ value: formatStepValue(ta?.field_type, val), followUps })
             }
           } else {
-            orderedValues.push(
-              ...Object.values(row.step_data as Record<string, string>).filter(Boolean)
-            )
-          }
-          if (orderedValues.length > 0) {
-            return (
-              <span className="text-xs text-gray-700">
-                {orderedValues.join(' -> ')}
-                {suffix}
-              </span>
-            )
+            for (const [, val] of Object.entries(row.step_data as Record<string, string>)) {
+              if (val) entries.push({ value: val, followUps: [] })
+            }
           }
         }
-        // Fallback to single dropdown_value_name or legacy dictionary_path
-        const fallback =
-          row.dropdown_value_name ??
-          (row.dictionary_path.length > 0 ? row.dictionary_path.join(' > ') : '-')
+
+        // Stragglers: follow-ups that didn't match any dropdown step
+        // (legacy data, schema drift) — append to the last entry, or as a
+        // standalone "()" if there were no steps at all.
+        const orphan: string[] = []
+        if (row.promise_date && !consumedPromiseDate) orphan.push(formatDate(row.promise_date))
+        if (row.promise_amount && !consumedPromiseAmount) {
+          orphan.push(formatMoneyKopeckTight(row.promise_amount))
+        }
+        if (row.credit_id && !consumedCredit) {
+          orphan.push(debtContractMap.get(row.credit_id) ?? `#${row.credit_id}`)
+        }
+        if (orphan.length > 0) {
+          if (entries.length > 0) {
+            entries[entries.length - 1].followUps.push(...orphan)
+          } else {
+            entries.push({ value: '', followUps: orphan })
+          }
+        }
+
+        if (entries.length === 0) {
+          const fallback =
+            row.dropdown_value_name ??
+            (row.dictionary_path.length > 0 ? row.dictionary_path.join(' > ') : '-')
+          return <span className="text-xs text-gray-700">{fallback}</span>
+        }
+
         return (
           <span className="text-xs text-gray-700">
-            {fallback}
-            {suffix}
+            {entries.map((e, i) => (
+              <span key={i}>
+                {e.value}
+                {e.followUps.length > 0 && (
+                  <span className="text-gray-500"> ({e.followUps.join(', ')})</span>
+                )}
+                {i < entries.length - 1 && ' -> '}
+              </span>
+            ))}
           </span>
         )
       },
