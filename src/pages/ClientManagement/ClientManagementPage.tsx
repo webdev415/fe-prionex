@@ -61,6 +61,7 @@ interface DisplayClient {
   }>
   phoneNumber: string
   createdDate: string
+  assignmentDate: string
   creditor: string
   debt: string
   priority: 'Critical' | 'High' | 'Medium' | 'Low'
@@ -96,6 +97,7 @@ const mapAPIClientToDisplay = (
     phoneNumber:
       client.phone_primary && !/^0+$/.test(client.phone_primary) ? client.phone_primary : '-',
     createdDate: client.created_at ? formatDate(client.created_at) : '-',
+    assignmentDate: client.assignment_date ? formatDate(client.assignment_date) : '-',
     creditor: client.primary_creditor || '-',
     debt: client.total_debt || '0',
     priority:
@@ -133,6 +135,8 @@ export interface ClientFilters {
   // Date Range Filter
   dateOfSaleFrom?: string
   dateOfSaleTo?: string
+  assignmentDateFrom?: string
+  assignmentDateTo?: string
 
   // Promise Date Filter
   promiseDateFrom?: string
@@ -199,6 +203,14 @@ export function ClientManagementPage() {
   const [unassignedOnlyFilter, setUnassignedOnlyFilter] = useURLState<boolean>('unassigned', false)
   const [dateOfSaleFromFilter, setDateOfSaleFromFilter] = useURLState<string>('dateFrom', '')
   const [dateOfSaleToFilter, setDateOfSaleToFilter] = useURLState<string>('dateTo', '')
+  const [assignmentDateFromFilter, setAssignmentDateFromFilter] = useURLState<string>(
+    'assignmentDateFrom',
+    ''
+  )
+  const [assignmentDateToFilter, setAssignmentDateToFilter] = useURLState<string>(
+    'assignmentDateTo',
+    ''
+  )
   const [debtRangeFromFilter, setDebtRangeFromFilter] = useURLState<number>('debtMin', 0)
   const [debtRangeToFilter, setDebtRangeToFilter] = useURLState<number>('debtMax', 0)
   const [principalRangeFromFilter, setPrincipalRangeFromFilter] = useURLState<number>(
@@ -247,6 +259,8 @@ export function ClientManagementPage() {
       unassignedOnly: unassignedOnlyFilter,
       dateOfSaleFrom: dateOfSaleFromFilter || undefined,
       dateOfSaleTo: dateOfSaleToFilter || undefined,
+      assignmentDateFrom: assignmentDateFromFilter || undefined,
+      assignmentDateTo: assignmentDateToFilter || undefined,
       debtRangeFrom: debtRangeFromFilter || undefined,
       debtRangeTo: debtRangeToFilter || undefined,
       principalRangeFrom: principalRangeFromFilter || undefined,
@@ -272,6 +286,8 @@ export function ClientManagementPage() {
       unassignedOnlyFilter,
       dateOfSaleFromFilter,
       dateOfSaleToFilter,
+      assignmentDateFromFilter,
+      assignmentDateToFilter,
       debtRangeFromFilter,
       debtRangeToFilter,
       principalRangeFromFilter,
@@ -330,6 +346,8 @@ export function ClientManagementPage() {
       unassignedOnlyFilter,
       dateOfSaleFromFilter,
       dateOfSaleToFilter,
+      assignmentDateFromFilter,
+      assignmentDateToFilter,
       debtRangeFromFilter,
       debtRangeToFilter,
       principalRangeFromFilter,
@@ -361,6 +379,8 @@ export function ClientManagementPage() {
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
+      assignmentDateFromFilter !== '' ||
+      assignmentDateToFilter !== '' ||
       promiseDateFromFilter !== '' ||
       promiseDateToFilter !== '' ||
       callbackDateFromFilter !== '' ||
@@ -399,6 +419,8 @@ export function ClientManagementPage() {
     unassignedOnlyFilter,
     dateOfSaleFromFilter,
     dateOfSaleToFilter,
+    assignmentDateFromFilter,
+    assignmentDateToFilter,
     debtRangeFromFilter,
     debtRangeToFilter,
     principalRangeFromFilter,
@@ -433,6 +455,8 @@ export function ClientManagementPage() {
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
+      assignmentDateFromFilter !== '' ||
+      assignmentDateToFilter !== '' ||
       promiseDateFromFilter !== '' ||
       promiseDateToFilter !== '' ||
       callbackDateFromFilter !== '' ||
@@ -462,6 +486,10 @@ export function ClientManagementPage() {
             if (parsed.unassignedOnlyFilter) setUnassignedOnlyFilter(parsed.unassignedOnlyFilter)
             if (parsed.dateOfSaleFromFilter) setDateOfSaleFromFilter(parsed.dateOfSaleFromFilter)
             if (parsed.dateOfSaleToFilter) setDateOfSaleToFilter(parsed.dateOfSaleToFilter)
+            if (parsed.assignmentDateFromFilter)
+              setAssignmentDateFromFilter(parsed.assignmentDateFromFilter)
+            if (parsed.assignmentDateToFilter)
+              setAssignmentDateToFilter(parsed.assignmentDateToFilter)
             if (parsed.debtRangeFromFilter) setDebtRangeFromFilter(parsed.debtRangeFromFilter)
             if (parsed.debtRangeToFilter) setDebtRangeToFilter(parsed.debtRangeToFilter)
             if (parsed.principalRangeFromFilter)
@@ -548,6 +576,7 @@ export function ClientManagementPage() {
       fullName: 'first_name',
       id: 'id',
       createdDate: 'created_at',
+      assignmentDate: 'assignment_date',
       taxIdNumber: 'tax_id',
       employeeName: 'responsible_employee_id',
       searcherName: 'responsible_searcher_id',
@@ -575,6 +604,12 @@ export function ClientManagementPage() {
     }
     if (filters.dateOfSaleTo) {
       params.sale_date_to = filters.dateOfSaleTo
+    }
+    if (filters.assignmentDateFrom) {
+      params.assignment_date_from = filters.assignmentDateFrom
+    }
+    if (filters.assignmentDateTo) {
+      params.assignment_date_to = filters.assignmentDateTo
     }
 
     // FILTER 3: Assignment - Employee
@@ -733,6 +768,7 @@ export function ClientManagementPage() {
     // DPD Range not yet implemented (days past due not calculated)
     // if (filters.dpdRangeFrom || filters.dpdRangeTo) count++
     if (filters.dateOfSaleFrom || filters.dateOfSaleTo) count++
+    if (filters.assignmentDateFrom || filters.assignmentDateTo) count++
     if (filters.promiseDateFrom || filters.promiseDateTo) count++
     if (filters.callbackDateFrom || filters.callbackDateTo) count++
     if (filters.interactionUserId) count++
@@ -1037,6 +1073,12 @@ export function ClientManagementPage() {
     if (newFilters.dateOfSaleTo !== dateOfSaleToFilter) {
       setDateOfSaleToFilter(newFilters.dateOfSaleTo || '')
     }
+    if (newFilters.assignmentDateFrom !== assignmentDateFromFilter) {
+      setAssignmentDateFromFilter(newFilters.assignmentDateFrom || '')
+    }
+    if (newFilters.assignmentDateTo !== assignmentDateToFilter) {
+      setAssignmentDateToFilter(newFilters.assignmentDateTo || '')
+    }
     if (newFilters.debtRangeFrom !== debtRangeFromFilter) {
       setDebtRangeFromFilter(newFilters.debtRangeFrom || 0)
     }
@@ -1098,6 +1140,8 @@ export function ClientManagementPage() {
     setUnassignedOnlyFilter(false)
     setDateOfSaleFromFilter('')
     setDateOfSaleToFilter('')
+    setAssignmentDateFromFilter('')
+    setAssignmentDateToFilter('')
     setDebtRangeFromFilter(0)
     setDebtRangeToFilter(0)
     setPrincipalRangeFromFilter(0)
@@ -1271,6 +1315,13 @@ export function ClientManagementPage() {
       align: 'left',
       sortable: true,
       sortKey: 'createdDate',
+    },
+    {
+      key: 'assignmentDate',
+      header: t('pages.clients.tableHeaders.assignmentDate'),
+      align: 'left',
+      sortable: true,
+      sortKey: 'assignmentDate',
     },
     {
       key: 'employeeName',
