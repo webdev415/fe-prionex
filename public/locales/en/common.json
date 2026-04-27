@@ -1834,8 +1834,12 @@
         "selectResult": "Please select a result from the tree.",
         "promiseDateRequired": "This result requires a promise date.",
         "promiseAmountRequired": "This result requires a promise amount.",
-        "creditRequired": "This result requires selecting a credit."
+        "creditRequired": "This result requires selecting a credit.",
+        "stepFieldRequired": "{{name}} is required.",
+        "stepRequired": "Please fill in this step before continuing."
       },
+      "pickToContinue": "Pick a chain above to continue.",
+      "stepsPreview": "Steps in this chain",
       "toasts": {
         "started": "Chain started",
         "completed": "Interaction saved and chain completed",

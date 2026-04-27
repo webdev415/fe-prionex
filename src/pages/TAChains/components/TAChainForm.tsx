@@ -225,7 +225,10 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
                   className="focus:border-primary-500 w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 outline-none placeholder:text-gray-400"
                 />
               </div>
-              <div className="max-h-[220px] overflow-y-auto p-1">
+              <div
+                className="max-h-[220px] overflow-y-auto overscroll-contain p-1"
+                onWheel={(e) => e.stopPropagation()}
+              >
                 {filteredDepartments.length === 0 ? (
                   <div className="py-3 text-center text-xs text-gray-500">
                     {t('pages.taChains.form.departmentNoneFound')}
