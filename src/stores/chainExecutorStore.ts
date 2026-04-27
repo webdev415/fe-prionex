@@ -10,6 +10,7 @@ import { create } from 'zustand'
 export interface MinimizedChainExecutorInfo {
   clientId: number
   clientName: string
+  responsibleEmployeeId?: number | null
   chainName: string | null
   currentStepOrder: number
   totalSteps: number

@@ -1840,6 +1840,7 @@
       },
       "pickToContinue": "Pick a chain above to continue.",
       "stepsPreview": "Steps in this chain",
+      "notifyResponsible": "Notify responsible employee",
       "toasts": {
         "started": "Chain started",
         "completed": "Interaction saved and chain completed",

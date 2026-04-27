@@ -59,6 +59,7 @@ import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
 interface Props {
   clientId: number
   clientName?: string
+  responsibleEmployeeId?: number | null
   debts?: Array<{
     id: number
     contract_number?: string
@@ -88,6 +89,7 @@ const EMPTY_INSTANT_VALUE: InstantStepValue = {
 export function ChainExecutor({
   clientId,
   clientName,
+  responsibleEmployeeId,
   debts = [],
   onSave,
   onMinimize,
@@ -281,6 +283,18 @@ export function ChainExecutor({
   const [creditId, setCreditId] = useState<string>('')
   const [notes, setNotes] = useState('')
 
+  // "Notify responsible" — default-on so collaborators stay in the loop;
+  // operator can opt out per-interaction. Hidden when there's no responsible
+  // employee, or when the operator IS the responsible employee (would be a
+  // self-notification).
+  const operatorUserId = user?.id ? parseInt(user.id, 10) : null
+  const showNotifyResponsibleCheckbox = !!(
+    responsibleEmployeeId &&
+    operatorUserId !== null &&
+    responsibleEmployeeId !== operatorUserId
+  )
+  const [notifyResponsible, setNotifyResponsible] = useState(true)
+
   // Instant-mode state — keyed by step.id so values survive across renders
   // even if the steps array is re-fetched (id is stable, step_order isn't
   // guaranteed to be).
@@ -316,6 +330,7 @@ export function ChainExecutor({
     setMinimized({
       clientId,
       clientName: clientName ?? `Client #${clientId}`,
+      responsibleEmployeeId: responsibleEmployeeId ?? null,
       chainName: activeChain?.name ?? null,
       currentStepOrder: activeInstance?.current_step_order ?? 1,
       totalSteps: steps.length || 1,
@@ -374,6 +389,7 @@ export function ChainExecutor({
     setInstantValues({})
     setInstantNotes('')
     setInstantSubmitting(false)
+    setNotifyResponsible(true)
   }, [selectedChainId, activeInstance?.id])
 
   // Reset current step fields on step change + pre-fill from template
@@ -531,6 +547,7 @@ export function ChainExecutor({
           Object.keys(collectedStepDataRef.current).length > 0
             ? collectedStepDataRef.current
             : undefined,
+        notify_responsible: showNotifyResponsibleCheckbox ? notifyResponsible : false,
       })
       const result = await advanceMut.mutateAsync({
         id: activeInstance.id,
@@ -667,6 +684,7 @@ export function ChainExecutor({
         promise_amount: firstPromiseAmount ? parseFloat(firstPromiseAmount) : undefined,
         notes: instantNotes || undefined,
         step_data: Object.keys(stepData).length > 0 ? stepData : undefined,
+        notify_responsible: showNotifyResponsibleCheckbox ? notifyResponsible : false,
       })
 
       await advanceMut.mutateAsync({ id: inst.id, dropdownValueId: lastDvId ?? null })
@@ -1249,6 +1267,17 @@ export function ChainExecutor({
                   </Button>
                 )}
 
+                {!isDelayBlocked && isLastStep && showNotifyResponsibleCheckbox && (
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={notifyResponsible}
+                      onChange={(e) => setNotifyResponsible(e.target.checked)}
+                    />
+                    {t('pages.clientChains.notifyResponsible', 'Notify responsible employee')}
+                  </label>
+                )}
+
                 {!isDelayBlocked && isLastStep && (
                   <Button
                     variant="primary"
@@ -1415,6 +1444,16 @@ export function ChainExecutor({
                   placeholder={t('pages.clientChains.notesPlaceholder')}
                 />
               </div>
+              {showNotifyResponsibleCheckbox && (
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={notifyResponsible}
+                    onChange={(e) => setNotifyResponsible(e.target.checked)}
+                  />
+                  {t('pages.clientChains.notifyResponsible', 'Notify responsible employee')}
+                </label>
+              )}
               <Button
                 variant="primary"
                 onClick={handleInstantSave}

@@ -117,6 +117,7 @@ export function MinimizedChainExecutorBubble() {
             <ChainExecutor
               clientId={info.clientId}
               clientName={info.clientName}
+              responsibleEmployeeId={info.responsibleEmployeeId ?? null}
               debts={info.debts}
               onSave={handleClose}
               onMinimize={handleMinimize}

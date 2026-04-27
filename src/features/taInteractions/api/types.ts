@@ -64,6 +64,7 @@ export interface TAInteractionCreate {
   step_data?: Record<string, unknown> | null
   call_id?: number | null
   assigned_operator_id?: number | null
+  notify_responsible?: boolean
 }
 
 export interface ChainInstance {

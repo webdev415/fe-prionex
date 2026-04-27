@@ -3339,6 +3339,7 @@ export function ClientDetailPage() {
               <ChainExecutor
                 clientId={clientId}
                 clientName={client?.fullName ?? `Client #${clientId}`}
+                responsibleEmployeeId={profile?.responsible_employee_id ?? null}
                 debts={loans}
                 onSave={() => setIsChainExecutorOpen(false)}
                 onMinimize={() => setIsChainExecutorOpen(false)}
