@@ -59,6 +59,8 @@ export interface CurrentUserResponse {
     name: string
     code: string
   }
+  department_id?: number | null
+  active_department_id?: number | null
   projects: Array<{
     id: number
     name: string
@@ -84,6 +86,7 @@ export interface User {
   active_project_id: string | null
   active_role_id: string | null
   active_role_name: string | null
+  active_department_id: number | null
   permissions?: string[]
   createdAt?: string
   updatedAt?: string

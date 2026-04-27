@@ -20,6 +20,11 @@ import { useTargetActions } from '@/features/targetActions/hooks/useTargetAction
 import type { TargetAction } from '@/features/targetActions/api/types'
 import type { TAInteraction } from '@/features/taInteractions/api/types'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { formatMoneyKopeckTight } from '@/lib/formatters'
+import { Icons } from '@/lib/icons'
+import { PermissionGuard } from '@/components/auth'
+import { PERMISSIONS } from '@/constants/permissions'
+import { EditTAInteractionModal } from './EditTAInteractionModal'
 
 interface Props {
   clientId: number
@@ -30,8 +35,9 @@ interface Props {
 }
 
 export function TAInteractionHistory({ clientId, debts = [] }: Props) {
+  const [editingId, setEditingId] = useState<number | null>(null)
   // Map debt ID → contract number for display
-  const debtContractMap = new Map(debts.map((d) => [d.id, d.contract_number ?? `#${d.id}`]))
+  const debtContractMap = new Map(debts.map((d) => [d.id, `#${d.contract_number ?? d.id}`]))
   const { t } = useTranslation('common')
 
   // Filters
@@ -88,6 +94,22 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       header: t('pages.clientChains.history.result'),
       align: 'left',
       render: (row) => {
+        // Promise date/amount live as top-level interaction fields (filled
+        // via dropdown-triggered prompts), not in step_data. Append them so
+        // the result column carries everything the dedicated columns used to.
+        const promiseSuffix: string[] = []
+        if (row.promise_date) {
+          promiseSuffix.push(
+            `${t('pages.clientChains.history.promiseDate')}: ${new Date(row.promise_date).toLocaleDateString()}`
+          )
+        }
+        if (row.promise_amount) {
+          promiseSuffix.push(
+            `${t('pages.clientChains.history.promiseAmount')}: ${formatMoneyKopeckTight(row.promise_amount)}`
+          )
+        }
+        const suffix = promiseSuffix.length > 0 ? ` — ${promiseSuffix.join(', ')}` : ''
+
         // Show all step values from step_data, ordered by chain step_order
         if (row.step_data && Object.keys(row.step_data).length > 0) {
           const chain = chains.find((c) => c.id === row.chain_id)
@@ -107,33 +129,25 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             )
           }
           if (orderedValues.length > 0) {
-            return <span className="text-xs text-gray-700">{orderedValues.join(' -> ')}</span>
+            return (
+              <span className="text-xs text-gray-700">
+                {orderedValues.join(' -> ')}
+                {suffix}
+              </span>
+            )
           }
         }
         // Fallback to single dropdown_value_name or legacy dictionary_path
+        const fallback =
+          row.dropdown_value_name ??
+          (row.dictionary_path.length > 0 ? row.dictionary_path.join(' > ') : '-')
         return (
           <span className="text-xs text-gray-700">
-            {row.dropdown_value_name ??
-              (row.dictionary_path.length > 0 ? row.dictionary_path.join(' > ') : '-')}
+            {fallback}
+            {suffix}
           </span>
         )
       },
-    },
-    {
-      key: 'promise_date',
-      header: t('pages.clientChains.history.promiseDate'),
-      align: 'left',
-      render: (row) => (
-        <span className="text-xs text-gray-700">
-          {row.promise_date ? new Date(row.promise_date).toLocaleDateString() : '-'}
-        </span>
-      ),
-    },
-    {
-      key: 'promise_amount',
-      header: t('pages.clientChains.history.promiseAmount'),
-      align: 'left',
-      render: (row) => <span className="text-xs text-gray-700">{row.promise_amount ?? '-'}</span>,
     },
     {
       key: 'credit_id',
@@ -188,9 +202,27 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       align: 'left',
       render: (row) => <span className="text-xs text-gray-600">{row.recorded_by_name ?? '-'}</span>,
     },
+    {
+      key: 'edit',
+      header: '',
+      align: 'right',
+      render: (row) => (
+        <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+          <button
+            type="button"
+            onClick={() => setEditingId(row.id)}
+            className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+            aria-label={t('actions.edit')}
+            title={t('actions.edit')}
+          >
+            <Icons.PencilEdit size={14} strokeWidth={1.5} />
+          </button>
+        </PermissionGuard>
+      ),
+    },
   ]
 
-  if (isLoading && page === 0) return <TableSkeleton columns={6} rows={3} />
+  if (isLoading && page === 0) return <TableSkeleton columns={7} rows={3} />
 
   return (
     <div className="flex flex-col gap-3">
@@ -271,6 +303,13 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       ) : (
         <DataTable columns={columns} data={items} className="w-full" />
       )}
+
+      <EditTAInteractionModal
+        open={editingId !== null}
+        interactionId={editingId}
+        onClose={() => setEditingId(null)}
+        debts={debts}
+      />
 
       {/* Pagination */}
       {totalCount > pageSize && (

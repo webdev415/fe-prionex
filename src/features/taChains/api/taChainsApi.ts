@@ -48,6 +48,16 @@ export async function activateTAChain(id: number): Promise<TAChain> {
   return response.data
 }
 
+export async function pinTAChain(id: number): Promise<TAChain> {
+  const response = await api.post<TAChain>(`${BASE_URL}/${id}/pin`)
+  return response.data
+}
+
+export async function unpinTAChain(id: number): Promise<TAChain> {
+  const response = await api.delete<TAChain>(`${BASE_URL}/${id}/pin`)
+  return response.data
+}
+
 export async function updateStepPositions(
   chainId: number,
   positions: Array<{ step_id: number; position_x: number; position_y: number }>

@@ -61,6 +61,7 @@ export function usePermissionRefresh() {
               : null,
             active_role_id: response.data.role ? String(response.data.role.id) : null,
             active_role_name: response.data.role?.name || null,
+            active_department_id: response.data.active_department_id ?? null,
             permissions: response.data.permissions || [],
             createdAt: response.data.created_at,
             updatedAt: response.data.created_at,

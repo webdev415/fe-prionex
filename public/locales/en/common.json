@@ -1840,8 +1840,13 @@
         "selectResult": "Please select a result from the tree.",
         "promiseDateRequired": "This result requires a promise date.",
         "promiseAmountRequired": "This result requires a promise amount.",
-        "creditRequired": "This result requires selecting a credit."
+        "creditRequired": "This result requires selecting a credit.",
+        "stepFieldRequired": "{{name}} is required.",
+        "stepRequired": "Please fill in this step before continuing."
       },
+      "pickToContinue": "Pick a chain above to continue.",
+      "stepsPreview": "Steps in this chain",
+      "notifyResponsible": "Notify responsible employee",
       "toasts": {
         "started": "Chain started",
         "completed": "Interaction saved and chain completed",
@@ -2004,8 +2009,12 @@
         "name": "Name",
         "description": "Description",
         "chainType": "Chain type",
-        "department": "Department",
-        "departmentPlaceholder": "Select a department",
+        "department": "Departments",
+        "departmentPlaceholder": "Select departments",
+        "departmentSearchPlaceholder": "Search departments…",
+        "departmentNoneFound": "No departments found",
+        "departmentSelectedCount": "{{count}} selected",
+        "departmentClear": "Clear",
         "systemHidden": "System (hidden) — only the system or an admin can launch"
       },
       "steps": {
@@ -2026,7 +2035,7 @@
       },
       "errors": {
         "nameRequired": "Name is required",
-        "departmentRequired": "Select a department"
+        "departmentRequired": "Select at least one department"
       },
       "toasts": {
         "created": "TA Chain created",
@@ -2064,7 +2073,8 @@
         "dropdown": "Dropdown",
         "date": "Date",
         "amount": "Amount",
-        "credit": "Credit"
+        "credit": "Credit",
+        "contact": "Contact"
       },
       "status": {
         "active": "Active",

@@ -65,6 +65,7 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
         is_required: true,
         delay_minutes: 0,
         not_in_the_past: false,
+        contact_source: firstTA.field_type === 'contact' ? 'client' : null,
       },
     ])
   }
@@ -147,7 +148,19 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
                   </label>
                   <Select
                     value={String(step.target_action_id)}
-                    onValueChange={(v) => update(index, { target_action_id: parseInt(v, 10) })}
+                    onValueChange={(v) => {
+                      const newId = parseInt(v, 10)
+                      const newTA = allTAs.find((x) => x.id === newId)
+                      // Auto-default contact_source for contact-type TAs;
+                      // clear it for any other type so we don't persist stale data.
+                      const next: Partial<TAChainStepIn> = { target_action_id: newId }
+                      if (newTA?.field_type === 'contact') {
+                        next.contact_source = step.contact_source ?? 'client'
+                      } else {
+                        next.contact_source = null
+                      }
+                      update(index, next)
+                    }}
                     disabled={disabled}
                   >
                     <SelectTrigger>
@@ -203,6 +216,33 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
                   </label>
                 )}
               </div>
+
+              {ta?.field_type === 'contact' && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-600">
+                    {t('pages.taChains.steps.contactSource', 'Contact source')}
+                  </label>
+                  <Select
+                    value={step.contact_source ?? 'client'}
+                    onValueChange={(v) =>
+                      update(index, { contact_source: v as 'client' | 'recommender' })
+                    }
+                    disabled={disabled}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="client">
+                        {t('pages.taChains.steps.contactSourceClient', 'Client contacts')}
+                      </SelectItem>
+                      <SelectItem value="recommender">
+                        {t('pages.taChains.steps.contactSourceRecommender', 'Recommender contacts')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </li>
           )
         })}

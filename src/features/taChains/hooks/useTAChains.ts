@@ -10,6 +10,8 @@ import {
   deactivateTAChain,
   getTAChain,
   getTAChains,
+  pinTAChain,
+  unpinTAChain,
   updateTAChain,
 } from '../api/taChainsApi'
 import type { TAChainCreate, TAChainListParams, TAChainUpdate } from '../api/types'
@@ -77,6 +79,22 @@ export function useActivateTAChain() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => activateTAChain(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  })
+}
+
+export function usePinTAChain() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => pinTAChain(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  })
+}
+
+export function useUnpinTAChain() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => unpinTAChain(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
   })
 }

@@ -95,6 +95,7 @@ export function ProjectSelector() {
             : null,
           active_role_id: backendUser.role ? String(backendUser.role.id) : null,
           active_role_name: backendUser.role?.name || null,
+          active_department_id: backendUser.active_department_id ?? null,
           permissions: backendUser.permissions || [],
           createdAt: backendUser.created_at,
           updatedAt: backendUser.created_at,

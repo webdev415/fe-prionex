@@ -6,6 +6,7 @@ import type {
   TAInteractionCreate,
   TAInteractionListParams,
   TAInteractionListResponse,
+  TAInteractionUpdate,
 } from './types'
 
 // TA Interactions
@@ -18,6 +19,19 @@ export async function getTAInteractions(
 
 export async function createTAInteraction(payload: TAInteractionCreate): Promise<TAInteraction> {
   const r = await api.post<TAInteraction>('/api/v1/ta-interactions', payload)
+  return r.data
+}
+
+export async function getTAInteraction(id: number): Promise<TAInteraction> {
+  const r = await api.get<TAInteraction>(`/api/v1/ta-interactions/${id}`)
+  return r.data
+}
+
+export async function updateTAInteraction(
+  id: number,
+  payload: TAInteractionUpdate
+): Promise<TAInteraction> {
+  const r = await api.put<TAInteraction>(`/api/v1/ta-interactions/${id}`, payload)
   return r.data
 }
 

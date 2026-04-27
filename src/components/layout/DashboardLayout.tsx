@@ -12,6 +12,7 @@ import { Sidebar, type SidebarItem, type SidebarSubItem } from './Sidebar'
 import { SearchBar } from './SearchBar'
 import { UserProfile } from './UserProfile'
 import { MinimizedCallBubble } from './MinimizedCallBubble'
+import { MinimizedChainExecutorBubble } from './MinimizedChainExecutorBubble'
 import { NotificationBell } from './NotificationBell'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
@@ -855,6 +856,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Desktop: Project Selector, Language Switcher and User Profile */}
           <div className="hidden items-center gap-3 lg:flex">
             <MinimizedCallBubble />
+            <MinimizedChainExecutorBubble />
             <NotificationBell />
             <AiAssistantHeaderButton />
             <UserProfile onLogoutClick={handleLogoutClick} />
@@ -862,6 +864,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Mobile: Notification bell + dropdown menu */}
           <div className="flex items-center gap-2 lg:hidden">
+            <MinimizedCallBubble />
+            <MinimizedChainExecutorBubble />
             <NotificationBell />
             <AiAssistantHeaderButton />
             <MobileHeaderMenu onLogoutClick={handleLogoutClick} />

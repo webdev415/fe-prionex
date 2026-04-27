@@ -35,7 +35,7 @@ interface TargetActionFormProps {
   onSuccess: () => void
 }
 
-const FIELD_TYPES: TAFieldType[] = ['text', 'dropdown', 'date', 'amount', 'credit']
+const FIELD_TYPES: TAFieldType[] = ['text', 'dropdown', 'date', 'amount', 'credit', 'contact']
 
 export function TargetActionForm({ formId, initial, onSuccess }: TargetActionFormProps) {
   const { t } = useTranslation('common')
