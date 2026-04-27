@@ -29,8 +29,61 @@ import {
 } from '@/features/taInteractions/hooks/useTAInteractions'
 import { useTAChain } from '@/features/taChains/hooks/useTAChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
+import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
+import type { ContactSource } from '@/features/taChains/api/types'
 import { getErrorMessage } from '@/lib/errors'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
+
+function ContactStepEdit({
+  clientId,
+  source,
+  value,
+  onChange,
+}: {
+  clientId: number
+  source: ContactSource | null
+  value: string
+  onChange: (v: string) => void
+}) {
+  const { t } = useTranslation('common')
+  const { data: phonesData } = useClientPhones(clientId, source)
+  if (!source) {
+    return (
+      <span className="text-xs text-gray-500">
+        {t('pages.clientChains.contactNoSource', 'No contact source configured')}
+      </span>
+    )
+  }
+  // step_data stores the phone string verbatim, so the Select compares
+  // by contact_value not id. If the saved value isn't in the current
+  // phone list (contact deleted/renamed), still show it as a stale entry.
+  const phones = phonesData ?? []
+  const valueIsKnown = phones.some((p) => p.contact_value === value)
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger>
+        <SelectValue placeholder={t('pages.clientChains.selectValue', 'Select…')} />
+      </SelectTrigger>
+      <SelectContent>
+        {!valueIsKnown && value !== '' && (
+          <SelectItem value={value}>
+            {value}
+            <span className="ml-2 text-xs text-gray-400">
+              {t('pages.clientChains.contactStale', '(stale)')}
+            </span>
+          </SelectItem>
+        )}
+        {phones.map((p) => (
+          <SelectItem key={p.id} value={p.contact_value}>
+            {p.contact_value}
+            {p.type_name ? ` (${p.type_name})` : ''}
+            {source === 'recommender' && p.comment ? ` — ${p.comment}` : ''}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
 
 interface Props {
   open: boolean
@@ -212,6 +265,13 @@ export function EditTAInteractionModal({
                       placeholder="0.00"
                       value={value}
                       onChange={(e) => setStepValue(step.target_action_id, e.target.value)}
+                    />
+                  ) : ta.field_type === 'contact' ? (
+                    <ContactStepEdit
+                      clientId={interaction.client_id}
+                      source={step.contact_source}
+                      value={value}
+                      onChange={(v) => setStepValue(step.target_action_id, v)}
                     />
                   ) : (
                     <Input

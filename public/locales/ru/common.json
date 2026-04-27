@@ -1934,7 +1934,9 @@
         "text": "Текст",
         "dropdown": "Список",
         "date": "Дата",
-        "amount": "Сумма"
+        "amount": "Сумма",
+        "credit": "Кредит",
+        "contact": "Контакт"
       },
       "status": {
         "active": "Активно",

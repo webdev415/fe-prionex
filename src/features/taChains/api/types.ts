@@ -4,11 +4,14 @@
 
 export type ChainType = 'manual' | 'automatic'
 
+export type ContactSource = 'client' | 'recommender'
+
 export interface TAChainStepIn {
   target_action_id: number
   is_required?: boolean
   delay_minutes?: number
   not_in_the_past?: boolean
+  contact_source?: ContactSource | null
 }
 
 export interface TAChainStep {
@@ -21,6 +24,7 @@ export interface TAChainStep {
   is_required: boolean
   delay_minutes: number
   not_in_the_past: boolean
+  contact_source: ContactSource | null
   position_x: number | null
   position_y: number | null
 }

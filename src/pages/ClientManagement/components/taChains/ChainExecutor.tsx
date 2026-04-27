@@ -46,6 +46,7 @@ import { useQuickPicks } from '@/features/quickPicks/hooks/useQuickPicks'
 import { getErrorMessage } from '@/lib/errors'
 import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
+import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
 
 interface Props {
   clientId: number
@@ -198,6 +199,12 @@ export function ChainExecutor({
   const steps = useMemo<TAChainStep[]>(() => activeChain?.steps ?? [], [activeChain])
   const currentStep = steps.find((s) => s.step_order === (activeInstance?.current_step_order ?? 1))
   const currentTA = currentStep ? taById.get(currentStep.target_action_id) : null
+
+  // Phone list for contact-type steps. Hook always runs but is disabled when
+  // not applicable.
+  const contactPhonesSource =
+    currentTA?.field_type === 'contact' ? (currentStep?.contact_source ?? null) : null
+  const { data: contactPhones } = useClientPhones(clientId, contactPhonesSource)
   const isLastStep = (activeInstance?.current_step_order ?? 1) >= steps.length
 
   const chainForBuilder =
@@ -938,6 +945,49 @@ export function ChainExecutor({
                             ? ` — ${formatMoneyKopeckTight(d.remaining_debt_amount)}`
                             : ''}
                           {d.days_past_due ? ` — overdue ${d.days_past_due}d` : ''}
+                        </span>
+                      </label>
+                    )
+                  })
+                )}
+              </div>
+            ) : currentTA.field_type === 'contact' ? (
+              <div className="flex flex-col gap-2">
+                {!contactPhones ? (
+                  <span className="text-xs text-gray-500">{t('common.loading')}</span>
+                ) : contactPhones.length === 0 ? (
+                  <span className="text-xs text-gray-500">
+                    {t('pages.clientChains.noContacts', 'No phones available for this source.')}
+                  </span>
+                ) : (
+                  contactPhones.map((p) => {
+                    // Store the phone string itself (not the id) so it
+                    // appears verbatim in interaction history without an
+                    // extra lookup, and survives if the contact is later
+                    // renamed or deleted.
+                    const isChecked = stepValue === p.contact_value
+                    const showComment = currentStep?.contact_source === 'recommender'
+                    return (
+                      <label
+                        key={p.id}
+                        className="flex items-start gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <input
+                          type="radio"
+                          name={`contact-step-${currentStep?.id ?? 0}`}
+                          checked={isChecked}
+                          onChange={() => setStepValue(p.contact_value)}
+                        />
+                        <span className="flex flex-col">
+                          <span className="font-medium">
+                            {p.contact_value}
+                            {p.type_name ? (
+                              <span className="ml-2 text-xs text-gray-400">({p.type_name})</span>
+                            ) : null}
+                          </span>
+                          {showComment && p.comment && (
+                            <span className="text-xs text-gray-500">{p.comment}</span>
+                          )}
                         </span>
                       </label>
                     )

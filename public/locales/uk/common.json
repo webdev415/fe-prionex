@@ -1930,7 +1930,9 @@
         "text": "Текст",
         "dropdown": "Список",
         "date": "Дата",
-        "amount": "Сума"
+        "amount": "Сума",
+        "credit": "Кредит",
+        "contact": "Контакт"
       },
       "status": {
         "active": "Активна",

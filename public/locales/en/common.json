@@ -2062,7 +2062,8 @@
         "dropdown": "Dropdown",
         "date": "Date",
         "amount": "Amount",
-        "credit": "Credit"
+        "credit": "Credit",
+        "contact": "Contact"
       },
       "status": {
         "active": "Active",
