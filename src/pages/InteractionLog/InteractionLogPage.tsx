@@ -19,6 +19,7 @@ import { useTAInteractions } from '@/features/taInteractions/hooks/useTAInteract
 import { useTAChains } from '@/features/taChains/hooks/useTAChains'
 import type { TAInteraction } from '@/features/taInteractions/api/types'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { formatMoneyKopeckTight } from '@/lib/formatters'
 import api from '@/lib/api'
 
 export function InteractionLogPage() {
@@ -115,7 +116,7 @@ export function InteractionLogPage() {
         }
         if (row.promise_amount) {
           promiseSuffix.push(
-            `${t('pages.interactionLog.columns.promiseAmount')}: ${row.promise_amount}`
+            `${t('pages.interactionLog.columns.promiseAmount')}: ${formatMoneyKopeckTight(row.promise_amount)}`
           )
         }
         const suffix = promiseSuffix.length > 0 ? ` — ${promiseSuffix.join(', ')}` : ''

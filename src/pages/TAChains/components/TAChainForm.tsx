@@ -222,7 +222,7 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
                   value={deptSearch}
                   onChange={(e) => setDeptSearch(e.target.value)}
                   placeholder={t('pages.taChains.form.departmentSearchPlaceholder')}
-                  className="focus:border-primary-500 w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm outline-none placeholder:text-gray-400"
+                  className="focus:border-primary-500 w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 outline-none placeholder:text-gray-400"
                 />
               </div>
               <div className="max-h-[220px] overflow-y-auto p-1">

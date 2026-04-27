@@ -5,13 +5,16 @@ import {
   completeChainInstance,
   createTAInteraction,
   getChainInstances,
+  getTAInteraction,
   getTAInteractions,
   startChainInstance,
+  updateTAInteraction,
 } from '../api/taInteractionsApi'
 import type {
   ChainInstanceCreate,
   TAInteractionCreate,
   TAInteractionListParams,
+  TAInteractionUpdate,
 } from '../api/types'
 
 const INT_KEY = ['ta-interactions'] as const
@@ -42,6 +45,25 @@ export function useCreateTAInteraction() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: INT_KEY })
       qc.invalidateQueries({ queryKey: INST_KEY })
+    },
+  })
+}
+
+export function useTAInteraction(id: number | null) {
+  return useQuery({
+    queryKey: [...INT_KEY, 'one', id],
+    queryFn: () => getTAInteraction(id!),
+    enabled: id !== null,
+  })
+}
+
+export function useUpdateTAInteraction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: TAInteractionUpdate }) =>
+      updateTAInteraction(id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: INT_KEY })
     },
   })
 }

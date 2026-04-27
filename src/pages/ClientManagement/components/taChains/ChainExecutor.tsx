@@ -22,6 +22,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
+import { Icons } from '@/lib/icons'
 import { useTAChains } from '@/features/taChains/hooks/useTAChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
 import type { TargetAction, TADropdownValueOut } from '@/features/targetActions/api/types'
@@ -39,6 +45,7 @@ import type { TAChainStep } from '@/features/taChains/api/types'
 import { useQuickPicks } from '@/features/quickPicks/hooks/useQuickPicks'
 import { getErrorMessage } from '@/lib/errors'
 import { useChainExecutorStore } from '@/stores/chainExecutorStore'
+import { formatMoneyKopeckTight } from '@/lib/formatters'
 
 interface Props {
   clientId: number
@@ -66,22 +73,24 @@ export function ChainExecutor({
   const { t } = useTranslation('common')
 
   // Operator's department drives chain visibility — they should only
-  // see chains assigned to their own department.
+  // see chains assigned to their own department. Admins (manage_settings)
+  // bypass the filter and see every chain.
   const { user } = useAuthStore()
+  const isAdmin = user?.permissions?.includes('manage_settings') ?? false
   const operatorDepartmentId = user?.active_department_id ?? undefined
 
-  // Available chains (manual only, active, scoped to operator's department).
-  // Uses the backend's single-id query param (no array serialization concerns).
+  // Available chains (manual only, active). For non-admins, scoped to
+  // the operator's department via the backend's single-id query param.
   const { data: chainsData } = useTAChains({
     include_inactive: false,
-    department_id: operatorDepartmentId,
+    department_id: isAdmin ? undefined : operatorDepartmentId,
   })
   const manualChains = useMemo(() => {
-    // Hide everything if we don't know the operator's department — better
-    // than leaking other departments' chains via a missing filter.
-    if (operatorDepartmentId === undefined) return []
+    // Non-admins with no department: hide everything (better than leaking
+    // other departments' chains via a missing filter). Admins always see all.
+    if (!isAdmin && operatorDepartmentId === undefined) return []
     return (chainsData?.items ?? []).filter((c) => c.chain_type === 'manual')
-  }, [chainsData, operatorDepartmentId])
+  }, [chainsData, operatorDepartmentId, isAdmin])
 
   // Full TA data (for dropdown values + flags)
   const { data: tasData } = useTargetActions({ include_hidden: false })
@@ -115,6 +124,53 @@ export function ChainExecutor({
   const activeInstance = instances?.find((i) => i.status === 'active') ?? null
 
   const [selectedChainId, setSelectedChainId] = useState<string>('')
+
+  // Chain selector dropdown — search-enabled to handle many chains.
+  const [chainOpen, setChainOpen] = useState(false)
+  const [chainSearch, setChainSearch] = useState('')
+  const filteredChains = useMemo(() => {
+    const q = chainSearch.trim().toLowerCase()
+    if (!q) return manualChains
+    return manualChains.filter((c) => c.name.toLowerCase().includes(q))
+  }, [manualChains, chainSearch])
+  const selectedChainObj = useMemo(
+    () => manualChains.find((c) => String(c.id) === selectedChainId) ?? null,
+    [manualChains, selectedChainId]
+  )
+
+  // Templates (quick picks) dropdown — replaces the old chip row.
+  const [templateOpen, setTemplateOpen] = useState(false)
+  const [templateSearch, setTemplateSearch] = useState('')
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
+  const filteredTemplates = useMemo(() => {
+    const q = templateSearch.trim().toLowerCase()
+    if (!q) return quickPicks
+    return quickPicks.filter((qp) => {
+      const label = qp.name ?? qp.chain_name ?? ''
+      return label.toLowerCase().includes(q)
+    })
+  }, [quickPicks, templateSearch])
+  const selectedTemplate = useMemo(
+    () => quickPicks.find((qp) => qp.id === selectedTemplateId) ?? null,
+    [quickPicks, selectedTemplateId]
+  )
+
+  const handleStartTemplate = async () => {
+    if (!selectedTemplate) return
+    try {
+      presetValuesRef.current = selectedTemplate.preset_values ?? {}
+      await startMut.mutateAsync({
+        chain_id: selectedTemplate.chain_id,
+        client_id: clientId,
+      })
+      toast.success(t('pages.clientChains.toasts.started'))
+      setSelectedTemplateId(null)
+      setTemplateSearch('')
+    } catch (err) {
+      presetValuesRef.current = {}
+      toast.error(getErrorMessage(err))
+    }
+  }
 
   const activeChain = useMemo(() => {
     if (activeInstance)
@@ -487,51 +543,165 @@ export function ChainExecutor({
           <>
             {quickPicks.length > 0 && (
               <div className="flex flex-col gap-2">
-                <span className="text-xs font-medium text-gray-500 uppercase">
+                <Label className="text-sm text-gray-700">
                   {t('pages.clientChains.quickPicks')}
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {quickPicks.map((qp) => (
-                    <Button
-                      key={qp.id}
-                      variant="cancel"
-                      size="sm"
-                      onClick={async () => {
-                        try {
-                          // Store preset values before starting chain
-                          presetValuesRef.current = qp.preset_values ?? {}
-                          await startMut.mutateAsync({ chain_id: qp.chain_id, client_id: clientId })
-                          toast.success(t('pages.clientChains.toasts.started'))
-                        } catch (err) {
-                          presetValuesRef.current = {}
-                          toast.error(getErrorMessage(err))
-                        }
-                      }}
-                      disabled={startMut.isPending}
-                      className="whitespace-nowrap"
+                </Label>
+                <DropdownMenu
+                  open={templateOpen}
+                  onOpenChange={(o) => {
+                    setTemplateOpen(o)
+                    if (!o) setTemplateSearch('')
+                  }}
+                  modal={false}
+                >
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="focus:border-primary-500 flex min-h-[40px] w-full items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm outline-none hover:bg-gray-50"
                     >
-                      {qp.name ?? qp.chain_name ?? `Chain #${qp.chain_id}`}
-                    </Button>
-                  ))}
-                </div>
+                      <span className={selectedTemplate ? 'text-gray-800' : 'text-gray-400'}>
+                        {selectedTemplate
+                          ? (selectedTemplate.name ??
+                            selectedTemplate.chain_name ??
+                            `Chain #${selectedTemplate.chain_id}`)
+                          : t('pages.clientChains.templatePlaceholder', 'Pick a template…')}
+                      </span>
+                      <Icons.ArrowDown size={16} className="text-gray-400" strokeWidth={1.5} />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="start"
+                    sideOffset={6}
+                    className="w-[--radix-dropdown-menu-trigger-width] min-w-[260px] rounded-md border border-gray-200 bg-white p-0 shadow-lg"
+                  >
+                    <div className="border-b border-gray-200 p-2">
+                      <input
+                        type="text"
+                        value={templateSearch}
+                        onChange={(e) => setTemplateSearch(e.target.value)}
+                        placeholder={t(
+                          'pages.clientChains.templateSearchPlaceholder',
+                          'Search templates…'
+                        )}
+                        className="focus:border-primary-500 w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 outline-none placeholder:text-gray-400"
+                      />
+                    </div>
+                    <div className="max-h-[220px] overflow-y-auto p-1">
+                      {filteredTemplates.length === 0 ? (
+                        <div className="py-3 text-center text-xs text-gray-500">
+                          {t('pages.clientChains.templateNoneFound', 'No templates match.')}
+                        </div>
+                      ) : (
+                        filteredTemplates.map((qp) => {
+                          const label = qp.name ?? qp.chain_name ?? `Chain #${qp.chain_id}`
+                          const isSelected = qp.id === selectedTemplateId
+                          return (
+                            <button
+                              key={qp.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedTemplateId(qp.id)
+                                setTemplateOpen(false)
+                                setTemplateSearch('')
+                              }}
+                              className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm hover:bg-gray-50 ${
+                                isSelected ? 'bg-blue-50 text-blue-700' : 'text-gray-800'
+                              }`}
+                            >
+                              <span className="truncate">{label}</span>
+                              {isSelected && (
+                                <Icons.Tick01 size={14} strokeWidth={2} className="text-blue-700" />
+                              )}
+                            </button>
+                          )
+                        })
+                      )}
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                {selectedTemplate && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleStartTemplate}
+                    disabled={startMut.isPending}
+                  >
+                    {t('pages.clientChains.startWithTemplate', 'Start with this template')}
+                  </Button>
+                )}
               </div>
             )}
             <div className="flex flex-col gap-1">
               <Label className="text-sm text-gray-700">
                 {t('pages.clientChains.taChainLabel')}
               </Label>
-              <Select value={selectedChainId} onValueChange={setSelectedChainId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('pages.clientChains.selectChainPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {manualChains.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <DropdownMenu
+                open={chainOpen}
+                onOpenChange={(o) => {
+                  setChainOpen(o)
+                  if (!o) setChainSearch('')
+                }}
+                modal={false}
+              >
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="focus:border-primary-500 flex min-h-[40px] w-full items-center justify-between gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm outline-none hover:bg-gray-50"
+                  >
+                    <span className={selectedChainObj ? 'text-gray-800' : 'text-gray-400'}>
+                      {selectedChainObj
+                        ? selectedChainObj.name
+                        : t('pages.clientChains.selectChainPlaceholder')}
+                    </span>
+                    <Icons.ArrowDown size={16} className="text-gray-400" strokeWidth={1.5} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  sideOffset={6}
+                  className="w-[--radix-dropdown-menu-trigger-width] min-w-[260px] rounded-md border border-gray-200 bg-white p-0 shadow-lg"
+                >
+                  <div className="border-b border-gray-200 p-2">
+                    <input
+                      type="text"
+                      value={chainSearch}
+                      onChange={(e) => setChainSearch(e.target.value)}
+                      placeholder={t('pages.clientChains.chainSearchPlaceholder', 'Search chains…')}
+                      className="focus:border-primary-500 w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 outline-none placeholder:text-gray-400"
+                    />
+                  </div>
+                  <div className="max-h-[220px] overflow-y-auto p-1">
+                    {filteredChains.length === 0 ? (
+                      <div className="py-3 text-center text-xs text-gray-500">
+                        {t('pages.clientChains.chainNoneFound', 'No chains match.')}
+                      </div>
+                    ) : (
+                      filteredChains.map((c) => {
+                        const isSelected = String(c.id) === selectedChainId
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedChainId(String(c.id))
+                              setChainOpen(false)
+                              setChainSearch('')
+                            }}
+                            className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm hover:bg-gray-50 ${
+                              isSelected ? 'bg-blue-50 text-blue-700' : 'text-gray-800'
+                            }`}
+                          >
+                            <span className="truncate">{c.name}</span>
+                            {isSelected && (
+                              <Icons.Tick01 size={14} strokeWidth={2} className="text-blue-700" />
+                            )}
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <Button
               variant="primary"
@@ -665,7 +835,7 @@ export function ChainExecutor({
                           #{d.contract_number ?? d.id}
                           {d.seller_company ? ` — ${d.seller_company}` : ''}
                           {d.remaining_debt_amount
-                            ? ` — ${d.remaining_debt_amount.toLocaleString()} UAH`
+                            ? ` — ${formatMoneyKopeckTight(d.remaining_debt_amount)}`
                             : ''}
                           {d.days_past_due ? ` — overdue ${d.days_past_due}d` : ''}
                         </span>
@@ -732,7 +902,7 @@ export function ChainExecutor({
                     #{d.contract_number ?? d.id}
                     {d.seller_company ? ` — ${d.seller_company}` : ''}
                     {d.remaining_debt_amount
-                      ? ` — ${d.remaining_debt_amount.toLocaleString()} UAH`
+                      ? ` — ${formatMoneyKopeckTight(d.remaining_debt_amount)}`
                       : ''}
                     {d.days_past_due ? ` — overdue ${d.days_past_due}d` : ''}
                   </SelectItem>
