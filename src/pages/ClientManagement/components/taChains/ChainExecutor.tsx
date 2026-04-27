@@ -1137,7 +1137,14 @@ export function ChainExecutor({
                       </div>
                     ) : currentTA.field_type === 'contact' ? (
                       <div className="flex flex-col gap-2">
-                        {!contactPhones ? (
+                        {!currentStep?.contact_source ? (
+                          <span className="text-xs text-amber-600">
+                            {t(
+                              'pages.clientChains.contactNoSource',
+                              'No contact source configured'
+                            )}
+                          </span>
+                        ) : !contactPhones ? (
                           <span className="text-xs text-gray-500">{t('common.loading')}</span>
                         ) : contactPhones.length === 0 ? (
                           <span className="text-xs text-gray-500">
@@ -1667,7 +1674,11 @@ function InstantStepCard({
         </div>
       ) : ta.field_type === 'contact' ? (
         <div className="flex flex-col gap-2">
-          {!phones ? (
+          {!step.contact_source ? (
+            <span className="text-xs text-amber-600">
+              {t('pages.clientChains.contactNoSource', 'No contact source configured')}
+            </span>
+          ) : !phones ? (
             <span className="text-xs text-gray-500">{t('common.loading')}</span>
           ) : phones.length === 0 ? (
             <span className="text-xs text-gray-500">
