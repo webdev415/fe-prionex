@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import { Icons } from '@/lib/icons'
-import { useTAChains } from '@/features/taChains/hooks/useTAChains'
+import { usePinTAChain, useTAChains, useUnpinTAChain } from '@/features/taChains/hooks/useTAChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
 import type { TargetAction, TADropdownValueOut } from '@/features/targetActions/api/types'
 import { useTags } from '@/features/tags/hooks/useTags'
@@ -133,10 +133,26 @@ export function ChainExecutor({
     if (!q) return manualChains
     return manualChains.filter((c) => c.name.toLowerCase().includes(q))
   }, [manualChains, chainSearch])
+  const pinnedChains = useMemo(() => filteredChains.filter((c) => c.is_pinned), [filteredChains])
+  const unpinnedChains = useMemo(() => filteredChains.filter((c) => !c.is_pinned), [filteredChains])
   const selectedChainObj = useMemo(
     () => manualChains.find((c) => String(c.id) === selectedChainId) ?? null,
     [manualChains, selectedChainId]
   )
+
+  const pinMut = usePinTAChain()
+  const unpinMut = useUnpinTAChain()
+  const toggleChainPin = async (chainId: number, currentlyPinned: boolean) => {
+    try {
+      if (currentlyPinned) {
+        await unpinMut.mutateAsync(chainId)
+      } else {
+        await pinMut.mutateAsync(chainId)
+      }
+    } catch (err) {
+      toast.error(getErrorMessage(err))
+    }
+  }
 
   // Templates (quick picks) dropdown — replaces the old chip row.
   const [templateOpen, setTemplateOpen] = useState(false)
@@ -670,34 +686,118 @@ export function ChainExecutor({
                       className="focus:border-primary-500 w-full rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900 outline-none placeholder:text-gray-400"
                     />
                   </div>
-                  <div className="max-h-[220px] overflow-y-auto p-1">
+                  <div className="max-h-[260px] overflow-y-auto p-1">
                     {filteredChains.length === 0 ? (
                       <div className="py-3 text-center text-xs text-gray-500">
                         {t('pages.clientChains.chainNoneFound', 'No chains match.')}
                       </div>
                     ) : (
-                      filteredChains.map((c) => {
-                        const isSelected = String(c.id) === selectedChainId
-                        return (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedChainId(String(c.id))
-                              setChainOpen(false)
-                              setChainSearch('')
-                            }}
-                            className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-left text-sm hover:bg-gray-50 ${
-                              isSelected ? 'bg-blue-50 text-blue-700' : 'text-gray-800'
-                            }`}
-                          >
-                            <span className="truncate">{c.name}</span>
-                            {isSelected && (
-                              <Icons.Tick01 size={14} strokeWidth={2} className="text-blue-700" />
+                      <>
+                        {pinnedChains.length > 0 && (
+                          <div>
+                            <div className="px-2 pt-1 pb-0.5 text-[10px] font-semibold tracking-wide text-gray-400 uppercase">
+                              {t('pages.clientChains.pinnedGroup', 'Pinned')}
+                            </div>
+                            {pinnedChains.map((c) => {
+                              const isSelected = String(c.id) === selectedChainId
+                              return (
+                                <div
+                                  key={c.id}
+                                  className={`group flex w-full items-center gap-1 rounded px-2 py-1.5 text-sm hover:bg-gray-50 ${
+                                    isSelected ? 'bg-blue-50' : ''
+                                  }`}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedChainId(String(c.id))
+                                      setChainOpen(false)
+                                      setChainSearch('')
+                                    }}
+                                    className={`flex flex-1 items-center justify-between text-left ${
+                                      isSelected ? 'text-blue-700' : 'text-gray-800'
+                                    }`}
+                                  >
+                                    <span className="truncate">{c.name}</span>
+                                    {isSelected && (
+                                      <Icons.Tick01
+                                        size={14}
+                                        strokeWidth={2}
+                                        className="text-blue-700"
+                                      />
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    aria-label={t('pages.clientChains.unpin', 'Unpin')}
+                                    title={t('pages.clientChains.unpin', 'Unpin')}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      toggleChainPin(c.id, true)
+                                    }}
+                                    className="rounded p-1 text-blue-600 hover:bg-blue-100"
+                                  >
+                                    <Icons.Pin size={14} strokeWidth={2} />
+                                  </button>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                        {unpinnedChains.length > 0 && (
+                          <div>
+                            {pinnedChains.length > 0 && (
+                              <div className="px-2 pt-2 pb-0.5 text-[10px] font-semibold tracking-wide text-gray-400 uppercase">
+                                {t('pages.clientChains.allGroup', 'All chains')}
+                              </div>
                             )}
-                          </button>
-                        )
-                      })
+                            {unpinnedChains.map((c) => {
+                              const isSelected = String(c.id) === selectedChainId
+                              return (
+                                <div
+                                  key={c.id}
+                                  className={`group flex w-full items-center gap-1 rounded px-2 py-1.5 text-sm hover:bg-gray-50 ${
+                                    isSelected ? 'bg-blue-50' : ''
+                                  }`}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedChainId(String(c.id))
+                                      setChainOpen(false)
+                                      setChainSearch('')
+                                    }}
+                                    className={`flex flex-1 items-center justify-between text-left ${
+                                      isSelected ? 'text-blue-700' : 'text-gray-800'
+                                    }`}
+                                  >
+                                    <span className="truncate">{c.name}</span>
+                                    {isSelected && (
+                                      <Icons.Tick01
+                                        size={14}
+                                        strokeWidth={2}
+                                        className="text-blue-700"
+                                      />
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    aria-label={t('pages.clientChains.pin', 'Pin')}
+                                    title={t('pages.clientChains.pin', 'Pin')}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      toggleChainPin(c.id, false)
+                                    }}
+                                    className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                                  >
+                                    <Icons.Pin size={14} strokeWidth={1.5} />
+                                  </button>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </DropdownMenuContent>

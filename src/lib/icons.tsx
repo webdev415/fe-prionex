@@ -35,6 +35,7 @@ import {
   ArrowRight01Icon,
   ArrowDown01Icon,
   ArrowUp01Icon,
+  PinIcon,
   EyeIcon,
   ViewIcon,
   LockIcon,
@@ -207,6 +208,7 @@ export const Icons = {
   ArrowRight: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowRight01Icon} {...props} />,
   ArrowDown: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowDown01Icon} {...props} />,
   ArrowUp: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowUp01Icon} {...props} />,
+  Pin: (props: Omit<IconProps, 'icon'>) => <Icon icon={PinIcon} {...props} />,
   // Checkmark (using CheckmarkCircle02Icon)
   Checkmark: (props: Omit<IconProps, 'icon'>) => <Icon icon={CheckmarkCircle02Icon} {...props} />,
   Cancel01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Cancel01Icon} {...props} />,
@@ -356,6 +358,7 @@ export {
   ArrowRight01Icon,
   ArrowDown01Icon,
   ArrowUp01Icon,
+  PinIcon,
   EyeIcon,
   ViewIcon,
   LockIcon,

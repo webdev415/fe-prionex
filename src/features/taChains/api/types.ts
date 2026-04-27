@@ -33,6 +33,7 @@ export interface TAChain {
   department_ids: number[]
   is_active: boolean
   is_system_hidden: boolean
+  is_pinned: boolean
   steps: TAChainStep[]
   step_count: number
   created_by: number | null
