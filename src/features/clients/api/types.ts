@@ -124,7 +124,6 @@ export interface Client {
   responsible_employee_id?: number | null
   responsible_searcher_id?: number | null
   assigned_at?: string | null
-  assignment_date?: string | null
   assigned_by?: number | null
 
   // Tags (Sprint 2.5 - Phase 2.3)
@@ -195,7 +194,7 @@ export interface GetClientsParams {
 
   // Sorting
   sort_by_priority?: boolean // Legacy parameter
-  sort_by?: 'priority_score' | 'created_at' | 'first_name' | 'last_name' | 'id' | 'assignment_date'
+  sort_by?: 'priority_score' | 'created_at' | 'first_name' | 'last_name' | 'id'
   sort_order?: 'asc' | 'desc'
 
   // Filter: Portfolio/Sellers
@@ -209,8 +208,6 @@ export interface GetClientsParams {
   responsible_employee_id?: number
   responsible_searcher_id?: number
   unassigned_only?: boolean
-  assignment_date_from?: string
-  assignment_date_to?: string
 
   // Filter: Debt Amounts (legacy - remaining debt)
   debt_min?: number
