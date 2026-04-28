@@ -127,7 +127,23 @@ export function useAdvanceChainInstance() {
       leafNodeId?: number | null
       dropdownValueId?: number | null
     }) => advanceChainInstance(id, { leafNodeId, dropdownValueId }),
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      // Optimistically update the per-client instance list so the executor
+      // sees `current_step_order` advance immediately. Without this, the UI
+      // re-renders the OLD step (with the freshly cleared stepValue) until
+      // the background refetch lands — making the previous step flash with
+      // an empty input for ~1s before the next step appears.
+      qc.setQueryData<(typeof updated)[] | undefined>(
+        [...INST_KEY, 'client', updated.client_id],
+        (old) => {
+          if (!old) return [updated]
+          const idx = old.findIndex((i) => i.id === updated.id)
+          if (idx === -1) return [...old, updated]
+          const next = old.slice()
+          next[idx] = updated
+          return next
+        }
+      )
       qc.invalidateQueries({ queryKey: INST_KEY })
       // Refresh data that effects may have changed
       qc.invalidateQueries({ queryKey: ['clients'] }) // spam call history, tags, etc.
