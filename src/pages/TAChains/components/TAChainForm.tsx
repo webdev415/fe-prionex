@@ -64,6 +64,7 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
       is_required: s.is_required,
       delay_minutes: s.delay_minutes,
       not_in_the_past: s.not_in_the_past,
+      contact_source: s.contact_source,
     })) ?? []
   )
 

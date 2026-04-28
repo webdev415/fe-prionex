@@ -227,7 +227,7 @@ export function ChainExecutor({
   // Phone list for contact-type steps. Hook always runs but is disabled when
   // not applicable.
   const contactPhonesSource =
-    currentTA?.field_type === 'contact' ? (currentStep?.contact_source ?? null) : null
+    currentTA?.field_type === 'contact' ? (currentStep?.contact_source ?? 'client') : null
   const { data: contactPhones } = useClientPhones(clientId, contactPhonesSource)
   const isLastStep = (activeInstance?.current_step_order ?? 1) >= steps.length
 
@@ -276,6 +276,11 @@ export function ChainExecutor({
   }
   const [completedSteps, setCompletedSteps] = useState<CompletedStep[]>([])
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false)
+  // Set true once the final save round-trip starts. Gates the body render
+  // so the user never sees a re-rendered step (e.g. a branched-back step 2)
+  // during the brief window between mutations finishing and `onSave` closing
+  // the modal at the parent.
+  const [isFinalizing, setIsFinalizing] = useState(false)
 
   // Current step form fields
   const [promiseDate, setPromiseDate] = useState('')
@@ -533,6 +538,7 @@ export function ChainExecutor({
     const finalPromiseAmount = promiseAmount || collectedPromiseAmountRef.current
     const finalCreditId = creditId || collectedCreditIdRef.current
 
+    setIsFinalizing(true)
     try {
       await createIntMut.mutateAsync({
         client_id: clientId,
@@ -571,6 +577,7 @@ export function ChainExecutor({
       onSave?.()
     } catch (err) {
       toast.error(getErrorMessage(err))
+      setIsFinalizing(false)
     }
   }
 
@@ -658,6 +665,7 @@ export function ChainExecutor({
     }
 
     setInstantSubmitting(true)
+    setIsFinalizing(true)
     try {
       const inst = await startMut.mutateAsync({
         chain_id: effectiveChain.id,
@@ -696,6 +704,7 @@ export function ChainExecutor({
       onSave?.()
     } catch (err) {
       toast.error(getErrorMessage(err))
+      setIsFinalizing(false)
     } finally {
       setInstantSubmitting(false)
     }
@@ -1017,7 +1026,12 @@ export function ChainExecutor({
           </div>
 
           {/* Body switch */}
-          {!effectiveChain ? (
+          {isFinalizing ? (
+            <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-500">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+              {t('pages.clientChains.saving', 'Saving…')}
+            </div>
+          ) : !effectiveChain ? (
             <p className="text-sm text-gray-500">
               {t('pages.clientChains.pickToContinue', 'Pick a chain above to continue.')}
             </p>
@@ -1137,14 +1151,7 @@ export function ChainExecutor({
                       </div>
                     ) : currentTA.field_type === 'contact' ? (
                       <div className="flex flex-col gap-2">
-                        {!currentStep?.contact_source ? (
-                          <span className="text-xs text-amber-600">
-                            {t(
-                              'pages.clientChains.contactNoSource',
-                              'No contact source configured'
-                            )}
-                          </span>
-                        ) : !contactPhones ? (
+                        {!contactPhones ? (
                           <span className="text-xs text-gray-500">{t('common.loading')}</span>
                         ) : contactPhones.length === 0 ? (
                           <span className="text-xs text-gray-500">
@@ -1160,13 +1167,14 @@ export function ChainExecutor({
                             return (
                               <label
                                 key={p.id}
-                                className="flex items-start gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                               >
                                 <input
                                   type="radio"
                                   name={`contact-step-${currentStep?.id ?? 0}`}
                                   checked={isChecked}
-                                  onChange={() => setStepValue(p.contact_value)}
+                                  onChange={() => {}}
+                                  onClick={() => setStepValue(isChecked ? '' : p.contact_value)}
                                 />
                                 <span className="flex flex-col">
                                   <span className="font-medium">
@@ -1589,7 +1597,7 @@ function InstantStepCard({
   const { t } = useTranslation('common')
   const { data: phones } = useClientPhones(
     clientId,
-    ta.field_type === 'contact' ? step.contact_source : null
+    ta.field_type === 'contact' ? (step.contact_source ?? 'client') : null
   )
 
   const dv =
@@ -1674,11 +1682,7 @@ function InstantStepCard({
         </div>
       ) : ta.field_type === 'contact' ? (
         <div className="flex flex-col gap-2">
-          {!step.contact_source ? (
-            <span className="text-xs text-amber-600">
-              {t('pages.clientChains.contactNoSource', 'No contact source configured')}
-            </span>
-          ) : !phones ? (
+          {!phones ? (
             <span className="text-xs text-gray-500">{t('common.loading')}</span>
           ) : phones.length === 0 ? (
             <span className="text-xs text-gray-500">
@@ -1691,13 +1695,14 @@ function InstantStepCard({
               return (
                 <label
                   key={p.id}
-                  className="flex items-start gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 >
                   <input
                     type="radio"
                     name={`instant-contact-${step.id}`}
                     checked={isChecked}
-                    onChange={() => onChange({ value: p.contact_value })}
+                    onChange={() => {}}
+                    onClick={() => onChange({ value: isChecked ? '' : p.contact_value })}
                   />
                   <span className="flex flex-col">
                     <span className="font-medium">
