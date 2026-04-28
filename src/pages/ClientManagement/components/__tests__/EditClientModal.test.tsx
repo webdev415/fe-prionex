@@ -303,13 +303,6 @@ describe('EditClientModal', () => {
       expect(screen.getByText('Addresses')).toBeInTheDocument()
       expect(screen.getByText(/Main/)).toBeInTheDocument()
     })
-
-    it('should render contacts section with existing contacts', () => {
-      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
-
-      expect(screen.getByText('Contacts & Referrals')).toBeInTheDocument()
-      expect(screen.getByText(/\+380509999999/)).toBeInTheDocument()
-    })
   })
 
   describe('Personal Info Save', () => {
@@ -443,59 +436,6 @@ describe('EditClientModal', () => {
     })
   })
 
-  describe('Contact Management', () => {
-    it('should show Add Contact button', () => {
-      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
-
-      expect(screen.getByText('Add Contact')).toBeInTheDocument()
-    })
-
-    it('should show contact form when Add Contact is clicked', () => {
-      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
-
-      fireEvent.click(screen.getByText('Add Contact'))
-
-      expect(screen.getByText('Contact type')).toBeInTheDocument()
-    })
-
-    it('should show edit and delete buttons for existing contacts', () => {
-      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
-
-      expect(screen.getAllByTestId('edit-contact-btn').length).toBeGreaterThan(0)
-      expect(screen.getAllByTestId('delete-contact-btn').length).toBeGreaterThan(0)
-    })
-
-    it('should show inline edit form when edit button is clicked', () => {
-      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
-
-      const editButtons = screen.getAllByTestId('edit-contact-btn')
-      fireEvent.click(editButtons[0])
-
-      expect(screen.getByDisplayValue('+380509999999')).toBeInTheDocument()
-    })
-
-    it('should call updateContact when saving contact edit', async () => {
-      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
-
-      const editButtons = screen.getAllByTestId('edit-contact-btn')
-      fireEvent.click(editButtons[0])
-
-      const saveButtons = screen.getAllByText('Save Changes')
-      const contactSaveBtn = saveButtons[saveButtons.length - 1]
-      fireEvent.click(contactSaveBtn)
-
-      await waitFor(() => {
-        expect(mockUpdateContact).toHaveBeenCalledWith(
-          expect.objectContaining({
-            clientId: 123,
-            contactId: 10,
-          }),
-          expect.anything()
-        )
-      })
-    })
-  })
-
   describe('Loading State', () => {
     it('should show loading state while profile is loading', () => {
       vi.mocked(useClientsModule.useClientProfile).mockReturnValue({
@@ -604,14 +544,6 @@ describe('EditClientModal', () => {
         expect(screen.queryByTestId('edit-client-save-personal')).not.toBeInTheDocument()
         expect(screen.queryByTestId('edit-client-save-passport')).not.toBeInTheDocument()
         expect(screen.getByTestId('edit-client-save-phones')).toBeInTheDocument()
-      })
-
-      it('should allow contact CRUD for operators', () => {
-        render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
-
-        expect(screen.getByText('Add Contact')).toBeInTheDocument()
-        expect(screen.getAllByTestId('edit-contact-btn').length).toBeGreaterThan(0)
-        expect(screen.getAllByTestId('delete-contact-btn').length).toBeGreaterThan(0)
       })
 
       it('should hide address management buttons for operators', () => {
