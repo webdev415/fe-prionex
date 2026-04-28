@@ -1149,12 +1149,7 @@ export function ChainExecutor({
           </div>
 
           {/* Body switch */}
-          {isFinalizing || isAutoAdvancing ? (
-            <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-500">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
-              {t('pages.clientChains.saving', 'Saving…')}
-            </div>
-          ) : !effectiveChain ? (
+          {!effectiveChain ? (
             <p className="text-sm text-gray-500">
               {t('pages.clientChains.pickToContinue', 'Pick a chain above to continue.')}
             </p>
@@ -1175,7 +1170,14 @@ export function ChainExecutor({
                   </div>
                 ))}
 
-                {isDelayBlocked && (
+                {(isFinalizing || isAutoAdvancing) && (
+                  <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                    {t('pages.clientChains.saving', 'Saving…')}
+                  </div>
+                )}
+
+                {!isFinalizing && !isAutoAdvancing && isDelayBlocked && (
                   <div className="flex flex-col items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-6 text-center">
                     <span className="text-2xl">⏳</span>
                     <span className="text-sm font-medium text-amber-800">
@@ -1191,138 +1193,142 @@ export function ChainExecutor({
                   </div>
                 )}
 
-                {!isDelayBlocked && currentStep && currentTA && (
-                  <div className="flex flex-col gap-1 rounded-lg border border-gray-200 bg-gray-50/50 p-3">
-                    <Label className="text-sm font-medium text-gray-800">
-                      {t('pages.clientChains.stepLabel', { order: currentStep.step_order })} —{' '}
-                      {currentTA.name}
-                      {currentStep.is_required && <span className="ml-1 text-red-500">*</span>}
-                    </Label>
-                    {currentTA.field_type === 'dropdown' ? (
-                      <Select value={stepValue} onValueChange={setStepValue}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t('pages.clientChains.selectValue')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {currentTA.dropdown_values
-                            .filter((dv) => !dv.is_hidden)
-                            .map((dv) => (
-                              <SelectItem key={dv.id} value={dv.value}>
-                                {dv.value}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    ) : currentTA.field_type === 'date' ? (
-                      <Input
-                        type="datetime-local"
-                        value={stepValue}
-                        onChange={(e) => setStepValue(e.target.value)}
-                      />
-                    ) : currentTA.field_type === 'amount' ? (
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        placeholder="0.00"
-                        leftIcon={<span className="text-gray-700">₴</span>}
-                        value={stepValue}
-                        onChange={(e) => setStepValue(e.target.value)}
-                      />
-                    ) : currentTA.field_type === 'credit' ? (
-                      <div className="flex flex-col gap-2">
-                        {debts.length === 0 ? (
-                          <span className="text-xs text-gray-500">
-                            {t('pages.clientChains.noCredits')}
-                          </span>
-                        ) : (
-                          debts.map((d) => {
-                            const creditKey = String(d.id)
-                            const selectedIds = stepValue ? stepValue.split(',') : []
-                            const isChecked = selectedIds.includes(creditKey)
-                            return (
-                              <label
-                                key={d.id}
-                                className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={(e) => {
-                                    const next = e.target.checked
-                                      ? [...selectedIds, creditKey]
-                                      : selectedIds.filter((id) => id !== creditKey)
-                                    setStepValue(next.filter(Boolean).join(','))
-                                  }}
-                                />
-                                <span>
-                                  #{d.contract_number ?? d.id}
-                                  {d.seller_company ? ` — ${d.seller_company}` : ''}
-                                  {d.remaining_debt_amount
-                                    ? ` — ${formatMoneyKopeckTight(d.remaining_debt_amount)}`
-                                    : ''}
-                                  {d.days_past_due ? ` — overdue ${d.days_past_due}d` : ''}
-                                </span>
-                              </label>
-                            )
-                          })
-                        )}
-                      </div>
-                    ) : currentTA.field_type === 'contact' ? (
-                      <div className="flex flex-col gap-2">
-                        {!contactPhones ? (
-                          <span className="text-xs text-gray-500">{t('common.loading')}</span>
-                        ) : contactPhones.length === 0 ? (
-                          <span className="text-xs text-gray-500">
-                            {t(
-                              'pages.clientChains.noContacts',
-                              'No phones available for this source.'
-                            )}
-                          </span>
-                        ) : (
-                          contactPhones.map((p) => {
-                            const isChecked = stepValue === p.contact_value
-                            const showComment = currentStep?.contact_source === 'recommender'
-                            return (
-                              <label
-                                key={p.id}
-                                className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                              >
-                                <input
-                                  type="radio"
-                                  name={`contact-step-${currentStep?.id ?? 0}`}
-                                  checked={isChecked}
-                                  onChange={() => {}}
-                                  onClick={() => setStepValue(isChecked ? '' : p.contact_value)}
-                                />
-                                <span className="flex flex-col">
-                                  <span className="font-medium">
-                                    {p.contact_value}
-                                    {p.type_name ? (
-                                      <span className="ml-2 text-xs text-gray-400">
-                                        ({p.type_name})
-                                      </span>
-                                    ) : null}
+                {!isFinalizing &&
+                  !isAutoAdvancing &&
+                  !isDelayBlocked &&
+                  currentStep &&
+                  currentTA && (
+                    <div className="flex flex-col gap-1 rounded-lg border border-gray-200 bg-gray-50/50 p-3">
+                      <Label className="text-sm font-medium text-gray-800">
+                        {t('pages.clientChains.stepLabel', { order: currentStep.step_order })} —{' '}
+                        {currentTA.name}
+                        {currentStep.is_required && <span className="ml-1 text-red-500">*</span>}
+                      </Label>
+                      {currentTA.field_type === 'dropdown' ? (
+                        <Select value={stepValue} onValueChange={setStepValue}>
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('pages.clientChains.selectValue')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {currentTA.dropdown_values
+                              .filter((dv) => !dv.is_hidden)
+                              .map((dv) => (
+                                <SelectItem key={dv.id} value={dv.value}>
+                                  {dv.value}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      ) : currentTA.field_type === 'date' ? (
+                        <Input
+                          type="datetime-local"
+                          value={stepValue}
+                          onChange={(e) => setStepValue(e.target.value)}
+                        />
+                      ) : currentTA.field_type === 'amount' ? (
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          placeholder="0.00"
+                          leftIcon={<span className="text-gray-700">₴</span>}
+                          value={stepValue}
+                          onChange={(e) => setStepValue(e.target.value)}
+                        />
+                      ) : currentTA.field_type === 'credit' ? (
+                        <div className="flex flex-col gap-2">
+                          {debts.length === 0 ? (
+                            <span className="text-xs text-gray-500">
+                              {t('pages.clientChains.noCredits')}
+                            </span>
+                          ) : (
+                            debts.map((d) => {
+                              const creditKey = String(d.id)
+                              const selectedIds = stepValue ? stepValue.split(',') : []
+                              const isChecked = selectedIds.includes(creditKey)
+                              return (
+                                <label
+                                  key={d.id}
+                                  className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                      const next = e.target.checked
+                                        ? [...selectedIds, creditKey]
+                                        : selectedIds.filter((id) => id !== creditKey)
+                                      setStepValue(next.filter(Boolean).join(','))
+                                    }}
+                                  />
+                                  <span>
+                                    #{d.contract_number ?? d.id}
+                                    {d.seller_company ? ` — ${d.seller_company}` : ''}
+                                    {d.remaining_debt_amount
+                                      ? ` — ${formatMoneyKopeckTight(d.remaining_debt_amount)}`
+                                      : ''}
+                                    {d.days_past_due ? ` — overdue ${d.days_past_due}d` : ''}
                                   </span>
-                                  {showComment && p.comment && (
-                                    <span className="text-xs text-gray-500">{p.comment}</span>
-                                  )}
-                                </span>
-                              </label>
-                            )
-                          })
-                        )}
-                      </div>
-                    ) : (
-                      <Input
-                        type="text"
-                        placeholder={currentTA.name}
-                        value={stepValue}
-                        onChange={(e) => setStepValue(e.target.value)}
-                      />
-                    )}
-                  </div>
-                )}
+                                </label>
+                              )
+                            })
+                          )}
+                        </div>
+                      ) : currentTA.field_type === 'contact' ? (
+                        <div className="flex flex-col gap-2">
+                          {!contactPhones ? (
+                            <span className="text-xs text-gray-500">{t('common.loading')}</span>
+                          ) : contactPhones.length === 0 ? (
+                            <span className="text-xs text-gray-500">
+                              {t(
+                                'pages.clientChains.noContacts',
+                                'No phones available for this source.'
+                              )}
+                            </span>
+                          ) : (
+                            contactPhones.map((p) => {
+                              const isChecked = stepValue === p.contact_value
+                              const showComment = currentStep?.contact_source === 'recommender'
+                              return (
+                                <label
+                                  key={p.id}
+                                  className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                >
+                                  <input
+                                    type="radio"
+                                    name={`contact-step-${currentStep?.id ?? 0}`}
+                                    checked={isChecked}
+                                    onChange={() => {}}
+                                    onClick={() => setStepValue(isChecked ? '' : p.contact_value)}
+                                  />
+                                  <span className="flex flex-col">
+                                    <span className="font-medium">
+                                      {p.contact_value}
+                                      {p.type_name ? (
+                                        <span className="ml-2 text-xs text-gray-400">
+                                          ({p.type_name})
+                                        </span>
+                                      ) : null}
+                                    </span>
+                                    {showComment && p.comment && (
+                                      <span className="text-xs text-gray-500">{p.comment}</span>
+                                    )}
+                                  </span>
+                                </label>
+                              )
+                            })
+                          )}
+                        </div>
+                      ) : (
+                        <Input
+                          type="text"
+                          placeholder={currentTA.name}
+                          value={stepValue}
+                          onChange={(e) => setStepValue(e.target.value)}
+                        />
+                      )}
+                    </div>
+                  )}
 
                 {selectedDropdownValue?.require_promise_date && (
                   <div className="flex flex-col gap-1">
@@ -1380,7 +1386,7 @@ export function ChainExecutor({
                   </div>
                 )}
 
-                {isLastStep && (
+                {!isFinalizing && !isAutoAdvancing && isLastStep && (
                   <div className="flex flex-col gap-1">
                     <Label className="text-sm text-gray-700">{t('pages.clientChains.notes')}</Label>
                     <Textarea
@@ -1392,29 +1398,37 @@ export function ChainExecutor({
                   </div>
                 )}
 
-                {!isDelayBlocked && !isLastStep && !canAutoAdvance && (
-                  <Button
-                    variant="cancel"
-                    onClick={handleAutoAdvance}
-                    disabled={advanceMut.isPending || isAutoAdvancing}
-                    className="w-full"
-                  >
-                    {t('pages.clientChains.continueToNext')}
-                  </Button>
-                )}
+                {!isFinalizing &&
+                  !isAutoAdvancing &&
+                  !isDelayBlocked &&
+                  !isLastStep &&
+                  !canAutoAdvance && (
+                    <Button
+                      variant="cancel"
+                      onClick={handleAutoAdvance}
+                      disabled={advanceMut.isPending || isAutoAdvancing}
+                      className="w-full"
+                    >
+                      {t('pages.clientChains.continueToNext')}
+                    </Button>
+                  )}
 
-                {!isDelayBlocked && isLastStep && showNotifyResponsibleCheckbox && (
-                  <label className="flex items-center gap-2 text-sm text-gray-700">
-                    <input
-                      type="checkbox"
-                      checked={notifyResponsible}
-                      onChange={(e) => setNotifyResponsible(e.target.checked)}
-                    />
-                    {t('pages.clientChains.notifyResponsible', 'Notify responsible employee')}
-                  </label>
-                )}
+                {!isFinalizing &&
+                  !isAutoAdvancing &&
+                  !isDelayBlocked &&
+                  isLastStep &&
+                  showNotifyResponsibleCheckbox && (
+                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={notifyResponsible}
+                        onChange={(e) => setNotifyResponsible(e.target.checked)}
+                      />
+                      {t('pages.clientChains.notifyResponsible', 'Notify responsible employee')}
+                    </label>
+                  )}
 
-                {!isDelayBlocked && isLastStep && (
+                {!isFinalizing && !isAutoAdvancing && !isDelayBlocked && isLastStep && (
                   <Button
                     variant="primary"
                     onClick={handleSave}
