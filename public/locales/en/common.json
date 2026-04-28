@@ -867,7 +867,6 @@
         "tags": "Tags",
         "phoneNumber": "Phone number",
         "createdDate": "Added On",
-        "assignmentDate": "Assignment Date",
         "creditor": "Creditor",
         "debt": "Debt",
         "totalDebt": "Total Debt",
