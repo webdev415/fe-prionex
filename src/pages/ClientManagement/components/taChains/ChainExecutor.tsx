@@ -502,6 +502,14 @@ export function ChainExecutor({
   const canAutoAdvance = currentTA && currentTA.field_type === 'dropdown' && !needsExtraFields
 
   useEffect(() => {
+    // Guard against the post-advance re-fire race: after `setStepValue('')`
+    // resets local state, this effect re-runs while `activeInstance` is
+    // still stale (TanStack Query refetch is in flight). Without this guard
+    // we'd auto-advance a second time using the previous step's stale
+    // `currentTA`, which causes the backend to advance again from the
+    // already-updated server state — silently skipping the next step
+    // (e.g. step 7 'Дата обещания' between dropdown step 6 and step 8).
+    if (!stepValue.trim()) return
     if (!isLastStep && !isAutoAdvancing && activeInstance && canAutoAdvance) {
       handleAutoAdvance()
     }
