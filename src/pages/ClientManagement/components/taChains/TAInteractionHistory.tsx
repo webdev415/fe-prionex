@@ -14,7 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
-import { useClientTAInteractions } from '@/features/taInteractions/hooks/useTAInteractions'
+import {
+  useClientTAInteractions,
+  useTogglePinTAInteraction,
+} from '@/features/taInteractions/hooks/useTAInteractions'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/errors'
 import { useTAChains } from '@/features/taChains/hooks/useTAChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
 import type { TargetAction } from '@/features/targetActions/api/types'
@@ -39,6 +44,14 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   // Map debt ID → contract number for display
   const debtContractMap = new Map(debts.map((d) => [d.id, `#${d.contract_number ?? d.id}`]))
   const { t } = useTranslation('common')
+  const togglePinMut = useTogglePinTAInteraction()
+  const handleTogglePin = async (id: number) => {
+    try {
+      await togglePinMut.mutateAsync(id)
+    } catch (err) {
+      toast.error(getErrorMessage(err))
+    }
+  }
 
   // Filters
   const [chainFilter, setChainFilter] = useState<string>('')
@@ -260,6 +273,27 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       render: (row) => <span className="text-xs text-gray-600">{row.recorded_by_name ?? '-'}</span>,
     },
     {
+      key: 'pin',
+      header: '',
+      align: 'right',
+      render: (row) => (
+        <button
+          type="button"
+          onClick={() => handleTogglePin(row.id)}
+          disabled={togglePinMut.isPending}
+          className={`rounded p-1 transition-colors ${
+            row.is_pinned
+              ? 'text-amber-500 hover:bg-amber-50'
+              : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
+          }`}
+          aria-label={row.is_pinned ? t('actions.unpin', 'Unpin') : t('actions.pin', 'Pin')}
+          title={row.is_pinned ? t('actions.unpin', 'Unpin') : t('actions.pin', 'Pin')}
+        >
+          <Icons.Pin size={14} strokeWidth={1.5} />
+        </button>
+      ),
+    },
+    {
       key: 'edit',
       header: '',
       align: 'right',
@@ -279,7 +313,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     },
   ]
 
-  if (isLoading && page === 0) return <TableSkeleton columns={7} rows={3} />
+  if (isLoading && page === 0) return <TableSkeleton columns={8} rows={3} />
 
   return (
     <div className="flex flex-col gap-3">

@@ -48,6 +48,7 @@ import {
   useAdvanceChainInstance,
   useClientChainInstances,
   useCancelChainInstance,
+  useClientPinnedChainIds,
 } from '@/features/taInteractions/hooks/useTAInteractions'
 import type { TAChainStep } from '@/features/taChains/api/types'
 import { useQuickPicks } from '@/features/quickPicks/hooks/useQuickPicks'
@@ -158,8 +159,22 @@ export function ChainExecutor({
     if (!q) return manualChains
     return manualChains.filter((c) => c.name.toLowerCase().includes(q))
   }, [manualChains, chainSearch])
-  const pinnedChains = useMemo(() => filteredChains.filter((c) => c.is_pinned), [filteredChains])
-  const unpinnedChains = useMemo(() => filteredChains.filter((c) => !c.is_pinned), [filteredChains])
+  // Per-client pin: a chain becomes "pinned for this client" when at least
+  // one of its interactions in this client's history is pinned. This is
+  // additive to the chain-level `is_pinned` (which is project-wide).
+  const { data: clientPinnedChainIdsData } = useClientPinnedChainIds(clientId)
+  const clientPinnedChainIds = useMemo(
+    () => new Set(clientPinnedChainIdsData ?? []),
+    [clientPinnedChainIdsData]
+  )
+  const pinnedChains = useMemo(
+    () => filteredChains.filter((c) => c.is_pinned || clientPinnedChainIds.has(c.id)),
+    [filteredChains, clientPinnedChainIds]
+  )
+  const unpinnedChains = useMemo(
+    () => filteredChains.filter((c) => !c.is_pinned && !clientPinnedChainIds.has(c.id)),
+    [filteredChains, clientPinnedChainIds]
+  )
   const selectedChainObj = useMemo(
     () => manualChains.find((c) => String(c.id) === selectedChainId) ?? null,
     [manualChains, selectedChainId]
@@ -920,6 +935,8 @@ export function ChainExecutor({
                             </div>
                             {pinnedChains.map((c) => {
                               const isSelected = String(c.id) === selectedChainId
+                              const isChainPinned = c.is_pinned
+                              const isClientPinned = clientPinnedChainIds.has(c.id)
                               return (
                                 <div
                                   key={c.id}
@@ -938,7 +955,20 @@ export function ChainExecutor({
                                       isSelected ? 'text-blue-700' : 'text-gray-800'
                                     }`}
                                   >
-                                    <span className="truncate">{c.name}</span>
+                                    <span className="flex items-center gap-1 truncate">
+                                      <span className="truncate">{c.name}</span>
+                                      {isClientPinned && !isChainPinned && (
+                                        <span
+                                          className="rounded bg-amber-100 px-1 py-0.5 text-[9px] font-medium text-amber-700"
+                                          title={t(
+                                            'pages.clientChains.clientPinHint',
+                                            'Pinned via this client’s history'
+                                          )}
+                                        >
+                                          {t('pages.clientChains.clientPinTag', 'client')}
+                                        </span>
+                                      )}
+                                    </span>
                                     {isSelected && (
                                       <Icons.Tick01
                                         size={14}
@@ -947,18 +977,20 @@ export function ChainExecutor({
                                       />
                                     )}
                                   </button>
-                                  <button
-                                    type="button"
-                                    aria-label={t('pages.clientChains.unpin', 'Unpin')}
-                                    title={t('pages.clientChains.unpin', 'Unpin')}
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      toggleChainPin(c.id, true)
-                                    }}
-                                    className="rounded p-1 text-blue-600 hover:bg-blue-100"
-                                  >
-                                    <Icons.Pin size={14} strokeWidth={2} />
-                                  </button>
+                                  {isChainPinned && (
+                                    <button
+                                      type="button"
+                                      aria-label={t('pages.clientChains.unpin', 'Unpin')}
+                                      title={t('pages.clientChains.unpin', 'Unpin')}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        toggleChainPin(c.id, true)
+                                      }}
+                                      className="rounded p-1 text-blue-600 hover:bg-blue-100"
+                                    >
+                                      <Icons.Pin size={14} strokeWidth={2} />
+                                    </button>
+                                  )}
                                 </div>
                               )
                             })}

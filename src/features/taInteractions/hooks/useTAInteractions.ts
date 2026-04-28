@@ -5,9 +5,11 @@ import {
   completeChainInstance,
   createTAInteraction,
   getChainInstances,
+  getClientPinnedChainIds,
   getTAInteraction,
   getTAInteractions,
   startChainInstance,
+  togglePinTAInteraction,
   updateTAInteraction,
 } from '../api/taInteractionsApi'
 import type {
@@ -65,6 +67,27 @@ export function useUpdateTAInteraction() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: INT_KEY })
     },
+  })
+}
+
+export function useTogglePinTAInteraction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => togglePinTAInteraction(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: INT_KEY })
+      // Pinned-chain-ids list depends on pin state — refetch so the chain
+      // selector re-orders without a manual refresh.
+      qc.invalidateQueries({ queryKey: ['ta-pinned-chains'] })
+    },
+  })
+}
+
+export function useClientPinnedChainIds(clientId: number | null) {
+  return useQuery({
+    queryKey: ['ta-pinned-chains', clientId],
+    queryFn: () => getClientPinnedChainIds(clientId!),
+    enabled: clientId !== null && clientId > 0,
   })
 }
 

@@ -35,6 +35,16 @@ export async function updateTAInteraction(
   return r.data
 }
 
+export async function togglePinTAInteraction(id: number): Promise<TAInteraction> {
+  const r = await api.post<TAInteraction>(`/api/v1/ta-interactions/${id}/pin`)
+  return r.data
+}
+
+export async function getClientPinnedChainIds(clientId: number): Promise<number[]> {
+  const r = await api.get<number[]>(`/api/v1/ta-interactions/clients/${clientId}/pinned-chain-ids`)
+  return r.data
+}
+
 // Chain Instances
 export async function getChainInstances(params?: {
   client_id?: number
