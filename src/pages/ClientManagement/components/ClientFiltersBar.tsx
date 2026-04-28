@@ -96,6 +96,8 @@ type FilterDateField =
   | 'promiseDateTo'
   | 'callbackDateFrom'
   | 'callbackDateTo'
+  | 'assignmentDateFrom'
+  | 'assignmentDateTo'
   | 'interactionDateFrom'
   | 'interactionDateTo'
 
@@ -368,6 +370,34 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                   value={filters.callbackDateTo || null}
                   onChange={({ value }) => handleFilterDateChange('callbackDateTo', value)}
                   placeholder="Max"
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Assignment Date (current responsible employee) */}
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
+            <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full shrink-0 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:max-w-[9.5rem] sm:min-w-[7.25rem] sm:text-sm sm:tracking-[-0.28px] sm:whitespace-normal">
+                {t('pages.clients.filters.assignmentDate', 'Assignment Date')}
+              </label>
+              <div className="flex w-full flex-1 items-center gap-2">
+                <DateSelect
+                  value={filters.assignmentDateFrom || null}
+                  onChange={({ value }) => handleFilterDateChange('assignmentDateFrom', value)}
+                  placeholder={t('pages.clients.filters.dateFrom', 'From')}
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                  -
+                </span>
+                <DateSelect
+                  value={filters.assignmentDateTo || null}
+                  onChange={({ value }) => handleFilterDateChange('assignmentDateTo', value)}
+                  placeholder={t('pages.clients.filters.dateTo', 'To')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
                 />

@@ -102,6 +102,13 @@ function mapFiltersToAPIParams(
     params.callback_date_to = filters.callbackDateTo
   }
 
+  if (filters.assignmentDateFrom) {
+    params.assignment_date_from = filters.assignmentDateFrom
+  }
+  if (filters.assignmentDateTo) {
+    params.assignment_date_to = filters.assignmentDateTo
+  }
+
   // FILTER: Interaction Created By (operator)
   if (filters.interactionUserId) {
     const parsed = parseInt(filters.interactionUserId, 10)
@@ -221,6 +228,18 @@ describe('Client Management Filter Integration', () => {
 
       expect(params.callback_date_from).toBe('2025-04-01')
       expect(params.callback_date_to).toBe('2025-04-15')
+    })
+
+    it('should map assignmentDateFrom/To to assignment_date_from/to', () => {
+      const filters: ClientFilters = {
+        assignmentDateFrom: '2026-01-10',
+        assignmentDateTo: '2026-01-20',
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+
+      expect(params.assignment_date_from).toBe('2026-01-10')
+      expect(params.assignment_date_to).toBe('2026-01-20')
     })
   })
 
@@ -558,6 +577,8 @@ describe('Client Management Filter Integration', () => {
         promiseDateTo: '2026-04-30',
         callbackDateFrom: '2026-05-01',
         callbackDateTo: '2026-05-31',
+        assignmentDateFrom: '2026-02-01',
+        assignmentDateTo: '2026-02-28',
         interactionUserId: '12',
         interactionDateFrom: '2026-03-15',
         interactionDateTo: '2026-05-01',
@@ -569,6 +590,8 @@ describe('Client Management Filter Integration', () => {
       expect(params.promise_date_to).toBe('2026-04-30')
       expect(params.callback_date_from).toBe('2026-05-01')
       expect(params.callback_date_to).toBe('2026-05-31')
+      expect(params.assignment_date_from).toBe('2026-02-01')
+      expect(params.assignment_date_to).toBe('2026-02-28')
       expect(params.interaction_user_id).toBe(12)
       expect(params.interaction_date_from).toBe('2026-03-15')
       expect(params.interaction_date_to).toBe('2026-05-01')
@@ -582,6 +605,8 @@ describe('Client Management Filter Integration', () => {
       expect(params.interaction_user_id).toBeUndefined()
       expect(params.interaction_date_from).toBeUndefined()
       expect(params.interaction_date_to).toBeUndefined()
+      expect(params.assignment_date_from).toBeUndefined()
+      expect(params.assignment_date_to).toBeUndefined()
     })
   })
 })

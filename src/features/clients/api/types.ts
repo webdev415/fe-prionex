@@ -125,6 +125,8 @@ export interface Client {
   responsible_searcher_id?: number | null
   assigned_at?: string | null
   assigned_by?: number | null
+  /** Latest assignment of current responsible employee (from assignment history) */
+  assignment_date?: string | null
 
   // Tags (Sprint 2.5 - Phase 2.3)
   tags?: Array<{ id: number; name: string; color: string; description?: string | null }>
@@ -232,6 +234,10 @@ export interface GetClientsParams {
   // Filter: Callback/Next-action Date
   callback_date_from?: string // YYYY-MM-DD format
   callback_date_to?: string // YYYY-MM-DD format
+
+  // Filter: Current employee assignment date (from assignment history)
+  assignment_date_from?: string // YYYY-MM-DD format
+  assignment_date_to?: string // YYYY-MM-DD format
 
   // Filter: Interaction operator
   interaction_user_id?: number
