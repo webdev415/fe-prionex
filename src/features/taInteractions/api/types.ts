@@ -20,6 +20,8 @@ export interface TAInteraction {
   assigned_operator_id: number | null
   created_at: string
   archived: boolean
+  is_pinned: boolean
+  pinned_at: string | null
 }
 
 export interface TAInteractionListResponse {

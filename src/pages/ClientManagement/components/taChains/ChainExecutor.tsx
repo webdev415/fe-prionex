@@ -48,6 +48,7 @@ import {
   useAdvanceChainInstance,
   useClientChainInstances,
   useCancelChainInstance,
+  useClientPinnedChainIds,
 } from '@/features/taInteractions/hooks/useTAInteractions'
 import type { TAChainStep } from '@/features/taChains/api/types'
 import { useQuickPicks } from '@/features/quickPicks/hooks/useQuickPicks'
@@ -158,8 +159,22 @@ export function ChainExecutor({
     if (!q) return manualChains
     return manualChains.filter((c) => c.name.toLowerCase().includes(q))
   }, [manualChains, chainSearch])
-  const pinnedChains = useMemo(() => filteredChains.filter((c) => c.is_pinned), [filteredChains])
-  const unpinnedChains = useMemo(() => filteredChains.filter((c) => !c.is_pinned), [filteredChains])
+  // Per-client pin: a chain becomes "pinned for this client" when at least
+  // one of its interactions in this client's history is pinned. This is
+  // additive to the chain-level `is_pinned` (which is project-wide).
+  const { data: clientPinnedChainIdsData } = useClientPinnedChainIds(clientId)
+  const clientPinnedChainIds = useMemo(
+    () => new Set(clientPinnedChainIdsData ?? []),
+    [clientPinnedChainIdsData]
+  )
+  const pinnedChains = useMemo(
+    () => filteredChains.filter((c) => c.is_pinned || clientPinnedChainIds.has(c.id)),
+    [filteredChains, clientPinnedChainIds]
+  )
+  const unpinnedChains = useMemo(
+    () => filteredChains.filter((c) => !c.is_pinned && !clientPinnedChainIds.has(c.id)),
+    [filteredChains, clientPinnedChainIds]
+  )
   const selectedChainObj = useMemo(
     () => manualChains.find((c) => String(c.id) === selectedChainId) ?? null,
     [manualChains, selectedChainId]
@@ -227,7 +242,7 @@ export function ChainExecutor({
   // Phone list for contact-type steps. Hook always runs but is disabled when
   // not applicable.
   const contactPhonesSource =
-    currentTA?.field_type === 'contact' ? (currentStep?.contact_source ?? null) : null
+    currentTA?.field_type === 'contact' ? (currentStep?.contact_source ?? 'client') : null
   const { data: contactPhones } = useClientPhones(clientId, contactPhonesSource)
   const isLastStep = (activeInstance?.current_step_order ?? 1) >= steps.length
 
@@ -276,6 +291,11 @@ export function ChainExecutor({
   }
   const [completedSteps, setCompletedSteps] = useState<CompletedStep[]>([])
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false)
+  // Set true once the final save round-trip starts. Gates the body render
+  // so the user never sees a re-rendered step (e.g. a branched-back step 2)
+  // during the brief window between mutations finishing and `onSave` closing
+  // the modal at the parent.
+  const [isFinalizing, setIsFinalizing] = useState(false)
 
   // Current step form fields
   const [promiseDate, setPromiseDate] = useState('')
@@ -533,6 +553,7 @@ export function ChainExecutor({
     const finalPromiseAmount = promiseAmount || collectedPromiseAmountRef.current
     const finalCreditId = creditId || collectedCreditIdRef.current
 
+    setIsFinalizing(true)
     try {
       await createIntMut.mutateAsync({
         client_id: clientId,
@@ -571,6 +592,7 @@ export function ChainExecutor({
       onSave?.()
     } catch (err) {
       toast.error(getErrorMessage(err))
+      setIsFinalizing(false)
     }
   }
 
@@ -658,6 +680,7 @@ export function ChainExecutor({
     }
 
     setInstantSubmitting(true)
+    setIsFinalizing(true)
     try {
       const inst = await startMut.mutateAsync({
         chain_id: effectiveChain.id,
@@ -696,6 +719,7 @@ export function ChainExecutor({
       onSave?.()
     } catch (err) {
       toast.error(getErrorMessage(err))
+      setIsFinalizing(false)
     } finally {
       setInstantSubmitting(false)
     }
@@ -911,6 +935,8 @@ export function ChainExecutor({
                             </div>
                             {pinnedChains.map((c) => {
                               const isSelected = String(c.id) === selectedChainId
+                              const isChainPinned = c.is_pinned
+                              const isClientPinned = clientPinnedChainIds.has(c.id)
                               return (
                                 <div
                                   key={c.id}
@@ -929,7 +955,20 @@ export function ChainExecutor({
                                       isSelected ? 'text-blue-700' : 'text-gray-800'
                                     }`}
                                   >
-                                    <span className="truncate">{c.name}</span>
+                                    <span className="flex items-center gap-1 truncate">
+                                      <span className="truncate">{c.name}</span>
+                                      {isClientPinned && !isChainPinned && (
+                                        <span
+                                          className="rounded bg-amber-100 px-1 py-0.5 text-[9px] font-medium text-amber-700"
+                                          title={t(
+                                            'pages.clientChains.clientPinHint',
+                                            'Pinned via this client’s history'
+                                          )}
+                                        >
+                                          {t('pages.clientChains.clientPinTag', 'client')}
+                                        </span>
+                                      )}
+                                    </span>
                                     {isSelected && (
                                       <Icons.Tick01
                                         size={14}
@@ -938,18 +977,20 @@ export function ChainExecutor({
                                       />
                                     )}
                                   </button>
-                                  <button
-                                    type="button"
-                                    aria-label={t('pages.clientChains.unpin', 'Unpin')}
-                                    title={t('pages.clientChains.unpin', 'Unpin')}
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      toggleChainPin(c.id, true)
-                                    }}
-                                    className="rounded p-1 text-blue-600 hover:bg-blue-100"
-                                  >
-                                    <Icons.Pin size={14} strokeWidth={2} />
-                                  </button>
+                                  {isChainPinned && (
+                                    <button
+                                      type="button"
+                                      aria-label={t('pages.clientChains.unpin', 'Unpin')}
+                                      title={t('pages.clientChains.unpin', 'Unpin')}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        toggleChainPin(c.id, true)
+                                      }}
+                                      className="rounded p-1 text-blue-600 hover:bg-blue-100"
+                                    >
+                                      <Icons.Pin size={14} strokeWidth={2} />
+                                    </button>
+                                  )}
                                 </div>
                               )
                             })}
@@ -1017,7 +1058,12 @@ export function ChainExecutor({
           </div>
 
           {/* Body switch */}
-          {!effectiveChain ? (
+          {isFinalizing ? (
+            <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-500">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+              {t('pages.clientChains.saving', 'Saving…')}
+            </div>
+          ) : !effectiveChain ? (
             <p className="text-sm text-gray-500">
               {t('pages.clientChains.pickToContinue', 'Pick a chain above to continue.')}
             </p>
@@ -1092,6 +1138,7 @@ export function ChainExecutor({
                         min={0}
                         step="0.01"
                         placeholder="0.00"
+                        leftIcon={<span className="text-gray-700">₴</span>}
                         value={stepValue}
                         onChange={(e) => setStepValue(e.target.value)}
                       />
@@ -1152,13 +1199,14 @@ export function ChainExecutor({
                             return (
                               <label
                                 key={p.id}
-                                className="flex items-start gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                               >
                                 <input
                                   type="radio"
                                   name={`contact-step-${currentStep?.id ?? 0}`}
                                   checked={isChecked}
-                                  onChange={() => setStepValue(p.contact_value)}
+                                  onChange={() => {}}
+                                  onClick={() => setStepValue(isChecked ? '' : p.contact_value)}
                                 />
                                 <span className="flex flex-col">
                                   <span className="font-medium">
@@ -1213,6 +1261,7 @@ export function ChainExecutor({
                       min={0}
                       step="0.01"
                       placeholder="0.00"
+                      leftIcon={<span className="text-gray-700">₴</span>}
                       value={promiseAmount}
                       onChange={(e) => setPromiseAmount(e.target.value)}
                     />
@@ -1580,7 +1629,7 @@ function InstantStepCard({
   const { t } = useTranslation('common')
   const { data: phones } = useClientPhones(
     clientId,
-    ta.field_type === 'contact' ? step.contact_source : null
+    ta.field_type === 'contact' ? (step.contact_source ?? 'client') : null
   )
 
   const dv =
@@ -1622,6 +1671,7 @@ function InstantStepCard({
           min={0}
           step="0.01"
           placeholder="0.00"
+          leftIcon={<span className="text-gray-700">₴</span>}
           value={value.value}
           onChange={(e) => onChange({ value: e.target.value })}
         />
@@ -1677,13 +1727,14 @@ function InstantStepCard({
               return (
                 <label
                   key={p.id}
-                  className="flex items-start gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
                 >
                   <input
                     type="radio"
                     name={`instant-contact-${step.id}`}
                     checked={isChecked}
-                    onChange={() => onChange({ value: p.contact_value })}
+                    onChange={() => {}}
+                    onClick={() => onChange({ value: isChecked ? '' : p.contact_value })}
                   />
                   <span className="flex flex-col">
                     <span className="font-medium">
@@ -1732,6 +1783,7 @@ function InstantStepCard({
             min={0}
             step="0.01"
             placeholder="0.00"
+            leftIcon={<span className="text-gray-700">₴</span>}
             value={value.promiseAmount}
             onChange={(e) => onChange({ promiseAmount: e.target.value })}
           />

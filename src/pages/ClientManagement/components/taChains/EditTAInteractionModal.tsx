@@ -46,14 +46,7 @@ function ContactStepEdit({
   onChange: (v: string) => void
 }) {
   const { t } = useTranslation('common')
-  const { data: phonesData } = useClientPhones(clientId, source)
-  if (!source) {
-    return (
-      <span className="text-xs text-gray-500">
-        {t('pages.clientChains.contactNoSource', 'No contact source configured')}
-      </span>
-    )
-  }
+  const { data: phonesData } = useClientPhones(clientId, source ?? 'client')
   // step_data stores the phone string verbatim, so the Select compares
   // by contact_value not id. If the saved value isn't in the current
   // phone list (contact deleted/renamed), still show it as a stale entry.
@@ -263,6 +256,7 @@ export function EditTAInteractionModal({
                       min={0}
                       step="0.01"
                       placeholder="0.00"
+                      leftIcon={<span className="text-gray-700">₴</span>}
                       value={value}
                       onChange={(e) => setStepValue(step.target_action_id, e.target.value)}
                     />
@@ -308,6 +302,7 @@ export function EditTAInteractionModal({
                   min={0}
                   step="0.01"
                   placeholder="0.00"
+                  leftIcon={<span className="text-gray-700">₴</span>}
                   value={promiseAmount}
                   onChange={(e) => setPromiseAmount(e.target.value)}
                 />

@@ -7,7 +7,7 @@
  * and supports reordering.
  */
 
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { Input } from '@/components/ui/Input'
@@ -35,6 +35,23 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
   // an admin can re-use generic TAs across departments).
   const { data } = useTargetActions({ include_hidden: false })
   const allTAs = useMemo(() => data?.items ?? [], [data])
+
+  // Auto-repair: legacy chains created with a bug had `contact_source = null`
+  // for contact-type steps. When the TA list is loaded, normalize any such
+  // step to 'client' so the admin's next Save persists a valid value.
+  useEffect(() => {
+    if (allTAs.length === 0) return
+    const fieldTypeById = new Map(allTAs.map((ta) => [ta.id, ta.field_type]))
+    let needsFix = false
+    const next = steps.map((s) => {
+      if (fieldTypeById.get(s.target_action_id) === 'contact' && !s.contact_source) {
+        needsFix = true
+        return { ...s, contact_source: 'client' as const }
+      }
+      return s
+    })
+    if (needsFix) onChange(next)
+  }, [allTAs, steps, onChange])
 
   const update = (index: number, patch: Partial<TAChainStepIn>) => {
     const next = steps.map((s, i) => (i === index ? { ...s, ...patch } : s))
