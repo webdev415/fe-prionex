@@ -69,6 +69,18 @@ export interface TAInteractionCreate {
   notify_responsible?: boolean
 }
 
+export interface ChainInstanceStepSnapshot {
+  value?: string | null
+  dropdown_value_id?: number | null
+  dropdown_value_name?: string | null
+  leaf_node_id?: number | null
+  promise_date?: string | null
+  promise_amount?: string | null
+  credit_id?: string | null
+  target_action_id?: number | null
+  target_action_name?: string | null
+}
+
 export interface ChainInstance {
   id: number
   chain_id: number
@@ -81,6 +93,7 @@ export interface ChainInstance {
   completed_at: string | null
   last_step_completed_at: string | null
   delay_seconds_left: number
+  step_data: Record<string, ChainInstanceStepSnapshot> | null
 }
 
 export interface ChainInstanceCreate {

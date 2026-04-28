@@ -122,11 +122,36 @@ export function useAdvanceChainInstance() {
       id,
       leafNodeId,
       dropdownValueId,
+      dropdownValueName,
+      stepValue,
+      targetActionId,
+      targetActionName,
+      promiseDate,
+      promiseAmount,
+      creditId,
     }: {
       id: number
       leafNodeId?: number | null
       dropdownValueId?: number | null
-    }) => advanceChainInstance(id, { leafNodeId, dropdownValueId }),
+      dropdownValueName?: string | null
+      stepValue?: string | null
+      targetActionId?: number | null
+      targetActionName?: string | null
+      promiseDate?: string | null
+      promiseAmount?: string | null
+      creditId?: string | null
+    }) =>
+      advanceChainInstance(id, {
+        leafNodeId,
+        dropdownValueId,
+        dropdownValueName,
+        stepValue,
+        targetActionId,
+        targetActionName,
+        promiseDate,
+        promiseAmount,
+        creditId,
+      }),
     onSuccess: (updated) => {
       // Optimistically update the per-client instance list so the executor
       // sees `current_step_order` advance immediately. Without this, the UI
