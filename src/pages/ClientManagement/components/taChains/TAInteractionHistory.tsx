@@ -22,6 +22,8 @@ import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/errors'
 import { useTAChains } from '@/features/taChains/hooks/useTAChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
+import { useOperators } from '@/features/users/hooks/useUsers'
+import { useAuthStore } from '@/stores/authStore'
 import type { TargetAction } from '@/features/targetActions/api/types'
 import type { TAInteraction } from '@/features/taInteractions/api/types'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
@@ -71,6 +73,22 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     for (const ta of tasData?.items ?? []) m.set(ta.id, ta)
     return m
   }, [tasData])
+
+  // Operator lookup so we can render full names instead of usernames in the
+  // Operator column. Snapshot column `recorded_by_name` keeps the username
+  // (set at creation), but for display we prefer first+last from the live
+  // users directory.
+  const user = useAuthStore((s) => s.user)
+  const projectId = user?.active_project_id ? parseInt(user.active_project_id, 10) : null
+  const { data: operators } = useOperators(projectId)
+  const operatorNameById = useMemo(() => {
+    const m = new Map<number, string>()
+    for (const op of operators ?? []) {
+      const full = `${op.first_name ?? ''} ${op.last_name ?? ''}`.trim()
+      m.set(op.id, full || op.username)
+    }
+    return m
+  }, [operators])
 
   const { data, isLoading } = useClientTAInteractions(clientId, {
     chain_id: chainFilter ? parseInt(chainFilter, 10) : undefined,
@@ -296,7 +314,13 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       key: 'recorded_by_name',
       header: t('pages.clientChains.history.operator'),
       align: 'left',
-      render: (row) => <span className="text-xs text-gray-600">{row.recorded_by_name ?? '-'}</span>,
+      render: (row) => {
+        const display =
+          (row.recorded_by != null ? operatorNameById.get(row.recorded_by) : null) ??
+          row.recorded_by_name ??
+          '-'
+        return <span className="text-xs text-gray-600">{display}</span>
+      },
     },
     {
       key: 'pin',
