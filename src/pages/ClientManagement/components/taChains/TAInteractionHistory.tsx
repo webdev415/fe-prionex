@@ -103,6 +103,30 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       ),
     },
     {
+      key: 'phone',
+      header: t('pages.clientChains.history.phone', 'Phone'),
+      align: 'left',
+      render: (row) => {
+        if (!row.step_data) return <span className="text-xs text-gray-700">-</span>
+        const chain = chains.find((c) => c.id === row.chain_id)
+        const stepsOrdered = chain?.steps
+          ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
+          : []
+        const phones: string[] = []
+        for (const step of stepsOrdered) {
+          const ta = taById.get(step.target_action_id)
+          if (ta?.field_type !== 'contact') continue
+          const val = (row.step_data as Record<string, string>)[String(step.target_action_id)]
+          if (val) phones.push(val)
+        }
+        return (
+          <span className="text-xs text-gray-700">
+            {phones.length > 0 ? phones.join(', ') : '-'}
+          </span>
+        )
+      },
+    },
+    {
       key: 'result',
       header: t('pages.clientChains.history.result'),
       align: 'left',
@@ -143,6 +167,8 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               const val = (row.step_data as Record<string, string>)[String(step.target_action_id)]
               if (!val) continue
               const ta = taById.get(step.target_action_id)
+              // Phone numbers (contact-type steps) live in their own column.
+              if (ta?.field_type === 'contact') continue
               const followUps: string[] = []
 
               // Attach top-level promise/credit fields to the dropdown step
@@ -313,7 +339,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     },
   ]
 
-  if (isLoading && page === 0) return <TableSkeleton columns={8} rows={3} />
+  if (isLoading && page === 0) return <TableSkeleton columns={9} rows={3} />
 
   return (
     <div className="flex flex-col gap-3">
