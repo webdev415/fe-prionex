@@ -403,6 +403,75 @@ export function ChainExecutor({
     setNotes('')
   }, [activeInstance?.id])
 
+  // Rehydrate completed steps + collected refs from server-side step_data
+  // when the modal opens onto an in-progress instance. Without this, closing
+  // the modal mid-chain and reopening would lose the values entered on prior
+  // steps even though the chain pointer is still on the right step.
+  const hydratedInstanceRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (!activeInstance || !activeChain || steps.length === 0) return
+    if (hydratedInstanceRef.current === activeInstance.id) return
+    if (restoredRef.current) {
+      // Minimized-store restore wins — its state is fresher than server.
+      hydratedInstanceRef.current = activeInstance.id
+      return
+    }
+    const sd = activeInstance.step_data
+    if (!sd) {
+      hydratedInstanceRef.current = activeInstance.id
+      return
+    }
+    const orders = Object.keys(sd)
+      .map((k) => parseInt(k, 10))
+      .filter((n) => !Number.isNaN(n))
+      .sort((a, b) => a - b)
+    if (orders.length === 0) {
+      hydratedInstanceRef.current = activeInstance.id
+      return
+    }
+    const rebuiltCompleted: CompletedStep[] = []
+    for (const order of orders) {
+      const snap = sd[String(order)]
+      if (!snap) continue
+      const stepDef = steps.find((s) => s.step_order === order)
+      const taName =
+        snap.target_action_name ??
+        (stepDef ? taById.get(stepDef.target_action_id)?.name : undefined) ??
+        ''
+      const taId = snap.target_action_id ?? stepDef?.target_action_id
+      if (snap.value && taId != null) {
+        collectedStepDataRef.current[String(taId)] = snap.value
+      }
+      if (snap.dropdown_value_id != null) {
+        collectedDropdownValueIdsRef.current[String(order)] = snap.dropdown_value_id
+      }
+      if (snap.promise_date && !collectedPromiseDateRef.current) {
+        collectedPromiseDateRef.current = snap.promise_date
+      }
+      if (snap.promise_amount && !collectedPromiseAmountRef.current) {
+        collectedPromiseAmountRef.current = snap.promise_amount
+      }
+      if (snap.credit_id && !collectedCreditIdRef.current) {
+        collectedCreditIdRef.current = snap.credit_id
+      }
+      rebuiltCompleted.push({
+        stepOrder: order,
+        taName,
+        taValue: snap.dropdown_value_name ?? snap.value ?? '',
+      })
+    }
+    setCompletedSteps(rebuiltCompleted)
+    hydratedInstanceRef.current = activeInstance.id
+  }, [
+    activeInstance,
+    activeInstance?.id,
+    activeInstance?.step_data,
+    activeChain,
+    activeChain?.id,
+    steps,
+    taById,
+  ])
+
   // Reset instant-mode state when the user changes which chain is selected
   // (or when an active instance appears/disappears).
   useEffect(() => {
@@ -483,6 +552,13 @@ export function ChainExecutor({
       await advanceMut.mutateAsync({
         id: activeInstance.id,
         dropdownValueId: selectedDropdownValue?.id ?? null,
+        dropdownValueName: selectedDropdownValue?.value ?? null,
+        stepValue: stepValue || null,
+        targetActionId: currentStep.target_action_id,
+        targetActionName: currentTA?.name ?? null,
+        promiseDate: promiseDate || null,
+        promiseAmount: promiseAmount || null,
+        creditId: creditId || null,
       })
       setStepValue('')
     } catch (err) {
@@ -581,6 +657,13 @@ export function ChainExecutor({
       const result = await advanceMut.mutateAsync({
         id: activeInstance.id,
         dropdownValueId: selectedDropdownValue?.id ?? null,
+        dropdownValueName: selectedDropdownValue?.value ?? null,
+        stepValue: stepValue || null,
+        targetActionId: currentStep?.target_action_id ?? null,
+        targetActionName: currentTA?.name ?? null,
+        promiseDate: promiseDate || null,
+        promiseAmount: promiseAmount || null,
+        creditId: creditId || null,
       })
       if (result.status === 'completed') {
         toast.success(t('pages.clientChains.toasts.completed'))
@@ -1066,7 +1149,7 @@ export function ChainExecutor({
           </div>
 
           {/* Body switch */}
-          {isFinalizing ? (
+          {isFinalizing || isAutoAdvancing ? (
             <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-500">
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
               {t('pages.clientChains.saving', 'Saving…')}
@@ -1091,10 +1174,6 @@ export function ChainExecutor({
                     <span className="text-xs text-green-800">{cs.taValue}</span>
                   </div>
                 ))}
-
-                {isAutoAdvancing && (
-                  <div className="text-center text-xs text-gray-500">{t('common.loading')}</div>
-                )}
 
                 {isDelayBlocked && (
                   <div className="flex flex-col items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-6 text-center">
