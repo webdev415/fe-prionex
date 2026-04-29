@@ -48,6 +48,10 @@ export async function activateTAChain(id: number): Promise<TAChain> {
   return response.data
 }
 
+export async function deleteTAChain(id: number): Promise<void> {
+  await api.delete(`${BASE_URL}/${id}`)
+}
+
 export async function pinTAChain(id: number): Promise<TAChain> {
   const response = await api.post<TAChain>(`${BASE_URL}/${id}/pin`)
   return response.data

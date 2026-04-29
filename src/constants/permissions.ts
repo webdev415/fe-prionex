@@ -142,6 +142,15 @@ export const PERMISSIONS = {
     MANAGE_SELLER_CONFIG: 'manage_seller_scoring_config',
     VIEW_HISTORY: 'view_scoring_config_history',
   },
+
+  /**
+   * TA Chains Category (1 permission)
+   * Hard-delete a TA Chain (refused if the chain has any recorded history).
+   * Note: create / edit / activate-deactivate continue to gate on manage_settings.
+   */
+  TA_CHAINS: {
+    DELETE: 'delete_ta_chains',
+  },
 } as const
 
 /**
@@ -190,6 +199,7 @@ export const PERMISSION_CATEGORIES = {
   TAGS: 'Tags',
   SELLERS: 'Sellers',
   SCORING_CONFIG: 'Scoring Configuration',
+  TA_CHAINS: 'TA Chains',
 } as const
 
 /**
@@ -255,4 +265,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   edit_scoring_config: 'Update scoring weights and priority thresholds',
   manage_seller_scoring_config: 'Manage seller-specific scoring configurations',
   view_scoring_config_history: 'View scoring configuration change history',
+
+  // TA Chains
+  delete_ta_chains: 'Delete TA Chains (refused if the chain has any recorded history)',
 }
