@@ -98,3 +98,10 @@ export async function cancelChainInstance(id: number): Promise<ChainInstance> {
   const r = await api.post<ChainInstance>(`/api/v1/chain-instances/${id}/cancel`)
   return r.data
 }
+
+export async function rewindChainInstance(id: number, stepOrder: number): Promise<ChainInstance> {
+  const r = await api.post<ChainInstance>(`/api/v1/chain-instances/${id}/rewind`, {
+    step_order: stepOrder,
+  })
+  return r.data
+}

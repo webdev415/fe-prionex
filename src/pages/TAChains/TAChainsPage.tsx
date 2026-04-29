@@ -24,7 +24,7 @@ import {
 import { useDepartments } from '@/features/departments/hooks/useDepartments'
 import { useAuthStore } from '@/stores/authStore'
 import type { TAChain } from '@/features/taChains/api/types'
-import { CreateTAChainModal, EditTAChainModal } from './components'
+import { CreateTAChainModal, DeleteTAChainModal, EditTAChainModal } from './components'
 import { getErrorMessage } from '@/lib/errors'
 
 const TYPE_BADGE: Record<string, string> = {
@@ -41,6 +41,7 @@ export function TAChainsPage() {
   const [showInactive, setShowInactive] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
+  const [chainToDelete, setChainToDelete] = useState<TAChain | null>(null)
 
   const { data, isLoading } = useTAChains({ include_inactive: showInactive })
   const { data: deptsData } = useDepartments({
@@ -86,6 +87,8 @@ export function TAChainsPage() {
       toast.error(getErrorMessage(err))
     }
   }
+
+  const handleDelete = (c: TAChain) => setChainToDelete(c)
 
   return (
     <div className="flex w-full flex-col items-start gap-4">
@@ -219,6 +222,16 @@ export function TAChainsPage() {
                       : t('pages.taChains.actions.activate')}
                   </LinkButton>
                 </PermissionGuard>
+                <PermissionGuard permission={PERMISSIONS.TA_CHAINS.DELETE}>
+                  <LinkButton
+                    variant="regular-black"
+                    size="xs"
+                    onClick={() => handleDelete(chain)}
+                    leftIcon={<Icons.Delete size={16} strokeWidth={1.5} />}
+                  >
+                    {t('pages.taChains.actions.delete', 'Delete')}
+                  </LinkButton>
+                </PermissionGuard>
               </div>
             </div>
           </li>
@@ -241,6 +254,12 @@ export function TAChainsPage() {
           onSuccess={() => setEditId(null)}
         />
       )}
+
+      <DeleteTAChainModal
+        open={chainToDelete !== null}
+        chain={chainToDelete}
+        onClose={() => setChainToDelete(null)}
+      />
     </div>
   )
 }

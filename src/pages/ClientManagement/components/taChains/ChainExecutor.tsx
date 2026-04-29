@@ -49,6 +49,7 @@ import {
   useClientChainInstances,
   useCancelChainInstance,
   useClientPinnedChainIds,
+  useRewindChainInstance,
 } from '@/features/taInteractions/hooks/useTAInteractions'
 import type { TAChainStep } from '@/features/taChains/api/types'
 import { useQuickPicks } from '@/features/quickPicks/hooks/useQuickPicks'
@@ -244,6 +245,7 @@ export function ChainExecutor({
   const contactPhonesSource =
     currentTA?.field_type === 'contact' ? (currentStep?.contact_source ?? 'client') : null
   const { data: contactPhones } = useClientPhones(clientId, contactPhonesSource)
+
   const isLastStep = (activeInstance?.current_step_order ?? 1) >= steps.length
 
   const chainForBuilder =
@@ -288,9 +290,33 @@ export function ChainExecutor({
     stepOrder: number
     taName: string
     taValue: string
+    targetActionId?: number
+    fieldType?: string
   }
   const [completedSteps, setCompletedSteps] = useState<CompletedStep[]>([])
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false)
+
+  // Step editing — when set, the completed card for that step_order shows
+  // an inline edit form instead of the read-only summary.
+  interface EditingStep {
+    stepOrder: number
+    targetActionId: number
+    fieldType: string
+    value: string
+    promiseDate: string
+    promiseAmount: string
+    creditId: string
+  }
+  const [editingStep, setEditingStep] = useState<EditingStep | null>(null)
+  const [showRewindWarning, setShowRewindWarning] = useState(false)
+
+  // Phone list for the step currently being edited (may differ from active step)
+  const editingContactSource = useMemo(() => {
+    if (!editingStep || editingStep.fieldType !== 'contact') return null
+    const stepDef = steps.find((s) => s.step_order === editingStep.stepOrder)
+    return (stepDef?.contact_source ?? 'client') as 'client' | 'recommender'
+  }, [editingStep, steps])
+  const { data: editingContactPhones } = useClientPhones(clientId, editingContactSource)
   // Set true once the final save round-trip starts. Gates the body render
   // so the user never sees a re-rendered step (e.g. a branched-back step 2)
   // during the brief window between mutations finishing and `onSave` closing
@@ -386,6 +412,7 @@ export function ChainExecutor({
   const createIntMut = useCreateTAInteraction()
   const advanceMut = useAdvanceChainInstance()
   const cancelMut = useCancelChainInstance()
+  const rewindMut = useRewindChainInstance()
 
   // Reset on chain change
   useEffect(() => {
@@ -401,6 +428,9 @@ export function ChainExecutor({
     setPromiseAmount('')
     setCreditId('')
     setNotes('')
+    // Allow the hydration effect to re-run for the new instance so it can
+    // rebuild completedSteps from step_data (even if steps loads slightly late).
+    hydratedInstanceRef.current = null
   }, [activeInstance?.id])
 
   // Rehydrate completed steps + collected refs from server-side step_data
@@ -458,6 +488,8 @@ export function ChainExecutor({
         stepOrder: order,
         taName,
         taValue: snap.dropdown_value_name ?? snap.value ?? '',
+        targetActionId: snap.target_action_id ?? stepDef?.target_action_id,
+        fieldType: stepDef ? taById.get(stepDef.target_action_id)?.field_type : undefined,
       })
     }
     setCompletedSteps(rebuiltCompleted)
@@ -494,6 +526,105 @@ export function ChainExecutor({
     setPromiseDate('')
     setPromiseAmount('')
   }, [activeInstance?.id, activeInstance?.current_step_order, currentStep?.target_action_id])
+
+  // ── Step editing ──────────────────────────────────────────────────────────
+
+  const stepHasBranch = (stepOrder: number): boolean => {
+    if (!builderData || !steps) return false
+    const stepDef = steps.find((s) => s.step_order === stepOrder)
+    if (!stepDef) return false
+    return stepBranchSet.has(stepDef.id)
+  }
+
+  const openEditStep = (cs: CompletedStep) => {
+    if (!cs.targetActionId) return
+    const snap = activeInstance?.step_data?.[String(cs.stepOrder)]
+    setEditingStep({
+      stepOrder: cs.stepOrder,
+      targetActionId: cs.targetActionId,
+      fieldType: cs.fieldType ?? 'text',
+      value: snap?.value ?? cs.taValue,
+      promiseDate: snap?.promise_date ?? '',
+      promiseAmount: snap?.promise_amount ?? '',
+      creditId: snap?.credit_id ?? '',
+    })
+  }
+
+  const cancelEditStep = () => setEditingStep(null)
+
+  // Situation A: non-branch — just update local collected data, no server call
+  const saveEditStepLocal = () => {
+    if (!editingStep) return
+    const {
+      stepOrder,
+      targetActionId,
+      value,
+      promiseDate: pd,
+      promiseAmount: pa,
+      creditId: ci,
+    } = editingStep
+
+    if (value) collectedStepDataRef.current[String(targetActionId)] = value
+    else delete collectedStepDataRef.current[String(targetActionId)]
+
+    if (pd) collectedPromiseDateRef.current = pd
+    if (pa) collectedPromiseAmountRef.current = pa
+    if (ci) collectedCreditIdRef.current = ci
+
+    setCompletedSteps((prev) =>
+      prev.map((cs) => (cs.stepOrder === stepOrder ? { ...cs, taValue: value } : cs))
+    )
+    setEditingStep(null)
+  }
+
+  // Situation B: branch step — warn then rewind server + clear state from that step onwards
+  const confirmRewindAndEdit = async () => {
+    if (!editingStep || !activeInstance) return
+    setShowRewindWarning(false)
+    try {
+      await rewindMut.mutateAsync({ id: activeInstance.id, stepOrder: editingStep.stepOrder })
+      // Clear local state for steps >= editingStep.stepOrder
+      setCompletedSteps((prev) => prev.filter((cs) => cs.stepOrder < editingStep.stepOrder))
+      const keysToRemove = Object.keys(collectedStepDataRef.current)
+      for (const k of keysToRemove) {
+        const taId = parseInt(k, 10)
+        const step = steps.find((s) => s.target_action_id === taId)
+        if (step && step.step_order >= editingStep.stepOrder) {
+          delete collectedStepDataRef.current[k]
+        }
+      }
+      // Reset extra fields — they'll be re-collected as the user re-walks
+      collectedPromiseDateRef.current = ''
+      collectedPromiseAmountRef.current = ''
+      collectedCreditIdRef.current = ''
+      collectedDropdownValueIdsRef.current = Object.fromEntries(
+        Object.entries(collectedDropdownValueIdsRef.current).filter(
+          ([order]) => parseInt(order, 10) < editingStep.stepOrder
+        )
+      )
+      // Pre-fill the current step with the edited value so the user
+      // can see their change immediately and just hit Continue/Save
+      setStepValue(editingStep.value)
+      if (editingStep.promiseDate) setPromiseDate(editingStep.promiseDate)
+      if (editingStep.promiseAmount) setPromiseAmount(editingStep.promiseAmount)
+      if (editingStep.creditId) setCreditId(editingStep.creditId)
+    } catch (err) {
+      toast.error(getErrorMessage(err))
+    } finally {
+      setEditingStep(null)
+    }
+  }
+
+  const handleSaveEditStep = () => {
+    if (!editingStep) return
+    if (stepHasBranch(editingStep.stepOrder)) {
+      setShowRewindWarning(true)
+    } else {
+      saveEditStepLocal()
+    }
+  }
+
+  // ── End step editing ───────────────────────────────────────────────────────
 
   const handleStart = async () => {
     const chainId = parseInt(selectedChainId, 10)
@@ -545,6 +676,8 @@ export function ChainExecutor({
         stepOrder: currentStep.step_order,
         taName: currentTA?.name ?? '',
         taValue: stepValue,
+        targetActionId: currentStep.target_action_id,
+        fieldType: currentTA?.field_type,
       },
     ])
 
@@ -1158,17 +1291,252 @@ export function ChainExecutor({
             <div className="flex w-full flex-col gap-4 lg:flex-row lg:gap-6">
               {/* LEFT: form */}
               <div className="flex flex-1 flex-col gap-4">
-                {completedSteps.map((cs) => (
-                  <div
-                    key={cs.stepOrder}
-                    className="flex flex-col gap-1 rounded-lg border border-green-200 bg-green-50/50 p-3"
-                  >
-                    <span className="text-xs font-semibold text-green-700">
-                      {t('pages.clientChains.stepLabel', { order: cs.stepOrder })} — {cs.taName}
-                    </span>
-                    <span className="text-xs text-green-800">{cs.taValue}</span>
-                  </div>
-                ))}
+                {completedSteps.map((cs) => {
+                  const isEditing = editingStep?.stepOrder === cs.stepOrder
+                  const ta = cs.targetActionId ? taById.get(cs.targetActionId) : null
+                  return (
+                    <div
+                      key={cs.stepOrder}
+                      className={`flex flex-col gap-2 rounded-lg border p-3 ${
+                        isEditing
+                          ? 'border-blue-200 bg-blue-50/50'
+                          : 'border-green-200 bg-green-50/50'
+                      }`}
+                    >
+                      {/* Header row */}
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={`text-xs font-semibold ${isEditing ? 'text-blue-700' : 'text-green-700'}`}
+                        >
+                          {t('pages.clientChains.stepLabel', { order: cs.stepOrder })} — {cs.taName}
+                        </span>
+                        {!isEditing && !isFinalizing && !isAutoAdvancing && (
+                          <button
+                            onClick={() => openEditStep(cs)}
+                            className="rounded p-1 text-gray-400 hover:bg-white hover:text-gray-700"
+                            title={t('common.edit', 'Edit')}
+                          >
+                            <Icons.Edit size={13} strokeWidth={1.5} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Read-only summary */}
+                      {!isEditing && <span className="text-xs text-green-800">{cs.taValue}</span>}
+
+                      {/* Inline edit form */}
+                      {isEditing && editingStep && (
+                        <div className="flex flex-col gap-2">
+                          {/* Main value input */}
+                          {editingStep.fieldType === 'dropdown' && ta ? (
+                            <Select
+                              value={editingStep.value}
+                              onValueChange={(v) =>
+                                setEditingStep((prev) => (prev ? { ...prev, value: v } : prev))
+                              }
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder={t('pages.clientChains.selectValue')} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ta.dropdown_values
+                                  .filter((dv) => !dv.is_hidden)
+                                  .map((dv) => (
+                                    <SelectItem key={dv.id} value={dv.value} className="text-xs">
+                                      {dv.value}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          ) : editingStep.fieldType === 'contact' ? (
+                            <div className="flex flex-col gap-1">
+                              {!editingContactPhones ? (
+                                <span className="text-xs text-gray-500">{t('common.loading')}</span>
+                              ) : editingContactPhones.length === 0 ? (
+                                <span className="text-xs text-gray-500">
+                                  {t(
+                                    'pages.clientChains.noContacts',
+                                    'No phones available for this source.'
+                                  )}
+                                </span>
+                              ) : (
+                                editingContactPhones.map((p) => {
+                                  const isChecked = editingStep.value === p.contact_value
+                                  const showComment = editingContactSource === 'recommender'
+                                  return (
+                                    <label
+                                      key={p.id}
+                                      className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                                    >
+                                      <input
+                                        type="radio"
+                                        name={`edit-contact-step-${editingStep.stepOrder}`}
+                                        checked={isChecked}
+                                        onChange={() => {}}
+                                        onClick={() =>
+                                          setEditingStep((prev) =>
+                                            prev
+                                              ? { ...prev, value: isChecked ? '' : p.contact_value }
+                                              : prev
+                                          )
+                                        }
+                                      />
+                                      <span className="flex flex-col">
+                                        <span className="font-medium">
+                                          {p.contact_value}
+                                          {p.type_name && (
+                                            <span className="ml-2 text-xs text-gray-400">
+                                              ({p.type_name})
+                                            </span>
+                                          )}
+                                        </span>
+                                        {showComment && p.comment && (
+                                          <span className="text-xs text-gray-500">{p.comment}</span>
+                                        )}
+                                      </span>
+                                    </label>
+                                  )
+                                })
+                              )}
+                            </div>
+                          ) : editingStep.fieldType === 'date' ? (
+                            <Input
+                              type="datetime-local"
+                              className="h-8 text-xs"
+                              value={editingStep.value}
+                              onChange={(e) =>
+                                setEditingStep((prev) =>
+                                  prev ? { ...prev, value: e.target.value } : prev
+                                )
+                              }
+                            />
+                          ) : editingStep.fieldType === 'amount' ? (
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              className="h-8 text-xs"
+                              leftIcon={<span className="text-gray-700">₴</span>}
+                              value={editingStep.value}
+                              onChange={(e) =>
+                                setEditingStep((prev) =>
+                                  prev ? { ...prev, value: e.target.value } : prev
+                                )
+                              }
+                            />
+                          ) : (
+                            <Input
+                              className="h-8 text-xs"
+                              value={editingStep.value}
+                              onChange={(e) =>
+                                setEditingStep((prev) =>
+                                  prev ? { ...prev, value: e.target.value } : prev
+                                )
+                              }
+                            />
+                          )}
+
+                          {/* Promise date / amount / credit if this step had extras */}
+                          {editingStep.promiseDate !== undefined &&
+                            editingStep.promiseDate !== '' && (
+                              <div className="flex flex-col gap-1">
+                                <Label className="text-xs text-gray-600">
+                                  {t('pages.clientChains.promiseDate')}
+                                </Label>
+                                <Input
+                                  type="datetime-local"
+                                  className="h-8 text-xs"
+                                  value={editingStep.promiseDate}
+                                  onChange={(e) =>
+                                    setEditingStep((prev) =>
+                                      prev ? { ...prev, promiseDate: e.target.value } : prev
+                                    )
+                                  }
+                                />
+                              </div>
+                            )}
+                          {editingStep.promiseAmount !== undefined &&
+                            editingStep.promiseAmount !== '' && (
+                              <div className="flex flex-col gap-1">
+                                <Label className="text-xs text-gray-600">
+                                  {t('pages.clientChains.promiseAmount')}
+                                </Label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step="0.01"
+                                  className="h-8 text-xs"
+                                  leftIcon={<span className="text-gray-700">₴</span>}
+                                  value={editingStep.promiseAmount}
+                                  onChange={(e) =>
+                                    setEditingStep((prev) =>
+                                      prev ? { ...prev, promiseAmount: e.target.value } : prev
+                                    )
+                                  }
+                                />
+                              </div>
+                            )}
+
+                          {/* Rewind warning — shown inline when a branch step is saved */}
+                          {showRewindWarning ? (
+                            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                              <p className="mb-1 text-xs font-semibold text-amber-800">
+                                {t(
+                                  'pages.clientChains.rewindWarningTitle',
+                                  'Change branching step?'
+                                )}
+                              </p>
+                              <p className="mb-2 text-xs text-amber-700">
+                                {t(
+                                  'pages.clientChains.rewindWarningBody',
+                                  'Steps after step {{order}} will be cleared and you will re-walk them.',
+                                  { order: editingStep.stepOrder }
+                                )}
+                              </p>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="primary"
+                                  className="h-7 flex-1 text-xs"
+                                  onClick={confirmRewindAndEdit}
+                                  disabled={rewindMut.isPending}
+                                >
+                                  {rewindMut.isPending
+                                    ? t('common.loading')
+                                    : t('pages.clientChains.rewindConfirm', 'Yes, reset & re-walk')}
+                                </Button>
+                                <Button
+                                  variant="cancel"
+                                  className="h-7 flex-1 text-xs"
+                                  onClick={() => setShowRewindWarning(false)}
+                                >
+                                  {t('common.cancel', 'Cancel')}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            /* Normal Save / Cancel buttons */
+                            <div className="flex gap-2">
+                              <Button
+                                variant="primary"
+                                className="h-7 flex-1 text-xs"
+                                onClick={handleSaveEditStep}
+                              >
+                                {t('common.save', 'Save')}
+                              </Button>
+                              <Button
+                                variant="cancel"
+                                className="h-7 flex-1 text-xs"
+                                onClick={cancelEditStep}
+                              >
+                                {t('common.cancel', 'Cancel')}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
 
                 {(isFinalizing || isAutoAdvancing) && (
                   <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500">

@@ -8,6 +8,7 @@ import {
   cloneTAChain,
   createTAChain,
   deactivateTAChain,
+  deleteTAChain,
   getTAChain,
   getTAChains,
   pinTAChain,
@@ -80,6 +81,17 @@ export function useActivateTAChain() {
   return useMutation({
     mutationFn: (id: number) => activateTAChain(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: KEY }),
+  })
+}
+
+export function useDeleteTAChain() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => deleteTAChain(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: KEY })
+      qc.invalidateQueries({ queryKey: ['target-actions'] })
+    },
   })
 }
 

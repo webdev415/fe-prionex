@@ -22,6 +22,8 @@ import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/errors'
 import { useTAChains } from '@/features/taChains/hooks/useTAChains'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
+import { useOperators } from '@/features/users/hooks/useUsers'
+import { useAuthStore } from '@/stores/authStore'
 import type { TargetAction } from '@/features/targetActions/api/types'
 import type { TAInteraction } from '@/features/taInteractions/api/types'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
@@ -72,6 +74,22 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     return m
   }, [tasData])
 
+  // Operator lookup so we can render full names instead of usernames in the
+  // Operator column. Snapshot column `recorded_by_name` keeps the username
+  // (set at creation), but for display we prefer first+last from the live
+  // users directory.
+  const user = useAuthStore((s) => s.user)
+  const projectId = user?.active_project_id ? parseInt(user.active_project_id, 10) : null
+  const { data: operators } = useOperators(projectId)
+  const operatorNameById = useMemo(() => {
+    const m = new Map<number, string>()
+    for (const op of operators ?? []) {
+      const full = `${op.first_name ?? ''} ${op.last_name ?? ''}`.trim()
+      m.set(op.id, full || op.username)
+    }
+    return m
+  }, [operators])
+
   const { data, isLoading } = useClientTAInteractions(clientId, {
     chain_id: chainFilter ? parseInt(chainFilter, 10) : undefined,
     notes_search: notesSearch || undefined,
@@ -101,6 +119,30 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       render: (row) => (
         <span className="text-xs font-medium text-gray-800">{row.chain_name ?? '-'}</span>
       ),
+    },
+    {
+      key: 'phone',
+      header: t('pages.clientChains.history.phone', 'Phone'),
+      align: 'left',
+      render: (row) => {
+        if (!row.step_data) return <span className="text-xs text-gray-700">-</span>
+        const chain = chains.find((c) => c.id === row.chain_id)
+        const stepsOrdered = chain?.steps
+          ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
+          : []
+        const phones: string[] = []
+        for (const step of stepsOrdered) {
+          const ta = taById.get(step.target_action_id)
+          if (ta?.field_type !== 'contact') continue
+          const val = (row.step_data as Record<string, string>)[String(step.target_action_id)]
+          if (val) phones.push(val)
+        }
+        return (
+          <span className="text-xs text-gray-700">
+            {phones.length > 0 ? phones.join(', ') : '-'}
+          </span>
+        )
+      },
     },
     {
       key: 'result',
@@ -143,6 +185,8 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               const val = (row.step_data as Record<string, string>)[String(step.target_action_id)]
               if (!val) continue
               const ta = taById.get(step.target_action_id)
+              // Phone numbers (contact-type steps) live in their own column.
+              if (ta?.field_type === 'contact') continue
               const followUps: string[] = []
 
               // Attach top-level promise/credit fields to the dropdown step
@@ -270,7 +314,13 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       key: 'recorded_by_name',
       header: t('pages.clientChains.history.operator'),
       align: 'left',
-      render: (row) => <span className="text-xs text-gray-600">{row.recorded_by_name ?? '-'}</span>,
+      render: (row) => {
+        const display =
+          (row.recorded_by != null ? operatorNameById.get(row.recorded_by) : null) ??
+          row.recorded_by_name ??
+          '-'
+        return <span className="text-xs text-gray-600">{display}</span>
+      },
     },
     {
       key: 'pin',
@@ -313,7 +363,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     },
   ]
 
-  if (isLoading && page === 0) return <TableSkeleton columns={8} rows={3} />
+  if (isLoading && page === 0) return <TableSkeleton columns={9} rows={3} />
 
   return (
     <div className="flex flex-col gap-3">

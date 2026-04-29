@@ -8,6 +8,7 @@ import {
   getClientPinnedChainIds,
   getTAInteraction,
   getTAInteractions,
+  rewindChainInstance,
   startChainInstance,
   togglePinTAInteraction,
   updateTAInteraction,
@@ -182,5 +183,27 @@ export function useCancelChainInstance() {
   return useMutation({
     mutationFn: (id: number) => cancelChainInstance(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: INST_KEY }),
+  })
+}
+
+export function useRewindChainInstance() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, stepOrder }: { id: number; stepOrder: number }) =>
+      rewindChainInstance(id, stepOrder),
+    onSuccess: (updated) => {
+      qc.setQueryData<(typeof updated)[] | undefined>(
+        [...INST_KEY, 'client', updated.client_id],
+        (old) => {
+          if (!old) return [updated]
+          const idx = old.findIndex((i) => i.id === updated.id)
+          if (idx === -1) return [...old, updated]
+          const next = old.slice()
+          next[idx] = updated
+          return next
+        }
+      )
+      qc.invalidateQueries({ queryKey: INST_KEY })
+    },
   })
 }
