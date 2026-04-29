@@ -118,6 +118,14 @@ function mapFiltersToAPIParams(
     params.interaction_date_to = filters.interactionDateTo
   }
 
+  // FILTER: Assignment Date
+  if (filters.assignmentDateFrom) {
+    params.assignment_date_from = filters.assignmentDateFrom
+  }
+  if (filters.assignmentDateTo) {
+    params.assignment_date_to = filters.assignmentDateTo
+  }
+
   return params
 }
 
@@ -582,6 +590,54 @@ describe('Client Management Filter Integration', () => {
       expect(params.interaction_user_id).toBeUndefined()
       expect(params.interaction_date_from).toBeUndefined()
       expect(params.interaction_date_to).toBeUndefined()
+    })
+  })
+
+  describe('Assignment Date Filter', () => {
+    it('should map assignmentDateFrom to assignment_date_from', () => {
+      const filters: ClientFilters = {
+        assignmentDateFrom: '2026-02-01',
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+      expect(params.assignment_date_from).toBe('2026-02-01')
+      expect(params.assignment_date_to).toBeUndefined()
+    })
+
+    it('should map assignmentDateTo to assignment_date_to', () => {
+      const filters: ClientFilters = {
+        assignmentDateTo: '2026-02-28',
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+      expect(params.assignment_date_from).toBeUndefined()
+      expect(params.assignment_date_to).toBe('2026-02-28')
+    })
+
+    it('should map full assignment date range', () => {
+      const filters: ClientFilters = {
+        assignmentDateFrom: '2026-02-01',
+        assignmentDateTo: '2026-02-28',
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+      expect(params.assignment_date_from).toBe('2026-02-01')
+      expect(params.assignment_date_to).toBe('2026-02-28')
+    })
+
+    it('should combine assignment date with existing filters', () => {
+      const filters: ClientFilters = {
+        responsibleEmployee: '42',
+        status: ['active'],
+        assignmentDateFrom: '2026-01-01',
+        assignmentDateTo: '2026-01-31',
+      }
+
+      const params = mapFiltersToAPIParams(filters)
+      expect(params.responsible_employee_id).toBe(42)
+      expect(params.status).toBe('active')
+      expect(params.assignment_date_from).toBe('2026-01-01')
+      expect(params.assignment_date_to).toBe('2026-01-31')
     })
   })
 })

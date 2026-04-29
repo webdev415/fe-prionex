@@ -874,6 +874,7 @@
         "score": "Score",
         "employee": "Employee",
         "searcher": "Searcher",
+        "assignmentDate": "Assignment Date",
         "actions": "Actions"
       },
       "priorities": {
