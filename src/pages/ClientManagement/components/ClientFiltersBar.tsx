@@ -98,6 +98,8 @@ type FilterDateField =
   | 'callbackDateTo'
   | 'interactionDateFrom'
   | 'interactionDateTo'
+  | 'assignmentDateFrom'
+  | 'assignmentDateTo'
 
 // Status options matching backend Client.status field (services/client/app/routers/clients.py:440)
 // Valid statuses: new, active, closed
@@ -321,6 +323,35 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 />
               </div>
             </div>
+          </div>
+
+          {/* Assignment Date */}
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
+            <div className="flex w-full flex-col gap-2 sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
+                {t('pages.clients.filters.assignmentDate')}
+              </label>
+              <div className="flex w-full flex-1 items-center gap-2">
+                <DateSelect
+                  value={filters.assignmentDateFrom || null}
+                  onChange={({ value }) => handleFilterDateChange('assignmentDateFrom', value)}
+                  placeholder="Min"
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+                <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
+                  -
+                </span>
+                <DateSelect
+                  value={filters.assignmentDateTo || null}
+                  onChange={({ value }) => handleFilterDateChange('assignmentDateTo', value)}
+                  placeholder="Max"
+                  format="yyyy-MM-dd"
+                  className="flex flex-1 flex-col gap-2"
+                />
+              </div>
+            </div>
+            <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
           </div>
 
           {/* Promise date & Callback date */}

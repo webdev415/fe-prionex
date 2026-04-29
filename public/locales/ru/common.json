@@ -795,6 +795,7 @@
         "score": "Оценка",
         "employee": "Сотрудник",
         "searcher": "Розыскник",
+        "assignmentDate": "Дата назначения",
         "actions": "Действия"
       },
       "priorities": {
@@ -816,6 +817,7 @@
         "dpdRange": "Диапазон DPD",
         "amountOfDebtRange": "Сумма отдельного долга",
         "dateOfSale": "Дата продажи долга",
+        "assignmentDate": "Дата назначения",
         "promiseDate": "Обещание",
         "callbackDate": "Обратный звонок",
         "interactionCreatedBy": "Создано взаимодействие",
