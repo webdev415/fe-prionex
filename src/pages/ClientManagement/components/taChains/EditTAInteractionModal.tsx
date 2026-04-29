@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
 import {
+  useClientChainInstances,
   useTAInteraction,
   useUpdateTAInteraction,
 } from '@/features/taInteractions/hooks/useTAInteractions'
@@ -87,6 +88,8 @@ interface Props {
     id: number
     contract_number?: string
     remaining_debt_amount?: string | number | null
+    days_past_due?: number | null
+    seller_company?: string | null
   }>
 }
 
@@ -102,6 +105,18 @@ export function EditTAInteractionModal({
   const { data: interaction } = useTAInteraction(open ? interactionId : null)
   const { data: chain } = useTAChain(interaction?.chain_id ?? null)
   const { data: tasData } = useTargetActions({ include_hidden: true })
+  // Wizard snapshots (chain_instances.step_data) are an authoritative
+  // backup of every step's value. We merge them with interaction.step_data
+  // so steps that didn't make it into ta_interactions.step_data still
+  // hydrate from the snapshot.
+  const { data: clientInstances } = useClientChainInstances(
+    open && interaction?.client_id ? interaction.client_id : null
+  )
+  const matchingInstance = useMemo(() => {
+    if (!interaction?.chain_instance_id || !clientInstances) return null
+    return clientInstances.find((i) => i.id === interaction.chain_instance_id) ?? null
+  }, [interaction?.chain_instance_id, clientInstances])
+
   const taById = useMemo(() => {
     const m = new Map<number, NonNullable<typeof tasData>['items'][number]>()
     for (const ta of tasData?.items ?? []) m.set(ta.id, ta)
@@ -110,7 +125,9 @@ export function EditTAInteractionModal({
 
   const updateMut = useUpdateTAInteraction()
 
-  // Local form state — keyed by target_action_id (string) to match step_data shape.
+  // Local form state — keyed by step.id (unique per step). We can't key by
+  // target_action_id because chains may reuse the same TA across multiple steps,
+  // which would collide and lose values on lookup AND on save.
   const [seenInteractionId, setSeenInteractionId] = useState<number | null>(null)
   const [stepValues, setStepValues] = useState<Record<string, string>>({})
   const [promiseDate, setPromiseDate] = useState<string>('')
@@ -118,14 +135,50 @@ export function EditTAInteractionModal({
   const [creditId, setCreditId] = useState<string>('')
   const [notes, setNotes] = useState<string>('')
 
-  // Hydrate from loaded interaction (setState during render — avoids effect cascade)
-  if (interaction && interaction.id !== seenInteractionId) {
+  // Hydrate once interaction + chain definition + (if applicable) instance are
+  // all loaded, so we don't overwrite the user's edits when a slower query
+  // arrives later.
+  const stillWaitingForInstance =
+    interaction?.chain_instance_id != null && clientInstances === undefined
+  const stillWaitingForChain = interaction != null && chain == null
+  if (
+    interaction &&
+    interaction.id !== seenInteractionId &&
+    !stillWaitingForInstance &&
+    !stillWaitingForChain
+  ) {
     setSeenInteractionId(interaction.id)
-    setStepValues(
-      Object.fromEntries(
-        Object.entries(interaction.step_data ?? {}).map(([k, v]) => [k, String(v ?? '')])
-      )
-    )
+
+    const next: Record<string, string> = {}
+    const sortedSteps = chain?.steps
+      ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
+      : []
+    // Resolve each step's value: prefer the wizard snapshot keyed by step_order
+    // (which preserves duplicates of the same target_action_id), then fall back
+    // to interaction.step_data keyed by target_action_id.
+    for (const step of sortedSteps) {
+      let v = ''
+      const snap = matchingInstance?.step_data?.[String(step.step_order)]
+      if (snap && typeof snap === 'object') {
+        const obj = snap as { value?: string | null }
+        if (obj.value != null && String(obj.value) !== '') {
+          v = String(obj.value)
+        }
+      }
+      if (v === '') {
+        const fromInteraction = interaction.step_data?.[String(step.target_action_id)]
+        if (fromInteraction != null) {
+          if (typeof fromInteraction === 'object') {
+            const inner = (fromInteraction as Record<string, unknown>).value
+            if (inner != null) v = String(inner)
+          } else {
+            v = String(fromInteraction)
+          }
+        }
+      }
+      next[String(step.id)] = v
+    }
+    setStepValues(next)
     setPromiseDate(interaction.promise_date ? interaction.promise_date.slice(0, 10) : '')
     setPromiseAmount(interaction.promise_amount ?? '')
     setCreditId(interaction.credit_id != null ? String(interaction.credit_id) : '')
@@ -164,9 +217,20 @@ export function EditTAInteractionModal({
   const handleSave = async () => {
     if (!interaction) return
     const trimmedNotes = notes.trim()
-    const cleanedStepData = Object.fromEntries(
-      Object.entries(stepValues).filter(([, v]) => v !== '')
-    )
+    // stepValues is keyed by step.id (unique). The API expects step_data keyed
+    // by target_action_id, so re-key on the way out. If the chain reuses a
+    // target_action_id across multiple steps, later step_orders win — same
+    // last-write-wins behavior the API has always had on this column.
+    const sortedStepsForSave = chain?.steps
+      ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
+      : []
+    const cleanedStepData: Record<string, string> = {}
+    for (const step of sortedStepsForSave) {
+      const v = stepValues[String(step.id)]
+      if (v !== undefined && v !== '') {
+        cleanedStepData[String(step.target_action_id)] = v
+      }
+    }
 
     try {
       await updateMut.mutateAsync({
@@ -190,8 +254,8 @@ export function EditTAInteractionModal({
     }
   }
 
-  const setStepValue = (taId: number, v: string) =>
-    setStepValues((prev) => ({ ...prev, [String(taId)]: v }))
+  const setStepValue = (stepId: number, v: string) =>
+    setStepValues((prev) => ({ ...prev, [String(stepId)]: v }))
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="2xl">
@@ -215,7 +279,7 @@ export function EditTAInteractionModal({
 
             {orderedSteps.map((step) => {
               const ta = taById.get(step.target_action_id)
-              const value = stepValues[String(step.target_action_id)] ?? ''
+              const value = stepValues[String(step.id)] ?? ''
               if (!ta) return null
               return (
                 <div
@@ -227,10 +291,7 @@ export function EditTAInteractionModal({
                     {step.is_required && <span className="ml-1 text-red-500">*</span>}
                   </Label>
                   {ta.field_type === 'dropdown' ? (
-                    <Select
-                      value={value}
-                      onValueChange={(v) => setStepValue(step.target_action_id, v)}
-                    >
+                    <Select value={value} onValueChange={(v) => setStepValue(step.id, v)}>
                       <SelectTrigger>
                         <SelectValue placeholder={t('pages.clientChains.selectValue', 'Select…')} />
                       </SelectTrigger>
@@ -245,11 +306,33 @@ export function EditTAInteractionModal({
                       </SelectContent>
                     </Select>
                   ) : ta.field_type === 'date' ? (
-                    <Input
-                      type="datetime-local"
-                      value={value}
-                      onChange={(e) => setStepValue(step.target_action_id, e.target.value)}
-                    />
+                    (() => {
+                      // Browser only accepts YYYY-MM-DDTHH:mm. Older saves may
+                      // carry seconds/timezone (ISO) or use a space separator
+                      // (Postgres). Try to normalize; if we can't, surface the
+                      // raw value as info so admins can see what was stored.
+                      const candidate = value ? value.replace(' ', 'T').slice(0, 16) : ''
+                      const isValidLocal = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(candidate)
+                      const inputValue = isValidLocal ? candidate : ''
+                      return (
+                        <div className="flex flex-col gap-1">
+                          <Input
+                            type="datetime-local"
+                            value={inputValue}
+                            onChange={(e) => setStepValue(step.id, e.target.value)}
+                          />
+                          {value && !isValidLocal && (
+                            <span className="text-xs text-amber-600">
+                              {t('pages.clientChains.editInteraction.savedValue', 'Saved value')}:{' '}
+                              {value}{' '}
+                              <span className="text-amber-500">
+                                {t('pages.clientChains.contactStale', '(stale)')}
+                              </span>
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })()
                   ) : ta.field_type === 'amount' ? (
                     <Input
                       type="number"
@@ -258,21 +341,93 @@ export function EditTAInteractionModal({
                       placeholder="0.00"
                       leftIcon={<span className="text-gray-700">₴</span>}
                       value={value}
-                      onChange={(e) => setStepValue(step.target_action_id, e.target.value)}
+                      onChange={(e) => setStepValue(step.id, e.target.value)}
                     />
                   ) : ta.field_type === 'contact' ? (
                     <ContactStepEdit
                       clientId={interaction.client_id}
                       source={step.contact_source}
                       value={value}
-                      onChange={(v) => setStepValue(step.target_action_id, v)}
+                      onChange={(v) => setStepValue(step.id, v)}
                     />
+                  ) : ta.field_type === 'credit' ? (
+                    (() => {
+                      const selectedIds = value ? value.split(',').filter(Boolean) : []
+                      const knownDebtIds = new Set(debts.map((d) => String(d.id)))
+                      // Legacy interactions saved before the checkbox UI may
+                      // have stored arbitrary text or contract numbers. Surface
+                      // those as removable rows so the value isn't silently
+                      // hidden when it doesn't map to any current debt.
+                      const staleIds = selectedIds.filter((id) => !knownDebtIds.has(id))
+                      return (
+                        <div className="flex flex-col gap-2">
+                          {debts.length === 0 && staleIds.length === 0 ? (
+                            <span className="text-xs text-gray-500">
+                              {t('pages.clientChains.noCredits')}
+                            </span>
+                          ) : (
+                            <>
+                              {debts.map((d) => {
+                                const creditKey = String(d.id)
+                                const isChecked = selectedIds.includes(creditKey)
+                                return (
+                                  <label
+                                    key={d.id}
+                                    className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        const next = e.target.checked
+                                          ? [...selectedIds, creditKey]
+                                          : selectedIds.filter((id) => id !== creditKey)
+                                        setStepValue(step.id, next.filter(Boolean).join(','))
+                                      }}
+                                    />
+                                    <span>
+                                      #{d.contract_number ?? d.id}
+                                      {d.seller_company ? ` — ${d.seller_company}` : ''}
+                                      {d.remaining_debt_amount
+                                        ? ` — ${formatMoneyKopeckTight(d.remaining_debt_amount)}`
+                                        : ''}
+                                      {d.days_past_due ? ` — overdue ${d.days_past_due}d` : ''}
+                                    </span>
+                                  </label>
+                                )
+                              })}
+                              {staleIds.map((id) => (
+                                <label
+                                  key={`stale-${id}`}
+                                  className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 hover:bg-amber-100"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked
+                                    onChange={() => {
+                                      const next = selectedIds.filter((s) => s !== id)
+                                      setStepValue(step.id, next.filter(Boolean).join(','))
+                                    }}
+                                  />
+                                  <span>
+                                    {id}
+                                    <span className="ml-2 text-xs text-amber-600">
+                                      {t('pages.clientChains.contactStale', '(stale)')}
+                                    </span>
+                                  </span>
+                                </label>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      )
+                    })()
                   ) : (
                     <Input
                       type="text"
                       placeholder={ta.name}
                       value={value}
-                      onChange={(e) => setStepValue(step.target_action_id, e.target.value)}
+                      onChange={(e) => setStepValue(step.id, e.target.value)}
                     />
                   )}
                 </div>
