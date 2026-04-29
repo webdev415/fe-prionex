@@ -795,6 +795,7 @@
         "score": "Score",
         "employee": "Employee",
         "searcher": "Searcher",
+        "assignmentDate": "Assignment Date",
         "actions": "Actions"
       },
       "priorities": {
@@ -816,6 +817,7 @@
         "dpdRange": "DPD Range",
         "amountOfDebtRange": "Individual Debt Amount",
         "dateOfSale": "Debt Sale Date",
+        "assignmentDate": "Assignment Date",
         "promiseDate": "Promise Date",
         "callbackDate": "Callback Date",
         "interactionCreatedBy": "Interaction Created By",

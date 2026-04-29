@@ -67,6 +67,7 @@ interface DisplayClient {
   score: number
   employeeName: string
   searcherName: string
+  assignmentDate: string
 }
 
 // Default thresholds (fallback if API not available)
@@ -108,6 +109,7 @@ const mapAPIClientToDisplay = (
     searcherName: client.responsible_searcher_id
       ? userNameMap.get(client.responsible_searcher_id) || '-'
       : '-',
+    assignmentDate: client.assignment_date ? formatDate(client.assignment_date) : '-',
   }
 }
 
@@ -141,6 +143,10 @@ export interface ClientFilters {
   // Callback Date Filter
   callbackDateFrom?: string
   callbackDateTo?: string
+
+  // Assignment Date Filter
+  assignmentDateFrom?: string
+  assignmentDateTo?: string
 
   // Interaction Created By
   interactionUserId?: string
@@ -235,6 +241,14 @@ export function ClientManagementPage() {
     'interactionDateTo',
     ''
   )
+  const [assignmentDateFromFilter, setAssignmentDateFromFilter] = useURLState<string>(
+    'assignmentDateFrom',
+    ''
+  )
+  const [assignmentDateToFilter, setAssignmentDateToFilter] = useURLState<string>(
+    'assignmentDateTo',
+    ''
+  )
 
   // Compute filters object from URL state
   const filters: ClientFilters = useMemo(
@@ -262,6 +276,8 @@ export function ClientManagementPage() {
       interactionUserId: interactionUserIdFilter || undefined,
       interactionDateFrom: interactionDateFromFilter || undefined,
       interactionDateTo: interactionDateToFilter || undefined,
+      assignmentDateFrom: assignmentDateFromFilter || undefined,
+      assignmentDateTo: assignmentDateToFilter || undefined,
     }),
     [
       portfolioFilter,
@@ -287,6 +303,8 @@ export function ClientManagementPage() {
       interactionUserIdFilter,
       interactionDateFromFilter,
       interactionDateToFilter,
+      assignmentDateFromFilter,
+      assignmentDateToFilter,
     ]
   )
 
@@ -345,6 +363,8 @@ export function ClientManagementPage() {
       interactionUserIdFilter,
       interactionDateFromFilter,
       interactionDateToFilter,
+      assignmentDateFromFilter,
+      assignmentDateToFilter,
       searchQuery,
       searchType,
     }
@@ -368,6 +388,8 @@ export function ClientManagementPage() {
       interactionUserIdFilter !== '' ||
       interactionDateFromFilter !== '' ||
       interactionDateToFilter !== '' ||
+      assignmentDateFromFilter !== '' ||
+      assignmentDateToFilter !== '' ||
       debtRangeFromFilter > 0 ||
       debtRangeToFilter > 0 ||
       principalRangeFromFilter > 0 ||
@@ -414,6 +436,8 @@ export function ClientManagementPage() {
     interactionUserIdFilter,
     interactionDateFromFilter,
     interactionDateToFilter,
+    assignmentDateFromFilter,
+    assignmentDateToFilter,
     searchQuery,
     searchType,
   ])
@@ -440,6 +464,8 @@ export function ClientManagementPage() {
       interactionUserIdFilter !== '' ||
       interactionDateFromFilter !== '' ||
       interactionDateToFilter !== '' ||
+      assignmentDateFromFilter !== '' ||
+      assignmentDateToFilter !== '' ||
       debtRangeFromFilter > 0 ||
       principalRangeFromFilter > 0
 
@@ -485,6 +511,10 @@ export function ClientManagementPage() {
               setInteractionDateFromFilter(parsed.interactionDateFromFilter)
             if (parsed.interactionDateToFilter)
               setInteractionDateToFilter(parsed.interactionDateToFilter)
+            if (parsed.assignmentDateFromFilter)
+              setAssignmentDateFromFilter(parsed.assignmentDateFromFilter)
+            if (parsed.assignmentDateToFilter)
+              setAssignmentDateToFilter(parsed.assignmentDateToFilter)
             if (parsed.currentPage) setCurrentPage(parsed.currentPage)
             if (parsed.rowsPerPage) setRowsPerPage(parsed.rowsPerPage)
             if (parsed.sortBy) setSortBy(parsed.sortBy)
@@ -553,6 +583,7 @@ export function ClientManagementPage() {
       searcherName: 'responsible_searcher_id',
       creditor: 'primary_creditor',
       debt: 'total_debt',
+      assignmentDate: 'assignment_date',
     }
 
     const params: Record<string, unknown> = {
@@ -672,7 +703,15 @@ export function ClientManagementPage() {
       params.interaction_date_to = filters.interactionDateTo
     }
 
-    // FILTER 15: Search (from global header search)
+    // FILTER 15: Assignment Date Range
+    if (filters.assignmentDateFrom) {
+      params.assignment_date_from = filters.assignmentDateFrom
+    }
+    if (filters.assignmentDateTo) {
+      params.assignment_date_to = filters.assignmentDateTo
+    }
+
+    // FILTER 16: Search (from global header search)
     if (searchQuery.trim()) {
       params.q = searchQuery.trim()
       params.search_type = searchType
@@ -737,6 +776,7 @@ export function ClientManagementPage() {
     if (filters.callbackDateFrom || filters.callbackDateTo) count++
     if (filters.interactionUserId) count++
     if (filters.interactionDateFrom || filters.interactionDateTo) count++
+    if (filters.assignmentDateFrom || filters.assignmentDateTo) count++
     if (filters.portfolio && filters.portfolio.length > 0) count++
     if (filters.tagIds && filters.tagIds.length > 0) count++
     if (filters.status && filters.status.length > 0) count++
@@ -1082,6 +1122,12 @@ export function ClientManagementPage() {
     if (newFilters.interactionDateTo !== interactionDateToFilter) {
       setInteractionDateToFilter(newFilters.interactionDateTo || '')
     }
+    if (newFilters.assignmentDateFrom !== assignmentDateFromFilter) {
+      setAssignmentDateFromFilter(newFilters.assignmentDateFrom || '')
+    }
+    if (newFilters.assignmentDateTo !== assignmentDateToFilter) {
+      setAssignmentDateToFilter(newFilters.assignmentDateTo || '')
+    }
 
     // Reset to page 1 when filters change
     setCurrentPage(1)
@@ -1113,6 +1159,8 @@ export function ClientManagementPage() {
     setInteractionUserIdFilter('')
     setInteractionDateFromFilter('')
     setInteractionDateToFilter('')
+    setAssignmentDateFromFilter('')
+    setAssignmentDateToFilter('')
 
     // Reset to first page
     setCurrentPage(1)
@@ -1281,6 +1329,13 @@ export function ClientManagementPage() {
       key: 'searcherName',
       header: t('pages.clients.tableHeaders.searcher'),
       align: 'left',
+    },
+    {
+      key: 'assignmentDate',
+      header: t('pages.clients.tableHeaders.assignmentDate'),
+      align: 'left',
+      sortable: true,
+      sortKey: 'assignmentDate',
     },
     {
       key: 'actions',
