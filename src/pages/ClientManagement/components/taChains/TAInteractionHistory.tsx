@@ -132,14 +132,19 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
           : []
         const phones: string[] = []
         for (const step of stepsOrdered) {
-          const ta = taById.get(step.target_action_id)
-          if (ta?.field_type !== 'contact') continue
-          const val = (row.step_data as Record<string, string>)[String(step.target_action_id)]
+          if (step.target_action_field_type !== 'contact') continue
+          const sd = row.step_data as Record<string, string>
+          const val = sd[String(step.step_order)] ?? sd[String(step.target_action_id)]
           if (val) phones.push(val)
         }
+        // Dedupe: chains with multiple contact steps that share a
+        // target_action_id (or the user entering the same phone in
+        // multiple contact steps) would otherwise render the same
+        // number twice.
+        const uniquePhones = Array.from(new Set(phones))
         return (
           <span className="text-xs text-gray-700">
-            {phones.length > 0 ? phones.join(', ') : '-'}
+            {uniquePhones.length > 0 ? uniquePhones.join(', ') : '-'}
           </span>
         )
       },
@@ -182,11 +187,12 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
 
           if (stepsOrdered.length > 0) {
             for (const step of stepsOrdered) {
-              const val = (row.step_data as Record<string, string>)[String(step.target_action_id)]
+              const sd = row.step_data as Record<string, string>
+              const val = sd[String(step.step_order)] ?? sd[String(step.target_action_id)]
               if (!val) continue
               const ta = taById.get(step.target_action_id)
               // Phone numbers (contact-type steps) live in their own column.
-              if (ta?.field_type === 'contact') continue
+              if (step.target_action_field_type === 'contact') continue
               const followUps: string[] = []
 
               // Attach top-level promise/credit fields to the dropdown step
@@ -278,9 +284,9 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
           const chain = chains.find((c) => c.id === row.chain_id)
           const stepsOrdered = chain?.steps ?? []
           for (const step of stepsOrdered) {
-            const ta = taById.get(step.target_action_id)
-            if (ta?.field_type === 'credit') {
-              const val = (row.step_data as Record<string, string>)[String(step.target_action_id)]
+            if (step.target_action_field_type === 'credit') {
+              const sd = row.step_data as Record<string, string>
+              const val = sd[String(step.step_order)] ?? sd[String(step.target_action_id)]
               if (val) {
                 // val is comma-separated credit IDs like "125844,55138"
                 for (const id of val.split(',')) {
