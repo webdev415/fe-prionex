@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/Select'
 import {
   useClientTAInteractions,
+  useDeleteTAInteraction,
   useTogglePinTAInteraction,
 } from '@/features/taInteractions/hooks/useTAInteractions'
 import { toast } from 'sonner'
@@ -31,6 +32,8 @@ import { formatDate, formatDateTime, formatMoneyKopeckTight } from '@/lib/format
 import { Icons } from '@/lib/icons'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { Modal } from '@/components/ui/Modal'
+import { Button } from '@/components/ui/Button'
 import { EditTAInteractionModal } from './EditTAInteractionModal'
 
 interface Props {
@@ -43,6 +46,8 @@ interface Props {
 
 export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const deleteMut = useDeleteTAInteraction()
   // Map debt ID → contract number for display
   const debtContractMap = new Map(debts.map((d) => [d.id, `#${d.contract_number ?? d.id}`]))
   const { t } = useTranslation('common')
@@ -329,42 +334,46 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       },
     },
     {
-      key: 'pin',
+      key: 'actions',
       header: '',
       align: 'right',
       render: (row) => (
-        <button
-          type="button"
-          onClick={() => handleTogglePin(row.id)}
-          disabled={togglePinMut.isPending}
-          className={`rounded p-1 transition-colors ${
-            row.is_pinned
-              ? 'text-amber-500 hover:bg-amber-50'
-              : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
-          }`}
-          aria-label={row.is_pinned ? t('actions.unpin', 'Unpin') : t('actions.pin', 'Pin')}
-          title={row.is_pinned ? t('actions.unpin', 'Unpin') : t('actions.pin', 'Pin')}
-        >
-          <Icons.Pin size={14} strokeWidth={1.5} />
-        </button>
-      ),
-    },
-    {
-      key: 'edit',
-      header: '',
-      align: 'right',
-      render: (row) => (
-        <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+        <div className="flex items-center justify-end gap-1">
           <button
             type="button"
-            onClick={() => setEditingId(row.id)}
-            className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-            aria-label={t('actions.edit')}
-            title={t('actions.edit')}
+            onClick={() => handleTogglePin(row.id)}
+            disabled={togglePinMut.isPending}
+            className={`rounded p-1 transition-colors ${
+              row.is_pinned
+                ? 'text-amber-500 hover:bg-amber-50'
+                : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
+            }`}
+            aria-label={row.is_pinned ? t('actions.unpin', 'Unpin') : t('actions.pin', 'Pin')}
+            title={row.is_pinned ? t('actions.unpin', 'Unpin') : t('actions.pin', 'Pin')}
           >
-            <Icons.PencilEdit size={14} strokeWidth={1.5} />
+            <Icons.Pin size={14} strokeWidth={1.5} />
           </button>
-        </PermissionGuard>
+          <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            <button
+              type="button"
+              onClick={() => setEditingId(row.id)}
+              className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-800"
+              aria-label={t('actions.edit')}
+              title={t('actions.edit')}
+            >
+              <Icons.PencilEdit size={14} strokeWidth={1.5} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeletingId(row.id)}
+              className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
+              aria-label={t('actions.delete', 'Delete')}
+              title={t('actions.delete', 'Delete')}
+            >
+              <Icons.Delete size={14} strokeWidth={1.5} />
+            </button>
+          </PermissionGuard>
+        </div>
       ),
     },
   ]
@@ -457,6 +466,53 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
         onClose={() => setEditingId(null)}
         debts={debts}
       />
+
+      <Modal open={deletingId !== null} onClose={() => setDeletingId(null)} maxWidth="sm">
+        <div className="flex flex-col items-center gap-4 py-2 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
+            <Icons.Delete size={26} className="text-red-600" strokeWidth={1.8} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <h3 className="text-base font-semibold text-gray-900">
+              {t('pages.clientChains.history.deleteTitle', 'Delete Interaction')}
+            </h3>
+            <p className="text-sm text-gray-500">
+              {t(
+                'pages.clientChains.history.deleteConfirm',
+                'Are you sure you want to delete this interaction? This action cannot be undone.'
+              )}
+            </p>
+          </div>
+          <div className="mt-2 flex w-full gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setDeletingId(null)}
+              disabled={deleteMut.isPending}
+            >
+              {t('actions.cancel', 'Cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              className="flex-1"
+              disabled={deleteMut.isPending}
+              onClick={async () => {
+                try {
+                  await deleteMut.mutateAsync(deletingId!)
+                  setDeletingId(null)
+                  toast.success(
+                    t('pages.clientChains.history.deleteSuccess', 'Interaction deleted')
+                  )
+                } catch (err) {
+                  toast.error(getErrorMessage(err))
+                }
+              }}
+            >
+              {t('actions.delete', 'Delete')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Pagination */}
       {totalCount > pageSize && (

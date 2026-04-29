@@ -4,6 +4,7 @@ import {
   cancelChainInstance,
   completeChainInstance,
   createTAInteraction,
+  deleteTAInteraction,
   getChainInstances,
   getClientPinnedChainIds,
   getTAInteraction,
@@ -65,6 +66,16 @@ export function useUpdateTAInteraction() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: TAInteractionUpdate }) =>
       updateTAInteraction(id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: INT_KEY })
+    },
+  })
+}
+
+export function useDeleteTAInteraction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => deleteTAInteraction(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: INT_KEY })
     },
