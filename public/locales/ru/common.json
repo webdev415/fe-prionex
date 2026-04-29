@@ -794,6 +794,7 @@
         "priority": "Приоритет",
         "score": "Оценка",
         "employee": "Сотрудник",
+        "assignmentDate": "Дата назначения",
         "searcher": "Розыскник",
         "actions": "Действия"
       },
@@ -818,6 +819,9 @@
         "dateOfSale": "Дата продажи долга",
         "promiseDate": "Обещание",
         "callbackDate": "Обратный звонок",
+        "assignmentDate": "Дата назначения",
+        "dateFrom": "От",
+        "dateTo": "До",
         "interactionCreatedBy": "Создано взаимодействие",
         "interactionLoggedDate": "Дата записи взаимодействия",
         "selectOperator": "Выберите оператора",

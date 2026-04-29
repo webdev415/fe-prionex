@@ -794,6 +794,7 @@
         "priority": "Priority",
         "score": "Score",
         "employee": "Employee",
+        "assignmentDate": "Assignment Date",
         "searcher": "Searcher",
         "actions": "Actions"
       },
@@ -818,6 +819,9 @@
         "dateOfSale": "Debt Sale Date",
         "promiseDate": "Promise Date",
         "callbackDate": "Callback Date",
+        "assignmentDate": "Assignment Date",
+        "dateFrom": "From",
+        "dateTo": "To",
         "interactionCreatedBy": "Interaction Created By",
         "interactionLoggedDate": "Interaction Logged Date",
         "selectOperator": "Select operator",

@@ -66,6 +66,7 @@ interface DisplayClient {
   priority: 'Critical' | 'High' | 'Medium' | 'Low'
   score: number
   employeeName: string
+  assignmentDate: string
   searcherName: string
 }
 
@@ -105,6 +106,7 @@ const mapAPIClientToDisplay = (
     employeeName: client.responsible_employee_id
       ? userNameMap.get(client.responsible_employee_id) || '-'
       : '-',
+    assignmentDate: client.assignment_date ? formatDate(client.assignment_date) : '-',
     searcherName: client.responsible_searcher_id
       ? userNameMap.get(client.responsible_searcher_id) || '-'
       : '-',
@@ -141,6 +143,10 @@ export interface ClientFilters {
   // Callback Date Filter
   callbackDateFrom?: string
   callbackDateTo?: string
+
+  // Assignment Date (current responsible employee, from history)
+  assignmentDateFrom?: string
+  assignmentDateTo?: string
 
   // Interaction Created By
   interactionUserId?: string
@@ -223,6 +229,14 @@ export function ClientManagementPage() {
     ''
   )
   const [callbackDateToFilter, setCallbackDateToFilter] = useURLState<string>('callbackDateTo', '')
+  const [assignmentDateFromFilter, setAssignmentDateFromFilter] = useURLState<string>(
+    'assignmentDateFrom',
+    ''
+  )
+  const [assignmentDateToFilter, setAssignmentDateToFilter] = useURLState<string>(
+    'assignmentDateTo',
+    ''
+  )
   const [interactionUserIdFilter, setInteractionUserIdFilter] = useURLState<string>(
     'interactionUserId',
     ''
@@ -259,6 +273,8 @@ export function ClientManagementPage() {
       promiseDateTo: promiseDateToFilter || undefined,
       callbackDateFrom: callbackDateFromFilter || undefined,
       callbackDateTo: callbackDateToFilter || undefined,
+      assignmentDateFrom: assignmentDateFromFilter || undefined,
+      assignmentDateTo: assignmentDateToFilter || undefined,
       interactionUserId: interactionUserIdFilter || undefined,
       interactionDateFrom: interactionDateFromFilter || undefined,
       interactionDateTo: interactionDateToFilter || undefined,
@@ -284,6 +300,8 @@ export function ClientManagementPage() {
       promiseDateToFilter,
       callbackDateFromFilter,
       callbackDateToFilter,
+      assignmentDateFromFilter,
+      assignmentDateToFilter,
       interactionUserIdFilter,
       interactionDateFromFilter,
       interactionDateToFilter,
@@ -342,6 +360,8 @@ export function ClientManagementPage() {
       promiseDateToFilter,
       callbackDateFromFilter,
       callbackDateToFilter,
+      assignmentDateFromFilter,
+      assignmentDateToFilter,
       interactionUserIdFilter,
       interactionDateFromFilter,
       interactionDateToFilter,
@@ -365,6 +385,8 @@ export function ClientManagementPage() {
       promiseDateToFilter !== '' ||
       callbackDateFromFilter !== '' ||
       callbackDateToFilter !== '' ||
+      assignmentDateFromFilter !== '' ||
+      assignmentDateToFilter !== '' ||
       interactionUserIdFilter !== '' ||
       interactionDateFromFilter !== '' ||
       interactionDateToFilter !== '' ||
@@ -411,6 +433,8 @@ export function ClientManagementPage() {
     promiseDateToFilter,
     callbackDateFromFilter,
     callbackDateToFilter,
+    assignmentDateFromFilter,
+    assignmentDateToFilter,
     interactionUserIdFilter,
     interactionDateFromFilter,
     interactionDateToFilter,
@@ -437,6 +461,8 @@ export function ClientManagementPage() {
       promiseDateToFilter !== '' ||
       callbackDateFromFilter !== '' ||
       callbackDateToFilter !== '' ||
+      assignmentDateFromFilter !== '' ||
+      assignmentDateToFilter !== '' ||
       interactionUserIdFilter !== '' ||
       interactionDateFromFilter !== '' ||
       interactionDateToFilter !== '' ||
@@ -479,6 +505,10 @@ export function ClientManagementPage() {
             if (parsed.callbackDateFromFilter)
               setCallbackDateFromFilter(parsed.callbackDateFromFilter)
             if (parsed.callbackDateToFilter) setCallbackDateToFilter(parsed.callbackDateToFilter)
+            if (parsed.assignmentDateFromFilter)
+              setAssignmentDateFromFilter(parsed.assignmentDateFromFilter)
+            if (parsed.assignmentDateToFilter)
+              setAssignmentDateToFilter(parsed.assignmentDateToFilter)
             if (parsed.interactionUserIdFilter)
               setInteractionUserIdFilter(parsed.interactionUserIdFilter)
             if (parsed.interactionDateFromFilter)
@@ -553,6 +583,7 @@ export function ClientManagementPage() {
       searcherName: 'responsible_searcher_id',
       creditor: 'primary_creditor',
       debt: 'total_debt',
+      assignmentDate: 'assignment_date',
     }
 
     const params: Record<string, unknown> = {
@@ -672,7 +703,15 @@ export function ClientManagementPage() {
       params.interaction_date_to = filters.interactionDateTo
     }
 
-    // FILTER 15: Search (from global header search)
+    // FILTER 15: Assignment Date (current employee, from history)
+    if (filters.assignmentDateFrom) {
+      params.assignment_date_from = filters.assignmentDateFrom
+    }
+    if (filters.assignmentDateTo) {
+      params.assignment_date_to = filters.assignmentDateTo
+    }
+
+    // FILTER 16: Search (from global header search)
     if (searchQuery.trim()) {
       params.q = searchQuery.trim()
       params.search_type = searchType
@@ -735,6 +774,7 @@ export function ClientManagementPage() {
     if (filters.dateOfSaleFrom || filters.dateOfSaleTo) count++
     if (filters.promiseDateFrom || filters.promiseDateTo) count++
     if (filters.callbackDateFrom || filters.callbackDateTo) count++
+    if (filters.assignmentDateFrom || filters.assignmentDateTo) count++
     if (filters.interactionUserId) count++
     if (filters.interactionDateFrom || filters.interactionDateTo) count++
     if (filters.portfolio && filters.portfolio.length > 0) count++
@@ -1073,6 +1113,12 @@ export function ClientManagementPage() {
     if (newFilters.callbackDateTo !== callbackDateToFilter) {
       setCallbackDateToFilter(newFilters.callbackDateTo || '')
     }
+    if (newFilters.assignmentDateFrom !== assignmentDateFromFilter) {
+      setAssignmentDateFromFilter(newFilters.assignmentDateFrom || '')
+    }
+    if (newFilters.assignmentDateTo !== assignmentDateToFilter) {
+      setAssignmentDateToFilter(newFilters.assignmentDateTo || '')
+    }
     if (newFilters.interactionUserId !== interactionUserIdFilter) {
       setInteractionUserIdFilter(newFilters.interactionUserId || '')
     }
@@ -1110,6 +1156,8 @@ export function ClientManagementPage() {
     setPromiseDateToFilter('')
     setCallbackDateFromFilter('')
     setCallbackDateToFilter('')
+    setAssignmentDateFromFilter('')
+    setAssignmentDateToFilter('')
     setInteractionUserIdFilter('')
     setInteractionDateFromFilter('')
     setInteractionDateToFilter('')
@@ -1276,6 +1324,14 @@ export function ClientManagementPage() {
       key: 'employeeName',
       header: t('pages.clients.tableHeaders.employee'),
       align: 'left',
+    },
+    {
+      key: 'assignmentDate',
+      header: t('pages.clients.tableHeaders.assignmentDate'),
+      align: 'left',
+      sortable: true,
+      sortKey: 'assignmentDate',
+      render: (client) => client.assignmentDate,
     },
     {
       key: 'searcherName',
