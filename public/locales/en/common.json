@@ -184,10 +184,18 @@
       "filters": {
         "operator": "Operator",
         "allOperators": "All operators",
+        "employee": "Employee",
+        "allEmployees": "All employees",
         "period": "Period",
         "status": "Status",
         "minDuration": "Min duration (s)",
         "maxDuration": "Max duration (s)",
+        "contactType": "Contact type",
+        "allContactTypes": "All",
+        "result": "Result",
+        "allResults": "All",
+        "promiseMin": "Promise min",
+        "promiseMax": "Promise max",
         "periods": {
           "today": "Today",
           "yesterday": "Yesterday",
@@ -208,12 +216,17 @@
         "phone": "Phone",
         "agent": "Operator",
         "client": "Client",
-        "recording": "Recording"
+        "recording": "Recording",
+        "employee": "Employee",
+        "contactType": "Contact type",
+        "result": "Result",
+        "promiseAmount": "Promise amount"
       },
       "summary": {
         "total": "total",
         "outgoing": "outgoing",
-        "answered": "answered"
+        "answered": "answered",
+        "totalInteractions": "interactions"
       },
       "actions": {
         "exportExcel": "Export to Excel",
@@ -227,8 +240,10 @@
         "summary": "{{total}} call(s), {{answered}} answered"
       },
       "empty": "No calls match the current filters",
+      "interactionsEmpty": "No interactions match the current filters",
       "errors": {
         "loadFailed": "Failed to load calls",
+        "loadInteractionsFailed": "Failed to load interactions",
         "exportFailed": "Export failed"
       },
       "calls": {

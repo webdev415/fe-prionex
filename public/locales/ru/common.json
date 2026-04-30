@@ -184,10 +184,18 @@
       "filters": {
         "operator": "Оператор",
         "allOperators": "Все операторы",
+        "employee": "Сотрудник",
+        "allEmployees": "Все сотрудники",
         "period": "Период",
         "status": "Статус",
         "minDuration": "Мин. длительность (с)",
         "maxDuration": "Макс. длительность (с)",
+        "contactType": "Тип контакта",
+        "allContactTypes": "Все",
+        "result": "Результат",
+        "allResults": "Все",
+        "promiseMin": "Обещание от",
+        "promiseMax": "Обещание до",
         "periods": {
           "today": "Сегодня",
           "yesterday": "Вчера",
@@ -208,12 +216,17 @@
         "phone": "Телефон",
         "agent": "Оператор",
         "client": "Клиент",
-        "recording": "Запись"
+        "recording": "Запись",
+        "employee": "Сотрудник",
+        "contactType": "Тип контакта",
+        "result": "Результат",
+        "promiseAmount": "Сумма обещания"
       },
       "summary": {
         "total": "всего",
         "outgoing": "исходящих",
-        "answered": "отвечено"
+        "answered": "отвечено",
+        "totalInteractions": "взаимодействий"
       },
       "actions": {
         "exportExcel": "Экспорт в Excel",
@@ -227,8 +240,10 @@
         "summary": "{{total}} звонок(-ов), {{answered}} отвечено"
       },
       "empty": "Нет звонков, соответствующих фильтрам",
+      "interactionsEmpty": "Нет взаимодействий, соответствующих фильтрам",
       "errors": {
         "loadFailed": "Не удалось загрузить звонки",
+        "loadInteractionsFailed": "Не удалось загрузить взаимодействия",
         "exportFailed": "Не удалось экспортировать"
       },
       "calls": {

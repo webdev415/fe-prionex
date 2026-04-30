@@ -2,6 +2,11 @@ export { useCallMonitoring, callMonitoringKeys } from './hooks/useCallMonitoring
 export { useCallsByPhone } from './hooks/useCallsByPhone'
 export { useExportCalls } from './hooks/useExportCalls'
 export {
+  useInteractionMonitoring,
+  interactionMonitoringKeys,
+} from './hooks/useInteractionMonitoring'
+export { useExportInteractions } from './hooks/useExportInteractions'
+export {
   getCallMonitoring,
   getCallsByPhone,
   exportCallMonitoring,

@@ -184,10 +184,18 @@
       "filters": {
         "operator": "Оператор",
         "allOperators": "Усі оператори",
+        "employee": "Співробітник",
+        "allEmployees": "Усі співробітники",
         "period": "Період",
         "status": "Статус",
         "minDuration": "Мін. тривалість (с)",
         "maxDuration": "Макс. тривалість (с)",
+        "contactType": "Тип контакту",
+        "allContactTypes": "Усі",
+        "result": "Результат",
+        "allResults": "Усі",
+        "promiseMin": "Обіцянка від",
+        "promiseMax": "Обіцянка до",
         "periods": {
           "today": "Сьогодні",
           "yesterday": "Вчора",
@@ -208,12 +216,17 @@
         "phone": "Телефон",
         "agent": "Оператор",
         "client": "Клієнт",
-        "recording": "Запис"
+        "recording": "Запис",
+        "employee": "Співробітник",
+        "contactType": "Тип контакту",
+        "result": "Результат",
+        "promiseAmount": "Сума обіцянки"
       },
       "summary": {
         "total": "всього",
         "outgoing": "вихідних",
-        "answered": "відповідей"
+        "answered": "відповідей",
+        "totalInteractions": "взаємодій"
       },
       "actions": {
         "exportExcel": "Експорт в Excel",
@@ -227,8 +240,10 @@
         "summary": "{{total}} дзвінок(-ів), {{answered}} з відповіддю"
       },
       "empty": "Немає дзвінків, що відповідають фільтрам",
+      "interactionsEmpty": "Немає взаємодій, що відповідають фільтрам",
       "errors": {
         "loadFailed": "Не вдалося завантажити дзвінки",
+        "loadInteractionsFailed": "Не вдалося завантажити взаємодії",
         "exportFailed": "Не вдалося експортувати"
       },
       "calls": {
