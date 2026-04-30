@@ -98,6 +98,8 @@ export async function getClientPaymentHistory(
         payment_method: params.payment_method,
         from_date: params.from_date,
         to_date: params.to_date,
+        date_field: params.date_field,
+        tz: params.tz,
       },
     }
   )
@@ -164,7 +166,7 @@ export async function getPaymentDebtBreakdown(
  * Get pending verification payments (bell notifications)
  */
 export async function getPendingVerificationPayments(
-  params: { days?: number } = {}
+  params: { days?: number; only_recorded_by_me?: boolean } = {}
 ): Promise<PendingPaymentResponse> {
   const response = await api.get<PendingPaymentResponse>(`${BASE_URL}/pending-verifications`, {
     params,

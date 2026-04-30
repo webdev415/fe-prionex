@@ -79,6 +79,7 @@ describe('CallDialogModal', () => {
     vi.mocked(useCallHook.useHangupCall).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
+      reset: vi.fn(),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
@@ -280,6 +281,15 @@ describe('CallDialogModal', () => {
 
       // Should display countdown
       expect(screen.getByText(/Auto-closing in/i)).toBeInTheDocument()
+    })
+
+    it('should call onClose when Close is clicked in ended state', () => {
+      render(<CallDialogModal {...defaultProps} initialState="ended" />, {
+        wrapper: createWrapper(),
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+      expect(mockOnClose).toHaveBeenCalledTimes(1)
     })
   })
 

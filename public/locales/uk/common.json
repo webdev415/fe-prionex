@@ -874,6 +874,7 @@
         "score": "Оцінка",
         "employee": "Співробітник",
         "searcher": "Пошуковець",
+        "assignmentDate": "Дата призначення",
         "actions": "Дії"
       },
       "priorities": {
@@ -895,6 +896,7 @@
         "dpdRange": "Діапазон DPD",
         "amountOfDebtRange": "Сума окремого боргу",
         "dateOfSale": "Дата продажу боргу",
+        "assignmentDate": "Дата призначення",
         "promiseDate": "Обіцянка",
         "callbackDate": "Зворотний дзвінок",
         "interactionCreatedBy": "Створено взаємодію",
@@ -1305,6 +1307,7 @@
           "reject": "Відхилити",
           "answerCall": "Відповісти на дзвінок",
           "callClient": "Дзвінок клієнту",
+          "readyToCall": "Готовий до дзвінка",
           "clientName": "Ім'я клієнта",
           "phoneNumber": "Номер телефону",
           "manualPhoneEntry": "Ввести номер вручну",
@@ -1721,7 +1724,8 @@
         "viewAll": "Переглянути всі",
         "showLess": "Показати менше",
         "tableHeaders": {
-          "date": "Дата",
+          "date": "Дата додавання платежу",
+          "paymentConfirmationDate": "Дата підтвердження платежу",
           "amount": "Сума",
           "method": "Спосіб",
           "status": "Статус",
@@ -1778,7 +1782,9 @@
           "all": "Всі"
         },
         "tableHeaders": {
-          "date": "Дата",
+          "date": "Дата додавання платежу",
+          "paymentConfirmationDate": "Дата підтвердження платежу",
+          "cancelledDate": "Дата скасування",
           "amount": "Сума",
           "method": "Спосіб",
           "reference": "Номер посилання",

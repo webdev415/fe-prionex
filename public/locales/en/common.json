@@ -874,6 +874,7 @@
         "score": "Score",
         "employee": "Employee",
         "searcher": "Searcher",
+        "assignmentDate": "Assignment Date",
         "actions": "Actions"
       },
       "priorities": {
@@ -895,6 +896,7 @@
         "dpdRange": "DPD Range",
         "amountOfDebtRange": "Individual Debt Amount",
         "dateOfSale": "Debt Sale Date",
+        "assignmentDate": "Assignment Date",
         "promiseDate": "Promise Date",
         "callbackDate": "Callback Date",
         "interactionCreatedBy": "Interaction Created By",
@@ -1029,6 +1031,7 @@
           "reject": "Reject",
           "answerCall": "Answer Call",
           "callClient": "Call Client",
+          "readyToCall": "Ready to call",
           "clientName": "Client Name",
           "phoneNumber": "Phone Number",
           "manualPhoneEntry": "Enter phone number manually",
@@ -1693,7 +1696,8 @@
         "viewAll": "View All",
         "showLess": "Show Less",
         "tableHeaders": {
-          "date": "Date",
+          "date": "Payment Added Date",
+          "paymentConfirmationDate": "Payment Confirmation Date",
           "amount": "Amount",
           "method": "Method",
           "status": "Status",
@@ -1750,7 +1754,9 @@
           "all": "All"
         },
         "tableHeaders": {
-          "date": "Date",
+          "date": "Payment Added Date",
+          "paymentConfirmationDate": "Payment Confirmation Date",
+          "cancelledDate": "Cancelled Date",
           "amount": "Amount",
           "method": "Method",
           "reference": "Reference",

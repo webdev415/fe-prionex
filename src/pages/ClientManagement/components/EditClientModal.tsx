@@ -27,15 +27,12 @@ import {
   useDeleteContact,
   useUpdateEmployment,
   useUpdatePassport,
-  useContactTypes,
   clientKeys,
 } from '@/features/clients/hooks/useClients'
 import type {
   ClientProfileResponse,
   CreateAddressRequest,
   UpdateAddressRequest,
-  CreateContactRequest,
-  UpdateContactRequest,
   UpdateClientRequest,
 } from '@/features/clients/api/types'
 
@@ -101,20 +98,11 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const { mutate: createAddress, isPending: isCreatingAddress } = useCreateAddress()
   const { mutate: updateAddress, isPending: isUpdatingAddress } = useUpdateAddress()
   const { mutate: deleteAddress } = useDeleteAddress()
-  const {
-    mutate: createContact,
-    mutateAsync: createContactAsync,
-    isPending: isCreatingContact,
-  } = useCreateContact()
-  const {
-    mutate: updateContact,
-    mutateAsync: updateContactAsync,
-    isPending: isUpdatingContact,
-  } = useUpdateContact()
-  const { mutate: deleteContact, mutateAsync: deleteContactAsync } = useDeleteContact()
+  const { mutateAsync: createContactAsync } = useCreateContact()
+  const { mutateAsync: updateContactAsync } = useUpdateContact()
+  const { mutateAsync: deleteContactAsync } = useDeleteContact()
   const { mutate: updateEmployment, isPending: isSavingWork } = useUpdateEmployment()
   const { mutate: updatePassport, isPending: isSavingPassport } = useUpdatePassport()
-  const { data: contactTypes = [] } = useContactTypes()
   const canEditAll = useHasPermission(PERMISSIONS.CLIENTS.EDIT)
 
   // Personal info — initialized from profile (component remounts via key when profile changes)
@@ -179,21 +167,9 @@ function EditForm({ profile, clientId }: EditFormProps) {
     is_primary: false,
   })
 
-  // Contact form state
-  const [showContactForm, setShowContactForm] = useState(false)
-  const [newContact, setNewContact] = useState<CreateContactRequest>({
-    contact_value: '',
-    contact_type_id: 7,
-    comment: '',
-  })
-
   // Inline edit state for addresses
   const [editingAddressId, setEditingAddressId] = useState<number | null>(null)
   const [editAddressData, setEditAddressData] = useState<UpdateAddressRequest>({})
-
-  // Inline edit state for contacts
-  const [editingContactId, setEditingContactId] = useState<number | null>(null)
-  const [editContactData, setEditContactData] = useState<UpdateContactRequest>({})
 
   // Inline error state per section
   const [personalError, setPersonalError] = useState<string | null>(null)
@@ -202,7 +178,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const [isSavingPhones, setIsSavingPhones] = useState(false)
   const [workError, setWorkError] = useState<string | null>(null)
   const [addressError, setAddressError] = useState<string | null>(null)
-  const [contactError, setContactError] = useState<string | null>(null)
 
   const invalidateClientCaches = () => {
     queryClient.invalidateQueries({ queryKey: clientKeys.profile(clientId) })
@@ -470,69 +445,6 @@ function EditForm({ profile, clientId }: EditFormProps) {
         },
         onError: (error) => {
           setAddressError(extractErrorMessage(error, t('pages.clients.editModal.saveError')))
-        },
-      }
-    )
-  }
-
-  const handleStartEditContact = (contact: ClientProfileResponse['recommenders'][number]) => {
-    setEditingContactId(contact.id)
-    setEditContactData({
-      contact_value: contact.contact_value || '',
-      contact_type_id: contact.contact_type_id ?? undefined,
-      comment: contact.comment || '',
-    })
-  }
-
-  const handleUpdateContact = () => {
-    if (editingContactId === null) return
-    setContactError(null)
-    updateContact(
-      { clientId, contactId: editingContactId, data: editContactData },
-      {
-        onSuccess: () => {
-          toast.success(t('pages.clients.editModal.contactUpdated'))
-          setEditingContactId(null)
-          setEditContactData({})
-        },
-        onError: (error) => {
-          setContactError(extractErrorMessage(error, t('pages.clients.editModal.saveError')))
-        },
-      }
-    )
-  }
-
-  const handleCreateContact = () => {
-    setContactError(null)
-    createContact(
-      { clientId, data: newContact },
-      {
-        onSuccess: () => {
-          toast.success(t('pages.clients.editModal.contactCreated'))
-          setShowContactForm(false)
-          setNewContact({
-            contact_value: '',
-            contact_type_id: 7,
-            comment: '',
-          })
-        },
-        onError: (error) => {
-          setContactError(extractErrorMessage(error, 'Failed to add contact'))
-        },
-      }
-    )
-  }
-
-  const handleDeleteContact = (contactId: number) => {
-    setContactError(null)
-    deleteContact(
-      { clientId, contactId },
-      {
-        onSuccess: () => {
-          toast.success(t('pages.clients.editModal.contactDeleted'))
-        },
-        onError: (error) => {
-          setContactError(extractErrorMessage(error, 'Failed to delete contact'))
         },
       }
     )
@@ -986,219 +898,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
         </div>
       )}
 
-      {/* Section 4: Contacts & Referrals */}
-      <div className="flex flex-col items-start gap-2 self-stretch">
-        <div className="flex w-full items-center justify-between">
-          <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-            {t('pages.clients.editModal.contacts')}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            leftIcon={<Icons.PlusSignCircle size={16} />}
-            onClick={() => setShowContactForm(true)}
-            className="text-xs"
-          >
-            {t('pages.clients.editModal.addContact')}
-          </Button>
-        </div>
-        {contactError && <p className="text-error-500 text-sm">{contactError}</p>}
-        <div className="flex flex-col gap-3 self-stretch">
-          {profile.recommenders?.map((contact, index) => (
-            <div key={contact.id}>
-              {editingContactId === contact.id ? (
-                <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white/50 p-4">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                      {t('pages.clients.detail.contactValue')}{' '}
-                      <span className="text-error-500">*</span>
-                    </label>
-                    <Input
-                      value={editContactData.contact_value || ''}
-                      onChange={(e) =>
-                        setEditContactData({ ...editContactData, contact_value: e.target.value })
-                      }
-                      inputSize="md"
-                      className="rounded-md"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                      {t('pages.clients.detail.contactType')}
-                    </label>
-                    <Select
-                      value={String(editContactData.contact_type_id ?? '')}
-                      onValueChange={(value) =>
-                        setEditContactData({ ...editContactData, contact_type_id: Number(value) })
-                      }
-                    >
-                      <SelectTrigger className="text-dark-500 h-[42px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {contactTypes.map((ct) => (
-                          <SelectItem key={ct.id} value={String(ct.id)}>
-                            {ct.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                      {t('pages.clients.detail.comment')}
-                    </label>
-                    <Input
-                      value={editContactData.comment || ''}
-                      onChange={(e) =>
-                        setEditContactData({ ...editContactData, comment: e.target.value })
-                      }
-                      inputSize="md"
-                      className="rounded-md"
-                    />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={handleUpdateContact}
-                      disabled={isUpdatingContact || !(editContactData.contact_value || '').trim()}
-                      className="rounded-md"
-                    >
-                      {isUpdatingContact
-                        ? t('pages.clients.editModal.saving')
-                        : t('pages.clients.editModal.save')}
-                    </Button>
-                    <Button
-                      variant="cancel"
-                      size="sm"
-                      onClick={() => {
-                        setEditingContactId(null)
-                        setEditContactData({})
-                      }}
-                      className="rounded-md"
-                    >
-                      {t('actions.close')}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between gap-3 rounded-xl border border-white bg-white/50 p-3 sm:p-4">
-                    <div className="flex flex-1 flex-col gap-1.5">
-                      <span className="text-dark-500 text-xs font-medium sm:text-sm">
-                        {contact.contact_value}
-                      </span>
-                      <span className="text-xs font-light text-gray-700">
-                        {contact.contact_type_code
-                          ? t(`contactTypes.${contact.contact_type_code}`, {
-                              defaultValue: contact.contact_type_name ?? '',
-                            })
-                          : (contact.contact_type_name ?? '')}
-                      </span>
-                      <span className="text-xs font-light text-gray-500">{contact.comment}</span>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <button
-                        type="button"
-                        data-testid="edit-contact-btn"
-                        aria-label={t('pages.clients.editModal.editContact')}
-                        onClick={() => handleStartEditContact(contact)}
-                        className="text-gray-600 transition-colors hover:text-blue-500"
-                      >
-                        <Icons.PencilEdit size={16} strokeWidth={1.5} />
-                      </button>
-                      <button
-                        type="button"
-                        data-testid="delete-contact-btn"
-                        aria-label={t('pages.clients.editModal.deleteContact')}
-                        onClick={() => handleDeleteContact(contact.id)}
-                        className="text-gray-600 transition-colors hover:text-red-500"
-                      >
-                        <Icons.Delete size={16} strokeWidth={1.5} />
-                      </button>
-                    </div>
-                  </div>
-                  {index < (profile.recommenders?.length ?? 0) - 1 && (
-                    <div className="mx-2 h-px self-stretch bg-gray-200"></div>
-                  )}
-                </>
-              )}
-            </div>
-          ))}
-
-          {/* Add Contact Form */}
-          {showContactForm && (
-            <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white/50 p-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                  {t('pages.clients.detail.contactValue')} <span className="text-error-500">*</span>
-                </label>
-                <Input
-                  value={newContact.contact_value}
-                  onChange={(e) => setNewContact({ ...newContact, contact_value: e.target.value })}
-                  inputSize="md"
-                  className="rounded-md"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                  {t('pages.clients.detail.contactType')}
-                </label>
-                <Select
-                  value={String(newContact.contact_type_id ?? '')}
-                  onValueChange={(value) =>
-                    setNewContact({ ...newContact, contact_type_id: Number(value) })
-                  }
-                >
-                  <SelectTrigger className="text-dark-500 h-[42px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contactTypes.map((ct) => (
-                      <SelectItem key={ct.id} value={String(ct.id)}>
-                        {ct.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-dark-500 text-xs font-medium sm:text-sm">
-                  {t('pages.clients.detail.comment')}
-                </label>
-                <Input
-                  value={newContact.comment || ''}
-                  onChange={(e) => setNewContact({ ...newContact, comment: e.target.value })}
-                  inputSize="md"
-                  className="rounded-md"
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleCreateContact}
-                  disabled={isCreatingContact || !newContact.contact_value.trim()}
-                  className="rounded-md"
-                >
-                  {isCreatingContact ? 'Adding...' : t('pages.clients.editModal.save')}
-                </Button>
-                <Button
-                  variant="cancel"
-                  size="sm"
-                  onClick={() => setShowContactForm(false)}
-                  className="rounded-md"
-                >
-                  {t('actions.close')}
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Section 5: Addresses */}
+      {/* Section 4: Addresses */}
       <div className="flex flex-col items-start gap-2 self-stretch">
         <div className="flex w-full items-center justify-between">
           <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
