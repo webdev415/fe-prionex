@@ -124,14 +124,7 @@ export function TagsPage() {
   }, [user])
 
   // Fetch data (only load active tab's data)
-  const {
-    data: tags = [],
-    isLoading,
-    isError,
-    error,
-  } = useTags(undefined, {
-    includeHidden: true,
-  })
+  const { data: tags = [], isLoading, isError, error } = useTags()
   const { data: segments = [], isLoading: segmentsLoading } = useSegments()
   const { data: rules = [], isLoading: rulesLoading } = useTagRules()
 

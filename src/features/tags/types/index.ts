@@ -5,7 +5,7 @@
  */
 
 export type TagCategory = 'status' | 'risk' | 'behavior' | 'communication' | 'system' | 'custom'
-export type TagVisibility = 'ui' | 'analytics' | 'system' | 'hidden'
+export type TagVisibility = 'ui' | 'analytics' | 'system'
 export type TagOrigin = 'system' | 'custom'
 export type ExpiryType = 'permanent' | 'ttl' | 'loan_closure'
 
