@@ -95,8 +95,8 @@ export const TagSelectorModal = memo(function TagSelectorModal({
 
     try {
       // Optimistic update
-      queryClient.setQueryData(
-        ['clients', clientId, 'tags'],
+      queryClient.setQueriesData(
+        { queryKey: ['clients', clientId, 'tags'] },
         () => allTags?.filter((t) => selectedTagIds.has(t.id)) || []
       )
 
