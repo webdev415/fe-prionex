@@ -181,6 +181,56 @@
         "calls": "Дзвінки",
         "interactions": "Історія взаємодій"
       },
+      "filters": {
+        "operator": "Оператор",
+        "allOperators": "Усі оператори",
+        "period": "Період",
+        "status": "Статус",
+        "minDuration": "Мін. тривалість (с)",
+        "maxDuration": "Макс. тривалість (с)",
+        "periods": {
+          "today": "Сьогодні",
+          "yesterday": "Вчора",
+          "last_7d": "Останні 7 днів",
+          "last_30d": "Останні 30 днів",
+          "custom": "Довільний"
+        },
+        "statuses": {
+          "all": "Усі",
+          "answered": "Відповідь",
+          "notAnswered": "Без відповіді"
+        }
+      },
+      "columns": {
+        "dateTime": "Дата / Час",
+        "duration": "Тривалість",
+        "status": "Статус",
+        "phone": "Телефон",
+        "agent": "Оператор",
+        "client": "Клієнт",
+        "recording": "Запис"
+      },
+      "summary": {
+        "total": "всього",
+        "outgoing": "вихідних",
+        "answered": "відповідей"
+      },
+      "actions": {
+        "exportExcel": "Експорт в Excel",
+        "exporting": "Експорт…",
+        "playRecording": "Відтворити запис"
+      },
+      "phoneSearch": {
+        "title": "Пошук за номером телефону",
+        "placeholder": "Введіть номер телефону",
+        "search": "Знайти",
+        "summary": "{{total}} дзвінок(-ів), {{answered}} з відповіддю"
+      },
+      "empty": "Немає дзвінків, що відповідають фільтрам",
+      "errors": {
+        "loadFailed": "Не вдалося завантажити дзвінки",
+        "exportFailed": "Не вдалося експортувати"
+      },
       "calls": {
         "placeholder": "Вкладка «Дзвінки» — незабаром"
       },

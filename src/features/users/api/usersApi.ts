@@ -129,6 +129,7 @@ export interface OperatorUser {
   last_name: string
   email: string
   status: string
+  asterisk_extension?: string | null
 }
 
 /**

@@ -181,6 +181,56 @@
         "calls": "Calls",
         "interactions": "Interaction History"
       },
+      "filters": {
+        "operator": "Operator",
+        "allOperators": "All operators",
+        "period": "Period",
+        "status": "Status",
+        "minDuration": "Min duration (s)",
+        "maxDuration": "Max duration (s)",
+        "periods": {
+          "today": "Today",
+          "yesterday": "Yesterday",
+          "last_7d": "Last 7 days",
+          "last_30d": "Last 30 days",
+          "custom": "Custom"
+        },
+        "statuses": {
+          "all": "All",
+          "answered": "Answered",
+          "notAnswered": "Not answered"
+        }
+      },
+      "columns": {
+        "dateTime": "Date / Time",
+        "duration": "Duration",
+        "status": "Status",
+        "phone": "Phone",
+        "agent": "Operator",
+        "client": "Client",
+        "recording": "Recording"
+      },
+      "summary": {
+        "total": "total",
+        "outgoing": "outgoing",
+        "answered": "answered"
+      },
+      "actions": {
+        "exportExcel": "Export to Excel",
+        "exporting": "Exporting…",
+        "playRecording": "Play recording"
+      },
+      "phoneSearch": {
+        "title": "Phone number search",
+        "placeholder": "Enter phone number",
+        "search": "Search",
+        "summary": "{{total}} call(s), {{answered}} answered"
+      },
+      "empty": "No calls match the current filters",
+      "errors": {
+        "loadFailed": "Failed to load calls",
+        "exportFailed": "Export failed"
+      },
       "calls": {
         "placeholder": "Calls tab — coming soon"
       },

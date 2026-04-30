@@ -181,6 +181,56 @@
         "calls": "Звонки",
         "interactions": "История взаимодействий"
       },
+      "filters": {
+        "operator": "Оператор",
+        "allOperators": "Все операторы",
+        "period": "Период",
+        "status": "Статус",
+        "minDuration": "Мин. длительность (с)",
+        "maxDuration": "Макс. длительность (с)",
+        "periods": {
+          "today": "Сегодня",
+          "yesterday": "Вчера",
+          "last_7d": "Последние 7 дней",
+          "last_30d": "Последние 30 дней",
+          "custom": "Произвольный"
+        },
+        "statuses": {
+          "all": "Все",
+          "answered": "Отвечен",
+          "notAnswered": "Не отвечен"
+        }
+      },
+      "columns": {
+        "dateTime": "Дата / Время",
+        "duration": "Длительность",
+        "status": "Статус",
+        "phone": "Телефон",
+        "agent": "Оператор",
+        "client": "Клиент",
+        "recording": "Запись"
+      },
+      "summary": {
+        "total": "всего",
+        "outgoing": "исходящих",
+        "answered": "отвечено"
+      },
+      "actions": {
+        "exportExcel": "Экспорт в Excel",
+        "exporting": "Экспорт…",
+        "playRecording": "Воспроизвести запись"
+      },
+      "phoneSearch": {
+        "title": "Поиск по номеру телефона",
+        "placeholder": "Введите номер телефона",
+        "search": "Найти",
+        "summary": "{{total}} звонок(-ов), {{answered}} отвечено"
+      },
+      "empty": "Нет звонков, соответствующих фильтрам",
+      "errors": {
+        "loadFailed": "Не удалось загрузить звонки",
+        "exportFailed": "Не удалось экспортировать"
+      },
       "calls": {
         "placeholder": "Вкладка «Звонки» — скоро будет доступна"
       },
