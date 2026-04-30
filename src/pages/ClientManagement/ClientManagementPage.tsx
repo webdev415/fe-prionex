@@ -40,6 +40,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useSearchStore } from '@/stores/searchStore'
 import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
+import { useTags } from '@/features/tags/hooks/useTags'
 import type { Client as APIClient } from '@/features/clients/api/types'
 import type { PriorityThresholds } from '@/features/clients/api/configApi'
 import { useURLState } from '@/hooks/useURLState'
@@ -82,7 +83,8 @@ const DEFAULT_THRESHOLDS: PriorityThresholds = {
 const mapAPIClientToDisplay = (
   client: APIClient,
   thresholds: PriorityThresholds,
-  userNameMap: Map<number, string>
+  userNameMap: Map<number, string>,
+  visibleTagIds: Set<number>
 ): DisplayClient => {
   const fullName = [client.first_name, client.middle_name, client.last_name]
     .filter(Boolean)
@@ -92,7 +94,7 @@ const mapAPIClientToDisplay = (
     id: client.id,
     fullName,
     taxIdNumber: client.tax_id,
-    tags: client.tags || [], // Tags from API
+    tags: (client.tags || []).filter((tag) => visibleTagIds.has(tag.id)),
     // phone_primary is now resolved from contacts by backend
     phoneNumber:
       client.phone_primary && !/^0+$/.test(client.phone_primary) ? client.phone_primary : '-',
@@ -744,6 +746,13 @@ export function ClientManagementPage() {
   // Fetch active users for resolving employee/searcher IDs to names (project-scoped)
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
+  const { data: operatorVisibleTags = [] } = useTags(
+    activeProjectId ? Number(activeProjectId) : undefined
+  )
+  const visibleTagIds = useMemo(
+    () => new Set(operatorVisibleTags.map((tag) => tag.id)),
+    [operatorVisibleTags]
+  )
   const userNameMap = useMemo(() => {
     const map = new Map<number, string>()
     if (operators) {
@@ -760,8 +769,18 @@ export function ClientManagementPage() {
 
   // Map API clients to display format
   const displayClients = useMemo(() => {
-    return apiClients.map((client) => mapAPIClientToDisplay(client, thresholds, userNameMap))
-  }, [apiClients, thresholds, userNameMap])
+    return apiClients.map((client) =>
+      mapAPIClientToDisplay(client, thresholds, userNameMap, visibleTagIds)
+    )
+  }, [apiClients, thresholds, userNameMap, visibleTagIds])
+
+  useEffect(() => {
+    if (visibleTagIds.size === 0 || tagIdsFilter.length === 0) return
+    const filteredTagIds = tagIdsFilter.filter((id) => visibleTagIds.has(id))
+    if (filteredTagIds.length !== tagIdsFilter.length) {
+      setTagIdsFilter(filteredTagIds)
+    }
+  }, [tagIdsFilter, setTagIdsFilter, visibleTagIds])
 
   // Count applied filters
   const appliedFiltersCount = useMemo(() => {
