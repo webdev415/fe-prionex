@@ -84,7 +84,7 @@ export function ChainBuilderPage() {
   const chains = chainsData?.items ?? []
 
   // Reference data for dropdowns
-  const { data: tagsList } = useTags(projectId)
+  const { data: tagsList } = useTags(projectId, { includeHidden: true })
   const tags = tagsList ?? []
   const { data: smsTemplatesData } = useSMSTemplates(
     projectId ? { project_id: projectId } : undefined

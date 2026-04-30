@@ -46,6 +46,7 @@ import { useURLState } from '@/hooks/useURLState'
 import type { Priority } from './types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
 
 // Display type matching page requirements
 interface DisplayClient {
@@ -56,6 +57,7 @@ interface DisplayClient {
     id: number
     name: string
     color: string
+    visibility?: string | null
     is_protected?: boolean
     expiry_type?: 'permanent' | 'ttl' | 'loan_closure'
   }>
@@ -82,7 +84,8 @@ const DEFAULT_THRESHOLDS: PriorityThresholds = {
 const mapAPIClientToDisplay = (
   client: APIClient,
   thresholds: PriorityThresholds,
-  userNameMap: Map<number, string>
+  userNameMap: Map<number, string>,
+  showHiddenTags: boolean
 ): DisplayClient => {
   const fullName = [client.first_name, client.middle_name, client.last_name]
     .filter(Boolean)
@@ -92,7 +95,9 @@ const mapAPIClientToDisplay = (
     id: client.id,
     fullName,
     taxIdNumber: client.tax_id,
-    tags: client.tags || [], // Tags from API
+    tags: (client.tags || []).filter(
+      (tag) => showHiddenTags || !isHiddenVisibility(tag.visibility)
+    ),
     // phone_primary is now resolved from contacts by backend
     phoneNumber:
       client.phone_primary && !/^0+$/.test(client.phone_primary) ? client.phone_primary : '-',
@@ -178,6 +183,7 @@ export function ClientManagementPage() {
   // Get search state from global store (synced with header search)
   const { searchQuery, searchType, setSearchQuery: clearSearchQuery } = useSearchStore()
   const user = useAuthStore((state) => state.user)
+  const showHiddenTags = isAdminRole(user?.active_role_name)
 
   // URL state for priority filtering
   const [selectedPriorities, setSelectedPriorities] = useURLState<Priority[]>('priority', [])
@@ -760,8 +766,10 @@ export function ClientManagementPage() {
 
   // Map API clients to display format
   const displayClients = useMemo(() => {
-    return apiClients.map((client) => mapAPIClientToDisplay(client, thresholds, userNameMap))
-  }, [apiClients, thresholds, userNameMap])
+    return apiClients.map((client) =>
+      mapAPIClientToDisplay(client, thresholds, userNameMap, showHiddenTags)
+    )
+  }, [apiClients, thresholds, userNameMap, showHiddenTags])
 
   // Count applied filters
   const appliedFiltersCount = useMemo(() => {
