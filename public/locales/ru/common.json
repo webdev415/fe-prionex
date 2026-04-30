@@ -31,7 +31,8 @@
     "reports": "Отчеты",
     "scoringConfiguration": "Конфигурация оценки",
     "systemSettings": "Системные настройки",
-    "tags": "Теги"
+    "tags": "Теги",
+    "actionAnalysis": "Анализ действий"
   },
   "search": {
     "placeholder": "Поиск",
@@ -172,6 +173,20 @@
       "mockTableRowClients": "Клиенты",
       "mockTableRowDebt": "Долг в зоне риска",
       "mockTableRowOverdue": "Доля просрочки"
+    },
+    "actionAnalysis": {
+      "title": "Анализ действий",
+      "subtitle": "Мониторинг звонков и история взаимодействий для команды тренеров.",
+      "tabs": {
+        "calls": "Звонки",
+        "interactions": "История взаимодействий"
+      },
+      "calls": {
+        "placeholder": "Вкладка «Звонки» — скоро будет доступна"
+      },
+      "interactions": {
+        "placeholder": "Вкладка «История взаимодействий» — скоро будет доступна"
+      }
     },
     "users": {
       "title": "Управление пользователями",

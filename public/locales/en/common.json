@@ -31,7 +31,8 @@
     "reports": "Reports",
     "scoringConfiguration": "Scoring Configuration",
     "systemSettings": "System Settings",
-    "tags": "Tags"
+    "tags": "Tags",
+    "actionAnalysis": "Action Analysis"
   },
   "search": {
     "placeholder": "Search",
@@ -172,6 +173,20 @@
       "mockTableRowClients": "Clients",
       "mockTableRowDebt": "Debt at risk",
       "mockTableRowOverdue": "Overdue ratio"
+    },
+    "actionAnalysis": {
+      "title": "Action Analysis",
+      "subtitle": "Call monitoring and interaction history for the trainer team.",
+      "tabs": {
+        "calls": "Calls",
+        "interactions": "Interaction History"
+      },
+      "calls": {
+        "placeholder": "Calls tab — coming soon"
+      },
+      "interactions": {
+        "placeholder": "Interaction History tab — coming soon"
+      }
     },
     "users": {
       "title": "User Management",

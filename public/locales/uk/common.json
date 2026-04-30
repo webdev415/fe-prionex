@@ -31,7 +31,8 @@
     "reports": "Звіти",
     "scoringConfiguration": "Конфігурація оцінки",
     "systemSettings": "Системні налаштування",
-    "tags": "Теги"
+    "tags": "Теги",
+    "actionAnalysis": "Аналіз дій"
   },
   "search": {
     "placeholder": "Пошук",
@@ -172,6 +173,20 @@
       "mockTableRowClients": "Клієнти",
       "mockTableRowDebt": "Борг у зоні ризику",
       "mockTableRowOverdue": "Частка прострочених"
+    },
+    "actionAnalysis": {
+      "title": "Аналіз дій",
+      "subtitle": "Моніторинг дзвінків та історія взаємодій для команди тренерів.",
+      "tabs": {
+        "calls": "Дзвінки",
+        "interactions": "Історія взаємодій"
+      },
+      "calls": {
+        "placeholder": "Вкладка «Дзвінки» — незабаром"
+      },
+      "interactions": {
+        "placeholder": "Вкладка «Історія взаємодій» — незабаром"
+      }
     },
     "users": {
       "title": "Управління користувачами",
