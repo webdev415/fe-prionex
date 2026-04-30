@@ -7,6 +7,7 @@
 
 import api from '@/lib/api'
 import type { Tag, TagDefinition, TagCreate, TagDefinitionUpdate } from '../types'
+import { isOperatorVisibleTag } from '../utils/visibility'
 
 /**
  * Fetch tags list for a project
@@ -14,10 +15,16 @@ import type { Tag, TagDefinition, TagCreate, TagDefinitionUpdate } from '../type
  * @param projectId - Project ID to filter tags
  * @returns List of tags
  */
-export async function getTags(projectId?: number): Promise<TagDefinition[]> {
+export async function getTags(
+  projectId?: number,
+  options?: { includeHidden?: boolean }
+): Promise<TagDefinition[]> {
   const params = projectId ? { project_id: projectId } : {}
   const response = await api.get<TagDefinition[]>('/api/v1/tags', { params })
-  return response.data
+  if (options?.includeHidden) {
+    return response.data
+  }
+  return response.data.filter(isOperatorVisibleTag)
 }
 
 /**
@@ -62,7 +69,7 @@ export async function deleteTag(id: number): Promise<{ success: boolean; message
  */
 export async function getClientTags(clientId: number): Promise<TagDefinition[]> {
   const response = await api.get<TagDefinition[]>(`/api/v1/clients/${clientId}/tags`)
-  return response.data
+  return response.data.filter(isOperatorVisibleTag)
 }
 
 /**

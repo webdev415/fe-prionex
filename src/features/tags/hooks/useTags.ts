@@ -24,7 +24,8 @@ import type {
 export const tagsKeys = {
   all: ['tags'] as const,
   lists: () => [...tagsKeys.all, 'list'] as const,
-  list: (projectId?: number) => [...tagsKeys.lists(), { projectId }] as const,
+  list: (projectId?: number, includeHidden = false) =>
+    [...tagsKeys.lists(), { projectId, includeHidden }] as const,
   details: () => [...tagsKeys.all, 'detail'] as const,
   detail: (id: number) => [...tagsKeys.details(), id] as const,
   rules: () => ['rules'] as const,
@@ -42,10 +43,11 @@ export const tagsKeys = {
  * @param projectId - Optional project ID filter
  * @returns React Query result with tags data
  */
-export function useTags(projectId?: number) {
+export function useTags(projectId?: number, options?: { includeHidden?: boolean }) {
+  const includeHidden = options?.includeHidden ?? false
   return useQuery({
-    queryKey: tagsKeys.list(projectId),
-    queryFn: () => tagsApi.getTags(projectId),
+    queryKey: tagsKeys.list(projectId, includeHidden),
+    queryFn: () => tagsApi.getTags(projectId, { includeHidden }),
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }
