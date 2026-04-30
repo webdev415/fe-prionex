@@ -40,6 +40,10 @@ export async function togglePinTAInteraction(id: number): Promise<TAInteraction>
   return r.data
 }
 
+export async function deleteTAInteraction(id: number): Promise<void> {
+  await api.delete(`/api/v1/ta-interactions/${id}`)
+}
+
 export async function getClientPinnedChainIds(clientId: number): Promise<number[]> {
   const r = await api.get<number[]>(`/api/v1/ta-interactions/clients/${clientId}/pinned-chain-ids`)
   return r.data

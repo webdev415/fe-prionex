@@ -470,7 +470,7 @@ export function ChainExecutor({
         ''
       const taId = snap.target_action_id ?? stepDef?.target_action_id
       if (snap.value && taId != null) {
-        collectedStepDataRef.current[String(taId)] = snap.value
+        collectedStepDataRef.current[String(order)] = snap.value
       }
       if (snap.dropdown_value_id != null) {
         collectedDropdownValueIdsRef.current[String(order)] = snap.dropdown_value_id
@@ -555,17 +555,10 @@ export function ChainExecutor({
   // Situation A: non-branch — just update local collected data, no server call
   const saveEditStepLocal = () => {
     if (!editingStep) return
-    const {
-      stepOrder,
-      targetActionId,
-      value,
-      promiseDate: pd,
-      promiseAmount: pa,
-      creditId: ci,
-    } = editingStep
+    const { stepOrder, value, promiseDate: pd, promiseAmount: pa, creditId: ci } = editingStep
 
-    if (value) collectedStepDataRef.current[String(targetActionId)] = value
-    else delete collectedStepDataRef.current[String(targetActionId)]
+    if (value) collectedStepDataRef.current[String(stepOrder)] = value
+    else delete collectedStepDataRef.current[String(stepOrder)]
 
     if (pd) collectedPromiseDateRef.current = pd
     if (pa) collectedPromiseAmountRef.current = pa
@@ -587,9 +580,7 @@ export function ChainExecutor({
       setCompletedSteps((prev) => prev.filter((cs) => cs.stepOrder < editingStep.stepOrder))
       const keysToRemove = Object.keys(collectedStepDataRef.current)
       for (const k of keysToRemove) {
-        const taId = parseInt(k, 10)
-        const step = steps.find((s) => s.target_action_id === taId)
-        if (step && step.step_order >= editingStep.stepOrder) {
+        if (parseInt(k, 10) >= editingStep.stepOrder) {
           delete collectedStepDataRef.current[k]
         }
       }
@@ -658,7 +649,7 @@ export function ChainExecutor({
 
     // Accumulate data synchronously via refs
     if (stepValue) {
-      collectedStepDataRef.current[String(currentStep.target_action_id)] = stepValue
+      collectedStepDataRef.current[String(currentStep.step_order)] = stepValue
     }
     if (selectedDropdownValue) {
       collectedDropdownValueIdsRef.current[String(activeInstance.current_step_order ?? 1)] =
@@ -731,7 +722,7 @@ export function ChainExecutor({
 
     // Accumulate current step's data into refs
     if (currentStep && stepValue) {
-      collectedStepDataRef.current[String(currentStep.target_action_id)] = stepValue
+      collectedStepDataRef.current[String(currentStep.step_order)] = stepValue
     }
     if (selectedDropdownValue) {
       collectedDropdownValueIdsRef.current[String(activeInstance.current_step_order ?? 1)] =
@@ -889,7 +880,7 @@ export function ChainExecutor({
         continue
       }
       const ta = taById.get(step.target_action_id)
-      if (v.value) stepData[String(step.target_action_id)] = v.value
+      if (v.value) stepData[String(step.step_order)] = v.value
 
       let dvId: number | null = null
       if (ta?.field_type === 'dropdown' && v.value) {
