@@ -56,6 +56,16 @@ const SmsTemplatesPage = lazy(() =>
     default: m.SmsTemplatesPage,
   }))
 )
+const TAManagementPage = lazy(() =>
+  import('@/pages/TAManagement').then((m) => ({
+    default: m.TAManagementPage,
+  }))
+)
+const InteractionLogPage = lazy(() =>
+  import('@/pages/InteractionLog').then((m) => ({
+    default: m.InteractionLogPage,
+  }))
+)
 const ReportsDashboardPage = lazy(() =>
   import('@/pages/ReportsDashboard').then((m) => ({
     default: m.ReportsDashboardPage,
@@ -83,6 +93,11 @@ const TagsPage = lazy(() => import('@/pages/Tags/TagsPage').then((m) => ({ defau
 const ProfileSettingsPage = lazy(() =>
   import('@/pages/ProfileSettings/ProfileSettingsPage').then((m) => ({
     default: m.ProfileSettingsPage,
+  }))
+)
+const AiAssistantPage = lazy(() =>
+  import('@/pages/AiAssistant/AiAssistantPage').then((m) => ({
+    default: m.AiAssistantPage,
   }))
 )
 const BulkOperatorAssignmentPage = lazy(() =>
@@ -132,6 +147,10 @@ export const router = createBrowserRouter([
       {
         path: 'profile',
         element: withSuspense(<ProfileSettingsPage />),
+      },
+      {
+        path: 'ai-assistant',
+        element: withSuspense(<AiAssistantPage />),
       },
       {
         path: 'users',
@@ -234,6 +253,22 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
             {withSuspense(<SmsTemplatesPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/target-actions',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            {withSuspense(<TAManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/interaction-log',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            {withSuspense(<InteractionLogPage />)}
           </PermissionRoute>
         ),
       },

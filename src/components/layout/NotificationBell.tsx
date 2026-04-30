@@ -135,6 +135,9 @@ export function NotificationBell() {
       n.type === NotificationType.TAG_REMOVED ||
       n.type === NotificationType.TAG_EXPIRED
   )
+  const taChainNotifications = notifications.filter(
+    (n) => n.type === NotificationType.TA_CHAIN_CREATED
+  )
 
   const markAsReadMutation = useMarkAsRead()
 
@@ -277,6 +280,21 @@ export function NotificationBell() {
                 )}
                 {tagNotifications.map((n) => (
                   <TagNotificationItem
+                    key={n.id}
+                    notification={n}
+                    onNavigate={handleNavigate}
+                    onDismiss={handleDismiss}
+                  />
+                ))}
+
+                {/* TA Chains section */}
+                {taChainNotifications.length > 0 && (
+                  <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold text-black">
+                    TA Chains
+                  </div>
+                )}
+                {taChainNotifications.map((n) => (
+                  <TaChainNotificationItem
                     key={n.id}
                     notification={n}
                     onNavigate={handleNavigate}
@@ -493,6 +511,68 @@ function TagNotificationItem({
           <p className="text-xs font-semibold text-black">{n.title}</p>
         </div>
         {n.body && <p className="text-xs text-black">{n.body}</p>}
+        <span className="text-[11px] text-gray-400">
+          {n.created_at ? formatRelativeTime(n.created_at) : ''}
+        </span>
+      </button>
+      <button
+        type="button"
+        aria-label="Dismiss notification"
+        onClick={(e) => onDismiss(e, n.id)}
+        className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-600"
+      >
+        <Icons.Cancel01 size={12} strokeWidth={2} />
+      </button>
+    </div>
+  )
+}
+
+// ─── TA Chain notification item ──────────────────────────────────
+
+function TaChainNotificationItem({
+  notification: n,
+  onNavigate,
+  onDismiss,
+}: {
+  notification: NotificationItem
+  onNavigate: NavigateFn
+  onDismiss: DismissFn
+}) {
+  const meta = n.metadata
+  return (
+    <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
+      <button
+        type="button"
+        disabled={!meta.client_id}
+        onClick={() => onNavigate(n.id, meta.client_id, n.read)}
+        className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
+      >
+        <div className="flex items-center gap-2 pr-5">
+          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+          <Icons.Bell size={14} strokeWidth={1.5} className="text-emerald-600" />
+          <p className="line-clamp-1 text-xs font-semibold text-black">
+            {meta.client_name ?? `Client #${meta.client_id}`}
+            {meta.client_id && (
+              <span className="ml-1 font-normal text-black">(ID: {meta.client_id})</span>
+            )}
+          </p>
+        </div>
+        {meta.chain_name && (
+          <p className="line-clamp-1 text-xs text-black">
+            <span className="font-medium">Chain:</span> {meta.chain_name}
+          </p>
+        )}
+        {meta.result_name && (
+          <p className="line-clamp-1 text-xs text-black">
+            <span className="font-medium">Result:</span>{' '}
+            <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+              {meta.result_name}
+            </span>
+          </p>
+        )}
+        {meta.operator_name && (
+          <p className="line-clamp-1 text-[11px] text-gray-500">by {meta.operator_name}</p>
+        )}
         <span className="text-[11px] text-gray-400">
           {n.created_at ? formatRelativeTime(n.created_at) : ''}
         </span>

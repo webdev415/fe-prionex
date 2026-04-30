@@ -18,6 +18,12 @@
     "roles": "Роли",
     "departments": "Отделы",
     "smsTemplates": "SMS Шаблоны",
+    "targetActions": "Целевые действия",
+    "taChains": "Цепочки TA",
+    "taDictionary": "Словарь",
+    "chainBuilder": "Конструктор цепочек",
+    "taManagement": "Целевые действия",
+    "interactionLog": "Журнал взаимодействий",
     "transactions": "Транзакции",
     "operations": "Операции",
     "bulkOperatorAssignment": "Массовое назначение операторов",
@@ -94,6 +100,79 @@
     "confirmMessage": "Вы уверены, что хотите выйти? Вам нужно будет снова войти, чтобы получить доступ к системе."
   },
   "pages": {
+    "aiAssistant": {
+      "headerButtonAria": "Открыть AI-ассистента",
+      "greeting": "Здравствуйте! Я AI-ассистент Prionex.",
+      "inputPlaceholder": "Поиск по имени, коду, клиентам",
+      "settings": "Настройки",
+      "client": "Клиент",
+      "period": "Период",
+      "allClients": "Все клиенты",
+      "myClients": "Мои клиенты",
+      "periodAll": "Всё время",
+      "periodToday": "Сегодня",
+      "periodLast7Days": "Последние 7 дней",
+      "periodLast30Days": "Последние 30 дней",
+      "periodMonth": "Этот месяц",
+      "periodQuarter": "Этот квартал",
+      "voiceInput": "Голосовой ввод",
+      "voiceListening": "Слушаю… говорите",
+      "voiceStartRecording": "Начать голосовой ввод",
+      "voiceStopRecording": "Остановить голосовой ввод",
+      "voiceNotSupported": "Голосовой ввод не поддерживается в этом браузере.",
+      "voicePermissionDenied": "Доступ к микрофону запрещён. Разрешите доступ для голосового ввода.",
+      "voiceError": "Ошибка голосового ввода. Попробуйте снова.",
+      "settingsTitle": "Настройки ассистента",
+      "settingsDescription": "Управляйте поведением ассистента для этого чата.",
+      "assistantPreferences": "Параметры ассистента",
+      "responseMode": "Режим ответа",
+      "responseShort": "Кратко",
+      "responseDetailed": "Подробно",
+      "outputFormat": "Формат ответа",
+      "outputText": "Текст",
+      "outputTableFirst": "Сначала таблица",
+      "outputMixed": "Смешанный",
+      "contextBehavior": "Поведение контекста",
+      "useSelectedClientAutomatically": "Автоматически использовать выбранного клиента",
+      "useSelectedPeriodAutomatically": "Автоматически использовать выбранный период",
+      "rememberConversationContext": "Помнить предыдущий контекст разговора",
+      "suggestedActions": "Предлагаемые действия",
+      "showQuickSuggestionsAfterResponse": "Показывать быстрые подсказки после ответа",
+      "autoScrollToLatestAnswer": "Автопрокрутка к последнему ответу",
+      "advanced": "Дополнительно",
+      "clearConversation": "Очистить разговор",
+      "startNewChat": "Начать новый чат",
+      "viewRecentPrompts": "Показать последние запросы",
+      "noRecentPrompts": "Пока нет последних запросов",
+      "done": "Готово",
+      "settingsUpdated": "Настройки ассистента обновлены",
+      "assistantTyping": "Ассистент печатает...",
+      "inputHint": "Enter — отправить, Shift+Enter — новая строка",
+      "quickPromptClientData": "Покажи детали клиента.",
+      "quickPromptDebt": "Проанализируй долг для выбранного клиента и периода.",
+      "quickPromptReport": "Сформируй отчёт для выбранного клиента и выбранного периода.",
+      "quickPromptEmployee": "Покажи информацию о сотруднике.",
+      "mockSummaryShort": "Краткий макет-итог",
+      "mockSummaryDetailed": "Подробный макет-ответ",
+      "mockDetectedRequest": "Распознанный запрос",
+      "mockTableHeader": "Предпросмотр в формате таблицы",
+      "mockTableFooter": "Это мок-данные для фронтенд-интеграции.",
+      "mockMixedPointOne": "Получен контекст клиента и периода из текущих фильтров.",
+      "mockMixedPointTwo": "Подготовлены ключевые метрики и заметки по рискам.",
+      "mockMixedPointThree": "Готово преобразовать это в экспортируемый отчёт.",
+      "mockPlainTail": "Это макетный ответ ассистента, сгенерированный только на фронтенде.",
+      "quickClientData": "Проверить данные клиента",
+      "quickDebt": "Анализ долга",
+      "quickReport": "Отчёт",
+      "quickEmployee": "Проверить сотрудника",
+      "scrollToLatestAria": "Прокрутить к последнему сообщению",
+      "closeSettingsAria": "Закрыть настройки",
+      "mockTableColMetric": "Показатель",
+      "mockTableColValue": "Значение",
+      "mockTableRowClients": "Клиенты",
+      "mockTableRowDebt": "Долг в зоне риска",
+      "mockTableRowOverdue": "Доля просрочки"
+    },
     "users": {
       "title": "Управление пользователями",
       "addNewUser": "Новый пользователь",
@@ -1095,7 +1174,8 @@
           "loans": "Займы",
           "tasks": "Задания",
           "docs": "Документы",
-          "callSms": "Звонок / SMS"
+          "callSms": "Звонок / SMS",
+          "taChains": "Цепочки TA"
         },
         "maritalStatuses": {
           "1": "Холост/Не замужем",
@@ -1740,6 +1820,163 @@
         "selectUser": "Выберите пользователя...",
         "comment": "Комментарий",
         "commentPlaceholder": "Необязательный комментарий..."
+      }
+    },
+    "taDictionary": {
+      "title": "Словарь",
+      "selectChain": "Выберите цепочку",
+      "selectChainPlaceholder": "Выберите цепочку...",
+      "noChainSelected": "Выберите цепочку выше для управления деревом категорий.",
+      "emptyTree": "У этой цепочки пока нет категорий. Добавьте корневой узел.",
+      "addRootNode": "Добавить корневую категорию",
+      "addChild": "Добавить дочерний",
+      "newNodeName": "Имя узла...",
+      "leaf": "Лист",
+      "hide": "Скрыть",
+      "unhide": "Восстановить",
+      "requirePromiseDate": "Требовать дату обещания",
+      "requirePromiseAmount": "Требовать сумму обещания",
+      "isPositive": "Положительный результат",
+      "form": {
+        "name": "Название",
+        "step": "Шаг",
+        "allSteps": "Все шаги (общий)",
+        "stepLabel": "Шаг {{order}}",
+        "nodeType": "Тип узла",
+        "leafSelectable": "Лист (выбираемый результат)",
+        "intermediateCategory": "Промежуточный (категория)",
+        "leafConfig": "Настройки листа"
+      }
+    },
+    "taChains": {
+      "title": "Цепочки TA",
+      "createButton": "Создать цепочку",
+      "searchPlaceholder": "Поиск цепочек...",
+      "showInactive": "Показывать неактивные",
+      "empty": "Цепочки TA не найдены. Нажмите «Создать цепочку», чтобы создать первую.",
+      "noTargetActionsHint": "Сначала создайте хотя бы одно активное целевое действие в Системных настройках → Целевые действия.",
+      "table": {
+        "department": "Отдел"
+      },
+      "chainTypes": {
+        "manual": "Ручная",
+        "automatic": "Автоматическая"
+      },
+      "status": {
+        "active": "Активна",
+        "deactivated": "Деактивирована",
+        "systemHidden": "Системная (скрытая)"
+      },
+      "actions": {
+        "clone": "Копия",
+        "activate": "Активировать",
+        "deactivate": "Деактивировать"
+      },
+      "form": {
+        "name": "Название",
+        "description": "Описание",
+        "chainType": "Тип цепочки",
+        "department": "Отделы",
+        "departmentPlaceholder": "Выберите отделы",
+        "departmentSearchPlaceholder": "Поиск отделов…",
+        "departmentNoneFound": "Отделы не найдены",
+        "departmentSelectedCount": "Выбрано: {{count}}",
+        "departmentClear": "Очистить",
+        "systemHidden": "Системная (скрытая) — запускается только системой или админом"
+      },
+      "steps": {
+        "title": "Шаги",
+        "label": "шагов",
+        "add": "Добавить шаг",
+        "empty": "Шагов пока нет. Нажмите «Добавить шаг», чтобы создать первый.",
+        "stepLabel": "Шаг {{index}}",
+        "targetAction": "Целевое действие",
+        "selectTA": "Выберите TA",
+        "delayMinutes": "Задержка (мин)",
+        "required": "Обязательно",
+        "notInPast": "Дата не может быть в прошлом"
+      },
+      "modals": {
+        "create": { "title": "Создание цепочки TA" },
+        "edit": { "title": "Редактирование цепочки TA" }
+      },
+      "errors": {
+        "nameRequired": "Название обязательно",
+        "departmentRequired": "Выберите хотя бы один отдел"
+      },
+      "toasts": {
+        "created": "Цепочка TA создана",
+        "updated": "Цепочка TA обновлена",
+        "cloned": "Цепочка TA скопирована",
+        "activated": "Цепочка TA активирована",
+        "deactivated": "Цепочка TA деактивирована"
+      }
+    },
+    "taManagement": {
+      "tabs": {
+        "targetActions": "Целевые действия",
+        "taChains": "Цепочки TA",
+        "dictionary": "Словарь",
+        "chainBuilder": "Конструктор цепочек"
+      }
+    },
+    "targetActions": {
+      "title": "Целевые действия",
+      "createButton": "Создать TA",
+      "searchPlaceholder": "Поиск TA...",
+      "showHidden": "Показывать скрытые",
+      "empty": "Целевые действия не найдены",
+      "lockedHint": "Это целевое действие уже используется в одной или нескольких цепочках и больше не редактируется. Создайте копию.",
+      "table": {
+        "name": "Название",
+        "type": "Тип",
+        "department": "Отдел",
+        "usedInChains": "Используется в цепочках",
+        "chainsSuffix": "цеп.",
+        "status": "Статус",
+        "actions": "Действия"
+      },
+      "fieldTypes": {
+        "text": "Текст",
+        "dropdown": "Список",
+        "date": "Дата",
+        "amount": "Сумма",
+        "credit": "Кредит",
+        "contact": "Контакт"
+      },
+      "status": {
+        "active": "Активно",
+        "hidden": "Скрыто"
+      },
+      "actions": {
+        "clone": "Копия",
+        "hide": "Скрыть",
+        "unhide": "Восстановить"
+      },
+      "form": {
+        "name": "Название",
+        "fieldType": "Тип поля",
+        "department": "Отдел",
+        "departmentPlaceholder": "Выберите отдел",
+        "dropdownValues": "Значения списка",
+        "addValuePlaceholder": "Добавить значение..."
+      },
+      "modals": {
+        "create": { "title": "Создание целевого действия" },
+        "edit": { "title": "Редактирование целевого действия" }
+      },
+      "errors": {
+        "nameRequired": "Название обязательно",
+        "departmentRequired": "Выберите отдел",
+        "dropdownEmpty": "Список должен содержать хотя бы одно значение",
+        "duplicateValue": "Такое значение уже существует"
+      },
+      "toasts": {
+        "created": "Целевое действие создано",
+        "updated": "Целевое действие обновлено",
+        "cloned": "Целевое действие скопировано",
+        "hidden": "Целевое действие скрыто",
+        "unhidden": "Целевое действие восстановлено"
       }
     },
     "smsTemplates": {

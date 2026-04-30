@@ -91,6 +91,7 @@ import { PermissionGuard } from '@/components/auth'
 import { useHasPermission } from '@/hooks/usePermissions'
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
+import { ChainExecutor, TAInteractionHistory } from './components/taChains'
 import { formatUkrainePhoneForDisplay, normalizeUkrainePhoneToDb } from '@/lib/phone'
 
 // Extended types for SMS and Call items with API-specific properties
@@ -158,9 +159,11 @@ export function ClientDetailPage() {
   const [connectRrError, setConnectRrError] = useState<string | null>(null)
   const [closeLoanConfirm, setCloseLoanConfirm] = useState<number | null>(null) // debtId to close
   const [completeRrConfirm, setCompleteRrConfirm] = useState<number | null>(null) // raId to complete
-  const [activeCommentTab, setActiveCommentTab] = useState<'comments' | 'primary' | 'dial-history'>(
-    'comments'
-  )
+  const [activeCommentTab, setActiveCommentTab] = useState<
+    'ta-chains' | 'comments' | 'primary' | 'dial-history'
+  >('ta-chains')
+  const [isChainExecutorOpen, setIsChainExecutorOpen] = useState(false)
+  const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
@@ -562,6 +565,12 @@ export function ClientDetailPage() {
     t,
   ])
 
+  const effectiveCommentTab =
+    activeCommentTab === 'comments' && !isActivitiesLoading && activities.length === 0
+      ? 'ta-chains'
+      : activeCommentTab
+  const displayedActivities = client?.activities ?? []
+
   const normalizePhoneForLookup = (value: string) => stripPhoneFormat(value)
 
   const phoneLookupValues = useMemo(() => {
@@ -699,7 +708,14 @@ export function ClientDetailPage() {
     'personal'
   )
   const [activeRightCardTab, setActiveRightCardTab] = useState<
-    'loans' | 'payments' | 'recommenders' | 'operators' | 'call-sms-history' | 'tasks' | 'documents'
+    | 'loans'
+    | 'payments'
+    | 'recommenders'
+    | 'operators'
+    | 'call-sms-history'
+    | 'tasks'
+    | 'documents'
+    | 'ta-chains'
   >('loans')
   const [isUploadDocModalOpen, setIsUploadDocModalOpen] = useState(false)
   const [activePaymentTab, setActivePaymentTab] = useState<
@@ -3438,21 +3454,34 @@ export function ClientDetailPage() {
             {/* Tabs */}
             <div className="flex items-center rounded-lg border border-white bg-white p-1 shadow-sm">
               <button
-                onClick={() => setActiveCommentTab('comments')}
+                onClick={() => setActiveCommentTab('ta-chains')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  activeCommentTab === 'comments'
+                  effectiveCommentTab === 'ta-chains'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
               >
-                {t('pages.clients.detail.comments')}
+                {t('pages.clients.detail.tabs.taChains')}
               </button>
+              {!isActivitiesLoading && displayedActivities.length > 0 && (
+                <button
+                  onClick={() => setActiveCommentTab('comments')}
+                  className={cn(
+                    'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                    effectiveCommentTab === 'comments'
+                      ? 'bg-secondary-800 text-white'
+                      : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                  )}
+                >
+                  {t('pages.clients.detail.comments')}
+                </button>
+              )}
               <button
                 onClick={() => setActiveCommentTab('primary')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  activeCommentTab === 'primary'
+                  effectiveCommentTab === 'primary'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
@@ -3463,7 +3492,7 @@ export function ClientDetailPage() {
                 onClick={() => setActiveCommentTab('dial-history')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  activeCommentTab === 'dial-history'
+                  effectiveCommentTab === 'dial-history'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
@@ -3483,10 +3512,60 @@ export function ClientDetailPage() {
           </div>
 
           {/* Content based on active tab */}
-          {activeCommentTab === 'comments' &&
+          {effectiveCommentTab === 'ta-chains' && (
+            <div className="flex w-full flex-col gap-4">
+              <button
+                type="button"
+                onClick={() => setIsChainExecutorOpen(true)}
+                className="bg-primary-300 text-dark-500 hover:bg-primary-500 w-full rounded-lg px-4 py-3 text-sm font-medium transition-colors sm:w-auto sm:self-start"
+              >
+                {t('pages.clientChains.logInteraction')}
+              </button>
+              <TAInteractionHistory clientId={clientId} debts={loans} />
+            </div>
+          )}
+
+          {/* Chain Executor Modal */}
+          <Modal
+            open={isChainExecutorOpen}
+            onClose={() => setIsChainExecutorOpen(false)}
+            maxWidth="xl"
+            showCloseButton={false}
+          >
+            {/* Minimize & Close buttons */}
+            <div className="absolute top-2 right-2 flex items-center gap-1 sm:top-4 sm:right-12">
+              <button
+                onClick={() => chainExecutorMinimizeRef.current?.()}
+                className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+                aria-label="Minimize modal"
+              >
+                <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
+              </button>
+              <button
+                onClick={() => setIsChainExecutorOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+                aria-label="Close modal"
+              >
+                <Icons.Cancel01 size={20} className="text-dark-500" strokeWidth={1.5} />
+              </button>
+            </div>
+            <ModalContent>
+              <ChainExecutor
+                clientId={clientId}
+                clientName={client?.fullName ?? `Client #${clientId}`}
+                responsibleEmployeeId={profile?.responsible_employee_id ?? null}
+                debts={loans}
+                onSave={() => setIsChainExecutorOpen(false)}
+                onMinimize={() => setIsChainExecutorOpen(false)}
+                onMinimizeRef={chainExecutorMinimizeRef}
+              />
+            </ModalContent>
+          </Modal>
+
+          {effectiveCommentTab === 'comments' &&
             (isActivitiesLoading ? (
               <TableSkeleton columns={12} rows={3} className="w-full" />
-            ) : client.activities.length === 0 ? (
+            ) : displayedActivities.length === 0 ? (
               <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
                   <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
@@ -3514,14 +3593,14 @@ export function ClientDetailPage() {
               <div className="w-full overflow-x-auto">
                 <DataTable
                   columns={activityColumns}
-                  data={client.activities.slice(0, 10)}
+                  data={displayedActivities.slice(0, 10)}
                   className="w-full"
                   tableClassName="w-max min-w-full"
                 />
               </div>
             ))}
 
-          {activeCommentTab === 'primary' &&
+          {effectiveCommentTab === 'primary' &&
             (isProfileLoading ? (
               <TableSkeleton columns={1} rows={3} className="w-full" />
             ) : !profile?.sale_notes?.trim() ? (
@@ -3544,7 +3623,7 @@ export function ClientDetailPage() {
               </div>
             ))}
 
-          {activeCommentTab === 'dial-history' &&
+          {effectiveCommentTab === 'dial-history' &&
             (isDialHistoryLoading ? (
               <TableSkeleton columns={2} rows={3} className="w-full" />
             ) : dialHistory.length === 0 ? (

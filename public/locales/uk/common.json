@@ -18,6 +18,12 @@
     "roles": "Ролі",
     "departments": "Відділи",
     "smsTemplates": "SMS Шаблони",
+    "targetActions": "Цільові дії",
+    "taChains": "Ланцюжки TA",
+    "taDictionary": "Словник",
+    "chainBuilder": "Конструктор ланцюжків",
+    "taManagement": "Цільові дії",
+    "interactionLog": "Журнал взаємодій",
     "transactions": "Транзакції",
     "operations": "Операції",
     "bulkOperatorAssignment": "Масове призначення операторів",
@@ -94,6 +100,79 @@
     "confirmMessage": "Ви впевнені, що хочете вийти? Вам потрібно буде знову увійти, щоб отримати доступ до системи."
   },
   "pages": {
+    "aiAssistant": {
+      "headerButtonAria": "Відкрити AI-асистента",
+      "greeting": "Вітаю! Я AI-асистент Prionex.",
+      "inputPlaceholder": "Пошук за ім'ям, кодом, клієнтами",
+      "settings": "Налаштування",
+      "client": "Клієнт",
+      "period": "Період",
+      "allClients": "Усі клієнти",
+      "myClients": "Мої клієнти",
+      "periodAll": "Увесь час",
+      "periodToday": "Сьогодні",
+      "periodLast7Days": "Останні 7 днів",
+      "periodLast30Days": "Останні 30 днів",
+      "periodMonth": "Цей місяць",
+      "periodQuarter": "Цей квартал",
+      "voiceInput": "Голосовий ввід",
+      "voiceListening": "Слухаю… говоріть",
+      "voiceStartRecording": "Почати голосовий ввід",
+      "voiceStopRecording": "Зупинити голосовий ввід",
+      "voiceNotSupported": "Голосовий ввід не підтримується в цьому браузері.",
+      "voicePermissionDenied": "Доступ до мікрофона заборонено. Дозвольте доступ для голосового вводу.",
+      "voiceError": "Помилка голосового вводу. Спробуйте ще раз.",
+      "settingsTitle": "Налаштування асистента",
+      "settingsDescription": "Керуйте поведінкою асистента для цього чату.",
+      "assistantPreferences": "Параметри асистента",
+      "responseMode": "Режим відповіді",
+      "responseShort": "Коротко",
+      "responseDetailed": "Детально",
+      "outputFormat": "Формат відповіді",
+      "outputText": "Текст",
+      "outputTableFirst": "Спочатку таблиця",
+      "outputMixed": "Змішано",
+      "contextBehavior": "Поведінка контексту",
+      "useSelectedClientAutomatically": "Автоматично використовувати вибраного клієнта",
+      "useSelectedPeriodAutomatically": "Автоматично використовувати вибраний період",
+      "rememberConversationContext": "Пам'ятати попередній контекст розмови",
+      "suggestedActions": "Запропоновані дії",
+      "showQuickSuggestionsAfterResponse": "Показувати швидкі підказки після відповіді",
+      "autoScrollToLatestAnswer": "Автопрокрутка до останньої відповіді",
+      "advanced": "Додатково",
+      "clearConversation": "Очистити розмову",
+      "startNewChat": "Почати новий чат",
+      "viewRecentPrompts": "Переглянути останні запити",
+      "noRecentPrompts": "Останніх запитів ще немає",
+      "done": "Готово",
+      "settingsUpdated": "Налаштування асистента оновлено",
+      "assistantTyping": "Асистент друкує...",
+      "inputHint": "Enter — надіслати, Shift+Enter — новий рядок",
+      "quickPromptClientData": "Покажи деталі клієнта.",
+      "quickPromptDebt": "Проаналізуй борг для вибраного клієнта і періоду.",
+      "quickPromptReport": "Згенеруй звіт для вибраного клієнта і вибраного періоду.",
+      "quickPromptEmployee": "Покажи інформацію про співробітника.",
+      "mockSummaryShort": "Короткий макет-висновок",
+      "mockSummaryDetailed": "Детальна макет-відповідь",
+      "mockDetectedRequest": "Виявлений запит",
+      "mockTableHeader": "Попередній перегляд у форматі таблиці",
+      "mockTableFooter": "Це макетні дані для фронтенд-інтеграції.",
+      "mockMixedPointOne": "Отримано контекст клієнта та періоду з поточних фільтрів.",
+      "mockMixedPointTwo": "Підготовлено ключові метрики та ризики для швидкого перегляду.",
+      "mockMixedPointThree": "Готово перетворити це на звіт для експорту.",
+      "mockPlainTail": "Це макетна відповідь асистента, згенерована лише на фронтенді.",
+      "quickClientData": "Перевірити дані клієнта",
+      "quickDebt": "Аналіз боргу",
+      "quickReport": "Звіт",
+      "quickEmployee": "Перевірити співробітника",
+      "scrollToLatestAria": "Прокрутити до останнього повідомлення",
+      "closeSettingsAria": "Закрити налаштування",
+      "mockTableColMetric": "Показник",
+      "mockTableColValue": "Значення",
+      "mockTableRowClients": "Клієнти",
+      "mockTableRowDebt": "Борг у зоні ризику",
+      "mockTableRowOverdue": "Частка прострочених"
+    },
     "users": {
       "title": "Управління користувачами",
       "addNewUser": "Новий користувач",
@@ -1096,7 +1175,8 @@
           "loans": "Позики",
           "tasks": "Завдання",
           "docs": "Документи",
-          "callSms": "Дзвінок / SMS"
+          "callSms": "Дзвінок / SMS",
+          "taChains": "Ланцюжки TA"
         },
         "maritalStatuses": {
           "1": "Неодружений/Незаміжня",
@@ -1736,6 +1816,163 @@
         "selectUser": "Виберіть користувача...",
         "comment": "Коментар",
         "commentPlaceholder": "Необов'язковий коментар..."
+      }
+    },
+    "taDictionary": {
+      "title": "Словник",
+      "selectChain": "Оберіть ланцюжок",
+      "selectChainPlaceholder": "Оберіть ланцюжок...",
+      "noChainSelected": "Оберіть ланцюжок вище для керування деревом категорій.",
+      "emptyTree": "У цього ланцюжка ще немає категорій. Додайте кореневий вузол.",
+      "addRootNode": "Додати кореневу категорію",
+      "addChild": "Додати дочірній",
+      "newNodeName": "Назва вузла...",
+      "leaf": "Лист",
+      "hide": "Приховати",
+      "unhide": "Відновити",
+      "requirePromiseDate": "Вимагати дату обіцянки",
+      "requirePromiseAmount": "Вимагати суму обіцянки",
+      "isPositive": "Позитивний результат",
+      "form": {
+        "name": "Назва",
+        "step": "Крок",
+        "allSteps": "Усі кроки (спільний)",
+        "stepLabel": "Крок {{order}}",
+        "nodeType": "Тип вузла",
+        "leafSelectable": "Лист (результат для вибору)",
+        "intermediateCategory": "Проміжний (категорія)",
+        "leafConfig": "Налаштування листа"
+      }
+    },
+    "taChains": {
+      "title": "Ланцюжки TA",
+      "createButton": "Створити ланцюжок",
+      "searchPlaceholder": "Пошук ланцюжків...",
+      "showInactive": "Показати неактивні",
+      "empty": "Ланцюжки TA не знайдено. Натисніть «Створити ланцюжок», щоб створити перший.",
+      "noTargetActionsHint": "Спочатку створіть хоча б одну активну цільову дію в Системних налаштуваннях → Цільові дії.",
+      "table": {
+        "department": "Відділ"
+      },
+      "chainTypes": {
+        "manual": "Ручний",
+        "automatic": "Автоматичний"
+      },
+      "status": {
+        "active": "Активний",
+        "deactivated": "Деактивований",
+        "systemHidden": "Системний (прихований)"
+      },
+      "actions": {
+        "clone": "Копія",
+        "activate": "Активувати",
+        "deactivate": "Деактивувати"
+      },
+      "form": {
+        "name": "Назва",
+        "description": "Опис",
+        "chainType": "Тип ланцюжка",
+        "department": "Відділи",
+        "departmentPlaceholder": "Оберіть відділи",
+        "departmentSearchPlaceholder": "Пошук відділів…",
+        "departmentNoneFound": "Відділи не знайдено",
+        "departmentSelectedCount": "Обрано: {{count}}",
+        "departmentClear": "Очистити",
+        "systemHidden": "Системний (прихований) — запускається лише системою або адміном"
+      },
+      "steps": {
+        "title": "Кроки",
+        "label": "кроків",
+        "add": "Додати крок",
+        "empty": "Кроків ще немає. Натисніть «Додати крок», щоб створити перший.",
+        "stepLabel": "Крок {{index}}",
+        "targetAction": "Цільова дія",
+        "selectTA": "Оберіть TA",
+        "delayMinutes": "Затримка (хв)",
+        "required": "Обов'язково",
+        "notInPast": "Дата не може бути в минулому"
+      },
+      "modals": {
+        "create": { "title": "Створення ланцюжка TA" },
+        "edit": { "title": "Редагування ланцюжка TA" }
+      },
+      "errors": {
+        "nameRequired": "Назва обов'язкова",
+        "departmentRequired": "Оберіть хоча б один відділ"
+      },
+      "toasts": {
+        "created": "Ланцюжок TA створено",
+        "updated": "Ланцюжок TA оновлено",
+        "cloned": "Ланцюжок TA скопійовано",
+        "activated": "Ланцюжок TA активовано",
+        "deactivated": "Ланцюжок TA деактивовано"
+      }
+    },
+    "taManagement": {
+      "tabs": {
+        "targetActions": "Цільові дії",
+        "taChains": "Ланцюжки TA",
+        "dictionary": "Словник",
+        "chainBuilder": "Конструктор ланцюжків"
+      }
+    },
+    "targetActions": {
+      "title": "Цільові дії",
+      "createButton": "Створити TA",
+      "searchPlaceholder": "Пошук TA...",
+      "showHidden": "Показати приховані",
+      "empty": "Цільові дії не знайдено",
+      "lockedHint": "Цю цільову дію вже використано в одному або декількох ланцюжках і її більше не можна редагувати. Створіть копію.",
+      "table": {
+        "name": "Назва",
+        "type": "Тип",
+        "department": "Відділ",
+        "usedInChains": "Використано в ланцюжках",
+        "chainsSuffix": "ланц.",
+        "status": "Статус",
+        "actions": "Дії"
+      },
+      "fieldTypes": {
+        "text": "Текст",
+        "dropdown": "Список",
+        "date": "Дата",
+        "amount": "Сума",
+        "credit": "Кредит",
+        "contact": "Контакт"
+      },
+      "status": {
+        "active": "Активна",
+        "hidden": "Прихована"
+      },
+      "actions": {
+        "clone": "Копія",
+        "hide": "Приховати",
+        "unhide": "Відновити"
+      },
+      "form": {
+        "name": "Назва",
+        "fieldType": "Тип поля",
+        "department": "Відділ",
+        "departmentPlaceholder": "Оберіть відділ",
+        "dropdownValues": "Значення списку",
+        "addValuePlaceholder": "Додати значення..."
+      },
+      "modals": {
+        "create": { "title": "Створення цільової дії" },
+        "edit": { "title": "Редагування цільової дії" }
+      },
+      "errors": {
+        "nameRequired": "Назва обов'язкова",
+        "departmentRequired": "Оберіть відділ",
+        "dropdownEmpty": "Список повинен мати щонайменше одне значення",
+        "duplicateValue": "Таке значення вже існує"
+      },
+      "toasts": {
+        "created": "Цільову дію створено",
+        "updated": "Цільову дію оновлено",
+        "cloned": "Цільову дію скопійовано",
+        "hidden": "Цільову дію приховано",
+        "unhidden": "Цільову дію відновлено"
       }
     },
     "smsTemplates": {

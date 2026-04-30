@@ -5,6 +5,7 @@ export const NotificationType = {
   TAG_ASSIGNED: 'tag_assigned',
   TAG_REMOVED: 'tag_removed',
   TAG_EXPIRED: 'tag_expired',
+  TA_CHAIN_CREATED: 'ta_chain_created',
 } as const
 
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType]

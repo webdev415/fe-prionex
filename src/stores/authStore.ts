@@ -21,6 +21,7 @@ function mapBackendUserToUser(backendUser: CurrentUserResponse): User {
     active_project_id: backendUser.active_project ? String(backendUser.active_project.id) : null,
     active_role_id: backendUser.role ? String(backendUser.role.id) : null,
     active_role_name: backendUser.role?.name || null,
+    active_department_id: backendUser.department_id ?? null,
     permissions: backendUser.permissions || [],
     createdAt: backendUser.created_at,
     updatedAt: backendUser.created_at,
@@ -138,6 +139,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             : null,
           active_role_id: loginUser.active_role_id ? String(loginUser.active_role_id) : null,
           active_role_name: loginUser.active_role_name || null,
+          active_department_id: null,
           permissions: [], // No permissions available from login response
           createdAt: undefined,
           updatedAt: undefined,
@@ -284,6 +286,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             : null,
           active_role_id: loginUser.active_role_id ? String(loginUser.active_role_id) : null,
           active_role_name: loginUser.active_role_name || null,
+          active_department_id: null,
           permissions: [], // No permissions available from login response
           createdAt: undefined,
           updatedAt: undefined,
@@ -417,6 +420,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               active_role_name: tokenPayload.active_role_name
                 ? String(tokenPayload.active_role_name)
                 : null,
+              active_department_id: null,
               permissions: [], // No permissions available from token
               timezone: tokenPayload.timezone ? String(tokenPayload.timezone) : undefined,
               createdAt: undefined,
@@ -584,6 +588,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         active_project_id: String(active_project.project_id),
         active_role_id: String(active_project.role_id),
         active_role_name: active_project.role_name,
+        active_department_id: null,
         permissions: permissions || [],
         createdAt: undefined,
         updatedAt: undefined,
@@ -672,6 +677,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         active_project_id: admin_user.active_project ? String(admin_user.active_project.id) : null,
         active_role_id: admin_user.role ? String(admin_user.role.id) : null,
         active_role_name: admin_user.role?.name || null,
+        active_department_id: admin_user.department_id ?? null,
         permissions: admin_user.permissions || [],
         createdAt: admin_user.created_at,
         updatedAt: admin_user.created_at,
