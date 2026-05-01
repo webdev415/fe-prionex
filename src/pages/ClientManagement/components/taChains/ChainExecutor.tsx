@@ -21,6 +21,8 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { DateSelect } from '@/components/ui/DateSelect'
+import { getDateTimeStringInTimezone } from '@/lib/dateUtils'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
 import {
@@ -1391,15 +1393,22 @@ export function ChainExecutor({
                               )}
                             </div>
                           ) : editingStep.fieldType === 'date' ? (
-                            <Input
-                              type="datetime-local"
-                              className="h-8 text-xs"
-                              value={editingStep.value}
-                              onChange={(e) =>
+                            <DateSelect
+                              value={editingStep.value || null}
+                              onChange={({ value }) =>
                                 setEditingStep((prev) =>
-                                  prev ? { ...prev, value: e.target.value } : prev
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        value: value ? getDateTimeStringInTimezone(value) : '',
+                                      }
+                                    : prev
                                 )
                               }
+                              format="dd/MM/yyyy HH:mm"
+                              showTimeSelect
+                              timeFormat="HH:mm"
+                              timeIntervals={15}
                             />
                           ) : editingStep.fieldType === 'amount' ? (
                             <Input
@@ -1434,15 +1443,24 @@ export function ChainExecutor({
                                 <Label className="text-xs text-gray-600">
                                   {t('pages.clientChains.promiseDate')}
                                 </Label>
-                                <Input
-                                  type="datetime-local"
-                                  className="h-8 text-xs"
-                                  value={editingStep.promiseDate}
-                                  onChange={(e) =>
+                                <DateSelect
+                                  value={editingStep.promiseDate || null}
+                                  onChange={({ value }) =>
                                     setEditingStep((prev) =>
-                                      prev ? { ...prev, promiseDate: e.target.value } : prev
+                                      prev
+                                        ? {
+                                            ...prev,
+                                            promiseDate: value
+                                              ? getDateTimeStringInTimezone(value)
+                                              : '',
+                                          }
+                                        : prev
                                     )
                                   }
+                                  format="dd/MM/yyyy HH:mm"
+                                  showTimeSelect
+                                  timeFormat="HH:mm"
+                                  timeIntervals={15}
                                 />
                               </div>
                             )}
@@ -1579,10 +1597,15 @@ export function ChainExecutor({
                           </SelectContent>
                         </Select>
                       ) : currentTA.field_type === 'date' ? (
-                        <Input
-                          type="datetime-local"
-                          value={stepValue}
-                          onChange={(e) => setStepValue(e.target.value)}
+                        <DateSelect
+                          value={stepValue || null}
+                          onChange={({ value }) =>
+                            setStepValue(value ? getDateTimeStringInTimezone(value) : '')
+                          }
+                          format="dd/MM/yyyy HH:mm"
+                          showTimeSelect
+                          timeFormat="HH:mm"
+                          timeIntervals={15}
                         />
                       ) : currentTA.field_type === 'amount' ? (
                         <Input
@@ -2120,10 +2143,13 @@ function InstantStepCard({
           </SelectContent>
         </Select>
       ) : ta.field_type === 'date' ? (
-        <Input
-          type="datetime-local"
-          value={value.value}
-          onChange={(e) => onChange({ value: e.target.value })}
+        <DateSelect
+          value={value.value || null}
+          onChange={({ value: v }) => onChange({ value: v ? getDateTimeStringInTimezone(v) : '' })}
+          format="dd/MM/yyyy HH:mm"
+          showTimeSelect
+          timeFormat="HH:mm"
+          timeIntervals={15}
         />
       ) : ta.field_type === 'amount' ? (
         <Input

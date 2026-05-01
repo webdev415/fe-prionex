@@ -208,6 +208,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               id={inputId}
               selected={parseDate(value)}
               onChange={handleChange}
+              onChangeRaw={(e) => e?.preventDefault()}
               dateFormat={format}
               placeholderText={placeholder}
               disabled={disabled}
@@ -216,6 +217,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               aria-describedby={error ? errorId : helperText ? helperId : undefined}
               showPopperArrow={false}
               popperPlacement="bottom-start"
+              popperProps={{ strategy: 'fixed' }}
               showTimeSelect={showTimeSelect}
               timeFormat={timeFormat}
               timeIntervals={timeIntervals}
