@@ -114,7 +114,12 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
 
   const renderDocRow = (doc: ClientDocument) => (
     <tr key={doc.id} className="border-b border-[#EBECE8] last:border-b-0 hover:bg-[#F9FAF8]">
-      <td className="px-3 py-2 text-sm font-medium text-[#05040D]">{doc.original_filename}</td>
+      <td
+        className="truncate px-3 py-2 text-sm font-medium text-[#05040D]"
+        title={doc.original_filename}
+      >
+        {doc.original_filename}
+      </td>
       <td className="px-3 py-2">
         <span
           className={cn(
@@ -192,7 +197,14 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
   )
 
   const renderDocTable = (docs: ClientDocument[]) => (
-    <table className="w-full text-left">
+    <table className="w-full table-fixed text-left">
+      <colgroup>
+        <col />
+        <col className="w-[140px]" />
+        <col className="w-[160px]" />
+        <col className="w-[100px]" />
+        <col className="w-[120px]" />
+      </colgroup>
       <thead>
         <tr className="border-b border-[#EBECE8] text-xs font-medium text-[#05040D]">
           <th className="px-3 py-2">
@@ -205,7 +217,7 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
           <th className="px-3 py-2">
             {t('pages.clients.detail.tableHeaders.documentSize', 'Size')}
           </th>
-          <th className="w-[100px] px-3 py-2"></th>
+          <th className="px-3 py-2"></th>
         </tr>
       </thead>
       <tbody>{docs.map(renderDocRow)}</tbody>
