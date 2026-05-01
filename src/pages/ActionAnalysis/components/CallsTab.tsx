@@ -12,7 +12,12 @@ import { Pagination } from '@/components/ui/Pagination'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import { formatDateTime } from '@/lib/formatters'
 import { defaultCustomDateRange } from '../lib/dateRange'
-import { readCallsUrlState, writeCallsUrlState, toCallMonitoringQuery } from '../lib/callsUrlState'
+import {
+  CALL_FILTERS_DEFAULT,
+  readCallsUrlState,
+  writeCallsUrlState,
+  toCallMonitoringQuery,
+} from '../lib/callsUrlState'
 import type { CallFiltersBarValue } from './CallFiltersBar'
 import { CallFiltersBar } from './CallFiltersBar'
 import { CallsTable } from './CallsTable'
@@ -69,25 +74,27 @@ export function CallsTab() {
 
   const [recordingCall, setRecordingCall] = useState<CallMonitoringItem | null>(null)
 
-  const handleFiltersChange = (next: Partial<CallFiltersBarValue>) => {
-    const merged: CallFiltersBarValue = { ...barState, ...next }
-    let out: CallFiltersBarValue = merged
-    if (merged.period === 'custom' && (!merged.customFromDate || !merged.customToDate)) {
+  const handleApply = (next: CallFiltersBarValue) => {
+    let out: CallFiltersBarValue = next
+    if (next.period === 'custom' && (!next.customFromDate || !next.customToDate)) {
       const d = defaultCustomDateRange(userTimezone)
       out = {
-        ...merged,
-        customFromDate: merged.customFromDate || d.from,
-        customToDate: merged.customToDate || d.to,
+        ...next,
+        customFromDate: next.customFromDate || d.from,
+        customToDate: next.customToDate || d.to,
       }
     }
-    if (merged.period !== 'custom') {
-      out = {
-        ...merged,
-        customFromDate: undefined,
-        customToDate: undefined,
-      }
+    if (next.period !== 'custom') {
+      out = { ...next, customFromDate: undefined, customToDate: undefined }
     }
     setSearchParams(writeCallsUrlState(new URLSearchParams(searchParams), out), { replace: true })
+    setPage(1)
+  }
+
+  const handleClear = () => {
+    setSearchParams(writeCallsUrlState(new URLSearchParams(searchParams), CALL_FILTERS_DEFAULT), {
+      replace: true,
+    })
     setPage(1)
   }
 
@@ -109,9 +116,10 @@ export function CallsTab() {
   return (
     <div className="flex flex-col gap-4">
       <CallFiltersBar
-        filters={barState}
+        value={barState}
         operators={operators}
-        onChange={handleFiltersChange}
+        onApply={handleApply}
+        onClear={handleClear}
         userTimezone={userTimezone}
       />
 

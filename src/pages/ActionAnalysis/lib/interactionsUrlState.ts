@@ -11,6 +11,20 @@ const DEFAULT_PERIOD: CallMonitoringPeriod = 'last_7d'
 const DEFAULT_SORT_BY: InteractionMonitoringSortBy = 'date'
 const DEFAULT_SORT_DIR: InteractionMonitoringSortDir = 'desc'
 
+export const INTERACTION_FILTERS_DEFAULT: InteractionBarState = {
+  period: DEFAULT_PERIOD,
+  customFromDate: undefined,
+  customToDate: undefined,
+  departmentId: null,
+  employeeIds: [],
+  result_ids: undefined,
+  contact_type_ids: undefined,
+  promise_amount_min: undefined,
+  promise_amount_max: undefined,
+  sort_by: DEFAULT_SORT_BY,
+  sort_dir: DEFAULT_SORT_DIR,
+}
+
 export interface InteractionBarState {
   period?: CallMonitoringPeriod
   customFromDate?: string

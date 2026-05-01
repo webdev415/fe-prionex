@@ -8,8 +8,24 @@ import { localDateStringsToIsoRange } from './dateRange'
 
 const DEFAULT_PERIOD: CallMonitoringPeriod = 'last_7d'
 
+export const CALL_FILTERS_DEFAULT: CallFiltersBarValue = {
+  agent_extensions: undefined,
+  outcome_filter: 'all',
+  min_duration: undefined,
+  max_duration: undefined,
+  period: DEFAULT_PERIOD,
+  customFromDate: undefined,
+  customToDate: undefined,
+}
+
 export function readCallsUrlState(params: URLSearchParams): CallFiltersBarValue {
-  const ext = params.get('agent_extension') ?? params.get('employee_id')
+  // Multi-value via repeated agent_extension=... params; tolerate single
+  // agent_extension or legacy employee_id for shared-link compat.
+  const exts = params.getAll('agent_extension').filter(Boolean)
+  if (exts.length === 0) {
+    const legacy = params.get('employee_id')
+    if (legacy) exts.push(legacy)
+  }
   const period = (params.get('period') as CallMonitoringPeriod | null) ?? DEFAULT_PERIOD
   const status = (params.get('status') as CallMonitoringOutcomeFilter | null) ?? 'all'
   const min = params.get('min_duration')
@@ -18,7 +34,7 @@ export function readCallsUrlState(params: URLSearchParams): CallFiltersBarValue 
   const toDate = params.get('to_date') ?? undefined
 
   return {
-    agent_extensions: ext ? [ext] : undefined,
+    agent_extensions: exts.length ? exts : undefined,
     period,
     outcome_filter: status,
     min_duration: min ? Number(min) : undefined,
@@ -42,8 +58,9 @@ export function writeCallsUrlState(
   next.delete('from_date')
   next.delete('to_date')
 
-  const ext = state.agent_extensions?.[0]
-  if (ext) next.set('agent_extension', ext)
+  for (const ext of state.agent_extensions ?? []) {
+    if (ext) next.append('agent_extension', ext)
+  }
   if (state.period && state.period !== DEFAULT_PERIOD) next.set('period', state.period)
   if (state.outcome_filter && state.outcome_filter !== 'all')
     next.set('status', state.outcome_filter)

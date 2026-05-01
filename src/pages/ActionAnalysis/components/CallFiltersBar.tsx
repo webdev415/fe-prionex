@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CallMonitoringFilters, CallMonitoringPeriod } from '@/features/actionAnalysis'
 import type { OperatorUser } from '@/features/users/api/usersApi'
+import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import {
   Select,
@@ -10,6 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
+import { useSyncedState } from '@/hooks'
+import { Icons } from '@/lib/icons'
+import { CALL_FILTERS_DEFAULT } from '../lib/callsUrlState'
 import { DateRangeQuickFilter } from './DateRangeQuickFilter'
 import { EmployeeFilterDropdown } from './EmployeeFilterDropdown'
 
@@ -21,13 +25,14 @@ export type CallFiltersBarValue = Omit<CallMonitoringFilters, 'from_datetime' | 
 }
 
 interface Props {
-  filters: CallFiltersBarValue
+  value: CallFiltersBarValue
   operators: OperatorUser[]
-  onChange: (next: Partial<CallFiltersBarValue>) => void
+  onApply: (next: CallFiltersBarValue) => void
+  onClear: () => void
   userTimezone?: string | null
 }
 
-export function CallFiltersBar({ filters, operators, onChange, userTimezone }: Props) {
+export function CallFiltersBar({ value, operators, onApply, onClear, userTimezone }: Props) {
   const { t } = useTranslation('common')
 
   const operatorsWithExt = useMemo(
@@ -35,24 +40,45 @@ export function CallFiltersBar({ filters, operators, onChange, userTimezone }: P
     [operators]
   )
 
+  const [draft, setDraft] = useSyncedState<CallFiltersBarValue>(value, value)
+
+  const update = (next: Partial<CallFiltersBarValue>) => {
+    setDraft((prev) => {
+      const merged = { ...prev, ...next }
+      // Custom period without dates is invalid; drop the dates if the
+      // user switches away from custom.
+      if (merged.period !== 'custom') {
+        merged.customFromDate = undefined
+        merged.customToDate = undefined
+      }
+      return merged
+    })
+  }
+
   const selectedOperatorIds = useMemo(() => {
-    const exts = filters.agent_extensions ?? []
+    const exts = draft.agent_extensions ?? []
     return operatorsWithExt
       .filter((o) => exts.includes(o.asterisk_extension as string))
       .map((o) => o.id)
-  }, [operatorsWithExt, filters.agent_extensions])
+  }, [operatorsWithExt, draft.agent_extensions])
 
-  const period = filters.period ?? 'last_7d'
+  const period: CallMonitoringPeriod = draft.period ?? 'last_7d'
 
-  const handleOperatorsChange = (ids: number[]) => {
+  const handleEmployeesChange = (ids: number[]) => {
     if (ids.length === 0) {
-      onChange({ agent_extensions: undefined })
+      update({ agent_extensions: undefined })
       return
     }
     const exts = ids
       .map((id) => operatorsWithExt.find((o) => o.id === id)?.asterisk_extension)
       .filter((e): e is string => !!e)
-    onChange({ agent_extensions: exts.length ? exts : undefined })
+    update({ agent_extensions: exts.length ? exts : undefined })
+  }
+
+  const handleApply = () => onApply(draft)
+  const handleClearAll = () => {
+    setDraft(CALL_FILTERS_DEFAULT)
+    onClear()
   }
 
   return (
@@ -60,9 +86,9 @@ export function CallFiltersBar({ filters, operators, onChange, userTimezone }: P
       <div className="flex w-full flex-col gap-4 sm:gap-6">
         <DateRangeQuickFilter
           period={period}
-          customFromDate={filters.customFromDate}
-          customToDate={filters.customToDate}
-          onChange={(next) => onChange(next)}
+          customFromDate={draft.customFromDate}
+          customToDate={draft.customToDate}
+          onChange={(next) => update(next)}
           userTimezone={userTimezone}
         />
 
@@ -72,8 +98,8 @@ export function CallFiltersBar({ filters, operators, onChange, userTimezone }: P
           <EmployeeFilterDropdown
             operators={operatorsWithExt}
             selectedIds={selectedOperatorIds}
-            onChange={handleOperatorsChange}
-            label={t('pages.actionAnalysis.filters.operator', 'Operator')}
+            onChange={handleEmployeesChange}
+            label={t('pages.actionAnalysis.filters.employee', 'Employee')}
           />
 
           <div className="flex flex-col gap-1.5">
@@ -81,9 +107,9 @@ export function CallFiltersBar({ filters, operators, onChange, userTimezone }: P
               {t('pages.actionAnalysis.filters.status', 'Status')}
             </span>
             <Select
-              value={filters.outcome_filter ?? 'all'}
+              value={draft.outcome_filter ?? 'all'}
               onValueChange={(v) =>
-                onChange({
+                update({
                   outcome_filter: v as CallMonitoringFilters['outcome_filter'],
                 })
               }
@@ -115,10 +141,10 @@ export function CallFiltersBar({ filters, operators, onChange, userTimezone }: P
               inputMode="numeric"
               className="h-[45px]"
               placeholder={t('pages.actionAnalysis.filters.minDurationPlaceholder', 'e.g. 30')}
-              value={filters.min_duration ?? ''}
+              value={draft.min_duration ?? ''}
               onChange={(e) => {
                 const v = e.target.value
-                onChange({ min_duration: v === '' ? undefined : Number(v) })
+                update({ min_duration: v === '' ? undefined : Number(v) })
               }}
             />
           </div>
@@ -133,13 +159,33 @@ export function CallFiltersBar({ filters, operators, onChange, userTimezone }: P
               inputMode="numeric"
               className="h-[45px]"
               placeholder={t('pages.actionAnalysis.filters.maxDurationPlaceholder', 'e.g. 600')}
-              value={filters.max_duration ?? ''}
+              value={draft.max_duration ?? ''}
               onChange={(e) => {
                 const v = e.target.value
-                onChange({ max_duration: v === '' ? undefined : Number(v) })
+                update({ max_duration: v === '' ? undefined : Number(v) })
               }}
             />
           </div>
+        </div>
+
+        <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+          <Button
+            type="button"
+            variant="white-secondary"
+            onClick={handleClearAll}
+            className="h-[45px] w-full rounded sm:w-auto sm:px-6"
+            leftIcon={<Icons.Reload size={16} />}
+          >
+            {t('pages.actionAnalysis.filters.clearAll', 'Clear All')}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleApply}
+            className="h-[45px] w-full rounded sm:w-auto sm:px-8"
+          >
+            {t('pages.actionAnalysis.filters.applyFilters', 'Apply Filters')}
+          </Button>
         </div>
       </div>
     </div>

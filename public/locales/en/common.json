@@ -216,6 +216,8 @@
         "promiseMinPlaceholder": "0.00",
         "promiseMaxPlaceholder": "e.g. 1000",
         "searchEmployeesPlaceholder": "Search",
+        "applyFilters": "Apply Filters",
+        "clearAll": "Clear All",
         "periods": {
           "today": "Today",
           "yesterday": "Yesterday",

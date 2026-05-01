@@ -77,7 +77,7 @@ export function CallsTable({ data, onPlayRecording }: Props) {
     },
     {
       key: 'agent',
-      header: t('pages.actionAnalysis.columns.agent', 'Operator'),
+      header: t('pages.actionAnalysis.columns.agent', 'Employee'),
       render: (r) => <span className="text-sm text-gray-700">{r.agent_extension}</span>,
     },
     {

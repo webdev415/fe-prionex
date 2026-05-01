@@ -216,6 +216,8 @@
         "promiseMinPlaceholder": "0.00",
         "promiseMaxPlaceholder": "напр. 1000",
         "searchEmployeesPlaceholder": "Поиск",
+        "applyFilters": "Применить фильтры",
+        "clearAll": "Сбросить",
         "periods": {
           "today": "Сегодня",
           "yesterday": "Вчера",

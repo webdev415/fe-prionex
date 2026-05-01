@@ -6,6 +6,7 @@ import type {
   InteractionContactTypeResponse,
   InteractionResultResponse,
 } from '@/features/clients/api/types'
+import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import {
   Select,
@@ -14,18 +15,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
-import type { InteractionBarState } from '../lib/interactionsUrlState'
+import { useSyncedState } from '@/hooks'
+import { Icons } from '@/lib/icons'
+import { INTERACTION_FILTERS_DEFAULT, type InteractionBarState } from '../lib/interactionsUrlState'
 import { DateRangeQuickFilter } from './DateRangeQuickFilter'
 import { EmployeeFilterDropdown } from './EmployeeFilterDropdown'
 
 const FILTER_SURFACE = 'rounded-xl bg-white/50 p-4 shadow-sm sm:p-6'
 
 interface Props {
-  state: InteractionBarState
+  value: InteractionBarState
   operators: OperatorUser[]
   results: InteractionResultResponse[]
   contactTypes: InteractionContactTypeResponse[]
-  onChange: (next: Partial<InteractionBarState>) => void
+  onApply: (next: InteractionBarState) => void
+  onClear: () => void
   userTimezone?: string | null
 }
 
@@ -43,34 +47,54 @@ function buildDepartmentOptions(operators: OperatorUser[]) {
 }
 
 export function InteractionFiltersBar({
-  state,
+  value,
   operators,
   results,
   contactTypes,
-  onChange,
+  onApply,
+  onClear,
   userTimezone,
 }: Props) {
   const { t } = useTranslation('common')
 
-  const period: CallMonitoringPeriod = state.period ?? 'last_7d'
-  const selectedResultId = state.result_ids?.[0]
-  const selectedContactTypeId = state.contact_type_ids?.[0]
+  const [draft, setDraft] = useSyncedState<InteractionBarState>(value, value)
+
+  const update = (next: Partial<InteractionBarState>) => {
+    setDraft((prev) => {
+      const merged = { ...prev, ...next }
+      if (merged.period !== 'custom') {
+        merged.customFromDate = undefined
+        merged.customToDate = undefined
+      }
+      return merged
+    })
+  }
+
+  const period: CallMonitoringPeriod = draft.period ?? 'last_7d'
+  const selectedResultId = draft.result_ids?.[0]
+  const selectedContactTypeId = draft.contact_type_ids?.[0]
 
   const departmentOptions = useMemo(() => buildDepartmentOptions(operators), [operators])
-  const departmentSelectValue = state.departmentId != null ? String(state.departmentId) : 'all'
+  const departmentSelectValue = draft.departmentId != null ? String(draft.departmentId) : 'all'
   const departmentName =
-    state.departmentId != null
-      ? (departmentOptions.find((d) => d.id === state.departmentId)?.name ?? undefined)
+    draft.departmentId != null
+      ? (departmentOptions.find((d) => d.id === draft.departmentId)?.name ?? undefined)
       : undefined
+
+  const handleApply = () => onApply(draft)
+  const handleClearAll = () => {
+    setDraft(INTERACTION_FILTERS_DEFAULT)
+    onClear()
+  }
 
   return (
     <div className={FILTER_SURFACE}>
       <div className="flex w-full flex-col gap-4 sm:gap-6">
         <DateRangeQuickFilter
           period={period}
-          customFromDate={state.customFromDate}
-          customToDate={state.customToDate}
-          onChange={(next) => onChange(next)}
+          customFromDate={draft.customFromDate}
+          customToDate={draft.customToDate}
+          onChange={(next) => update(next)}
           userTimezone={userTimezone}
         />
 
@@ -85,9 +109,9 @@ export function InteractionFiltersBar({
               value={departmentSelectValue}
               onValueChange={(v) => {
                 if (v === 'all') {
-                  onChange({ departmentId: null })
+                  update({ departmentId: null })
                 } else {
-                  onChange({ departmentId: Number(v), employeeIds: [] })
+                  update({ departmentId: Number(v), employeeIds: [] })
                 }
               }}
             >
@@ -111,11 +135,11 @@ export function InteractionFiltersBar({
 
           <EmployeeFilterDropdown
             operators={operators}
-            selectedIds={state.employeeIds}
-            onChange={(ids) => onChange({ departmentId: null, employeeIds: ids })}
-            disabled={state.departmentId != null}
+            selectedIds={draft.employeeIds}
+            onChange={(ids) => update({ departmentId: null, employeeIds: ids })}
+            disabled={draft.departmentId != null}
             disabledLabel={departmentName}
-            label={t('pages.actionAnalysis.filters.employees', 'Employees')}
+            label={t('pages.actionAnalysis.filters.employee', 'Employee')}
           />
 
           <div className="flex flex-col gap-1.5">
@@ -125,7 +149,7 @@ export function InteractionFiltersBar({
             <Select
               value={selectedContactTypeId != null ? String(selectedContactTypeId) : 'all'}
               onValueChange={(v) =>
-                onChange({ contact_type_ids: v === 'all' ? undefined : [Number(v)] })
+                update({ contact_type_ids: v === 'all' ? undefined : [Number(v)] })
               }
             >
               <SelectTrigger className="h-[45px] w-full">
@@ -152,7 +176,7 @@ export function InteractionFiltersBar({
             </span>
             <Select
               value={selectedResultId != null ? String(selectedResultId) : 'all'}
-              onValueChange={(v) => onChange({ result_ids: v === 'all' ? undefined : [Number(v)] })}
+              onValueChange={(v) => update({ result_ids: v === 'all' ? undefined : [Number(v)] })}
             >
               <SelectTrigger className="h-[45px] w-full">
                 <SelectValue placeholder={t('pages.actionAnalysis.filters.allResults', 'All')} />
@@ -180,10 +204,10 @@ export function InteractionFiltersBar({
               step="0.01"
               className="h-[45px]"
               placeholder={t('pages.actionAnalysis.filters.promiseMinPlaceholder', '0.00')}
-              value={state.promise_amount_min ?? ''}
+              value={draft.promise_amount_min ?? ''}
               onChange={(e) => {
                 const v = e.target.value
-                onChange({ promise_amount_min: v === '' ? undefined : Number(v) })
+                update({ promise_amount_min: v === '' ? undefined : Number(v) })
               }}
             />
           </div>
@@ -198,13 +222,33 @@ export function InteractionFiltersBar({
               step="0.01"
               className="h-[45px]"
               placeholder={t('pages.actionAnalysis.filters.promiseMaxPlaceholder', 'e.g. 1000')}
-              value={state.promise_amount_max ?? ''}
+              value={draft.promise_amount_max ?? ''}
               onChange={(e) => {
                 const v = e.target.value
-                onChange({ promise_amount_max: v === '' ? undefined : Number(v) })
+                update({ promise_amount_max: v === '' ? undefined : Number(v) })
               }}
             />
           </div>
+        </div>
+
+        <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+          <Button
+            type="button"
+            variant="white-secondary"
+            onClick={handleClearAll}
+            className="h-[45px] w-full rounded sm:w-auto sm:px-6"
+            leftIcon={<Icons.Reload size={16} />}
+          >
+            {t('pages.actionAnalysis.filters.clearAll', 'Clear All')}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleApply}
+            className="h-[45px] w-full rounded sm:w-auto sm:px-8"
+          >
+            {t('pages.actionAnalysis.filters.applyFilters', 'Apply Filters')}
+          </Button>
         </div>
       </div>
     </div>

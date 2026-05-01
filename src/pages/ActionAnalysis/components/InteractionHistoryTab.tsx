@@ -16,6 +16,7 @@ import {
 import { Pagination } from '@/components/ui/Pagination'
 import { defaultCustomDateRange } from '../lib/dateRange'
 import {
+  INTERACTION_FILTERS_DEFAULT,
   readInteractionBarState,
   writeInteractionBarState,
   toInteractionMonitoringQuery,
@@ -76,23 +77,18 @@ export function InteractionHistoryTab() {
 
   const { data, error } = useInteractionMonitoring(queryFilters, queryEnabled)
 
-  const handleFiltersChange = (next: Partial<InteractionBarState>) => {
-    const merged: InteractionBarState = { ...barState, ...next }
-    let out: InteractionBarState = merged
-    if (merged.period === 'custom' && (!merged.customFromDate || !merged.customToDate)) {
+  const handleApply = (next: InteractionBarState) => {
+    let out: InteractionBarState = next
+    if (next.period === 'custom' && (!next.customFromDate || !next.customToDate)) {
       const d = defaultCustomDateRange(userTimezone)
       out = {
-        ...merged,
-        customFromDate: merged.customFromDate || d.from,
-        customToDate: merged.customToDate || d.to,
+        ...next,
+        customFromDate: next.customFromDate || d.from,
+        customToDate: next.customToDate || d.to,
       }
     }
-    if (merged.period !== 'custom') {
-      out = {
-        ...merged,
-        customFromDate: undefined,
-        customToDate: undefined,
-      }
+    if (next.period !== 'custom') {
+      out = { ...next, customFromDate: undefined, customToDate: undefined }
     }
     setSearchParams(writeInteractionBarState(new URLSearchParams(searchParams), out), {
       replace: true,
@@ -100,11 +96,29 @@ export function InteractionHistoryTab() {
     setPage(1)
   }
 
+  const handleClear = () => {
+    setSearchParams(
+      writeInteractionBarState(new URLSearchParams(searchParams), INTERACTION_FILTERS_DEFAULT),
+      { replace: true }
+    )
+    setPage(1)
+  }
+
   const handleSortChange = (
     sortBy: InteractionMonitoringSortBy,
     sortDir: InteractionMonitoringSortDir
   ) => {
-    handleFiltersChange({ sort_by: sortBy, sort_dir: sortDir })
+    // Sort changes commit immediately (no Apply step) — clicking a column
+    // header is meant as a one-click reorder, not a draft edit.
+    setSearchParams(
+      writeInteractionBarState(new URLSearchParams(searchParams), {
+        ...barState,
+        sort_by: sortBy,
+        sort_dir: sortDir,
+      }),
+      { replace: true }
+    )
+    setPage(1)
   }
 
   const items = resolvedUsers.kind === 'empty' ? [] : (data?.items ?? [])
@@ -116,11 +130,12 @@ export function InteractionHistoryTab() {
   return (
     <div className="flex flex-col gap-4">
       <InteractionFiltersBar
-        state={barState}
+        value={barState}
         operators={operators}
         results={results}
         contactTypes={contactTypes}
-        onChange={handleFiltersChange}
+        onApply={handleApply}
+        onClear={handleClear}
         userTimezone={userTimezone}
       />
 
