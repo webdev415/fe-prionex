@@ -49,7 +49,9 @@ export function InteractionHistoryTable({ data, sortBy, sortDir, onSortChange }:
       key: 'date',
       header: t('pages.actionAnalysis.columns.dateTime', 'Date / Time'),
       sortable: true,
-      render: (r) => <span className="text-sm text-gray-700">{formatDateTime(r.interaction_date)}</span>,
+      render: (r) => (
+        <span className="text-sm text-gray-700">{formatDateTime(r.interaction_date)}</span>
+      ),
     },
     {
       key: 'clientId',
@@ -57,7 +59,7 @@ export function InteractionHistoryTable({ data, sortBy, sortDir, onSortChange }:
       render: (r) => (
         <Link
           to={`/dashboard/clients/${r.client_id}`}
-          className="text-sm font-medium text-primary-600 hover:underline"
+          className="text-primary-600 text-sm font-medium hover:underline"
         >
           #{r.client_id}
         </Link>
@@ -69,7 +71,7 @@ export function InteractionHistoryTable({ data, sortBy, sortDir, onSortChange }:
       render: (r) => (
         <Link
           to={`/dashboard/clients/${r.client_id}`}
-          className="text-sm text-primary-600 hover:underline"
+          className="text-primary-600 text-sm hover:underline"
         >
           {r.client_full_name ?? '—'}
         </Link>
@@ -100,7 +102,9 @@ export function InteractionHistoryTable({ data, sortBy, sortDir, onSortChange }:
       render: (r) =>
         r.result_code ? (
           <span className="text-sm text-gray-700">
-            {t(`interactionResults.${r.result_code}`, { defaultValue: r.result_name ?? r.result_code })}
+            {t(`interactionResults.${r.result_code}`, {
+              defaultValue: r.result_name ?? r.result_code,
+            })}
           </span>
         ) : (
           <span className="text-sm text-gray-400">—</span>

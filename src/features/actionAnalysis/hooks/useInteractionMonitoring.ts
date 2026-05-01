@@ -8,10 +8,7 @@ export const interactionMonitoringKeys = {
     [...interactionMonitoringKeys.all, 'list', filters] as const,
 }
 
-export function useInteractionMonitoring(
-  filters: InteractionMonitoringFilters,
-  enabled = true
-) {
+export function useInteractionMonitoring(filters: InteractionMonitoringFilters, enabled = true) {
   return useQuery({
     queryKey: interactionMonitoringKeys.list(filters),
     queryFn: () => getInteractionMonitoring(filters),

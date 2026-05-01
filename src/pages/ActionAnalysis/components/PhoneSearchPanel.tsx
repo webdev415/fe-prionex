@@ -55,7 +55,7 @@ export function PhoneSearchPanel({ onPlayRecording }: Props) {
       {phone && (
         <div className="mt-4 flex flex-col gap-3">
           {error ? (
-            <div className="rounded-md border border-error-200 bg-error-50 p-3 text-sm text-error-700">
+            <div className="border-error-200 bg-error-50 text-error-700 rounded-md border p-3 text-sm">
               {t('pages.actionAnalysis.errors.loadFailed', 'Failed to load calls')}
             </div>
           ) : (

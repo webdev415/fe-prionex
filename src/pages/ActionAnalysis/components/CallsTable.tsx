@@ -35,12 +35,16 @@ export function CallsTable({ data, onPlayRecording }: Props) {
     {
       key: 'date',
       header: t('pages.actionAnalysis.columns.dateTime', 'Date / Time'),
-      render: (r) => <span className="text-sm text-gray-700">{formatDateTime(r.initiated_at)}</span>,
+      render: (r) => (
+        <span className="text-sm text-gray-700">{formatDateTime(r.initiated_at)}</span>
+      ),
     },
     {
       key: 'duration',
       header: t('pages.actionAnalysis.columns.duration', 'Duration'),
-      render: (r) => <span className="text-sm text-gray-700">{formatDuration(r.talk_duration)}</span>,
+      render: (r) => (
+        <span className="text-sm text-gray-700">{formatDuration(r.talk_duration)}</span>
+      ),
     },
     {
       key: 'status',
@@ -51,7 +55,7 @@ export function CallsTable({ data, onPlayRecording }: Props) {
           <span
             className={
               answered
-                ? 'inline-flex rounded-full bg-success-50 px-2 py-0.5 text-xs font-medium text-success-700'
+                ? 'bg-success-50 text-success-700 inline-flex rounded-full px-2 py-0.5 text-xs font-medium'
                 : 'inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700'
             }
           >
@@ -83,7 +87,7 @@ export function CallsTable({ data, onPlayRecording }: Props) {
         r.client_id ? (
           <Link
             to={`/dashboard/clients/${r.client_id}`}
-            className="text-sm text-primary-600 hover:underline"
+            className="text-primary-600 text-sm hover:underline"
           >
             #{r.client_id}
           </Link>

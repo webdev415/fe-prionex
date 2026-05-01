@@ -110,7 +110,9 @@ export function InteractionFiltersBar({
                 />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t('pages.actionAnalysis.filters.allContactTypes', 'All')}</SelectItem>
+                <SelectItem value="all">
+                  {t('pages.actionAnalysis.filters.allContactTypes', 'All')}
+                </SelectItem>
                 {contactTypes.map((ct) => (
                   <SelectItem key={ct.id} value={String(ct.id)}>
                     {ct.name}
@@ -126,15 +128,15 @@ export function InteractionFiltersBar({
             </span>
             <Select
               value={selectedResultId != null ? String(selectedResultId) : 'all'}
-              onValueChange={(v) =>
-                onChange({ result_ids: v === 'all' ? undefined : [Number(v)] })
-              }
+              onValueChange={(v) => onChange({ result_ids: v === 'all' ? undefined : [Number(v)] })}
             >
               <SelectTrigger className="h-10 w-full">
                 <SelectValue placeholder={t('pages.actionAnalysis.filters.allResults', 'All')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t('pages.actionAnalysis.filters.allResults', 'All')}</SelectItem>
+                <SelectItem value="all">
+                  {t('pages.actionAnalysis.filters.allResults', 'All')}
+                </SelectItem>
                 {results.map((r) => (
                   <SelectItem key={r.id} value={String(r.id)}>
                     {t(`interactionResults.${r.code}`, { defaultValue: r.name })}

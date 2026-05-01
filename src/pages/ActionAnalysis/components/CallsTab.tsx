@@ -37,9 +37,7 @@ export function CallsTab() {
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const userTimezone = useAuthStore((s) => s.user?.timezone)
-  const { data: operators = [] } = useOperators(
-    activeProjectId ? Number(activeProjectId) : null
-  )
+  const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
   const barState = useMemo(() => readCallsUrlState(searchParams), [searchParams])
 
@@ -63,8 +61,7 @@ export function CallsTab() {
   const [page, setPage] = useState(1)
 
   const callsQueryEnabled =
-    barState.period !== 'custom' ||
-    !!(barState.customFromDate && barState.customToDate)
+    barState.period !== 'custom' || !!(barState.customFromDate && barState.customToDate)
 
   const queryFilters: CallMonitoringFilters = {
     ...apiFiltersBase,
@@ -161,16 +158,12 @@ export function CallsTab() {
       </div>
 
       {error ? (
-        <div className="rounded-md border border-error-200 bg-error-50 p-3 text-sm text-error-700">
+        <div className="border-error-200 bg-error-50 text-error-700 rounded-md border p-3 text-sm">
           {t('pages.actionAnalysis.errors.loadFailed', 'Failed to load calls')}
         </div>
       ) : (
         <>
-          <CallsTable
-            data={calls}
-            loading={isFetching}
-            onPlayRecording={setRecordingCall}
-          />
+          <CallsTable data={calls} loading={isFetching} onPlayRecording={setRecordingCall} />
           {total > PAGE_SIZE && (
             <Pagination
               currentPage={page}

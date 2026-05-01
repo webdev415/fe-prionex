@@ -32,7 +32,8 @@ export function readInteractionBarState(params: URLSearchParams): InteractionBar
   const promiseMin = params.get('promise_min')
   const promiseMax = params.get('promise_max')
   const sortBy = (params.get('sort_by') as InteractionMonitoringSortBy | null) ?? DEFAULT_SORT_BY
-  const sortDir = (params.get('sort_dir') as InteractionMonitoringSortDir | null) ?? DEFAULT_SORT_DIR
+  const sortDir =
+    (params.get('sort_dir') as InteractionMonitoringSortDir | null) ?? DEFAULT_SORT_DIR
   const dept = params.get('department_id')
   const employeeIds = params
     .getAll('employee_id')
@@ -84,10 +85,8 @@ export function writeInteractionBarState(
   if (resultId) next.set('result_id', String(resultId))
   const contactTypeId = state.contact_type_ids?.[0]
   if (contactTypeId) next.set('contact_type_id', String(contactTypeId))
-  if (state.promise_amount_min != null)
-    next.set('promise_min', String(state.promise_amount_min))
-  if (state.promise_amount_max != null)
-    next.set('promise_max', String(state.promise_amount_max))
+  if (state.promise_amount_min != null) next.set('promise_min', String(state.promise_amount_min))
+  if (state.promise_amount_max != null) next.set('promise_max', String(state.promise_amount_max))
   if (state.sort_by && state.sort_by !== DEFAULT_SORT_BY) next.set('sort_by', state.sort_by)
   if (state.sort_dir && state.sort_dir !== DEFAULT_SORT_DIR) next.set('sort_dir', state.sort_dir)
   if (state.period === 'custom' && state.customFromDate && state.customToDate) {
@@ -107,9 +106,7 @@ export function resolveInteractionUsers(
   operators: OperatorUser[]
 ): ResolvedInteractionUsers {
   if (state.departmentId != null) {
-    const ids = operators
-      .filter((o) => o.department_id === state.departmentId)
-      .map((o) => o.id)
+    const ids = operators.filter((o) => o.department_id === state.departmentId).map((o) => o.id)
     return ids.length ? { kind: 'ids', ids } : { kind: 'empty' }
   }
   if (state.employeeIds.length > 0) return { kind: 'ids', ids: state.employeeIds }

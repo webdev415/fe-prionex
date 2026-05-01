@@ -65,8 +65,8 @@ export function EmployeeScopeFilter({ operators, value, onChange }: Props) {
 
   const triggerLabel =
     value.departmentId != null
-      ? deptOpts.find((d) => d.id === value.departmentId)?.name ??
-        t('pages.actionAnalysis.filters.department', 'Department')
+      ? (deptOpts.find((d) => d.id === value.departmentId)?.name ??
+        t('pages.actionAnalysis.filters.department', 'Department'))
       : value.employeeIds.length === 0
         ? t('pages.actionAnalysis.filters.allEmployees', 'All employees')
         : t('pages.actionAnalysis.filters.employeesCount', '{{count}} selected', {
@@ -134,10 +134,7 @@ export function EmployeeScopeFilter({ operators, value, onChange }: Props) {
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={t(
-                  'pages.actionAnalysis.filters.searchEmployees',
-                  'Search by name…'
-                )}
+                placeholder={t('pages.actionAnalysis.filters.searchEmployees', 'Search by name…')}
                 className="h-9 text-sm"
               />
             </div>
@@ -156,13 +153,13 @@ export function EmployeeScopeFilter({ operators, value, onChange }: Props) {
                       checked={draftIds.includes(op.id)}
                       onCheckedChange={(checked) => {
                         setDraftIds((prev) =>
-                          checked === true
-                            ? [...prev, op.id]
-                            : prev.filter((id) => id !== op.id)
+                          checked === true ? [...prev, op.id] : prev.filter((id) => id !== op.id)
                         )
                       }}
                     />
-                    <span className="text-dark-500 truncate text-sm font-light">{op.full_name}</span>
+                    <span className="text-dark-500 truncate text-sm font-light">
+                      {op.full_name}
+                    </span>
                   </label>
                 ))
               )}

@@ -37,9 +37,7 @@ export function InteractionHistoryTab() {
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const userTimezone = useAuthStore((s) => s.user?.timezone)
-  const { data: operators = [] } = useOperators(
-    activeProjectId ? Number(activeProjectId) : null
-  )
+  const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const { data: contactTypes = [] } = useInteractionContactTypes()
   const { data: results = [] } = useInteractionResults()
 
@@ -167,7 +165,7 @@ export function InteractionHistoryTab() {
           )}
         </div>
       ) : error ? (
-        <div className="rounded-md border border-error-200 bg-error-50 p-3 text-sm text-error-700">
+        <div className="border-error-200 bg-error-50 text-error-700 rounded-md border p-3 text-sm">
           {t('pages.actionAnalysis.errors.loadInteractionsFailed', 'Failed to load interactions')}
         </div>
       ) : (

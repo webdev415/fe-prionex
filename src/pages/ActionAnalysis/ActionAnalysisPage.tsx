@@ -67,9 +67,7 @@ export function ActionAnalysisPage() {
         </div>
       </div>
 
-      <div>
-        {activeTab === 'calls' ? <CallsTab /> : <InteractionHistoryTab />}
-      </div>
+      <div>{activeTab === 'calls' ? <CallsTab /> : <InteractionHistoryTab />}</div>
     </div>
   )
 }

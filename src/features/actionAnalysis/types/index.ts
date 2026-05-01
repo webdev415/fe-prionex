@@ -1,15 +1,6 @@
-export type CallMonitoringPeriod =
-  | 'today'
-  | 'yesterday'
-  | 'last_7d'
-  | 'last_30d'
-  | 'custom'
+export type CallMonitoringPeriod = 'today' | 'yesterday' | 'last_7d' | 'last_30d' | 'custom'
 
-export type CallMonitoringSort =
-  | 'date_desc'
-  | 'date_asc'
-  | 'duration_desc'
-  | 'duration_asc'
+export type CallMonitoringSort = 'date_desc' | 'date_asc' | 'duration_desc' | 'duration_asc'
 
 export type CallMonitoringOutcomeFilter = 'all' | 'answered' | 'not_answered'
 

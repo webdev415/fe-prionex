@@ -4,8 +4,7 @@ import type { CallMonitoringFilters } from '../types'
 
 export const callMonitoringKeys = {
   all: ['action-analysis', 'calls'] as const,
-  list: (filters: CallMonitoringFilters) =>
-    [...callMonitoringKeys.all, 'list', filters] as const,
+  list: (filters: CallMonitoringFilters) => [...callMonitoringKeys.all, 'list', filters] as const,
   byPhone: (phone: string, sort?: string) =>
     [...callMonitoringKeys.all, 'by-phone', phone, sort] as const,
 }

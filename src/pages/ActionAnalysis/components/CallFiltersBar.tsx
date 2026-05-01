@@ -27,10 +27,7 @@ function formatYmd(d: Date | null): string | undefined {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-export type CallFiltersBarValue = Omit<
-  CallMonitoringFilters,
-  'from_datetime' | 'to_datetime'
-> & {
+export type CallFiltersBarValue = Omit<CallMonitoringFilters, 'from_datetime' | 'to_datetime'> & {
   customFromDate?: string
   customToDate?: string
 }
@@ -59,12 +56,12 @@ export function CallFiltersBar({ filters, operators, onChange }: Props) {
             </span>
             <Select
               value={selectedExt ? selectedExt : 'all'}
-              onValueChange={(v) =>
-                onChange({ agent_extensions: v === 'all' ? undefined : [v] })
-              }
+              onValueChange={(v) => onChange({ agent_extensions: v === 'all' ? undefined : [v] })}
             >
               <SelectTrigger className="h-10 w-full">
-                <SelectValue placeholder={t('pages.actionAnalysis.filters.allOperators', 'All operators')} />
+                <SelectValue
+                  placeholder={t('pages.actionAnalysis.filters.allOperators', 'All operators')}
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">
@@ -116,7 +113,9 @@ export function CallFiltersBar({ filters, operators, onChange }: Props) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t('pages.actionAnalysis.filters.statuses.all', 'All')}</SelectItem>
+                <SelectItem value="all">
+                  {t('pages.actionAnalysis.filters.statuses.all', 'All')}
+                </SelectItem>
                 <SelectItem value="answered">
                   {t('pages.actionAnalysis.filters.statuses.answered', 'Answered')}
                 </SelectItem>
@@ -167,18 +166,14 @@ export function CallFiltersBar({ filters, operators, onChange }: Props) {
             <DateSelect
               label={t('pages.actionAnalysis.filters.dateFrom', 'From')}
               value={parseYmd(filters.customFromDate)}
-              onChange={({ value }) =>
-                onChange({ customFromDate: formatYmd(value) ?? '' })
-              }
+              onChange={({ value }) => onChange({ customFromDate: formatYmd(value) ?? '' })}
               placeholder={t('pages.actionAnalysis.filters.selectDate', 'Select date')}
               format="yyyy-MM-dd"
             />
             <DateSelect
               label={t('pages.actionAnalysis.filters.dateTo', 'To')}
               value={parseYmd(filters.customToDate)}
-              onChange={({ value }) =>
-                onChange({ customToDate: formatYmd(value) ?? '' })
-              }
+              onChange={({ value }) => onChange({ customToDate: formatYmd(value) ?? '' })}
               placeholder={t('pages.actionAnalysis.filters.selectDate', 'Select date')}
               format="yyyy-MM-dd"
             />

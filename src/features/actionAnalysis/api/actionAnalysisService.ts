@@ -44,10 +44,9 @@ export async function getCallsByPhone(
   if (filters.limit != null) params.set('limit', String(filters.limit))
   if (filters.offset != null) params.set('offset', String(filters.offset))
 
-  const response = await api.get<CallMonitoringResponse>(
-    '/api/v1/calls/monitoring/by-phone',
-    { params }
-  )
+  const response = await api.get<CallMonitoringResponse>('/api/v1/calls/monitoring/by-phone', {
+    params,
+  })
   return response.data
 }
 
@@ -61,9 +60,7 @@ export async function exportCallMonitoring(filters: CallMonitoringFilters): Prom
   return response.data
 }
 
-function buildInteractionParams(
-  filters: InteractionMonitoringFilters
-): URLSearchParams {
+function buildInteractionParams(filters: InteractionMonitoringFilters): URLSearchParams {
   const params = new URLSearchParams()
   filters.user_ids?.forEach((id) => params.append('user_ids', String(id)))
   if (filters.period) params.set('period', filters.period)
@@ -74,9 +71,7 @@ function buildInteractionParams(
   if (filters.promise_amount_max != null)
     params.set('promise_amount_max', String(filters.promise_amount_max))
   filters.result_ids?.forEach((id) => params.append('result_ids', String(id)))
-  filters.contact_type_ids?.forEach((id) =>
-    params.append('contact_type_ids', String(id))
-  )
+  filters.contact_type_ids?.forEach((id) => params.append('contact_type_ids', String(id)))
   if (filters.sort_by) params.set('sort_by', filters.sort_by)
   if (filters.sort_dir) params.set('sort_dir', filters.sort_dir)
   if (filters.page != null) params.set('page', String(filters.page))
