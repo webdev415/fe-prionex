@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -9,20 +9,20 @@ import {
   useExportCalls,
   type CallMonitoringFilters,
   type CallMonitoringItem,
-  type CallMonitoringPeriod,
-  type CallMonitoringOutcomeFilter,
 } from '@/features/actionAnalysis'
 import { Button } from '@/components/ui/Button'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import { formatDateTime } from '@/lib/formatters'
+import { defaultCustomDateRange } from '../lib/dateRange'
+import { readCallsUrlState, writeCallsUrlState, toCallMonitoringQuery } from '../lib/callsUrlState'
+import type { CallFiltersBarValue } from './CallFiltersBar'
 import { CallFiltersBar } from './CallFiltersBar'
 import { CallsTable } from './CallsTable'
 import { PhoneSearchPanel } from './PhoneSearchPanel'
 
 const PAGE_SIZE = 20
-const DEFAULT_PERIOD: CallMonitoringPeriod = 'last_7d'
 
 function formatDuration(seconds: number | null | undefined): string {
   if (seconds == null) return '0:00'
@@ -31,78 +31,82 @@ function formatDuration(seconds: number | null | undefined): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-function readFiltersFromUrl(params: URLSearchParams): CallMonitoringFilters {
-  const ext = params.get('agent_extension') ?? params.get('employee_id')
-  const period = (params.get('period') as CallMonitoringPeriod | null) ?? DEFAULT_PERIOD
-  const status = (params.get('status') as CallMonitoringOutcomeFilter | null) ?? 'all'
-  const min = params.get('min_duration')
-  const max = params.get('max_duration')
-
-  return {
-    agent_extensions: ext ? [ext] : undefined,
-    period,
-    outcome_filter: status,
-    min_duration: min ? Number(min) : undefined,
-    max_duration: max ? Number(max) : undefined,
-  }
-}
-
-function writeFiltersToUrl(
-  params: URLSearchParams,
-  filters: CallMonitoringFilters
-): URLSearchParams {
-  const next = new URLSearchParams(params)
-  next.delete('agent_extension')
-  next.delete('employee_id')
-  next.delete('period')
-  next.delete('status')
-  next.delete('min_duration')
-  next.delete('max_duration')
-
-  const ext = filters.agent_extensions?.[0]
-  if (ext) next.set('agent_extension', ext)
-  if (filters.period && filters.period !== DEFAULT_PERIOD) next.set('period', filters.period)
-  if (filters.outcome_filter && filters.outcome_filter !== 'all')
-    next.set('status', filters.outcome_filter)
-  if (filters.min_duration != null) next.set('min_duration', String(filters.min_duration))
-  if (filters.max_duration != null) next.set('max_duration', String(filters.max_duration))
-  return next
-}
-
 export function CallsTab() {
   const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const userTimezone = useAuthStore((s) => s.user?.timezone)
   const { data: operators = [] } = useOperators(
     activeProjectId ? Number(activeProjectId) : null
   )
 
-  const filters = useMemo(() => readFiltersFromUrl(searchParams), [searchParams])
+  const barState = useMemo(() => readCallsUrlState(searchParams), [searchParams])
+
+  useEffect(() => {
+    if (searchParams.get('period') !== 'custom') return
+    if (searchParams.get('from_date') && searchParams.get('to_date')) return
+    const s = readCallsUrlState(searchParams)
+    const d = defaultCustomDateRange(userTimezone)
+    setSearchParams(
+      writeCallsUrlState(new URLSearchParams(searchParams), {
+        ...s,
+        customFromDate: d.from,
+        customToDate: d.to,
+      }),
+      { replace: true }
+    )
+  }, [searchParams, setSearchParams, userTimezone])
+
+  const apiFiltersBase = useMemo(() => toCallMonitoringQuery(barState), [barState])
 
   const [page, setPage] = useState(1)
 
+  const callsQueryEnabled =
+    barState.period !== 'custom' ||
+    !!(barState.customFromDate && barState.customToDate)
+
   const queryFilters: CallMonitoringFilters = {
-    ...filters,
+    ...apiFiltersBase,
     sort: 'date_desc',
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
   }
-  const { data, isLoading, isFetching, error } = useCallMonitoring(queryFilters)
+  const { data, isLoading, isFetching, error } = useCallMonitoring(queryFilters, callsQueryEnabled)
 
   const exportMutation = useExportCalls()
 
   const [recordingCall, setRecordingCall] = useState<CallMonitoringItem | null>(null)
 
-  const handleFiltersChange = (next: Partial<CallMonitoringFilters>) => {
-    const merged = { ...filters, ...next }
-    setSearchParams(writeFiltersToUrl(searchParams, merged), { replace: true })
+  const handleFiltersChange = (next: Partial<CallFiltersBarValue>) => {
+    const merged: CallFiltersBarValue = { ...barState, ...next }
+    let out: CallFiltersBarValue = merged
+    if (merged.period === 'custom' && (!merged.customFromDate || !merged.customToDate)) {
+      const d = defaultCustomDateRange(userTimezone)
+      out = {
+        ...merged,
+        customFromDate: merged.customFromDate || d.from,
+        customToDate: merged.customToDate || d.to,
+      }
+    }
+    if (merged.period !== 'custom') {
+      out = {
+        ...merged,
+        customFromDate: undefined,
+        customToDate: undefined,
+      }
+    }
+    setSearchParams(writeCallsUrlState(new URLSearchParams(searchParams), out), { replace: true })
     setPage(1)
   }
 
   const handleExport = async () => {
     try {
-      await exportMutation.mutateAsync(queryFilters)
+      const exportPayload: CallMonitoringFilters = {
+        ...apiFiltersBase,
+        sort: 'date_desc',
+      }
+      await exportMutation.mutateAsync(exportPayload)
     } catch (err) {
       console.error('Export failed:', err)
       toast.error(t('pages.actionAnalysis.errors.exportFailed', 'Export failed'))
@@ -126,13 +130,7 @@ export function CallsTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <CallFiltersBar
-          filters={filters}
-          operators={operators}
-          onChange={handleFiltersChange}
-        />
-      </div>
+      <CallFiltersBar filters={barState} operators={operators} onChange={handleFiltersChange} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-4 text-sm text-gray-700">
@@ -153,7 +151,7 @@ export function CallsTab() {
           variant="outline"
           size="sm"
           onClick={handleExport}
-          disabled={exportMutation.isPending || isLoading}
+          disabled={exportMutation.isPending || isLoading || !callsQueryEnabled}
         >
           <Icons.FileDownload size={16} strokeWidth={1.5} />
           {exportMutation.isPending

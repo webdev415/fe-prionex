@@ -196,6 +196,17 @@
         "allResults": "Все",
         "promiseMin": "Обещание от",
         "promiseMax": "Обещание до",
+        "department": "Отдел",
+        "allDepartments": "Все отделы",
+        "employees": "Сотрудники",
+        "employeesCount": "Выбрано: {{count}}",
+        "searchEmployees": "Поиск по имени…",
+        "noOperatorsMatch": "Нет совпадений",
+        "clearEmployees": "Сбросить",
+        "applyEmployees": "Применить",
+        "dateFrom": "С",
+        "dateTo": "По",
+        "selectDate": "Выберите дату",
         "periods": {
           "today": "Сегодня",
           "yesterday": "Вчера",
@@ -216,6 +227,8 @@
         "phone": "Телефон",
         "agent": "Оператор",
         "client": "Клиент",
+        "clientId": "ID клиента",
+        "promiseDate": "Дата обещания",
         "recording": "Запись",
         "employee": "Сотрудник",
         "contactType": "Тип контакта",
@@ -244,6 +257,7 @@
       "errors": {
         "loadFailed": "Не удалось загрузить звонки",
         "loadInteractionsFailed": "Не удалось загрузить взаимодействия",
+        "departmentNoOperators": "В этом отделе нет операторов в текущем проекте.",
         "exportFailed": "Не удалось экспортировать"
       },
       "calls": {

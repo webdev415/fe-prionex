@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
-import { formatDateTime } from '@/lib/formatters'
+import { formatDate, formatDateTime } from '@/lib/formatters'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
 import type {
   InteractionMonitoringItem,
@@ -52,6 +52,18 @@ export function InteractionHistoryTable({ data, sortBy, sortDir, onSortChange }:
       render: (r) => <span className="text-sm text-gray-700">{formatDateTime(r.interaction_date)}</span>,
     },
     {
+      key: 'clientId',
+      header: t('pages.actionAnalysis.columns.clientId', 'Client ID'),
+      render: (r) => (
+        <Link
+          to={`/dashboard/clients/${r.client_id}`}
+          className="text-sm font-medium text-primary-600 hover:underline"
+        >
+          #{r.client_id}
+        </Link>
+      ),
+    },
+    {
       key: 'client',
       header: t('pages.actionAnalysis.columns.client', 'Client'),
       render: (r) => (
@@ -59,7 +71,7 @@ export function InteractionHistoryTable({ data, sortBy, sortDir, onSortChange }:
           to={`/dashboard/clients/${r.client_id}`}
           className="text-sm text-primary-600 hover:underline"
         >
-          {r.client_full_name ?? `#${r.client_id}`}
+          {r.client_full_name ?? '—'}
         </Link>
       ),
     },
@@ -99,7 +111,17 @@ export function InteractionHistoryTable({ data, sortBy, sortDir, onSortChange }:
       header: t('pages.actionAnalysis.columns.promiseAmount', 'Promise amount'),
       sortable: true,
       align: 'right',
-      render: (r) => <span className="text-sm text-gray-700">{formatAmount(r.promise_to_pay_amount)}</span>,
+      render: (r) => (
+        <div className="flex flex-col items-end gap-0.5 text-sm text-gray-700">
+          <span>{formatAmount(r.promise_to_pay_amount)}</span>
+          {r.promise_to_pay_date ? (
+            <span className="text-xs text-gray-500">
+              {t('pages.actionAnalysis.columns.promiseDate', 'Promise date')}:{' '}
+              {formatDate(r.promise_to_pay_date)}
+            </span>
+          ) : null}
+        </div>
+      ),
     },
   ]
 

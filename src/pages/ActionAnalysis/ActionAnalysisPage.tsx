@@ -31,10 +31,10 @@ export function ActionAnalysisPage() {
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">
+        <h1 className="text-dark-500 text-2xl font-light">
           {t('pages.actionAnalysis.title', 'Action Analysis')}
         </h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm font-light text-gray-600">
           {t(
             'pages.actionAnalysis.subtitle',
             'Call monitoring and interaction history for the trainer team.'

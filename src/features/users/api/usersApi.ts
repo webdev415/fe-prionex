@@ -130,6 +130,9 @@ export interface OperatorUser {
   email: string
   status: string
   asterisk_extension?: string | null
+  /** Role's department in the active project (operators list only). */
+  department_id?: number | null
+  department_name?: string | null
 }
 
 /**

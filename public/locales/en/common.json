@@ -196,6 +196,17 @@
         "allResults": "All",
         "promiseMin": "Promise min",
         "promiseMax": "Promise max",
+        "department": "Department",
+        "allDepartments": "All departments",
+        "employees": "Employees",
+        "employeesCount": "{{count}} selected",
+        "searchEmployees": "Search by name…",
+        "noOperatorsMatch": "No matches",
+        "clearEmployees": "Clear",
+        "applyEmployees": "Apply",
+        "dateFrom": "From",
+        "dateTo": "To",
+        "selectDate": "Select date",
         "periods": {
           "today": "Today",
           "yesterday": "Yesterday",
@@ -216,6 +227,8 @@
         "phone": "Phone",
         "agent": "Operator",
         "client": "Client",
+        "clientId": "Client ID",
+        "promiseDate": "Promise date",
         "recording": "Recording",
         "employee": "Employee",
         "contactType": "Contact type",
@@ -244,6 +257,7 @@
       "errors": {
         "loadFailed": "Failed to load calls",
         "loadInteractionsFailed": "Failed to load interactions",
+        "departmentNoOperators": "No operators in this department for the current project.",
         "exportFailed": "Export failed"
       },
       "calls": {

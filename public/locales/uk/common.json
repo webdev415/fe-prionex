@@ -196,6 +196,17 @@
         "allResults": "Усі",
         "promiseMin": "Обіцянка від",
         "promiseMax": "Обіцянка до",
+        "department": "Відділ",
+        "allDepartments": "Усі відділи",
+        "employees": "Співробітники",
+        "employeesCount": "Обрано: {{count}}",
+        "searchEmployees": "Пошук за іменем…",
+        "noOperatorsMatch": "Немає збігів",
+        "clearEmployees": "Очистити",
+        "applyEmployees": "Застосувати",
+        "dateFrom": "Від",
+        "dateTo": "До",
+        "selectDate": "Оберіть дату",
         "periods": {
           "today": "Сьогодні",
           "yesterday": "Вчора",
@@ -216,6 +227,8 @@
         "phone": "Телефон",
         "agent": "Оператор",
         "client": "Клієнт",
+        "clientId": "ID клієнта",
+        "promiseDate": "Дата обіцянки",
         "recording": "Запис",
         "employee": "Співробітник",
         "contactType": "Тип контакту",
@@ -244,6 +257,7 @@
       "errors": {
         "loadFailed": "Не вдалося завантажити дзвінки",
         "loadInteractionsFailed": "Не вдалося завантажити взаємодії",
+        "departmentNoOperators": "У цьому відділі немає операторів у поточному проєкті.",
         "exportFailed": "Не вдалося експортувати"
       },
       "calls": {

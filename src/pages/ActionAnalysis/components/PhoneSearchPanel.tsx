@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { Icons } from '@/lib/icons'
 import { useCallsByPhone } from '@/features/actionAnalysis'
 import type { CallMonitoringItem } from '@/features/actionAnalysis'
 import { CallsTable } from './CallsTable'
+
+const PANEL_SURFACE = 'rounded-xl bg-white/50 p-4 shadow-sm sm:p-6'
 
 interface Props {
   onPlayRecording: (call: CallMonitoringItem) => void
@@ -21,18 +24,18 @@ export function PhoneSearchPanel({ onPlayRecording }: Props) {
   const calls = data?.calls ?? []
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
-      <h3 className="mb-3 text-sm font-medium text-gray-800">
+    <div className={PANEL_SURFACE}>
+      <h3 className="text-dark-500 mb-3 text-sm font-medium">
         {t('pages.actionAnalysis.phoneSearch.title', 'Phone number search')}
       </h3>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <input
+        <Input
           type="tel"
           inputMode="tel"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder={t('pages.actionAnalysis.phoneSearch.placeholder', 'Enter phone number')}
-          className="h-10 flex-1 rounded-md border border-gray-300 bg-white px-3 text-sm"
+          className="h-10 flex-1"
           onKeyDown={(e) => {
             if (e.key === 'Enter') setPhone(draft.trim())
           }}
@@ -40,6 +43,7 @@ export function PhoneSearchPanel({ onPlayRecording }: Props) {
         <Button
           variant="primary"
           size="sm"
+          className="shrink-0 sm:h-10"
           onClick={() => setPhone(draft.trim())}
           disabled={draft.trim().length < 3}
         >
