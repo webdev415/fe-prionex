@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
-import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import {
@@ -10,14 +9,11 @@ import {
 } from '@/features/clients/hooks/useNoteInteraction'
 import {
   useInteractionMonitoring,
-  useExportInteractions,
   type InteractionMonitoringFilters,
   type InteractionMonitoringSortBy,
   type InteractionMonitoringSortDir,
 } from '@/features/actionAnalysis'
-import { Button } from '@/components/ui/Button'
 import { Pagination } from '@/components/ui/Pagination'
-import { Icons } from '@/lib/icons'
 import { defaultCustomDateRange } from '../lib/dateRange'
 import {
   readInteractionBarState,
@@ -78,9 +74,7 @@ export function InteractionHistoryTab() {
     (barState.period !== 'custom' || !!(barState.customFromDate && barState.customToDate)) &&
     resolvedUsers.kind !== 'empty'
 
-  const { data, isFetching, error } = useInteractionMonitoring(queryFilters, queryEnabled)
-
-  const exportMutation = useExportInteractions()
+  const { data, error } = useInteractionMonitoring(queryFilters, queryEnabled)
 
   const handleFiltersChange = (next: Partial<InteractionBarState>) => {
     const merged: InteractionBarState = { ...barState, ...next }
@@ -113,16 +107,6 @@ export function InteractionHistoryTab() {
     handleFiltersChange({ sort_by: sortBy, sort_dir: sortDir })
   }
 
-  const handleExport = async () => {
-    try {
-      const exportPayload = toInteractionMonitoringQuery(barState, operators)
-      await exportMutation.mutateAsync(exportPayload)
-    } catch (err) {
-      console.error('Interaction export failed:', err)
-      toast.error(t('pages.actionAnalysis.errors.exportFailed', 'Export failed'))
-    }
-  }
-
   const items = resolvedUsers.kind === 'empty' ? [] : (data?.items ?? [])
   const total = resolvedUsers.kind === 'empty' ? 0 : (data?.total ?? 0)
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
@@ -137,24 +121,12 @@ export function InteractionHistoryTab() {
         results={results}
         contactTypes={contactTypes}
         onChange={handleFiltersChange}
+        userTimezone={userTimezone}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm text-gray-700">
-          <span className="font-medium">{total}</span>{' '}
-          {t('pages.actionAnalysis.summary.totalInteractions', 'interactions')}
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExport}
-          disabled={exportMutation.isPending || isFetching || !queryEnabled}
-        >
-          <Icons.FileDownload size={16} strokeWidth={1.5} />
-          {exportMutation.isPending
-            ? t('pages.actionAnalysis.actions.exporting', 'Exporting…')
-            : t('pages.actionAnalysis.actions.exportExcel', 'Export to Excel')}
-        </Button>
+      <div className="text-sm text-gray-700">
+        <span className="font-medium">{total}</span>{' '}
+        {t('pages.actionAnalysis.summary.totalInteractions', 'interactions')}
       </div>
 
       {emptyDeptMessage ? (

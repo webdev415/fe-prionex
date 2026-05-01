@@ -1,8 +1,21 @@
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
+import { toast } from 'sonner'
+import { useAuthStore } from '@/stores/authStore'
+import { useOperators } from '@/features/users/hooks'
+import { Button } from '@/components/ui/Button'
+import { Icons } from '@/lib/icons'
+import { useExportCalls, useExportInteractions } from '@/features/actionAnalysis'
 import { ACTION_ANALYSIS_TABS, type ActionAnalysisTabId } from './types'
 import { CallsTab } from './components/CallsTab'
 import { InteractionHistoryTab } from './components/InteractionHistoryTab'
+import { readCallsUrlState, toCallMonitoringQuery } from './lib/callsUrlState'
+import {
+  readInteractionBarState,
+  resolveInteractionUsers,
+  toInteractionMonitoringQuery,
+} from './lib/interactionsUrlState'
 
 const TAB_LABEL_KEYS: Record<ActionAnalysisTabId, { key: string; fallback: string }> = {
   calls: { key: 'pages.actionAnalysis.tabs.calls', fallback: 'Calls' },
@@ -22,24 +35,77 @@ export function ActionAnalysisPage() {
   const rawTab = searchParams.get('tab')
   const activeTab: ActionAnalysisTabId = isTab(rawTab) ? rawTab : 'calls'
 
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
+
+  const exportCallsMutation = useExportCalls()
+  const exportInteractionsMutation = useExportInteractions()
+
+  // Whether the active tab's filters yield a usable export request.
+  const exportReady = useMemo(() => {
+    if (activeTab === 'calls') {
+      const s = readCallsUrlState(searchParams)
+      return s.period !== 'custom' || !!(s.customFromDate && s.customToDate)
+    }
+    const s = readInteractionBarState(searchParams)
+    const usable = s.period !== 'custom' || !!(s.customFromDate && s.customToDate)
+    if (!usable) return false
+    const resolved = resolveInteractionUsers(s, operators)
+    return resolved.kind !== 'empty'
+  }, [activeTab, searchParams, operators])
+
+  const isExporting =
+    activeTab === 'calls' ? exportCallsMutation.isPending : exportInteractionsMutation.isPending
+
   const setActiveTab = (tab: ActionAnalysisTabId) => {
     const next = new URLSearchParams(searchParams)
     next.set('tab', tab)
     setSearchParams(next, { replace: true })
   }
 
+  const handleExport = async () => {
+    try {
+      if (activeTab === 'calls') {
+        const state = readCallsUrlState(searchParams)
+        const payload = { ...toCallMonitoringQuery(state), sort: 'date_desc' as const }
+        await exportCallsMutation.mutateAsync(payload)
+      } else {
+        const state = readInteractionBarState(searchParams)
+        const payload = toInteractionMonitoringQuery(state, operators)
+        await exportInteractionsMutation.mutateAsync(payload)
+      }
+    } catch (err) {
+      console.error('Export failed:', err)
+      toast.error(t('pages.actionAnalysis.errors.exportFailed', 'Export failed'))
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-dark-500 text-2xl font-light">
-          {t('pages.actionAnalysis.title', 'Action Analysis')}
-        </h1>
-        <p className="mt-1 text-sm font-light text-gray-600">
-          {t(
-            'pages.actionAnalysis.subtitle',
-            'Call monitoring and interaction history for the trainer team.'
-          )}
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+            {t('pages.actionAnalysis.title', 'Action Analysis')}
+          </h1>
+          <p className="mt-1 text-sm font-light text-gray-600">
+            {t(
+              'pages.actionAnalysis.subtitle',
+              'Call monitoring and interaction history for the trainer team.'
+            )}
+          </p>
+        </div>
+        <Button
+          variant="primary"
+          size="md"
+          onClick={handleExport}
+          disabled={!exportReady || isExporting}
+          leftIcon={<Icons.Download size={16} className="text-dark-500" />}
+          className="h-[45px] w-full rounded-full text-xs sm:w-auto"
+        >
+          {isExporting
+            ? t('pages.actionAnalysis.actions.exporting', 'Exporting…')
+            : t('pages.actionAnalysis.actions.exportExcel', 'Export to Excel')}
+        </Button>
       </div>
 
       <div className="border-b border-gray-200">

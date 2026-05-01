@@ -1,18 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
-import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import {
   useCallMonitoring,
-  useExportCalls,
   type CallMonitoringFilters,
   type CallMonitoringItem,
 } from '@/features/actionAnalysis'
-import { Button } from '@/components/ui/Button'
 import { Pagination } from '@/components/ui/Pagination'
-import { Icons } from '@/lib/icons'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import { formatDateTime } from '@/lib/formatters'
 import { defaultCustomDateRange } from '../lib/dateRange'
@@ -69,9 +65,7 @@ export function CallsTab() {
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
   }
-  const { data, isLoading, isFetching, error } = useCallMonitoring(queryFilters, callsQueryEnabled)
-
-  const exportMutation = useExportCalls()
+  const { data, isFetching, error } = useCallMonitoring(queryFilters, callsQueryEnabled)
 
   const [recordingCall, setRecordingCall] = useState<CallMonitoringItem | null>(null)
 
@@ -97,19 +91,6 @@ export function CallsTab() {
     setPage(1)
   }
 
-  const handleExport = async () => {
-    try {
-      const exportPayload: CallMonitoringFilters = {
-        ...apiFiltersBase,
-        sort: 'date_desc',
-      }
-      await exportMutation.mutateAsync(exportPayload)
-    } catch (err) {
-      console.error('Export failed:', err)
-      toast.error(t('pages.actionAnalysis.errors.exportFailed', 'Export failed'))
-    }
-  }
-
   const operatorLookup = useMemo(() => {
     const byExt: Record<string, string> = {}
     for (const op of operators) {
@@ -127,34 +108,26 @@ export function CallsTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <CallFiltersBar filters={barState} operators={operators} onChange={handleFiltersChange} />
+      <CallFiltersBar
+        filters={barState}
+        operators={operators}
+        onChange={handleFiltersChange}
+        userTimezone={userTimezone}
+      />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-4 text-sm text-gray-700">
-          <span>
-            <span className="font-medium">{summary?.total_calls ?? 0}</span>{' '}
-            {t('pages.actionAnalysis.summary.total', 'total')}
-          </span>
-          <span>
-            <span className="font-medium">{summary?.outgoing_calls ?? 0}</span>{' '}
-            {t('pages.actionAnalysis.summary.outgoing', 'outgoing')}
-          </span>
-          <span>
-            <span className="font-medium">{summary?.answered_calls ?? 0}</span>{' '}
-            {t('pages.actionAnalysis.summary.answered', 'answered')}
-          </span>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExport}
-          disabled={exportMutation.isPending || isLoading || !callsQueryEnabled}
-        >
-          <Icons.FileDownload size={16} strokeWidth={1.5} />
-          {exportMutation.isPending
-            ? t('pages.actionAnalysis.actions.exporting', 'Exporting…')
-            : t('pages.actionAnalysis.actions.exportExcel', 'Export to Excel')}
-        </Button>
+      <div className="flex flex-wrap gap-4 text-sm text-gray-700">
+        <span>
+          <span className="font-medium">{summary?.total_calls ?? 0}</span>{' '}
+          {t('pages.actionAnalysis.summary.total', 'total')}
+        </span>
+        <span>
+          <span className="font-medium">{summary?.outgoing_calls ?? 0}</span>{' '}
+          {t('pages.actionAnalysis.summary.outgoing', 'outgoing')}
+        </span>
+        <span>
+          <span className="font-medium">{summary?.answered_calls ?? 0}</span>{' '}
+          {t('pages.actionAnalysis.summary.answered', 'answered')}
+        </span>
       </div>
 
       {error ? (
