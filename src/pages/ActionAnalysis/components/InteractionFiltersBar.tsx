@@ -1,9 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type {
-  CallMonitoringPeriod,
-  InteractionMonitoringSortBy,
-  InteractionMonitoringSortDir,
-} from '@/features/actionAnalysis'
+import type { CallMonitoringPeriod } from '@/features/actionAnalysis'
 import type { OperatorUser } from '@/features/users/api/usersApi'
 import type {
   InteractionContactTypeResponse,

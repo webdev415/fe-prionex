@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Button } from '@/components/ui/Button'
@@ -50,9 +50,10 @@ export function EmployeeScopeFilter({ operators, value, onChange }: Props) {
   const [search, setSearch] = useState('')
   const [draftIds, setDraftIds] = useState<number[]>(value.employeeIds)
 
-  useEffect(() => {
-    if (!menuOpen) setDraftIds([...value.employeeIds])
-  }, [value.employeeIds, menuOpen])
+  const handleMenuOpenChange = (open: boolean) => {
+    setMenuOpen(open)
+    if (!open) setDraftIds([...value.employeeIds])
+  }
 
   const filteredOperators = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -110,7 +111,7 @@ export function EmployeeScopeFilter({ operators, value, onChange }: Props) {
         <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
           {t('pages.actionAnalysis.filters.employees', 'Employees')}
         </span>
-        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
+        <DropdownMenu open={menuOpen} onOpenChange={handleMenuOpenChange} modal={false}>
           <DropdownMenuTrigger asChild disabled={value.departmentId != null}>
             <Button
               type="button"

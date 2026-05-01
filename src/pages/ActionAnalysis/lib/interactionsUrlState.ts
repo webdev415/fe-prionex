@@ -122,18 +122,23 @@ export function toInteractionMonitoringQuery(
 ): InteractionMonitoringFilters {
   const resolved = resolveInteractionUsers(state, operators)
   const user_ids = resolved.kind === 'ids' ? resolved.ids : undefined
-  const { customFromDate, customToDate, departmentId: _d, employeeIds: _e, ...rest } = state
 
   let from_datetime: string | undefined
   let to_datetime: string | undefined
-  if (rest.period === 'custom' && customFromDate && customToDate) {
-    const r = localDateStringsToIsoRange(customFromDate, customToDate)
+  if (state.period === 'custom' && state.customFromDate && state.customToDate) {
+    const r = localDateStringsToIsoRange(state.customFromDate, state.customToDate)
     from_datetime = r.from_datetime
     to_datetime = r.to_datetime
   }
 
   return {
-    ...rest,
+    period: state.period,
+    result_ids: state.result_ids,
+    contact_type_ids: state.contact_type_ids,
+    promise_amount_min: state.promise_amount_min,
+    promise_amount_max: state.promise_amount_max,
+    sort_by: state.sort_by,
+    sort_dir: state.sort_dir,
     user_ids,
     from_datetime,
     to_datetime,

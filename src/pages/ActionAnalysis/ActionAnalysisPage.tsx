@@ -43,7 +43,7 @@ export function ActionAnalysisPage() {
       </div>
 
       <div className="border-b border-gray-200">
-        <nav className="-mb-px flex gap-6" role="tablist">
+        <div className="-mb-px flex gap-6" role="tablist">
           {ACTION_ANALYSIS_TABS.map((tab) => {
             const { key, fallback } = TAB_LABEL_KEYS[tab]
             const isActive = activeTab === tab
@@ -64,7 +64,7 @@ export function ActionAnalysisPage() {
               </button>
             )
           })}
-        </nav>
+        </div>
       </div>
 
       <div>
