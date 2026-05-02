@@ -31,7 +31,8 @@
     "reports": "Звіти",
     "scoringConfiguration": "Конфігурація оцінки",
     "systemSettings": "Системні налаштування",
-    "tags": "Теги"
+    "tags": "Теги",
+    "actionAnalysis": "Аналіз дій"
   },
   "search": {
     "placeholder": "Пошук",
@@ -172,6 +173,110 @@
       "mockTableRowClients": "Клієнти",
       "mockTableRowDebt": "Борг у зоні ризику",
       "mockTableRowOverdue": "Частка прострочених"
+    },
+    "actionAnalysis": {
+      "title": "Аналіз дій",
+      "subtitle": "Моніторинг дзвінків та історія взаємодій для команди тренерів.",
+      "tabs": {
+        "calls": "Дзвінки",
+        "interactions": "Історія взаємодій"
+      },
+      "filters": {
+        "operator": "Оператор",
+        "allOperators": "Усі оператори",
+        "employee": "Співробітник",
+        "allEmployees": "Усі співробітники",
+        "period": "Період",
+        "status": "Статус",
+        "minDuration": "Мін. тривалість (с)",
+        "maxDuration": "Макс. тривалість (с)",
+        "contactType": "Тип контакту",
+        "allContactTypes": "Усі",
+        "result": "Результат",
+        "allResults": "Усі",
+        "promiseMin": "Обіцянка від",
+        "promiseMax": "Обіцянка до",
+        "department": "Відділ",
+        "allDepartments": "Усі відділи",
+        "employees": "Співробітники",
+        "employeesCount": "Обрано: {{count}}",
+        "searchEmployees": "Пошук за іменем…",
+        "noOperatorsMatch": "Немає збігів",
+        "clearEmployees": "Очистити",
+        "applyEmployees": "Застосувати",
+        "dateFrom": "Від",
+        "dateTo": "До",
+        "selectDate": "Оберіть дату",
+        "selectStartDate": "Оберіть початкову дату",
+        "selectEndDate": "Оберіть кінцеву дату",
+        "dateRange": "Період",
+        "quickRanges": "Швидко",
+        "minDurationPlaceholder": "напр. 30",
+        "maxDurationPlaceholder": "напр. 600",
+        "promiseMinPlaceholder": "0.00",
+        "promiseMaxPlaceholder": "напр. 1000",
+        "searchEmployeesPlaceholder": "Пошук",
+        "applyFilters": "Застосувати фільтри",
+        "clearAll": "Скинути",
+        "periods": {
+          "today": "Сьогодні",
+          "yesterday": "Вчора",
+          "last_7d": "Останні 7 днів",
+          "last_30d": "Останні 30 днів",
+          "custom": "Довільний"
+        },
+        "statuses": {
+          "all": "Усі",
+          "answered": "Відповідь",
+          "notAnswered": "Без відповіді"
+        }
+      },
+      "columns": {
+        "dateTime": "Дата / Час",
+        "duration": "Тривалість",
+        "status": "Статус",
+        "phone": "Телефон",
+        "agent": "Оператор",
+        "client": "Клієнт",
+        "clientId": "ID клієнта",
+        "promiseDate": "Дата обіцянки",
+        "recording": "Запис",
+        "employee": "Співробітник",
+        "contactType": "Тип контакту",
+        "result": "Результат",
+        "promiseAmount": "Сума обіцянки"
+      },
+      "summary": {
+        "total": "всього",
+        "outgoing": "вихідних",
+        "answered": "відповідей",
+        "totalInteractions": "взаємодій"
+      },
+      "actions": {
+        "exportExcel": "Експорт в Excel",
+        "exporting": "Експорт…",
+        "playRecording": "Відтворити запис"
+      },
+      "phoneSearch": {
+        "title": "Пошук за номером телефону",
+        "placeholder": "Введіть номер телефону",
+        "search": "Знайти",
+        "summary": "{{total}} дзвінок(-ів), {{answered}} з відповіддю"
+      },
+      "empty": "Немає дзвінків, що відповідають фільтрам",
+      "interactionsEmpty": "Немає взаємодій, що відповідають фільтрам",
+      "errors": {
+        "loadFailed": "Не вдалося завантажити дзвінки",
+        "loadInteractionsFailed": "Не вдалося завантажити взаємодії",
+        "departmentNoOperators": "У цьому відділі немає операторів у поточному проєкті.",
+        "exportFailed": "Не вдалося експортувати"
+      },
+      "calls": {
+        "placeholder": "Вкладка «Дзвінки» — незабаром"
+      },
+      "interactions": {
+        "placeholder": "Вкладка «Історія взаємодій» — незабаром"
+      }
     },
     "users": {
       "title": "Управління користувачами",

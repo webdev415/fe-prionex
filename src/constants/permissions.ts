@@ -152,6 +152,14 @@ export const PERMISSIONS = {
   TA_CHAINS: {
     DELETE: 'delete_ta_chains',
   },
+
+  /**
+   * Action Analysis Category (1 permission)
+   * Controls access to action analysis
+   */
+  ACTION_ANALYSIS: {
+    VIEW: 'view_action_analysis',
+  },
 } as const
 
 /**
@@ -201,6 +209,7 @@ export const PERMISSION_CATEGORIES = {
   SELLERS: 'Sellers',
   SCORING_CONFIG: 'Scoring Configuration',
   TA_CHAINS: 'TA Chains',
+  ACTION_ANALYSIS: 'Action Analysis',
 } as const
 
 /**
@@ -270,4 +279,6 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
 
   // TA Chains
   delete_ta_chains: 'Delete TA Chains (refused if the chain has any recorded history)',
+  // Action Analysis
+  view_action_analysis: 'View Action Analysis page (call monitoring & interaction history)',
 }

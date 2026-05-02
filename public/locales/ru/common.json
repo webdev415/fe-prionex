@@ -31,7 +31,8 @@
     "reports": "Отчеты",
     "scoringConfiguration": "Конфигурация оценки",
     "systemSettings": "Системные настройки",
-    "tags": "Теги"
+    "tags": "Теги",
+    "actionAnalysis": "Анализ действий"
   },
   "search": {
     "placeholder": "Поиск",
@@ -172,6 +173,110 @@
       "mockTableRowClients": "Клиенты",
       "mockTableRowDebt": "Долг в зоне риска",
       "mockTableRowOverdue": "Доля просрочки"
+    },
+    "actionAnalysis": {
+      "title": "Анализ действий",
+      "subtitle": "Мониторинг звонков и история взаимодействий для команды тренеров.",
+      "tabs": {
+        "calls": "Звонки",
+        "interactions": "История взаимодействий"
+      },
+      "filters": {
+        "operator": "Оператор",
+        "allOperators": "Все операторы",
+        "employee": "Сотрудник",
+        "allEmployees": "Все сотрудники",
+        "period": "Период",
+        "status": "Статус",
+        "minDuration": "Мин. длительность (с)",
+        "maxDuration": "Макс. длительность (с)",
+        "contactType": "Тип контакта",
+        "allContactTypes": "Все",
+        "result": "Результат",
+        "allResults": "Все",
+        "promiseMin": "Обещание от",
+        "promiseMax": "Обещание до",
+        "department": "Отдел",
+        "allDepartments": "Все отделы",
+        "employees": "Сотрудники",
+        "employeesCount": "Выбрано: {{count}}",
+        "searchEmployees": "Поиск по имени…",
+        "noOperatorsMatch": "Нет совпадений",
+        "clearEmployees": "Сбросить",
+        "applyEmployees": "Применить",
+        "dateFrom": "С",
+        "dateTo": "По",
+        "selectDate": "Выберите дату",
+        "selectStartDate": "Выберите начальную дату",
+        "selectEndDate": "Выберите конечную дату",
+        "dateRange": "Период",
+        "quickRanges": "Быстро",
+        "minDurationPlaceholder": "напр. 30",
+        "maxDurationPlaceholder": "напр. 600",
+        "promiseMinPlaceholder": "0.00",
+        "promiseMaxPlaceholder": "напр. 1000",
+        "searchEmployeesPlaceholder": "Поиск",
+        "applyFilters": "Применить фильтры",
+        "clearAll": "Сбросить",
+        "periods": {
+          "today": "Сегодня",
+          "yesterday": "Вчера",
+          "last_7d": "Последние 7 дней",
+          "last_30d": "Последние 30 дней",
+          "custom": "Произвольный"
+        },
+        "statuses": {
+          "all": "Все",
+          "answered": "Отвечен",
+          "notAnswered": "Не отвечен"
+        }
+      },
+      "columns": {
+        "dateTime": "Дата / Время",
+        "duration": "Длительность",
+        "status": "Статус",
+        "phone": "Телефон",
+        "agent": "Оператор",
+        "client": "Клиент",
+        "clientId": "ID клиента",
+        "promiseDate": "Дата обещания",
+        "recording": "Запись",
+        "employee": "Сотрудник",
+        "contactType": "Тип контакта",
+        "result": "Результат",
+        "promiseAmount": "Сумма обещания"
+      },
+      "summary": {
+        "total": "всего",
+        "outgoing": "исходящих",
+        "answered": "отвечено",
+        "totalInteractions": "взаимодействий"
+      },
+      "actions": {
+        "exportExcel": "Экспорт в Excel",
+        "exporting": "Экспорт…",
+        "playRecording": "Воспроизвести запись"
+      },
+      "phoneSearch": {
+        "title": "Поиск по номеру телефона",
+        "placeholder": "Введите номер телефона",
+        "search": "Найти",
+        "summary": "{{total}} звонок(-ов), {{answered}} отвечено"
+      },
+      "empty": "Нет звонков, соответствующих фильтрам",
+      "interactionsEmpty": "Нет взаимодействий, соответствующих фильтрам",
+      "errors": {
+        "loadFailed": "Не удалось загрузить звонки",
+        "loadInteractionsFailed": "Не удалось загрузить взаимодействия",
+        "departmentNoOperators": "В этом отделе нет операторов в текущем проекте.",
+        "exportFailed": "Не удалось экспортировать"
+      },
+      "calls": {
+        "placeholder": "Вкладка «Звонки» — скоро будет доступна"
+      },
+      "interactions": {
+        "placeholder": "Вкладка «История взаимодействий» — скоро будет доступна"
+      }
     },
     "users": {
       "title": "Управление пользователями",

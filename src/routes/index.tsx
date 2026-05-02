@@ -72,6 +72,11 @@ const ReportsDashboardPage = lazy(() =>
     default: m.ReportsDashboardPage,
   }))
 )
+const ActionAnalysisPage = lazy(() =>
+  import('@/pages/ActionAnalysis').then((m) => ({
+    default: m.ActionAnalysisPage,
+  }))
+)
 const SellerManagementPage = lazy(() =>
   import('@/pages/SellerManagement').then((m) => ({
     default: m.SellerManagementPage,
@@ -217,6 +222,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.REPORTS.VIEW_ALL_REPORTS}>
             {withSuspense(<ReportsDashboardPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'action-analysis',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.ACTION_ANALYSIS.VIEW}>
+            {withSuspense(<ActionAnalysisPage />)}
           </PermissionRoute>
         ),
       },

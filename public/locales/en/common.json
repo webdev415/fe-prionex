@@ -31,7 +31,8 @@
     "reports": "Reports",
     "scoringConfiguration": "Scoring Configuration",
     "systemSettings": "System Settings",
-    "tags": "Tags"
+    "tags": "Tags",
+    "actionAnalysis": "Action Analysis"
   },
   "search": {
     "placeholder": "Search",
@@ -172,6 +173,110 @@
       "mockTableRowClients": "Clients",
       "mockTableRowDebt": "Debt at risk",
       "mockTableRowOverdue": "Overdue ratio"
+    },
+    "actionAnalysis": {
+      "title": "Action Analysis",
+      "subtitle": "Call monitoring and interaction history for the trainer team.",
+      "tabs": {
+        "calls": "Calls",
+        "interactions": "Interaction History"
+      },
+      "filters": {
+        "operator": "Operator",
+        "allOperators": "All operators",
+        "employee": "Employee",
+        "allEmployees": "All employees",
+        "period": "Period",
+        "status": "Status",
+        "minDuration": "Min duration (s)",
+        "maxDuration": "Max duration (s)",
+        "contactType": "Contact type",
+        "allContactTypes": "All",
+        "result": "Result",
+        "allResults": "All",
+        "promiseMin": "Promise min",
+        "promiseMax": "Promise max",
+        "department": "Department",
+        "allDepartments": "All departments",
+        "employees": "Employees",
+        "employeesCount": "{{count}} selected",
+        "searchEmployees": "Search by name…",
+        "noOperatorsMatch": "No matches",
+        "clearEmployees": "Clear",
+        "applyEmployees": "Apply",
+        "dateFrom": "From",
+        "dateTo": "To",
+        "selectDate": "Select date",
+        "selectStartDate": "Select start date",
+        "selectEndDate": "Select end date",
+        "dateRange": "Date Range",
+        "quickRanges": "Quick",
+        "minDurationPlaceholder": "e.g. 30",
+        "maxDurationPlaceholder": "e.g. 600",
+        "promiseMinPlaceholder": "0.00",
+        "promiseMaxPlaceholder": "e.g. 1000",
+        "searchEmployeesPlaceholder": "Search",
+        "applyFilters": "Apply Filters",
+        "clearAll": "Clear All",
+        "periods": {
+          "today": "Today",
+          "yesterday": "Yesterday",
+          "last_7d": "Last 7 days",
+          "last_30d": "Last 30 days",
+          "custom": "Custom"
+        },
+        "statuses": {
+          "all": "All",
+          "answered": "Answered",
+          "notAnswered": "Not answered"
+        }
+      },
+      "columns": {
+        "dateTime": "Date / Time",
+        "duration": "Duration",
+        "status": "Status",
+        "phone": "Phone",
+        "agent": "Operator",
+        "client": "Client",
+        "clientId": "Client ID",
+        "promiseDate": "Promise date",
+        "recording": "Recording",
+        "employee": "Employee",
+        "contactType": "Contact type",
+        "result": "Result",
+        "promiseAmount": "Promise amount"
+      },
+      "summary": {
+        "total": "total",
+        "outgoing": "outgoing",
+        "answered": "answered",
+        "totalInteractions": "interactions"
+      },
+      "actions": {
+        "exportExcel": "Export to Excel",
+        "exporting": "Exporting…",
+        "playRecording": "Play recording"
+      },
+      "phoneSearch": {
+        "title": "Phone number search",
+        "placeholder": "Enter phone number",
+        "search": "Search",
+        "summary": "{{total}} call(s), {{answered}} answered"
+      },
+      "empty": "No calls match the current filters",
+      "interactionsEmpty": "No interactions match the current filters",
+      "errors": {
+        "loadFailed": "Failed to load calls",
+        "loadInteractionsFailed": "Failed to load interactions",
+        "departmentNoOperators": "No operators in this department for the current project.",
+        "exportFailed": "Export failed"
+      },
+      "calls": {
+        "placeholder": "Calls tab — coming soon"
+      },
+      "interactions": {
+        "placeholder": "Interaction History tab — coming soon"
+      }
     },
     "users": {
       "title": "User Management",
