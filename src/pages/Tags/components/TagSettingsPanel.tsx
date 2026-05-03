@@ -5,7 +5,7 @@
  * dropdown options, events, conditions, and mutex groups.
  */
 
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTagConfigStore } from '@/stores/tagConfigStore'
 import { ConfigListEditor } from './ConfigListEditor'
@@ -14,6 +14,13 @@ import { SegmentPresetManager } from './SegmentPresetManager'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import type { TagDefinition } from '@/features/tags'
+import {
+  useTagSettings,
+  usePutTagSettings,
+  useResetTagSettings,
+} from '@/features/tags/hooks/useTagSettings'
+import { PermissionGuard } from '@/components/auth/PermissionGuard'
+import { PERMISSIONS } from '@/constants/permissions'
 
 interface TagSettingsPanelProps {
   tags: TagDefinition[]
@@ -34,6 +41,101 @@ export function TagSettingsPanel({
   const [openSection, setOpenSection] = useState<SectionId | null>('dictionary')
 
   const config = useTagConfigStore()
+  const loadFromServer = useTagConfigStore((state) => state.loadFromServer)
+
+  // Backend integration: fetch project-wide settings on mount, fall back to
+  // baked-in DEFAULT_CONFIG if PR2-BE is not yet deployed.
+  const settingsQuery = useTagSettings()
+  const putMutation = usePutTagSettings()
+  const resetMutation = useResetTagSettings()
+
+  // Snapshot of the last value confirmed by backend. State (not ref) because
+  // it participates in `isDirty` derivation during render. lastServerStamp is
+  // a ref because it only guards the effect and never feeds the render output.
+  const [lastSavedSnapshot, setLastSavedSnapshot] = useState<string | null>(null)
+  const lastServerStamp = useRef<string | null>(null)
+
+  useEffect(() => {
+    const data = settingsQuery.data
+    if (!data) return
+    const stamp = `${data.updated_at}|${data.schema_version}`
+    if (stamp === lastServerStamp.current) return
+    lastServerStamp.current = stamp
+    loadFromServer(data.value as Record<string, unknown>)
+    // Sync derived snapshot with the just-loaded server value. setState here
+    // is the documented pattern for adapting external (React Query) state to
+    // component state — see React docs "You Might Not Need an Effect", section
+    // on syncing with external data sources.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLastSavedSnapshot(JSON.stringify(data.value))
+  }, [settingsQuery.data, loadFromServer])
+
+  const currentSnapshot = useMemo(
+    () =>
+      JSON.stringify({
+        categories: config.categories,
+        visibilities: config.visibilities,
+        expiryTypes: config.expiryTypes,
+        presetColors: config.presetColors,
+        triggerTypes: config.triggerTypes,
+        actionTypes: config.actionTypes,
+        conditionFields: config.conditionFields,
+        operators: config.operators,
+        refreshModes: config.refreshModes,
+        rulePresets: config.rulePresets,
+        segmentPresets: config.segmentPresets,
+      }),
+    [
+      config.categories,
+      config.visibilities,
+      config.expiryTypes,
+      config.presetColors,
+      config.triggerTypes,
+      config.actionTypes,
+      config.conditionFields,
+      config.operators,
+      config.refreshModes,
+      config.rulePresets,
+      config.segmentPresets,
+    ]
+  )
+
+  const isDirty = lastSavedSnapshot !== null && currentSnapshot !== lastSavedSnapshot
+
+  const handleSave = () => {
+    const payload = {
+      categories: config.categories,
+      visibilities: config.visibilities,
+      expiryTypes: config.expiryTypes,
+      presetColors: config.presetColors,
+      triggerTypes: config.triggerTypes,
+      actionTypes: config.actionTypes,
+      conditionFields: config.conditionFields,
+      operators: config.operators,
+      refreshModes: config.refreshModes,
+      rulePresets: config.rulePresets,
+      segmentPresets: config.segmentPresets,
+      // availableEvents intentionally NOT sent — read-only event registry
+      // is owned by backend (`/api/v1/tags/event-registry`).
+    }
+    putMutation.mutate(payload, {
+      onSuccess: () => {
+        setLastSavedSnapshot(JSON.stringify(payload))
+      },
+    })
+  }
+
+  const handleReset = () => {
+    if (!window.confirm(t('pages.tags.settings.confirmReset', 'Reset all settings to defaults?'))) {
+      return
+    }
+    resetMutation.mutate(undefined, {
+      onSuccess: (data) => {
+        loadFromServer(data.value as Record<string, unknown>)
+        setLastSavedSnapshot(JSON.stringify(data.value))
+      },
+    })
+  }
 
   const toggleSection = (id: SectionId) => {
     setOpenSection((prev) => (prev === id ? null : id))
@@ -77,29 +179,47 @@ export function TagSettingsPanel({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">
-          {t(
-            'pages.tags.settings.description',
-            'Manage dropdown options, events, and rule conditions. Changes apply immediately to all forms.'
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-1 items-center gap-3">
+          <p className="text-xs text-gray-500">
+            {t(
+              'pages.tags.settings.description',
+              'Manage dropdown options, events, and rule conditions. Save to apply changes for everyone in this project.'
+            )}
+          </p>
+          {isDirty && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+              {t('pages.tags.settings.unsavedChanges', 'Unsaved changes')}
+            </span>
           )}
-        </p>
-        <Button
-          size="sm"
-          variant="cancel"
-          onClick={() => {
-            if (
-              window.confirm(
-                t('pages.tags.settings.confirmReset', 'Reset all settings to defaults?')
-              )
-            ) {
-              config.resetToDefaults()
-            }
-          }}
-          className="text-xs"
-        >
-          {t('pages.tags.settings.resetDefaults', 'Reset defaults')}
-        </Button>
+          {settingsQuery.data?.is_default && (
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-600">
+              {t('pages.tags.settings.usingDefaults', 'Using defaults')}
+            </span>
+          )}
+        </div>
+        <PermissionGuard permission={PERMISSIONS.TAGS.MANAGE_SETTINGS}>
+          <Button
+            size="sm"
+            variant="cancel"
+            onClick={handleReset}
+            disabled={resetMutation.isPending || putMutation.isPending}
+            className="text-xs"
+          >
+            {t('pages.tags.settings.resetDefaults', 'Reset defaults')}
+          </Button>
+        </PermissionGuard>
+        <PermissionGuard permission={PERMISSIONS.TAGS.MANAGE_SETTINGS}>
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={!isDirty || putMutation.isPending || resetMutation.isPending}
+            isLoading={putMutation.isPending}
+            className="text-xs"
+          >
+            {t('pages.tags.settings.save', 'Save')}
+          </Button>
+        </PermissionGuard>
       </div>
 
       {sections.map((section) => (
