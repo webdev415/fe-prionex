@@ -1696,6 +1696,7 @@
         "viewAll": "View All",
         "showLess": "Show Less",
         "tableHeaders": {
+          "paymentDate": "Payment Date",
           "date": "Payment Added Date",
           "paymentConfirmationDate": "Payment Confirmation Date",
           "amount": "Amount",

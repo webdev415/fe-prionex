@@ -1724,6 +1724,7 @@
         "viewAll": "Переглянути всі",
         "showLess": "Показати менше",
         "tableHeaders": {
+          "paymentDate": "Дата платежу",
           "date": "Дата додавання платежу",
           "paymentConfirmationDate": "Дата підтвердження платежу",
           "amount": "Сума",
