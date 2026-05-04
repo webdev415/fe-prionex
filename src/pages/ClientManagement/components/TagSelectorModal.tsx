@@ -24,6 +24,7 @@ import { Icons } from '@/lib/icons'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
+import { useTranslation } from 'react-i18next'
 
 interface TagSelectorModalProps {
   clientId: number
@@ -40,6 +41,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
   open,
   onClose,
 }: TagSelectorModalProps) {
+  const { t } = useTranslation('common')
   const queryClient = useQueryClient()
   const canAssignTags = useHasPermission(PERMISSIONS.CLIENTS.ASSIGN_TAGS)
   const { data: allTags, isLoading: tagsLoading } = useTags(projectId)
@@ -106,10 +108,10 @@ export const TagSelectorModal = memo(function TagSelectorModal({
         ...toRemove.map((tagId) => removeMutation.mutateAsync({ clientId, tagId })),
       ])
 
-      toast.success(`Tags updated for ${clientName}`)
+      toast.success(t('pages.clients.modals.tagSelector.tagsUpdated', { name: clientName }))
       onClose()
     } catch {
-      toast.error('Failed to update tags')
+      toast.error(t('pages.clients.modals.tagSelector.updateFailed'))
       queryClient.invalidateQueries({ queryKey: ['clients', clientId, 'tags'] })
     } finally {
       setIsSaving(false)
@@ -125,6 +127,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
     clientName,
     onClose,
     canAssignTags,
+    t,
   ])
 
   const isLoading = tagsLoading || clientTagsLoading
@@ -133,19 +136,21 @@ export const TagSelectorModal = memo(function TagSelectorModal({
     <Modal open={open} onClose={onClose} maxWidth="lg" data-testid="tag-selector-modal">
       <ModalHeader
         icon={<Icons.Contact size={24} className="text-primary-500" />}
-        title={`Manage Tags - ${clientName}`}
+        title={t('pages.clients.modals.tagSelector.title', { name: clientName })}
       />
 
       <ModalContent>
         {isLoading ? (
           <div className="flex items-center justify-center py-6 sm:py-8">
-            <div className="text-xs text-gray-600 sm:text-sm">Loading tags...</div>
+            <div className="text-xs text-gray-600 sm:text-sm">
+              {t('pages.clients.modals.tagSelector.loadingTags')}
+            </div>
           </div>
         ) : (
           <>
             <div className="mb-3 sm:mb-4">
               <Input
-                placeholder="Search tags..."
+                placeholder={t('pages.clients.modals.tagSelector.searchTags')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 leftIcon={<Icons.Search size={16} />}
@@ -154,7 +159,10 @@ export const TagSelectorModal = memo(function TagSelectorModal({
             </div>
 
             <div className="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm">
-              {selectedTagIds.size} of {allTags?.length || 0} tags selected
+              {t('pages.clients.modals.tagSelector.selectedCount', {
+                selected: selectedTagIds.size,
+                total: allTags?.length || 0,
+              })}
             </div>
 
             <div className="max-h-64 space-y-2 overflow-y-auto sm:max-h-96">
@@ -180,8 +188,8 @@ export const TagSelectorModal = memo(function TagSelectorModal({
               ) : (
                 <div className="py-6 text-center text-xs text-gray-500 sm:py-8 sm:text-sm">
                   {debouncedSearchQuery
-                    ? 'No tags found matching your search'
-                    : 'No tags available'}
+                    ? t('pages.clients.modals.tagSelector.noTagsMatch')
+                    : t('pages.clients.modals.tagSelector.noTagsAvailable')}
                 </div>
               )}
             </div>
@@ -196,7 +204,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
           disabled={isSaving}
           className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button
           onClick={handleSave}
@@ -204,7 +212,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
           disabled={isLoading || !canAssignTags}
           className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
-          Save Tags
+          {t('pages.clients.modals.tagSelector.saveTags')}
         </Button>
       </ModalFooter>
     </Modal>

@@ -62,7 +62,7 @@ function formatDate(iso: string): string {
 }
 
 export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAccordionProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation('common')
   const queryClient = useQueryClient()
 
   // Preview modal state

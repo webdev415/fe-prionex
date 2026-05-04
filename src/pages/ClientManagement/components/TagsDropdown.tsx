@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import type { Tag } from '@/features/tags/types'
+import { useTranslation } from 'react-i18next'
 
 interface TagsDropdownProps {
   tags: Tag[]
@@ -30,6 +31,7 @@ export function TagsDropdown({
   onOpenChange,
   trigger,
 }: TagsDropdownProps) {
+  const { t } = useTranslation('common')
   const [searchQuery, setSearchQuery] = useState('')
   const [tempSelection, setTempSelection] = useState<number[]>(selectedTagIds)
   const [isOpen, setIsOpen] = useState(false)
@@ -89,7 +91,7 @@ export function TagsDropdown({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search tags..."
+            placeholder={t('pages.clients.detail.tagsDropdown.searchTags')}
             className="text-dark-500 focus:border-primary-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-gray-400"
           />
         </div>
@@ -97,7 +99,9 @@ export function TagsDropdown({
         {/* Tags List */}
         <div className="max-h-[200px] overflow-y-auto p-2">
           {filteredTags.length === 0 ? (
-            <div className="py-4 text-center text-sm text-gray-500">No tags found</div>
+            <div className="py-4 text-center text-sm text-gray-500">
+              {t('pages.clients.detail.tagsDropdown.noTagsFound')}
+            </div>
           ) : (
             <div className="space-y-1">
               {filteredTags.map((tag) => (
@@ -123,10 +127,10 @@ export function TagsDropdown({
         <div className="border-t border-gray-200 p-3">
           <div className="flex items-center gap-2">
             <Button variant="cancel" onClick={handleClear} className="flex flex-1">
-              Clear
+              {t('pages.clients.detail.tagsDropdown.clear')}
             </Button>
             <Button variant="primary" onClick={handleApply} className="flex flex-1">
-              Apply
+              {t('pages.clients.detail.tagsDropdown.apply')}
             </Button>
           </div>
         </div>

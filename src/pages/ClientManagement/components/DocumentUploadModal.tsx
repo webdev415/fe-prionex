@@ -29,18 +29,18 @@ interface DocumentUploadModalProps {
   loans: Loan[]
 }
 
-const DOC_TYPES = [
-  { value: 'passport', label: 'Паспорт' },
-  { value: 'inn', label: 'ІНН' },
-  { value: 'contract', label: 'Договір' },
-  { value: 'income', label: 'Довідка про доходи' },
-  { value: 'outcome', label: 'Витяг' },
-  { value: 'signature', label: 'ЕЦП' },
-  { value: 'other', label: 'Інше' },
-]
+const DOC_TYPE_VALUES = [
+  'passport',
+  'inn',
+  'contract',
+  'income',
+  'outcome',
+  'signature',
+  'other',
+] as const
 
 export function DocumentUploadModal({ open, onClose, clientId, loans }: DocumentUploadModalProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation('common')
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -68,14 +68,14 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
     try {
       await documentApi.upload(clientId, file, docType, debtId)
       queryClient.invalidateQueries({ queryKey: clientKeys.documents(clientId) })
-      toast.success(t('common.success', 'Success'))
+      toast.success(t('status.success'))
       // Reset and close
       setFile(null)
       setDocType('other')
       setDebtId(null)
       onClose()
     } catch {
-      toast.error(t('common.error', 'Error'))
+      toast.error(t('status.error'))
     } finally {
       setUploading(false)
     }
@@ -90,7 +90,7 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
 
   return (
     <Modal open={open} onClose={handleClose} maxWidth="md">
-      <ModalHeader title={t('pages.clients.detail.uploadDocument', 'Завантажити документ')} />
+      <ModalHeader title={t('pages.clients.detail.documentUploadTitle')} />
 
       <div className="flex flex-col gap-4 p-4 md:p-6">
         <Button
@@ -98,9 +98,9 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
           type="button"
           className="w-full"
           leftIcon={<Icons.AddInvoice size={16} />}
-          onClick={() => toast.info(t('common.soon', 'Незабаром'))}
+          onClick={() => toast.info(t('pages.clients.detail.comingSoon'))}
         >
-          {t('pages.clients.detail.generateDocument', 'Сгенерувати документ')}
+          {t('pages.clients.detail.generateDocument')}
         </Button>
 
         {/* File drop zone */}
@@ -166,10 +166,7 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
                 <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
               <span className="text-secondary-600 text-sm">
-                {t(
-                  'pages.clients.detail.dropFileHere',
-                  'Перетягніть файл або натисніть для вибору'
-                )}
+                {t('pages.clients.detail.dropFileOrClick')}
               </span>
             </div>
           )}
@@ -179,16 +176,16 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-secondary-700 mb-1 block text-sm font-medium">
-              {t('pages.clients.detail.tableHeaders.documentType', 'Тип документа')}
+              {t('pages.clients.detail.documentType')}
             </label>
             <select
               value={docType}
               onChange={(e) => setDocType(e.target.value)}
               className="border-secondary-300 text-secondary-900 focus:border-primary-400 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none"
             >
-              {DOC_TYPES.map((dt) => (
-                <option key={dt.value} value={dt.value}>
-                  {dt.label}
+              {DOC_TYPE_VALUES.map((value) => (
+                <option key={value} value={value}>
+                  {t(`pages.clients.detail.documentTypes.${value}`)}
                 </option>
               ))}
             </select>
@@ -196,16 +193,14 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
 
           <div>
             <label className="text-secondary-700 mb-1 block text-sm font-medium">
-              {t('pages.clients.detail.loan', 'Кредит')}
+              {t('pages.clients.detail.loan')}
             </label>
             <select
               value={debtId ?? ''}
               onChange={(e) => setDebtId(e.target.value ? Number(e.target.value) : null)}
               className="border-secondary-300 text-secondary-900 focus:border-primary-400 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none"
             >
-              <option value="">
-                {t('pages.clients.detail.documentsUnlinked', "Без прив'язки")}
-              </option>
+              <option value="">{t('pages.clients.detail.documentsUnlinked')}</option>
               {loans.map((loan) => (
                 <option key={loan.id} value={loan.id}>
                   #{loan.loanNumber} — {loan.counterparty}
@@ -218,12 +213,10 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
 
       <ModalFooter>
         <Button variant="outline" onClick={handleClose}>
-          {t('common.cancel', 'Скасувати')}
+          {t('actions.cancel')}
         </Button>
         <Button onClick={handleUpload} disabled={!file || uploading}>
-          {uploading
-            ? t('common.loading', 'Завантаження...')
-            : t('pages.clients.detail.uploadDocument', 'Завантажити')}
+          {uploading ? t('status.loading') : t('pages.clients.detail.documentUploadAction')}
         </Button>
       </ModalFooter>
     </Modal>
