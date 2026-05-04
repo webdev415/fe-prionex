@@ -77,6 +77,67 @@
     "uk": "Украинский",
     "ru": "Русский"
   },
+  "notificationBell": {
+    "title": "Уведомления",
+    "markAllRead": "Отметить все как прочитанные",
+    "ariaLabel": "Уведомления",
+    "ariaLabelWithCount": "Уведомления ({{count}})",
+    "noNotifications": "Нет уведомлений",
+    "sections": {
+      "pendingPayments": "Ожидающие платежи",
+      "tasks": "Задачи",
+      "calls": "Звонки",
+      "tags": "Теги",
+      "taChains": "Цепочки TA"
+    },
+    "payment": {
+      "pending": "ожидает",
+      "daysPending_one": "{{count}} день",
+      "daysPending_few": "{{count}} дня",
+      "daysPending_many": "{{count}} дней"
+    },
+    "paymentMethod": {
+      "bank_transfer": "Банковский перевод",
+      "online_gateway": "Онлайн-шлюз",
+      "cash": "Наличные",
+      "card": "Карта",
+      "other": "Другое"
+    },
+    "clientNumber": "Клиент №{{id}}",
+    "idLabel": "ID: {{id}}",
+    "debtLabel": "Долг: {{id}}",
+    "chainLabel": "Цепочка:",
+    "resultLabel": "Результат:",
+    "byOperator": "от {{name}}",
+    "errors": {
+      "dismissFailed": "Не удалось скрыть уведомление",
+      "markAllReadFailed": "Не удалось отметить все как прочитанные"
+    },
+    "taskPriority": {
+      "high": "высокий",
+      "normal": "обычный",
+      "low": "низкий"
+    },
+    "taskStatus": {
+      "pending": "ожидает",
+      "in_progress": "в работе",
+      "completed": "завершено",
+      "extended": "продлено",
+      "rejected": "отклонено",
+      "incoming_line_result": "результат входящей линии"
+    },
+    "relative": {
+      "justNow": "только что",
+      "minutesAgo": "{{count}} мин. назад",
+      "hoursAgo_one": "{{count}} ч назад",
+      "hoursAgo_few": "{{count}} ч назад",
+      "hoursAgo_many": "{{count}} ч назад",
+      "daysAgo_one": "{{count}} день назад",
+      "daysAgo_few": "{{count}} дня назад",
+      "daysAgo_many": "{{count}} дней назад"
+    },
+    "dismissAria": "Закрыть уведомление"
+  },
   "common": {
     "step": "Шаг",
     "selected": "Выбрано",

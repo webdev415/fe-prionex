@@ -77,6 +77,64 @@
     "uk": "Ukrainian",
     "ru": "Russian"
   },
+  "notificationBell": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "ariaLabel": "Notifications",
+    "ariaLabelWithCount": "Notifications ({{count}})",
+    "noNotifications": "No notifications",
+    "sections": {
+      "pendingPayments": "Pending Payments",
+      "tasks": "Tasks",
+      "calls": "Calls",
+      "tags": "Tags",
+      "taChains": "TA Chains"
+    },
+    "payment": {
+      "pending": "pending",
+      "daysPending_one": "{{count}}d",
+      "daysPending_other": "{{count}}d"
+    },
+    "paymentMethod": {
+      "bank_transfer": "Bank transfer",
+      "online_gateway": "Online gateway",
+      "cash": "Cash",
+      "card": "Card",
+      "other": "Other"
+    },
+    "clientNumber": "Client #{{id}}",
+    "idLabel": "ID: {{id}}",
+    "debtLabel": "Debt: {{id}}",
+    "chainLabel": "Chain:",
+    "resultLabel": "Result:",
+    "byOperator": "by {{name}}",
+    "errors": {
+      "dismissFailed": "Failed to dismiss notification",
+      "markAllReadFailed": "Failed to mark all as read"
+    },
+    "taskPriority": {
+      "high": "high",
+      "normal": "normal",
+      "low": "low"
+    },
+    "taskStatus": {
+      "pending": "pending",
+      "in_progress": "in progress",
+      "completed": "completed",
+      "extended": "extended",
+      "rejected": "rejected",
+      "incoming_line_result": "incoming line result"
+    },
+    "relative": {
+      "justNow": "just now",
+      "minutesAgo": "{{count}} min ago",
+      "hoursAgo_one": "{{count}}h ago",
+      "hoursAgo_other": "{{count}}h ago",
+      "daysAgo_one": "{{count}}d ago",
+      "daysAgo_other": "{{count}}d ago"
+    },
+    "dismissAria": "Dismiss notification"
+  },
   "common": {
     "step": "Step",
     "selected": "Selected",
