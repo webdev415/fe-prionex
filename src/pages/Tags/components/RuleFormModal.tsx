@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { RuleExecutionsModal } from './RuleExecutionsModal'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -210,6 +211,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
   )
 
   const [isCustomEvent, setIsCustomEvent] = useState(false)
+  const [executionsOpen, setExecutionsOpen] = useState(false)
 
   const {
     register,
@@ -887,6 +889,17 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
         </ModalContent>
 
         <ModalFooter>
+          {isEdit && rule && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setExecutionsOpen(true)}
+              className="mr-auto"
+            >
+              <Icons.Clock01 size={14} strokeWidth={2} className="mr-1" />
+              {t('pages.tags.rules.viewExecutions', 'View executions')}
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -903,6 +916,14 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
           </Button>
         </ModalFooter>
       </form>
+      {isEdit && rule && (
+        <RuleExecutionsModal
+          open={executionsOpen}
+          ruleId={rule.id}
+          ruleName={rule.name}
+          onClose={() => setExecutionsOpen(false)}
+        />
+      )}
     </Modal>
   )
 }
