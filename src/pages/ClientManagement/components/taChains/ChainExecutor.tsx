@@ -2085,7 +2085,6 @@ export function ChainExecutor({
                     {effectiveChain.name} —{' '}
                     {t('pages.clientChains.stepCount', {
                       count: effectiveSteps.length,
-                      defaultValue: '{{count}} steps',
                     })}
                   </p>
                   <ol className="flex flex-col">
