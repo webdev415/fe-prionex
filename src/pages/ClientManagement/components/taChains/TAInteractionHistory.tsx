@@ -114,7 +114,9 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       header: t('pages.clientChains.history.date'),
       align: 'left',
       render: (row) => (
-        <span className="text-xs text-gray-700">{new Date(row.created_at).toLocaleString()}</span>
+        <span className="text-xs text-gray-700">
+          {formatDateTime(row.created_at, user?.timezone)}
+        </span>
       ),
     },
     {
@@ -173,7 +175,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               .join(', ')
           }
           if (fieldType === 'amount') return formatMoneyKopeckTight(val)
-          if (fieldType === 'date') return formatDateTime(val)
+          if (fieldType === 'date') return formatDateTime(val, user?.timezone)
           return val
         }
 

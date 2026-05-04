@@ -11,7 +11,9 @@ export function useNotifications(params?: {
   return useQuery({
     queryKey: ['notifications', params],
     queryFn: () => notificationApi.getNotifications(params ?? { page: 1, page_size: 50 }),
-    staleTime: 30_000,
+    staleTime: 15_000,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   })
 }
 
