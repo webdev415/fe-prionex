@@ -1221,22 +1221,37 @@ export function DebtSummaryPage() {
                               index % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
                             }`}
                           >
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium whitespace-nowrap sm:px-6">
                               {formatIsoDate(
                                 paymentHistoryData?.payments.find((p) => p.id === payment.id)
                                   ?.payment_date
                               )}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
-                              {convertUTCToUserTimezone(payment.date, userTimezone)}
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium whitespace-nowrap sm:px-6">
+                              {(() => {
+                                const formatted = convertUTCToUserTimezone(
+                                  payment.date,
+                                  userTimezone
+                                )
+                                const spaceIdx = formatted.indexOf(' ')
+                                const datePart =
+                                  spaceIdx >= 0 ? formatted.slice(0, spaceIdx) : formatted
+                                const timePart = spaceIdx >= 0 ? formatted.slice(spaceIdx + 1) : ''
+                                return (
+                                  <div className="flex flex-col leading-tight">
+                                    <span>{datePart}</span>
+                                    {timePart && <span className="text-dark-400">{timePart}</span>}
+                                  </div>
+                                )
+                              })()}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium whitespace-nowrap sm:px-6">
                               {formatIsoDate(
                                 paymentHistoryData?.payments.find((p) => p.id === payment.id)
                                   ?.payment_confirmation_date
                               )}
                             </td>
-                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
+                            <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium whitespace-nowrap sm:px-6">
                               {formatMoneyUAHTwoDecimals(payment.amount)}
                             </td>
                             <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-xs font-medium sm:px-6">
