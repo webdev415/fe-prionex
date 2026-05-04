@@ -111,9 +111,9 @@ const BulkOperatorAssignmentPage = lazy(() =>
     default: m.BulkOperatorAssignmentPage,
   }))
 )
-const BulkPaymentImportPage = lazy(() =>
+const BulkPaymentVerificationPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
-    default: m.BulkPaymentImportPage,
+    default: m.BulkPaymentVerificationPage,
   }))
 )
 
@@ -301,7 +301,7 @@ export const router = createBrowserRouter([
         path: 'operations/bulk-payment-import',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT_PAYMENTS}>
-            {withSuspense(<BulkPaymentImportPage />)}
+            {withSuspense(<BulkPaymentVerificationPage />)}
           </PermissionRoute>
         ),
       },

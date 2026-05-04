@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
 import {
   usePaymentImportUpload,
@@ -15,7 +16,8 @@ import { toast } from 'sonner'
 
 type PageState = 'upload' | 'preview' | 'processing'
 
-export function BulkPaymentImportPage() {
+export function BulkPaymentVerificationPage() {
+  const { t } = useTranslation('common')
   const [state, setState] = useState<PageState>('upload')
   const [preview, setPreview] = useState<PaymentImportPreviewResponse | null>(null)
   const [activeJobId, setActiveJobId] = useState<number | null>(null)
@@ -30,7 +32,7 @@ export function BulkPaymentImportPage() {
 
   const handleFileSelected = (file: File) => {
     if (!activeProjectId) {
-      toast.error('Please select an active project before uploading.')
+      toast.error(t('pages.imports.bulkPaymentVerification.noProjectToast'))
       return
     }
 
@@ -82,9 +84,10 @@ export function BulkPaymentImportPage() {
 
   return (
     <div>
-      {/* Page Header */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">Bulk Payment Verification</h1>
+        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+          {t('pages.imports.bulkPaymentVerification.title')}
+        </h1>
 
         <Button
           variant="primary"
@@ -92,7 +95,7 @@ export function BulkPaymentImportPage() {
           leftIcon={<Icons.TransactionHistory size={20} className="text-dark-500" />}
           className="flex h-10 w-full flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:h-12 sm:w-auto"
         >
-          Import History
+          {t('pages.imports.bulkPaymentVerification.viewHistory')}
         </Button>
       </div>
 

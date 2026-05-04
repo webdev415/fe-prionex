@@ -638,7 +638,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           },
           {
             path: '/dashboard/operations/bulk-payment-import',
-            label: t('navigation.bulkPaymentImport', 'Bulk Payment Import'),
+            label: t('navigation.bulkPaymentVerification'),
             icon: 'transaction-history',
             requiredPermission: PERMISSIONS.DATA.IMPORT_PAYMENTS,
           },
