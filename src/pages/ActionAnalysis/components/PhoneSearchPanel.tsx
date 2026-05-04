@@ -11,9 +11,10 @@ const PANEL_SURFACE = 'rounded-xl bg-white/50 p-4 shadow-sm sm:p-6'
 
 interface Props {
   onPlayRecording: (call: CallMonitoringItem) => void
+  onViewDetail: (call: CallMonitoringItem) => void
 }
 
-export function PhoneSearchPanel({ onPlayRecording }: Props) {
+export function PhoneSearchPanel({ onPlayRecording, onViewDetail }: Props) {
   const { t } = useTranslation('common')
   const [draft, setDraft] = useState('')
   const [phone, setPhone] = useState('')
@@ -69,7 +70,12 @@ export function PhoneSearchPanel({ onPlayRecording }: Props) {
                   })}
                 </div>
               )}
-              <CallsTable data={calls} loading={isFetching} onPlayRecording={onPlayRecording} />
+              <CallsTable
+                data={calls}
+                loading={isFetching}
+                onPlayRecording={onPlayRecording}
+                onViewDetail={onViewDetail}
+              />
             </>
           )}
         </div>

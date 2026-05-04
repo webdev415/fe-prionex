@@ -235,16 +235,35 @@
         "dateTime": "Date / Time",
         "duration": "Duration",
         "status": "Status",
+        "callType": "Call type",
         "phone": "Phone",
-        "agent": "Operator",
+        "agent": "Employee",
         "client": "Client",
         "clientId": "Client ID",
         "promiseDate": "Promise date",
         "recording": "Recording",
+        "viewDetail": "View detail",
         "employee": "Employee",
         "contactType": "Contact type",
         "result": "Result",
         "promiseAmount": "Promise amount"
+      },
+      "callType": {
+        "incoming": "Incoming",
+        "outgoing": "Outgoing"
+      },
+      "callDetail": {
+        "title": "Call details",
+        "fields": {
+          "dateTime": "Date / Time",
+          "status": "Status",
+          "callType": "Call type",
+          "employee": "Employee",
+          "phone": "Phone",
+          "duration": "Duration",
+          "client": "Client",
+          "callId": "Call ID"
+        }
       },
       "summary": {
         "total": "total",
@@ -255,7 +274,8 @@
       "actions": {
         "exportExcel": "Export to Excel",
         "exporting": "Exporting…",
-        "playRecording": "Play recording"
+        "playRecording": "Play recording",
+        "viewDetail": "View detail"
       },
       "phoneSearch": {
         "title": "Phone number search",

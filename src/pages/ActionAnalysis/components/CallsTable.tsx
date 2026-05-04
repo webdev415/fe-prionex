@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { Button } from '@/components/ui/Button'
+import { LinkButton } from '@/components/ui/LinkButton'
 import { Icons } from '@/lib/icons'
+import { cn } from '@/lib/utils'
 import { formatDateTime } from '@/lib/formatters'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
 import type { CallMonitoringItem } from '@/features/actionAnalysis'
@@ -24,9 +25,10 @@ interface Props {
   data: CallMonitoringItem[]
   loading?: boolean
   onPlayRecording: (call: CallMonitoringItem) => void
+  onViewDetail: (call: CallMonitoringItem) => void
 }
 
-export function CallsTable({ data, onPlayRecording }: Props) {
+export function CallsTable({ data, onPlayRecording, onViewDetail }: Props) {
   const { t } = useTranslation('common')
 
   const rows: Row[] = data.map((c) => ({ ...c, id: c.call_id }))
@@ -53,15 +55,33 @@ export function CallsTable({ data, onPlayRecording }: Props) {
         const answered = isAnswered(r)
         return (
           <span
-            className={
-              answered
-                ? 'bg-success-50 text-success-700 inline-flex rounded-full px-2 py-0.5 text-xs font-medium'
-                : 'inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700'
-            }
+            className={cn(
+              'inline-flex rounded-full px-2 py-0.5 text-xs font-medium',
+              answered ? 'bg-success-50 text-success-700' : 'bg-gray-100 text-gray-700'
+            )}
           >
             {answered
               ? t('pages.actionAnalysis.filters.statuses.answered', 'Answered')
               : t('pages.actionAnalysis.filters.statuses.notAnswered', 'Not answered')}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'callType',
+      header: t('pages.actionAnalysis.columns.callType', 'Call type'),
+      render: (r) => {
+        const isInbound = r.direction === 'inbound'
+        return (
+          <span className="inline-flex items-center gap-1.5 text-sm text-gray-700">
+            {isInbound ? (
+              <Icons.CallIncoming04 size={14} className="text-information-500" strokeWidth={1.5} />
+            ) : (
+              <Icons.CallOutgoing04 size={14} className="text-secondary-500" strokeWidth={1.5} />
+            )}
+            {isInbound
+              ? t('pages.actionAnalysis.callType.incoming', 'Incoming')
+              : t('pages.actionAnalysis.callType.outgoing', 'Outgoing')}
           </span>
         )
       },
@@ -99,17 +119,43 @@ export function CallsTable({ data, onPlayRecording }: Props) {
       key: 'recording',
       header: t('pages.actionAnalysis.columns.recording', 'Recording'),
       align: 'center',
-      render: (r) => (
-        <Button
-          variant="cancel"
-          size="sm"
-          disabled={!r.has_recording}
-          onClick={() => onPlayRecording(r)}
-          aria-label={t('pages.actionAnalysis.actions.playRecording', 'Play recording')}
-        >
-          <Icons.Voice size={16} className="text-gray-700" strokeWidth={1.5} />
-        </Button>
-      ),
+      render: (r) => {
+        const enabled = !!r.has_recording
+        return (
+          <button
+            type="button"
+            disabled={!enabled}
+            onClick={() => enabled && onPlayRecording(r)}
+            aria-label={t('pages.actionAnalysis.actions.playRecording', 'Play recording')}
+            className={cn(
+              'inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+              enabled
+                ? 'text-secondary-700 hover:bg-secondary-50 cursor-pointer'
+                : 'cursor-not-allowed text-gray-300'
+            )}
+          >
+            <Icons.Voice size={18} strokeWidth={1.5} />
+          </button>
+        )
+      },
+    },
+    {
+      key: 'viewDetail',
+      header: t('pages.actionAnalysis.columns.viewDetail', 'View detail'),
+      align: 'left',
+      render: (r) =>
+        isAnswered(r) ? (
+          <LinkButton
+            variant="regular-secondary"
+            size="xs"
+            onClick={() => onViewDetail(r)}
+            leftIcon={<Icons.View size={14} strokeWidth={2} />}
+          >
+            {t('pages.actionAnalysis.actions.viewDetail', 'View detail')}
+          </LinkButton>
+        ) : (
+          <span className="text-sm text-gray-400">—</span>
+        ),
     },
   ]
 

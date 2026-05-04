@@ -19,11 +19,13 @@ import {
   toCallMonitoringQuery,
 } from '../lib/callsUrlState'
 import type { CallFiltersBarValue } from './CallFiltersBar'
+import { CallDetailModal } from './CallDetailModal'
 import { CallFiltersBar } from './CallFiltersBar'
 import { CallsTable } from './CallsTable'
 import { PhoneSearchPanel } from './PhoneSearchPanel'
 
 const PAGE_SIZE = 20
+const CALL_ID_PARAM = 'call_id'
 
 function formatDuration(seconds: number | null | undefined): string {
   if (seconds == null) return '0:00'
@@ -74,6 +76,26 @@ export function CallsTab() {
 
   const [recordingCall, setRecordingCall] = useState<CallMonitoringItem | null>(null)
 
+  // Detail modal: source of truth is the URL (?call_id=…) so links are shareable.
+  const selectedCallId = searchParams.get(CALL_ID_PARAM)
+  const calls = useMemo(() => data?.calls ?? [], [data?.calls])
+  const selectedCall = useMemo(
+    () => (selectedCallId ? (calls.find((c) => c.call_id === selectedCallId) ?? null) : null),
+    [selectedCallId, calls]
+  )
+
+  const handleViewDetail = (call: CallMonitoringItem) => {
+    const next = new URLSearchParams(searchParams)
+    next.set(CALL_ID_PARAM, call.call_id)
+    setSearchParams(next, { replace: false })
+  }
+
+  const handleCloseDetail = () => {
+    const next = new URLSearchParams(searchParams)
+    next.delete(CALL_ID_PARAM)
+    setSearchParams(next, { replace: false })
+  }
+
   const handleApply = (next: CallFiltersBarValue) => {
     let out: CallFiltersBarValue = next
     if (next.period === 'custom' && (!next.customFromDate || !next.customToDate)) {
@@ -109,7 +131,6 @@ export function CallsTab() {
   }, [operators])
 
   const summary = data?.summary
-  const calls = data?.calls ?? []
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -122,6 +143,8 @@ export function CallsTab() {
         onClear={handleClear}
         userTimezone={userTimezone}
       />
+
+      <PhoneSearchPanel onPlayRecording={setRecordingCall} onViewDetail={handleViewDetail} />
 
       <div className="flex flex-wrap gap-4 text-sm text-gray-700">
         <span>
@@ -144,7 +167,12 @@ export function CallsTab() {
         </div>
       ) : (
         <>
-          <CallsTable data={calls} loading={isFetching} onPlayRecording={setRecordingCall} />
+          <CallsTable
+            data={calls}
+            loading={isFetching}
+            onPlayRecording={setRecordingCall}
+            onViewDetail={handleViewDetail}
+          />
           {total > PAGE_SIZE && (
             <Pagination
               currentPage={page}
@@ -156,8 +184,6 @@ export function CallsTab() {
           )}
         </>
       )}
-
-      <PhoneSearchPanel onPlayRecording={setRecordingCall} />
 
       {recordingCall && (
         <CallRecordingModal
@@ -176,6 +202,13 @@ export function CallsTab() {
           }}
         />
       )}
+
+      <CallDetailModal
+        open={!!selectedCall}
+        onClose={handleCloseDetail}
+        call={selectedCall}
+        operatorName={selectedCall ? operatorLookup[selectedCall.agent_extension] : undefined}
+      />
     </div>
   )
 }

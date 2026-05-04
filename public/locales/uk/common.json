@@ -235,16 +235,35 @@
         "dateTime": "Дата / Час",
         "duration": "Тривалість",
         "status": "Статус",
+        "callType": "Тип дзвінка",
         "phone": "Телефон",
-        "agent": "Оператор",
+        "agent": "Співробітник",
         "client": "Клієнт",
         "clientId": "ID клієнта",
         "promiseDate": "Дата обіцянки",
         "recording": "Запис",
+        "viewDetail": "Деталі",
         "employee": "Співробітник",
         "contactType": "Тип контакту",
         "result": "Результат",
         "promiseAmount": "Сума обіцянки"
+      },
+      "callType": {
+        "incoming": "Вхідний",
+        "outgoing": "Вихідний"
+      },
+      "callDetail": {
+        "title": "Деталі дзвінка",
+        "fields": {
+          "dateTime": "Дата / Час",
+          "status": "Статус",
+          "callType": "Тип дзвінка",
+          "employee": "Співробітник",
+          "phone": "Телефон",
+          "duration": "Тривалість",
+          "client": "Клієнт",
+          "callId": "ID дзвінка"
+        }
       },
       "summary": {
         "total": "всього",
@@ -255,7 +274,8 @@
       "actions": {
         "exportExcel": "Експорт в Excel",
         "exporting": "Експорт…",
-        "playRecording": "Відтворити запис"
+        "playRecording": "Відтворити запис",
+        "viewDetail": "Деталі"
       },
       "phoneSearch": {
         "title": "Пошук за номером телефону",
