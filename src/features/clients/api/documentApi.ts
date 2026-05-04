@@ -50,13 +50,11 @@ export const documentApi = {
     URL.revokeObjectURL(url)
   },
 
-  preview: async (clientId: number, docId: number): Promise<{ url: string; blob: Blob }> => {
+  preview: async (clientId: number, docId: number): Promise<Blob> => {
     const response = await api.get(`/api/v1/clients/${clientId}/documents/${docId}`, {
       responseType: 'blob',
     })
-    const blob = response.data as Blob
-    const url = URL.createObjectURL(blob)
-    return { url, blob }
+    return response.data as Blob
   },
 
   patch: (

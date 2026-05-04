@@ -27,11 +27,13 @@
     "transactions": "Транзакции",
     "operations": "Операции",
     "bulkOperatorAssignment": "Массовое назначение операторов",
+    "bulkPaymentVerification": "Массовая верификация платежей",
     "auditLogs": "Журнал аудита",
     "reports": "Отчеты",
     "scoringConfiguration": "Конфигурация оценки",
     "systemSettings": "Системные настройки",
-    "tags": "Теги"
+    "tags": "Теги",
+    "actionAnalysis": "Анализ действий"
   },
   "search": {
     "placeholder": "Поиск",
@@ -74,6 +76,67 @@
     "en": "Английский",
     "uk": "Украинский",
     "ru": "Русский"
+  },
+  "notificationBell": {
+    "title": "Уведомления",
+    "markAllRead": "Отметить все как прочитанные",
+    "ariaLabel": "Уведомления",
+    "ariaLabelWithCount": "Уведомления ({{count}})",
+    "noNotifications": "Нет уведомлений",
+    "sections": {
+      "pendingPayments": "Ожидающие платежи",
+      "tasks": "Задачи",
+      "calls": "Звонки",
+      "tags": "Теги",
+      "taChains": "Цепочки TA"
+    },
+    "payment": {
+      "pending": "ожидает",
+      "daysPending_one": "{{count}} день",
+      "daysPending_few": "{{count}} дня",
+      "daysPending_many": "{{count}} дней"
+    },
+    "paymentMethod": {
+      "bank_transfer": "Банковский перевод",
+      "online_gateway": "Онлайн-шлюз",
+      "cash": "Наличные",
+      "card": "Карта",
+      "other": "Другое"
+    },
+    "clientNumber": "Клиент №{{id}}",
+    "idLabel": "ID: {{id}}",
+    "debtLabel": "Долг: {{id}}",
+    "chainLabel": "Цепочка:",
+    "resultLabel": "Результат:",
+    "byOperator": "от {{name}}",
+    "errors": {
+      "dismissFailed": "Не удалось скрыть уведомление",
+      "markAllReadFailed": "Не удалось отметить все как прочитанные"
+    },
+    "taskPriority": {
+      "high": "высокий",
+      "normal": "обычный",
+      "low": "низкий"
+    },
+    "taskStatus": {
+      "pending": "ожидает",
+      "in_progress": "в работе",
+      "completed": "завершено",
+      "extended": "продлено",
+      "rejected": "отклонено",
+      "incoming_line_result": "результат входящей линии"
+    },
+    "relative": {
+      "justNow": "только что",
+      "minutesAgo": "{{count}} мин. назад",
+      "hoursAgo_one": "{{count}} ч назад",
+      "hoursAgo_few": "{{count}} ч назад",
+      "hoursAgo_many": "{{count}} ч назад",
+      "daysAgo_one": "{{count}} день назад",
+      "daysAgo_few": "{{count}} дня назад",
+      "daysAgo_many": "{{count}} дней назад"
+    },
+    "dismissAria": "Закрыть уведомление"
   },
   "common": {
     "step": "Шаг",
@@ -172,6 +235,110 @@
       "mockTableRowClients": "Клиенты",
       "mockTableRowDebt": "Долг в зоне риска",
       "mockTableRowOverdue": "Доля просрочки"
+    },
+    "actionAnalysis": {
+      "title": "Анализ действий",
+      "subtitle": "Мониторинг звонков и история взаимодействий для команды тренеров.",
+      "tabs": {
+        "calls": "Звонки",
+        "interactions": "История взаимодействий"
+      },
+      "filters": {
+        "operator": "Оператор",
+        "allOperators": "Все операторы",
+        "employee": "Сотрудник",
+        "allEmployees": "Все сотрудники",
+        "period": "Период",
+        "status": "Статус",
+        "minDuration": "Мин. длительность (с)",
+        "maxDuration": "Макс. длительность (с)",
+        "contactType": "Тип контакта",
+        "allContactTypes": "Все",
+        "result": "Результат",
+        "allResults": "Все",
+        "promiseMin": "Обещание от",
+        "promiseMax": "Обещание до",
+        "department": "Отдел",
+        "allDepartments": "Все отделы",
+        "employees": "Сотрудники",
+        "employeesCount": "Выбрано: {{count}}",
+        "searchEmployees": "Поиск по имени…",
+        "noOperatorsMatch": "Нет совпадений",
+        "clearEmployees": "Сбросить",
+        "applyEmployees": "Применить",
+        "dateFrom": "С",
+        "dateTo": "По",
+        "selectDate": "Выберите дату",
+        "selectStartDate": "Выберите начальную дату",
+        "selectEndDate": "Выберите конечную дату",
+        "dateRange": "Период",
+        "quickRanges": "Быстро",
+        "minDurationPlaceholder": "напр. 30",
+        "maxDurationPlaceholder": "напр. 600",
+        "promiseMinPlaceholder": "0.00",
+        "promiseMaxPlaceholder": "напр. 1000",
+        "searchEmployeesPlaceholder": "Поиск",
+        "applyFilters": "Применить фильтры",
+        "clearAll": "Сбросить",
+        "periods": {
+          "today": "Сегодня",
+          "yesterday": "Вчера",
+          "last_7d": "Последние 7 дней",
+          "last_30d": "Последние 30 дней",
+          "custom": "Произвольный"
+        },
+        "statuses": {
+          "all": "Все",
+          "answered": "Отвечен",
+          "notAnswered": "Не отвечен"
+        }
+      },
+      "columns": {
+        "dateTime": "Дата / Время",
+        "duration": "Длительность",
+        "status": "Статус",
+        "phone": "Телефон",
+        "agent": "Оператор",
+        "client": "Клиент",
+        "clientId": "ID клиента",
+        "promiseDate": "Дата обещания",
+        "recording": "Запись",
+        "employee": "Сотрудник",
+        "contactType": "Тип контакта",
+        "result": "Результат",
+        "promiseAmount": "Сумма обещания"
+      },
+      "summary": {
+        "total": "всего",
+        "outgoing": "исходящих",
+        "answered": "отвечено",
+        "totalInteractions": "взаимодействий"
+      },
+      "actions": {
+        "exportExcel": "Экспорт в Excel",
+        "exporting": "Экспорт…",
+        "playRecording": "Воспроизвести запись"
+      },
+      "phoneSearch": {
+        "title": "Поиск по номеру телефона",
+        "placeholder": "Введите номер телефона",
+        "search": "Найти",
+        "summary": "{{total}} звонок(-ов), {{answered}} отвечено"
+      },
+      "empty": "Нет звонков, соответствующих фильтрам",
+      "interactionsEmpty": "Нет взаимодействий, соответствующих фильтрам",
+      "errors": {
+        "loadFailed": "Не удалось загрузить звонки",
+        "loadInteractionsFailed": "Не удалось загрузить взаимодействия",
+        "departmentNoOperators": "В этом отделе нет операторов в текущем проекте.",
+        "exportFailed": "Не удалось экспортировать"
+      },
+      "calls": {
+        "placeholder": "Вкладка «Звонки» — скоро будет доступна"
+      },
+      "interactions": {
+        "placeholder": "Вкладка «История взаимодействий» — скоро будет доступна"
+      }
     },
     "users": {
       "title": "Управление пользователями",
@@ -808,10 +975,28 @@
       },
       "operatorAssignment": {
         "title": "Массовое назначение операторов",
-        "viewHistory": "История",
+        "viewHistory": "История импорта",
+        "noProjectToast": "Выберите активный проект перед загрузкой файла.",
+        "upload": {
+          "sectionTitle": "Загрузка CSV",
+          "description": "CSV-файл со столбцами client_id и operator_id",
+          "downloadTemplate": "Скачать шаблон",
+          "downloading": "Загрузка...",
+          "clickToUpload": "Нажмите для загрузки",
+          "orDragAndDrop": "или перетащите файл сюда",
+          "constraints": "Только CSV, максимум 10 МБ, до 10 000 строк",
+          "validating": "Проверка CSV...",
+          "errors": {
+            "onlyCsv": "Поддерживаются только файлы CSV.",
+            "fileTooLarge": "Файл превышает максимальный размер 10 МБ ({{size}} МБ)."
+          }
+        },
         "preview": {
           "title": "Предварительный просмотр",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записей · Партия: {{batchId}}",
           "previewRows": "Предпросмотр (первые {{count}} строк)",
+          "emptyPreview": "Нет строк для предпросмотра",
+          "emptyErrors": "Нет ошибок",
           "errors": "Ошибки ({{count}})",
           "readyToAssign": "Готово к назначению",
           "noChange": "Без изменений",
@@ -835,8 +1020,7 @@
           "assignmentReasonPlaceholder": "напр., Перераспределение портфеля март 2026",
           "cancel": "Отмена",
           "confirm": "Подтвердить и назначить {{count}} клиентов",
-          "starting": "Запуск...",
-          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записей · Партия: {{batchId}}"
+          "starting": "Запуск..."
         },
         "progress": {
           "assignmentComplete": "Назначение завершено",
@@ -848,10 +1032,87 @@
           "successful": "Успешно",
           "failed": "Не удалось",
           "processingTime": "Время обработки: {{time}}",
+          "errorDetails": "Детали ошибки",
           "cancel": "Отмена",
           "downloadErrors": "Скачать ошибки",
           "startNewImport": "Новый импорт",
           "jobStarted": "Назначение операторов запущено"
+        }
+      },
+      "bulkPaymentVerification": {
+        "title": "Массовая верификация платежей",
+        "viewHistory": "История импорта",
+        "noProjectToast": "Выберите активный проект перед загрузкой файла.",
+        "upload": {
+          "sectionTitle": "Загрузка банковского CSV",
+          "descriptionIntro": "Проверяет существующие ожидающие платежи или автоматически создает проверенные записи. Обязательные столбцы:",
+          "optionalIntro": "Необязательно:",
+          "downloadTemplate": "Скачать шаблон",
+          "downloading": "Загрузка...",
+          "clickToUpload": "Нажмите для загрузки",
+          "orDragAndDrop": "или перетащите файл сюда",
+          "constraints": "Только CSV, максимум 10 МБ, до 10 000 строк",
+          "validating": "Проверка CSV и сопоставление договоров...",
+          "errors": {
+            "onlyCsv": "Поддерживаются только файлы CSV.",
+            "fileTooLarge": "Файл превышает максимальный размер 10 МБ ({{size}} МБ)."
+          }
+        },
+        "preview": {
+          "title": "Предварительная верификация платежей",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записей · Партия: {{batchId}}",
+          "summary": {
+            "ready": "Готово",
+            "warnings": "Предупреждения",
+            "invalid": "Недействительные",
+            "totalAmount": "Общая сумма",
+            "uniqueContracts": "Уникальные договоры"
+          },
+          "previewTableTitle": "Предпросмотр ({{count}} строк)",
+          "errorsTableTitle": "Ошибки ({{count}} строк)",
+          "emptyPreview": "Нет строк для предпросмотра",
+          "emptyErrors": "Нет ошибок",
+          "skipWarnings": "Пропустить строки с предупреждениями ({{count}} строк)",
+          "commentPlaceholder": "Необязательный комментарий к этому импорту...",
+          "cancel": "Отмена",
+          "verifyPayments": "Верифицировать {{count}} платежей",
+          "starting": "Запуск...",
+          "columns": {
+            "row": "Строка",
+            "contractNumber": "Номер договора",
+            "tin": "ИНН",
+            "client": "Клиент",
+            "amount": "Сумма",
+            "date": "Дата",
+            "method": "Способ",
+            "type": "Тип",
+            "status": "Статус",
+            "note": "Примечание"
+          },
+          "rowType": {
+            "pending": "Ожидает",
+            "new": "Новый"
+          },
+          "rowStatus": {
+            "ready": "Готово",
+            "warning": "Предупреждение",
+            "error": "Ошибка"
+          }
+        },
+        "progress": {
+          "complete": "Верификация платежей завершена",
+          "verificationFailed": "Верификация платежей не удалась",
+          "cancelled": "Верификация платежей отменена",
+          "processing": "Верификация платежей...",
+          "progressLabel": "Прогресс",
+          "totalRecords": "Всего записей",
+          "paymentsVerified": "Платежи верифицированы",
+          "failedRows": "Ошибки",
+          "errorDetails": "Детали ошибки",
+          "processingTime": "Время обработки: {{time}}",
+          "cancelJob": "Отменить импорт",
+          "downloadErrors": "Скачать ошибки",
+          "startNewImport": "Новый импорт"
         }
       }
     },
@@ -1031,6 +1292,22 @@
       "detail": {
         "clientNotFound": "Клиент не найден",
         "backToClients": "Назад к клиентам",
+        "documentUploadTitle": "Загрузить документ",
+        "documentUploadAction": "Загрузить",
+        "generateDocument": "Сгенерировать документ",
+        "comingSoon": "Скоро",
+        "dropFileOrClick": "Перетащите файл или нажмите для выбора",
+        "loan": "Кредит",
+        "documentsUnlinked": "Без привязки",
+        "documentTypes": {
+          "passport": "Паспорт",
+          "inn": "ИНН",
+          "contract": "Договор",
+          "income": "Справка о доходах",
+          "outcome": "Выписка",
+          "signature": "ЭЦП",
+          "other": "Другое"
+        },
         "department": "Отдел",
         "phones": "Телефоны",
         "tin": "ИНН",
@@ -1469,23 +1746,42 @@
           "clear": "Очистить",
           "apply": "Применить"
         },
-        "tagsDropdown": {
-          "searchTags": "Поиск тегов...",
-          "noTagsFound": "Теги не найдены",
-          "clear": "Очистить",
-          "apply": "Применить"
-        },
-        "bulkTag": {
-          "addTags": "Добавить теги",
-          "removeTags": "Удалить теги",
-          "clients": "клиент(ов)",
-          "searchTags": "Поиск тегов...",
+        "tagSelector": {
+          "title": "Управление тегами — {{name}}",
           "loadingTags": "Загрузка тегов...",
-          "noTagsFound": "Теги не найдены",
-          "tagsSelected": "тег(ов) выбрано",
-          "selectAtLeastOneTag": "Пожалуйста, выберите хотя бы один тег",
-          "cancel": "Отмена",
-          "processing": "Обработка..."
+          "searchTags": "Поиск тегов...",
+          "selectedCount": "Выбрано {{selected}} из {{total}} тегов",
+          "noTagsMatch": "По запросу теги не найдены",
+          "noTagsAvailable": "Нет доступных тегов",
+          "saveTags": "Сохранить теги",
+          "tagsUpdated": "Теги обновлены для {{name}}",
+          "updateFailed": "Не удалось обновить теги"
+        },
+        "deleteClient": {
+          "title": "Удалить клиента",
+          "softDeleteWarning": "Действие уберёт клиента из активных записей (мягкое удаление). При необходимости администраторы могут восстановить данные.",
+          "clientDetails": "Данные клиента",
+          "fieldName": "ФИО:",
+          "fieldTaxId": "ИНН:",
+          "fieldPhone": "Телефон:",
+          "fieldTotalDebt": "Общий долг:",
+          "impactTitle": "Что произойдёт:",
+          "impact1": "Клиент будет помечен как удалённый (мягкое удаление)",
+          "impact2": "Клиент исчезнет из списков клиентов",
+          "impact3": "Исторические данные (заметки, звонки, платежи) сохранятся",
+          "impact4": "Отменить действие без участия администратора нельзя",
+          "debtsSummary": "Связанные долги: {{count}} на сумму {{amount}}",
+          "confirmCheckbox": "Я понимаю, что клиент будет убран из активных записей",
+          "submitDelete": "Удалить клиента",
+          "deleting": "Удаление...",
+          "deletedSuccess": "Клиент успешно удалён",
+          "deleteFailed": "Не удалось удалить клиента"
+        },
+        "documentPreview": {
+          "loading": "Загрузка...",
+          "loadFailed": "Не удалось загрузить документ",
+          "previewNotAvailable": "Предпросмотр недоступен",
+          "download": "Скачать"
         },
         "recordPayment": {
           "title": "Записать платеж",
@@ -1688,6 +1984,24 @@
           "csvColumnCreatedBy": "Создано",
           "downloadCSV": "Скачать CSV"
         },
+        "tagsDropdown": {
+          "searchTags": "Поиск тегов...",
+          "noTagsFound": "Теги не найдены",
+          "clear": "Очистить",
+          "apply": "Применить"
+        },
+        "bulkTag": {
+          "addTags": "Добавить теги",
+          "removeTags": "Удалить теги",
+          "clients": "клиент(ов)",
+          "searchTags": "Поиск тегов...",
+          "loadingTags": "Загрузка тегов...",
+          "noTagsFound": "Теги не найдены",
+          "tagsSelected": "тег(ов) выбрано",
+          "selectAtLeastOneTag": "Пожалуйста, выберите хотя бы один тег",
+          "cancel": "Отмена",
+          "processing": "Обработка..."
+        },
         "paymentVerificationQueue": {
           "title": "Очередь верификации платежей",
           "pendingVerification": "Ожидает верификации",
@@ -1831,6 +2145,146 @@
         "selectUser": "Выберите пользователя...",
         "comment": "Комментарий",
         "commentPlaceholder": "Необязательный комментарий..."
+      }
+    },
+    "clientChains": {
+      "logInteraction": "Записать взаимодействие",
+      "taChainLabel": "Цепочка TA",
+      "startChain": "Начать цепочку",
+      "selectChain": "Цепочка",
+      "selectChainPlaceholder": "Выберите цепочку...",
+      "noChains": "Нет доступных активных цепочек.",
+      "noCredits": "Для этого клиента не найдено открытых кредитов.",
+      "steps": "шагов",
+      "start": "Начать",
+      "activeLabel": "в процессе",
+      "cancel": "Отменить цепочку",
+      "selectValue": "Выберите значение...",
+      "selectResult": "Выберите результат",
+      "selected": "Выбрано",
+      "requiredByLeaf": "Обязательно по настройкам узла",
+      "promiseDate": "Дата обещания",
+      "promiseAmount": "Сумма обещания",
+      "promiseAmountUAH": "Сумма обещания (₴)",
+      "credit": "Кредит",
+      "creditPlaceholder": "Выберите кредит...",
+      "notes": "Заметки",
+      "notesPlaceholder": "Заметки (необязательно)...",
+      "stepLabel": "Шаг {{order}}",
+      "delayWaiting": "Этот шаг будет доступен через {{minutes}} мин.",
+      "delayWaitingSeconds": "Этот шаг будет доступен через {{seconds}} с",
+      "delayHint": "Предыдущий шаг только что завершён. Дождитесь окончания задержки.",
+      "saveInteraction": "Сохранить взаимодействие",
+      "continueToNext": "Далее →",
+      "quickPicks": "Быстрый старт",
+      "chainProgress": "Ход цепочки",
+      "stepOf": "шаг {{current}} из {{total}}",
+      "current": "текущий",
+      "branch": "ветка",
+      "effectsOnSave": "Эффекты при сохранении",
+      "effectTag": "Тег",
+      "effectRemoveTag": "Снять тег",
+      "effectTask": "Задача: создан обратный звонок",
+      "effectSMS": "Событие: SMS отправлено",
+      "effectSpam": "Добавлено в спам",
+      "dictionary": {
+        "level1": "Уровень 1 — Тип взаимодействия",
+        "level2": "Уровень 2 — Категория",
+        "level3": "Уровень 3 — Результат",
+        "selectPlaceholder": "Выберите..."
+      },
+      "errors": {
+        "selectResult": "Выберите результат в дереве.",
+        "promiseDateRequired": "Для этого результата нужна дата обещания.",
+        "promiseAmountRequired": "Для этого результата нужна сумма обещания.",
+        "creditRequired": "Для этого результата нужно выбрать кредит.",
+        "stepFieldRequired": "Поле «{{name}}» обязательно.",
+        "stepRequired": "Заполните этот шаг перед продолжением."
+      },
+      "pickToContinue": "Выберите цепочку выше, чтобы продолжить.",
+      "stepsPreview": "Шаги в этой цепочке",
+      "notifyResponsible": "Уведомить ответственного сотрудника",
+      "toasts": {
+        "started": "Цепочка запущена",
+        "completed": "Взаимодействие сохранено, цепочка завершена",
+        "advanced": "Сохранено — переход к шагу {{step}}",
+        "cancelled": "Цепочка отменена"
+      },
+      "history": {
+        "title": "История взаимодействий",
+        "date": "Дата",
+        "chain": "Цепочка",
+        "phone": "Телефон",
+        "result": "Результат",
+        "dictionaryPath": "Путь категории",
+        "promise": "Обещание",
+        "notes": "Заметки",
+        "operator": "Оператор",
+        "promiseDate": "Дата обещания",
+        "promiseAmount": "Сумма",
+        "credit": "Номер кредита",
+        "empty": "Взаимодействий пока нет.",
+        "filterChain": "Цепочка",
+        "allChains": "Все цепочки",
+        "from": "С",
+        "to": "По",
+        "searchNotes": "Заметки",
+        "searchNotesPlaceholder": "Поиск по заметкам...",
+        "deleteTitle": "Удалить взаимодействие",
+        "deleteConfirm": "Удалить это взаимодействие? Это действие нельзя отменить.",
+        "deleteSuccess": "Взаимодействие удалено"
+      },
+      "templatePlaceholder": "Выберите шаблон…",
+      "templateSearchPlaceholder": "Поиск шаблонов…",
+      "templateNoneFound": "Нет подходящих шаблонов.",
+      "startWithTemplate": "Начать с этим шаблоном",
+      "chainSearchPlaceholder": "Поиск цепочек…",
+      "chainNoneFound": "Нет подходящих цепочек.",
+      "pinnedGroup": "Закреплённые",
+      "allGroup": "Все цепочки",
+      "clientPinHint": "Закреплено через историю этого клиента",
+      "clientPinTag": "клиент",
+      "pin": "Закрепить",
+      "unpin": "Открепить",
+      "previewHint": "Просмотрите цепочку справа и нажмите «Начать», когда будете готовы.",
+      "stepCount": "{{count}} шагов",
+      "rewindWarningTitle": "Изменить шаг с ветвлением?",
+      "rewindWarningBody": "Шаги после шага {{order}} будут очищены, и вы пройдёте их снова.",
+      "rewindConfirm": "Да, сбросить и пройти снова",
+      "saving": "Сохранение…",
+      "noContacts": "Нет доступных телефонов для этого источника."
+    },
+    "interactionLog": {
+      "title": "Журнал взаимодействий",
+      "export": "Экспорт CSV",
+      "empty": "По выбранным фильтрам взаимодействий не найдено.",
+      "columns": {
+        "date": "Дата",
+        "clientId": "Клиент",
+        "chain": "Цепочка",
+        "dictionaryPath": "Путь категории",
+        "promise": "Обещание",
+        "promiseDate": "Дата обещания",
+        "promiseAmount": "Сумма",
+        "creditNumber": "Номер кредита",
+        "notes": "Заметки",
+        "operator": "Оператор"
+      },
+      "filters": {
+        "clientId": "ID клиента",
+        "clientIdPlaceholder": "ID",
+        "chain": "Цепочка",
+        "allChains": "Все цепочки",
+        "from": "С",
+        "to": "По",
+        "notes": "Заметки",
+        "notesPlaceholder": "Поиск по заметкам..."
+      },
+      "pagination": {
+        "rangeOfTotal": "{{start}}–{{end}} / {{total}}",
+        "pageOfPages": "{{page}} / {{totalPages}}",
+        "previousPage": "Предыдущая страница",
+        "nextPage": "Следующая страница"
       }
     },
     "taDictionary": {

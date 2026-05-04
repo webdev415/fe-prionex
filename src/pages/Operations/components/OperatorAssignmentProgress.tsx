@@ -98,6 +98,19 @@ export function OperatorAssignmentProgress({ jobId, onComplete }: Props) {
         </div>
       </div>
 
+      {isFailed && job.error_summary && (
+        <div className="border-error-200 bg-error-50 rounded-lg border p-3">
+          <p className="text-error-700 text-sm font-medium">{t(`${p}.errorDetails`)}</p>
+          <p className="text-error-600 mt-1 text-sm">
+            {typeof job.error_summary === 'string'
+              ? job.error_summary
+              : (job.error_summary as Record<string, unknown>)?.fatal
+                ? String((job.error_summary as Record<string, unknown>).fatal)
+                : JSON.stringify(job.error_summary)}
+          </p>
+        </div>
+      )}
+
       {/* Processing time */}
       {(isComplete || isFailed) && job.processing_time && (
         <p className="text-sm text-gray-600">

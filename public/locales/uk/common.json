@@ -27,11 +27,13 @@
     "transactions": "Транзакції",
     "operations": "Операції",
     "bulkOperatorAssignment": "Масове призначення операторів",
+    "bulkPaymentVerification": "Масова верифікація платежів",
     "auditLogs": "Журнал аудиту",
     "reports": "Звіти",
     "scoringConfiguration": "Конфігурація оцінки",
     "systemSettings": "Системні налаштування",
-    "tags": "Теги"
+    "tags": "Теги",
+    "actionAnalysis": "Аналіз дій"
   },
   "search": {
     "placeholder": "Пошук",
@@ -74,6 +76,67 @@
     "en": "Англійська",
     "uk": "Українська",
     "ru": "Російська"
+  },
+  "notificationBell": {
+    "title": "Повідомлення",
+    "markAllRead": "Позначити як прочитані",
+    "ariaLabel": "Повідомлення",
+    "ariaLabelWithCount": "Повідомлення ({{count}})",
+    "noNotifications": "Немає повідомлень",
+    "sections": {
+      "pendingPayments": "Очікуючі оплати",
+      "tasks": "Завдання",
+      "calls": "Дзвінки",
+      "tags": "Теги",
+      "taChains": "Ланцюжки TA"
+    },
+    "payment": {
+      "pending": "очікує",
+      "daysPending_one": "{{count}} день",
+      "daysPending_few": "{{count}} дні",
+      "daysPending_many": "{{count}} днів"
+    },
+    "paymentMethod": {
+      "bank_transfer": "Банківський переказ",
+      "online_gateway": "Онлайн-шлюз",
+      "cash": "Готівка",
+      "card": "Картка",
+      "other": "Інше"
+    },
+    "clientNumber": "Клієнт №{{id}}",
+    "idLabel": "ID: {{id}}",
+    "debtLabel": "Борг: {{id}}",
+    "chainLabel": "Ланцюжок:",
+    "resultLabel": "Результат:",
+    "byOperator": "від {{name}}",
+    "errors": {
+      "dismissFailed": "Не вдалося приховати повідомлення",
+      "markAllReadFailed": "Не вдалося позначити всі як прочитані"
+    },
+    "taskPriority": {
+      "high": "високий",
+      "normal": "нормальний",
+      "low": "низький"
+    },
+    "taskStatus": {
+      "pending": "очікує",
+      "in_progress": "в роботі",
+      "completed": "завершено",
+      "extended": "продовжено",
+      "rejected": "відхилено",
+      "incoming_line_result": "результат вхідної лінії"
+    },
+    "relative": {
+      "justNow": "щойно",
+      "minutesAgo": "{{count}} хв тому",
+      "hoursAgo_one": "{{count}} год тому",
+      "hoursAgo_few": "{{count}} год тому",
+      "hoursAgo_many": "{{count}} год тому",
+      "daysAgo_one": "{{count}} день тому",
+      "daysAgo_few": "{{count}} дні тому",
+      "daysAgo_many": "{{count}} днів тому"
+    },
+    "dismissAria": "Закрити повідомлення"
   },
   "common": {
     "step": "Крок",
@@ -172,6 +235,110 @@
       "mockTableRowClients": "Клієнти",
       "mockTableRowDebt": "Борг у зоні ризику",
       "mockTableRowOverdue": "Частка прострочених"
+    },
+    "actionAnalysis": {
+      "title": "Аналіз дій",
+      "subtitle": "Моніторинг дзвінків та історія взаємодій для команди тренерів.",
+      "tabs": {
+        "calls": "Дзвінки",
+        "interactions": "Історія взаємодій"
+      },
+      "filters": {
+        "operator": "Оператор",
+        "allOperators": "Усі оператори",
+        "employee": "Співробітник",
+        "allEmployees": "Усі співробітники",
+        "period": "Період",
+        "status": "Статус",
+        "minDuration": "Мін. тривалість (с)",
+        "maxDuration": "Макс. тривалість (с)",
+        "contactType": "Тип контакту",
+        "allContactTypes": "Усі",
+        "result": "Результат",
+        "allResults": "Усі",
+        "promiseMin": "Обіцянка від",
+        "promiseMax": "Обіцянка до",
+        "department": "Відділ",
+        "allDepartments": "Усі відділи",
+        "employees": "Співробітники",
+        "employeesCount": "Обрано: {{count}}",
+        "searchEmployees": "Пошук за іменем…",
+        "noOperatorsMatch": "Немає збігів",
+        "clearEmployees": "Очистити",
+        "applyEmployees": "Застосувати",
+        "dateFrom": "Від",
+        "dateTo": "До",
+        "selectDate": "Оберіть дату",
+        "selectStartDate": "Оберіть початкову дату",
+        "selectEndDate": "Оберіть кінцеву дату",
+        "dateRange": "Період",
+        "quickRanges": "Швидко",
+        "minDurationPlaceholder": "напр. 30",
+        "maxDurationPlaceholder": "напр. 600",
+        "promiseMinPlaceholder": "0.00",
+        "promiseMaxPlaceholder": "напр. 1000",
+        "searchEmployeesPlaceholder": "Пошук",
+        "applyFilters": "Застосувати фільтри",
+        "clearAll": "Скинути",
+        "periods": {
+          "today": "Сьогодні",
+          "yesterday": "Вчора",
+          "last_7d": "Останні 7 днів",
+          "last_30d": "Останні 30 днів",
+          "custom": "Довільний"
+        },
+        "statuses": {
+          "all": "Усі",
+          "answered": "Відповідь",
+          "notAnswered": "Без відповіді"
+        }
+      },
+      "columns": {
+        "dateTime": "Дата / Час",
+        "duration": "Тривалість",
+        "status": "Статус",
+        "phone": "Телефон",
+        "agent": "Оператор",
+        "client": "Клієнт",
+        "clientId": "ID клієнта",
+        "promiseDate": "Дата обіцянки",
+        "recording": "Запис",
+        "employee": "Співробітник",
+        "contactType": "Тип контакту",
+        "result": "Результат",
+        "promiseAmount": "Сума обіцянки"
+      },
+      "summary": {
+        "total": "всього",
+        "outgoing": "вихідних",
+        "answered": "відповідей",
+        "totalInteractions": "взаємодій"
+      },
+      "actions": {
+        "exportExcel": "Експорт в Excel",
+        "exporting": "Експорт…",
+        "playRecording": "Відтворити запис"
+      },
+      "phoneSearch": {
+        "title": "Пошук за номером телефону",
+        "placeholder": "Введіть номер телефону",
+        "search": "Знайти",
+        "summary": "{{total}} дзвінок(-ів), {{answered}} з відповіддю"
+      },
+      "empty": "Немає дзвінків, що відповідають фільтрам",
+      "interactionsEmpty": "Немає взаємодій, що відповідають фільтрам",
+      "errors": {
+        "loadFailed": "Не вдалося завантажити дзвінки",
+        "loadInteractionsFailed": "Не вдалося завантажити взаємодії",
+        "departmentNoOperators": "У цьому відділі немає операторів у поточному проєкті.",
+        "exportFailed": "Не вдалося експортувати"
+      },
+      "calls": {
+        "placeholder": "Вкладка «Дзвінки» — незабаром"
+      },
+      "interactions": {
+        "placeholder": "Вкладка «Історія взаємодій» — незабаром"
+      }
     },
     "users": {
       "title": "Управління користувачами",
@@ -808,10 +975,28 @@
       },
       "operatorAssignment": {
         "title": "Масове призначення операторів",
-        "viewHistory": "Історія",
+        "viewHistory": "Історія імпорту",
+        "noProjectToast": "Оберіть активний проєкт перед завантаженням файлу.",
+        "upload": {
+          "sectionTitle": "Завантаження CSV",
+          "description": "Файл CSV зі стовпцями client_id та operator_id",
+          "downloadTemplate": "Завантажити шаблон",
+          "downloading": "Завантаження...",
+          "clickToUpload": "Натисніть для завантаження",
+          "orDragAndDrop": "або перетягніть файл сюди",
+          "constraints": "Лише CSV, максимум 10 МБ, до 10 000 рядків",
+          "validating": "Перевірка CSV...",
+          "errors": {
+            "onlyCsv": "Підтримуються лише файли CSV.",
+            "fileTooLarge": "Файл перевищує максимальний розмір 10 МБ ({{size}} МБ)."
+          }
+        },
         "preview": {
           "title": "Попередній перегляд",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записів · Партія: {{batchId}}",
           "previewRows": "Попередній перегляд (перші {{count}} рядків)",
+          "emptyPreview": "Немає рядків для перегляду",
+          "emptyErrors": "Немає помилок",
           "errors": "Помилки ({{count}})",
           "readyToAssign": "Готово до призначення",
           "noChange": "Без змін",
@@ -835,8 +1020,7 @@
           "assignmentReasonPlaceholder": "напр., Перерозподіл портфеля березень 2026",
           "cancel": "Скасувати",
           "confirm": "Підтвердити та призначити {{count}} клієнтів",
-          "starting": "Запуск...",
-          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записів · Партія: {{batchId}}"
+          "starting": "Запуск..."
         },
         "progress": {
           "assignmentComplete": "Призначення завершено",
@@ -848,10 +1032,87 @@
           "successful": "Успішно",
           "failed": "Не вдалося",
           "processingTime": "Час обробки: {{time}}",
+          "errorDetails": "Деталі помилки",
           "cancel": "Скасувати",
           "downloadErrors": "Завантажити помилки",
           "startNewImport": "Новий імпорт",
           "jobStarted": "Призначення операторів запущено"
+        }
+      },
+      "bulkPaymentVerification": {
+        "title": "Масова верифікація платежів",
+        "viewHistory": "Історія імпорту",
+        "noProjectToast": "Оберіть активний проєкт перед завантаженням файлу.",
+        "upload": {
+          "sectionTitle": "Завантаження банківського CSV",
+          "descriptionIntro": "Перевіряє наявні очікувані платежі або автоматично створює перевірені записи. Обов'язкові стовпці:",
+          "optionalIntro": "Необов'язково:",
+          "downloadTemplate": "Завантажити шаблон",
+          "downloading": "Завантаження...",
+          "clickToUpload": "Натисніть для завантаження",
+          "orDragAndDrop": "або перетягніть файл сюди",
+          "constraints": "Лише CSV, максимум 10 МБ, до 10 000 рядків",
+          "validating": "Перевірка CSV та зіставлення договорів...",
+          "errors": {
+            "onlyCsv": "Підтримуються лише файли CSV.",
+            "fileTooLarge": "Файл перевищує максимальний розмір 10 МБ ({{size}} МБ)."
+          }
+        },
+        "preview": {
+          "title": "Попередній перегляд верифікації платежів",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записів · Партія: {{batchId}}",
+          "summary": {
+            "ready": "Готово",
+            "warnings": "Попередження",
+            "invalid": "Недійсні",
+            "totalAmount": "Загальна сума",
+            "uniqueContracts": "Унікальні договори"
+          },
+          "previewTableTitle": "Попередній перегляд ({{count}} рядків)",
+          "errorsTableTitle": "Помилки ({{count}} рядків)",
+          "emptyPreview": "Немає рядків для перегляду",
+          "emptyErrors": "Немає помилок",
+          "skipWarnings": "Пропустити рядки з попередженнями ({{count}} рядків)",
+          "commentPlaceholder": "Необов'язковий коментар до цього імпорту...",
+          "cancel": "Скасувати",
+          "verifyPayments": "Верифікувати {{count}} платежів",
+          "starting": "Запуск...",
+          "columns": {
+            "row": "Рядок",
+            "contractNumber": "Номер договору",
+            "tin": "ІПН",
+            "client": "Клієнт",
+            "amount": "Сума",
+            "date": "Дата",
+            "method": "Спосіб",
+            "type": "Тип",
+            "status": "Статус",
+            "note": "Примітка"
+          },
+          "rowType": {
+            "pending": "Очікує",
+            "new": "Новий"
+          },
+          "rowStatus": {
+            "ready": "Готово",
+            "warning": "Попередження",
+            "error": "Помилка"
+          }
+        },
+        "progress": {
+          "complete": "Верифікацію платежів завершено",
+          "verificationFailed": "Верифікацію платежів не вдалося виконати",
+          "cancelled": "Верифікацію платежів скасовано",
+          "processing": "Верифікація платежів...",
+          "progressLabel": "Прогрес",
+          "totalRecords": "Всього записів",
+          "paymentsVerified": "Платежі верифіковано",
+          "failedRows": "Помилки",
+          "errorDetails": "Деталі помилки",
+          "processingTime": "Час обробки: {{time}}",
+          "cancelJob": "Скасувати імпорт",
+          "downloadErrors": "Завантажити помилки",
+          "startNewImport": "Новий імпорт"
         }
       }
     },
@@ -1032,6 +1293,22 @@
       "detail": {
         "clientNotFound": "Клієнта не знайдено",
         "backToClients": "Назад до клієнтів",
+        "documentUploadTitle": "Завантажити документ",
+        "documentUploadAction": "Завантажити",
+        "generateDocument": "Згенерувати документ",
+        "comingSoon": "Незабаром",
+        "dropFileOrClick": "Перетягніть файл або натисніть для вибору",
+        "loan": "Кредит",
+        "documentsUnlinked": "Без прив'язки",
+        "documentTypes": {
+          "passport": "Паспорт",
+          "inn": "ІПН",
+          "contract": "Договір",
+          "income": "Довідка про доходи",
+          "outcome": "Витяг",
+          "signature": "ЕЦП",
+          "other": "Інше"
+        },
         "department": "Відділ",
         "phones": "Телефони",
         "tin": "ІПН",
@@ -1465,6 +1742,43 @@
           "clear": "Очистити",
           "apply": "Застосувати"
         },
+        "tagSelector": {
+          "title": "Керування тегами — {{name}}",
+          "loadingTags": "Завантаження тегів...",
+          "searchTags": "Пошук тегів...",
+          "selectedCount": "{{selected}} з {{total}} тегів вибрано",
+          "noTagsMatch": "За запитом тегів не знайдено",
+          "noTagsAvailable": "Немає доступних тегів",
+          "saveTags": "Зберегти теги",
+          "tagsUpdated": "Теги оновлено для {{name}}",
+          "updateFailed": "Не вдалося оновити теги"
+        },
+        "deleteClient": {
+          "title": "Видалити клієнта",
+          "softDeleteWarning": "Ця дія прибере клієнта з активних записів (м'яке видалення). За потреби адміністратори можуть відновити дані.",
+          "clientDetails": "Дані клієнта",
+          "fieldName": "ПІБ:",
+          "fieldTaxId": "ІПН:",
+          "fieldPhone": "Телефон:",
+          "fieldTotalDebt": "Загальний борг:",
+          "impactTitle": "Що станеться:",
+          "impact1": "Клієнта буде позначено як видаленого (м'яке видалення)",
+          "impact2": "Клієнт зникне зі списків клієнтів",
+          "impact3": "Історичні дані (нотатки, дзвінки, платежі) збережуться",
+          "impact4": "Скасувати дію без участі адміністратора неможливо",
+          "debtsSummary": "Пов'язані борги: {{count}} на суму {{amount}}",
+          "confirmCheckbox": "Я розумію, що клієнта буде прибрано з активних записів",
+          "submitDelete": "Видалити клієнта",
+          "deleting": "Видалення...",
+          "deletedSuccess": "Клієнта успішно видалено",
+          "deleteFailed": "Не вдалося видалити клієнта"
+        },
+        "documentPreview": {
+          "loading": "Завантаження...",
+          "loadFailed": "Не вдалося завантажити документ",
+          "previewNotAvailable": "Попередній перегляд недоступний",
+          "download": "Завантажити"
+        },
         "recordPayment": {
           "title": "Записати платіж",
           "currentDebt": "Поточний борг:",
@@ -1829,6 +2143,146 @@
         "commentPlaceholder": "Необов'язковий коментар..."
       }
     },
+    "clientChains": {
+      "logInteraction": "Журнал взаємодії",
+      "taChainLabel": "Ланцюжок TA",
+      "startChain": "Почати ланцюжок",
+      "selectChain": "Ланцюжок",
+      "selectChainPlaceholder": "Оберіть ланцюжок...",
+      "noChains": "Немає доступних активних ланцюжків.",
+      "noCredits": "Для цього клієнта не знайдено відкритих кредитів.",
+      "steps": "кроків",
+      "start": "Почати",
+      "activeLabel": "у процесі",
+      "cancel": "Скасувати ланцюжок",
+      "selectValue": "Оберіть значення...",
+      "selectResult": "Оберіть результат",
+      "selected": "Обрано",
+      "requiredByLeaf": "Обов'язково за налаштуванням вузла",
+      "promiseDate": "Дата обіцянки",
+      "promiseAmount": "Сума обіцянки",
+      "promiseAmountUAH": "Сума обіцянки (₴)",
+      "credit": "Кредит",
+      "creditPlaceholder": "Оберіть кредит...",
+      "notes": "Нотатки",
+      "notesPlaceholder": "Нотатки (необов'язково)...",
+      "stepLabel": "Крок {{order}}",
+      "delayWaiting": "Цей крок буде доступний за {{minutes}} хв",
+      "delayWaitingSeconds": "Цей крок буде доступний за {{seconds}} с",
+      "delayHint": "Попередній крок щойно завершено. Зачекайте, поки пройде затримка.",
+      "saveInteraction": "Зберегти взаємодію",
+      "continueToNext": "Далі →",
+      "quickPicks": "Швидкий старт",
+      "chainProgress": "Перебіг ланцюжка",
+      "stepOf": "крок {{current}} з {{total}}",
+      "current": "поточний",
+      "branch": "гілка",
+      "effectsOnSave": "Наслідки після збереження",
+      "effectTag": "Тег",
+      "effectRemoveTag": "Зняти тег",
+      "effectTask": "Завдання: зворотний дзвінок створено",
+      "effectSMS": "Подія: SMS надіслано",
+      "effectSpam": "Додано до списку спаму",
+      "dictionary": {
+        "level1": "Рівень 1 — Тип взаємодії",
+        "level2": "Рівень 2 — Категорія",
+        "level3": "Рівень 3 — Результат",
+        "selectPlaceholder": "Оберіть..."
+      },
+      "errors": {
+        "selectResult": "Оберіть результат у дереві.",
+        "promiseDateRequired": "Для цього результату потрібна дата обіцянки.",
+        "promiseAmountRequired": "Для цього результату потрібна сума обіцянки.",
+        "creditRequired": "Для цього результату потрібно обрати кредит.",
+        "stepFieldRequired": "Поле «{{name}}» обов'язкове.",
+        "stepRequired": "Заповніть цей крок перед продовженням."
+      },
+      "pickToContinue": "Оберіть ланцюжок вище, щоб продовжити.",
+      "stepsPreview": "Кроки в цьому ланцюжку",
+      "notifyResponsible": "Повідомити відповідального співробітника",
+      "toasts": {
+        "started": "Ланцюжок запущено",
+        "completed": "Взаємодію збережено, ланцюжок завершено",
+        "advanced": "Збережено — перехід до кроку {{step}}",
+        "cancelled": "Ланцюжок скасовано"
+      },
+      "history": {
+        "title": "Історія взаємодій",
+        "date": "Дата",
+        "chain": "Ланцюжок",
+        "phone": "Телефон",
+        "result": "Результат",
+        "dictionaryPath": "Шлях категорії",
+        "promise": "Обіцянка",
+        "notes": "Нотатки",
+        "operator": "Оператор",
+        "promiseDate": "Дата обіцянки",
+        "promiseAmount": "Сума",
+        "credit": "Номер кредиту",
+        "empty": "Взаємодій ще не записано.",
+        "filterChain": "Ланцюжок",
+        "allChains": "Усі ланцюжки",
+        "from": "Від",
+        "to": "До",
+        "searchNotes": "Нотатки",
+        "searchNotesPlaceholder": "Пошук у нотатках...",
+        "deleteTitle": "Видалити взаємодію",
+        "deleteConfirm": "Видалити цю взаємодію? Цю дію не можна скасувати.",
+        "deleteSuccess": "Взаємодію видалено"
+      },
+      "templatePlaceholder": "Оберіть шаблон…",
+      "templateSearchPlaceholder": "Пошук шаблонів…",
+      "templateNoneFound": "Немає відповідних шаблонів.",
+      "startWithTemplate": "Почати з цим шаблоном",
+      "chainSearchPlaceholder": "Пошук ланцюжків…",
+      "chainNoneFound": "Немає відповідних ланцюжків.",
+      "pinnedGroup": "Закріплені",
+      "allGroup": "Усі ланцюжки",
+      "clientPinHint": "Закріплено через історію цього клієнта",
+      "clientPinTag": "клієнт",
+      "pin": "Закріпити",
+      "unpin": "Відкріпити",
+      "previewHint": "Перегляньте ланцюжок праворуч і натисніть «Почати», коли будете готові.",
+      "stepCount": "{{count}} кроків",
+      "rewindWarningTitle": "Змінити крок з розгалуженням?",
+      "rewindWarningBody": "Кроки після кроку {{order}} буде очищено, і ви пройдете їх знову.",
+      "rewindConfirm": "Так, скинути й пройти знову",
+      "saving": "Збереження…",
+      "noContacts": "Немає доступних телефонів для цього джерела."
+    },
+    "interactionLog": {
+      "title": "Журнал взаємодій",
+      "export": "Експорт CSV",
+      "empty": "За вашими фільтрами взаємодій не знайдено.",
+      "columns": {
+        "date": "Дата",
+        "clientId": "Клієнт",
+        "chain": "Ланцюжок",
+        "dictionaryPath": "Шлях категорії",
+        "promise": "Обіцянка",
+        "promiseDate": "Дата обіцянки",
+        "promiseAmount": "Сума",
+        "creditNumber": "Номер кредиту",
+        "notes": "Нотатки",
+        "operator": "Оператор"
+      },
+      "filters": {
+        "clientId": "ID клієнта",
+        "clientIdPlaceholder": "ID",
+        "chain": "Ланцюжок",
+        "allChains": "Усі ланцюжки",
+        "from": "Від",
+        "to": "До",
+        "notes": "Нотатки",
+        "notesPlaceholder": "Пошук у нотатках..."
+      },
+      "pagination": {
+        "rangeOfTotal": "{{start}}–{{end}} / {{total}}",
+        "pageOfPages": "{{page}} / {{totalPages}}",
+        "previousPage": "Попередня сторінка",
+        "nextPage": "Наступна сторінка"
+      }
+    },
     "taDictionary": {
       "title": "Словник",
       "selectChain": "Оберіть ланцюжок",
@@ -2005,7 +2459,7 @@
         "actions": "Дії"
       },
       "categories": {
-        "paymentReminder": "Нагадування про платіж",
+        "paymentReminder": "Нагадування про оплату",
         "urgentContact": "Терміновий контакт",
         "general": "Загальне"
       },
@@ -2915,7 +3369,7 @@
               "No contact": "Немає контакту",
               "Refusal to pay": "Відмова від оплати",
               "Agreement": "Обіцянка оплати",
-              "Call back by appointment": "Перезвонити за домовленістю",
+              "Call back by appointment": "Передзвонити",
               "Consent to interact": "Згода на взаємодію",
               "Waiting for a call": "Очікує дзвінка",
               "Hanged up": "Поклав слухавку",

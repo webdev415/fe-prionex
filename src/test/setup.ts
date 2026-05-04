@@ -71,6 +71,18 @@ if (typeof globalThis.HTMLAudioElement === 'undefined') {
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
+      if (key === 'pages.imports.operatorAssignment.preview.fileInfo' && options) {
+        return `File: ${String(options.filename)} · ${String(options.totalRecords)} records · Batch: ${String(options.batchId)}`
+      }
+      if (key === 'pages.imports.operatorAssignment.preview.previewRows' && options) {
+        return `Preview (first ${String(options.count)} rows)`
+      }
+      if (key === 'pages.imports.operatorAssignment.preview.errors' && options) {
+        return `Errors (${String(options.count)})`
+      }
+      if (key === 'pages.imports.operatorAssignment.preview.confirm' && options) {
+        return `Confirm & Assign ${String(options.count)} Clients`
+      }
       // Map translation keys to readable text for testing
       const translations: Record<string, string> = {
         'login.title': 'Sign In',
@@ -254,8 +266,44 @@ vi.mock('react-i18next', () => ({
         'twoFactor.backupCodes.copied': 'Copied',
         'twoFactor.backupCodes.copyFailed': 'Could not copy to clipboard',
         'twoFactor.backupCodes.download': 'Download .txt',
+        'pages.clients.modals.deleteClient.title': 'Delete Client',
+        'pages.clients.modals.deleteClient.softDeleteWarning':
+          'This action will remove the client from active records (soft delete). Data can be recovered by administrators if needed.',
+        'pages.clients.modals.deleteClient.clientDetails': 'Client Details',
+        'pages.clients.modals.deleteClient.fieldName': 'Name:',
+        'pages.clients.modals.deleteClient.fieldTaxId': 'Tax ID:',
+        'pages.clients.modals.deleteClient.fieldPhone': 'Phone:',
+        'pages.clients.modals.deleteClient.fieldTotalDebt': 'Total Debt:',
+        'pages.clients.modals.deleteClient.impactTitle': 'What Will Happen:',
+        'pages.clients.modals.deleteClient.impact1':
+          'Client will be marked as deleted (soft delete)',
+        'pages.clients.modals.deleteClient.impact2': 'Client will disappear from client lists',
+        'pages.clients.modals.deleteClient.impact3':
+          'Historical data (notes, calls, payments) will be preserved',
+        'pages.clients.modals.deleteClient.impact4':
+          'This action cannot be undone without admin intervention',
+        'pages.clients.modals.deleteClient.debtsSummary':
+          'Associated debts: {{count}} debt(s) totaling {{amount}}',
+        'pages.clients.modals.deleteClient.confirmCheckbox':
+          'I understand this action will remove the client from active records',
+        'pages.clients.modals.deleteClient.submitDelete': 'Delete Client',
+        'pages.clients.modals.deleteClient.deleting': 'Deleting...',
+        'pages.clients.modals.deleteClient.deletedSuccess': 'Client deleted successfully',
+        'pages.clients.modals.deleteClient.deleteFailed': 'Failed to delete client',
+        'pages.clients.detail.tagsDropdown.searchTags': 'Search tags...',
+        'pages.clients.detail.tagsDropdown.noTagsFound': 'No tags found',
+        'pages.clients.detail.tagsDropdown.clear': 'Clear',
+        'pages.clients.detail.tagsDropdown.apply': 'Apply',
       }
-      return translations[key] || key
+      const template = translations[key] || key
+      if (options && typeof template === 'string' && template.includes('{{')) {
+        return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) =>
+          name in (options as Record<string, unknown>)
+            ? String((options as Record<string, unknown>)[name])
+            : `{{${name}}}`
+        )
+      }
+      return template
     },
     i18n: {
       language: 'en',

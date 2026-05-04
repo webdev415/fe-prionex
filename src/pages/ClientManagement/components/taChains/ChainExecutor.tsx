@@ -21,6 +21,8 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { DateSelect } from '@/components/ui/DateSelect'
+import { getDateTimeStringInTimezone, wallTimeAsTimezoneToUtcIso } from '@/lib/dateUtils'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
 import {
@@ -86,6 +88,27 @@ const EMPTY_INSTANT_VALUE: InstantStepValue = {
   promiseDate: '',
   promiseAmount: '',
   creditId: '',
+}
+
+// Date-type steps store the picker output as a naive browser-local string
+// (e.g. "2026-04-30T00:53"). The user is mentally typing in their profile
+// timezone (e.g. Kyiv), which may differ from the browser tz. So at submit
+// time we re-interpret the naive wall time as profile-tz wall time, then
+// convert to UTC ISO. If the value is already a UTC ISO (Z/+offset), pass
+// through.
+function toUtcIsoIfDate(
+  value: string | null | undefined,
+  fieldType: string | null | undefined,
+  profileTimezone: string | null | undefined
+): string | null {
+  if (!value) return null
+  if (fieldType !== 'date') return value
+  if (/[Zz]$|[+-]\d{2}:\d{2}$/.test(value)) return value // already absolute
+  if (!profileTimezone) {
+    const d = new Date(value)
+    return isNaN(d.getTime()) ? value : d.toISOString()
+  }
+  return wallTimeAsTimezoneToUtcIso(value, profileTimezone)
 }
 
 export function ChainExecutor({
@@ -555,9 +578,18 @@ export function ChainExecutor({
   // Situation A: non-branch — just update local collected data, no server call
   const saveEditStepLocal = () => {
     if (!editingStep) return
-    const { stepOrder, value, promiseDate: pd, promiseAmount: pa, creditId: ci } = editingStep
+    const {
+      stepOrder,
+      value,
+      fieldType,
+      promiseDate: pd,
+      promiseAmount: pa,
+      creditId: ci,
+    } = editingStep
 
-    if (value) collectedStepDataRef.current[String(stepOrder)] = value
+    if (value)
+      collectedStepDataRef.current[String(stepOrder)] =
+        toUtcIsoIfDate(value, fieldType, user?.timezone) ?? value
     else delete collectedStepDataRef.current[String(stepOrder)]
 
     if (pd) collectedPromiseDateRef.current = pd
@@ -647,9 +679,12 @@ export function ChainExecutor({
 
     setIsAutoAdvancing(true)
 
-    // Accumulate data synchronously via refs
+    // Accumulate data synchronously via refs.
+    // Convert date-type values to UTC ISO so TAInteraction.step_data
+    // (used by the Result column) matches what the chain_instance stores.
     if (stepValue) {
-      collectedStepDataRef.current[String(currentStep.step_order)] = stepValue
+      collectedStepDataRef.current[String(currentStep.step_order)] =
+        toUtcIsoIfDate(stepValue, currentTA?.field_type, user?.timezone) ?? stepValue
     }
     if (selectedDropdownValue) {
       collectedDropdownValueIdsRef.current[String(activeInstance.current_step_order ?? 1)] =
@@ -677,7 +712,7 @@ export function ChainExecutor({
         id: activeInstance.id,
         dropdownValueId: selectedDropdownValue?.id ?? null,
         dropdownValueName: selectedDropdownValue?.value ?? null,
-        stepValue: stepValue || null,
+        stepValue: toUtcIsoIfDate(stepValue || null, currentTA?.field_type, user?.timezone),
         targetActionId: currentStep.target_action_id,
         targetActionName: currentTA?.name ?? null,
         promiseDate: promiseDate || null,
@@ -720,9 +755,10 @@ export function ChainExecutor({
   const handleSave = async () => {
     if (!activeInstance || !activeChain) return
 
-    // Accumulate current step's data into refs
+    // Accumulate current step's data into refs (date-type → UTC ISO).
     if (currentStep && stepValue) {
-      collectedStepDataRef.current[String(currentStep.step_order)] = stepValue
+      collectedStepDataRef.current[String(currentStep.step_order)] =
+        toUtcIsoIfDate(stepValue, currentTA?.field_type, user?.timezone) ?? stepValue
     }
     if (selectedDropdownValue) {
       collectedDropdownValueIdsRef.current[String(activeInstance.current_step_order ?? 1)] =
@@ -782,7 +818,7 @@ export function ChainExecutor({
         id: activeInstance.id,
         dropdownValueId: selectedDropdownValue?.id ?? null,
         dropdownValueName: selectedDropdownValue?.value ?? null,
-        stepValue: stepValue || null,
+        stepValue: toUtcIsoIfDate(stepValue || null, currentTA?.field_type, user?.timezone),
         targetActionId: currentStep?.target_action_id ?? null,
         targetActionName: currentTA?.name ?? null,
         promiseDate: promiseDate || null,
@@ -880,7 +916,10 @@ export function ChainExecutor({
         continue
       }
       const ta = taById.get(step.target_action_id)
-      if (v.value) stepData[String(step.step_order)] = v.value
+      if (v.value) {
+        stepData[String(step.step_order)] =
+          toUtcIsoIfDate(v.value, ta?.field_type, user?.timezone) ?? v.value
+      }
 
       let dvId: number | null = null
       if (ta?.field_type === 'dropdown' && v.value) {
@@ -902,10 +941,21 @@ export function ChainExecutor({
         client_id: clientId,
       })
 
-      // Walk through middle steps so server-side per-step effects fire
+      // Walk through middle steps so server-side per-step effects fire.
+      // Pass stepValue + targetActionId so the backend snapshots step_data,
+      // which create_task / add_to_spam effects need to resolve refs.
       for (let i = 0; i < effectiveSteps.length - 1; i++) {
-        const dvId = dvByOrder[effectiveSteps[i].step_order] ?? null
-        await advanceMut.mutateAsync({ id: inst.id, dropdownValueId: dvId })
+        const step = effectiveSteps[i]
+        const v = instantValues[step.id]
+        const ta = taById.get(step.target_action_id)
+        const dvId = dvByOrder[step.step_order] ?? null
+        await advanceMut.mutateAsync({
+          id: inst.id,
+          dropdownValueId: dvId,
+          stepValue: toUtcIsoIfDate(v?.value || null, ta?.field_type, user?.timezone),
+          targetActionId: step.target_action_id,
+          targetActionName: ta?.name ?? null,
+        })
       }
 
       const lastStep = effectiveSteps[effectiveSteps.length - 1]
@@ -925,7 +975,19 @@ export function ChainExecutor({
         notify_responsible: showNotifyResponsibleCheckbox ? notifyResponsible : false,
       })
 
-      await advanceMut.mutateAsync({ id: inst.id, dropdownValueId: lastDvId ?? null })
+      // KAN-451: pass the LAST step's snapshot fields too, so the backend
+      // persists step_data[lastStepOrder]. Without this, date-type final
+      // steps (which have no dropdown_value_id) leave step_data incomplete,
+      // and chain-completion create_task effects can't resolve due_date_ref.
+      const lastV = instantValues[lastStep.id]
+      const lastTa = taById.get(lastStep.target_action_id)
+      await advanceMut.mutateAsync({
+        id: inst.id,
+        dropdownValueId: lastDvId ?? null,
+        stepValue: toUtcIsoIfDate(lastV?.value || null, lastTa?.field_type, user?.timezone),
+        targetActionId: lastStep.target_action_id,
+        targetActionName: lastTa?.name ?? null,
+      })
 
       toast.success(t('pages.clientChains.toasts.completed'))
       setInstantValues({})
@@ -1391,15 +1453,22 @@ export function ChainExecutor({
                               )}
                             </div>
                           ) : editingStep.fieldType === 'date' ? (
-                            <Input
-                              type="datetime-local"
-                              className="h-8 text-xs"
-                              value={editingStep.value}
-                              onChange={(e) =>
+                            <DateSelect
+                              value={editingStep.value || null}
+                              onChange={({ value }) =>
                                 setEditingStep((prev) =>
-                                  prev ? { ...prev, value: e.target.value } : prev
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        value: value ? getDateTimeStringInTimezone(value) : '',
+                                      }
+                                    : prev
                                 )
                               }
+                              format="dd/MM/yyyy HH:mm"
+                              showTimeSelect
+                              timeFormat="HH:mm"
+                              timeIntervals={15}
                             />
                           ) : editingStep.fieldType === 'amount' ? (
                             <Input
@@ -1434,15 +1503,24 @@ export function ChainExecutor({
                                 <Label className="text-xs text-gray-600">
                                   {t('pages.clientChains.promiseDate')}
                                 </Label>
-                                <Input
-                                  type="datetime-local"
-                                  className="h-8 text-xs"
-                                  value={editingStep.promiseDate}
-                                  onChange={(e) =>
+                                <DateSelect
+                                  value={editingStep.promiseDate || null}
+                                  onChange={({ value }) =>
                                     setEditingStep((prev) =>
-                                      prev ? { ...prev, promiseDate: e.target.value } : prev
+                                      prev
+                                        ? {
+                                            ...prev,
+                                            promiseDate: value
+                                              ? getDateTimeStringInTimezone(value)
+                                              : '',
+                                          }
+                                        : prev
                                     )
                                   }
+                                  format="dd/MM/yyyy HH:mm"
+                                  showTimeSelect
+                                  timeFormat="HH:mm"
+                                  timeIntervals={15}
                                 />
                               </div>
                             )}
@@ -1579,10 +1657,15 @@ export function ChainExecutor({
                           </SelectContent>
                         </Select>
                       ) : currentTA.field_type === 'date' ? (
-                        <Input
-                          type="datetime-local"
-                          value={stepValue}
-                          onChange={(e) => setStepValue(e.target.value)}
+                        <DateSelect
+                          value={stepValue || null}
+                          onChange={({ value }) =>
+                            setStepValue(value ? getDateTimeStringInTimezone(value) : '')
+                          }
+                          format="dd/MM/yyyy HH:mm"
+                          showTimeSelect
+                          timeFormat="HH:mm"
+                          timeIntervals={15}
                         />
                       ) : currentTA.field_type === 'amount' ? (
                         <Input
@@ -2002,7 +2085,6 @@ export function ChainExecutor({
                     {effectiveChain.name} —{' '}
                     {t('pages.clientChains.stepCount', {
                       count: effectiveSteps.length,
-                      defaultValue: '{{count}} steps',
                     })}
                   </p>
                   <ol className="flex flex-col">
@@ -2120,10 +2202,13 @@ function InstantStepCard({
           </SelectContent>
         </Select>
       ) : ta.field_type === 'date' ? (
-        <Input
-          type="datetime-local"
-          value={value.value}
-          onChange={(e) => onChange({ value: e.target.value })}
+        <DateSelect
+          value={value.value || null}
+          onChange={({ value: v }) => onChange({ value: v ? getDateTimeStringInTimezone(v) : '' })}
+          format="dd/MM/yyyy HH:mm"
+          showTimeSelect
+          timeFormat="HH:mm"
+          timeIntervals={15}
         />
       ) : ta.field_type === 'amount' ? (
         <Input

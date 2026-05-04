@@ -79,6 +79,45 @@ export function getDateTimeStringInTimezone(
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
+/**
+ * Treat a naive "YYYY-MM-DDTHH:mm" wall time as if it were in the given
+ * timezone, and return the corresponding UTC ISO timestamp.
+ *
+ * Use when the user picked a wall time meaning "this time in my profile
+ * timezone" (e.g. Kyiv) but the browser tz might differ from the profile
+ * tz, so we can't rely on `new Date(naive).toISOString()`.
+ */
+export function wallTimeAsTimezoneToUtcIso(naive: string, timezone: string): string {
+  const m = naive.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+  if (!m) return naive
+  const [, y, mo, d, h, mi] = m
+  const wallUtcMs = Date.UTC(+y, +mo - 1, +d, +h, +mi)
+  try {
+    const fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+    const parts = fmt.formatToParts(new Date(wallUtcMs))
+    const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? '0')
+    const tzWallAsUtcMs = Date.UTC(
+      get('year'),
+      get('month') - 1,
+      get('day'),
+      get('hour'),
+      get('minute')
+    )
+    const offsetMs = tzWallAsUtcMs - wallUtcMs
+    return new Date(wallUtcMs - offsetMs).toISOString()
+  } catch {
+    return new Date(naive).toISOString()
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Period range helper (used by dashboard, modals, and agent table)
 // ---------------------------------------------------------------------------

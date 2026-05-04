@@ -34,6 +34,7 @@ import { AssignRoleModal, type AssignRoleMode } from './components/AssignRoleMod
 import { PriorityBadge } from './components/PriorityBadge'
 import type { Priority } from './types'
 import { TagBadge } from '@/components/ui/TagBadge'
+import { ClientTagTraceModal } from '@/pages/Tags/components/ClientTagTraceModal'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { CallRecordingModal } from './components/CallRecordingModal'
 import { ViewSMSModal } from './components/ViewSMSModal'
@@ -93,6 +94,7 @@ import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
 import { formatUkrainePhoneForDisplay, normalizeUkrainePhoneToDb } from '@/lib/phone'
+import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
 
 // Extended types for SMS and Call items with API-specific properties
 type ExtendedSMSItem = {
@@ -167,6 +169,8 @@ export function ClientDetailPage() {
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
+  const activeRoleName = useAuthStore((state) => state.user?.active_role_name)
+  const showHiddenTags = isAdminRole(activeRoleName)
   const {
     user,
     isCallModalOpen,
@@ -250,6 +254,11 @@ export function ClientDetailPage() {
   const deleteTaskMutation = useDeleteTask(clientId)
   // Fetch client tags from API (real)
   const { data: clientTags } = useClientTags(clientId)
+  const [traceModal, setTraceModal] = useState<{
+    open: boolean
+    tagCode?: string
+    tagName?: string
+  }>({ open: false })
 
   // Fetch department of responsible employee
   const { data: responsibleEmployeeDepartment } = useUserDepartment(
@@ -371,7 +380,9 @@ export function ClientDetailPage() {
         text: c.content,
         author: c.created_by_name ?? `User #${c.created_by}`,
       })),
-      tags: profile.tags,
+      tags: (profile.tags || []).filter(
+        (tag) => showHiddenTags || !isHiddenVisibility((tag as { visibility?: string }).visibility)
+      ),
       // Loans mapped from DebtDetail to UI shape
       loans: (loans ?? []).map((d) => ({
         id: d.id,
@@ -562,6 +573,7 @@ export function ClientDetailPage() {
     documents,
     activities,
     responsibleEmployeeDepartment,
+    showHiddenTags,
     t,
   ])
 
@@ -1668,14 +1680,27 @@ export function ClientDetailPage() {
                     {clientTags && clientTags.length > 0 ? (
                       <>
                         {clientTags.slice(0, 3).map((tag) => (
-                          <TagBadge
+                          <button
                             key={tag.id}
-                            name={tag.name}
-                            color={tag.color}
-                            size="sm"
-                            isProtected={tag.is_protected}
-                            expiryType={tag.expiry_type}
-                          />
+                            type="button"
+                            onClick={() =>
+                              setTraceModal({
+                                open: true,
+                                tagCode: (tag as { code?: string }).code,
+                                tagName: tag.name,
+                              })
+                            }
+                            title={t('pages.tags.trace.openHint', 'Why this tag?')}
+                            className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                          >
+                            <TagBadge
+                              name={tag.name}
+                              color={tag.color}
+                              size="sm"
+                              isProtected={tag.is_protected}
+                              expiryType={tag.expiry_type}
+                            />
+                          </button>
                         ))}
                         {clientTags.length > 3 && (
                           <button
@@ -1688,6 +1713,17 @@ export function ClientDetailPage() {
                             })}
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => setTraceModal({ open: true })}
+                          title={t(
+                            'pages.tags.trace.openAllHint',
+                            'View tag activity for this client'
+                          )}
+                          className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700 transition-colors hover:bg-indigo-100"
+                        >
+                          {t('pages.tags.trace.cta', 'Why?')}
+                        </button>
                       </>
                     ) : (
                       <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
@@ -3793,6 +3829,15 @@ export function ClientDetailPage() {
           clientName={client.fullName}
           projectId={1}
           onClose={() => setIsTagModalOpen(false)}
+        />
+
+        {/* Tag Trace Modal — "Why this tag?" timeline (PR3 commit 3.10) */}
+        <ClientTagTraceModal
+          open={traceModal.open}
+          clientId={clientId}
+          tagCode={traceModal.tagCode}
+          tagName={traceModal.tagName}
+          onClose={() => setTraceModal({ open: false })}
         />
 
         {/* Edit Client Modal */}

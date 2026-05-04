@@ -4,7 +4,7 @@
  * Barrel export for all user-related React Query hooks.
  */
 
-export { useUsers, usersKeys } from './useUsers'
+export { useUsers, useOperators, usersKeys } from './useUsers'
 export { useUser } from './useUser'
 export { useCreateUser } from './useCreateUser'
 export { useUpdateUser } from './useUpdateUser'

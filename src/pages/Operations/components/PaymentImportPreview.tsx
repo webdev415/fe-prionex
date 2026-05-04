@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -17,14 +19,17 @@ interface Props {
 
 type PreviewRowWithId = PaymentPreviewRow & { id: number }
 
-function StatusBadge({ status }: { status: PaymentRowStatus }) {
-  const statusConfig: Record<
-    PaymentRowStatus,
-    { icon: typeof Icons.Success; color: string; label: string }
-  > = {
-    ready: { icon: Icons.Success, color: 'text-success-600', label: 'Ready' },
-    warning: { icon: Icons.Warning, color: 'text-warning-500', label: 'Warning' },
-    error: { icon: Icons.Error, color: 'text-error-500', label: 'Error' },
+function StatusBadge({
+  status,
+  labels,
+}: {
+  status: PaymentRowStatus
+  labels: Record<PaymentRowStatus, string>
+}) {
+  const statusConfig: Record<PaymentRowStatus, { icon: typeof Icons.Success; color: string }> = {
+    ready: { icon: Icons.Success, color: 'text-success-600' },
+    warning: { icon: Icons.Warning, color: 'text-warning-500' },
+    error: { icon: Icons.Error, color: 'text-error-500' },
   }
 
   const cfg = statusConfig[status]
@@ -32,7 +37,7 @@ function StatusBadge({ status }: { status: PaymentRowStatus }) {
   return (
     <span className={`inline-flex items-center gap-1 text-xs font-medium ${cfg.color}`}>
       <StatusIcon size={14} />
-      {cfg.label}
+      {labels[status]}
     </span>
   )
 }
@@ -61,30 +66,41 @@ function formatAmount(amount: number): string {
   }).format(amount)
 }
 
-function usePreviewColumns(): Column<PreviewRowWithId>[] {
-  return useMemo(
-    () => [
+function usePaymentPreviewColumns(t: TFunction<'common'>): Column<PreviewRowWithId>[] {
+  const c = 'pages.imports.bulkPaymentVerification.preview.columns'
+  const p = 'pages.imports.bulkPaymentVerification.preview'
+  return useMemo(() => {
+    const rowStatusLabels: Record<PaymentRowStatus, string> = {
+      ready: t(`${p}.rowStatus.ready`),
+      warning: t(`${p}.rowStatus.warning`),
+      error: t(`${p}.rowStatus.error`),
+    }
+    const rowTypeLabels = {
+      pending: t(`${p}.rowType.pending`),
+      new: t(`${p}.rowType.new`),
+    }
+    return [
       {
         key: 'row_number',
-        header: 'Row',
+        header: t(`${c}.row`),
       },
       {
         key: 'loan_number',
-        header: 'Contract Number',
+        header: t(`${c}.contractNumber`),
         render: (row: PreviewRowWithId) => (
           <span className="text-dark-500 font-medium">{row.loan_number}</span>
         ),
       },
       {
         key: 'tin',
-        header: 'TIN',
+        header: t(`${c}.tin`),
         render: (row: PreviewRowWithId) => (
           <span className="text-xs text-gray-600">{row.tin || '—'}</span>
         ),
       },
       {
         key: 'client_name',
-        header: 'Client',
+        header: t(`${c}.client`),
         render: (row: PreviewRowWithId) => (
           <span className="text-gray-600">
             {row.client_name || (row.client_id ? `ID: ${row.client_id}` : '—')}
@@ -93,38 +109,38 @@ function usePreviewColumns(): Column<PreviewRowWithId>[] {
       },
       {
         key: 'payment_amount',
-        header: 'Amount',
+        header: t(`${c}.amount`),
         render: (row: PreviewRowWithId) => (
           <span className="text-dark-500 font-medium">{formatAmount(row.payment_amount)}</span>
         ),
       },
       {
         key: 'payment_date',
-        header: 'Date',
+        header: t(`${c}.date`),
       },
       {
         key: 'payment_method',
-        header: 'Method',
+        header: t(`${c}.method`),
         render: (row: PreviewRowWithId) => (
           <span className="text-xs text-gray-600">{row.payment_method}</span>
         ),
       },
       {
         key: 'has_pending_match',
-        header: 'Type',
+        header: t(`${c}.type`),
         render: (row: PreviewRowWithId) => {
           if (row.status === 'error') return <span className="text-xs text-gray-400">—</span>
           if (row.has_pending_match === true) {
             return (
               <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-                Pending
+                {rowTypeLabels.pending}
               </span>
             )
           }
           if (row.has_pending_match === false) {
             return (
               <span className="inline-flex items-center rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">
-                New
+                {rowTypeLabels.new}
               </span>
             )
           }
@@ -133,24 +149,28 @@ function usePreviewColumns(): Column<PreviewRowWithId>[] {
       },
       {
         key: 'status',
-        header: 'Status',
-        render: (row: PreviewRowWithId) => <StatusBadge status={row.status} />,
+        header: t(`${c}.status`),
+        render: (row: PreviewRowWithId) => (
+          <StatusBadge status={row.status} labels={rowStatusLabels} />
+        ),
       },
       {
         key: 'note',
-        header: 'Note',
+        header: t(`${c}.note`),
         render: (row: PreviewRowWithId) => (
           <span className="text-xs text-gray-600">{row.error || row.warning || ''}</span>
         ),
       },
-    ],
-    []
-  )
+    ]
+  }, [t])
 }
 
 export function PaymentImportPreview({ preview, onConfirm, onCancel, isExecuting }: Props) {
+  const { t } = useTranslation('common')
+  const p = 'pages.imports.bulkPaymentVerification.preview'
   const { summary } = preview
-  const columns = usePreviewColumns()
+
+  const columns = usePaymentPreviewColumns(t)
   const [skipWarnings, setSkipWarnings] = useState(false)
   const [comment, setComment] = useState('')
 
@@ -165,76 +185,75 @@ export function PaymentImportPreview({ preview, onConfirm, onCancel, isExecuting
   )
 
   const actionableCount = summary.ready + summary.warnings
+  const previewShown = Math.min(previewRowsWithId.length, 100)
 
   return (
     <div className="space-y-6">
-      {/* File info */}
       <div>
-        <h3 className="text-dark-500 text-lg font-medium">Preview Payment Verification</h3>
+        <h3 className="text-dark-500 text-lg font-medium">{t(`${p}.title`)}</h3>
         <p className="text-sm text-gray-600">
-          File: <span className="font-medium">{preview.filename}</span> &middot;{' '}
-          {preview.total_records} records &middot; Batch: {preview.batch_id}
+          {t(`${p}.fileInfo`, {
+            filename: preview.filename,
+            totalRecords: preview.total_records,
+            batchId: preview.batch_id,
+          })}
         </p>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <SummaryCard
-          label="Ready"
+          label={t(`${p}.summary.ready`)}
           value={summary.ready}
           color="bg-success-50 border-success-200 text-success-700"
         />
         <SummaryCard
-          label="Warnings"
+          label={t(`${p}.summary.warnings`)}
           value={summary.warnings}
           color="bg-warning-50 border-warning-200 text-warning-700"
         />
         <SummaryCard
-          label="Invalid"
+          label={t(`${p}.summary.invalid`)}
           value={summary.invalid}
           color="bg-error-50 border-error-200 text-error-700"
         />
         <SummaryCard
-          label="Total Amount"
+          label={t(`${p}.summary.totalAmount`)}
           value={formatAmount(summary.total_amount)}
           color="bg-information-50 border-information-200 text-information-700"
         />
         <SummaryCard
-          label="Unique Contracts"
+          label={t(`${p}.summary.uniqueContracts`)}
           value={summary.unique_contracts}
           color="bg-gray-50 border-gray-200 text-dark-500"
         />
       </div>
 
-      {/* Preview table */}
       {previewRowsWithId.length > 0 && (
         <div>
           <h4 className="text-dark-500 mb-2 text-sm font-medium">
-            Preview ({Math.min(previewRowsWithId.length, 100)} rows)
+            {t(`${p}.previewTableTitle`, { count: previewShown })}
           </h4>
           <DataTable<PreviewRowWithId>
             columns={columns}
             data={previewRowsWithId}
-            emptyMessage="No preview rows"
+            emptyMessage={t(`${p}.emptyPreview`)}
           />
         </div>
       )}
 
-      {/* Errors table */}
       {errorRowsWithId.length > 0 && (
         <div>
           <h4 className="text-error-600 mb-2 text-sm font-medium">
-            Errors ({errorRowsWithId.length} rows)
+            {t(`${p}.errorsTableTitle`, { count: errorRowsWithId.length })}
           </h4>
           <DataTable<PreviewRowWithId>
             columns={columns}
             data={errorRowsWithId}
-            emptyMessage="No errors"
+            emptyMessage={t(`${p}.emptyErrors`)}
           />
         </div>
       )}
 
-      {/* Options */}
       <div className="space-y-3 border-t border-gray-200 pt-4">
         {summary.warnings > 0 && (
           <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -244,23 +263,22 @@ export function PaymentImportPreview({ preview, onConfirm, onCancel, isExecuting
               onChange={(e) => setSkipWarnings(e.target.checked)}
               className="rounded border-gray-300"
             />
-            Skip rows with warnings ({summary.warnings} rows)
+            {t(`${p}.skipWarnings`, { count: summary.warnings })}
           </label>
         )}
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Optional comment for this import..."
+          placeholder={t(`${p}.commentPlaceholder`)}
           maxLength={500}
           rows={2}
           className="focus:border-secondary-500 focus:ring-secondary-500 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-1 focus:outline-none"
         />
       </div>
 
-      {/* Actions */}
       <div className="flex items-center justify-end gap-3 pt-3">
         <Button variant="cancel" size="md" onClick={onCancel} disabled={isExecuting}>
-          Cancel
+          {t(`${p}.cancel`)}
         </Button>
         <Button
           variant="secondary"
@@ -269,7 +287,7 @@ export function PaymentImportPreview({ preview, onConfirm, onCancel, isExecuting
           disabled={isExecuting || actionableCount === 0}
           isLoading={isExecuting}
         >
-          {isExecuting ? 'Starting...' : `Verify ${actionableCount} Payments`}
+          {isExecuting ? t(`${p}.starting`) : t(`${p}.verifyPayments`, { count: actionableCount })}
         </Button>
       </div>
     </div>

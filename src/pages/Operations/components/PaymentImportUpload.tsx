@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { useDownloadPaymentImportTemplate } from '@/features/imports/hooks/usePaymentImport'
@@ -11,20 +12,27 @@ interface Props {
   isUploading: boolean
 }
 
-function validateFile(file: File): string | null {
-  if (!file.name.toLowerCase().endsWith('.csv')) {
-    return 'Only CSV files are supported.'
-  }
-  if (file.size > MAX_FILE_SIZE) {
-    return `File exceeds maximum size of 10 MB (${(file.size / (1024 * 1024)).toFixed(1)} MB).`
-  }
-  return null
-}
-
 export function PaymentImportUpload({ onFileSelected, isUploading }: Props) {
+  const { t } = useTranslation('common')
+  const p = 'pages.imports.bulkPaymentVerification.upload'
   const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const downloadTemplate = useDownloadPaymentImportTemplate()
+
+  const validateFile = useCallback(
+    (file: File): string | null => {
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        return t(`${p}.errors.onlyCsv`)
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        return t(`${p}.errors.fileTooLarge`, {
+          size: (file.size / (1024 * 1024)).toFixed(1),
+        })
+      }
+      return null
+    },
+    [t, p]
+  )
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -51,7 +59,7 @@ export function PaymentImportUpload({ onFileSelected, isUploading }: Props) {
       }
       onFileSelected(file)
     },
-    [onFileSelected]
+    [onFileSelected, validateFile]
   )
 
   const handleFileChange = useCallback(
@@ -69,20 +77,21 @@ export function PaymentImportUpload({ onFileSelected, isUploading }: Props) {
         inputRef.current.value = ''
       }
     },
-    [onFileSelected]
+    [onFileSelected, validateFile]
   )
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-dark-500 text-lg font-medium">Upload Bank CSV</h3>
+          <h3 className="text-dark-500 text-lg font-medium">{t(`${p}.sectionTitle`)}</h3>
           <p className="text-sm text-gray-600">
-            Verifies existing pending payments or auto-creates verified records. Required columns:{' '}
+            {t(`${p}.descriptionIntro`)}{' '}
             <code className="rounded bg-gray-100 px-1 text-xs">loan_number</code>,{' '}
             <code className="rounded bg-gray-100 px-1 text-xs">tin</code>,{' '}
             <code className="rounded bg-gray-100 px-1 text-xs">payment_amount</code>,{' '}
-            <code className="rounded bg-gray-100 px-1 text-xs">payment_date</code>. Optional:{' '}
+            <code className="rounded bg-gray-100 px-1 text-xs">payment_date</code>.{' '}
+            {t(`${p}.optionalIntro`)}{' '}
             <code className="rounded bg-gray-100 px-1 text-xs">payment_method</code>,{' '}
             <code className="rounded bg-gray-100 px-1 text-xs">payment_type</code>
           </p>
@@ -100,7 +109,7 @@ export function PaymentImportUpload({ onFileSelected, isUploading }: Props) {
             )
           }
         >
-          {downloadTemplate.isPending ? 'Downloading...' : 'Download Template'}
+          {downloadTemplate.isPending ? t(`${p}.downloading`) : t(`${p}.downloadTemplate`)}
         </Button>
       </div>
 
@@ -127,16 +136,16 @@ export function PaymentImportUpload({ onFileSelected, isUploading }: Props) {
         {isUploading ? (
           <div className="flex flex-col items-center gap-2">
             <Icons.Spinner className="h-8 w-8" />
-            <p className="text-sm text-gray-600">Validating CSV and resolving contracts...</p>
+            <p className="text-sm text-gray-600">{t(`${p}.validating`)}</p>
           </div>
         ) : (
           <>
             <Icons.CloudDownload size={40} className="text-gray-400" />
             <p className="text-dark-500 mt-2 text-sm">
-              <span className="text-secondary-700 font-medium">Click to upload</span> or drag and
-              drop
+              <span className="text-secondary-700 font-medium">{t(`${p}.clickToUpload`)}</span>{' '}
+              {t(`${p}.orDragAndDrop`)}
             </p>
-            <p className="mt-1 text-xs text-gray-500">CSV only, max 10 MB, max 10,000 rows</p>
+            <p className="mt-1 text-xs text-gray-500">{t(`${p}.constraints`)}</p>
           </>
         )}
 

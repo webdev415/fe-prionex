@@ -32,6 +32,9 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { useTAChains, useTAChain } from '@/features/taChains/hooks/useTAChains'
 import { updateStepPositions } from '@/features/taChains/api/taChainsApi'
+import { useTaskSubjects } from '@/features/clients/hooks/useClients'
+import { useOperators } from '@/features/users/hooks/useUsers'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import {
   useBuilderData,
   useCreateBranch,
@@ -84,12 +87,32 @@ export function ChainBuilderPage() {
   const chains = chainsData?.items ?? []
 
   // Reference data for dropdowns
-  const { data: tagsList } = useTags(projectId)
+  const { data: tagsList } = useTags(projectId, { includeHidden: true })
   const tags = tagsList ?? []
   const { data: smsTemplatesData } = useSMSTemplates(
     projectId ? { project_id: projectId } : undefined
   )
   const smsTemplates = smsTemplatesData?.templates ?? []
+  const { data: taskSubjects = [] } = useTaskSubjects()
+  const { data: operators = [] } = useOperators(projectId ?? null)
+  const taskSubjectOptions = useMemo(
+    () => taskSubjects.map((s) => ({ id: String(s.id), name: s.name })),
+    [taskSubjects]
+  )
+  const operatorOptions = useMemo(
+    () => operators.map((u) => ({ id: String(u.id), name: u.full_name })),
+    [operators]
+  )
+  const subjectNameById = useMemo(() => {
+    const m = new Map<number, string>()
+    for (const s of taskSubjects) m.set(s.id, s.name)
+    return m
+  }, [taskSubjects])
+  const operatorNameById = useMemo(() => {
+    const m = new Map<number, string>()
+    for (const u of operators) m.set(u.id, u.full_name)
+    return m
+  }, [operators])
 
   // Pretty-print config — replace IDs with names where possible
   const formatConfig = (config: Record<string, unknown>): string => {
@@ -105,6 +128,37 @@ export function ChainBuilderPage() {
       } else if (key === 'source_chain_id' || key === 'blocking_chain_id') {
         const c = chains.find((c) => c.id === Number(value))
         parts.push(`chain: ${c?.name ?? `#${value}`}`)
+      } else if (key === 'subject_id') {
+        const name = subjectNameById.get(Number(value))
+        parts.push(`subject: ${name ?? `#${value}`}`)
+      } else if (key === 'assigned_user_id') {
+        const name = operatorNameById.get(Number(value))
+        parts.push(`user: ${name ?? `#${value}`}`)
+      } else if (key === 'assignee_mode') {
+        const label =
+          value === 'created_by'
+            ? 'chain starter'
+            : value === 'client_responsible'
+              ? 'responsible operator'
+              : value === 'specific_user'
+                ? 'specific user'
+                : String(value)
+        parts.push(`assignee: ${label}`)
+      } else if (key === 'due_date_ref') {
+        if (value === 'chain_entry_date') parts.push('due: chain entry date')
+        else if (value === 'chain_completion_date') parts.push('due: chain completion date')
+        else {
+          const ord = Number(value)
+          const step = (chain?.steps ?? []).find((s) => s.step_order === ord)
+          parts.push(
+            `due: ${step ? `Step ${step.step_order} — ${step.target_action_name ?? '#' + step.target_action_id}` : `step_order ${value}`}`
+          )
+        }
+      } else if (key === 'phone_ref') {
+        const step = (chain?.steps ?? []).find((s) => s.id === Number(value))
+        parts.push(
+          `phone: ${step ? `Step ${step.step_order} — ${step.target_action_name ?? '#' + step.target_action_id}` : `step #${value}`}`
+        )
       } else {
         parts.push(`${key}: ${value}`)
       }
@@ -144,7 +198,7 @@ export function ChainBuilderPage() {
   const [newBranchConditions, setNewBranchConditions] = useState<Set<number>>(new Set())
   const [branchCondDropdownOpen, setBranchCondDropdownOpen] = useState(false)
 
-  const steps: TAChainStep[] = chain?.steps ?? []
+  const steps: TAChainStep[] = useMemo(() => chain?.steps ?? [], [chain?.steps])
   const selectedStep = steps.find((s) => s.id === selectedStepId)
 
   // Build React Flow nodes + edges from chain steps + branches
@@ -281,6 +335,17 @@ export function ChainBuilderPage() {
     for (const dv of stepDropdownValues) m.set(dv.id, dv.value)
     return m
   }, [stepDropdownValues])
+
+  // Steps of specific field types — used by effect builders that need to
+  // reference a chain step (phone for add_to_spam, due date for create_task).
+  const contactSteps = useMemo(
+    () => steps.filter((s) => s.target_action_field_type === 'contact'),
+    [steps]
+  )
+  const dateSteps = useMemo(
+    () => steps.filter((s) => s.target_action_field_type === 'date'),
+    [steps]
+  )
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -746,27 +811,127 @@ export function ChainBuilderPage() {
                         )}
                         {newEffectType === 'create_task' && (
                           <>
+                            <SearchableSelect
+                              options={taskSubjectOptions}
+                              value={newEffectConfig.subject_id ?? ''}
+                              onValueChange={(v) =>
+                                setNewEffectConfig({ ...newEffectConfig, subject_id: v })
+                              }
+                              placeholder="Subject (required)"
+                              searchPlaceholder="Search subjects..."
+                              className="text-xs"
+                            />
                             <input
                               className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
-                              placeholder="Task title"
+                              placeholder="Title (optional override)"
                               value={newEffectConfig.title ?? ''}
                               onChange={(e) =>
                                 setNewEffectConfig({ ...newEffectConfig, title: e.target.value })
                               }
                             />
+                            <textarea
+                              className="min-h-[48px] rounded-md border border-gray-200 px-2 py-1.5 text-xs text-gray-800"
+                              placeholder="Description (optional)"
+                              value={newEffectConfig.description ?? ''}
+                              onChange={(e) =>
+                                setNewEffectConfig({
+                                  ...newEffectConfig,
+                                  description: e.target.value,
+                                })
+                              }
+                            />
                             <select
                               className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
-                              value={newEffectConfig.priority ?? 'medium'}
+                              value={newEffectConfig.priority ?? 'normal'}
                               onChange={(e) =>
                                 setNewEffectConfig({ ...newEffectConfig, priority: e.target.value })
                               }
                             >
                               <option value="low">Low</option>
-                              <option value="medium">Medium</option>
+                              <option value="normal">Normal</option>
                               <option value="high">High</option>
+                              <option value="urgent">Urgent</option>
+                              <option value="critical">Critical</option>
+                            </select>
+                            <select
+                              className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                              value={newEffectConfig.assignee_mode ?? ''}
+                              onChange={(e) =>
+                                setNewEffectConfig({
+                                  ...newEffectConfig,
+                                  assignee_mode: e.target.value,
+                                  assigned_user_id: '',
+                                })
+                              }
+                            >
+                              <option value="">Assignee... (required)</option>
+                              <option value="created_by">Chain starter</option>
+                              <option value="client_responsible">Responsible operator</option>
+                              <option value="specific_user">Specific user</option>
+                            </select>
+                            {newEffectConfig.assignee_mode === 'specific_user' && (
+                              <SearchableSelect
+                                options={operatorOptions}
+                                value={newEffectConfig.assigned_user_id ?? ''}
+                                onValueChange={(v) =>
+                                  setNewEffectConfig({
+                                    ...newEffectConfig,
+                                    assigned_user_id: v,
+                                  })
+                                }
+                                placeholder="Pick user..."
+                                searchPlaceholder="Search users..."
+                                className="text-xs"
+                              />
+                            )}
+                            <select
+                              className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                              value={newEffectConfig.due_date_ref ?? ''}
+                              onChange={(e) =>
+                                setNewEffectConfig({
+                                  ...newEffectConfig,
+                                  due_date_ref: e.target.value,
+                                })
+                              }
+                            >
+                              <option value="">Due date — none (optional)</option>
+                              <option value="chain_entry_date">Chain entry date</option>
+                              <option value="chain_completion_date">Chain completion date</option>
+                              {dateSteps.map((s) => (
+                                <option key={s.id} value={String(s.step_order)}>
+                                  Step {s.step_order} —{' '}
+                                  {s.target_action_name ?? `#${s.target_action_id}`}
+                                </option>
+                              ))}
                             </select>
                           </>
                         )}
+                        {newEffectType === 'add_to_spam' &&
+                          (contactSteps.length === 0 ? (
+                            <div className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
+                              No contact-type steps in this chain. Add a step that collects a phone
+                              before configuring add_to_spam.
+                            </div>
+                          ) : (
+                            <select
+                              className="h-8 rounded-md border border-gray-200 px-2 text-xs text-gray-800"
+                              value={newEffectConfig.phone_ref ?? ''}
+                              onChange={(e) =>
+                                setNewEffectConfig({
+                                  ...newEffectConfig,
+                                  phone_ref: e.target.value,
+                                })
+                              }
+                            >
+                              <option value="">Phone source... (required)</option>
+                              {contactSteps.map((s) => (
+                                <option key={s.id} value={String(s.id)}>
+                                  Step {s.step_order} —{' '}
+                                  {s.target_action_name ?? `#${s.target_action_id}`}
+                                </option>
+                              ))}
+                            </select>
+                          ))}
                         {stepDropdownValues.length > 0 && (
                           <div className="relative">
                             <button
@@ -814,38 +979,64 @@ export function ChainBuilderPage() {
                             )}
                           </div>
                         )}
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            const cfg: Record<string, unknown> = {}
-                            if (newEffectConfig.tag_id)
-                              cfg.tag_id = parseInt(newEffectConfig.tag_id)
-                            if (newEffectConfig.sms_template_id)
-                              cfg.sms_template_id = parseInt(newEffectConfig.sms_template_id)
-                            if (newEffectConfig.title) cfg.title = newEffectConfig.title
-                            if (newEffectConfig.priority) cfg.priority = newEffectConfig.priority
-                            try {
-                              await createEffect.mutateAsync({
-                                step_id: selectedStep.id,
-                                effect_type: newEffectType,
-                                config: cfg,
-                                condition_dropdown_value_ids:
-                                  newEffectConditions.size > 0
-                                    ? Array.from(newEffectConditions)
-                                    : undefined,
-                              })
-                              toast.success('Effect added')
-                              setNewEffectConfig({})
-                              setNewEffectConditions(new Set())
-                              setEffectCondDropdownOpen(false)
-                            } catch (e) {
-                              toast.error(getErrorMessage(e))
-                            }
-                          }}
-                          className="flex h-8 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs text-gray-600 hover:bg-gray-100"
-                        >
-                          + Add effect
-                        </button>
+                        {(() => {
+                          const ec = newEffectConfig
+                          const addEffectDisabled =
+                            (newEffectType === 'add_tag' && !ec.tag_id) ||
+                            (newEffectType === 'remove_tag' && !ec.tag_id) ||
+                            (newEffectType === 'send_sms' && !ec.sms_template_id) ||
+                            (newEffectType === 'add_to_spam' &&
+                              (contactSteps.length === 0 || !ec.phone_ref)) ||
+                            (newEffectType === 'create_task' &&
+                              (!ec.subject_id ||
+                                !ec.assignee_mode ||
+                                (ec.assignee_mode === 'specific_user' && !ec.assigned_user_id)))
+                          return (
+                            <button
+                              type="button"
+                              disabled={addEffectDisabled}
+                              onClick={async () => {
+                                const cfg: Record<string, unknown> = {}
+                                if (ec.tag_id) cfg.tag_id = parseInt(ec.tag_id)
+                                if (ec.sms_template_id)
+                                  cfg.sms_template_id = parseInt(ec.sms_template_id)
+                                if (newEffectType === 'create_task') {
+                                  cfg.subject_id = parseInt(ec.subject_id!)
+                                  if (ec.title) cfg.title = ec.title
+                                  if (ec.description) cfg.description = ec.description
+                                  cfg.priority = ec.priority || 'normal'
+                                  cfg.assignee_mode = ec.assignee_mode
+                                  if (ec.assignee_mode === 'specific_user') {
+                                    cfg.assigned_user_id = parseInt(ec.assigned_user_id!)
+                                  }
+                                  if (ec.due_date_ref) cfg.due_date_ref = ec.due_date_ref
+                                } else if (newEffectType === 'add_to_spam') {
+                                  cfg.phone_ref = parseInt(ec.phone_ref!)
+                                }
+                                try {
+                                  await createEffect.mutateAsync({
+                                    step_id: selectedStep.id,
+                                    effect_type: newEffectType,
+                                    config: cfg,
+                                    condition_dropdown_value_ids:
+                                      newEffectConditions.size > 0
+                                        ? Array.from(newEffectConditions)
+                                        : undefined,
+                                  })
+                                  toast.success('Effect added')
+                                  setNewEffectConfig({})
+                                  setNewEffectConditions(new Set())
+                                  setEffectCondDropdownOpen(false)
+                                } catch (e) {
+                                  toast.error(getErrorMessage(e))
+                                }
+                              }}
+                              className="flex h-8 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              + Add effect
+                            </button>
+                          )
+                        })()}
                       </div>
                     </div>
 

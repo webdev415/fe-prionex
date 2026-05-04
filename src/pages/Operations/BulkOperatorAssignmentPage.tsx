@@ -12,6 +12,7 @@ import { OperatorAssignmentPreview } from './components/OperatorAssignmentPrevie
 import { OperatorAssignmentProgress } from './components/OperatorAssignmentProgress'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
+import { toast } from 'sonner'
 
 type PageState = 'upload' | 'preview' | 'processing'
 
@@ -30,7 +31,10 @@ export function BulkOperatorAssignmentPage() {
   const executeMutation = useOperatorAssignmentExecute()
 
   const handleFileSelected = (file: File) => {
-    if (!activeProjectId) return
+    if (!activeProjectId) {
+      toast.error(t('pages.imports.operatorAssignment.noProjectToast'))
+      return
+    }
 
     uploadMutation.mutate(
       { file, projectId: activeProjectId },

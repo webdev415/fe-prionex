@@ -13,6 +13,8 @@ import { toast } from 'sonner'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { DateSelect } from '@/components/ui/DateSelect'
+import { getDateTimeStringInTimezone } from '@/lib/dateUtils'
 import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
 import {
@@ -307,21 +309,21 @@ export function EditTAInteractionModal({
                     </Select>
                   ) : ta.field_type === 'date' ? (
                     (() => {
-                      // Browser only accepts YYYY-MM-DDTHH:mm. Older saves may
-                      // carry seconds/timezone (ISO) or use a space separator
-                      // (Postgres). Try to normalize; if we can't, surface the
-                      // raw value as info so admins can see what was stored.
-                      const candidate = value ? value.replace(' ', 'T').slice(0, 16) : ''
-                      const isValidLocal = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(candidate)
-                      const inputValue = isValidLocal ? candidate : ''
+                      const parsed = value ? new Date(value) : null
+                      const isValid = !!parsed && !isNaN(parsed.getTime())
                       return (
                         <div className="flex flex-col gap-1">
-                          <Input
-                            type="datetime-local"
-                            value={inputValue}
-                            onChange={(e) => setStepValue(step.id, e.target.value)}
+                          <DateSelect
+                            value={isValid ? parsed : null}
+                            onChange={({ value: v }) =>
+                              setStepValue(step.id, v ? getDateTimeStringInTimezone(v) : '')
+                            }
+                            format="dd/MM/yyyy HH:mm"
+                            showTimeSelect
+                            timeFormat="HH:mm"
+                            timeIntervals={15}
                           />
-                          {value && !isValidLocal && (
+                          {value && !isValid && (
                             <span className="text-xs text-amber-600">
                               {t('pages.clientChains.editInteraction.savedValue', 'Saved value')}:{' '}
                               {value}{' '}

@@ -89,15 +89,20 @@ export const PERMISSIONS = {
   },
 
   /**
-   * Tags Category (4 permissions)
-   * Controls access to tag management
-   * Note: Tags are admin-only
+   * Tags Category (6 permissions)
+   * Controls access to tag management.
+   * Note: Tags are admin-only for create/edit/delete; view is granted to operators.
+   * Settings (manage_tag_settings) and system rules (manage_system_rules) are
+   * gated separately so non-admin operators cannot reshape category lists or
+   * delete protected system rules.
    */
   TAGS: {
     VIEW: 'view_tags',
     CREATE: 'create_tags',
     EDIT: 'edit_tags',
     DELETE: 'delete_tags',
+    MANAGE_SETTINGS: 'manage_tag_settings',
+    MANAGE_SYSTEM_RULES: 'manage_system_rules',
   },
 
   /**
@@ -152,6 +157,14 @@ export const PERMISSIONS = {
   TA_CHAINS: {
     DELETE: 'delete_ta_chains',
   },
+
+  /**
+   * Action Analysis Category (1 permission)
+   * Controls access to action analysis
+   */
+  ACTION_ANALYSIS: {
+    VIEW: 'view_action_analysis',
+  },
 } as const
 
 /**
@@ -201,6 +214,7 @@ export const PERMISSION_CATEGORIES = {
   SELLERS: 'Sellers',
   SCORING_CONFIG: 'Scoring Configuration',
   TA_CHAINS: 'TA Chains',
+  ACTION_ANALYSIS: 'Action Analysis',
 } as const
 
 /**
@@ -255,6 +269,9 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   create_tags: 'Create new tags',
   edit_tags: 'Edit existing tags',
   delete_tags: 'Delete tags',
+  manage_tag_settings:
+    'Manage tag-service global settings (categories, presets, event registry view)',
+  manage_system_rules: 'Edit and delete system-protected tag rules',
 
   // Sellers
   view_sellers: 'View seller/creditor list and details',
@@ -270,4 +287,6 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
 
   // TA Chains
   delete_ta_chains: 'Delete TA Chains (refused if the chain has any recorded history)',
+  // Action Analysis
+  view_action_analysis: 'View Action Analysis page (call monitoring & interaction history)',
 }

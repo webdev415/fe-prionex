@@ -638,7 +638,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           },
           {
             path: '/dashboard/operations/bulk-payment-import',
-            label: t('navigation.bulkPaymentImport', 'Bulk Payment Import'),
+            label: t('navigation.bulkPaymentVerification'),
             icon: 'transaction-history',
             requiredPermission: PERMISSIONS.DATA.IMPORT_PAYMENTS,
           },
@@ -655,6 +655,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         icon: 'chart-ring',
         label: t('navigation.reports'),
         requiredPermission: PERMISSIONS.REPORTS.VIEW_ALL_REPORTS,
+      },
+      {
+        path: '/dashboard/action-analysis',
+        icon: 'analytics-01',
+        label: t('navigation.actionAnalysis'),
+        requiredPermission: PERMISSIONS.ACTION_ANALYSIS.VIEW,
       },
       {
         path: '/dashboard/users',
