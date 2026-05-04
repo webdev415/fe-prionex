@@ -265,7 +265,9 @@ export function TaskBell() {
                       <div className="flex items-center gap-1 text-black">
                         <Icons.Clock01 size={11} strokeWidth={1.5} />
                         <span className="text-[11px]">
-                          {task.due_date ? formatTaskDueDateForDisplay(task.due_date) : '—'}
+                          {task.due_date
+                            ? formatTaskDueDateForDisplay(task.due_date, userTimezone)
+                            : '—'}
                         </span>
                       </div>
                     </button>

@@ -578,9 +578,18 @@ export function ChainExecutor({
   // Situation A: non-branch — just update local collected data, no server call
   const saveEditStepLocal = () => {
     if (!editingStep) return
-    const { stepOrder, value, promiseDate: pd, promiseAmount: pa, creditId: ci } = editingStep
+    const {
+      stepOrder,
+      value,
+      fieldType,
+      promiseDate: pd,
+      promiseAmount: pa,
+      creditId: ci,
+    } = editingStep
 
-    if (value) collectedStepDataRef.current[String(stepOrder)] = value
+    if (value)
+      collectedStepDataRef.current[String(stepOrder)] =
+        toUtcIsoIfDate(value, fieldType, user?.timezone) ?? value
     else delete collectedStepDataRef.current[String(stepOrder)]
 
     if (pd) collectedPromiseDateRef.current = pd
@@ -670,9 +679,12 @@ export function ChainExecutor({
 
     setIsAutoAdvancing(true)
 
-    // Accumulate data synchronously via refs
+    // Accumulate data synchronously via refs.
+    // Convert date-type values to UTC ISO so TAInteraction.step_data
+    // (used by the Result column) matches what the chain_instance stores.
     if (stepValue) {
-      collectedStepDataRef.current[String(currentStep.step_order)] = stepValue
+      collectedStepDataRef.current[String(currentStep.step_order)] =
+        toUtcIsoIfDate(stepValue, currentTA?.field_type, user?.timezone) ?? stepValue
     }
     if (selectedDropdownValue) {
       collectedDropdownValueIdsRef.current[String(activeInstance.current_step_order ?? 1)] =
@@ -806,7 +818,7 @@ export function ChainExecutor({
         id: activeInstance.id,
         dropdownValueId: selectedDropdownValue?.id ?? null,
         dropdownValueName: selectedDropdownValue?.value ?? null,
-        stepValue: stepValue || null,
+        stepValue: toUtcIsoIfDate(stepValue || null, currentTA?.field_type, user?.timezone),
         targetActionId: currentStep?.target_action_id ?? null,
         targetActionName: currentTA?.name ?? null,
         promiseDate: promiseDate || null,
@@ -963,7 +975,19 @@ export function ChainExecutor({
         notify_responsible: showNotifyResponsibleCheckbox ? notifyResponsible : false,
       })
 
-      await advanceMut.mutateAsync({ id: inst.id, dropdownValueId: lastDvId ?? null })
+      // KAN-451: pass the LAST step's snapshot fields too, so the backend
+      // persists step_data[lastStepOrder]. Without this, date-type final
+      // steps (which have no dropdown_value_id) leave step_data incomplete,
+      // and chain-completion create_task effects can't resolve due_date_ref.
+      const lastV = instantValues[lastStep.id]
+      const lastTa = taById.get(lastStep.target_action_id)
+      await advanceMut.mutateAsync({
+        id: inst.id,
+        dropdownValueId: lastDvId ?? null,
+        stepValue: toUtcIsoIfDate(lastV?.value || null, lastTa?.field_type, user?.timezone),
+        targetActionId: lastStep.target_action_id,
+        targetActionName: lastTa?.name ?? null,
+      })
 
       toast.success(t('pages.clientChains.toasts.completed'))
       setInstantValues({})
@@ -1444,7 +1468,7 @@ export function ChainExecutor({
                               format="dd/MM/yyyy HH:mm"
                               showTimeSelect
                               timeFormat="HH:mm"
-                              timeIntervals={1}
+                              timeIntervals={15}
                             />
                           ) : editingStep.fieldType === 'amount' ? (
                             <Input
@@ -1496,7 +1520,7 @@ export function ChainExecutor({
                                   format="dd/MM/yyyy HH:mm"
                                   showTimeSelect
                                   timeFormat="HH:mm"
-                                  timeIntervals={1}
+                                  timeIntervals={15}
                                 />
                               </div>
                             )}
@@ -1641,7 +1665,7 @@ export function ChainExecutor({
                           format="dd/MM/yyyy HH:mm"
                           showTimeSelect
                           timeFormat="HH:mm"
-                          timeIntervals={1}
+                          timeIntervals={15}
                         />
                       ) : currentTA.field_type === 'amount' ? (
                         <Input
@@ -2184,7 +2208,7 @@ function InstantStepCard({
           format="dd/MM/yyyy HH:mm"
           showTimeSelect
           timeFormat="HH:mm"
-          timeIntervals={1}
+          timeIntervals={15}
         />
       ) : ta.field_type === 'amount' ? (
         <Input
