@@ -40,7 +40,6 @@ export interface TagDefinition extends Tag {
   notification_enabled: boolean
   notification_template?: string
   notification_roles?: string[]
-  auto_trigger_event?: string
   is_protected: boolean
   protected_removal_roles: string[]
   expiry_type: ExpiryType
@@ -69,7 +68,6 @@ export interface TagDefinitionCreate extends TagCreate {
   notification_enabled?: boolean
   notification_template?: string
   notification_roles?: string[]
-  auto_trigger_event?: string
   is_protected?: boolean
   protected_removal_roles?: string[]
   expiry_type?: ExpiryType
@@ -94,7 +92,6 @@ export interface TagDefinitionUpdate extends TagUpdate {
   notification_enabled?: boolean
   notification_template?: string
   notification_roles?: string[]
-  auto_trigger_event?: string
   is_protected?: boolean
   protected_removal_roles?: string[]
   expiry_type?: ExpiryType
