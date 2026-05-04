@@ -130,9 +130,7 @@ export function NotificationBell() {
   const paymentNotifications = notifications.filter(
     (n) => n.type === NotificationType.PAYMENT_PENDING
   )
-  const taskNotifications = notifications.filter(
-    (n) => n.type === NotificationType.TASK_OVERDUE || n.type === NotificationType.TASK_ASSIGNED
-  )
+  const taskNotifications = notifications.filter((n) => n.type === NotificationType.TASK_OVERDUE)
   const callNotifications = notifications.filter(
     (n) =>
       n.type === NotificationType.INCOMING_CALL || n.type === NotificationType.CALLBACK_REQUESTED
