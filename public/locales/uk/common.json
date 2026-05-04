@@ -115,7 +115,7 @@
     },
     "taskPriority": {
       "high": "високий",
-      "normal": "звичайний",
+      "normal": "нормальний",
       "low": "низький"
     },
     "taskStatus": {
@@ -2255,7 +2255,7 @@
         "actions": "Дії"
       },
       "categories": {
-        "paymentReminder": "Нагадування про платіж",
+        "paymentReminder": "Нагадування про оплату",
         "urgentContact": "Терміновий контакт",
         "general": "Загальне"
       },
@@ -3165,7 +3165,7 @@
               "No contact": "Немає контакту",
               "Refusal to pay": "Відмова від оплати",
               "Agreement": "Обіцянка оплати",
-              "Call back by appointment": "Перезвонити за домовленістю",
+              "Call back by appointment": "Передзвонити",
               "Consent to interact": "Згода на взаємодію",
               "Waiting for a call": "Очікує дзвінка",
               "Hanged up": "Поклав слухавку",
