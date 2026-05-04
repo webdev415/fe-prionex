@@ -2079,6 +2079,39 @@
         "commentPlaceholder": "Необов'язковий коментар..."
       }
     },
+    "interactionLog": {
+      "title": "Журнал взаємодій",
+      "export": "Експорт CSV",
+      "empty": "За вашими фільтрами взаємодій не знайдено.",
+      "columns": {
+        "date": "Дата",
+        "clientId": "Клієнт",
+        "chain": "Ланцюжок",
+        "dictionaryPath": "Шлях категорії",
+        "promise": "Обіцянка",
+        "promiseDate": "Дата обіцянки",
+        "promiseAmount": "Сума",
+        "creditNumber": "Номер кредиту",
+        "notes": "Нотатки",
+        "operator": "Оператор"
+      },
+      "filters": {
+        "clientId": "ID клієнта",
+        "clientIdPlaceholder": "ID",
+        "chain": "Ланцюжок",
+        "allChains": "Усі ланцюжки",
+        "from": "Від",
+        "to": "До",
+        "notes": "Нотатки",
+        "notesPlaceholder": "Пошук у нотатках..."
+      },
+      "pagination": {
+        "rangeOfTotal": "{{start}}–{{end}} / {{total}}",
+        "pageOfPages": "{{page}} / {{totalPages}}",
+        "previousPage": "Попередня сторінка",
+        "nextPage": "Наступна сторінка"
+      }
+    },
     "taDictionary": {
       "title": "Словник",
       "selectChain": "Оберіть ланцюжок",

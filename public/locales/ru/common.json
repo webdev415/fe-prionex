@@ -2083,6 +2083,39 @@
         "commentPlaceholder": "Необязательный комментарий..."
       }
     },
+    "interactionLog": {
+      "title": "Журнал взаимодействий",
+      "export": "Экспорт CSV",
+      "empty": "По выбранным фильтрам взаимодействий не найдено.",
+      "columns": {
+        "date": "Дата",
+        "clientId": "Клиент",
+        "chain": "Цепочка",
+        "dictionaryPath": "Путь категории",
+        "promise": "Обещание",
+        "promiseDate": "Дата обещания",
+        "promiseAmount": "Сумма",
+        "creditNumber": "Номер кредита",
+        "notes": "Заметки",
+        "operator": "Оператор"
+      },
+      "filters": {
+        "clientId": "ID клиента",
+        "clientIdPlaceholder": "ID",
+        "chain": "Цепочка",
+        "allChains": "Все цепочки",
+        "from": "С",
+        "to": "По",
+        "notes": "Заметки",
+        "notesPlaceholder": "Поиск по заметкам..."
+      },
+      "pagination": {
+        "rangeOfTotal": "{{start}}–{{end}} / {{total}}",
+        "pageOfPages": "{{page}} / {{totalPages}}",
+        "previousPage": "Предыдущая страница",
+        "nextPage": "Следующая страница"
+      }
+    },
     "taDictionary": {
       "title": "Словарь",
       "selectChain": "Выберите цепочку",

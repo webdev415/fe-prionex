@@ -2189,12 +2189,19 @@
       },
       "filters": {
         "clientId": "Client ID",
+        "clientIdPlaceholder": "ID",
         "chain": "Chain",
         "allChains": "All chains",
         "from": "From",
         "to": "To",
         "notes": "Notes",
         "notesPlaceholder": "Search notes..."
+      },
+      "pagination": {
+        "rangeOfTotal": "{{start}}–{{end}} / {{total}}",
+        "pageOfPages": "{{page}} / {{totalPages}}",
+        "previousPage": "Previous page",
+        "nextPage": "Next page"
       }
     },
     "taDictionary": {
