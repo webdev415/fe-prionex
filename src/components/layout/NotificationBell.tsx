@@ -30,9 +30,11 @@ import type { NotificationItem } from '@/features/notifications/types'
 
 function formatDateTime(isoDate: string, timezone?: string): string {
   try {
-    let dateStr = isoDate
-    if (!dateStr.endsWith('Z') && !dateStr.includes('+')) {
-      dateStr = dateStr.replace(' ', 'T') + 'Z'
+    // Convention: DB stores UTC. Naive strings (no Z/offset) are interpreted
+    // as UTC; we display in the user's profile timezone.
+    let dateStr = isoDate.replace(' ', 'T')
+    if (!dateStr.endsWith('Z') && !/[-+]\d{2}:\d{2}$/.test(dateStr)) {
+      dateStr += 'Z'
     }
     const tz = timezone ?? 'UTC'
     const parts = new Intl.DateTimeFormat('en-GB', {
@@ -127,7 +129,9 @@ export function NotificationBell() {
   const paymentNotifications = notifications.filter(
     (n) => n.type === NotificationType.PAYMENT_PENDING
   )
-  const taskNotifications = notifications.filter((n) => n.type === NotificationType.TASK_OVERDUE)
+  const taskNotifications = notifications.filter(
+    (n) => n.type === NotificationType.TASK_OVERDUE || n.type === NotificationType.TASK_ASSIGNED
+  )
   const callNotifications = notifications.filter((n) => n.type === NotificationType.INCOMING_CALL)
   const tagNotifications = notifications.filter(
     (n) =>
@@ -397,32 +401,41 @@ function TaskNotificationItem({
               <span className="ml-1 font-normal text-black">/ Debt: {meta.debt_id}</span>
             )}
           </p>
-          <span
-            className={cn(
-              'rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
-              meta.priority === 'high' && 'bg-red-100 text-red-600',
-              meta.priority === 'normal' && 'bg-blue-100 text-blue-600',
-              meta.priority === 'low' && 'bg-gray-100 text-gray-500'
-            )}
-          >
-            {meta.priority}
-          </span>
-          <span
-            className={cn(
-              'rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
-              meta.status === 'pending' && 'bg-yellow-100 text-yellow-600',
-              meta.status === 'in_progress' && 'bg-blue-100 text-blue-600',
-              meta.status === 'completed' && 'bg-green-100 text-green-600',
-              meta.status === 'extended' && 'bg-purple-100 text-purple-600',
-              meta.status === 'rejected' && 'bg-red-100 text-red-600',
-              meta.status === 'incoming_line_result' && 'bg-orange-100 text-orange-600'
-            )}
-          >
-            {meta.status?.replace(/_/g, ' ')}
-          </span>
+          {meta.priority && (
+            <span
+              className={cn(
+                'rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
+                meta.priority === 'high' && 'bg-red-100 text-red-600',
+                meta.priority === 'normal' && 'bg-blue-100 text-blue-600',
+                meta.priority === 'low' && 'bg-gray-100 text-gray-500'
+              )}
+            >
+              {meta.priority}
+            </span>
+          )}
+          {meta.status && (
+            <span
+              className={cn(
+                'rounded px-1.5 py-0.5 text-[10px] font-medium capitalize',
+                meta.status === 'pending' && 'bg-yellow-100 text-yellow-600',
+                meta.status === 'in_progress' && 'bg-blue-100 text-blue-600',
+                meta.status === 'completed' && 'bg-green-100 text-green-600',
+                meta.status === 'extended' && 'bg-purple-100 text-purple-600',
+                meta.status === 'rejected' && 'bg-red-100 text-red-600',
+                meta.status === 'incoming_line_result' && 'bg-orange-100 text-orange-600'
+              )}
+            >
+              {meta.status?.replace(/_/g, ' ')}
+            </span>
+          )}
+          {meta.subject_name && !meta.status && (
+            <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">
+              {meta.subject_name}
+            </span>
+          )}
         </div>
-        {meta.description && (
-          <p className="w-full min-w-0 truncate text-xs text-black">{meta.description}</p>
+        {(meta.description || n.body) && (
+          <p className="w-full min-w-0 truncate text-xs text-black">{meta.description || n.body}</p>
         )}
         <div className="flex items-center gap-1 text-black">
           <Icons.Clock01 size={11} strokeWidth={1.5} />

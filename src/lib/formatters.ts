@@ -162,11 +162,36 @@ export function formatDateDotDMY(dateStr?: string | null): string {
 
 /**
  * Format datetime for display → DD-MM-YYYY HH:MM
+ *
+ * If `timezone` is given, the value is formatted in that IANA tz instead of
+ * browser-local. Naive strings without Z/offset are interpreted as UTC
+ * (matches the DB convention).
  */
-export function formatDateTime(dateStr?: string): string {
+export function formatDateTime(dateStr?: string, timezone?: string | null): string {
   if (!dateStr) return '—'
-  const d = new Date(dateStr)
+  let normalized = dateStr.replace(' ', 'T')
+  if (!normalized.endsWith('Z') && !/[-+]\d{2}:\d{2}$/.test(normalized)) {
+    normalized += 'Z'
+  }
+  const d = new Date(normalized)
   if (isNaN(d.getTime())) return '—'
+  if (timezone) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).formatToParts(d)
+      const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '00'
+      return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}`
+    } catch {
+      // fall through to browser-local
+    }
+  }
   const hour = String(d.getHours()).padStart(2, '0')
   const minute = String(d.getMinutes()).padStart(2, '0')
   return `${toDMY(d)} ${hour}:${minute}`

@@ -1,6 +1,7 @@
 export const NotificationType = {
   INCOMING_CALL: 'incoming_call',
   TASK_OVERDUE: 'task_overdue',
+  TASK_ASSIGNED: 'task_assigned',
   PAYMENT_PENDING: 'payment_pending',
   TAG_ASSIGNED: 'tag_assigned',
   TAG_REMOVED: 'tag_removed',
