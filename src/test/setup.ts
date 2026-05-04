@@ -71,6 +71,18 @@ if (typeof globalThis.HTMLAudioElement === 'undefined') {
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
+      if (key === 'pages.imports.operatorAssignment.preview.fileInfo' && options) {
+        return `File: ${String(options.filename)} · ${String(options.totalRecords)} records · Batch: ${String(options.batchId)}`
+      }
+      if (key === 'pages.imports.operatorAssignment.preview.previewRows' && options) {
+        return `Preview (first ${String(options.count)} rows)`
+      }
+      if (key === 'pages.imports.operatorAssignment.preview.errors' && options) {
+        return `Errors (${String(options.count)})`
+      }
+      if (key === 'pages.imports.operatorAssignment.preview.confirm' && options) {
+        return `Confirm & Assign ${String(options.count)} Clients`
+      }
       // Map translation keys to readable text for testing
       const translations: Record<string, string> = {
         'login.title': 'Sign In',

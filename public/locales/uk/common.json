@@ -903,10 +903,28 @@
       },
       "operatorAssignment": {
         "title": "Масове призначення операторів",
-        "viewHistory": "Історія",
+        "viewHistory": "Історія імпорту",
+        "noProjectToast": "Оберіть активний проєкт перед завантаженням файлу.",
+        "upload": {
+          "sectionTitle": "Завантаження CSV",
+          "description": "Файл CSV зі стовпцями client_id та operator_id",
+          "downloadTemplate": "Завантажити шаблон",
+          "downloading": "Завантаження...",
+          "clickToUpload": "Натисніть для завантаження",
+          "orDragAndDrop": "або перетягніть файл сюди",
+          "constraints": "Лише CSV, максимум 10 МБ, до 10 000 рядків",
+          "validating": "Перевірка CSV...",
+          "errors": {
+            "onlyCsv": "Підтримуються лише файли CSV.",
+            "fileTooLarge": "Файл перевищує максимальний розмір 10 МБ ({{size}} МБ)."
+          }
+        },
         "preview": {
           "title": "Попередній перегляд",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записів · Партія: {{batchId}}",
           "previewRows": "Попередній перегляд (перші {{count}} рядків)",
+          "emptyPreview": "Немає рядків для перегляду",
+          "emptyErrors": "Немає помилок",
           "errors": "Помилки ({{count}})",
           "readyToAssign": "Готово до призначення",
           "noChange": "Без змін",
@@ -930,8 +948,7 @@
           "assignmentReasonPlaceholder": "напр., Перерозподіл портфеля березень 2026",
           "cancel": "Скасувати",
           "confirm": "Підтвердити та призначити {{count}} клієнтів",
-          "starting": "Запуск...",
-          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записів · Партія: {{batchId}}"
+          "starting": "Запуск..."
         },
         "progress": {
           "assignmentComplete": "Призначення завершено",
@@ -943,6 +960,7 @@
           "successful": "Успішно",
           "failed": "Не вдалося",
           "processingTime": "Час обробки: {{time}}",
+          "errorDetails": "Деталі помилки",
           "cancel": "Скасувати",
           "downloadErrors": "Завантажити помилки",
           "startNewImport": "Новий імпорт",
