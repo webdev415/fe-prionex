@@ -657,6 +657,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.REPORTS.VIEW_ALL_REPORTS,
       },
       {
+        path: '/dashboard/action-analysis',
+        icon: 'analytics-01',
+        label: t('navigation.actionAnalysis'),
+        requiredPermission: PERMISSIONS.ACTION_ANALYSIS.VIEW,
+      },
+      {
         path: '/dashboard/users',
         icon: 'user-search-01',
         label: t('navigation.users'),

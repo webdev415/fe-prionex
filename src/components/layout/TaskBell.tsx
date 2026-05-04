@@ -18,6 +18,7 @@ import { useMyTasks } from '@/features/clients/hooks/useClients'
 import { usePendingVerificationPayments } from '@/features/payments/hooks/usePayments'
 import { taskApi } from '@/features/clients/api/taskApi'
 import { useAuthStore } from '@/stores/authStore'
+import { formatTaskDueDateForDisplay } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 
 function formatDateTime(isoDate: string, timezone?: string): string {
@@ -264,7 +265,7 @@ export function TaskBell() {
                       <div className="flex items-center gap-1 text-black">
                         <Icons.Clock01 size={11} strokeWidth={1.5} />
                         <span className="text-[11px]">
-                          {task.due_date ? formatDateTime(task.due_date, userTimezone) : '—'}
+                          {task.due_date ? formatTaskDueDateForDisplay(task.due_date) : '—'}
                         </span>
                       </div>
                     </button>

@@ -1,5 +1,6 @@
 export const NotificationType = {
   INCOMING_CALL: 'incoming_call',
+  CALLBACK_REQUESTED: 'callback_requested',
   TASK_OVERDUE: 'task_overdue',
   TASK_ASSIGNED: 'task_assigned',
   PAYMENT_PENDING: 'payment_pending',

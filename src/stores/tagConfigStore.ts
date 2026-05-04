@@ -107,6 +107,12 @@ interface TagConfigState {
   addSegmentPreset: (preset: SegmentPreset) => void
   updateSegmentPreset: (oldKey: string, preset: SegmentPreset) => void
   resetToDefaults: () => void
+  /**
+   * Replace all config sections with values from backend (PR2-BE).
+   * Unknown keys are ignored; missing keys keep current state. Safe to call
+   * on every successful useTagSettings fetch.
+   */
+  loadFromServer: (value: Record<string, unknown>) => void
 }
 
 const DEFAULT_INTERACTION_RESULT_OPTIONS: ConfigItem[] = [
@@ -973,6 +979,34 @@ export const useTagConfigStore = create<TagConfigState>()(
         }),
 
       resetToDefaults: () => set(cloneDefaultConfig()),
+
+      loadFromServer: (value) =>
+        set((state) => {
+          if (!value || typeof value !== 'object') return state
+          const next: Partial<TagConfigState> = {}
+          const known: Array<keyof TagConfigState> = [
+            'categories',
+            'visibilities',
+            'expiryTypes',
+            'presetColors',
+            'triggerTypes',
+            'availableEvents',
+            'actionTypes',
+            'conditionFields',
+            'operators',
+            'refreshModes',
+            'rulePresets',
+            'segmentPresets',
+          ]
+          for (const key of known) {
+            const incoming = (value as Record<string, unknown>)[key]
+            if (incoming !== undefined) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ;(next as Record<string, unknown>)[key] = incoming as any
+            }
+          }
+          return { ...state, ...next }
+        }),
     }),
     {
       name: 'tag-config-storage',

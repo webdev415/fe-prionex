@@ -93,6 +93,7 @@ import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
 import { formatUkrainePhoneForDisplay, normalizeUkrainePhoneToDb } from '@/lib/phone'
+import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
 
 // Extended types for SMS and Call items with API-specific properties
 type ExtendedSMSItem = {
@@ -167,6 +168,8 @@ export function ClientDetailPage() {
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
+  const activeRoleName = useAuthStore((state) => state.user?.active_role_name)
+  const showHiddenTags = isAdminRole(activeRoleName)
   const {
     user,
     isCallModalOpen,
@@ -371,7 +374,9 @@ export function ClientDetailPage() {
         text: c.content,
         author: c.created_by_name ?? `User #${c.created_by}`,
       })),
-      tags: profile.tags,
+      tags: (profile.tags || []).filter(
+        (tag) => showHiddenTags || !isHiddenVisibility((tag as { visibility?: string }).visibility)
+      ),
       // Loans mapped from DebtDetail to UI shape
       loans: (loans ?? []).map((d) => ({
         id: d.id,
@@ -562,6 +567,7 @@ export function ClientDetailPage() {
     documents,
     activities,
     responsibleEmployeeDepartment,
+    showHiddenTags,
     t,
   ])
 

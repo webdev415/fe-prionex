@@ -7,6 +7,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { tagsApi } from '../api/tagsApi'
+import { useAuthStore } from '@/stores/authStore'
+import { filterTagsForRole } from '../utils/visibility'
 import type {
   TagCreate,
   TagDefinitionCreate,
@@ -42,10 +44,13 @@ export const tagsKeys = {
  * @param projectId - Optional project ID filter
  * @returns React Query result with tags data
  */
-export function useTags(projectId?: number) {
+export function useTags(projectId?: number, options?: { includeHidden?: boolean }) {
+  const roleName = useAuthStore((state) => state.user?.active_role_name)
+  const includeHidden = options?.includeHidden ?? false
   return useQuery({
-    queryKey: tagsKeys.list(projectId),
+    queryKey: [...tagsKeys.list(projectId), { includeHidden, roleName }],
     queryFn: () => tagsApi.getTags(projectId),
+    select: (tags) => filterTagsForRole(tags, roleName, includeHidden),
     staleTime: 5 * 60 * 1000, // 5 minutes
   })
 }
@@ -111,10 +116,13 @@ export function useDeleteTag() {
  * @param clientId - Client ID
  * @returns React Query result with client tags data
  */
-export function useClientTags(clientId: number) {
+export function useClientTags(clientId: number, options?: { includeHidden?: boolean }) {
+  const roleName = useAuthStore((state) => state.user?.active_role_name)
+  const includeHidden = options?.includeHidden ?? false
   return useQuery({
-    queryKey: ['clients', clientId, 'tags'] as const,
+    queryKey: ['clients', clientId, 'tags', { includeHidden, roleName }] as const,
     queryFn: () => tagsApi.getClientTags(clientId),
+    select: (tags) => filterTagsForRole(tags, roleName, includeHidden),
     enabled: !!clientId,
     staleTime: 0, // Always refetch on invalidation (auto-tagging is async)
   })

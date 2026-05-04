@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
+import { formatTaskDueDateForDisplay } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 
 import {
@@ -132,7 +133,10 @@ export function NotificationBell() {
   const taskNotifications = notifications.filter(
     (n) => n.type === NotificationType.TASK_OVERDUE || n.type === NotificationType.TASK_ASSIGNED
   )
-  const callNotifications = notifications.filter((n) => n.type === NotificationType.INCOMING_CALL)
+  const callNotifications = notifications.filter(
+    (n) =>
+      n.type === NotificationType.INCOMING_CALL || n.type === NotificationType.CALLBACK_REQUESTED
+  )
   const tagNotifications = notifications.filter(
     (n) =>
       n.type === NotificationType.TAG_ASSIGNED ||
@@ -255,7 +259,6 @@ export function NotificationBell() {
                   <TaskNotificationItem
                     key={n.id}
                     notification={n}
-                    userTimezone={userTimezone}
                     onNavigate={handleNavigate}
                     onDismiss={handleDismiss}
                   />
@@ -372,12 +375,10 @@ function PaymentNotificationItem({
 
 function TaskNotificationItem({
   notification: n,
-  userTimezone,
   onNavigate,
   onDismiss,
 }: {
   notification: NotificationItem
-  userTimezone?: string
   onNavigate: NavigateFn
   onDismiss: DismissFn
 }) {
@@ -440,7 +441,7 @@ function TaskNotificationItem({
         <div className="flex items-center gap-1 text-black">
           <Icons.Clock01 size={11} strokeWidth={1.5} />
           <span className="text-[11px]">
-            {meta.due_date ? formatDateTime(meta.due_date, userTimezone) : '—'}
+            {meta.due_date ? formatTaskDueDateForDisplay(meta.due_date) : '—'}
           </span>
         </div>
       </button>

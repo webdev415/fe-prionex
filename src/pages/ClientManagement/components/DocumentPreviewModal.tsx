@@ -6,7 +6,7 @@
  * - Other types: download-only prompt
  */
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { documentApi } from '@/features/clients/api/documentApi'
@@ -54,7 +54,7 @@ export function DocumentPreviewModal({
   const dragStart = useRef({ x: 0, y: 0 })
 
   const {
-    data: previewData,
+    data: blob,
     isLoading: loading,
     error,
   } = useQuery({
@@ -64,13 +64,17 @@ export function DocumentPreviewModal({
     staleTime: 60000,
   })
 
-  const blobUrl = previewData?.url ?? null
-
+  // Mint a fresh object URL whenever the blob arrives or changes, and revoke
+  // it on unmount/blob change. Caching only the Blob (not the URL) in React
+  // Query lets a re-open of the same document produce a new URL instead of
+  // reusing one that was already revoked on the previous close.
+  const blobUrl = useMemo(() => (blob ? URL.createObjectURL(blob) : null), [blob])
   useEffect(() => {
+    if (!blobUrl) return
     return () => {
-      if (previewData?.url) URL.revokeObjectURL(previewData.url)
+      URL.revokeObjectURL(blobUrl)
     }
-  }, [previewData?.url])
+  }, [blobUrl])
 
   const handleDownload = () => {
     documentApi.download(clientId, documentId, filename)

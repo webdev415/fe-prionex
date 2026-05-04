@@ -13,6 +13,7 @@ import { Modal, ModalHeader, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { documentApi } from '@/features/clients/api/documentApi'
 import { clientKeys } from '@/features/clients/hooks/useClients'
+import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
 interface Loan {
@@ -92,6 +93,16 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
       <ModalHeader title={t('pages.clients.detail.uploadDocument', 'Завантажити документ')} />
 
       <div className="flex flex-col gap-4 p-4 md:p-6">
+        <Button
+          variant="outline"
+          type="button"
+          className="w-full"
+          leftIcon={<Icons.AddInvoice size={16} />}
+          onClick={() => toast.info(t('common.soon', 'Незабаром'))}
+        >
+          {t('pages.clients.detail.generateDocument', 'Сгенерувати документ')}
+        </Button>
+
         {/* File drop zone */}
         <div
           role="button"
@@ -164,41 +175,44 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
           )}
         </div>
 
-        {/* Document type */}
-        <div>
-          <label className="text-secondary-700 mb-1 block text-sm font-medium">
-            {t('pages.clients.detail.tableHeaders.documentType', 'Тип документа')}
-          </label>
-          <select
-            value={docType}
-            onChange={(e) => setDocType(e.target.value)}
-            className="border-secondary-300 text-secondary-900 focus:border-primary-400 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none"
-          >
-            {DOC_TYPES.map((dt) => (
-              <option key={dt.value} value={dt.value}>
-                {dt.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Document type & Credit */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-secondary-700 mb-1 block text-sm font-medium">
+              {t('pages.clients.detail.tableHeaders.documentType', 'Тип документа')}
+            </label>
+            <select
+              value={docType}
+              onChange={(e) => setDocType(e.target.value)}
+              className="border-secondary-300 text-secondary-900 focus:border-primary-400 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none"
+            >
+              {DOC_TYPES.map((dt) => (
+                <option key={dt.value} value={dt.value}>
+                  {dt.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* Credit (optional) */}
-        <div>
-          <label className="text-secondary-700 mb-1 block text-sm font-medium">
-            {t('pages.clients.detail.loan', 'Кредит')}
-          </label>
-          <select
-            value={debtId ?? ''}
-            onChange={(e) => setDebtId(e.target.value ? Number(e.target.value) : null)}
-            className="border-secondary-300 text-secondary-900 focus:border-primary-400 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none"
-          >
-            <option value="">{t('pages.clients.detail.documentsUnlinked', "Без прив'язки")}</option>
-            {loans.map((loan) => (
-              <option key={loan.id} value={loan.id}>
-                #{loan.loanNumber} — {loan.counterparty}
+          <div>
+            <label className="text-secondary-700 mb-1 block text-sm font-medium">
+              {t('pages.clients.detail.loan', 'Кредит')}
+            </label>
+            <select
+              value={debtId ?? ''}
+              onChange={(e) => setDebtId(e.target.value ? Number(e.target.value) : null)}
+              className="border-secondary-300 text-secondary-900 focus:border-primary-400 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none"
+            >
+              <option value="">
+                {t('pages.clients.detail.documentsUnlinked', "Без прив'язки")}
               </option>
-            ))}
-          </select>
+              {loans.map((loan) => (
+                <option key={loan.id} value={loan.id}>
+                  #{loan.loanNumber} — {loan.counterparty}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

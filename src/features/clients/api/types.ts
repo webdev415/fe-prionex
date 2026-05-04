@@ -128,7 +128,13 @@ export interface Client {
   assigned_by?: number | null
 
   // Tags (Sprint 2.5 - Phase 2.3)
-  tags?: Array<{ id: number; name: string; color: string; description?: string | null }>
+  tags?: Array<{
+    id: number
+    name: string
+    color: string
+    description?: string | null
+    visibility?: string | null
+  }>
 }
 
 export interface ClientDetail extends Client {
