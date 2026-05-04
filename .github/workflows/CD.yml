@@ -213,16 +213,16 @@ jobs:
           key: ${{ steps.set-env.outputs.DEPLOY_ENV == 'production' && secrets.PROD_SSH_KEY || secrets.DEV_SSH_KEY }}
           port: 22
           script: |
-            echo "Waiting for frontend to be healthy..."
-            for i in $(seq 1 12); do
+            echo "Waiting for frontend to be healthy (up to 5 minutes)..."
+            for i in $(seq 1 60); do
               if curl -sf http://localhost:3000 > /dev/null 2>&1; then
                 echo "✅ Frontend is healthy"
                 exit 0
               fi
-              echo "  Attempt $i/12 - waiting 5s..."
+              echo "  Attempt $i/60 - waiting 5s..."
               sleep 5
             done
-            echo "❌ Frontend failed to respond within 60s"
+            echo "❌ Frontend failed to respond within 5 minutes"
             exit 1
 
       - name: Deploy notification
