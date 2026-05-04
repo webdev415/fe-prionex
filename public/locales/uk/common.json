@@ -27,6 +27,7 @@
     "transactions": "Транзакції",
     "operations": "Операції",
     "bulkOperatorAssignment": "Масове призначення операторів",
+    "bulkPaymentVerification": "Масова верифікація платежів",
     "auditLogs": "Журнал аудиту",
     "reports": "Звіти",
     "scoringConfiguration": "Конфігурація оцінки",
@@ -946,6 +947,82 @@
           "downloadErrors": "Завантажити помилки",
           "startNewImport": "Новий імпорт",
           "jobStarted": "Призначення операторів запущено"
+        }
+      },
+      "bulkPaymentVerification": {
+        "title": "Масова верифікація платежів",
+        "viewHistory": "Історія імпорту",
+        "noProjectToast": "Оберіть активний проєкт перед завантаженням файлу.",
+        "upload": {
+          "sectionTitle": "Завантаження банківського CSV",
+          "descriptionIntro": "Перевіряє наявні очікувані платежі або автоматично створює перевірені записи. Обов'язкові стовпці:",
+          "optionalIntro": "Необов'язково:",
+          "downloadTemplate": "Завантажити шаблон",
+          "downloading": "Завантаження...",
+          "clickToUpload": "Натисніть для завантаження",
+          "orDragAndDrop": "або перетягніть файл сюди",
+          "constraints": "Лише CSV, максимум 10 МБ, до 10 000 рядків",
+          "validating": "Перевірка CSV та зіставлення договорів...",
+          "errors": {
+            "onlyCsv": "Підтримуються лише файли CSV.",
+            "fileTooLarge": "Файл перевищує максимальний розмір 10 МБ ({{size}} МБ)."
+          }
+        },
+        "preview": {
+          "title": "Попередній перегляд верифікації платежів",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записів · Партія: {{batchId}}",
+          "summary": {
+            "ready": "Готово",
+            "warnings": "Попередження",
+            "invalid": "Недійсні",
+            "totalAmount": "Загальна сума",
+            "uniqueContracts": "Унікальні договори"
+          },
+          "previewTableTitle": "Попередній перегляд ({{count}} рядків)",
+          "errorsTableTitle": "Помилки ({{count}} рядків)",
+          "emptyPreview": "Немає рядків для перегляду",
+          "emptyErrors": "Немає помилок",
+          "skipWarnings": "Пропустити рядки з попередженнями ({{count}} рядків)",
+          "commentPlaceholder": "Необов'язковий коментар до цього імпорту...",
+          "cancel": "Скасувати",
+          "verifyPayments": "Верифікувати {{count}} платежів",
+          "starting": "Запуск...",
+          "columns": {
+            "row": "Рядок",
+            "contractNumber": "Номер договору",
+            "tin": "ІПН",
+            "client": "Клієнт",
+            "amount": "Сума",
+            "date": "Дата",
+            "method": "Спосіб",
+            "type": "Тип",
+            "status": "Статус",
+            "note": "Примітка"
+          },
+          "rowType": {
+            "pending": "Очікує",
+            "new": "Новий"
+          },
+          "rowStatus": {
+            "ready": "Готово",
+            "warning": "Попередження",
+            "error": "Помилка"
+          }
+        },
+        "progress": {
+          "complete": "Верифікацію платежів завершено",
+          "verificationFailed": "Верифікацію платежів не вдалося виконати",
+          "cancelled": "Верифікацію платежів скасовано",
+          "processing": "Верифікація платежів...",
+          "progressLabel": "Прогрес",
+          "totalRecords": "Всього записів",
+          "paymentsVerified": "Платежі верифіковано",
+          "failedRows": "Помилки",
+          "errorDetails": "Деталі помилки",
+          "processingTime": "Час обробки: {{time}}",
+          "cancelJob": "Скасувати імпорт",
+          "downloadErrors": "Завантажити помилки",
+          "startNewImport": "Новий імпорт"
         }
       }
     },

@@ -27,6 +27,7 @@
     "transactions": "Транзакции",
     "operations": "Операции",
     "bulkOperatorAssignment": "Массовое назначение операторов",
+    "bulkPaymentVerification": "Массовая верификация платежей",
     "auditLogs": "Журнал аудита",
     "reports": "Отчеты",
     "scoringConfiguration": "Конфигурация оценки",
@@ -946,6 +947,82 @@
           "downloadErrors": "Скачать ошибки",
           "startNewImport": "Новый импорт",
           "jobStarted": "Назначение операторов запущено"
+        }
+      },
+      "bulkPaymentVerification": {
+        "title": "Массовая верификация платежей",
+        "viewHistory": "История импорта",
+        "noProjectToast": "Выберите активный проект перед загрузкой файла.",
+        "upload": {
+          "sectionTitle": "Загрузка банковского CSV",
+          "descriptionIntro": "Проверяет существующие ожидающие платежи или автоматически создает проверенные записи. Обязательные столбцы:",
+          "optionalIntro": "Необязательно:",
+          "downloadTemplate": "Скачать шаблон",
+          "downloading": "Загрузка...",
+          "clickToUpload": "Нажмите для загрузки",
+          "orDragAndDrop": "или перетащите файл сюда",
+          "constraints": "Только CSV, максимум 10 МБ, до 10 000 строк",
+          "validating": "Проверка CSV и сопоставление договоров...",
+          "errors": {
+            "onlyCsv": "Поддерживаются только файлы CSV.",
+            "fileTooLarge": "Файл превышает максимальный размер 10 МБ ({{size}} МБ)."
+          }
+        },
+        "preview": {
+          "title": "Предварительная верификация платежей",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записей · Партия: {{batchId}}",
+          "summary": {
+            "ready": "Готово",
+            "warnings": "Предупреждения",
+            "invalid": "Недействительные",
+            "totalAmount": "Общая сумма",
+            "uniqueContracts": "Уникальные договоры"
+          },
+          "previewTableTitle": "Предпросмотр ({{count}} строк)",
+          "errorsTableTitle": "Ошибки ({{count}} строк)",
+          "emptyPreview": "Нет строк для предпросмотра",
+          "emptyErrors": "Нет ошибок",
+          "skipWarnings": "Пропустить строки с предупреждениями ({{count}} строк)",
+          "commentPlaceholder": "Необязательный комментарий к этому импорту...",
+          "cancel": "Отмена",
+          "verifyPayments": "Верифицировать {{count}} платежей",
+          "starting": "Запуск...",
+          "columns": {
+            "row": "Строка",
+            "contractNumber": "Номер договора",
+            "tin": "ИНН",
+            "client": "Клиент",
+            "amount": "Сумма",
+            "date": "Дата",
+            "method": "Способ",
+            "type": "Тип",
+            "status": "Статус",
+            "note": "Примечание"
+          },
+          "rowType": {
+            "pending": "Ожидает",
+            "new": "Новый"
+          },
+          "rowStatus": {
+            "ready": "Готово",
+            "warning": "Предупреждение",
+            "error": "Ошибка"
+          }
+        },
+        "progress": {
+          "complete": "Верификация платежей завершена",
+          "verificationFailed": "Верификация платежей не удалась",
+          "cancelled": "Верификация платежей отменена",
+          "processing": "Верификация платежей...",
+          "progressLabel": "Прогресс",
+          "totalRecords": "Всего записей",
+          "paymentsVerified": "Платежи верифицированы",
+          "failedRows": "Ошибки",
+          "errorDetails": "Детали ошибки",
+          "processingTime": "Время обработки: {{time}}",
+          "cancelJob": "Отменить импорт",
+          "downloadErrors": "Скачать ошибки",
+          "startNewImport": "Новый импорт"
         }
       }
     },
