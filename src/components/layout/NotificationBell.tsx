@@ -284,6 +284,7 @@ export function NotificationBell() {
                     notification={n}
                     onNavigate={handleNavigate}
                     onDismiss={handleDismiss}
+                    userTimezone={userTimezone}
                   />
                 ))}
 
@@ -404,10 +405,12 @@ function TaskNotificationItem({
   notification: n,
   onNavigate,
   onDismiss,
+  userTimezone,
 }: {
   notification: NotificationItem
   onNavigate: NavigateFn
   onDismiss: DismissFn
+  userTimezone?: string
 }) {
   const { t } = useTranslation('common')
   const meta = n.metadata
@@ -477,7 +480,7 @@ function TaskNotificationItem({
         <div className="flex items-center gap-1 text-black">
           <Icons.Clock01 size={11} strokeWidth={1.5} />
           <span className="text-[11px]">
-            {meta.due_date ? formatTaskDueDateForDisplay(meta.due_date) : '—'}
+            {meta.due_date ? formatTaskDueDateForDisplay(meta.due_date, userTimezone) : '—'}
           </span>
         </div>
       </button>
