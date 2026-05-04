@@ -1,10 +1,26 @@
 import { AuthLayout } from '@/components/layout'
-import { LoginCard, AccountLockedCard, AlreadyLoggedInCard, useAuth } from '@/features/auth'
+import {
+  LoginCard,
+  AccountLockedCard,
+  AlreadyLoggedInCard,
+  TwoFactorCodeCard,
+  useAuth,
+} from '@/features/auth'
 
 export default function LoginPage() {
-  const { isLoading, error, errorState, lockoutMinutes, login, forceLogin, clearError } = useAuth()
+  const {
+    isLoading,
+    error,
+    errorState,
+    lockoutMinutes,
+    twoFactorUsername,
+    login,
+    forceLogin,
+    verifyTwoFactor,
+    cancelTwoFactor,
+    clearError,
+  } = useAuth()
 
-  // Render appropriate card based on error state
   const renderAuthCard = () => {
     switch (errorState) {
       case 'ACCOUNT_LOCKED':
@@ -16,6 +32,17 @@ export default function LoginPage() {
             onForceLogout={forceLogin}
             onCancel={clearError}
             isLoading={isLoading}
+          />
+        )
+
+      case 'TWO_FACTOR_REQUIRED':
+        return (
+          <TwoFactorCodeCard
+            username={twoFactorUsername}
+            onSubmit={verifyTwoFactor}
+            onCancel={cancelTwoFactor}
+            isLoading={isLoading}
+            error={error}
           />
         )
 
