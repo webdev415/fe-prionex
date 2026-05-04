@@ -77,6 +77,67 @@
     "uk": "Українська",
     "ru": "Російська"
   },
+  "notificationBell": {
+    "title": "Повідомлення",
+    "markAllRead": "Позначити як прочитані",
+    "ariaLabel": "Повідомлення",
+    "ariaLabelWithCount": "Повідомлення ({{count}})",
+    "noNotifications": "Немає повідомлень",
+    "sections": {
+      "pendingPayments": "Очікуючі оплати",
+      "tasks": "Завдання",
+      "calls": "Дзвінки",
+      "tags": "Теги",
+      "taChains": "Ланцюжки TA"
+    },
+    "payment": {
+      "pending": "очікує",
+      "daysPending_one": "{{count}} день",
+      "daysPending_few": "{{count}} дні",
+      "daysPending_many": "{{count}} днів"
+    },
+    "paymentMethod": {
+      "bank_transfer": "Банківський переказ",
+      "online_gateway": "Онлайн-шлюз",
+      "cash": "Готівка",
+      "card": "Картка",
+      "other": "Інше"
+    },
+    "clientNumber": "Клієнт №{{id}}",
+    "idLabel": "ID: {{id}}",
+    "debtLabel": "Борг: {{id}}",
+    "chainLabel": "Ланцюжок:",
+    "resultLabel": "Результат:",
+    "byOperator": "від {{name}}",
+    "errors": {
+      "dismissFailed": "Не вдалося приховати повідомлення",
+      "markAllReadFailed": "Не вдалося позначити всі як прочитані"
+    },
+    "taskPriority": {
+      "high": "високий",
+      "normal": "звичайний",
+      "low": "низький"
+    },
+    "taskStatus": {
+      "pending": "очікує",
+      "in_progress": "в роботі",
+      "completed": "завершено",
+      "extended": "продовжено",
+      "rejected": "відхилено",
+      "incoming_line_result": "результат вхідної лінії"
+    },
+    "relative": {
+      "justNow": "щойно",
+      "minutesAgo": "{{count}} хв тому",
+      "hoursAgo_one": "{{count}} год тому",
+      "hoursAgo_few": "{{count}} год тому",
+      "hoursAgo_many": "{{count}} год тому",
+      "daysAgo_one": "{{count}} день тому",
+      "daysAgo_few": "{{count}} дні тому",
+      "daysAgo_many": "{{count}} днів тому"
+    },
+    "dismissAria": "Закрити повідомлення"
+  },
   "common": {
     "step": "Крок",
     "selected": "Вибрано",
