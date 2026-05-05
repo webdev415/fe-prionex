@@ -171,6 +171,60 @@ export function formatDateTime(dateStr?: string): string {
   const minute = String(d.getMinutes()).padStart(2, '0')
   return `${toDMY(d)} ${hour}:${minute}`
 }
+
+/** IANA zone used by Task Service for naive DATETIME columns (see task model). */
+const TASK_SERVICE_WALL_TIMEZONE = 'Europe/Kyiv'
+
+/**
+ * True if the string encodes an absolute instant (Z or numeric UTC offset at end).
+ * Naive ISO strings from the task API (no suffix) must return false.
+ */
+function hasExplicitTimeZoneOffset(isoDate: string): boolean {
+  const s = isoDate.trim()
+  if (/[zZ]$/.test(s)) return true
+  // RFC 3339 offset: ...+03:00, ...-05:00, or ...+0000 (after T, last occurrence)
+  return /T[^Z]*[+-]\d{2}:\d{2}$/.test(s) || /T[^Z]*[+-]\d{4}$/.test(s)
+}
+
+/**
+ * Format a Task Service `due_date` for the notification bell and similar UI.
+ *
+ * The task DB stores `due_date` as naive datetime in Europe/Kyiv wall time; the API
+ * uses `isoformat()` (no `Z`). Interpreting that as UTC (e.g. by appending `Z`)
+ * shifts the label by the Kyiv–UTC offset. For naive values we render the stored
+ * calendar time in Europe/Kyiv. If the string includes `Z` or a numeric offset,
+ * it is treated as an absolute instant and shown in Europe/Kyiv.
+ */
+export function formatTaskDueDateForDisplay(isoDate: string | null | undefined): string {
+  if (isoDate == null || String(isoDate).trim() === '') return '—'
+  const s = String(isoDate).trim()
+
+  if (hasExplicitTimeZoneOffset(s)) {
+    try {
+      const d = new Date(s)
+      if (isNaN(d.getTime())) return '—'
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: TASK_SERVICE_WALL_TIMEZONE,
+      }).formatToParts(d)
+      const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
+      return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}`
+    } catch {
+      return '—'
+    }
+  }
+
+  const normalized = s.replace(' ', 'T')
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?/.exec(normalized)
+  if (!m) return '—'
+  const [, year, month, day, hour, minute] = m
+  return `${day}-${month}-${year} ${hour}:${minute}`
+}
 /**
  * Truncate text with ellipsis
  */
