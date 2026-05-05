@@ -18,14 +18,22 @@
     "roles": "Roles",
     "departments": "Departments",
     "smsTemplates": "SMS Templates",
+    "targetActions": "Target Actions",
+    "taChains": "TA Chains",
+    "taDictionary": "Dictionary",
+    "chainBuilder": "Chain Builder",
+    "taManagement": "Target Actions",
+    "interactionLog": "Interaction Log",
     "transactions": "Transactions",
     "operations": "Operations",
     "bulkOperatorAssignment": "Bulk Operator Assignment",
+    "bulkPaymentVerification": "Bulk Payment Verification",
     "auditLogs": "Audit Logs",
     "reports": "Reports",
     "scoringConfiguration": "Scoring Configuration",
     "systemSettings": "System Settings",
-    "tags": "Tags"
+    "tags": "Tags",
+    "actionAnalysis": "Action Analysis"
   },
   "search": {
     "placeholder": "Search",
@@ -69,6 +77,64 @@
     "uk": "Ukrainian",
     "ru": "Russian"
   },
+  "notificationBell": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "ariaLabel": "Notifications",
+    "ariaLabelWithCount": "Notifications ({{count}})",
+    "noNotifications": "No notifications",
+    "sections": {
+      "pendingPayments": "Pending Payments",
+      "tasks": "Tasks",
+      "calls": "Calls",
+      "tags": "Tags",
+      "taChains": "TA Chains"
+    },
+    "payment": {
+      "pending": "pending",
+      "daysPending_one": "{{count}}d",
+      "daysPending_other": "{{count}}d"
+    },
+    "paymentMethod": {
+      "bank_transfer": "Bank transfer",
+      "online_gateway": "Online gateway",
+      "cash": "Cash",
+      "card": "Card",
+      "other": "Other"
+    },
+    "clientNumber": "Client #{{id}}",
+    "idLabel": "ID: {{id}}",
+    "debtLabel": "Debt: {{id}}",
+    "chainLabel": "Chain:",
+    "resultLabel": "Result:",
+    "byOperator": "by {{name}}",
+    "errors": {
+      "dismissFailed": "Failed to dismiss notification",
+      "markAllReadFailed": "Failed to mark all as read"
+    },
+    "taskPriority": {
+      "high": "high",
+      "normal": "normal",
+      "low": "low"
+    },
+    "taskStatus": {
+      "pending": "pending",
+      "in_progress": "in progress",
+      "completed": "completed",
+      "extended": "extended",
+      "rejected": "rejected",
+      "incoming_line_result": "incoming line result"
+    },
+    "relative": {
+      "justNow": "just now",
+      "minutesAgo": "{{count}} min ago",
+      "hoursAgo_one": "{{count}}h ago",
+      "hoursAgo_other": "{{count}}h ago",
+      "daysAgo_one": "{{count}}d ago",
+      "daysAgo_other": "{{count}}d ago"
+    },
+    "dismissAria": "Dismiss notification"
+  },
   "common": {
     "step": "Step",
     "selected": "Selected",
@@ -94,6 +160,199 @@
     "confirmMessage": "Are you sure you want to logout? You will need to login again to access the system."
   },
   "pages": {
+    "aiAssistant": {
+      "headerButtonAria": "Open AI assistant",
+      "greeting": "Hello! I'm the Prionex AI Assistant.",
+      "inputPlaceholder": "Search by name, code, clients",
+      "settings": "Settings",
+      "client": "Client",
+      "period": "Period",
+      "allClients": "All clients",
+      "myClients": "My clients",
+      "periodAll": "All time",
+      "periodToday": "Today",
+      "periodLast7Days": "Last 7 days",
+      "periodLast30Days": "Last 30 days",
+      "periodMonth": "This month",
+      "periodQuarter": "This quarter",
+      "voiceInput": "Voice input",
+      "voiceListening": "Listening… speak now",
+      "voiceStartRecording": "Start voice input",
+      "voiceStopRecording": "Stop voice input",
+      "voiceNotSupported": "Voice input is not supported in this browser.",
+      "voicePermissionDenied": "Microphone permission denied. Allow access to use voice input.",
+      "voiceError": "Voice input failed. Please try again.",
+      "settingsTitle": "Assistant settings",
+      "settingsDescription": "Control assistant behavior for this chat.",
+      "assistantPreferences": "Assistant preferences",
+      "responseMode": "Response mode",
+      "responseShort": "Short",
+      "responseDetailed": "Detailed",
+      "outputFormat": "Output format",
+      "outputText": "Text",
+      "outputTableFirst": "Table first",
+      "outputMixed": "Mixed",
+      "contextBehavior": "Context behavior",
+      "useSelectedClientAutomatically": "Use selected client automatically",
+      "useSelectedPeriodAutomatically": "Use selected period automatically",
+      "rememberConversationContext": "Remember previous conversation context",
+      "suggestedActions": "Suggested actions",
+      "showQuickSuggestionsAfterResponse": "Show quick suggestions after response",
+      "autoScrollToLatestAnswer": "Auto-scroll to latest answer",
+      "advanced": "Optional advanced",
+      "clearConversation": "Clear conversation",
+      "startNewChat": "Start new chat",
+      "viewRecentPrompts": "View recent prompts",
+      "noRecentPrompts": "No recent prompts yet",
+      "done": "Done",
+      "settingsUpdated": "Assistant settings updated",
+      "assistantTyping": "Assistant is typing...",
+      "inputHint": "Press Enter to send, Shift+Enter for a new line",
+      "quickPromptClientData": "Show client details.",
+      "quickPromptDebt": "Analyze debt for selected client and period.",
+      "quickPromptReport": "Generate report for selected client and selected period.",
+      "quickPromptEmployee": "Show employee information.",
+      "mockSummaryShort": "Mock summary",
+      "mockSummaryDetailed": "Mock detailed answer",
+      "mockDetectedRequest": "Detected request",
+      "mockTableHeader": "Table-first preview",
+      "mockTableFooter": "This is mock data for frontend integration.",
+      "mockMixedPointOne": "Retrieved client and period context from current filters.",
+      "mockMixedPointTwo": "Prepared key metrics and risk notes for quick review.",
+      "mockMixedPointThree": "Ready to convert this into an exportable report.",
+      "mockPlainTail": "This is a mock assistant response generated on frontend only.",
+      "quickClientData": "Check Client Data",
+      "quickDebt": "Analyze Debt",
+      "quickReport": "Generate Report",
+      "quickEmployee": "Check Employee",
+      "scrollToLatestAria": "Scroll to latest message",
+      "closeSettingsAria": "Close settings",
+      "mockTableColMetric": "Metric",
+      "mockTableColValue": "Value",
+      "mockTableRowClients": "Clients",
+      "mockTableRowDebt": "Debt at risk",
+      "mockTableRowOverdue": "Overdue ratio"
+    },
+    "actionAnalysis": {
+      "title": "Action Analysis",
+      "subtitle": "Call monitoring and interaction history for the trainer team.",
+      "tabs": {
+        "calls": "Calls",
+        "interactions": "Interaction History"
+      },
+      "filters": {
+        "operator": "Operator",
+        "allOperators": "All operators",
+        "employee": "Employee",
+        "allEmployees": "All employees",
+        "period": "Period",
+        "status": "Status",
+        "minDuration": "Min duration (s)",
+        "maxDuration": "Max duration (s)",
+        "contactType": "Contact type",
+        "allContactTypes": "All",
+        "result": "Result",
+        "allResults": "All",
+        "promiseMin": "Promise min",
+        "promiseMax": "Promise max",
+        "department": "Department",
+        "allDepartments": "All departments",
+        "employees": "Employees",
+        "employeesCount": "{{count}} selected",
+        "phone": "Phone",
+        "phonePlaceholder": "e.g. 0631234567",
+        "searchEmployees": "Search by name…",
+        "noOperatorsMatch": "No matches",
+        "clearEmployees": "Clear",
+        "applyEmployees": "Apply",
+        "dateFrom": "From",
+        "dateTo": "To",
+        "selectDate": "Select date",
+        "selectStartDate": "Select start date",
+        "selectEndDate": "Select end date",
+        "dateRange": "Date Range",
+        "quickRanges": "Quick",
+        "minDurationPlaceholder": "e.g. 30",
+        "maxDurationPlaceholder": "e.g. 600",
+        "promiseMinPlaceholder": "0.00",
+        "promiseMaxPlaceholder": "e.g. 1000",
+        "searchEmployeesPlaceholder": "Search",
+        "applyFilters": "Apply Filters",
+        "clearAll": "Clear All",
+        "periods": {
+          "today": "Today",
+          "yesterday": "Yesterday",
+          "last_7d": "Last 7 days",
+          "last_30d": "Last 30 days",
+          "custom": "Custom"
+        },
+        "statuses": {
+          "all": "All",
+          "answered": "Answered",
+          "notAnswered": "Not answered"
+        }
+      },
+      "columns": {
+        "dateTime": "Date / Time",
+        "duration": "Duration",
+        "status": "Status",
+        "callType": "Call type",
+        "phone": "Phone",
+        "agent": "Employee",
+        "client": "Client",
+        "clientId": "Client ID",
+        "promiseDate": "Promise date",
+        "recording": "Recording",
+        "viewDetail": "View detail",
+        "employee": "Employee",
+        "contactType": "Contact type",
+        "result": "Result",
+        "promiseAmount": "Promise amount"
+      },
+      "callType": {
+        "incoming": "Incoming",
+        "outgoing": "Outgoing"
+      },
+      "callDetail": {
+        "title": "Call details",
+        "fields": {
+          "dateTime": "Date / Time",
+          "status": "Status",
+          "callType": "Call type",
+          "employee": "Employee",
+          "phone": "Phone",
+          "duration": "Duration",
+          "client": "Client",
+          "callId": "Call ID"
+        }
+      },
+      "summary": {
+        "total": "total",
+        "outgoing": "outgoing",
+        "answered": "answered",
+        "totalInteractions": "interactions"
+      },
+      "actions": {
+        "exportExcel": "Export to Excel",
+        "exporting": "Exporting…",
+        "playRecording": "Play recording",
+        "viewDetail": "View detail"
+      },
+      "empty": "No calls match the current filters",
+      "interactionsEmpty": "No interactions match the current filters",
+      "errors": {
+        "loadFailed": "Failed to load calls",
+        "loadInteractionsFailed": "Failed to load interactions",
+        "departmentNoOperators": "No operators in this department for the current project.",
+        "exportFailed": "Export failed"
+      },
+      "calls": {
+        "placeholder": "Calls tab — coming soon"
+      },
+      "interactions": {
+        "placeholder": "Interaction History tab — coming soon"
+      }
+    },
     "users": {
       "title": "User Management",
       "addNewUser": "New User",
@@ -718,11 +977,28 @@
       },
       "operatorAssignment": {
         "title": "Bulk Operator Assignment",
-        "viewHistory": "View History",
+        "viewHistory": "Import History",
+        "noProjectToast": "Please select an active project before uploading.",
+        "upload": {
+          "sectionTitle": "Upload CSV File",
+          "description": "CSV with client_id and operator_id columns",
+          "downloadTemplate": "Download Template",
+          "downloading": "Downloading...",
+          "clickToUpload": "Click to upload",
+          "orDragAndDrop": "or drag and drop",
+          "constraints": "CSV only, max 10 MB, max 10,000 rows",
+          "validating": "Validating CSV...",
+          "errors": {
+            "onlyCsv": "Only CSV files are supported.",
+            "fileTooLarge": "File exceeds maximum size of 10 MB ({{size}} MB)."
+          }
+        },
         "preview": {
           "title": "Validation Preview",
           "fileInfo": "File: {{filename}} · {{totalRecords}} records · Batch: {{batchId}}",
           "previewRows": "Preview (first {{count}} rows)",
+          "emptyPreview": "No preview rows",
+          "emptyErrors": "No errors",
           "errors": "Errors ({{count}})",
           "readyToAssign": "Ready to assign",
           "noChange": "No change",
@@ -758,10 +1034,87 @@
           "successful": "Successful",
           "failed": "Failed",
           "processingTime": "Processing time: {{time}}",
+          "errorDetails": "Error Details",
           "cancel": "Cancel",
           "downloadErrors": "Download Errors",
           "startNewImport": "Start New Import",
           "jobStarted": "Operator assignment job started"
+        }
+      },
+      "bulkPaymentVerification": {
+        "title": "Bulk Payment Verification",
+        "viewHistory": "Import History",
+        "noProjectToast": "Please select an active project before uploading.",
+        "upload": {
+          "sectionTitle": "Upload Bank CSV",
+          "descriptionIntro": "Verifies existing pending payments or auto-creates verified records. Required columns:",
+          "optionalIntro": "Optional:",
+          "downloadTemplate": "Download Template",
+          "downloading": "Downloading...",
+          "clickToUpload": "Click to upload",
+          "orDragAndDrop": "or drag and drop",
+          "constraints": "CSV only, max 10 MB, max 10,000 rows",
+          "validating": "Validating CSV and resolving contracts...",
+          "errors": {
+            "onlyCsv": "Only CSV files are supported.",
+            "fileTooLarge": "File exceeds maximum size of 10 MB ({{size}} MB)."
+          }
+        },
+        "preview": {
+          "title": "Preview Payment Verification",
+          "fileInfo": "File: {{filename}} · {{totalRecords}} records · Batch: {{batchId}}",
+          "summary": {
+            "ready": "Ready",
+            "warnings": "Warnings",
+            "invalid": "Invalid",
+            "totalAmount": "Total Amount",
+            "uniqueContracts": "Unique Contracts"
+          },
+          "previewTableTitle": "Preview ({{count}} rows)",
+          "errorsTableTitle": "Errors ({{count}} rows)",
+          "emptyPreview": "No preview rows",
+          "emptyErrors": "No errors",
+          "skipWarnings": "Skip rows with warnings ({{count}} rows)",
+          "commentPlaceholder": "Optional comment for this import...",
+          "cancel": "Cancel",
+          "verifyPayments": "Verify {{count}} Payments",
+          "starting": "Starting...",
+          "columns": {
+            "row": "Row",
+            "contractNumber": "Contract Number",
+            "tin": "TIN",
+            "client": "Client",
+            "amount": "Amount",
+            "date": "Date",
+            "method": "Method",
+            "type": "Type",
+            "status": "Status",
+            "note": "Note"
+          },
+          "rowType": {
+            "pending": "Pending",
+            "new": "New"
+          },
+          "rowStatus": {
+            "ready": "Ready",
+            "warning": "Warning",
+            "error": "Error"
+          }
+        },
+        "progress": {
+          "complete": "Payment Verification Complete",
+          "verificationFailed": "Payment Verification Failed",
+          "cancelled": "Payment Verification Cancelled",
+          "processing": "Verifying Payments...",
+          "progressLabel": "Progress",
+          "totalRecords": "Total Records",
+          "paymentsVerified": "Payments Verified",
+          "failedRows": "Failed",
+          "errorDetails": "Error Details",
+          "processingTime": "Processing time: {{time}}",
+          "cancelJob": "Cancel Import",
+          "downloadErrors": "Download Errors",
+          "startNewImport": "Start New Import"
         }
       }
     },
@@ -795,6 +1148,7 @@
         "score": "Score",
         "employee": "Employee",
         "searcher": "Searcher",
+        "assignmentDate": "Assignment Date",
         "actions": "Actions"
       },
       "priorities": {
@@ -816,6 +1170,7 @@
         "dpdRange": "DPD Range",
         "amountOfDebtRange": "Individual Debt Amount",
         "dateOfSale": "Debt Sale Date",
+        "assignmentDate": "Assignment Date",
         "promiseDate": "Promise Date",
         "callbackDate": "Callback Date",
         "interactionCreatedBy": "Interaction Created By",
@@ -1096,6 +1451,43 @@
           "noPortfoliosFound": "No portfolios found",
           "clear": "Clear",
           "apply": "Apply"
+        },
+        "tagSelector": {
+          "title": "Manage Tags — {{name}}",
+          "loadingTags": "Loading tags...",
+          "searchTags": "Search tags...",
+          "selectedCount": "{{selected}} of {{total}} tags selected",
+          "noTagsMatch": "No tags found matching your search",
+          "noTagsAvailable": "No tags available",
+          "saveTags": "Save Tags",
+          "tagsUpdated": "Tags updated for {{name}}",
+          "updateFailed": "Failed to update tags"
+        },
+        "deleteClient": {
+          "title": "Delete Client",
+          "softDeleteWarning": "This action will remove the client from active records (soft delete). Data can be recovered by administrators if needed.",
+          "clientDetails": "Client Details",
+          "fieldName": "Name:",
+          "fieldTaxId": "Tax ID:",
+          "fieldPhone": "Phone:",
+          "fieldTotalDebt": "Total Debt:",
+          "impactTitle": "What Will Happen:",
+          "impact1": "Client will be marked as deleted (soft delete)",
+          "impact2": "Client will disappear from client lists",
+          "impact3": "Historical data (notes, calls, payments) will be preserved",
+          "impact4": "This action cannot be undone without admin intervention",
+          "debtsSummary": "Associated debts: {{count}} debt(s) totaling {{amount}}",
+          "confirmCheckbox": "I understand this action will remove the client from active records",
+          "submitDelete": "Delete Client",
+          "deleting": "Deleting...",
+          "deletedSuccess": "Client deleted successfully",
+          "deleteFailed": "Failed to delete client"
+        },
+        "documentPreview": {
+          "loading": "Loading...",
+          "loadFailed": "Failed to load document",
+          "previewNotAvailable": "Preview not available",
+          "download": "Download"
         },
         "recordPayment": {
           "title": "Record Payment",
@@ -1441,6 +1833,22 @@
       "detail": {
         "clientNotFound": "Client not found",
         "backToClients": "Back to Clients",
+        "documentUploadTitle": "Upload document",
+        "documentUploadAction": "Upload",
+        "generateDocument": "Generate document",
+        "comingSoon": "Coming soon",
+        "dropFileOrClick": "Drag a file here or click to select",
+        "loan": "Loan",
+        "documentsUnlinked": "Not linked to a loan",
+        "documentTypes": {
+          "passport": "Passport",
+          "inn": "Tax ID",
+          "contract": "Contract",
+          "income": "Income statement",
+          "outcome": "Extract / statement",
+          "signature": "Digital signature",
+          "other": "Other"
+        },
         "department": "Department",
         "phones": "Phones",
         "tin": "TIN",
@@ -1592,7 +2000,8 @@
           "loans": "Loans",
           "tasks": "Tasks",
           "docs": "Docs",
-          "callSms": "Call / SMS"
+          "callSms": "Call / SMS",
+          "taChains": "TA Chains"
         }
       },
       "debtSummary": {
@@ -1706,6 +2115,362 @@
         "selectUser": "Select user...",
         "comment": "Comment",
         "commentPlaceholder": "Optional comment..."
+      }
+    },
+    "clientChains": {
+      "logInteraction": "Log interaction",
+      "taChainLabel": "TA Chain",
+      "startChain": "Start a chain",
+      "selectChain": "Chain",
+      "selectChainPlaceholder": "Pick a chain...",
+      "noChains": "No active chains available.",
+      "noCredits": "No open credits found for this client.",
+      "steps": "steps",
+      "start": "Start",
+      "activeLabel": "in progress",
+      "cancel": "Cancel chain",
+      "selectValue": "Select a value...",
+      "selectResult": "Select a result",
+      "selected": "Selected",
+      "requiredByLeaf": "Required by leaf node config",
+      "promiseDate": "Promise date",
+      "promiseAmount": "Promise amount",
+      "promiseAmountUAH": "Promise amount (UAH)",
+      "credit": "Credit",
+      "creditPlaceholder": "Select a credit...",
+      "notes": "Notes",
+      "notesPlaceholder": "Optional notes...",
+      "stepLabel": "Step {{order}}",
+      "delayWaiting": "This step is available in {{minutes}} minute(s)",
+      "delayWaitingSeconds": "This step is available in {{seconds}} second(s)",
+      "delayHint": "The previous step was just completed. Please wait for the delay to pass.",
+      "saveInteraction": "Save interaction",
+      "continueToNext": "Continue →",
+      "quickPicks": "Quick start",
+      "chainProgress": "Chain progress",
+      "stepOf": "step {{current}} of {{total}}",
+      "current": "current",
+      "branch": "branch",
+      "effectsOnSave": "Effects on save",
+      "effectTag": "Tag",
+      "effectRemoveTag": "Remove tag",
+      "effectTask": "Task: Callback created",
+      "effectSMS": "Event: SMS sent",
+      "effectSpam": "Added to spam list",
+      "dictionary": {
+        "level1": "Level 1 — Interaction type",
+        "level2": "Level 2 — Category",
+        "level3": "Level 3 — Result",
+        "selectPlaceholder": "Select..."
+      },
+      "errors": {
+        "selectResult": "Please select a result from the tree.",
+        "promiseDateRequired": "This result requires a promise date.",
+        "promiseAmountRequired": "This result requires a promise amount.",
+        "creditRequired": "This result requires selecting a credit.",
+        "stepFieldRequired": "{{name}} is required.",
+        "stepRequired": "Please fill in this step before continuing."
+      },
+      "pickToContinue": "Pick a chain above to continue.",
+      "stepsPreview": "Steps in this chain",
+      "notifyResponsible": "Notify responsible employee",
+      "toasts": {
+        "started": "Chain started",
+        "completed": "Interaction saved and chain completed",
+        "advanced": "Saved — advanced to step {{step}}",
+        "cancelled": "Chain cancelled"
+      },
+      "history": {
+        "title": "Interaction history",
+        "date": "Date",
+        "chain": "Chain",
+        "phone": "Phone",
+        "result": "Result",
+        "dictionaryPath": "Category path",
+        "promise": "Promise",
+        "notes": "Notes",
+        "operator": "Operator",
+        "promiseDate": "Promise date",
+        "promiseAmount": "Amount",
+        "credit": "Credit number",
+        "empty": "No interactions recorded yet.",
+        "filterChain": "Chain",
+        "allChains": "All chains",
+        "from": "From",
+        "to": "To",
+        "searchNotes": "Notes",
+        "searchNotesPlaceholder": "Search notes...",
+        "deleteTitle": "Delete interaction",
+        "deleteConfirm": "Are you sure you want to delete this interaction? This cannot be undone.",
+        "deleteSuccess": "Interaction deleted"
+      },
+      "templatePlaceholder": "Pick a template…",
+      "templateSearchPlaceholder": "Search templates…",
+      "templateNoneFound": "No templates match.",
+      "startWithTemplate": "Start with this template",
+      "chainSearchPlaceholder": "Search chains…",
+      "chainNoneFound": "No chains match.",
+      "pinnedGroup": "Pinned",
+      "allGroup": "All chains",
+      "clientPinHint": "Pinned via this client’s history",
+      "clientPinTag": "client",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "previewHint": "Review the chain on the right and click Start when ready.",
+      "stepCount": "{{count}} steps",
+      "rewindWarningTitle": "Change branching step?",
+      "rewindWarningBody": "Steps after step {{order}} will be cleared and you will re-walk them.",
+      "rewindConfirm": "Yes, reset & re-walk",
+      "saving": "Saving…",
+      "noContacts": "No phones available for this source."
+    },
+    "chainBuilder": {
+      "title": "Chain Builder",
+      "selectChain": "Select a chain...",
+      "selectChainHint": "Select a chain above to open the visual builder.",
+      "steps": "steps",
+      "triggers": "Triggers",
+      "blockers": "Blockers",
+      "effects": "Effects",
+      "branches": "Branches",
+      "stepConfig": "Step config",
+      "delay": "Delay",
+      "required": "Required",
+      "selectStepHint": "Click a step on the canvas to configure it.",
+      "branchTo": "Branch to step...",
+      "conditionLeaf": "If result is... (else = default)",
+      "conditionElse": "else (default / no condition)",
+      "branchAddedCondition": "Conditional branch added",
+      "effectCondition": "Always (or select conditions...)",
+      "branchAddedElse": "Default branch added (else)"
+    },
+    "quickPicks": {
+      "title": "Quick Picks",
+      "description": "Create named templates with pre-filled step values. Operators pick a template and the chain auto-fills.",
+      "selectDepartment": "Select department...",
+      "selectDepartmentHint": "Select a department to manage its templates.",
+      "selectChain": "Select chain...",
+      "empty": "No templates configured for this department yet.",
+      "addTemplate": "Add template",
+      "templateName": "Template name",
+      "templateNamePlaceholder": "e.g. PTP - standard",
+      "presetValues": "Pre-fill step values (leave empty to skip)",
+      "leaveEmpty": "Leave empty...",
+      "creditAutoFill": "Credit is selected by operator from client data",
+      "addButton": "Add template",
+      "toasts": {
+        "added": "Template added",
+        "removed": "Template removed"
+      }
+    },
+    "interactionLog": {
+      "title": "Interaction Log",
+      "export": "Export CSV",
+      "empty": "No interactions found matching your filters.",
+      "columns": {
+        "date": "Date",
+        "clientId": "Client",
+        "chain": "Chain",
+        "dictionaryPath": "Category path",
+        "promise": "Promise",
+        "promiseDate": "Promise date",
+        "promiseAmount": "Amount",
+        "creditNumber": "Credit number",
+        "notes": "Notes",
+        "operator": "Operator"
+      },
+      "filters": {
+        "clientId": "Client ID",
+        "clientIdPlaceholder": "ID",
+        "chain": "Chain",
+        "allChains": "All chains",
+        "from": "From",
+        "to": "To",
+        "notes": "Notes",
+        "notesPlaceholder": "Search notes..."
+      },
+      "pagination": {
+        "rangeOfTotal": "{{start}}–{{end}} / {{total}}",
+        "pageOfPages": "{{page}} / {{totalPages}}",
+        "previousPage": "Previous page",
+        "nextPage": "Next page"
+      }
+    },
+    "taDictionary": {
+      "title": "Dictionary",
+      "pageTitle": "Admin Dictionary",
+      "treeTitle": "Dictionary tree",
+      "selectChain": "Select a chain",
+      "selectChainPlaceholder": "Pick a chain...",
+      "noChainSelected": "Select a chain above to manage its category tree.",
+      "emptyTree": "This chain has no categories yet. Add a root node to start building the tree.",
+      "addRootNode": "Add root node",
+      "addChild": "Add child node",
+      "newNodeName": "Node name...",
+      "leaf": "leaf",
+      "intermediate": "intermediate",
+      "childrenSuffix": "children",
+      "inactive": "inactive",
+      "active": "Active",
+      "hide": "Hide",
+      "unhide": "Unhide",
+      "nodeSettings": "Node settings",
+      "selectedLabel": "Selected",
+      "selectNodeHint": "Click a node on the left to view and edit its settings.",
+      "requirePromiseDate": "Require promise date",
+      "requirePromiseAmount": "Require promise amount",
+      "requireCredit": "Require credit selection",
+      "isPositive": "Positive result",
+      "form": {
+        "name": "Name",
+        "step": "Step",
+        "allSteps": "All steps (shared)",
+        "stepLabel": "Step {{order}}",
+        "nodeType": "Node type",
+        "leafSelectable": "Leaf (selectable result)",
+        "intermediateCategory": "Intermediate (category)",
+        "leafConfig": "Leaf node config"
+      },
+      "toasts": {
+        "saved": "Node saved",
+        "hidden": "Node hidden",
+        "unhidden": "Node restored",
+        "childAdded": "Child node added"
+      }
+    },
+    "taChains": {
+      "title": "TA Chains",
+      "createButton": "Create chain",
+      "searchPlaceholder": "Search chains...",
+      "showInactive": "Show inactive",
+      "empty": "No TA Chains found. Click \"Create chain\" to build the first one.",
+      "noTargetActionsHint": "You need at least one active Target Action before you can build a chain. Create one in System Settings → Target Actions.",
+      "table": {
+        "department": "Department"
+      },
+      "chainTypes": {
+        "manual": "Manual",
+        "automatic": "Automatic"
+      },
+      "status": {
+        "active": "Active",
+        "deactivated": "Deactivated",
+        "systemHidden": "System (hidden)"
+      },
+      "actions": {
+        "clone": "Clone",
+        "activate": "Activate",
+        "deactivate": "Deactivate"
+      },
+      "form": {
+        "name": "Name",
+        "description": "Description",
+        "chainType": "Chain type",
+        "department": "Departments",
+        "departmentPlaceholder": "Select departments",
+        "departmentSearchPlaceholder": "Search departments…",
+        "departmentNoneFound": "No departments found",
+        "departmentSelectedCount": "{{count}} selected",
+        "departmentClear": "Clear",
+        "systemHidden": "System (hidden) — only the system or an admin can launch"
+      },
+      "steps": {
+        "title": "Steps",
+        "label": "steps",
+        "add": "Add step",
+        "empty": "No steps yet. Click \"Add step\" to add the first one.",
+        "stepLabel": "Step {{index}}",
+        "targetAction": "Target Action",
+        "selectTA": "Select a TA",
+        "delayMinutes": "Delay (minutes)",
+        "required": "Required",
+        "notInPast": "Date cannot be in the past"
+      },
+      "modals": {
+        "create": { "title": "Create TA Chain" },
+        "edit": { "title": "Edit TA Chain" }
+      },
+      "errors": {
+        "nameRequired": "Name is required",
+        "departmentRequired": "Select at least one department"
+      },
+      "toasts": {
+        "created": "TA Chain created",
+        "updated": "TA Chain updated",
+        "cloned": "TA Chain cloned",
+        "activated": "TA Chain activated",
+        "deactivated": "TA Chain deactivated"
+      }
+    },
+    "taManagement": {
+      "tabs": {
+        "targetActions": "Target Actions",
+        "taChains": "TA Chains",
+        "dictionary": "Dictionary",
+        "chainBuilder": "Chain Builder"
+      }
+    },
+    "targetActions": {
+      "title": "Target Actions",
+      "createButton": "Create TA",
+      "searchPlaceholder": "Search TAs...",
+      "empty": "No Target Actions found",
+      "lockedHint": "This Target Action is already used in one or more chains and cannot be edited. Clone it to create a new editable copy.",
+      "table": {
+        "name": "Name",
+        "type": "Type",
+        "department": "Department",
+        "usedInChains": "Used in chains",
+        "chainsSuffix": "chains",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "fieldTypes": {
+        "text": "Text",
+        "dropdown": "Dropdown",
+        "date": "Date",
+        "amount": "Amount",
+        "credit": "Credit",
+        "contact": "Contact"
+      },
+      "status": {
+        "active": "Active",
+        "hidden": "Hidden"
+      },
+      "actions": {
+        "clone": "Clone",
+        "hide": "Hide",
+        "unhide": "Unhide"
+      },
+      "showHidden": "Show hidden",
+      "form": {
+        "name": "Name",
+        "fieldType": "Field type",
+        "department": "Department",
+        "departmentPlaceholder": "Select a department",
+        "dropdownValues": "Dropdown values",
+        "addValuePlaceholder": "Add a value...",
+        "promiseDate": "Promise date",
+        "promiseAmount": "Promise amount",
+        "credit": "Credit",
+        "positive": "Positive"
+      },
+      "modals": {
+        "create": { "title": "Create Target Action" },
+        "edit": { "title": "Edit Target Action" }
+      },
+      "errors": {
+        "nameRequired": "Name is required",
+        "departmentRequired": "A valid Department ID is required",
+        "dropdownEmpty": "Dropdown TAs need at least one value",
+        "duplicateValue": "This value already exists"
+      },
+      "toasts": {
+        "created": "Target Action created",
+        "updated": "Target Action updated",
+        "cloned": "Target Action cloned",
+        "hidden": "Target Action hidden",
+        "unhidden": "Target Action restored"
       }
     },
     "smsTemplates": {

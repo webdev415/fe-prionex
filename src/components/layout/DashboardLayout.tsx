@@ -12,6 +12,7 @@ import { Sidebar, type SidebarItem, type SidebarSubItem } from './Sidebar'
 import { SearchBar } from './SearchBar'
 import { UserProfile } from './UserProfile'
 import { MinimizedCallBubble } from './MinimizedCallBubble'
+import { MinimizedChainExecutorBubble } from './MinimizedChainExecutorBubble'
 import { NotificationBell } from './NotificationBell'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
@@ -35,6 +36,31 @@ import { searchClients, mapPriorityLevel, type SearchType } from '@/api/clientSe
 
 interface DashboardLayoutProps {
   children: ReactNode
+}
+
+function AiAssistantHeaderButton() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { t } = useTranslation('common')
+  const isActive = location.pathname === '/dashboard/ai-assistant'
+
+  return (
+    <button
+      type="button"
+      aria-label={t('pages.aiAssistant.headerButtonAria')}
+      onClick={() => navigate('/dashboard/ai-assistant')}
+      className={cn(
+        'relative flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100 focus:outline-none',
+        isActive && 'bg-gray-100'
+      )}
+    >
+      <Icons.AiBrain03
+        size={20}
+        strokeWidth={1.5}
+        className={cn('transition-colors', isActive ? 'text-primary-600' : 'text-gray-300')}
+      />
+    </button>
+  )
 }
 
 // Extend SidebarItem interface to support permission checking
@@ -612,7 +638,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           },
           {
             path: '/dashboard/operations/bulk-payment-import',
-            label: t('navigation.bulkPaymentImport', 'Bulk Payment Import'),
+            label: t('navigation.bulkPaymentVerification'),
             icon: 'transaction-history',
             requiredPermission: PERMISSIONS.DATA.IMPORT_PAYMENTS,
           },
@@ -629,6 +655,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         icon: 'chart-ring',
         label: t('navigation.reports'),
         requiredPermission: PERMISSIONS.REPORTS.VIEW_ALL_REPORTS,
+      },
+      {
+        path: '/dashboard/action-analysis',
+        icon: 'analytics-01',
+        label: t('navigation.actionAnalysis'),
+        requiredPermission: PERMISSIONS.ACTION_ANALYSIS.VIEW,
       },
       {
         path: '/dashboard/users',
@@ -682,6 +714,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             path: '/dashboard/system-settings/sms-templates',
             label: t('navigation.smsTemplates'),
             icon: 'mail-send-01',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+          },
+          {
+            path: '/dashboard/system-settings/target-actions',
+            label: t('navigation.taManagement', 'Target Actions'),
+            icon: 'file-01',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+          },
+          {
+            path: '/dashboard/system-settings/interaction-log',
+            label: t('navigation.interactionLog', 'Interaction Log'),
+            icon: 'file-01',
             requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
           },
         ],
@@ -742,8 +786,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { navItems, bottomNavItems } = navItemsResult
   const { toggleSidebar } = useSidebarStore()
 
+  const isAiAssistantRoute =
+    location.pathname === '/dashboard/ai-assistant' ||
+    location.pathname === '/dashboard/ai-assistant/'
+
   return (
-    <div className="bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center bg-no-repeat">
+    <div
+      className={cn(
+        'bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center',
+        /* Long scroll (chat): fixed attachment paints vs viewport so the SVG does not “run out” mid-page */
+        isAiAssistantRoute ? '[background-attachment:fixed]' : 'bg-no-repeat'
+      )}
+    >
       {/* Sidebar */}
       <Sidebar items={navItems} bottomItems={bottomNavItems} />
 
@@ -808,13 +862,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Desktop: Project Selector, Language Switcher and User Profile */}
           <div className="hidden items-center gap-3 lg:flex">
             <MinimizedCallBubble />
+            <MinimizedChainExecutorBubble />
             <NotificationBell />
+            <AiAssistantHeaderButton />
             <UserProfile onLogoutClick={handleLogoutClick} />
           </div>
 
           {/* Mobile: Notification bell + dropdown menu */}
           <div className="flex items-center gap-2 lg:hidden">
+            <MinimizedCallBubble />
+            <MinimizedChainExecutorBubble />
             <NotificationBell />
+            <AiAssistantHeaderButton />
             <MobileHeaderMenu onLogoutClick={handleLogoutClick} />
           </div>
         </header>

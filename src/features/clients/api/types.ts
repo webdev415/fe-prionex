@@ -124,10 +124,17 @@ export interface Client {
   responsible_employee_id?: number | null
   responsible_searcher_id?: number | null
   assigned_at?: string | null
+  assignment_date?: string | null
   assigned_by?: number | null
 
   // Tags (Sprint 2.5 - Phase 2.3)
-  tags?: Array<{ id: number; name: string; color: string; description?: string | null }>
+  tags?: Array<{
+    id: number
+    name: string
+    color: string
+    description?: string | null
+    visibility?: string | null
+  }>
 }
 
 export interface ClientDetail extends Client {
@@ -194,7 +201,17 @@ export interface GetClientsParams {
 
   // Sorting
   sort_by_priority?: boolean // Legacy parameter
-  sort_by?: 'priority_score' | 'created_at' | 'first_name' | 'last_name' | 'id'
+  sort_by?:
+    | 'priority_score'
+    | 'created_at'
+    | 'first_name'
+    | 'last_name'
+    | 'id'
+    | 'tax_id'
+    | 'responsible_employee_id'
+    | 'responsible_searcher_id'
+    | 'total_debt'
+    | 'assignment_date'
   sort_order?: 'asc' | 'desc'
 
   // Filter: Portfolio/Sellers
@@ -239,6 +256,10 @@ export interface GetClientsParams {
   // Filter: Interaction logged date (applies to promise and callback subqueries)
   interaction_date_from?: string // YYYY-MM-DD format
   interaction_date_to?: string // YYYY-MM-DD format
+
+  // Filter: Assignment Date (date of latest assignment record for current employee)
+  assignment_date_from?: string // YYYY-MM-DD format
+  assignment_date_to?: string // YYYY-MM-DD format
 
   // Filter: Status
   status?: string // Comma-separated statuses (e.g., "active,new")

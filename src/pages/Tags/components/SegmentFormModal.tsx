@@ -165,6 +165,11 @@ export function SegmentFormModal({
     }
   }, [conditions, previewMutation])
 
+  const handleConditionsChange = useCallback((next: SegmentCondition[]) => {
+    setConditions(next)
+    setPreviewCount(null)
+  }, [])
+
   const onSubmit = useCallback(
     async (data: SegmentFormData) => {
       // Validate conditions before submitting
@@ -371,7 +376,11 @@ export function SegmentFormModal({
                   'Conditions within a group are combined with AND. Groups are combined with OR.'
                 )}
               </p>
-              <ConditionBuilder conditions={conditions} tags={tags} onChange={setConditions} />
+              <ConditionBuilder
+                conditions={conditions}
+                tags={tags}
+                onChange={handleConditionsChange}
+              />
             </div>
 
             {/* Preview */}

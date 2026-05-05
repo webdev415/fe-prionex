@@ -34,6 +34,7 @@ import { AssignRoleModal, type AssignRoleMode } from './components/AssignRoleMod
 import { PriorityBadge } from './components/PriorityBadge'
 import type { Priority } from './types'
 import { TagBadge } from '@/components/ui/TagBadge'
+import { ClientTagTraceModal } from '@/pages/Tags/components/ClientTagTraceModal'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { CallRecordingModal } from './components/CallRecordingModal'
 import { ViewSMSModal } from './components/ViewSMSModal'
@@ -67,6 +68,10 @@ import {
   useCompleteRestructuringAgreement,
   useUpdateTask,
   useDeleteTask,
+  useCreateContact,
+  useUpdateContact,
+  useDeleteContact,
+  useContactTypes,
 } from '@/features/clients/hooks/useClients'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
 import {
@@ -87,7 +92,9 @@ import { PermissionGuard } from '@/components/auth'
 import { useHasPermission } from '@/hooks/usePermissions'
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
+import { ChainExecutor, TAInteractionHistory } from './components/taChains'
 import { formatUkrainePhoneForDisplay, normalizeUkrainePhoneToDb } from '@/lib/phone'
+import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
 
 // Extended types for SMS and Call items with API-specific properties
 type ExtendedSMSItem = {
@@ -154,12 +161,16 @@ export function ClientDetailPage() {
   const [connectRrError, setConnectRrError] = useState<string | null>(null)
   const [closeLoanConfirm, setCloseLoanConfirm] = useState<number | null>(null) // debtId to close
   const [completeRrConfirm, setCompleteRrConfirm] = useState<number | null>(null) // raId to complete
-  const [activeCommentTab, setActiveCommentTab] = useState<'comments' | 'primary' | 'dial-history'>(
-    'comments'
-  )
+  const [activeCommentTab, setActiveCommentTab] = useState<
+    'ta-chains' | 'comments' | 'primary' | 'dial-history'
+  >('ta-chains')
+  const [isChainExecutorOpen, setIsChainExecutorOpen] = useState(false)
+  const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
+  const activeRoleName = useAuthStore((state) => state.user?.active_role_name)
+  const showHiddenTags = isAdminRole(activeRoleName)
   const {
     user,
     isCallModalOpen,
@@ -233,11 +244,21 @@ export function ClientDetailPage() {
     isValidClientId
   )
   const { mutate: addSpamCall } = useAddSpamCallHistory(clientId)
+  const { mutate: createContact, isPending: isCreatingContact } = useCreateContact()
+  const { mutate: updateContact, isPending: isUpdatingContact } = useUpdateContact()
+  const { mutate: deleteContact, isPending: isDeletingContact } = useDeleteContact()
+  const { data: contactTypes = [] } = useContactTypes()
   const canCreateTasks = useHasPermission(PERMISSIONS.CLIENTS.CREATE_TASKS)
+  const canEditClient = useHasPermission(PERMISSIONS.CLIENTS.EDIT)
   const updateTaskMutation = useUpdateTask(clientId)
   const deleteTaskMutation = useDeleteTask(clientId)
   // Fetch client tags from API (real)
   const { data: clientTags } = useClientTags(clientId)
+  const [traceModal, setTraceModal] = useState<{
+    open: boolean
+    tagCode?: string
+    tagName?: string
+  }>({ open: false })
 
   // Fetch department of responsible employee
   const { data: responsibleEmployeeDepartment } = useUserDepartment(
@@ -339,6 +360,7 @@ export function ClientDetailPage() {
       recommenders: (profile.recommenders ?? []).map((r) => ({
         id: r.id,
         contactValue: r.contact_value ?? '',
+        contactTypeId: r.contact_type_id ?? null,
         contactType: r.contact_type_name ?? '',
         contactTypeCode: r.contact_type_code ?? null,
         isPhone: r.is_phone ?? false,
@@ -358,7 +380,9 @@ export function ClientDetailPage() {
         text: c.content,
         author: c.created_by_name ?? `User #${c.created_by}`,
       })),
-      tags: profile.tags,
+      tags: (profile.tags || []).filter(
+        (tag) => showHiddenTags || !isHiddenVisibility((tag as { visibility?: string }).visibility)
+      ),
       // Loans mapped from DebtDetail to UI shape
       loans: (loans ?? []).map((d) => ({
         id: d.id,
@@ -549,8 +573,15 @@ export function ClientDetailPage() {
     documents,
     activities,
     responsibleEmployeeDepartment,
+    showHiddenTags,
     t,
   ])
+
+  const effectiveCommentTab =
+    activeCommentTab === 'comments' && !isActivitiesLoading && activities.length === 0
+      ? 'ta-chains'
+      : activeCommentTab
+  const displayedActivities = client?.activities ?? []
 
   const normalizePhoneForLookup = (value: string) => stripPhoneFormat(value)
 
@@ -676,11 +707,27 @@ export function ClientDetailPage() {
   const [selectedPhoneForSMS, setSelectedPhoneForSMS] = useState<string>('')
   const [selectedPhoneForCall, setSelectedPhoneForCall] = useState<string>('')
   const [selectedPhoneForNote, setSelectedPhoneForNote] = useState<string>('')
+  const [contactEditorMode, setContactEditorMode] = useState<'add' | 'edit' | null>(null)
+  const [editingContactId, setEditingContactId] = useState<number | null>(null)
+  const [contactDeleteConfirmId, setContactDeleteConfirmId] = useState<number | null>(null)
+  const [contactError, setContactError] = useState<string | null>(null)
+  const [contactFormData, setContactFormData] = useState({
+    contact_value: '',
+    contact_type_id: 7,
+    comment: '',
+  })
   const [activeClientCardTab, setActiveClientCardTab] = useState<'personal' | 'passport' | 'work'>(
     'personal'
   )
   const [activeRightCardTab, setActiveRightCardTab] = useState<
-    'loans' | 'payments' | 'recommenders' | 'operators' | 'call-sms-history' | 'tasks' | 'documents'
+    | 'loans'
+    | 'payments'
+    | 'recommenders'
+    | 'operators'
+    | 'call-sms-history'
+    | 'tasks'
+    | 'documents'
+    | 'ta-chains'
   >('loans')
   const [isUploadDocModalOpen, setIsUploadDocModalOpen] = useState(false)
   const [activePaymentTab, setActivePaymentTab] = useState<
@@ -688,6 +735,79 @@ export function ClientDetailPage() {
   >('payments')
   const [activeOperatorTab, setActiveOperatorTab] = useState<'operators' | 'searchers'>('operators')
   const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms'>('all')
+
+  const resetContactEditor = () => {
+    setContactEditorMode(null)
+    setEditingContactId(null)
+    setContactError(null)
+    setContactFormData({
+      contact_value: '',
+      contact_type_id: 7,
+      comment: '',
+    })
+  }
+
+  const handleStartAddContact = () => {
+    setContactError(null)
+    setEditingContactId(null)
+    setContactEditorMode('add')
+    setContactFormData({
+      contact_value: '',
+      contact_type_id: contactTypes[0]?.id ?? 7,
+      comment: '',
+    })
+  }
+
+  const handleStartEditContact = (contact: {
+    id: number
+    contactValue: string
+    contactTypeId: number | null
+    comment: string
+  }) => {
+    setContactError(null)
+    setEditingContactId(contact.id)
+    setContactEditorMode('edit')
+    setContactFormData({
+      contact_value: contact.contactValue ?? '',
+      contact_type_id: contact.contactTypeId ?? contactTypes[0]?.id ?? 7,
+      comment: contact.comment ?? '',
+    })
+  }
+
+  const handleSaveContact = () => {
+    const payload = {
+      contact_value: contactFormData.contact_value.trim(),
+      contact_type_id: contactFormData.contact_type_id,
+      comment: contactFormData.comment.trim() || undefined,
+    }
+    if (!payload.contact_value) return
+    setContactError(null)
+    if (contactEditorMode === 'edit' && editingContactId !== null) {
+      updateContact(
+        { clientId, contactId: editingContactId, data: payload },
+        {
+          onSuccess: () => {
+            toast.success(
+              t('pages.clients.editModal.contactUpdated', 'Contact updated successfully')
+            )
+            resetContactEditor()
+          },
+          onError: () => setContactError(t('pages.clients.editModal.saveError', 'Failed to save')),
+        }
+      )
+      return
+    }
+    createContact(
+      { clientId, data: payload },
+      {
+        onSuccess: () => {
+          toast.success(t('pages.clients.editModal.contactCreated', 'Contact added successfully'))
+          resetContactEditor()
+        },
+        onError: () => setContactError(t('pages.clients.editModal.saveError', 'Failed to save')),
+      }
+    )
+  }
 
   // Tab navigation scroll state
   const tabContainerRef = useRef<HTMLDivElement>(null)
@@ -1560,14 +1680,27 @@ export function ClientDetailPage() {
                     {clientTags && clientTags.length > 0 ? (
                       <>
                         {clientTags.slice(0, 3).map((tag) => (
-                          <TagBadge
+                          <button
                             key={tag.id}
-                            name={tag.name}
-                            color={tag.color}
-                            size="sm"
-                            isProtected={tag.is_protected}
-                            expiryType={tag.expiry_type}
-                          />
+                            type="button"
+                            onClick={() =>
+                              setTraceModal({
+                                open: true,
+                                tagCode: (tag as { code?: string }).code,
+                                tagName: tag.name,
+                              })
+                            }
+                            title={t('pages.tags.trace.openHint', 'Why this tag?')}
+                            className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                          >
+                            <TagBadge
+                              name={tag.name}
+                              color={tag.color}
+                              size="sm"
+                              isProtected={tag.is_protected}
+                              expiryType={tag.expiry_type}
+                            />
+                          </button>
                         ))}
                         {clientTags.length > 3 && (
                           <button
@@ -1580,6 +1713,17 @@ export function ClientDetailPage() {
                             })}
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => setTraceModal({ open: true })}
+                          title={t(
+                            'pages.tags.trace.openAllHint',
+                            'View tag activity for this client'
+                          )}
+                          className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700 transition-colors hover:bg-indigo-100"
+                        >
+                          {t('pages.tags.trace.cta', 'Why?')}
+                        </button>
                       </>
                     ) : (
                       <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
@@ -2531,143 +2675,252 @@ export function ClientDetailPage() {
                 {/* Tab 3: Recommenders */}
                 {activeRightCardTab === 'recommenders' && (
                   <div className="self-stretch overflow-x-auto p-3 md:p-6">
-                    {client.recommenders.length === 0 ? (
-                      <p className="text-xs text-gray-500">-</p>
-                    ) : (
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
-                              {t('pages.clients.detail.contactValue')}
-                            </th>
-                            <th className="pb-2"></th>
-                            <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
-                              {t('pages.clients.detail.contactType')}
-                            </th>
-                            <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
-                              {t('pages.clients.detail.comment')}
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {client.recommenders.map((contact) => (
-                            <tr key={contact.id} className="border-b border-gray-100 last:border-0">
-                              <td className="py-2 pr-3">
-                                <div className="flex flex-col items-start gap-1">
-                                  <div className="flex items-center gap-0.5">
-                                    <span className="text-dark-500 font-medium tracking-[-0.24px] break-all">
-                                      {contact.contactValue}
-                                    </span>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
+                    {contactError && <p className="text-error-500 mb-3 text-sm">{contactError}</p>}
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
+                            {t('pages.clients.detail.contactValue')}
+                          </th>
+                          <th className="pb-2"></th>
+                          <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
+                            {t('pages.clients.detail.contactType')}
+                          </th>
+                          <th className="pb-2 text-left font-light tracking-[-0.24px] text-gray-700">
+                            {t('pages.clients.detail.comment')}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {client.recommenders.map((contact) => (
+                          <tr key={contact.id} className="border-b border-gray-100 last:border-0">
+                            <td className="py-2 pr-3">
+                              <div className="flex flex-col items-start gap-1">
+                                <div className="flex items-center gap-0.5">
+                                  <span className="text-dark-500 font-medium tracking-[-0.24px] break-all">
+                                    {contact.contactValue}
+                                  </span>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
+                                      >
+                                        <Icons.Info size={14} strokeWidth={1.5} />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="text-xs">
+                                      {contact.added_by_user_name && (
+                                        <div>
+                                          {t('pages.clients.detail.addedBy')}:{' '}
+                                          {contact.added_by_user_name}
+                                        </div>
+                                      )}
+                                      {contact.created_at && (
+                                        <div>
+                                          {t('pages.clients.detail.addedDate')}:{' '}
+                                          {formatDate(contact.created_at ?? undefined)}
+                                        </div>
+                                      )}
+                                      {!contact.added_by_user_name && !contact.created_at && (
+                                        <div>-</div>
+                                      )}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </div>
+                                {(contact.isPhone || looksLikePhone(contact.contactValue)) &&
+                                  renderLinkedContactBadges(contact.contactValue, 'start')}
+                              </div>
+                            </td>
+                            <td className="py-2 pr-3">
+                              {(contact.isPhone || looksLikePhone(contact.contactValue)) &&
+                                contact.contactValue && (
+                                  <div className="flex items-center gap-1 md:gap-2">
+                                    <PermissionGuard
+                                      permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}
+                                    >
+                                      <button
+                                        disabled={!user?.is_agent || !user?.asterisk_extension}
+                                        onClick={() => {
+                                          if (isCallActive()) {
+                                            toast.warning(
+                                              t('pages.clients.modals.callDialog.callInProgress') ||
+                                                'Another call or recording is already in progress. Please finish or close it first.'
+                                            )
+                                            return
+                                          }
+                                          setSelectedPhoneForCall(contact.contactValue)
+                                          setOpenCallModal('call-dialog')
+                                          setIsCallModalOpen(true)
+                                        }}
+                                        className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                                      >
+                                        <Icons.Headset size={16} className="flex-shrink-0" />
+                                      </button>
+                                    </PermissionGuard>
+                                    <PermissionGuard
+                                      permission={PERMISSIONS.COMMUNICATION.SEND_SMS}
+                                    >
+                                      <button
+                                        onClick={() => {
+                                          setSelectedPhoneForSMS(contact.contactValue)
+                                          setIsSendSMSModalOpen(true)
+                                        }}
+                                        className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
+                                      >
+                                        <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                                      </button>
+                                    </PermissionGuard>
+                                    <PermissionGuard
+                                      permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}
+                                    >
+                                      <button
+                                        onClick={() => {
+                                          setSelectedPhoneForNote(contact.contactValue)
+                                          setIsNoteModalOpen(true)
+                                        }}
+                                        className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
+                                      >
+                                        <Icons.PencilEdit size={16} className="flex-shrink-0" />
+                                      </button>
+                                    </PermissionGuard>
+                                    {canEditClient && (
+                                      <>
                                         <button
                                           type="button"
-                                          className="flex h-[20px] w-[20px] shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
+                                          onClick={() => handleStartEditContact(contact)}
+                                          className="flex h-[20px] w-[20px] cursor-pointer items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100"
+                                          title={t(
+                                            'pages.clients.editModal.editContact',
+                                            'Edit contact'
+                                          )}
                                         >
-                                          <Icons.Info size={14} strokeWidth={1.5} />
+                                          <Icons.Edit size={14} className="flex-shrink-0" />
                                         </button>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top" className="text-xs">
-                                        {contact.added_by_user_name && (
-                                          <div>
-                                            {t('pages.clients.detail.addedBy')}:{' '}
-                                            {contact.added_by_user_name}
-                                          </div>
-                                        )}
-                                        {contact.created_at && (
-                                          <div>
-                                            {t('pages.clients.detail.addedDate')}:{' '}
-                                            {formatDate(contact.created_at ?? undefined)}
-                                          </div>
-                                        )}
-                                        {!contact.added_by_user_name && !contact.created_at && (
-                                          <div>-</div>
-                                        )}
-                                      </TooltipContent>
-                                    </Tooltip>
+                                        <button
+                                          type="button"
+                                          onClick={() => setContactDeleteConfirmId(contact.id)}
+                                          className="text-error-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center rounded border border-red-200 hover:bg-red-50"
+                                          title={t(
+                                            'pages.clients.editModal.deleteContact',
+                                            'Delete contact'
+                                          )}
+                                        >
+                                          <Icons.Delete size={14} className="flex-shrink-0" />
+                                        </button>
+                                      </>
+                                    )}
                                   </div>
-                                  {(contact.isPhone || looksLikePhone(contact.contactValue)) &&
-                                    renderLinkedContactBadges(contact.contactValue, 'start')}
+                                )}
+                            </td>
+                            <td className="py-2 pr-3">
+                              <span className="text-dark-500 font-medium tracking-[-0.24px]">
+                                {contact.contactTypeCode
+                                  ? t(`contactTypes.${contact.contactTypeCode}`, {
+                                      defaultValue: contact.contactType,
+                                    })
+                                  : contact.contactType}
+                              </span>
+                            </td>
+                            <td className="py-2 pr-3">
+                              <span className="text-dark-500 font-medium tracking-[-0.24px]">
+                                {contact.comment}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                        {client.recommenders.length === 0 && contactEditorMode === null && (
+                          <tr>
+                            <td colSpan={4} className="py-3 text-xs text-gray-500">
+                              -
+                            </td>
+                          </tr>
+                        )}
+                        {contactEditorMode !== null && (
+                          <tr className="border-b border-gray-100">
+                            <td colSpan={4} className="py-3">
+                              <div className="grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 md:grid-cols-3">
+                                <Input
+                                  value={contactFormData.contact_value}
+                                  onChange={(e) =>
+                                    setContactFormData((prev) => ({
+                                      ...prev,
+                                      contact_value: e.target.value,
+                                    }))
+                                  }
+                                  label={t('pages.clients.detail.contactValue')}
+                                />
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-dark-500 text-xs font-medium sm:text-sm">
+                                    {t('pages.clients.detail.contactType')}
+                                  </label>
+                                  <Select
+                                    value={String(contactFormData.contact_type_id)}
+                                    onValueChange={(value) =>
+                                      setContactFormData((prev) => ({
+                                        ...prev,
+                                        contact_type_id: Number(value),
+                                      }))
+                                    }
+                                  >
+                                    <SelectTrigger className="h-[42px] rounded-lg border border-gray-300 bg-white">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {contactTypes.map((ct) => (
+                                        <SelectItem key={ct.id} value={String(ct.id)}>
+                                          {ct.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
                                 </div>
-                              </td>
-                              <td className="py-2 pr-3">
-                                {(contact.isPhone || looksLikePhone(contact.contactValue)) &&
-                                  contact.contactValue && (
-                                    <div className="flex items-center gap-1 md:gap-2">
-                                      <PermissionGuard
-                                        permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}
-                                      >
-                                        <button
-                                          disabled={!user?.is_agent || !user?.asterisk_extension}
-                                          onClick={() => {
-                                            if (isCallActive()) {
-                                              toast.warning(
-                                                t(
-                                                  'pages.clients.modals.callDialog.callInProgress'
-                                                ) ||
-                                                  'Another call or recording is already in progress. Please finish or close it first.'
-                                              )
-                                              return
-                                            }
-                                            setSelectedPhoneForCall(contact.contactValue)
-                                            setOpenCallModal('call-dialog')
-                                            setIsCallModalOpen(true)
-                                          }}
-                                          className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
-                                        >
-                                          <Icons.Headset size={16} className="flex-shrink-0" />
-                                        </button>
-                                      </PermissionGuard>
-                                      <PermissionGuard
-                                        permission={PERMISSIONS.COMMUNICATION.SEND_SMS}
-                                      >
-                                        <button
-                                          onClick={() => {
-                                            setSelectedPhoneForSMS(contact.contactValue)
-                                            setIsSendSMSModalOpen(true)
-                                          }}
-                                          className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                                        >
-                                          <Icons.ChatFeedback01
-                                            size={16}
-                                            className="flex-shrink-0"
-                                          />
-                                        </button>
-                                      </PermissionGuard>
-                                      <PermissionGuard
-                                        permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}
-                                      >
-                                        <button
-                                          onClick={() => {
-                                            setSelectedPhoneForNote(contact.contactValue)
-                                            setIsNoteModalOpen(true)
-                                          }}
-                                          className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
-                                        >
-                                          <Icons.PencilEdit size={16} className="flex-shrink-0" />
-                                        </button>
-                                      </PermissionGuard>
-                                    </div>
-                                  )}
-                              </td>
-                              <td className="py-2 pr-3">
-                                <span className="text-dark-500 font-medium tracking-[-0.24px]">
-                                  {contact.contactTypeCode
-                                    ? t(`contactTypes.${contact.contactTypeCode}`, {
-                                        defaultValue: contact.contactType,
-                                      })
-                                    : contact.contactType}
-                                </span>
-                              </td>
-                              <td className="py-2 pr-3">
-                                <span className="text-dark-500 font-medium tracking-[-0.24px]">
-                                  {contact.comment}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                                <Input
+                                  value={contactFormData.comment}
+                                  onChange={(e) =>
+                                    setContactFormData((prev) => ({
+                                      ...prev,
+                                      comment: e.target.value,
+                                    }))
+                                  }
+                                  label={t('pages.clients.detail.comment')}
+                                />
+                              </div>
+                              <div className="mt-3 flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={handleSaveContact}
+                                  disabled={
+                                    isCreatingContact ||
+                                    isUpdatingContact ||
+                                    !contactFormData.contact_value.trim()
+                                  }
+                                >
+                                  {isCreatingContact || isUpdatingContact
+                                    ? t('actions.saving', 'Saving...')
+                                    : t('pages.clients.editModal.save', 'Save')}
+                                </Button>
+                                <Button size="sm" variant="cancel" onClick={resetContactEditor}>
+                                  {t('actions.cancel')}
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                    {canEditClient && (
+                      <div className="mt-4 flex justify-end">
+                        <Button
+                          variant="secondary"
+                          leftIcon={<Icons.PlusSignCircle size={20} />}
+                          className="rounded text-xs md:text-sm"
+                          size="sm"
+                          onClick={handleStartAddContact}
+                        >
+                          {t('pages.clients.editModal.addContact', 'Add Contact')}
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -3237,21 +3490,34 @@ export function ClientDetailPage() {
             {/* Tabs */}
             <div className="flex items-center rounded-lg border border-white bg-white p-1 shadow-sm">
               <button
-                onClick={() => setActiveCommentTab('comments')}
+                onClick={() => setActiveCommentTab('ta-chains')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  activeCommentTab === 'comments'
+                  effectiveCommentTab === 'ta-chains'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
               >
-                {t('pages.clients.detail.comments')}
+                {t('pages.clients.detail.tabs.taChains')}
               </button>
+              {!isActivitiesLoading && displayedActivities.length > 0 && (
+                <button
+                  onClick={() => setActiveCommentTab('comments')}
+                  className={cn(
+                    'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                    effectiveCommentTab === 'comments'
+                      ? 'bg-secondary-800 text-white'
+                      : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                  )}
+                >
+                  {t('pages.clients.detail.comments')}
+                </button>
+              )}
               <button
                 onClick={() => setActiveCommentTab('primary')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  activeCommentTab === 'primary'
+                  effectiveCommentTab === 'primary'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
@@ -3262,7 +3528,7 @@ export function ClientDetailPage() {
                 onClick={() => setActiveCommentTab('dial-history')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
-                  activeCommentTab === 'dial-history'
+                  effectiveCommentTab === 'dial-history'
                     ? 'bg-secondary-800 text-white'
                     : 'hover:bg-primary-200/10 hover:text-secondary-800'
                 )}
@@ -3282,10 +3548,60 @@ export function ClientDetailPage() {
           </div>
 
           {/* Content based on active tab */}
-          {activeCommentTab === 'comments' &&
+          {effectiveCommentTab === 'ta-chains' && (
+            <div className="flex w-full flex-col gap-4">
+              <button
+                type="button"
+                onClick={() => setIsChainExecutorOpen(true)}
+                className="bg-primary-300 text-dark-500 hover:bg-primary-500 w-full rounded-lg px-4 py-3 text-sm font-medium transition-colors sm:w-auto sm:self-start"
+              >
+                {t('pages.clientChains.logInteraction')}
+              </button>
+              <TAInteractionHistory clientId={clientId} debts={loans} />
+            </div>
+          )}
+
+          {/* Chain Executor Modal */}
+          <Modal
+            open={isChainExecutorOpen}
+            onClose={() => setIsChainExecutorOpen(false)}
+            maxWidth="xl"
+            showCloseButton={false}
+          >
+            {/* Minimize & Close buttons */}
+            <div className="absolute top-2 right-2 flex items-center gap-1 sm:top-4 sm:right-12">
+              <button
+                onClick={() => chainExecutorMinimizeRef.current?.()}
+                className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+                aria-label="Minimize modal"
+              >
+                <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
+              </button>
+              <button
+                onClick={() => setIsChainExecutorOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+                aria-label="Close modal"
+              >
+                <Icons.Cancel01 size={20} className="text-dark-500" strokeWidth={1.5} />
+              </button>
+            </div>
+            <ModalContent>
+              <ChainExecutor
+                clientId={clientId}
+                clientName={client?.fullName ?? `Client #${clientId}`}
+                responsibleEmployeeId={profile?.responsible_employee_id ?? null}
+                debts={loans}
+                onSave={() => setIsChainExecutorOpen(false)}
+                onMinimize={() => setIsChainExecutorOpen(false)}
+                onMinimizeRef={chainExecutorMinimizeRef}
+              />
+            </ModalContent>
+          </Modal>
+
+          {effectiveCommentTab === 'comments' &&
             (isActivitiesLoading ? (
               <TableSkeleton columns={12} rows={3} className="w-full" />
-            ) : client.activities.length === 0 ? (
+            ) : displayedActivities.length === 0 ? (
               <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
                   <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
@@ -3313,14 +3629,14 @@ export function ClientDetailPage() {
               <div className="w-full overflow-x-auto">
                 <DataTable
                   columns={activityColumns}
-                  data={client.activities.slice(0, 10)}
+                  data={displayedActivities.slice(0, 10)}
                   className="w-full"
                   tableClassName="w-max min-w-full"
                 />
               </div>
             ))}
 
-          {activeCommentTab === 'primary' &&
+          {effectiveCommentTab === 'primary' &&
             (isProfileLoading ? (
               <TableSkeleton columns={1} rows={3} className="w-full" />
             ) : !profile?.sale_notes?.trim() ? (
@@ -3343,7 +3659,7 @@ export function ClientDetailPage() {
               </div>
             ))}
 
-          {activeCommentTab === 'dial-history' &&
+          {effectiveCommentTab === 'dial-history' &&
             (isDialHistoryLoading ? (
               <TableSkeleton columns={2} rows={3} className="w-full" />
             ) : dialHistory.length === 0 ? (
@@ -3515,6 +3831,15 @@ export function ClientDetailPage() {
           onClose={() => setIsTagModalOpen(false)}
         />
 
+        {/* Tag Trace Modal — "Why this tag?" timeline (PR3 commit 3.10) */}
+        <ClientTagTraceModal
+          open={traceModal.open}
+          clientId={clientId}
+          tagCode={traceModal.tagCode}
+          tagName={traceModal.tagName}
+          onClose={() => setTraceModal({ open: false })}
+        />
+
         {/* Edit Client Modal */}
         <EditClientModal
           open={isEditModalOpen}
@@ -3676,6 +4001,70 @@ export function ClientDetailPage() {
               className="w-full rounded-md sm:w-auto"
             >
               {t('actions.close')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Close Loan Confirmation Modal */}
+        <Modal
+          open={contactDeleteConfirmId !== null}
+          onClose={() => setContactDeleteConfirmId(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Delete size={18} className="text-dark-500" strokeWidth={1.8} />
+              </div>
+            }
+            title={t('pages.clients.editModal.deleteContact', 'Delete contact')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 text-base font-light">
+              {t(
+                'pages.clients.editModal.confirmDeleteContact',
+                'Are you sure you want to delete this contact?'
+              )}
+            </p>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setContactDeleteConfirmId(null)}
+              disabled={isDeletingContact}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={isDeletingContact}
+              className="h-[45px] flex-1 text-sm"
+              onClick={() => {
+                if (contactDeleteConfirmId === null) return
+                deleteContact(
+                  { clientId, contactId: contactDeleteConfirmId },
+                  {
+                    onSuccess: () => {
+                      toast.success(
+                        t('pages.clients.editModal.contactDeleted', 'Contact removed successfully')
+                      )
+                      setContactDeleteConfirmId(null)
+                      if (editingContactId === contactDeleteConfirmId) {
+                        resetContactEditor()
+                      }
+                    },
+                    onError: () =>
+                      setContactError(
+                        t('pages.clients.editModal.saveError', 'Failed to delete contact')
+                      ),
+                  }
+                )
+              }}
+            >
+              {isDeletingContact ? t('actions.saving', 'Saving...') : t('actions.delete', 'Delete')}
             </Button>
           </ModalFooter>
         </Modal>

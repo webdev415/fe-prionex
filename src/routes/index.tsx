@@ -5,6 +5,7 @@ import { ProtectedRoute } from './ProtectedRoute'
 import { PermissionRoute } from './PermissionRoute'
 import { GuestRoute } from './GuestRoute'
 import { DashboardLayout } from '@/components/layout'
+import { RouteErrorElement } from '@/components/RouteErrorElement'
 import { PERMISSIONS } from '@/constants/permissions'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
@@ -56,9 +57,24 @@ const SmsTemplatesPage = lazy(() =>
     default: m.SmsTemplatesPage,
   }))
 )
+const TAManagementPage = lazy(() =>
+  import('@/pages/TAManagement').then((m) => ({
+    default: m.TAManagementPage,
+  }))
+)
+const InteractionLogPage = lazy(() =>
+  import('@/pages/InteractionLog').then((m) => ({
+    default: m.InteractionLogPage,
+  }))
+)
 const ReportsDashboardPage = lazy(() =>
   import('@/pages/ReportsDashboard').then((m) => ({
     default: m.ReportsDashboardPage,
+  }))
+)
+const ActionAnalysisPage = lazy(() =>
+  import('@/pages/ActionAnalysis').then((m) => ({
+    default: m.ActionAnalysisPage,
   }))
 )
 const SellerManagementPage = lazy(() =>
@@ -85,14 +101,19 @@ const ProfileSettingsPage = lazy(() =>
     default: m.ProfileSettingsPage,
   }))
 )
+const AiAssistantPage = lazy(() =>
+  import('@/pages/AiAssistant/AiAssistantPage').then((m) => ({
+    default: m.AiAssistantPage,
+  }))
+)
 const BulkOperatorAssignmentPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
     default: m.BulkOperatorAssignmentPage,
   }))
 )
-const BulkPaymentImportPage = lazy(() =>
+const BulkPaymentVerificationPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
-    default: m.BulkPaymentImportPage,
+    default: m.BulkPaymentVerificationPage,
   }))
 )
 
@@ -112,14 +133,17 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <GuestRoute>{withSuspense(<LoginPage />)}</GuestRoute>,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '/change-password',
     element: <ProtectedRoute>{withSuspense(<ForceChangePasswordPage />)}</ProtectedRoute>,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '/dashboard',
     element: <DashboardLayoutRoute />,
+    errorElement: <RouteErrorElement />,
     children: [
       {
         index: true,
@@ -132,6 +156,10 @@ export const router = createBrowserRouter([
       {
         path: 'profile',
         element: withSuspense(<ProfileSettingsPage />),
+      },
+      {
+        path: 'ai-assistant',
+        element: withSuspense(<AiAssistantPage />),
       },
       {
         path: 'users',
@@ -198,6 +226,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'action-analysis',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.ACTION_ANALYSIS.VIEW}>
+            {withSuspense(<ActionAnalysisPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
         path: 'sellers',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SELLERS.VIEW}>
@@ -238,6 +274,22 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'system-settings/target-actions',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            {withSuspense(<TAManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/interaction-log',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            {withSuspense(<InteractionLogPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
         path: 'operations/bulk-operator-assignment',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.EDIT}>
@@ -249,7 +301,7 @@ export const router = createBrowserRouter([
         path: 'operations/bulk-payment-import',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT_PAYMENTS}>
-            {withSuspense(<BulkPaymentImportPage />)}
+            {withSuspense(<BulkPaymentVerificationPage />)}
           </PermissionRoute>
         ),
       },
@@ -299,21 +351,26 @@ export const router = createBrowserRouter([
   {
     path: '/dashboard/scoring-configuration',
     element: <Navigate to="/dashboard/system-settings/scoring-configuration" replace />,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '/dashboard/scoring-configuration/history',
     element: <Navigate to="/dashboard/system-settings/scoring-configuration/history" replace />,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '/dashboard/sms-templates',
     element: <Navigate to="/dashboard/system-settings/sms-templates" replace />,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '/',
     element: <Navigate to="/dashboard" replace />,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '*',
     element: <Navigate to="/dashboard" replace />,
+    errorElement: <RouteErrorElement />,
   },
 ])

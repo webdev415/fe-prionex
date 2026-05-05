@@ -46,6 +46,8 @@ import { useURLState } from '@/hooks/useURLState'
 import type { Priority } from './types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { useTags } from '@/features/tags/hooks/useTags'
+import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
 
 // Display type matching page requirements
 interface DisplayClient {
@@ -56,6 +58,7 @@ interface DisplayClient {
     id: number
     name: string
     color: string
+    visibility?: string | null
     is_protected?: boolean
     expiry_type?: 'permanent' | 'ttl' | 'loan_closure'
   }>
@@ -67,6 +70,7 @@ interface DisplayClient {
   score: number
   employeeName: string
   searcherName: string
+  assignmentDate: string
 }
 
 // Default thresholds (fallback if API not available)
@@ -81,7 +85,10 @@ const DEFAULT_THRESHOLDS: PriorityThresholds = {
 const mapAPIClientToDisplay = (
   client: APIClient,
   thresholds: PriorityThresholds,
-  userNameMap: Map<number, string>
+  userNameMap: Map<number, string>,
+  showHiddenTags: boolean,
+  /** When set (operator + catalog loaded): only show tags whose name exists in tag-service catalog (hidden tags are omitted there). */
+  operatorAllowedTagNames: Set<string> | null
 ): DisplayClient => {
   const fullName = [client.first_name, client.middle_name, client.last_name]
     .filter(Boolean)
@@ -91,7 +98,14 @@ const mapAPIClientToDisplay = (
     id: client.id,
     fullName,
     taxIdNumber: client.tax_id,
-    tags: client.tags || [], // Tags from API
+    tags: (client.tags || []).filter((tag) => {
+      if (showHiddenTags) return true
+      if (isHiddenVisibility(tag.visibility)) return false
+      if (operatorAllowedTagNames !== null) {
+        return operatorAllowedTagNames.has(tag.name)
+      }
+      return true
+    }),
     // phone_primary is now resolved from contacts by backend
     phoneNumber:
       client.phone_primary && !/^0+$/.test(client.phone_primary) ? client.phone_primary : '-',
@@ -108,6 +122,7 @@ const mapAPIClientToDisplay = (
     searcherName: client.responsible_searcher_id
       ? userNameMap.get(client.responsible_searcher_id) || '-'
       : '-',
+    assignmentDate: client.assignment_date ? formatDate(client.assignment_date) : '-',
   }
 }
 
@@ -142,6 +157,10 @@ export interface ClientFilters {
   callbackDateFrom?: string
   callbackDateTo?: string
 
+  // Assignment Date Filter
+  assignmentDateFrom?: string
+  assignmentDateTo?: string
+
   // Interaction Created By
   interactionUserId?: string
 
@@ -172,6 +191,7 @@ export function ClientManagementPage() {
   // Get search state from global store (synced with header search)
   const { searchQuery, searchType, setSearchQuery: clearSearchQuery } = useSearchStore()
   const user = useAuthStore((state) => state.user)
+  const showHiddenTags = isAdminRole(user?.active_role_name)
 
   // URL state for priority filtering
   const [selectedPriorities, setSelectedPriorities] = useURLState<Priority[]>('priority', [])
@@ -235,6 +255,14 @@ export function ClientManagementPage() {
     'interactionDateTo',
     ''
   )
+  const [assignmentDateFromFilter, setAssignmentDateFromFilter] = useURLState<string>(
+    'assignmentDateFrom',
+    ''
+  )
+  const [assignmentDateToFilter, setAssignmentDateToFilter] = useURLState<string>(
+    'assignmentDateTo',
+    ''
+  )
 
   // Compute filters object from URL state
   const filters: ClientFilters = useMemo(
@@ -262,6 +290,8 @@ export function ClientManagementPage() {
       interactionUserId: interactionUserIdFilter || undefined,
       interactionDateFrom: interactionDateFromFilter || undefined,
       interactionDateTo: interactionDateToFilter || undefined,
+      assignmentDateFrom: assignmentDateFromFilter || undefined,
+      assignmentDateTo: assignmentDateToFilter || undefined,
     }),
     [
       portfolioFilter,
@@ -287,6 +317,8 @@ export function ClientManagementPage() {
       interactionUserIdFilter,
       interactionDateFromFilter,
       interactionDateToFilter,
+      assignmentDateFromFilter,
+      assignmentDateToFilter,
     ]
   )
 
@@ -345,6 +377,8 @@ export function ClientManagementPage() {
       interactionUserIdFilter,
       interactionDateFromFilter,
       interactionDateToFilter,
+      assignmentDateFromFilter,
+      assignmentDateToFilter,
       searchQuery,
       searchType,
     }
@@ -368,6 +402,8 @@ export function ClientManagementPage() {
       interactionUserIdFilter !== '' ||
       interactionDateFromFilter !== '' ||
       interactionDateToFilter !== '' ||
+      assignmentDateFromFilter !== '' ||
+      assignmentDateToFilter !== '' ||
       debtRangeFromFilter > 0 ||
       debtRangeToFilter > 0 ||
       principalRangeFromFilter > 0 ||
@@ -414,6 +450,8 @@ export function ClientManagementPage() {
     interactionUserIdFilter,
     interactionDateFromFilter,
     interactionDateToFilter,
+    assignmentDateFromFilter,
+    assignmentDateToFilter,
     searchQuery,
     searchType,
   ])
@@ -440,6 +478,8 @@ export function ClientManagementPage() {
       interactionUserIdFilter !== '' ||
       interactionDateFromFilter !== '' ||
       interactionDateToFilter !== '' ||
+      assignmentDateFromFilter !== '' ||
+      assignmentDateToFilter !== '' ||
       debtRangeFromFilter > 0 ||
       principalRangeFromFilter > 0
 
@@ -485,6 +525,10 @@ export function ClientManagementPage() {
               setInteractionDateFromFilter(parsed.interactionDateFromFilter)
             if (parsed.interactionDateToFilter)
               setInteractionDateToFilter(parsed.interactionDateToFilter)
+            if (parsed.assignmentDateFromFilter)
+              setAssignmentDateFromFilter(parsed.assignmentDateFromFilter)
+            if (parsed.assignmentDateToFilter)
+              setAssignmentDateToFilter(parsed.assignmentDateToFilter)
             if (parsed.currentPage) setCurrentPage(parsed.currentPage)
             if (parsed.rowsPerPage) setRowsPerPage(parsed.rowsPerPage)
             if (parsed.sortBy) setSortBy(parsed.sortBy)
@@ -553,6 +597,7 @@ export function ClientManagementPage() {
       searcherName: 'responsible_searcher_id',
       creditor: 'primary_creditor',
       debt: 'total_debt',
+      assignmentDate: 'assignment_date',
     }
 
     const params: Record<string, unknown> = {
@@ -672,7 +717,15 @@ export function ClientManagementPage() {
       params.interaction_date_to = filters.interactionDateTo
     }
 
-    // FILTER 15: Search (from global header search)
+    // FILTER 15: Assignment Date Range
+    if (filters.assignmentDateFrom) {
+      params.assignment_date_from = filters.assignmentDateFrom
+    }
+    if (filters.assignmentDateTo) {
+      params.assignment_date_to = filters.assignmentDateTo
+    }
+
+    // FILTER 16: Search (from global header search)
     if (searchQuery.trim()) {
       params.q = searchQuery.trim()
       params.search_type = searchType
@@ -704,6 +757,15 @@ export function ClientManagementPage() {
 
   // Fetch active users for resolving employee/searcher IDs to names (project-scoped)
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const activeProjectIdNum = activeProjectId ? Number(activeProjectId) : undefined
+  // Tag-service list for operators excludes hidden tags — use names to filter client-list embedded tags
+  // when client-service rows omit or stale-sync visibility (different DB ids than tag-service).
+  const { data: operatorTagCatalog } = useTags(activeProjectIdNum)
+  const operatorAllowedTagNames = useMemo(() => {
+    if (showHiddenTags) return null
+    if (operatorTagCatalog === undefined) return null
+    return new Set(operatorTagCatalog.map((t) => t.name))
+  }, [showHiddenTags, operatorTagCatalog])
   const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const userNameMap = useMemo(() => {
     const map = new Map<number, string>()
@@ -721,8 +783,16 @@ export function ClientManagementPage() {
 
   // Map API clients to display format
   const displayClients = useMemo(() => {
-    return apiClients.map((client) => mapAPIClientToDisplay(client, thresholds, userNameMap))
-  }, [apiClients, thresholds, userNameMap])
+    return apiClients.map((client) =>
+      mapAPIClientToDisplay(
+        client,
+        thresholds,
+        userNameMap,
+        showHiddenTags,
+        operatorAllowedTagNames
+      )
+    )
+  }, [apiClients, thresholds, userNameMap, showHiddenTags, operatorAllowedTagNames])
 
   // Count applied filters
   const appliedFiltersCount = useMemo(() => {
@@ -737,6 +807,7 @@ export function ClientManagementPage() {
     if (filters.callbackDateFrom || filters.callbackDateTo) count++
     if (filters.interactionUserId) count++
     if (filters.interactionDateFrom || filters.interactionDateTo) count++
+    if (filters.assignmentDateFrom || filters.assignmentDateTo) count++
     if (filters.portfolio && filters.portfolio.length > 0) count++
     if (filters.tagIds && filters.tagIds.length > 0) count++
     if (filters.status && filters.status.length > 0) count++
@@ -1082,6 +1153,12 @@ export function ClientManagementPage() {
     if (newFilters.interactionDateTo !== interactionDateToFilter) {
       setInteractionDateToFilter(newFilters.interactionDateTo || '')
     }
+    if (newFilters.assignmentDateFrom !== assignmentDateFromFilter) {
+      setAssignmentDateFromFilter(newFilters.assignmentDateFrom || '')
+    }
+    if (newFilters.assignmentDateTo !== assignmentDateToFilter) {
+      setAssignmentDateToFilter(newFilters.assignmentDateTo || '')
+    }
 
     // Reset to page 1 when filters change
     setCurrentPage(1)
@@ -1113,6 +1190,8 @@ export function ClientManagementPage() {
     setInteractionUserIdFilter('')
     setInteractionDateFromFilter('')
     setInteractionDateToFilter('')
+    setAssignmentDateFromFilter('')
+    setAssignmentDateToFilter('')
 
     // Reset to first page
     setCurrentPage(1)
@@ -1281,6 +1360,13 @@ export function ClientManagementPage() {
       key: 'searcherName',
       header: t('pages.clients.tableHeaders.searcher'),
       align: 'left',
+    },
+    {
+      key: 'assignmentDate',
+      header: t('pages.clients.tableHeaders.assignmentDate'),
+      align: 'left',
+      sortable: true,
+      sortKey: 'assignmentDate',
     },
     {
       key: 'actions',

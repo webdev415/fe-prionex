@@ -24,6 +24,16 @@ import { Icons } from '@/lib/icons'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
+import { useTranslation } from 'react-i18next'
+import { PromiseAssignDialog } from './PromiseAssignDialog'
+
+interface TagWithPayloadFlag {
+  id: number
+  name: string
+  color: string
+  description?: string
+  requires_payload?: boolean
+}
 
 interface TagSelectorModalProps {
   clientId: number
@@ -40,6 +50,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
   open,
   onClose,
 }: TagSelectorModalProps) {
+  const { t } = useTranslation('common')
   const queryClient = useQueryClient()
   const canAssignTags = useHasPermission(PERMISSIONS.CLIENTS.ASSIGN_TAGS)
   const { data: allTags, isLoading: tagsLoading } = useTags(projectId)
@@ -50,6 +61,12 @@ export const TagSelectorModal = memo(function TagSelectorModal({
   const [selectedTagIds, setSelectedTagIds] = useState<Set<number>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  // Pending payload-required tag the operator wants to assign — opens
+  // PromiseAssignDialog where they enter ЦД (date/time) and amount.
+  const [pendingPayloadTag, setPendingPayloadTag] = useState<{
+    id: number
+    name: string
+  } | null>(null)
 
   // Debounce search query for better performance
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
@@ -68,14 +85,23 @@ export const TagSelectorModal = memo(function TagSelectorModal({
     [allTags, debouncedSearchQuery]
   )
 
-  // Memoize handleToggleTag to prevent re-creating function on every render
-  const handleToggleTag = useCallback((tagId: number) => {
+  // Memoize handleToggleTag to prevent re-creating function on every render.
+  // Tags with `requires_payload=true` (e.g. promise_to_pay) cannot be added
+  // through the bulk save path — they need a dedicated form for ЦД + amount.
+  // Clicking on such a tag opens PromiseAssignDialog instead.
+  const handleToggleTag = useCallback((tag: TagWithPayloadFlag) => {
     setSelectedTagIds((prev) => {
+      const isSelected = prev.has(tag.id)
+      // Adding a payload-required tag → divert to dedicated dialog
+      if (!isSelected && tag.requires_payload) {
+        setPendingPayloadTag({ id: tag.id, name: tag.name })
+        return prev
+      }
       const next = new Set(prev)
-      if (next.has(tagId)) {
-        next.delete(tagId)
+      if (next.has(tag.id)) {
+        next.delete(tag.id)
       } else {
-        next.add(tagId)
+        next.add(tag.id)
       }
       return next
     })
@@ -95,8 +121,8 @@ export const TagSelectorModal = memo(function TagSelectorModal({
 
     try {
       // Optimistic update
-      queryClient.setQueryData(
-        ['clients', clientId, 'tags'],
+      queryClient.setQueriesData(
+        { queryKey: ['clients', clientId, 'tags'] },
         () => allTags?.filter((t) => selectedTagIds.has(t.id)) || []
       )
 
@@ -106,10 +132,10 @@ export const TagSelectorModal = memo(function TagSelectorModal({
         ...toRemove.map((tagId) => removeMutation.mutateAsync({ clientId, tagId })),
       ])
 
-      toast.success(`Tags updated for ${clientName}`)
+      toast.success(t('pages.clients.modals.tagSelector.tagsUpdated', { name: clientName }))
       onClose()
     } catch {
-      toast.error('Failed to update tags')
+      toast.error(t('pages.clients.modals.tagSelector.updateFailed'))
       queryClient.invalidateQueries({ queryKey: ['clients', clientId, 'tags'] })
     } finally {
       setIsSaving(false)
@@ -125,6 +151,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
     clientName,
     onClose,
     canAssignTags,
+    t,
   ])
 
   const isLoading = tagsLoading || clientTagsLoading
@@ -133,19 +160,21 @@ export const TagSelectorModal = memo(function TagSelectorModal({
     <Modal open={open} onClose={onClose} maxWidth="lg" data-testid="tag-selector-modal">
       <ModalHeader
         icon={<Icons.Contact size={24} className="text-primary-500" />}
-        title={`Manage Tags - ${clientName}`}
+        title={t('pages.clients.modals.tagSelector.title', { name: clientName })}
       />
 
       <ModalContent>
         {isLoading ? (
           <div className="flex items-center justify-center py-6 sm:py-8">
-            <div className="text-xs text-gray-600 sm:text-sm">Loading tags...</div>
+            <div className="text-xs text-gray-600 sm:text-sm">
+              {t('pages.clients.modals.tagSelector.loadingTags')}
+            </div>
           </div>
         ) : (
           <>
             <div className="mb-3 sm:mb-4">
               <Input
-                placeholder="Search tags..."
+                placeholder={t('pages.clients.modals.tagSelector.searchTags')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 leftIcon={<Icons.Search size={16} />}
@@ -154,34 +183,49 @@ export const TagSelectorModal = memo(function TagSelectorModal({
             </div>
 
             <div className="mb-3 text-xs text-gray-600 sm:mb-4 sm:text-sm">
-              {selectedTagIds.size} of {allTags?.length || 0} tags selected
+              {t('pages.clients.modals.tagSelector.selectedCount', {
+                selected: selectedTagIds.size,
+                total: allTags?.length || 0,
+              })}
             </div>
 
             <div className="max-h-64 space-y-2 overflow-y-auto sm:max-h-96">
               {filteredTags && filteredTags.length > 0 ? (
-                filteredTags.map((tag) => (
-                  <label
-                    key={tag.id}
-                    className="flex cursor-pointer items-center gap-2 rounded p-2 sm:gap-3"
-                  >
-                    <Checkbox
-                      checked={selectedTagIds.has(tag.id)}
-                      onCheckedChange={() => handleToggleTag(tag.id)}
-                      disabled={!canAssignTags}
-                    />
-                    <TagBadge name={tag.name} color={tag.color} size="sm" />
-                    {tag.description && (
-                      <span className="hidden text-xs text-gray-500 sm:inline">
-                        {tag.description}
-                      </span>
-                    )}
-                  </label>
-                ))
+                filteredTags.map((tag) => {
+                  const t = tag as unknown as TagWithPayloadFlag
+                  const isPayloadTag = !!t.requires_payload
+                  return (
+                    <label
+                      key={tag.id}
+                      className="flex cursor-pointer items-center gap-2 rounded p-2 sm:gap-3"
+                    >
+                      <Checkbox
+                        checked={selectedTagIds.has(tag.id)}
+                        onCheckedChange={() => handleToggleTag(t)}
+                        disabled={!canAssignTags}
+                      />
+                      <TagBadge name={tag.name} color={tag.color} size="sm" />
+                      {isPayloadTag && (
+                        <span
+                          className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
+                          title="Тег требует ЦД и/или сумму — откроется отдельная форма"
+                        >
+                          требует ЦД
+                        </span>
+                      )}
+                      {tag.description && (
+                        <span className="hidden text-xs text-gray-500 sm:inline">
+                          {tag.description}
+                        </span>
+                      )}
+                    </label>
+                  )
+                })
               ) : (
                 <div className="py-6 text-center text-xs text-gray-500 sm:py-8 sm:text-sm">
                   {debouncedSearchQuery
-                    ? 'No tags found matching your search'
-                    : 'No tags available'}
+                    ? t('pages.clients.modals.tagSelector.noTagsMatch')
+                    : t('pages.clients.modals.tagSelector.noTagsAvailable')}
                 </div>
               )}
             </div>
@@ -196,7 +240,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
           disabled={isSaving}
           className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button
           onClick={handleSave}
@@ -204,9 +248,19 @@ export const TagSelectorModal = memo(function TagSelectorModal({
           disabled={isLoading || !canAssignTags}
           className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
-          Save Tags
+          {t('pages.clients.modals.tagSelector.saveTags')}
         </Button>
       </ModalFooter>
+      {pendingPayloadTag && (
+        <PromiseAssignDialog
+          open={true}
+          clientId={clientId}
+          clientName={clientName}
+          tagId={pendingPayloadTag.id}
+          tagName={pendingPayloadTag.name}
+          onClose={() => setPendingPayloadTag(null)}
+        />
+      )}
     </Modal>
   )
 })

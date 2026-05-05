@@ -166,7 +166,7 @@ export async function getPaymentDebtBreakdown(
  * Get pending verification payments (bell notifications)
  */
 export async function getPendingVerificationPayments(
-  params: { days?: number } = {}
+  params: { days?: number; only_recorded_by_me?: boolean } = {}
 ): Promise<PendingPaymentResponse> {
   const response = await api.get<PendingPaymentResponse>(`${BASE_URL}/pending-verifications`, {
     params,

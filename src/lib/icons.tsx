@@ -35,6 +35,7 @@ import {
   ArrowRight01Icon,
   ArrowDown01Icon,
   ArrowUp01Icon,
+  PinIcon,
   EyeIcon,
   ViewIcon,
   LockIcon,
@@ -133,6 +134,8 @@ import {
   ChatIcon,
   CallOutgoing04Icon,
   CallIncoming04Icon,
+  AiBrain03Icon,
+  Mic02Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -205,6 +208,7 @@ export const Icons = {
   ArrowRight: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowRight01Icon} {...props} />,
   ArrowDown: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowDown01Icon} {...props} />,
   ArrowUp: (props: Omit<IconProps, 'icon'>) => <Icon icon={ArrowUp01Icon} {...props} />,
+  Pin: (props: Omit<IconProps, 'icon'>) => <Icon icon={PinIcon} {...props} />,
   // Checkmark (using CheckmarkCircle02Icon)
   Checkmark: (props: Omit<IconProps, 'icon'>) => <Icon icon={CheckmarkCircle02Icon} {...props} />,
   Cancel01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Cancel01Icon} {...props} />,
@@ -322,6 +326,8 @@ export const Icons = {
   Chat: (props: Omit<IconProps, 'icon'>) => <Icon icon={ChatIcon} {...props} />,
   CallOutgoing04: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallOutgoing04Icon} {...props} />,
   CallIncoming04: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallIncoming04Icon} {...props} />,
+  AiBrain03: (props: Omit<IconProps, 'icon'>) => <Icon icon={AiBrain03Icon} {...props} />,
+  Mic02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Mic02Icon} {...props} />,
 }
 
 /**
@@ -352,6 +358,7 @@ export {
   ArrowRight01Icon,
   ArrowDown01Icon,
   ArrowUp01Icon,
+  PinIcon,
   EyeIcon,
   ViewIcon,
   LockIcon,
@@ -446,6 +453,8 @@ export {
   ChatIcon,
   CallOutgoing04Icon,
   CallIncoming04Icon,
+  AiBrain03Icon,
+  Mic02Icon,
 }
 
 /**

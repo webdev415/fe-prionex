@@ -1,0 +1,522 @@
+/**
+ * EditTAInteractionModal — admin edit of a saved TA chain interaction.
+ *
+ * Surfaces every step's recorded value (from `step_data`) plus top-level
+ * promise-date / promise-amount / credit / notes. Step rendering mirrors
+ * ChainExecutor by field_type so the editor matches what was originally
+ * entered. Submits to PUT /api/v1/ta-interactions/{id}.
+ */
+
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
+import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { DateSelect } from '@/components/ui/DateSelect'
+import { getDateTimeStringInTimezone } from '@/lib/dateUtils'
+import { Label } from '@/components/ui/Label'
+import { Textarea } from '@/components/ui/Textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
+import { Icons } from '@/lib/icons'
+import {
+  useClientChainInstances,
+  useTAInteraction,
+  useUpdateTAInteraction,
+} from '@/features/taInteractions/hooks/useTAInteractions'
+import { useTAChain } from '@/features/taChains/hooks/useTAChains'
+import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
+import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
+import type { ContactSource } from '@/features/taChains/api/types'
+import { getErrorMessage } from '@/lib/errors'
+import { formatMoneyKopeckTight } from '@/lib/formatters'
+
+function ContactStepEdit({
+  clientId,
+  source,
+  value,
+  onChange,
+}: {
+  clientId: number
+  source: ContactSource | null
+  value: string
+  onChange: (v: string) => void
+}) {
+  const { t } = useTranslation('common')
+  const { data: phonesData } = useClientPhones(clientId, source ?? 'client')
+  // step_data stores the phone string verbatim, so the Select compares
+  // by contact_value not id. If the saved value isn't in the current
+  // phone list (contact deleted/renamed), still show it as a stale entry.
+  const phones = phonesData ?? []
+  const valueIsKnown = phones.some((p) => p.contact_value === value)
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger>
+        <SelectValue placeholder={t('pages.clientChains.selectValue', 'Select…')} />
+      </SelectTrigger>
+      <SelectContent>
+        {!valueIsKnown && value !== '' && (
+          <SelectItem value={value}>
+            {value}
+            <span className="ml-2 text-xs text-gray-400">
+              {t('pages.clientChains.contactStale', '(stale)')}
+            </span>
+          </SelectItem>
+        )}
+        {phones.map((p) => (
+          <SelectItem key={p.id} value={p.contact_value}>
+            {p.contact_value}
+            {p.type_name ? ` (${p.type_name})` : ''}
+            {source === 'recommender' && p.comment ? ` — ${p.comment}` : ''}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
+interface Props {
+  open: boolean
+  interactionId: number | null
+  onClose: () => void
+  onSaved?: () => void
+  debts?: Array<{
+    id: number
+    contract_number?: string
+    remaining_debt_amount?: string | number | null
+    days_past_due?: number | null
+    seller_company?: string | null
+  }>
+}
+
+export function EditTAInteractionModal({
+  open,
+  interactionId,
+  onClose,
+  onSaved,
+  debts = [],
+}: Props) {
+  const { t } = useTranslation('common')
+
+  const { data: interaction } = useTAInteraction(open ? interactionId : null)
+  const { data: chain } = useTAChain(interaction?.chain_id ?? null)
+  const { data: tasData } = useTargetActions({ include_hidden: true })
+  // Wizard snapshots (chain_instances.step_data) are an authoritative
+  // backup of every step's value. We merge them with interaction.step_data
+  // so steps that didn't make it into ta_interactions.step_data still
+  // hydrate from the snapshot.
+  const { data: clientInstances } = useClientChainInstances(
+    open && interaction?.client_id ? interaction.client_id : null
+  )
+  const matchingInstance = useMemo(() => {
+    if (!interaction?.chain_instance_id || !clientInstances) return null
+    return clientInstances.find((i) => i.id === interaction.chain_instance_id) ?? null
+  }, [interaction?.chain_instance_id, clientInstances])
+
+  const taById = useMemo(() => {
+    const m = new Map<number, NonNullable<typeof tasData>['items'][number]>()
+    for (const ta of tasData?.items ?? []) m.set(ta.id, ta)
+    return m
+  }, [tasData])
+
+  const updateMut = useUpdateTAInteraction()
+
+  // Local form state — keyed by step.id (unique per step). We can't key by
+  // target_action_id because chains may reuse the same TA across multiple steps,
+  // which would collide and lose values on lookup AND on save.
+  const [seenInteractionId, setSeenInteractionId] = useState<number | null>(null)
+  const [stepValues, setStepValues] = useState<Record<string, string>>({})
+  const [promiseDate, setPromiseDate] = useState<string>('')
+  const [promiseAmount, setPromiseAmount] = useState<string>('')
+  const [creditId, setCreditId] = useState<string>('')
+  const [notes, setNotes] = useState<string>('')
+
+  // Hydrate once interaction + chain definition + (if applicable) instance are
+  // all loaded, so we don't overwrite the user's edits when a slower query
+  // arrives later.
+  const stillWaitingForInstance =
+    interaction?.chain_instance_id != null && clientInstances === undefined
+  const stillWaitingForChain = interaction != null && chain == null
+  if (
+    interaction &&
+    interaction.id !== seenInteractionId &&
+    !stillWaitingForInstance &&
+    !stillWaitingForChain
+  ) {
+    setSeenInteractionId(interaction.id)
+
+    const next: Record<string, string> = {}
+    const sortedSteps = chain?.steps
+      ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
+      : []
+    // Resolve each step's value: prefer the wizard snapshot keyed by step_order
+    // (which preserves duplicates of the same target_action_id), then fall back
+    // to interaction.step_data keyed by target_action_id.
+    for (const step of sortedSteps) {
+      let v = ''
+      const snap = matchingInstance?.step_data?.[String(step.step_order)]
+      if (snap && typeof snap === 'object') {
+        const obj = snap as { value?: string | null }
+        if (obj.value != null && String(obj.value) !== '') {
+          v = String(obj.value)
+        }
+      }
+      if (v === '') {
+        const fromInteraction = interaction.step_data?.[String(step.target_action_id)]
+        if (fromInteraction != null) {
+          if (typeof fromInteraction === 'object') {
+            const inner = (fromInteraction as Record<string, unknown>).value
+            if (inner != null) v = String(inner)
+          } else {
+            v = String(fromInteraction)
+          }
+        }
+      }
+      next[String(step.id)] = v
+    }
+    setStepValues(next)
+    setPromiseDate(interaction.promise_date ? interaction.promise_date.slice(0, 10) : '')
+    setPromiseAmount(interaction.promise_amount ?? '')
+    setCreditId(interaction.credit_id != null ? String(interaction.credit_id) : '')
+    setNotes(interaction.notes ?? '')
+  }
+
+  const orderedSteps = useMemo(() => {
+    if (!chain?.steps) return []
+    return [...chain.steps].sort((a, b) => a.step_order - b.step_order)
+  }, [chain])
+
+  // Detect which optional fields the chain can actually collect, based on
+  // dropdown options present in any step's TA. We *also* surface a field if
+  // the saved interaction has a value for it, so admins can clear stale data
+  // even if the chain definition has since changed.
+  const chainCapabilities = useMemo(() => {
+    let promiseDate = false
+    let promiseAmount = false
+    let credit = false
+    for (const step of orderedSteps) {
+      const ta = taById.get(step.target_action_id)
+      if (!ta || ta.field_type !== 'dropdown') continue
+      for (const dv of ta.dropdown_values) {
+        if (dv.require_promise_date) promiseDate = true
+        if (dv.require_promise_amount) promiseAmount = true
+        if (dv.require_credit) credit = true
+      }
+    }
+    return { promiseDate, promiseAmount, credit }
+  }, [orderedSteps, taById])
+
+  const showPromiseDate = chainCapabilities.promiseDate || !!interaction?.promise_date
+  const showPromiseAmount = chainCapabilities.promiseAmount || !!interaction?.promise_amount
+  const showCredit = chainCapabilities.credit || interaction?.credit_id != null
+
+  const handleSave = async () => {
+    if (!interaction) return
+    const trimmedNotes = notes.trim()
+    // stepValues is keyed by step.id (unique). The API expects step_data keyed
+    // by target_action_id, so re-key on the way out. If the chain reuses a
+    // target_action_id across multiple steps, later step_orders win — same
+    // last-write-wins behavior the API has always had on this column.
+    const sortedStepsForSave = chain?.steps
+      ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
+      : []
+    const cleanedStepData: Record<string, string> = {}
+    for (const step of sortedStepsForSave) {
+      const v = stepValues[String(step.id)]
+      if (v !== undefined && v !== '') {
+        cleanedStepData[String(step.target_action_id)] = v
+      }
+    }
+
+    try {
+      await updateMut.mutateAsync({
+        id: interaction.id,
+        payload: {
+          step_data: cleanedStepData,
+          promise_date: promiseDate ? `${promiseDate}T00:00:00` : undefined,
+          clear_promise_date: !promiseDate,
+          promise_amount: promiseAmount ? parseFloat(promiseAmount) : undefined,
+          clear_promise_amount: !promiseAmount,
+          credit_id: creditId ? parseInt(creditId, 10) : undefined,
+          clear_credit_id: !creditId,
+          notes: trimmedNotes || '',
+        },
+      })
+      toast.success(t('pages.clientChains.editInteraction.savedToast', 'Interaction updated'))
+      onSaved?.()
+      onClose()
+    } catch (err) {
+      toast.error(getErrorMessage(err))
+    }
+  }
+
+  const setStepValue = (stepId: number, v: string) =>
+    setStepValues((prev) => ({ ...prev, [String(stepId)]: v }))
+
+  return (
+    <Modal open={open} onClose={onClose} maxWidth="2xl">
+      <ModalHeader
+        icon={
+          <div className="bg-primary-300 flex h-7 w-7 items-center justify-center rounded-full">
+            <Icons.PencilEdit size={18} className="text-dark-500" strokeWidth={2} />
+          </div>
+        }
+        title={t('pages.clientChains.editInteraction.title', 'Edit interaction')}
+      />
+      <ModalContent>
+        {!interaction || !chain ? (
+          <div className="text-sm text-gray-500">{t('common.loading')}</div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+              {t('pages.clientChains.editInteraction.chainLabel', 'Chain')}:{' '}
+              <span className="font-medium text-gray-800">{chain.name}</span>
+            </div>
+
+            {orderedSteps.map((step) => {
+              const ta = taById.get(step.target_action_id)
+              const value = stepValues[String(step.id)] ?? ''
+              if (!ta) return null
+              return (
+                <div
+                  key={step.id}
+                  className="flex flex-col gap-1 rounded-lg border border-gray-200 bg-gray-50/50 p-3"
+                >
+                  <Label className="text-sm font-medium text-gray-800">
+                    {t('pages.clientChains.stepLabel', { order: step.step_order })} — {ta.name}
+                    {step.is_required && <span className="ml-1 text-red-500">*</span>}
+                  </Label>
+                  {ta.field_type === 'dropdown' ? (
+                    <Select value={value} onValueChange={(v) => setStepValue(step.id, v)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('pages.clientChains.selectValue', 'Select…')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ta.dropdown_values
+                          .filter((dv) => !dv.is_hidden)
+                          .map((dv) => (
+                            <SelectItem key={dv.id} value={dv.value}>
+                              {dv.value}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  ) : ta.field_type === 'date' ? (
+                    (() => {
+                      const parsed = value ? new Date(value) : null
+                      const isValid = !!parsed && !isNaN(parsed.getTime())
+                      return (
+                        <div className="flex flex-col gap-1">
+                          <DateSelect
+                            value={isValid ? parsed : null}
+                            onChange={({ value: v }) =>
+                              setStepValue(step.id, v ? getDateTimeStringInTimezone(v) : '')
+                            }
+                            format="dd/MM/yyyy HH:mm"
+                            showTimeSelect
+                            timeFormat="HH:mm"
+                            timeIntervals={15}
+                          />
+                          {value && !isValid && (
+                            <span className="text-xs text-amber-600">
+                              {t('pages.clientChains.editInteraction.savedValue', 'Saved value')}:{' '}
+                              {value}{' '}
+                              <span className="text-amber-500">
+                                {t('pages.clientChains.contactStale', '(stale)')}
+                              </span>
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })()
+                  ) : ta.field_type === 'amount' ? (
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      placeholder="0.00"
+                      leftIcon={<span className="text-gray-700">₴</span>}
+                      value={value}
+                      onChange={(e) => setStepValue(step.id, e.target.value)}
+                    />
+                  ) : ta.field_type === 'contact' ? (
+                    <ContactStepEdit
+                      clientId={interaction.client_id}
+                      source={step.contact_source}
+                      value={value}
+                      onChange={(v) => setStepValue(step.id, v)}
+                    />
+                  ) : ta.field_type === 'credit' ? (
+                    (() => {
+                      const selectedIds = value ? value.split(',').filter(Boolean) : []
+                      const knownDebtIds = new Set(debts.map((d) => String(d.id)))
+                      // Legacy interactions saved before the checkbox UI may
+                      // have stored arbitrary text or contract numbers. Surface
+                      // those as removable rows so the value isn't silently
+                      // hidden when it doesn't map to any current debt.
+                      const staleIds = selectedIds.filter((id) => !knownDebtIds.has(id))
+                      return (
+                        <div className="flex flex-col gap-2">
+                          {debts.length === 0 && staleIds.length === 0 ? (
+                            <span className="text-xs text-gray-500">
+                              {t('pages.clientChains.noCredits')}
+                            </span>
+                          ) : (
+                            <>
+                              {debts.map((d) => {
+                                const creditKey = String(d.id)
+                                const isChecked = selectedIds.includes(creditKey)
+                                return (
+                                  <label
+                                    key={d.id}
+                                    className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        const next = e.target.checked
+                                          ? [...selectedIds, creditKey]
+                                          : selectedIds.filter((id) => id !== creditKey)
+                                        setStepValue(step.id, next.filter(Boolean).join(','))
+                                      }}
+                                    />
+                                    <span>
+                                      #{d.contract_number ?? d.id}
+                                      {d.seller_company ? ` — ${d.seller_company}` : ''}
+                                      {d.remaining_debt_amount
+                                        ? ` — ${formatMoneyKopeckTight(d.remaining_debt_amount)}`
+                                        : ''}
+                                      {d.days_past_due ? ` — overdue ${d.days_past_due}d` : ''}
+                                    </span>
+                                  </label>
+                                )
+                              })}
+                              {staleIds.map((id) => (
+                                <label
+                                  key={`stale-${id}`}
+                                  className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 hover:bg-amber-100"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked
+                                    onChange={() => {
+                                      const next = selectedIds.filter((s) => s !== id)
+                                      setStepValue(step.id, next.filter(Boolean).join(','))
+                                    }}
+                                  />
+                                  <span>
+                                    {id}
+                                    <span className="ml-2 text-xs text-amber-600">
+                                      {t('pages.clientChains.contactStale', '(stale)')}
+                                    </span>
+                                  </span>
+                                </label>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      )
+                    })()
+                  ) : (
+                    <Input
+                      type="text"
+                      placeholder={ta.name}
+                      value={value}
+                      onChange={(e) => setStepValue(step.id, e.target.value)}
+                    />
+                  )}
+                </div>
+              )
+            })}
+
+            {showPromiseDate && (
+              <div className="flex flex-col gap-1">
+                <Label className="text-sm text-gray-700">
+                  {t('pages.clientChains.promiseDate')}
+                </Label>
+                <Input
+                  type="date"
+                  value={promiseDate}
+                  onChange={(e) => setPromiseDate(e.target.value)}
+                />
+              </div>
+            )}
+
+            {showPromiseAmount && (
+              <div className="flex flex-col gap-1">
+                <Label className="text-sm text-gray-700">
+                  {t('pages.clientChains.promiseAmountUAH')}
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="0.00"
+                  leftIcon={<span className="text-gray-700">₴</span>}
+                  value={promiseAmount}
+                  onChange={(e) => setPromiseAmount(e.target.value)}
+                />
+              </div>
+            )}
+
+            {showCredit && debts.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <Label className="text-sm text-gray-700">
+                  {t('pages.clientChains.credit', 'Credit')}
+                </Label>
+                <Select value={creditId} onValueChange={setCreditId}>
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={t('pages.clientChains.creditPlaceholder', 'Pick a credit…')}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {debts.map((d) => (
+                      <SelectItem key={d.id} value={String(d.id)}>
+                        #{d.contract_number ?? d.id}
+                        {d.remaining_debt_amount
+                          ? ` — ${formatMoneyKopeckTight(d.remaining_debt_amount)}`
+                          : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1">
+              <Label className="text-sm text-gray-700">{t('pages.clientChains.notes')}</Label>
+              <Textarea
+                rows={3}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={t('pages.clientChains.notesPlaceholder')}
+              />
+            </div>
+          </div>
+        )}
+      </ModalContent>
+      <ModalFooter>
+        <Button type="button" variant="cancel" onClick={onClose} className="flex-1">
+          {t('actions.cancel')}
+        </Button>
+        <Button
+          type="button"
+          variant="primary"
+          onClick={handleSave}
+          disabled={!interaction || updateMut.isPending}
+          className="flex-1"
+        >
+          {t('actions.save')}
+        </Button>
+      </ModalFooter>
+    </Modal>
+  )
+}

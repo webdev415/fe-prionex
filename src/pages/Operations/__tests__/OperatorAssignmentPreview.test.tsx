@@ -95,7 +95,7 @@ describe('OperatorAssignmentPreview', () => {
   it('should render filename', () => {
     render(<OperatorAssignmentPreview {...defaultProps} />, { wrapper: createWrapper() })
 
-    expect(screen.getByText('march-redistribution.csv')).toBeInTheDocument()
+    expect(screen.getByText(/march-redistribution\.csv/)).toBeInTheDocument()
   })
 
   it('should render preview rows in table', () => {
