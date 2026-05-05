@@ -288,8 +288,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   view_action_analysis: 'View Action Analysis page (call monitoring & interaction history)',
   view_click_tracking:
     'View Click Tracking timeline (operator action history synced to call recording)',
-  view_screen_time:
-    'View Screen Time analysis (time-per-section with team benchmarking)',
+  view_screen_time: 'View Screen Time analysis (time-per-section with team benchmarking)',
   view_activity_heatmap: 'View Activity Heatmap (per-hour operator state grid)',
   view_script_analytics:
     'View Script Analytics & anomaly detection (interaction-result distribution and auto-flags)',

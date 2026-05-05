@@ -11,8 +11,9 @@ export {
   exportScriptAnalytics,
   operatorAnalyticsService,
 } from './api/operatorAnalyticsService'
-export { TrackingProvider, useTracker } from './providers/TrackingProvider'
+export { TrackingProvider } from './providers/TrackingProvider'
 export { RouteChangeTracker } from './components/RouteChangeTracker'
+export { useTracker } from './hooks/useTracker'
 export { useTrackEvent } from './hooks/useTrackEvent'
 export { useTimeline, timelineKeys } from './hooks/useTimeline'
 export { useScreenTime, screenTimeKeys } from './hooks/useScreenTime'

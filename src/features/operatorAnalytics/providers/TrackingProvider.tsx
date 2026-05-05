@@ -1,15 +1,8 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  type PropsWithChildren,
-} from 'react'
+import { useCallback, useEffect, useMemo, useRef, type PropsWithChildren } from 'react'
 import { useCallStore } from '@/stores/callStore'
 import { ingestEvents, buildIngestEventsBody } from '../api/operatorAnalyticsService'
-import type { AnalyticsEventType, TrackingEventPayload } from '../types'
+import type { TrackingEventPayload } from '../types'
+import { TrackingContext, type Tracker } from './trackingContext'
 
 const FLUSH_THRESHOLD = 20
 const FLUSH_DEBOUNCE_MS = 5_000
@@ -17,18 +10,6 @@ const IDLE_THRESHOLD_MS = 15_000
 const SESSION_STORAGE_KEY = 'analytics:session_id'
 
 const ANALYTICS_INGEST_PATH = '/api/v1/analytics/events'
-
-type Tracker = (
-  eventType: AnalyticsEventType,
-  options?: {
-    callId?: string | null
-    clientId?: number | null
-    pageRef?: string | null
-    meta?: Record<string, unknown> | null
-  }
-) => void
-
-const TrackingContext = createContext<Tracker | null>(null)
 
 function getOrCreateSessionId(): string {
   if (typeof window === 'undefined') return 'ssr'
@@ -64,7 +45,9 @@ export function TrackingProvider({
   const bufferRef = useRef<TrackingEventPayload[]>([])
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastActivityRef = useRef<number>(Date.now())
+  // Initialised to 0 instead of Date.now() to keep render impure-free; the
+  // first `track()` call overwrites it before the idle timer can fire.
+  const lastActivityRef = useRef<number>(0)
   const sessionIdRef = useRef<string>(getOrCreateSessionId())
 
   const flush = useCallback(
@@ -137,7 +120,8 @@ export function TrackingProvider({
         call_id: callId,
         client_id: options?.clientId ?? null,
         event_type: eventType,
-        page_ref: options?.pageRef ?? (typeof window !== 'undefined' ? window.location.pathname : null),
+        page_ref:
+          options?.pageRef ?? (typeof window !== 'undefined' ? window.location.pathname : null),
         meta: options?.meta ?? null,
       })
       lastActivityRef.current = Date.now()
@@ -193,12 +177,4 @@ export function TrackingProvider({
   const value = useMemo(() => track, [track])
 
   return <TrackingContext.Provider value={value}>{children}</TrackingContext.Provider>
-}
-
-export function useTracker(): Tracker {
-  const tracker = useContext(TrackingContext)
-  if (!tracker) {
-    return () => {}
-  }
-  return tracker
 }

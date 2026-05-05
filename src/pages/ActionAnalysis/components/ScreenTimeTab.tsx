@@ -6,10 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
-import {
-  useExportScreenTime,
-  useScreenTime,
-} from '@/features/operatorAnalytics'
+import { useExportScreenTime, useScreenTime } from '@/features/operatorAnalytics'
 import {
   readAnalyticsBarState,
   toAnalyticsRangeFilters,
@@ -42,7 +39,8 @@ export function ScreenTimeTab() {
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
   const filters = toAnalyticsRangeFilters(urlState)
-  const periodReady = urlState.period !== 'custom' || !!(urlState.customFromDate && urlState.customToDate)
+  const periodReady =
+    urlState.period !== 'custom' || !!(urlState.customFromDate && urlState.customToDate)
 
   const { data, isLoading, isError } = useScreenTime(filters, periodReady)
   const exportMutation = useExportScreenTime()
@@ -95,11 +93,17 @@ export function ScreenTimeTab() {
 
       {!periodReady ? (
         <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
-          {t('pages.actionAnalysis.filters.selectCustomRange', 'Pick a custom date range to load data.')}
+          {t(
+            'pages.actionAnalysis.filters.selectCustomRange',
+            'Pick a custom date range to load data.'
+          )}
         </div>
       ) : isError ? (
         <div className="rounded-xl bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
-          {t('pages.actionAnalysis.errors.loadScreenTimeFailed', 'Failed to load screen-time data.')}
+          {t(
+            'pages.actionAnalysis.errors.loadScreenTimeFailed',
+            'Failed to load screen-time data.'
+          )}
         </div>
       ) : isLoading ? (
         <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
@@ -107,12 +111,15 @@ export function ScreenTimeTab() {
         </div>
       ) : !data?.operators?.length ? (
         <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
-          {t('pages.actionAnalysis.screenTime.empty', 'No screen-time data for the selected filters.')}
+          {t(
+            'pages.actionAnalysis.screenTime.empty',
+            'No screen-time data for the selected filters.'
+          )}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl bg-white/80 shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-gray-100 text-left text-xs uppercase text-gray-600">
+            <thead className="bg-gray-100 text-left text-xs text-gray-600 uppercase">
               <tr>
                 <th className="px-4 py-2">
                   {t('pages.actionAnalysis.screenTime.columns.operator', 'Operator')}
@@ -136,7 +143,10 @@ export function ScreenTimeTab() {
             </thead>
             <tbody>
               {data.operators.map((op) => (
-                <tr key={op.operator_id} className={`border-t border-gray-100 ${highlightStyles(op.highlight)}`}>
+                <tr
+                  key={op.operator_id}
+                  className={`border-t border-gray-100 ${highlightStyles(op.highlight)}`}
+                >
                   <td className="px-4 py-2 font-medium text-gray-800">
                     {operatorById.get(op.operator_id) ?? `#${op.operator_id}`}
                   </td>
@@ -145,7 +155,9 @@ export function ScreenTimeTab() {
                   <td className="px-4 py-2">{formatMs(op.idle_total_ms)}</td>
                   <td className="px-4 py-2">{formatMs(op.after_call_processing_ms)}</td>
                   <td className="px-4 py-2 font-mono text-xs">
-                    {op.deviation_pct == null ? '—' : `${op.deviation_pct > 0 ? '+' : ''}${op.deviation_pct}%`}
+                    {op.deviation_pct == null
+                      ? '—'
+                      : `${op.deviation_pct > 0 ? '+' : ''}${op.deviation_pct}%`}
                   </td>
                 </tr>
               ))}

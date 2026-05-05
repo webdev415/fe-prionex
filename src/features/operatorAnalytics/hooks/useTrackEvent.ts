@@ -1,4 +1,4 @@
-import { useTracker } from '../providers/TrackingProvider'
+import { useTracker } from './useTracker'
 
 export function useTrackEvent() {
   return useTracker()

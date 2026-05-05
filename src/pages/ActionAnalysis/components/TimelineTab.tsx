@@ -5,15 +5,8 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Icons } from '@/lib/icons'
-import {
-  useExportTimeline,
-  useTimeline,
-  type TimelineEventDto,
-} from '@/features/operatorAnalytics'
-import {
-  readTimelineBarState,
-  writeTimelineBarState,
-} from '../lib/analyticsUrlState'
+import { useExportTimeline, useTimeline, type TimelineEventDto } from '@/features/operatorAnalytics'
+import { readTimelineBarState, writeTimelineBarState } from '../lib/analyticsUrlState'
 
 function formatOffset(seconds?: number | null): string {
   if (seconds == null || !Number.isFinite(seconds)) return '—'
@@ -108,10 +101,7 @@ export function TimelineTab() {
         </div>
       ) : isError ? (
         <div className="rounded-xl bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
-          {t(
-            'pages.actionAnalysis.errors.loadTimelineFailed',
-            'Failed to load the timeline.'
-          )}
+          {t('pages.actionAnalysis.errors.loadTimelineFailed', 'Failed to load the timeline.')}
         </div>
       ) : isLoading ? (
         <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
@@ -127,7 +117,7 @@ export function TimelineTab() {
       ) : (
         <div className="overflow-x-auto rounded-xl bg-white/80 shadow-sm">
           <table className="w-full text-sm">
-            <thead className="bg-gray-100 text-left text-xs uppercase text-gray-600">
+            <thead className="bg-gray-100 text-left text-xs text-gray-600 uppercase">
               <tr>
                 <th className="px-4 py-2">
                   {t('pages.actionAnalysis.timeline.columns.offset', 'Offset')}
@@ -146,7 +136,9 @@ export function TimelineTab() {
             <tbody>
               {events.map((event, index) => (
                 <tr key={`${event.ts}-${index}`} className="border-t border-gray-100">
-                  <td className="px-4 py-2 font-mono text-xs">{formatOffset(event.offset_seconds)}</td>
+                  <td className="px-4 py-2 font-mono text-xs">
+                    {formatOffset(event.offset_seconds)}
+                  </td>
                   <td className="px-4 py-2 font-medium text-gray-800">{event.event_type}</td>
                   <td className="px-4 py-2 text-gray-600">{event.page_ref ?? '—'}</td>
                   <td className="px-4 py-2 font-mono text-xs text-gray-500">

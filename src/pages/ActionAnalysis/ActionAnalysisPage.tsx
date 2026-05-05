@@ -27,10 +27,7 @@ import {
   toInteractionMonitoringQuery,
 } from './lib/interactionsUrlState'
 
-const TOP_TAB_LABEL_KEYS: Record<
-  ActionAnalysisTopTabId,
-  { key: string; fallback: string }
-> = {
+const TOP_TAB_LABEL_KEYS: Record<ActionAnalysisTopTabId, { key: string; fallback: string }> = {
   calls: { key: 'pages.actionAnalysis.topTabs.calls', fallback: 'Calls' },
   scores: { key: 'pages.actionAnalysis.topTabs.scores', fallback: 'Scores' },
   training: { key: 'pages.actionAnalysis.topTabs.training', fallback: 'Training' },
@@ -73,9 +70,7 @@ function isTopTab(value: string | null): value is ActionAnalysisTopTabId {
 }
 
 function isSubTab(value: string | null): value is ActionAnalysisCallsSubTabId {
-  return (
-    value !== null && (ACTION_ANALYSIS_CALLS_SUB_TABS as string[]).includes(value)
-  )
+  return value !== null && (ACTION_ANALYSIS_CALLS_SUB_TABS as string[]).includes(value)
 }
 
 export function ActionAnalysisPage() {
@@ -100,9 +95,7 @@ export function ActionAnalysisPage() {
   const activeSubTab: ActionAnalysisCallsSubTabId = isSubTab(rawSub) ? rawSub : 'list'
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
-  const { data: operators = [] } = useOperators(
-    activeProjectId ? Number(activeProjectId) : null
-  )
+  const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
   const exportCallsMutation = useExportCalls()
   const exportInteractionsMutation = useExportInteractions()
@@ -167,8 +160,7 @@ export function ActionAnalysisPage() {
   }
 
   const headerExportVisible =
-    activeTopTab === 'calls' &&
-    (activeSubTab === 'list' || activeSubTab === 'interactions')
+    activeTopTab === 'calls' && (activeSubTab === 'list' || activeSubTab === 'interactions')
 
   const visibleSubTabs = useMemo(() => {
     return ACTION_ANALYSIS_CALLS_SUB_TABS.filter((sub) => {
@@ -246,8 +238,8 @@ export function ActionAnalysisPage() {
                   onClick={() => setActiveSubTab(sub)}
                   className={`rounded-full border px-4 py-1.5 text-xs font-medium transition-colors ${
                     isActive
-                      ? 'bg-primary-500 text-white border-primary-500'
-                      : 'bg-white text-gray-700 border-gray-200 hover:border-primary-300'
+                      ? 'bg-primary-500 border-primary-500 text-white'
+                      : 'hover:border-primary-300 border-gray-200 bg-white text-gray-700'
                   }`}
                 >
                   {t(meta.key, meta.fallback)}

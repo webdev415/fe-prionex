@@ -6,10 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
-import {
-  useExportScriptAnalytics,
-  useScriptAnalytics,
-} from '@/features/operatorAnalytics'
+import { useExportScriptAnalytics, useScriptAnalytics } from '@/features/operatorAnalytics'
 import {
   readAnalyticsBarState,
   toAnalyticsRangeFilters,
@@ -27,7 +24,8 @@ export function ScriptAnalyticsTab() {
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
   const filters = toAnalyticsRangeFilters(urlState)
-  const periodReady = urlState.period !== 'custom' || !!(urlState.customFromDate && urlState.customToDate)
+  const periodReady =
+    urlState.period !== 'custom' || !!(urlState.customFromDate && urlState.customToDate)
 
   const { data, isLoading, isError } = useScriptAnalytics(filters, periodReady)
   const exportMutation = useExportScriptAnalytics()
@@ -87,11 +85,17 @@ export function ScriptAnalyticsTab() {
 
       {!periodReady ? (
         <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
-          {t('pages.actionAnalysis.filters.selectCustomRange', 'Pick a custom date range to load data.')}
+          {t(
+            'pages.actionAnalysis.filters.selectCustomRange',
+            'Pick a custom date range to load data.'
+          )}
         </div>
       ) : isError ? (
         <div className="rounded-xl bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
-          {t('pages.actionAnalysis.errors.loadScriptAnalyticsFailed', 'Failed to load script analytics.')}
+          {t(
+            'pages.actionAnalysis.errors.loadScriptAnalyticsFailed',
+            'Failed to load script analytics.'
+          )}
         </div>
       ) : isLoading ? (
         <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
@@ -99,7 +103,10 @@ export function ScriptAnalyticsTab() {
         </div>
       ) : !opsData.length ? (
         <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
-          {t('pages.actionAnalysis.scriptAnalytics.empty', 'No script-analytics data for the selected filters.')}
+          {t(
+            'pages.actionAnalysis.scriptAnalytics.empty',
+            'No script-analytics data for the selected filters.'
+          )}
         </div>
       ) : (
         <>
@@ -125,13 +132,16 @@ export function ScriptAnalyticsTab() {
 
           <div className="overflow-x-auto rounded-xl bg-white/80 shadow-sm">
             <table className="w-full text-sm">
-              <thead className="bg-gray-100 text-left text-xs uppercase text-gray-600">
+              <thead className="bg-gray-100 text-left text-xs text-gray-600 uppercase">
                 <tr>
                   <th className="px-4 py-2">
                     {t('pages.actionAnalysis.scriptAnalytics.columns.operator', 'Operator')}
                   </th>
                   <th className="px-4 py-2">
-                    {t('pages.actionAnalysis.scriptAnalytics.columns.totalInteractions', 'Interactions')}
+                    {t(
+                      'pages.actionAnalysis.scriptAnalytics.columns.totalInteractions',
+                      'Interactions'
+                    )}
                   </th>
                   <th className="px-4 py-2">
                     {t('pages.actionAnalysis.scriptAnalytics.columns.fastResultPct', 'Fast %')}
@@ -172,12 +182,19 @@ export function ScriptAnalyticsTab() {
               </h3>
               <ul className="flex flex-col gap-1.5 text-xs text-yellow-900">
                 {data.flags.map((flag, idx) => (
-                  <li key={`${flag.operator_id}-${flag.rule}-${idx}`} className="flex flex-wrap items-center gap-2">
+                  <li
+                    key={`${flag.operator_id}-${flag.rule}-${idx}`}
+                    className="flex flex-wrap items-center gap-2"
+                  >
                     <span className="font-medium">
                       {operatorById.get(flag.operator_id) ?? `#${flag.operator_id}`}
                     </span>
-                    <span className="rounded-full bg-yellow-100 px-2 py-0.5 font-mono">{flag.rule}</span>
-                    <span className="font-mono">{flag.value} / {flag.threshold}</span>
+                    <span className="rounded-full bg-yellow-100 px-2 py-0.5 font-mono">
+                      {flag.rule}
+                    </span>
+                    <span className="font-mono">
+                      {flag.value} / {flag.threshold}
+                    </span>
                     {flag.detail ? <span className="text-yellow-800">{flag.detail}</span> : null}
                   </li>
                 ))}

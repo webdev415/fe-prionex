@@ -22,14 +22,10 @@ function buildRangeParams(filters: AnalyticsRangeFilters): URLSearchParams {
   return params
 }
 
-export async function ingestEvents(
-  payload: IngestEventsRequest
-): Promise<IngestEventsResponse> {
-  const response = await api.post<IngestEventsResponse>(
-    `${ANALYTICS_BASE}/events`,
-    payload,
-    { timeout: 5_000 }
-  )
+export async function ingestEvents(payload: IngestEventsRequest): Promise<IngestEventsResponse> {
+  const response = await api.post<IngestEventsResponse>(`${ANALYTICS_BASE}/events`, payload, {
+    timeout: 5_000,
+  })
   return response.data
 }
 
@@ -53,9 +49,7 @@ export async function exportTimeline(query: TimelineQuery): Promise<Blob> {
   return response.data
 }
 
-export async function getScreenTime(
-  filters: AnalyticsRangeFilters
-): Promise<ScreenTimeResponse> {
+export async function getScreenTime(filters: AnalyticsRangeFilters): Promise<ScreenTimeResponse> {
   const response = await api.get<ScreenTimeResponse>(`${ANALYTICS_BASE}/screen-time`, {
     params: buildRangeParams(filters),
   })
@@ -92,16 +86,13 @@ export async function exportHeatmap(filters: HeatmapFilters): Promise<Blob> {
 export async function getScriptAnalytics(
   filters: AnalyticsRangeFilters
 ): Promise<ScriptAnalyticsResponse> {
-  const response = await api.get<ScriptAnalyticsResponse>(
-    `${ANALYTICS_BASE}/script-analytics`,
-    { params: buildRangeParams(filters) }
-  )
+  const response = await api.get<ScriptAnalyticsResponse>(`${ANALYTICS_BASE}/script-analytics`, {
+    params: buildRangeParams(filters),
+  })
   return response.data
 }
 
-export async function exportScriptAnalytics(
-  filters: AnalyticsRangeFilters
-): Promise<Blob> {
+export async function exportScriptAnalytics(filters: AnalyticsRangeFilters): Promise<Blob> {
   const response = await api.get<Blob>(`${ANALYTICS_BASE}/script-analytics/export`, {
     params: buildRangeParams(filters),
     responseType: 'blob',

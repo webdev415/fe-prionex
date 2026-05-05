@@ -13,11 +13,7 @@ import {
 import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
-import {
-  useExportHeatmap,
-  useHeatmap,
-  type HeatmapState,
-} from '@/features/operatorAnalytics'
+import { useExportHeatmap, useHeatmap, type HeatmapState } from '@/features/operatorAnalytics'
 import {
   readHeatmapBarState,
   toHeatmapFilters,
@@ -43,7 +39,8 @@ export function HeatmapTab() {
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
 
   const filters = toHeatmapFilters(urlState)
-  const periodReady = urlState.period !== 'custom' || !!(urlState.customFromDate && urlState.customToDate)
+  const periodReady =
+    urlState.period !== 'custom' || !!(urlState.customFromDate && urlState.customToDate)
 
   const { data, isLoading, isError } = useHeatmap(filters, periodReady)
   const exportMutation = useExportHeatmap()
@@ -91,7 +88,9 @@ export function HeatmapTab() {
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">{t('pages.actionAnalysis.heatmap.states.all', 'All states')}</SelectItem>
+          <SelectItem value="all">
+            {t('pages.actionAnalysis.heatmap.states.all', 'All states')}
+          </SelectItem>
           <SelectItem value="active_call">
             {t('pages.actionAnalysis.heatmap.states.active_call', 'Active call')}
           </SelectItem>
@@ -101,14 +100,18 @@ export function HeatmapTab() {
           <SelectItem value="waiting">
             {t('pages.actionAnalysis.heatmap.states.waiting', 'Waiting')}
           </SelectItem>
-          <SelectItem value="idle">{t('pages.actionAnalysis.heatmap.states.idle', 'Idle')}</SelectItem>
-          <SelectItem value="break">{t('pages.actionAnalysis.heatmap.states.break', 'Break')}</SelectItem>
+          <SelectItem value="idle">
+            {t('pages.actionAnalysis.heatmap.states.idle', 'Idle')}
+          </SelectItem>
+          <SelectItem value="break">
+            {t('pages.actionAnalysis.heatmap.states.break', 'Break')}
+          </SelectItem>
         </SelectContent>
       </Select>
     </div>
   )
 
-  const operatorList = data?.operators ?? []
+  const operatorList = useMemo(() => data?.operators ?? [], [data])
   const allHours = useMemo(() => {
     const set = new Set<string>()
     operatorList.forEach((op) => op.hours.forEach((h) => set.add(h.hour)))
@@ -142,7 +145,10 @@ export function HeatmapTab() {
 
       {!periodReady ? (
         <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
-          {t('pages.actionAnalysis.filters.selectCustomRange', 'Pick a custom date range to load data.')}
+          {t(
+            'pages.actionAnalysis.filters.selectCustomRange',
+            'Pick a custom date range to load data.'
+          )}
         </div>
       ) : isError ? (
         <div className="rounded-xl bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
@@ -159,15 +165,17 @@ export function HeatmapTab() {
       ) : (
         <div className="overflow-x-auto rounded-xl bg-white/80 p-4 shadow-sm">
           <div className="flex items-center gap-3 pb-3 text-xs">
-            {(['active_call', 'post_call', 'waiting', 'idle', 'break'] as HeatmapState[]).map((state) => (
-              <span key={state} className="flex items-center gap-1.5">
-                <span
-                  className="inline-block h-3 w-3 rounded-sm"
-                  style={{ backgroundColor: STATE_COLORS[state] }}
-                />
-                {t(`pages.actionAnalysis.heatmap.states.${state}`, state)}
-              </span>
-            ))}
+            {(['active_call', 'post_call', 'waiting', 'idle', 'break'] as HeatmapState[]).map(
+              (state) => (
+                <span key={state} className="flex items-center gap-1.5">
+                  <span
+                    className="inline-block h-3 w-3 rounded-sm"
+                    style={{ backgroundColor: STATE_COLORS[state] }}
+                  />
+                  {t(`pages.actionAnalysis.heatmap.states.${state}`, state)}
+                </span>
+              )
+            )}
           </div>
           <table className="w-full text-xs">
             <thead className="text-left text-gray-500">
