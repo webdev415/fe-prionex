@@ -2835,11 +2835,7 @@ export function ClientDetailPage() {
                             </td>
                             <td className="py-2 pr-3">
                               <span className="text-dark-500 font-medium tracking-[-0.24px]">
-                                {contact.contactTypeCode
-                                  ? t(`contactTypes.${contact.contactTypeCode}`, {
-                                      defaultValue: contact.contactType,
-                                    })
-                                  : contact.contactType}
+                                {contact.contactType}
                               </span>
                             </td>
                             <td className="py-2 pr-3">
