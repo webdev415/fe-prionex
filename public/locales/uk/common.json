@@ -287,8 +287,11 @@
           "yesterday": "Вчора",
           "last_7d": "Останні 7 днів",
           "last_30d": "Останні 30 днів",
+          "last7d": "Останні 7 днів",
+          "last30d": "Останні 30 днів",
           "custom": "Довільний"
         },
+        "selectCustomRange": "Виберіть довільний діапазон, щоб завантажити дані.",
         "statuses": {
           "all": "Усі",
           "answered": "Відповідь",
@@ -346,6 +349,10 @@
       "errors": {
         "loadFailed": "Не вдалося завантажити дзвінки",
         "loadInteractionsFailed": "Не вдалося завантажити взаємодії",
+        "loadTimelineFailed": "Не вдалося завантажити таймлайн.",
+        "loadScreenTimeFailed": "Не вдалося завантажити дані екранного часу.",
+        "loadHeatmapFailed": "Не вдалося завантажити теплову карту.",
+        "loadScriptAnalyticsFailed": "Не вдалося завантажити аналітику скриптів.",
         "departmentNoOperators": "У цьому відділі немає операторів у поточному проєкті.",
         "exportFailed": "Не вдалося експортувати"
       },
@@ -354,6 +361,70 @@
       },
       "interactions": {
         "placeholder": "Вкладка «Історія взаємодій» — незабаром"
+      },
+      "topTabs": {
+        "calls": "Дзвінки",
+        "scores": "Оцінки",
+        "training": "Навчання",
+        "settings": "Налаштування"
+      },
+      "topTabsComingSoon": "Цей розділ буде доступний у наступних релізах.",
+      "subTabs": {
+        "list": "Список дзвінків",
+        "interactions": "Історія взаємодій",
+        "timeline": "Таймлайн",
+        "screenTime": "Екранний час",
+        "heatmap": "Теплова карта",
+        "scriptAnalytics": "Аналітика скриптів"
+      },
+      "timeline": {
+        "callId": "ID дзвінка",
+        "callIdPlaceholder": "Вставте UUID дзвінка, щоб завантажити таймлайн",
+        "empty": "Введіть ID дзвінка вище, щоб переглянути дії оператора.",
+        "noEvents": "Для цього дзвінка немає записаних подій.",
+        "columns": {
+          "offset": "Зсув",
+          "event": "Подія",
+          "page": "Сторінка",
+          "timestamp": "Час"
+        }
+      },
+      "screenTime": {
+        "empty": "Немає даних екранного часу за вибраними фільтрами.",
+        "columns": {
+          "operator": "Оператор",
+          "cardOpen": "Сер. дзвінок→картка",
+          "formSubmit": "Сер. відправка форми",
+          "idle": "Простій",
+          "afterCall": "Постобробка",
+          "deviation": "Δ до команди"
+        }
+      },
+      "heatmap": {
+        "operator": "Оператор",
+        "empty": "Немає даних теплової карти за вибраними фільтрами.",
+        "filters": {
+          "state": "Фільтр стану"
+        },
+        "states": {
+          "all": "Усі стани",
+          "active_call": "Активний дзвінок",
+          "post_call": "Після дзвінка",
+          "waiting": "Очікування",
+          "idle": "Простій",
+          "break": "Перерва"
+        }
+      },
+      "scriptAnalytics": {
+        "empty": "Немає даних за вибраними фільтрами.",
+        "teamDistribution": "Розподіл команди",
+        "flagsHeading": "Авто-прапорці",
+        "columns": {
+          "operator": "Оператор",
+          "totalInteractions": "Взаємодії",
+          "fastResultPct": "% швидких",
+          "distribution": "Розподіл"
+        }
       }
     },
     "users": {
