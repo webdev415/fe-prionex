@@ -8,12 +8,23 @@ import type {
   ExitImpersonationResponse,
   SwitchProjectResponse,
   UpdateMyProfileInput,
+  VerifyTwoFactorRequest,
+  TwoFactorStatusResponse,
+  TwoFactorSetupResponse,
+  TwoFactorEnableRequest,
+  TwoFactorEnableResponse,
+  TwoFactorDisableRequest,
+  TwoFactorRegenerateRequest,
+  TwoFactorBackupCodesResponse,
 } from '@/types/api'
 
 export const authApi = {
   login: (data: LoginRequest) => api.post<LoginResponse>('/api/v1/auth/login', data),
 
   forceLogin: (data: LoginRequest) => api.post<LoginResponse>('/api/v1/auth/force-login', data),
+
+  verifyTwoFactor: (data: VerifyTwoFactorRequest) =>
+    api.post<LoginResponse>('/api/v1/auth/login/verify-two-factor', data),
 
   logout: () => api.post('/api/v1/auth/logout'),
 
@@ -34,6 +45,22 @@ export const authApi = {
 
   changePassword: (data: { current_password?: string; new_password: string }) =>
     api.post('/api/v1/users/me/change-password', data),
+
+  // ─── Two-Factor Authentication ──────────────────────────────────────────
+  twoFactor: {
+    status: () => api.get<TwoFactorStatusResponse>('/api/v1/users/me/2fa'),
+
+    setup: () => api.post<TwoFactorSetupResponse>('/api/v1/users/me/2fa/setup'),
+
+    enable: (data: TwoFactorEnableRequest) =>
+      api.post<TwoFactorEnableResponse>('/api/v1/users/me/2fa/enable', data),
+
+    disable: (data: TwoFactorDisableRequest) =>
+      api.post<{ success: boolean; message: string }>('/api/v1/users/me/2fa/disable', data),
+
+    regenerateBackupCodes: (data: TwoFactorRegenerateRequest) =>
+      api.post<TwoFactorBackupCodesResponse>('/api/v1/users/me/2fa/backup-codes/regenerate', data),
+  },
 }
 
 export default authApi

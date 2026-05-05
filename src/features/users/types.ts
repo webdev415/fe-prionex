@@ -48,6 +48,9 @@ export interface ApiUser {
   asterisk_extension?: string
   is_agent: boolean
   agent_status?: 'online' | 'offline' | 'busy' | 'on-call'
+  two_factor_enabled: boolean
+  // True when the user has previously enrolled — admin can re-enable without re-enrollment.
+  two_factor_has_secret: boolean
 }
 
 /**

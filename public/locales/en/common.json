@@ -378,7 +378,9 @@
         "status": "Status",
         "activate": "Activate",
         "deactivate": "Deactivate",
-        "resetPassword": "Reset Password"
+        "resetPassword": "Reset Password",
+        "disableTwoFactor": "Disable 2FA",
+        "reenableTwoFactor": "Re-enable 2FA"
       },
       "messages": {
         "nowViewingAs": "Now viewing as {{username}}",
@@ -421,6 +423,15 @@
           "confirmDetail": "The new password will be: {{password}}",
           "failed": "Failed to reset password",
           "resetting": "Resetting..."
+        },
+        "adminToggleTwoFactor": {
+          "disableTitle": "Disable Two-Factor Authentication",
+          "reenableTitle": "Re-enable Two-Factor Authentication",
+          "disableBody": "The user will be able to log in with their password only on next login. Their authenticator secret and unused backup codes are kept so you can re-enable 2FA for them later. The user's active session will be terminated. This action is recorded in the audit log.",
+          "reenableBody": "Two-factor authentication will be turned back on using the user's previously enrolled authenticator. They will be required to enter a 6-digit code on next login. The user's active session will be terminated. This action is recorded in the audit log.",
+          "disabling": "Disabling...",
+          "reenabling": "Re-enabling...",
+          "failed": "Failed to update two-factor authentication"
         },
         "changeStatus": {
           "activateTitle": "Activate User",

@@ -19,6 +19,7 @@ import { UserDetailModal } from './components/UserDetailModal'
 import { EditUserModal } from './components/EditUserModal'
 import ChangeStatusModal from './components/ChangeStatusModal'
 import { ResetPasswordConfirmModal } from './components/ResetPasswordConfirmModal'
+import { AdminToggleTwoFactorModal } from './components/AdminToggleTwoFactorModal'
 import type { ApiUser } from '@/features/users/types'
 import { Icons } from '@/lib/icons'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -71,6 +72,7 @@ export function UserManagementPage() {
   const [impersonatingUserId, setImpersonatingUserId] = useState<number | null>(null)
   const [openDropdownUserId, setOpenDropdownUserId] = useState<number | null>(null)
   const [resetPasswordUser, setResetPasswordUser] = useState<ApiUser | null>(null)
+  const [toggleTwoFactorUser, setToggleTwoFactorUser] = useState<ApiUser | null>(null)
 
   // Close dropdown when screen size crosses breakpoint (in either direction)
   useEffect(() => {
@@ -289,6 +291,22 @@ export function UserManagementPage() {
               )}
             </PermissionGuard>
 
+            <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+              {currentUser?.id !== String(user.id) &&
+                (user.two_factor_enabled || user.two_factor_has_secret) && (
+                  <LinkButton
+                    variant="regular-black"
+                    size="xs"
+                    onClick={() => setToggleTwoFactorUser(user)}
+                    leftIcon={<Icons.Shield size={16} color="#05040D" strokeWidth={1.5} />}
+                  >
+                    {user.two_factor_enabled
+                      ? t('pages.users.actions.disableTwoFactor')
+                      : t('pages.users.actions.reenableTwoFactor')}
+                  </LinkButton>
+                )}
+            </PermissionGuard>
+
             <PermissionGuard permission={PERMISSIONS.USERS.IMPERSONATE}>
               {currentUser?.id !== String(user.id) && (
                 <LinkButton
@@ -354,6 +372,25 @@ export function UserManagementPage() {
                       <span>{t('pages.users.actions.resetPassword')}</span>
                     </DropdownMenuItem>
                   )}
+                </PermissionGuard>
+                <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+                  {currentUser?.id !== String(user.id) &&
+                    (user.two_factor_enabled || user.two_factor_has_secret) && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setOpenDropdownUserId(null)
+                          setToggleTwoFactorUser(user)
+                        }}
+                        className="text-dark-500 flex cursor-pointer items-center gap-2 text-sm"
+                      >
+                        <Icons.Shield size={16} strokeWidth={1.5} />
+                        <span>
+                          {user.two_factor_enabled
+                            ? t('pages.users.actions.disableTwoFactor')
+                            : t('pages.users.actions.reenableTwoFactor')}
+                        </span>
+                      </DropdownMenuItem>
+                    )}
                 </PermissionGuard>
                 <PermissionGuard permission={PERMISSIONS.USERS.IMPERSONATE}>
                   {currentUser?.id !== String(user.id) && (
@@ -535,6 +572,14 @@ export function UserManagementPage() {
           open={resetPasswordUser !== null}
           user={resetPasswordUser}
           onClose={() => setResetPasswordUser(null)}
+        />
+      )}
+
+      {toggleTwoFactorUser && (
+        <AdminToggleTwoFactorModal
+          open={toggleTwoFactorUser !== null}
+          user={toggleTwoFactorUser}
+          onClose={() => setToggleTwoFactorUser(null)}
         />
       )}
     </div>
