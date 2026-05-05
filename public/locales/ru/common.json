@@ -2140,6 +2140,7 @@
         "viewAll": "Просмотреть все",
         "showLess": "Показать меньше",
         "tableHeaders": {
+          "paymentDate": "Дата платежа",
           "date": "Дата добавления платежа",
           "paymentConfirmationDate": "Дата подтверждения платежа",
           "amount": "Сумма",
