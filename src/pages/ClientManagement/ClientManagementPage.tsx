@@ -46,6 +46,8 @@ import { useURLState } from '@/hooks/useURLState'
 import type { Priority } from './types'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { useTags } from '@/features/tags/hooks/useTags'
+import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
 
 // Display type matching page requirements
 interface DisplayClient {
@@ -56,6 +58,7 @@ interface DisplayClient {
     id: number
     name: string
     color: string
+    visibility?: string | null
     is_protected?: boolean
     expiry_type?: 'permanent' | 'ttl' | 'loan_closure'
   }>
@@ -82,7 +85,10 @@ const DEFAULT_THRESHOLDS: PriorityThresholds = {
 const mapAPIClientToDisplay = (
   client: APIClient,
   thresholds: PriorityThresholds,
-  userNameMap: Map<number, string>
+  userNameMap: Map<number, string>,
+  showHiddenTags: boolean,
+  /** When set (operator + catalog loaded): only show tags whose name exists in tag-service catalog (hidden tags are omitted there). */
+  operatorAllowedTagNames: Set<string> | null
 ): DisplayClient => {
   const fullName = [client.first_name, client.middle_name, client.last_name]
     .filter(Boolean)
@@ -92,7 +98,14 @@ const mapAPIClientToDisplay = (
     id: client.id,
     fullName,
     taxIdNumber: client.tax_id,
-    tags: client.tags || [], // Tags from API
+    tags: (client.tags || []).filter((tag) => {
+      if (showHiddenTags) return true
+      if (isHiddenVisibility(tag.visibility)) return false
+      if (operatorAllowedTagNames !== null) {
+        return operatorAllowedTagNames.has(tag.name)
+      }
+      return true
+    }),
     // phone_primary is now resolved from contacts by backend
     phoneNumber:
       client.phone_primary && !/^0+$/.test(client.phone_primary) ? client.phone_primary : '-',
@@ -178,6 +191,7 @@ export function ClientManagementPage() {
   // Get search state from global store (synced with header search)
   const { searchQuery, searchType, setSearchQuery: clearSearchQuery } = useSearchStore()
   const user = useAuthStore((state) => state.user)
+  const showHiddenTags = isAdminRole(user?.active_role_name)
 
   // URL state for priority filtering
   const [selectedPriorities, setSelectedPriorities] = useURLState<Priority[]>('priority', [])
@@ -743,6 +757,15 @@ export function ClientManagementPage() {
 
   // Fetch active users for resolving employee/searcher IDs to names (project-scoped)
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const activeProjectIdNum = activeProjectId ? Number(activeProjectId) : undefined
+  // Tag-service list for operators excludes hidden tags — use names to filter client-list embedded tags
+  // when client-service rows omit or stale-sync visibility (different DB ids than tag-service).
+  const { data: operatorTagCatalog } = useTags(activeProjectIdNum)
+  const operatorAllowedTagNames = useMemo(() => {
+    if (showHiddenTags) return null
+    if (operatorTagCatalog === undefined) return null
+    return new Set(operatorTagCatalog.map((t) => t.name))
+  }, [showHiddenTags, operatorTagCatalog])
   const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const userNameMap = useMemo(() => {
     const map = new Map<number, string>()
@@ -760,8 +783,16 @@ export function ClientManagementPage() {
 
   // Map API clients to display format
   const displayClients = useMemo(() => {
-    return apiClients.map((client) => mapAPIClientToDisplay(client, thresholds, userNameMap))
-  }, [apiClients, thresholds, userNameMap])
+    return apiClients.map((client) =>
+      mapAPIClientToDisplay(
+        client,
+        thresholds,
+        userNameMap,
+        showHiddenTags,
+        operatorAllowedTagNames
+      )
+    )
+  }, [apiClients, thresholds, userNameMap, showHiddenTags, operatorAllowedTagNames])
 
   // Count applied filters
   const appliedFiltersCount = useMemo(() => {
