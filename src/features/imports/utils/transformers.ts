@@ -13,6 +13,9 @@ import type {
   // ImportErrorsResponse,
   UploadImportResponse,
   CancelImportResponse,
+  VendorFileLogical,
+  VendorFilePhase,
+  VendorPhaseStatus,
 } from '../types'
 
 /**
@@ -162,11 +165,88 @@ export function transformImportJob(backend: BackendImportJobResponse): ImportJob
 }
 
 /**
+ * Vendor file order matches the receiver's dispatch order (users → credits
+ * → payments → write_offs). Display labels and target-DB labels are kept
+ * close to the dispatch route so the UI surfaces what the worker actually does.
+ */
+const VENDOR_PHASE_DISPLAY: Array<{
+  logical_name: VendorFileLogical
+  display_name: string
+  target_db: string
+}> = [
+  { logical_name: 'users', display_name: 'Users', target_db: 'client-DB clients' },
+  { logical_name: 'credits', display_name: 'Credits', target_db: 'client-DB debts' },
+  {
+    logical_name: 'write_offs',
+    display_name: 'Write-offs',
+    target_db: 'client-DB debt_writeoffs',
+  },
+  { logical_name: 'payments', display_name: 'Payments', target_db: 'payment-DB payments' },
+]
+
+function basenameFromPath(path: string): string {
+  if (!path) return ''
+  const parts = path.split('/')
+  return parts[parts.length - 1] || path
+}
+
+/**
+ * Build the per-file phase rows from import_options.vendor.* + the job's
+ * top-level status. Mirrors the worker's dispatch order so a 4-row table
+ * tells the user where the import got stuck (or how far it got).
+ */
+function buildVendorPhases(
+  importOptions: Record<string, unknown> | null,
+  jobStatus: ImportJobStatus
+): VendorFilePhase[] | undefined {
+  const vendor = importOptions?.vendor as Record<string, unknown> | undefined
+  if (!vendor) return undefined
+
+  const bundle = (vendor.bundle as Record<string, string> | undefined) ?? {}
+  const filesCompleted = new Set(
+    Array.isArray(vendor.files_completed) ? (vendor.files_completed as string[]) : []
+  )
+  const currentFile = vendor.current_file as string | undefined
+  const currentDone = vendor.current_file_records_done as number | undefined
+  const currentTotal = vendor.current_file_total_records as number | undefined
+
+  return VENDOR_PHASE_DISPLAY.map(({ logical_name, display_name, target_db }) => {
+    const path = bundle[logical_name] || ''
+    let status: VendorPhaseStatus
+    if (filesCompleted.has(logical_name)) {
+      status = 'completed'
+    } else if (currentFile === logical_name) {
+      // Job ended while this file was the active one — that's where it failed
+      status = jobStatus === 'failed' ? 'failed' : 'in_progress'
+    } else if (jobStatus === 'completed') {
+      // Job completed without listing this file → effectively skipped/done
+      status = 'completed'
+    } else {
+      status = 'pending'
+    }
+
+    return {
+      logical_name,
+      display_name,
+      filename: basenameFromPath(path),
+      target_db,
+      status,
+      processed: currentFile === logical_name ? currentDone : undefined,
+      total: currentFile === logical_name ? currentTotal : undefined,
+    }
+  })
+}
+
+/**
  * Transform backend ImportJobResponse to frontend ImportJobDetail
  */
 export function transformImportJobDetail(backend: BackendImportJobResponse): ImportJobDetail {
   const metadata = extractMetadata(backend.import_options)
   const status = mapStatus(backend.status)
+  const importType =
+    (backend.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
+    (metadata.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
+    'simple'
 
   return {
     id: backend.id,
@@ -179,10 +259,7 @@ export function transformImportJobDetail(backend: BackendImportJobResponse): Imp
     updated_clients: backend.updated_records,
     errors_count: backend.failed_records,
     processing_time: formatProcessingTime(backend.processing_duration),
-    import_type:
-      (backend.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
-      (metadata.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
-      'simple',
+    import_type: importType,
     seller_creditor: metadata.seller_creditor,
     project_code: metadata.project_code,
     purchase_date: metadata.purchase_date,
@@ -194,6 +271,10 @@ export function transformImportJobDetail(backend: BackendImportJobResponse): Imp
         : undefined,
     processing_row: status === 'in_progress' ? backend.processed_records : undefined,
     error_summary: backend.error_summary ?? null,
+    vendor_phases:
+      importType === 'vendor' ? buildVendorPhases(backend.import_options, status) : undefined,
+    vendor_error:
+      importType === 'vendor' ? (backend.import_options?.error as string | undefined) : undefined,
   }
 }
 

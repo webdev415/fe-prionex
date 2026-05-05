@@ -16,6 +16,7 @@ import { DateSelect } from '@/components/ui/DateSelect'
 import { RadioCard } from './RadioCard'
 import { useProjects } from '@/features/projects'
 import { useSellers } from '@/features/sellers'
+import { useVendorSchemas } from '@/features/imports'
 import { useAuthStore } from '@/stores/authStore'
 
 export interface Step1Data {
@@ -24,6 +25,8 @@ export interface Step1Data {
   purchaseDate: string
   comment: string
   importType: 'simple' | 'vendor'
+  // Vendor flow only — vendor_schemas.code chosen on upload.
+  schemaCode?: string
 }
 
 interface Step1LoanSourceProps {
@@ -49,6 +52,12 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
     limit: 100,
   })
   const sellers = sellersData?.sellers || []
+
+  // Vendor flow: fetch active vendor schemas. Only used / shown when the
+  // "vendor" radio is selected. Default-select the first option as soon as
+  // the user picks vendor and we don't yet have a schemaCode set.
+  const { data: vendorSchemas = [], isLoading: isLoadingVendorSchemas } = useVendorSchemas()
+  const isVendor = data.importType === 'vendor'
 
   return (
     <div className="space-y-6">
@@ -273,6 +282,44 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
             className="flex-1"
           />
         </div>
+
+        {isVendor && (
+          <div className="mt-4">
+            <Label htmlFor="vendor-schema-code" required className="mb-1.5 block">
+              {t('pages.imports.step1.vendorSchema', 'Vendor schema')}
+            </Label>
+            <Select
+              value={data.schemaCode ?? ''}
+              onValueChange={(value) => onChange({ schemaCode: value })}
+              disabled={isLoadingVendorSchemas || vendorSchemas.length === 0}
+            >
+              <SelectTrigger className="w-full" id="vendor-schema-code">
+                <SelectValue
+                  placeholder={
+                    isLoadingVendorSchemas
+                      ? t('pages.imports.step1.placeholders.loadingVendorSchemas', 'Loading…')
+                      : vendorSchemas.length === 0
+                        ? t(
+                            'pages.imports.step1.noVendorSchemasAvailable',
+                            'No vendor schemas configured'
+                          )
+                        : t(
+                            'pages.imports.step1.placeholders.selectVendorSchema',
+                            'Select vendor schema'
+                          )
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {vendorSchemas.map((s) => (
+                  <SelectItem key={s.code} value={s.code}>
+                    {s.display_name} ({s.code})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
     </div>
   )

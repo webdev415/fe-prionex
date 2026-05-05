@@ -14,6 +14,7 @@ import type {
   ImportJobDetail,
   ImportErrorsResponse,
   CancelImportResponse,
+  VendorSchema,
 } from '../types'
 import {
   transformUploadResponse,
@@ -77,6 +78,9 @@ export async function uploadImport(request: UploadImportRequest): Promise<Upload
     formData.append('comment', request.comment)
   }
   formData.append('import_type', request.import_type)
+  if (request.import_type === 'vendor' && request.schema_code) {
+    formData.append('schema_code', request.schema_code)
+  }
 
   // Get current token to ensure it's available
   const token = getAccessToken()
@@ -292,6 +296,18 @@ export async function validateCSV(_file: File): Promise<{
 }
 
 /**
+ * List active vendor-import schemas.
+ *
+ * GET /api/v1/import/vendor-schemas — returns rows the user can pick on the
+ * vendor-upload form. Each row is `{ code, display_name }`; the `code` is the
+ * value that gets posted as the `schema_code` form field on upload.
+ */
+export async function getVendorSchemas(): Promise<VendorSchema[]> {
+  const response = await api.get('/api/v1/import/vendor-schemas')
+  return Array.isArray(response.data) ? response.data : []
+}
+
+/**
  * Exported API object for easier importing
  */
 export const importsApi = {
@@ -302,4 +318,5 @@ export const importsApi = {
   exportImportJobErrors,
   cancelImportJob,
   validateCSV,
+  getVendorSchemas,
 }
