@@ -7,6 +7,7 @@
 export { useImportJobs, importJobsKeys } from './useImportJobs'
 export { useImportJob } from './useImportJob'
 export { useImportJobErrors } from './useImportJobErrors'
+export { useVendorSchemas, vendorSchemasKey } from './useVendorSchemas'
 export {
   useUploadImport,
   useCancelImport,

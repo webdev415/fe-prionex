@@ -8,3 +8,4 @@ export { ImportHistoryModal, type ImportHistoryData, type ImportStatus } from '.
 export { ImportHistoryFiltersBar, type ImportHistoryFilters } from './ImportHistoryFiltersBar'
 export { SemiCircularProgress } from './SemiCircularProgressProps'
 export { ImportDetailsPageSkeleton } from './ImportDetailsPageSkeleton'
+export { VendorPhaseProgress } from './VendorPhaseProgress'
