@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/DropdownMenu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { searchClients, mapPriorityLevel, type SearchType } from '@/api/clientSearchApi'
+import { RouteChangeTracker, TrackingProvider } from '@/features/operatorAnalytics'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -791,6 +792,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     location.pathname === '/dashboard/ai-assistant/'
 
   return (
+    <TrackingProvider>
+    <RouteChangeTracker />
     <div
       className={cn(
         'bg-light-50 bg-dashboard-light min-h-screen bg-cover bg-center',
@@ -937,6 +940,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         />
       )}
     </div>
+    </TrackingProvider>
   )
 }
 

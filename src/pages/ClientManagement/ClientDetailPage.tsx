@@ -80,6 +80,7 @@ import {
 import type { InteractionResponse } from '@/features/clients/api/types'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
+import { useTrackEvent } from '@/features/operatorAnalytics'
 import { useCallStore } from '@/stores/callStore'
 import { useClientTags } from '@/features/tags/hooks/useTags'
 import { TagSelectorModal } from './components/TagSelectorModal'
@@ -139,6 +140,16 @@ export function ClientDetailPage() {
   const { isCallActive, setOpenCallModal } = useCallStore()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const trackEvent = useTrackEvent()
+
+  useEffect(() => {
+    if (!id) return
+    const numericId = Number(id)
+    trackEvent('client_card_open', {
+      clientId: Number.isFinite(numericId) ? numericId : null,
+      meta: { client_id: id },
+    })
+  }, [id, trackEvent])
 
   // Returns true if the value looks like a Ukrainian phone number,
   // regardless of the contact type's isPhone flag
@@ -892,6 +903,15 @@ export function ClientDetailPage() {
       }
     }
   }, [activeClientCardTab]) // Re-check when tab changes
+
+  useEffect(() => {
+    if (!id) return
+    const numericId = Number(id)
+    trackEvent('client_card_tab_switch', {
+      clientId: Number.isFinite(numericId) ? numericId : null,
+      meta: { tab: activeClientCardTab },
+    })
+  }, [activeClientCardTab, id, trackEvent])
 
   // Scroll active tab into view when it changes
   useEffect(() => {

@@ -154,11 +154,16 @@ export const PERMISSIONS = {
   },
 
   /**
-   * Action Analysis Category (1 permission)
-   * Controls access to action analysis
+   * Action Analysis Category (5 permissions)
+   * Controls access to the Action Analysis page and its drill-downs
+   * (KAN-409 added the four operator-analytics sub-permissions).
    */
   ACTION_ANALYSIS: {
     VIEW: 'view_action_analysis',
+    VIEW_CLICK_TRACKING: 'view_click_tracking',
+    VIEW_SCREEN_TIME: 'view_screen_time',
+    VIEW_ACTIVITY_HEATMAP: 'view_activity_heatmap',
+    VIEW_SCRIPT_ANALYTICS: 'view_script_analytics',
   },
 } as const
 
@@ -281,4 +286,11 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   delete_ta_chains: 'Delete TA Chains (refused if the chain has any recorded history)',
   // Action Analysis
   view_action_analysis: 'View Action Analysis page (call monitoring & interaction history)',
+  view_click_tracking:
+    'View Click Tracking timeline (operator action history synced to call recording)',
+  view_screen_time:
+    'View Screen Time analysis (time-per-section with team benchmarking)',
+  view_activity_heatmap: 'View Activity Heatmap (per-hour operator state grid)',
+  view_script_analytics:
+    'View Script Analytics & anomaly detection (interaction-result distribution and auto-flags)',
 }
