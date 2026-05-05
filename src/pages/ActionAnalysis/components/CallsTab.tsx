@@ -22,7 +22,6 @@ import type { CallFiltersBarValue } from './CallFiltersBar'
 import { CallDetailModal } from './CallDetailModal'
 import { CallFiltersBar } from './CallFiltersBar'
 import { CallsTable } from './CallsTable'
-import { PhoneSearchPanel } from './PhoneSearchPanel'
 
 const PAGE_SIZE = 20
 const CALL_ID_PARAM = 'call_id'
@@ -143,8 +142,6 @@ export function CallsTab() {
         onClear={handleClear}
         userTimezone={userTimezone}
       />
-
-      <PhoneSearchPanel onPlayRecording={setRecordingCall} onViewDetail={handleViewDetail} />
 
       <div className="flex flex-wrap gap-4 text-sm text-gray-700">
         <span>

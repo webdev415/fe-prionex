@@ -200,6 +200,8 @@
         "allDepartments": "All departments",
         "employees": "Employees",
         "employeesCount": "{{count}} selected",
+        "phone": "Phone",
+        "phonePlaceholder": "e.g. 0631234567",
         "searchEmployees": "Search by name…",
         "noOperatorsMatch": "No matches",
         "clearEmployees": "Clear",
@@ -276,12 +278,6 @@
         "exporting": "Exporting…",
         "playRecording": "Play recording",
         "viewDetail": "View detail"
-      },
-      "phoneSearch": {
-        "title": "Phone number search",
-        "placeholder": "Enter phone number",
-        "search": "Search",
-        "summary": "{{total}} call(s), {{answered}} answered"
       },
       "empty": "No calls match the current filters",
       "interactionsEmpty": "No interactions match the current filters",

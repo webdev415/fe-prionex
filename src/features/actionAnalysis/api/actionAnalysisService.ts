@@ -2,7 +2,6 @@ import { api } from '@/lib/api'
 import type {
   CallMonitoringFilters,
   CallMonitoringResponse,
-  CallsByPhoneFilters,
   InteractionMonitoringFilters,
   InteractionMonitoringResponse,
 } from '../types'
@@ -31,21 +30,6 @@ export async function getCallMonitoring(
 ): Promise<CallMonitoringResponse> {
   const response = await api.get<CallMonitoringResponse>('/api/v1/calls/monitoring', {
     params: buildCallParams(filters),
-  })
-  return response.data
-}
-
-export async function getCallsByPhone(
-  filters: CallsByPhoneFilters
-): Promise<CallMonitoringResponse> {
-  const params = new URLSearchParams()
-  params.set('phone', filters.phone)
-  if (filters.sort) params.set('sort', filters.sort)
-  if (filters.limit != null) params.set('limit', String(filters.limit))
-  if (filters.offset != null) params.set('offset', String(filters.offset))
-
-  const response = await api.get<CallMonitoringResponse>('/api/v1/calls/monitoring/by-phone', {
-    params,
   })
   return response.data
 }
@@ -102,7 +86,6 @@ export async function exportInteractionMonitoring(
 
 export const actionAnalysisService = {
   getCallMonitoring,
-  getCallsByPhone,
   exportCallMonitoring,
   getInteractionMonitoring,
   exportInteractionMonitoring,

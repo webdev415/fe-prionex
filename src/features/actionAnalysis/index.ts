@@ -1,5 +1,4 @@
 export { useCallMonitoring, callMonitoringKeys } from './hooks/useCallMonitoring'
-export { useCallsByPhone } from './hooks/useCallsByPhone'
 export { useExportCalls } from './hooks/useExportCalls'
 export {
   useInteractionMonitoring,
@@ -8,7 +7,6 @@ export {
 export { useExportInteractions } from './hooks/useExportInteractions'
 export {
   getCallMonitoring,
-  getCallsByPhone,
   exportCallMonitoring,
   getInteractionMonitoring,
   exportInteractionMonitoring,
@@ -22,7 +20,6 @@ export type {
   CallMonitoringSort,
   CallMonitoringPeriod,
   CallMonitoringOutcomeFilter,
-  CallsByPhoneFilters,
   InteractionMonitoringFilters,
   InteractionMonitoringItem,
   InteractionMonitoringResponse,

@@ -200,6 +200,8 @@
         "allDepartments": "Усі відділи",
         "employees": "Співробітники",
         "employeesCount": "Обрано: {{count}}",
+        "phone": "Телефон",
+        "phonePlaceholder": "напр. 0631234567",
         "searchEmployees": "Пошук за іменем…",
         "noOperatorsMatch": "Немає збігів",
         "clearEmployees": "Очистити",
@@ -276,12 +278,6 @@
         "exporting": "Експорт…",
         "playRecording": "Відтворити запис",
         "viewDetail": "Деталі"
-      },
-      "phoneSearch": {
-        "title": "Пошук за номером телефону",
-        "placeholder": "Введіть номер телефону",
-        "search": "Знайти",
-        "summary": "{{total}} дзвінок(-ів), {{answered}} з відповіддю"
       },
       "empty": "Немає дзвінків, що відповідають фільтрам",
       "interactionsEmpty": "Немає взаємодій, що відповідають фільтрам",

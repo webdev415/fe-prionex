@@ -200,6 +200,8 @@
         "allDepartments": "Все отделы",
         "employees": "Сотрудники",
         "employeesCount": "Выбрано: {{count}}",
+        "phone": "Телефон",
+        "phonePlaceholder": "напр. 0631234567",
         "searchEmployees": "Поиск по имени…",
         "noOperatorsMatch": "Нет совпадений",
         "clearEmployees": "Сбросить",
@@ -276,12 +278,6 @@
         "exporting": "Экспорт…",
         "playRecording": "Воспроизвести запись",
         "viewDetail": "Подробнее"
-      },
-      "phoneSearch": {
-        "title": "Поиск по номеру телефона",
-        "placeholder": "Введите номер телефона",
-        "search": "Найти",
-        "summary": "{{total}} звонок(-ов), {{answered}} отвечено"
       },
       "empty": "Нет звонков, соответствующих фильтрам",
       "interactionsEmpty": "Нет взаимодействий, соответствующих фильтрам",
