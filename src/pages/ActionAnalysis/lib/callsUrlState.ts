@@ -10,6 +10,7 @@ const DEFAULT_PERIOD: CallMonitoringPeriod = 'last_7d'
 
 export const CALL_FILTERS_DEFAULT: CallFiltersBarValue = {
   agent_extensions: undefined,
+  phone_number: undefined,
   outcome_filter: 'all',
   min_duration: undefined,
   max_duration: undefined,
@@ -28,6 +29,7 @@ export function readCallsUrlState(params: URLSearchParams): CallFiltersBarValue 
   }
   const period = (params.get('period') as CallMonitoringPeriod | null) ?? DEFAULT_PERIOD
   const status = (params.get('status') as CallMonitoringOutcomeFilter | null) ?? 'all'
+  const phone = params.get('phone') ?? undefined
   const min = params.get('min_duration')
   const max = params.get('max_duration')
   const fromDate = params.get('from_date') ?? undefined
@@ -35,6 +37,7 @@ export function readCallsUrlState(params: URLSearchParams): CallFiltersBarValue 
 
   return {
     agent_extensions: exts.length ? exts : undefined,
+    phone_number: phone,
     period,
     outcome_filter: status,
     min_duration: min ? Number(min) : undefined,
@@ -53,6 +56,7 @@ export function writeCallsUrlState(
   next.delete('employee_id')
   next.delete('period')
   next.delete('status')
+  next.delete('phone')
   next.delete('min_duration')
   next.delete('max_duration')
   next.delete('from_date')
@@ -64,6 +68,7 @@ export function writeCallsUrlState(
   if (state.period && state.period !== DEFAULT_PERIOD) next.set('period', state.period)
   if (state.outcome_filter && state.outcome_filter !== 'all')
     next.set('status', state.outcome_filter)
+  if (state.phone_number) next.set('phone', state.phone_number)
   if (state.min_duration != null) next.set('min_duration', String(state.min_duration))
   if (state.max_duration != null) next.set('max_duration', String(state.max_duration))
   if (state.period === 'custom' && state.customFromDate && state.customToDate) {

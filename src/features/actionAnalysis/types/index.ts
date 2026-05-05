@@ -51,13 +51,6 @@ export interface CallMonitoringResponse {
   offset: number
 }
 
-export interface CallsByPhoneFilters {
-  phone: string
-  sort?: CallMonitoringSort
-  limit?: number
-  offset?: number
-}
-
 export type InteractionMonitoringSortBy = 'date' | 'promise_amount'
 export type InteractionMonitoringSortDir = 'asc' | 'desc'
 

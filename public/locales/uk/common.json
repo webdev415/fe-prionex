@@ -262,6 +262,8 @@
         "allDepartments": "Усі відділи",
         "employees": "Співробітники",
         "employeesCount": "Обрано: {{count}}",
+        "phone": "Телефон",
+        "phonePlaceholder": "напр. 0631234567",
         "searchEmployees": "Пошук за іменем…",
         "noOperatorsMatch": "Немає збігів",
         "clearEmployees": "Очистити",
@@ -297,16 +299,35 @@
         "dateTime": "Дата / Час",
         "duration": "Тривалість",
         "status": "Статус",
+        "callType": "Тип дзвінка",
         "phone": "Телефон",
-        "agent": "Оператор",
+        "agent": "Співробітник",
         "client": "Клієнт",
         "clientId": "ID клієнта",
         "promiseDate": "Дата обіцянки",
         "recording": "Запис",
+        "viewDetail": "Деталі",
         "employee": "Співробітник",
         "contactType": "Тип контакту",
         "result": "Результат",
         "promiseAmount": "Сума обіцянки"
+      },
+      "callType": {
+        "incoming": "Вхідний",
+        "outgoing": "Вихідний"
+      },
+      "callDetail": {
+        "title": "Деталі дзвінка",
+        "fields": {
+          "dateTime": "Дата / Час",
+          "status": "Статус",
+          "callType": "Тип дзвінка",
+          "employee": "Співробітник",
+          "phone": "Телефон",
+          "duration": "Тривалість",
+          "client": "Клієнт",
+          "callId": "ID дзвінка"
+        }
       },
       "summary": {
         "total": "всього",
@@ -317,13 +338,8 @@
       "actions": {
         "exportExcel": "Експорт в Excel",
         "exporting": "Експорт…",
-        "playRecording": "Відтворити запис"
-      },
-      "phoneSearch": {
-        "title": "Пошук за номером телефону",
-        "placeholder": "Введіть номер телефону",
-        "search": "Знайти",
-        "summary": "{{total}} дзвінок(-ів), {{answered}} з відповіддю"
+        "playRecording": "Відтворити запис",
+        "viewDetail": "Деталі"
       },
       "empty": "Немає дзвінків, що відповідають фільтрам",
       "interactionsEmpty": "Немає взаємодій, що відповідають фільтрам",

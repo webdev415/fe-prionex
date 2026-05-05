@@ -262,6 +262,8 @@
         "allDepartments": "Все отделы",
         "employees": "Сотрудники",
         "employeesCount": "Выбрано: {{count}}",
+        "phone": "Телефон",
+        "phonePlaceholder": "напр. 0631234567",
         "searchEmployees": "Поиск по имени…",
         "noOperatorsMatch": "Нет совпадений",
         "clearEmployees": "Сбросить",
@@ -297,16 +299,35 @@
         "dateTime": "Дата / Время",
         "duration": "Длительность",
         "status": "Статус",
+        "callType": "Тип звонка",
         "phone": "Телефон",
-        "agent": "Оператор",
+        "agent": "Сотрудник",
         "client": "Клиент",
         "clientId": "ID клиента",
         "promiseDate": "Дата обещания",
         "recording": "Запись",
+        "viewDetail": "Подробнее",
         "employee": "Сотрудник",
         "contactType": "Тип контакта",
         "result": "Результат",
         "promiseAmount": "Сумма обещания"
+      },
+      "callType": {
+        "incoming": "Входящий",
+        "outgoing": "Исходящий"
+      },
+      "callDetail": {
+        "title": "Детали звонка",
+        "fields": {
+          "dateTime": "Дата / Время",
+          "status": "Статус",
+          "callType": "Тип звонка",
+          "employee": "Сотрудник",
+          "phone": "Телефон",
+          "duration": "Длительность",
+          "client": "Клиент",
+          "callId": "ID звонка"
+        }
       },
       "summary": {
         "total": "всего",
@@ -317,13 +338,8 @@
       "actions": {
         "exportExcel": "Экспорт в Excel",
         "exporting": "Экспорт…",
-        "playRecording": "Воспроизвести запись"
-      },
-      "phoneSearch": {
-        "title": "Поиск по номеру телефона",
-        "placeholder": "Введите номер телефона",
-        "search": "Найти",
-        "summary": "{{total}} звонок(-ов), {{answered}} отвечено"
+        "playRecording": "Воспроизвести запись",
+        "viewDetail": "Подробнее"
       },
       "empty": "Нет звонков, соответствующих фильтрам",
       "interactionsEmpty": "Нет взаимодействий, соответствующих фильтрам",
