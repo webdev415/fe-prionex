@@ -159,11 +159,17 @@ export function ChainExecutor({
     return m
   }, [tagsList])
 
-  // Quick picks — keyed by department. A chain may now have several
-  // departments; pick the first as the canonical one for fetching picks.
-  const { data: quickPicksData } = useQuickPicks(
-    manualChains.length > 0 ? manualChains[0]?.department_ids?.[0] : undefined
-  )
+  // Quick picks are scoped per department: each pick row carries its own
+  // `department_id`, and the server filters by it. The lookup must use the
+  // OPERATOR'S department — not "the first department of the first manual
+  // chain", which is fragile (chains can belong to several departments,
+  // and the order of `department_ids[]` is not meaningful). Admins (who
+  // can run any chain) get the unfiltered set, mirroring how the chain
+  // list itself is fetched (line 134–137). Picks whose chain isn't in
+  // the visible manual chain list are dropped below as a safety net.
+  const { data: quickPicksData } = useQuickPicks(isAdmin ? undefined : operatorDepartmentId, {
+    fetchAll: isAdmin,
+  })
   const quickPicks = useMemo(() => {
     const manualIds = new Set(manualChains.map((c) => c.id))
     return (quickPicksData ?? []).filter((qp) => manualIds.has(qp.chain_id))
