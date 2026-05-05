@@ -25,15 +25,59 @@ import {
 } from '@/components/ui/Select'
 import type { UserDetailResponse } from '../types'
 import { useProjects } from '@/features/projects'
-import { useRoles } from '@/features/roles'
+import { useProjectRoles } from '@/features/roles'
 import type { ApiProject } from '@/features/projects/types'
-import type { ApiRole } from '@/features/roles/types'
 import { Checkbox } from '@/components/ui/Checkbox'
 
 interface EditUserFormProps {
   user: UserDetailResponse
   onSuccess: () => void
   onCancel?: () => void
+}
+
+interface ProjectRoleRowProps {
+  projectId: number
+  projectName?: string
+  selectedRoleId: number | undefined
+  onRoleChange: (roleId: number) => void
+}
+
+function ProjectRoleRow({
+  projectId,
+  projectName,
+  selectedRoleId,
+  onRoleChange,
+}: ProjectRoleRowProps) {
+  const { t } = useTranslation('common')
+  const { data: rolesData } = useProjectRoles(projectId)
+  const availableRoles = (rolesData?.roles || []).filter((role) => role.is_active)
+
+  return (
+    <div className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 sm:gap-4">
+      <span className="text-dark-500 text-sm font-light">{projectName}:</span>
+      <Select
+        value={selectedRoleId?.toString() || ''}
+        onValueChange={(value) => onRoleChange(parseInt(value, 10))}
+      >
+        <SelectTrigger className="border-light-50 text-dark-500 mt-1 w-full border text-sm">
+          <SelectValue placeholder={t('pages.users.forms.notAssigned')} />
+        </SelectTrigger>
+        <SelectContent>
+          {availableRoles.length > 0 ? (
+            availableRoles.map((role) => (
+              <SelectItem key={role.id} value={role.id.toString()}>
+                {role.name}
+              </SelectItem>
+            ))
+          ) : (
+            <SelectItem value="no-roles-available" disabled>
+              {t('pages.users.forms.noRolesAvailable')}
+            </SelectItem>
+          )}
+        </SelectContent>
+      </Select>
+    </div>
+  )
 }
 
 export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
@@ -43,9 +87,6 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
   // Project/role assignment state (UI only, similar to CreateUserForm)
   const { data: projectsData } = useProjects()
   const projects: ApiProject[] = projectsData?.projects || []
-  // Fetch only active roles (exclude archived/inactive roles)
-  const { data: rolesData } = useRoles({ is_active: true })
-  const allRoles: ApiRole[] = (rolesData?.roles || []).filter((role) => role.is_active)
 
   const [selectedProjects, setSelectedProjects] = useState<number[]>(() =>
     (user.projects || []).map((p) => p.project_id)
@@ -101,10 +142,6 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
   if (!user) {
     return <div className="py-8 text-center text-gray-600">No user data available</div>
   }
-
-  // Helpers for project/role editing (only active roles)
-  const getRolesForProject = (projectId: number): ApiRole[] =>
-    allRoles.filter((role) => role.project_id === projectId && role.is_active)
 
   const onSubmit = (data: UpdateUserFormData) => {
     // Build payload for update with project assignments
@@ -391,45 +428,17 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
             {t('pages.users.forms.rolePerProject')}
           </h3>
           <div className="space-y-3">
-            {selectedProjects.map((projectId) => {
-              const project = projects.find((p) => p.id === projectId)
-              const availableRoles = getRolesForProject(projectId)
-              const selectedRoleId = projectRoles[projectId]
-
-              return (
-                <div
-                  key={projectId}
-                  className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 sm:gap-4"
-                >
-                  <span className="text-dark-500 text-sm font-light">{project?.name}:</span>
-                  <Select
-                    value={selectedRoleId?.toString() || ''}
-                    onValueChange={(value) => {
-                      const roleId = parseInt(value, 10)
-                      setProjectRoles((prev) => ({ ...prev, [projectId]: roleId }))
-                    }}
-                  >
-                    <SelectTrigger className="border-light-50 text-dark-500 mt-1 w-full border text-sm">
-                      <SelectValue placeholder={t('pages.users.forms.notAssigned')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableRoles.length > 0 ? (
-                        availableRoles.map((role) => (
-                          <SelectItem key={role.id} value={role.id.toString()}>
-                            {role.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        // Radix Select does not allow empty-string values for items
-                        <SelectItem value="no-roles-available" disabled>
-                          {t('pages.users.forms.noRolesAvailable')}
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )
-            })}
+            {selectedProjects.map((projectId) => (
+              <ProjectRoleRow
+                key={projectId}
+                projectId={projectId}
+                projectName={projects.find((p) => p.id === projectId)?.name}
+                selectedRoleId={projectRoles[projectId]}
+                onRoleChange={(roleId) =>
+                  setProjectRoles((prev) => ({ ...prev, [projectId]: roleId }))
+                }
+              />
+            ))}
           </div>
         </div>
       )}
