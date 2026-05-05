@@ -159,7 +159,7 @@ const SelectContent = React.forwardRef<
             )}
           >
             <SelectSearchContext.Provider value={query}>
-              <div className="select-scrollbar max-h-64 overflow-y-scroll p-1">{children}</div>
+              <div className="select-scrollbar max-h-64 overflow-y-auto p-1">{children}</div>
             </SelectSearchContext.Provider>
           </SelectPrimitive.Viewport>
         </SelectPrimitive.Content>
