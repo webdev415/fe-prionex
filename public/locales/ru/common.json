@@ -3110,6 +3110,9 @@
           "replace_tag": "Заменить тег"
         },
         "selectField": "Выберите поле",
+        "selectEvent": "Выберите событие...",
+        "customEvent": "Своё значение...",
+        "eventHint": "Выберите системное событие или введите своё",
         "executionCount": "Выполнений",
         "lastExecuted": "Последний запуск",
         "neverExecuted": "—",
@@ -3162,7 +3165,16 @@
           "old_amount": "Старая сумма",
           "new_amount": "Новая сумма",
           "old_status": "Старый статус",
-          "new_status": "Новый статус"
+          "new_status": "Новый статус",
+          "status": "Статус",
+          "remaining_debt": "Остаток долга",
+          "message_id": "ID сообщения",
+          "phone_number": "Номер телефона",
+          "segments": "Сегменты SMS",
+          "gateway_provider": "Шлюз провайдера",
+          "agent_extension": "Внутренний номер оператора",
+          "interaction_id": "ID взаимодействия",
+          "payment_confirmation_date": "Дата подтверждения платежа"
         },
         "validation": {
           "nameRequired": "Название обязательно",
@@ -3201,23 +3213,44 @@
         "eventOptions": {
           "interaction.created": {
             "result_name": {
-              "No contact": "Немає контакту",
-              "Refusal to pay": "Відмова від оплати",
-              "Agreement": "Обіцянка оплати",
-              "Call back by appointment": "Перезвонити за домовленістю",
-              "Consent to interact": "Згода на взаємодію",
-              "Waiting for a call": "Очікує дзвінка",
-              "Hanged up": "Поклав слухавку",
-              "Request for documents": "Запит документів",
-              "Disconnected": "Відключений",
-              "Refused payment": "Відмовився платити",
-              "Will provide information": "Надасть інформацію",
-              "Will not provide information": "Не надасть інформацію",
-              "Refused consent to interact": "Відмовив у згоді на взаємодію",
-              "Threatens": "Погрожує",
-              "Sent documents": "Надіслано документи",
-              "No numbers": "Немає номерів",
-              "Numbers found": "Номери знайдено"
+              "No contact": "Нет контакта",
+              "Refusal to pay": "Отказ от оплаты",
+              "Agreement": "Обещание оплаты",
+              "Call back by appointment": "Перезвонить по договорённости",
+              "Consent to interact": "Согласие на взаимодействие",
+              "Waiting for a call": "Ожидает звонка",
+              "Hanged up": "Положил трубку",
+              "Request for documents": "Запрос документов",
+              "Disconnected": "Отключён",
+              "Refused payment": "Отказался платить",
+              "Will provide information": "Предоставит информацию",
+              "Will not provide information": "Не предоставит информацию",
+              "Refused consent to interact": "Отказал в согласии на взаимодействие",
+              "Threatens": "Угрожает",
+              "Sent documents": "Отправлены документы",
+              "No numbers": "Нет номеров",
+              "Numbers found": "Номера найдены",
+              "Agreement - Full payment": "Обещание — полная оплата",
+              "Agreement - Partial payment": "Обещание — частичная оплата",
+              "Agreement - Restructuring": "Обещание — реструктуризация",
+              "Agreement - Potential payment": "Обещание — возможная оплата",
+              "Payment reminder": "Напоминание об оплате"
+            },
+            "type_code": {
+              "INCOMING": "Входящая",
+              "OUTGOING": "Исходящая",
+              "SEARCHING": "Поиск"
+            },
+            "channel": {
+              "call": "Звонок",
+              "messenger": "Мессенджер",
+              "mail": "Почта",
+              "chat": "Чат"
+            },
+            "direction": {
+              "inbound": "Входящее",
+              "outbound": "Исходящее",
+              "system": "Системное"
             }
           }
         }
@@ -3252,6 +3285,18 @@
       },
       "helpBanner": "Нужна помощь с настройкой тегов?",
       "helpLink": "Документация",
+      "trace": {
+        "cta": "Почему?",
+        "openAllHint": "Посмотреть активность тегов этого клиента",
+        "titleAll": "Активность тегов клиента",
+        "titleSingle": "Почему «{{tag}}»?",
+        "empty": "Активность тегов для этого клиента ещё не зафиксирована.",
+        "emptyForTag": "Для этого тега пока нет истории — возможно, он назначен вручную или до включения трассировки.",
+        "loadFailed": "Не удалось загрузить трассировку",
+        "entriesCount": "{{count}} событий в хронологии (свежие сверху)",
+        "actor": "инициатор",
+        "action": "действие"
+      },
       "settings": {
         "description": "Управление выпадающими списками, событиями и условиями правил. Изменения применяются сразу ко всем формам.",
         "dictionarySettings": "Справочник тегов",

@@ -629,14 +629,17 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               </p>
               <div className="space-y-2">
                 {fields.map((field, index) => (
-                  <div key={field.id} className="flex items-start gap-2">
+                  <div
+                    key={field.id}
+                    className="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1.2fr)_minmax(180px,0.8fr)_minmax(0,1fr)_auto] lg:items-start"
+                  >
                     <Controller
                       name={`conditions.${index}.field`}
                       control={control}
                       render={({ field: fieldCtrl }) => (
                         <div className="min-w-0">
                           <Select value={fieldCtrl.value} onValueChange={fieldCtrl.onChange}>
-                            <SelectTrigger className="h-9 w-40 shrink-0 text-xs">
+                            <SelectTrigger className="h-9 w-full min-w-0 text-xs">
                               <SelectValue
                                 placeholder={t('pages.tags.rules.selectField', 'Select field')}
                               />
@@ -662,7 +665,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       control={control}
                       render={({ field: opField }) => (
                         <Select value={opField.value} onValueChange={opField.onChange}>
-                          <SelectTrigger className="h-9 w-28 shrink-0 text-xs">
+                          <SelectTrigger className="h-9 w-full min-w-0 text-xs">
                             <SelectValue placeholder={t('pages.tags.rules.operator', 'Op')} />
                           </SelectTrigger>
                           <SelectContent>
@@ -685,7 +688,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                             control={control}
                             render={({ field: valField }) => (
                               <Select value={valField.value} onValueChange={valField.onChange}>
-                                <SelectTrigger className="h-9 min-w-[140px] flex-1 text-xs">
+                                <SelectTrigger className="h-9 w-full min-w-0 text-xs">
                                   <SelectValue
                                     placeholder={t('pages.tags.rules.selectTag', 'Select tag')}
                                   />
@@ -713,7 +716,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                             control={control}
                             render={({ field: valField }) => (
                               <Select value={valField.value} onValueChange={valField.onChange}>
-                                <SelectTrigger className="h-9 min-w-[140px] flex-1 text-xs">
+                                <SelectTrigger className="h-9 w-full min-w-0 text-xs">
                                   <SelectValue
                                     placeholder={t(
                                       'pages.tags.rules.valuePlaceholder',
@@ -739,7 +742,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       return (
                         <Input
                           inputSize="sm"
-                          className="h-9 text-xs"
+                          className="h-9 w-full min-w-0 text-xs"
                           placeholder={t('pages.tags.rules.valuePlaceholder', 'e.g. 80')}
                           {...register(`conditions.${index}.value`)}
                         />
@@ -749,7 +752,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       type="button"
                       variant="ghost"
                       size="icon-xs"
-                      className="mt-0.5 shrink-0 text-gray-400 hover:text-red-500"
+                      className="self-start text-gray-400 hover:text-red-500"
                       onClick={() => remove(index)}
                       aria-label={t('actions.remove', 'Remove')}
                     >
