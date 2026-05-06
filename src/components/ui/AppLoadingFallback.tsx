@@ -1,6 +1,7 @@
 /**
  * Full-screen loading UI for Suspense fallbacks and auth bootstrap.
- * Keeps a simple centered spinner instead of top-left text.
+ * Border colours use inline styles so Prettier/tailwind-merge cannot reorder
+ * classes in a way that drops the accent stroke (which looked like a dead gray dot).
  */
 
 import { useTranslation } from 'react-i18next'
@@ -12,8 +13,22 @@ export interface AppLoadingFallbackProps {
   variant?: AppLoadingFallbackVariant
 }
 
+const SPINNER_BOX =
+  'box-border h-12 w-12 shrink-0 animate-spin rounded-full border-[3px] border-solid'
+
 export function AppLoadingFallback({ variant = 'shell' }: AppLoadingFallbackProps) {
   const { t } = useTranslation('common')
+
+  const spinnerStyle =
+    variant === 'auth'
+      ? {
+          borderColor: 'rgba(255, 255, 255, 0.25)',
+          borderTopColor: '#ffffff',
+        }
+      : {
+          borderColor: 'var(--color-gray-300)',
+          borderTopColor: 'var(--color-primary-600)',
+        }
 
   return (
     <div
@@ -25,18 +40,7 @@ export function AppLoadingFallback({ variant = 'shell' }: AppLoadingFallbackProp
       )}
     >
       <span className="sr-only">{t('status.loading')}</span>
-      {/* Shell: gray ring + green top segment (same pattern as SearchResults spinner).
-          Avoid mixing border-t-transparent with competing border-* utilities — merge order
-          can drop the accent stroke on light backgrounds so the spinner looks like a dead gray dot. */}
-      <div
-        className={cn(
-          'shrink-0 rounded-full border-[3px] motion-safe:animate-spin',
-          variant === 'auth'
-            ? 'h-12 w-12 border-white/25 border-t-white'
-            : 'border-t-primary-600 h-12 w-12 border-gray-300'
-        )}
-        aria-hidden
-      />
+      <div className={SPINNER_BOX} style={spinnerStyle} aria-hidden />
     </div>
   )
 }
