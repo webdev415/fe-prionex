@@ -56,6 +56,10 @@ function buildInteractionParams(filters: InteractionMonitoringFilters): URLSearc
     params.set('promise_amount_max', String(filters.promise_amount_max))
   filters.result_ids?.forEach((id) => params.append('result_ids', String(id)))
   filters.contact_type_ids?.forEach((id) => params.append('contact_type_ids', String(id)))
+  if (filters.internal_date_type) params.set('internal_date_type', filters.internal_date_type)
+  if (filters.internal_date_from) params.set('internal_date_from', filters.internal_date_from)
+  if (filters.internal_date_to) params.set('internal_date_to', filters.internal_date_to)
+  if (filters.channel) params.set('channel', filters.channel)
   if (filters.sort_by) params.set('sort_by', filters.sort_by)
   if (filters.sort_dir) params.set('sort_dir', filters.sort_dir)
   if (filters.page != null) params.set('page', String(filters.page))
@@ -84,9 +88,19 @@ export async function exportInteractionMonitoring(
   return response.data
 }
 
+/**
+ * Distinct, project-scoped values present in `interactions.channel`. Source
+ * for the Action Analysis Interaction History "Channel" filter dropdown.
+ */
+export async function listInteractionChannels(): Promise<string[]> {
+  const response = await api.get<string[]>('/api/v1/interaction-channels')
+  return response.data
+}
+
 export const actionAnalysisService = {
   getCallMonitoring,
   exportCallMonitoring,
   getInteractionMonitoring,
   exportInteractionMonitoring,
+  listInteractionChannels,
 }

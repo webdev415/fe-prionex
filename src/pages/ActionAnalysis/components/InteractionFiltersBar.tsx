@@ -1,12 +1,14 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CallMonitoringPeriod } from '@/features/actionAnalysis'
+import type { CallMonitoringPeriod, InteractionInternalDateType } from '@/features/actionAnalysis'
+import { useInteractionChannels } from '@/features/actionAnalysis'
 import type { OperatorUser } from '@/features/users/api/usersApi'
 import type {
   InteractionContactTypeResponse,
   InteractionResultResponse,
 } from '@/features/clients/api/types'
 import { Button } from '@/components/ui/Button'
+import { DateSelect } from '@/components/ui/DateSelect'
 import { Input } from '@/components/ui/Input'
 import {
   Select,
@@ -31,6 +33,18 @@ interface Props {
   onApply: (next: InteractionBarState) => void
   onClear: () => void
   userTimezone?: string | null
+}
+
+function parseYmd(dateStr: string | undefined): Date | null {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d, 12, 0, 0, 0)
+}
+
+function formatYmd(d: Date | null): string | undefined {
+  if (!d) return undefined
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 function buildDepartmentOptions(operators: OperatorUser[]) {
@@ -73,6 +87,14 @@ export function InteractionFiltersBar({
   const period: CallMonitoringPeriod = draft.period ?? 'last_7d'
   const selectedResultId = draft.result_ids?.[0]
   const selectedContactTypeId = draft.contact_type_ids?.[0]
+
+  // Distinct channels for the dropdown source. Project-scoped, 5-min cache.
+  const { data: channels = [] } = useInteractionChannels()
+
+  const internalDateType: InteractionInternalDateType | undefined = draft.internal_date_type
+  const internalDateRangeActive = !!internalDateType
+  const parsedInternalFrom = parseYmd(draft.internal_date_from)
+  const parsedInternalTo = parseYmd(draft.internal_date_to)
 
   const departmentOptions = useMemo(() => buildDepartmentOptions(operators), [operators])
   const departmentSelectValue = draft.departmentId != null ? String(draft.departmentId) : 'all'
@@ -196,6 +218,30 @@ export function InteractionFiltersBar({
 
           <div className="flex flex-col gap-1.5">
             <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+              {t('pages.actionAnalysis.filters.channel', 'Channel')}
+            </span>
+            <Select
+              value={draft.channel ?? 'all'}
+              onValueChange={(v) => update({ channel: v === 'all' ? undefined : v })}
+            >
+              <SelectTrigger className="h-[45px] w-full">
+                <SelectValue placeholder={t('pages.actionAnalysis.filters.allChannels', 'All')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  {t('pages.actionAnalysis.filters.allChannels', 'All')}
+                </SelectItem>
+                {channels.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.promiseMin', 'Promise min')}
             </span>
             <Input
@@ -227,6 +273,96 @@ export function InteractionFiltersBar({
                 const v = e.target.value
                 update({ promise_amount_max: v === '' ? undefined : Number(v) })
               }}
+            />
+          </div>
+        </div>
+
+        {/*
+          Internal-date filter (KAN-409 follow-up): one combined filter that
+          targets a chosen date column inside the interaction (promise / next
+          action / follow-up, or `any` = OR). The bounds are required for the
+          filter to apply, so picking a type alone is a no-op on the backend.
+        */}
+        <div className="h-px w-full bg-gray-200" />
+        <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+              {t('pages.actionAnalysis.filters.internalDateType', 'Internal date')}
+            </span>
+            <Select
+              value={internalDateType ?? 'none'}
+              onValueChange={(v) => {
+                if (v === 'none') {
+                  update({
+                    internal_date_type: undefined,
+                    internal_date_from: undefined,
+                    internal_date_to: undefined,
+                  })
+                } else {
+                  update({ internal_date_type: v as InteractionInternalDateType })
+                }
+              }}
+            >
+              <SelectTrigger className="h-[45px] w-full">
+                <SelectValue
+                  placeholder={t('pages.actionAnalysis.filters.internalDateTypeNone', 'Off')}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">
+                  {t('pages.actionAnalysis.filters.internalDateTypeNone', 'Off')}
+                </SelectItem>
+                <SelectItem value="promise_to_pay">
+                  {t(
+                    'pages.actionAnalysis.filters.internalDateTypes.promiseToPay',
+                    'Promise to pay'
+                  )}
+                </SelectItem>
+                <SelectItem value="next_action">
+                  {t(
+                    'pages.actionAnalysis.filters.internalDateTypes.nextAction',
+                    'Callback / next action'
+                  )}
+                </SelectItem>
+                <SelectItem value="follow_up">
+                  {t('pages.actionAnalysis.filters.internalDateTypes.followUp', 'Follow-up')}
+                </SelectItem>
+                <SelectItem value="any">
+                  {t('pages.actionAnalysis.filters.internalDateTypes.any', 'Any of the above')}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+              {t('pages.actionAnalysis.filters.internalDateFrom', 'Internal date from')}
+            </span>
+            <DateSelect
+              value={parsedInternalFrom}
+              onChange={({ value }) =>
+                update({ internal_date_from: formatYmd(value) ?? undefined })
+              }
+              placeholder={t('pages.actionAnalysis.filters.selectStartDate', 'Select start date')}
+              max={parsedInternalTo ?? undefined}
+              format="yyyy-MM-dd"
+              className="[&_input]:h-[45px]"
+              disabled={!internalDateRangeActive}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+              {t('pages.actionAnalysis.filters.internalDateTo', 'Internal date to')}
+            </span>
+            <DateSelect
+              value={parsedInternalTo}
+              onChange={({ value }) => update({ internal_date_to: formatYmd(value) ?? undefined })}
+              placeholder={t('pages.actionAnalysis.filters.selectEndDate', 'Select end date')}
+              min={parsedInternalFrom ?? undefined}
+              format="yyyy-MM-dd"
+              className="[&_input]:h-[45px]"
+              disabled={!internalDateRangeActive}
             />
           </div>
         </div>

@@ -234,6 +234,18 @@
           "all": "Усі",
           "answered": "Відповідь",
           "notAnswered": "Без відповіді"
+        },
+        "channel": "Канал",
+        "allChannels": "Усі",
+        "internalDateType": "Внутрішня дата",
+        "internalDateTypeNone": "Вимк.",
+        "internalDateFrom": "Внутрішня дата від",
+        "internalDateTo": "Внутрішня дата до",
+        "internalDateTypes": {
+          "promiseToPay": "Обіцянка оплати",
+          "nextAction": "Передзвонити / наступна дія",
+          "followUp": "Уточнення",
+          "any": "Будь-яка з перелічених"
         }
       },
       "columns": {
@@ -251,7 +263,11 @@
         "employee": "Співробітник",
         "contactType": "Тип контакту",
         "result": "Результат",
-        "promiseAmount": "Сума обіцянки"
+        "promiseAmount": "Сума обіцянки",
+        "responsibleAtCreation": "Відповідальний на момент створення",
+        "currentResponsible": "Поточний відповідальний",
+        "internalDate": "Дата (обіцянка / передзвін)",
+        "channel": "Канал"
       },
       "callType": {
         "incoming": "Вхідний",
