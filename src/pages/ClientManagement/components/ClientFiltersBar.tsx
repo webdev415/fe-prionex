@@ -198,7 +198,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       debtRangeFrom: value,
                     })
                   }
-                  placeholder="Min"
+                  placeholder={t('pages.clients.filters.min')}
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
                 />
@@ -213,7 +213,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       debtRangeTo: value,
                     })
                   }
-                  placeholder="Max"
+                  placeholder={t('pages.clients.filters.max')}
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
                 />
@@ -233,7 +233,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       dpdRangeFrom: value,
                     })
                   }
-                  placeholder="Min"
+                  placeholder={t('pages.clients.filters.min')}
                   className="flex flex-1 flex-col items-start gap-2"
                 />
                 <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -247,7 +247,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       dpdRangeTo: value,
                     })
                   }
-                  placeholder="Max"
+                  placeholder={t('pages.clients.filters.max')}
                   className="flex flex-1 flex-col items-start gap-2"
                 />
                 <span className="text-xs leading-[150%] font-medium tracking-[-0.24px] text-gray-700 sm:text-sm sm:tracking-[-0.28px]">
@@ -276,7 +276,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       totalDebtRangeFrom: value,
                     })
                   }
-                  placeholder="Min"
+                  placeholder={t('pages.clients.filters.min')}
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
                 />
@@ -291,7 +291,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                       totalDebtRangeTo: value,
                     })
                   }
-                  placeholder="Max"
+                  placeholder={t('pages.clients.filters.max')}
                   className="flex flex-1 flex-col items-start gap-2"
                   formatWithCommas={true}
                 />
@@ -307,7 +307,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.dateOfSaleFrom || null}
                   onChange={({ value }) => handleFilterDateChange('dateOfSaleFrom', value)}
-                  placeholder="Min"
+                  placeholder={t('pages.clients.filters.min')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
                 />
@@ -317,7 +317,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.dateOfSaleTo || null}
                   onChange={({ value }) => handleFilterDateChange('dateOfSaleTo', value)}
-                  placeholder="Max"
+                  placeholder={t('pages.clients.filters.max')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
                 />
@@ -335,7 +335,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.assignmentDateFrom || null}
                   onChange={({ value }) => handleFilterDateChange('assignmentDateFrom', value)}
-                  placeholder="Min"
+                  placeholder={t('pages.clients.filters.min')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
                 />
@@ -345,7 +345,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.assignmentDateTo || null}
                   onChange={({ value }) => handleFilterDateChange('assignmentDateTo', value)}
-                  placeholder="Max"
+                  placeholder={t('pages.clients.filters.max')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
                 />
@@ -364,7 +364,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.promiseDateFrom || null}
                   onChange={({ value }) => handleFilterDateChange('promiseDateFrom', value)}
-                  placeholder="Min"
+                  placeholder={t('pages.clients.filters.min')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
                 />
@@ -374,7 +374,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.promiseDateTo || null}
                   onChange={({ value }) => handleFilterDateChange('promiseDateTo', value)}
-                  placeholder="Max"
+                  placeholder={t('pages.clients.filters.max')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
                 />
@@ -388,7 +388,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.callbackDateFrom || null}
                   onChange={({ value }) => handleFilterDateChange('callbackDateFrom', value)}
-                  placeholder="Min"
+                  placeholder={t('pages.clients.filters.min')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
                 />
@@ -398,7 +398,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.callbackDateTo || null}
                   onChange={({ value }) => handleFilterDateChange('callbackDateTo', value)}
-                  placeholder="Max"
+                  placeholder={t('pages.clients.filters.max')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
                 />
@@ -416,7 +416,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.interactionDateFrom || null}
                   onChange={({ value }) => handleFilterDateChange('interactionDateFrom', value)}
-                  placeholder="Min"
+                  placeholder={t('pages.clients.filters.min')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
                 />
@@ -426,7 +426,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                 <DateSelect
                   value={filters.interactionDateTo || null}
                   onChange={({ value }) => handleFilterDateChange('interactionDateTo', value)}
-                  placeholder="Max"
+                  placeholder={t('pages.clients.filters.max')}
                   format="yyyy-MM-dd"
                   className="flex flex-1 flex-col gap-2"
                 />

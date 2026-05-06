@@ -294,6 +294,18 @@ vi.mock('react-i18next', () => ({
         'pages.clients.detail.tagsDropdown.noTagsFound': 'No tags found',
         'pages.clients.detail.tagsDropdown.clear': 'Clear',
         'pages.clients.detail.tagsDropdown.apply': 'Apply',
+        'pages.clients.modals.tagsDropdown.searchTags': 'Search tags...',
+        'pages.clients.modals.tagsDropdown.noTagsFound': 'No tags found',
+        'pages.clients.modals.tagsDropdown.clear': 'Clear',
+        'pages.clients.modals.tagsDropdown.apply': 'Apply',
+        'pages.clients.filters.min': 'Min',
+        'pages.clients.filters.max': 'Max',
+        'components.pagination.rowsPerPage': 'Rows per page:',
+        'components.pagination.previousPage': 'Previous page',
+        'components.pagination.nextPage': 'Next page',
+        'components.pagination.goToPage': 'Go to page {{page}}',
+        'components.pagination.page': 'Page',
+        'components.pagination.of': 'of',
       }
       const template = translations[key] || key
       if (options && typeof template === 'string' && template.includes('{{')) {

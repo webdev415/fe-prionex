@@ -159,15 +159,31 @@ export const TagSelectorModal = memo(function TagSelectorModal({
   return (
     <Modal open={open} onClose={onClose} maxWidth="lg" data-testid="tag-selector-modal">
       <ModalHeader
-        icon={<Icons.Contact size={24} className="text-primary-500" />}
+        icon={
+          <div className="bg-primary-400 flex h-9 w-9 items-center justify-center rounded-full">
+            <Icons.Contact size={21} className="text-dark-500" strokeWidth={1.5} />
+          </div>
+        }
         title={t('pages.clients.modals.tagSelector.title', { name: clientName })}
       />
 
       <ModalContent>
         {isLoading ? (
-          <div className="flex items-center justify-center py-6 sm:py-8">
-            <div className="text-xs text-gray-600 sm:text-sm">
-              {t('pages.clients.modals.tagSelector.loadingTags')}
+          <div className="space-y-4 sm:space-y-5" data-testid="tag-selector-loading-skeleton">
+            <div className="h-10 w-full animate-pulse rounded-lg bg-gray-200" />
+            <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
+            <div className="max-h-64 space-y-2 overflow-y-auto sm:max-h-96">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-3 rounded p-2"
+                  aria-label={t('pages.clients.modals.tagSelector.loadingTags')}
+                >
+                  <div className="h-4 w-4 animate-pulse rounded bg-gray-200" />
+                  <div className="h-6 w-32 animate-pulse rounded-full bg-gray-200" />
+                  <div className="hidden h-4 w-40 animate-pulse rounded bg-gray-200 sm:block" />
+                </div>
+              ))}
             </div>
           </div>
         ) : (

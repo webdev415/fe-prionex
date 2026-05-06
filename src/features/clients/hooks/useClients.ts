@@ -61,6 +61,8 @@ export function useClients(params: GetClientsParams = {}) {
   return useQuery({
     queryKey: clientKeys.list(params),
     queryFn: () => clientApi.getClients(params),
+    // Keep previous page/filter/sort results while refetching to avoid full-page loader flicker.
+    placeholderData: (previousData) => previousData,
     staleTime: 30000, // 30 seconds
     refetchInterval: 60000, // Refetch every 60 seconds
     enabled: true,

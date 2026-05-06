@@ -8,6 +8,7 @@
 
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
 import {
   Select,
   SelectTrigger,
@@ -44,6 +45,7 @@ export function Pagination({
   onPageSizeChange,
   className,
 }: PaginationProps) {
+  const { t } = useTranslation('common')
   type PageToken = number | 'ellipsis'
 
   const getPaginationTokens = (): PageToken[] => {
@@ -91,7 +93,9 @@ export function Pagination({
       {/* Rows per page selector (Left) - minimized on mobile */}
       <div className="flex items-center gap-2">
         {/* Hidden on mobile, shown on desktop */}
-        <span className="text-dark-500 hidden text-sm font-light md:inline">Rows per page:</span>
+        <span className="text-dark-500 hidden text-sm font-light md:inline">
+          {t('components.pagination.rowsPerPage', 'Rows per page:')}
+        </span>
         <Select
           value={pageSize.toString()}
           onValueChange={(value) => {
@@ -120,7 +124,7 @@ export function Pagination({
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
           className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white sm:h-10 sm:w-10"
-          aria-label="Previous page"
+          aria-label={t('components.pagination.previousPage', 'Previous page')}
         >
           <Icons.ArrowLeft size={14} className="text-dark-500 sm:h-4 sm:w-4" strokeWidth={1.5} />
         </button>
@@ -144,7 +148,10 @@ export function Pagination({
                   ? 'bg-secondary-800 text-white'
                   : 'text-dark-500 border border-gray-300 bg-white hover:bg-gray-100'
               )}
-              aria-label={`Go to page ${token}`}
+              aria-label={t('components.pagination.goToPage', {
+                defaultValue: 'Go to page {{page}}',
+                page: token,
+              })}
               aria-current={currentPage === token ? 'page' : undefined}
               title={String(token)}
             >
@@ -158,7 +165,7 @@ export function Pagination({
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
           className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white sm:h-10 sm:w-10"
-          aria-label="Next page"
+          aria-label={t('components.pagination.nextPage', 'Next page')}
         >
           <Icons.ArrowRight size={14} className="text-dark-500 sm:h-4 sm:w-4" strokeWidth={1.5} />
         </button>
@@ -167,9 +174,13 @@ export function Pagination({
       {/* Page indicator (Right) - minimized on mobile */}
       <div className="flex items-center gap-1">
         {/* Hidden on mobile, shown on desktop */}
-        <span className="hidden text-sm font-light text-gray-700 md:inline">Page</span>
+        <span className="hidden text-sm font-light text-gray-700 md:inline">
+          {t('components.pagination.page', 'Page')}
+        </span>
         <span className="text-dark-500 text-xs font-medium md:text-sm">{currentPage}</span>
-        <span className="text-xs font-light text-gray-500 md:text-sm">of</span>
+        <span className="text-xs font-light text-gray-500 md:text-sm">
+          {t('components.pagination.of', 'of')}
+        </span>
         <span className="text-dark-500 text-xs font-medium md:text-sm">{totalPages}</span>
       </div>
     </div>

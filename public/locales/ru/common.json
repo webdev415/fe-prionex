@@ -19,7 +19,7 @@
     "departments": "Отделы",
     "smsTemplates": "SMS Шаблоны",
     "targetActions": "Целевые действия",
-    "taChains": "Цепочки TA",
+    "taChains": "Цепочки ЦД",
     "taDictionary": "Словарь",
     "chainBuilder": "Конструктор цепочек",
     "taManagement": "Целевые действия",
@@ -66,6 +66,16 @@
     "logout": "Выйти",
     "loggingOut": "Выход..."
   },
+  "components": {
+    "pagination": {
+      "rowsPerPage": "Строк на странице:",
+      "previousPage": "Предыдущая страница",
+      "nextPage": "Следующая страница",
+      "goToPage": "Перейти на страницу {{page}}",
+      "page": "Страница",
+      "of": "из"
+    }
+  },
   "status": {
     "loading": "Загрузка...",
     "success": "Успешно",
@@ -89,7 +99,7 @@
       "tasks": "Задачи",
       "calls": "Звонки",
       "tags": "Теги",
-      "taChains": "Цепочки TA"
+      "taChains": "Цепочки ЦД"
     },
     "payment": {
       "pending": "ожидает",
@@ -1272,6 +1282,8 @@
         "tags": "Теги",
         "noUsersAvailable": "Нет доступных пользователей",
         "more": "больше",
+        "min": "Мин",
+        "max": "Макс",
         "days": "дней"
       },
       "statuses": {
@@ -1551,7 +1563,7 @@
           "tasks": "Задания",
           "docs": "Документы",
           "callSms": "Звонок / SMS",
-          "taChains": "Цепочки TA"
+          "taChains": "Цепочки ЦД"
         },
         "maritalStatuses": {
           "1": "Холост/Не замужем",
@@ -2238,7 +2250,7 @@
     },
     "clientChains": {
       "logInteraction": "Записать взаимодействие",
-      "taChainLabel": "Цепочка TA",
+      "taChainLabel": "Цепочка ЦД",
       "startChain": "Начать цепочку",
       "selectChain": "Цепочка",
       "selectChainPlaceholder": "Выберите цепочку...",
@@ -2403,11 +2415,11 @@
       }
     },
     "taChains": {
-      "title": "Цепочки TA",
+      "title": "Цепочки ЦД",
       "createButton": "Создать цепочку",
       "searchPlaceholder": "Поиск цепочек...",
       "showInactive": "Показывать неактивные",
-      "empty": "Цепочки TA не найдены. Нажмите «Создать цепочку», чтобы создать первую.",
+      "empty": "Цепочки ЦД не найдены. Нажмите «Создать цепочку», чтобы создать первую.",
       "noTargetActionsHint": "Сначала создайте хотя бы одно активное целевое действие в Системных настройках → Целевые действия.",
       "table": {
         "department": "Отдел"
@@ -2445,17 +2457,17 @@
         "empty": "Шагов пока нет. Нажмите «Добавить шаг», чтобы создать первый.",
         "stepLabel": "Шаг {{index}}",
         "targetAction": "Целевое действие",
-        "selectTA": "Выберите TA",
+        "selectTA": "Выберите ЦД",
         "delayMinutes": "Задержка (мин)",
         "required": "Обязательно",
         "notInPast": "Дата не может быть в прошлом"
       },
       "modals": {
         "create": {
-          "title": "Создание цепочки TA"
+          "title": "Создание цепочки ЦД"
         },
         "edit": {
-          "title": "Редактирование цепочки TA"
+          "title": "Редактирование цепочки ЦД"
         }
       },
       "errors": {
@@ -2463,25 +2475,25 @@
         "departmentRequired": "Выберите хотя бы один отдел"
       },
       "toasts": {
-        "created": "Цепочка TA создана",
-        "updated": "Цепочка TA обновлена",
-        "cloned": "Цепочка TA скопирована",
-        "activated": "Цепочка TA активирована",
-        "deactivated": "Цепочка TA деактивирована"
+        "created": "Цепочка ЦД создана",
+        "updated": "Цепочка ЦД обновлена",
+        "cloned": "Цепочка ЦД скопирована",
+        "activated": "Цепочка ЦД активирована",
+        "deactivated": "Цепочка ЦД деактивирована"
       }
     },
     "taManagement": {
       "tabs": {
         "targetActions": "Целевые действия",
-        "taChains": "Цепочки TA",
+        "taChains": "Цепочки ЦД",
         "dictionary": "Словарь",
         "chainBuilder": "Конструктор цепочек"
       }
     },
     "targetActions": {
       "title": "Целевые действия",
-      "createButton": "Создать TA",
-      "searchPlaceholder": "Поиск TA...",
+      "createButton": "Создать ЦД",
+      "searchPlaceholder": "Поиск ЦД...",
       "showHidden": "Показывать скрытые",
       "empty": "Целевые действия не найдены",
       "lockedHint": "Это целевое действие уже используется в одной или нескольких цепочках и больше не редактируется. Создайте копию.",

@@ -66,6 +66,16 @@
     "logout": "Logout",
     "loggingOut": "Logging out..."
   },
+  "components": {
+    "pagination": {
+      "rowsPerPage": "Rows per page:",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "goToPage": "Go to page {{page}}",
+      "page": "Page",
+      "of": "of"
+    }
+  },
   "status": {
     "loading": "Loading...",
     "success": "Success",
@@ -1268,6 +1278,8 @@
         "selectSearcher": "Select searcher",
         "unassignedOnly": "Unassigned only",
         "more": "more",
+        "min": "Min",
+        "max": "Max",
         "days": "days",
         "noUsersAvailable": "No users available"
       },
@@ -1532,6 +1544,12 @@
         "portfolioDropdown": {
           "searchPortfolios": "Search portfolios",
           "noPortfoliosFound": "No portfolios found",
+          "clear": "Clear",
+          "apply": "Apply"
+        },
+        "tagsDropdown": {
+          "searchTags": "Search tags...",
+          "noTagsFound": "No tags found",
           "clear": "Clear",
           "apply": "Apply"
         },
