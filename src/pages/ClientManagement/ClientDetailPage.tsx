@@ -2792,7 +2792,6 @@ export function ClientDetailPage() {
                                         defaultValue: contact.contactType,
                                       })
                                     : contact.contactType}
-
                               </span>
                             </td>
                             <td className="py-2 pr-3">
@@ -2842,10 +2841,9 @@ export function ClientDetailPage() {
                                     <SelectContent>
                                       {contactTypes.map((ct) => (
                                         <SelectItem key={ct.id} value={String(ct.id)}>
-                                           {i18n.language === 'uk'
+                                          {i18n.language === 'uk'
                                             ? ct.name
                                             : t(`contactTypes.${ct.code}`)}
-
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
