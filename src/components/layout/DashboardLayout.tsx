@@ -729,6 +729,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: 'file-01',
             requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
           },
+          {
+            path: '/dashboard/system-settings/document-generation',
+            label: t('navigation.documentGeneration', 'Document Generation'),
+            icon: 'file-01',
+            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+          },
         ],
       },
     ]
