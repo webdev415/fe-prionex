@@ -69,6 +69,11 @@ const InteractionLogPage = lazy(() =>
     default: m.InteractionLogPage,
   }))
 )
+const DocumentGenerationPage = lazy(() =>
+  import('@/pages/DocumentGeneration').then((m) => ({
+    default: m.DocumentGenerationPage,
+  }))
+)
 const ReportsDashboardPage = lazy(() =>
   import('@/pages/ReportsDashboard').then((m) => ({
     default: m.ReportsDashboardPage,
@@ -288,6 +293,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
             {withSuspense(<InteractionLogPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/document-generation',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            {withSuspense(<DocumentGenerationPage />)}
           </PermissionRoute>
         ),
       },

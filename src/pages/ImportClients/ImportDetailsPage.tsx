@@ -124,13 +124,19 @@ export function ImportDetailsPage() {
     },
   })
 
-  // Fetch import errors with pagination. Use `refetchOnMount: 'always'`
-  // so a stale failed-state cache (e.g., a backend enum panic that has
-  // since been fixed) gets re-tried instead of leaving the table blank.
+  // Fetch import errors with pagination. `refetchOnMount: 'always'`
+  // dodges a stale failed-state cache. `refetchInterval` keeps the
+  // errors table in sync with the live `errors_count` while a vendor
+  // import is mid-flight — the backend now flushes per-file errors as
+  // each file completes, so polling reveals them progressively.
   const { data: errorsData } = useImportJobErrors(
     id,
     { page: errorPage, page_size: errorPageSize },
-    { refetchOnMount: 'always', retry: 2 }
+    {
+      refetchOnMount: 'always',
+      retry: 2,
+      refetchInterval: jobDetail?.status === 'in_progress' ? 5000 : false,
+    }
   )
 
   // Export errors mutation

@@ -1,0 +1,1 @@
+export { DocumentGenerationPage } from './DocumentGenerationPage'

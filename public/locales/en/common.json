@@ -24,6 +24,7 @@
     "chainBuilder": "Chain Builder",
     "taManagement": "Target Actions",
     "interactionLog": "Interaction Log",
+    "documentGeneration": "Document Generation",
     "transactions": "Transactions",
     "operations": "Operations",
     "bulkOperatorAssignment": "Bulk Operator Assignment",
@@ -2364,6 +2365,118 @@
         "removed": "Template removed"
       }
     },
+    "documentGeneration": {
+      "title": "Document Generation",
+      "tabs": {
+        "journal": "Document Journal",
+        "templates": "Document Templates"
+      },
+      "documentTypes": {
+        "passport": "Passport",
+        "inn": "Tax ID",
+        "contract": "Contract",
+        "income": "Income statement",
+        "outcome": "Extract / statement",
+        "signature": "Digital signature",
+        "other": "Other"
+      },
+      "actions": {
+        "uploaded": "Uploaded",
+        "generated": "Generated"
+      },
+      "filters": {
+        "documentType": "Document type",
+        "action": "Action",
+        "operator": "Operator",
+        "client": "Client",
+        "clientPlaceholder": "Name",
+        "creditor": "Creditor",
+        "creditorPlaceholder": "Credit ID or creditor name",
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "all": "All",
+        "reset": "Reset"
+      },
+      "journal": {
+        "columns": {
+          "documentName": "Document Name",
+          "documentType": "Document Type",
+          "client": "Client",
+          "creditId": "Credit ID",
+          "creditor": "Creditor",
+          "action": "Action",
+          "performedBy": "Performed by",
+          "dateTime": "Date and time"
+        },
+        "loading": "Loading…",
+        "empty": "No documents found.",
+        "loadError": "Failed to load document journal."
+      },
+      "templates": {
+        "comingSoon": "Template management is coming in a follow-up release.",
+        "create": "Create template",
+        "intro": "Reusable document bodies with variable placeholders.",
+        "empty": "No templates yet.",
+        "loading": "Loading...",
+        "loadError": "Failed to load templates.",
+        "columns": {
+          "name": "Template name",
+          "preview": "Preview",
+          "variables": "Variables",
+          "updated": "Updated",
+          "actions": "Actions"
+        },
+        "modals": {
+          "createTitle": "Create template",
+          "editTitle": "Edit template",
+          "subtitle": "Use {{variable_name}} to insert dynamic data.",
+          "deleteTitle": "Delete template",
+          "deleteConfirm": "Are you sure you want to delete this template?",
+          "deleteWarning": "This action cannot be undone."
+        },
+        "form": {
+          "name": "Template name",
+          "namePlaceholder": "e.g. Demand letter",
+          "body": "Template body",
+          "bodyPlaceholder": "Compose your template here. Insert variables from the right-hand panel.",
+          "preview": "Preview (sample data)",
+          "previewEmpty": "Start typing to see a live preview.",
+          "variables": "Variables",
+          "variablesHelp": "Click a variable to insert it at the cursor."
+        },
+        "variableGroups": {
+          "client": "Client",
+          "credit": "Credit",
+          "system": "System"
+        },
+        "variables": {
+          "clientFullName": "Client's full name",
+          "clientFirstName": "Client's first name",
+          "clientLastName": "Client's last name",
+          "clientTaxId": "Tax ID (TIN)",
+          "clientPhone": "Primary phone",
+          "clientEmail": "Primary email",
+          "clientAddress": "Registered address",
+          "creditId": "Credit ID / contract number",
+          "creditorName": "Creditor name",
+          "debtAmount": "Outstanding debt amount",
+          "debtCurrency": "Debt currency",
+          "contractDate": "Contract sign date",
+          "dueDate": "Next payment due date",
+          "today": "Today's date",
+          "operatorName": "Operator full name"
+        },
+        "errors": {
+          "nameRequired": "Template name is required",
+          "bodyRequired": "Template body is required"
+        },
+        "messages": {
+          "created": "Template created",
+          "updated": "Template updated",
+          "deleted": "Template deleted"
+        }
+      }
+    },
     "interactionLog": {
       "title": "Interaction Log",
       "export": "Export CSV",
@@ -2488,8 +2601,12 @@
         "notInPast": "Date cannot be in the past"
       },
       "modals": {
-        "create": { "title": "Create TA Chain" },
-        "edit": { "title": "Edit TA Chain" }
+        "create": {
+          "title": "Create TA Chain"
+        },
+        "edit": {
+          "title": "Edit TA Chain"
+        }
       },
       "errors": {
         "nameRequired": "Name is required",
@@ -2557,8 +2674,12 @@
         "positive": "Positive"
       },
       "modals": {
-        "create": { "title": "Create Target Action" },
-        "edit": { "title": "Edit Target Action" }
+        "create": {
+          "title": "Create Target Action"
+        },
+        "edit": {
+          "title": "Edit Target Action"
+        }
       },
       "errors": {
         "nameRequired": "Name is required",
@@ -2830,6 +2951,7 @@
         },
         "operators": {
           "eq": "equals",
+          "ne": "not equals",
           "neq": "not equals",
           "gt": "greater than",
           "gte": "greater or equal",
@@ -2936,6 +3058,9 @@
           "replace_tag": "Replace Tag"
         },
         "selectField": "Select field",
+        "selectEvent": "Select event...",
+        "customEvent": "Custom value...",
+        "eventHint": "Pick a system event or enter your own",
         "executionCount": "Executions",
         "lastExecuted": "Last Run",
         "neverExecuted": "—",
@@ -2955,6 +3080,49 @@
           "status": "Client Status",
           "has_tag": "Has Tag",
           "not_has_tag": "Does Not Have Tag"
+        },
+        "eventPayloadFields": {
+          "interaction_id": "Interaction ID",
+          "result_name": "Result",
+          "type_code": "Interaction type",
+          "channel": "Channel",
+          "direction": "Direction",
+          "payment_id": "Payment ID",
+          "payment_number": "Payment number",
+          "debt_id": "Debt ID",
+          "amount": "Amount",
+          "payment_method": "Payment method",
+          "payment_date": "Payment date",
+          "payment_confirmation_date": "Payment confirmation date",
+          "status": "Status",
+          "verified_by_user_id": "Verified by (user ID)",
+          "verified_at": "Verified at",
+          "recorded_by_user_id": "Recorded by (user ID)",
+          "remaining_debt": "Remaining debt",
+          "sms_id": "SMS ID",
+          "message_id": "Message ID",
+          "phone_number": "Phone number",
+          "template_name": "SMS template",
+          "segments": "SMS segments",
+          "gateway_provider": "Gateway provider",
+          "call_id": "Call ID",
+          "outcome": "Call outcome",
+          "disposition": "Disposition",
+          "agent_extension": "Agent extension",
+          "score": "Score",
+          "risk_score": "Risk score",
+          "previous_score": "Previous score",
+          "score_change": "Score change",
+          "algorithm_version": "Algorithm version",
+          "calculation_reason": "Calculation reason",
+          "tax_id": "Tax ID",
+          "source": "Source",
+          "import_batch_id": "Import batch ID",
+          "contract_number": "Contract number",
+          "old_amount": "Previous amount",
+          "new_amount": "New amount",
+          "old_status": "Previous status",
+          "new_status": "New status"
         },
         "validation": {
           "nameRequired": "Name is required",
@@ -3009,7 +3177,28 @@
               "Threatens": "Threatens",
               "Sent documents": "Sent documents",
               "No numbers": "No numbers",
-              "Numbers found": "Numbers found"
+              "Numbers found": "Numbers found",
+              "Agreement - Full payment": "Agreement - Full payment",
+              "Agreement - Partial payment": "Agreement - Partial payment",
+              "Agreement - Restructuring": "Agreement - Restructuring",
+              "Agreement - Potential payment": "Agreement - Potential payment",
+              "Payment reminder": "Payment reminder"
+            },
+            "type_code": {
+              "INCOMING": "Incoming",
+              "OUTGOING": "Outgoing",
+              "SEARCHING": "Searching"
+            },
+            "channel": {
+              "call": "Call",
+              "messenger": "Messenger",
+              "mail": "Mail",
+              "chat": "Chat"
+            },
+            "direction": {
+              "inbound": "Inbound",
+              "outbound": "Outbound",
+              "system": "System"
             }
           }
         }
@@ -3044,6 +3233,18 @@
       },
       "helpBanner": "Need help configuring tags?",
       "helpLink": "View documentation",
+      "trace": {
+        "cta": "Why?",
+        "openAllHint": "View tag activity for this client",
+        "titleAll": "Tag activity for this client",
+        "titleSingle": "Why \"{{tag}}\"?",
+        "empty": "No tag activity recorded for this client.",
+        "emptyForTag": "No history yet for this tag — it may have been assigned manually or before tracing was enabled.",
+        "loadFailed": "Failed to load trace",
+        "entriesCount": "{{count}} events on the timeline (newest first)",
+        "actor": "actor",
+        "action": "action"
+      },
       "settings": {
         "description": "Manage dropdown options, events, and rule conditions. Changes apply immediately to all forms.",
         "dictionarySettings": "Tag Dictionary",
