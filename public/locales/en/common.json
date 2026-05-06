@@ -292,7 +292,8 @@
         "loadHeatmapFailed": "Failed to load the heatmap.",
         "loadScriptAnalyticsFailed": "Failed to load script analytics.",
         "departmentNoOperators": "No operators in this department for the current project.",
-        "exportFailed": "Export failed"
+        "exportFailed": "Export failed",
+        "callNotFound": "Call not found"
       },
       "calls": {
         "placeholder": "Calls tab — coming soon"

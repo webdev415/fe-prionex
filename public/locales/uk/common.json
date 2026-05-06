@@ -292,7 +292,8 @@
         "loadHeatmapFailed": "Не вдалося завантажити теплову карту.",
         "loadScriptAnalyticsFailed": "Не вдалося завантажити аналітику скриптів.",
         "departmentNoOperators": "У цьому відділі немає операторів у поточному проєкті.",
-        "exportFailed": "Не вдалося експортувати"
+        "exportFailed": "Не вдалося експортувати",
+        "callNotFound": "Дзвінок не знайдено"
       },
       "calls": {
         "placeholder": "Вкладка «Дзвінки» — незабаром"
