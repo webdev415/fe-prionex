@@ -99,13 +99,21 @@ export function useCreateInteraction() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.activities(variables.clientId) })
-      // Refetch client tags after delays — auto-tagging rules run async via RabbitMQ/Celery
+      // Refetch client tags after delays — auto-tagging rules run async via
+      // RabbitMQ/Celery. 2s/5s покрывают типичный happy-path; 10s/15s —
+      // страховка от просевшей очереди Celery или повторов через DLQ.
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['clients', variables.clientId, 'tags'] })
       }, 2000)
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['clients', variables.clientId, 'tags'] })
       }, 5000)
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['clients', variables.clientId, 'tags'] })
+      }, 10000)
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['clients', variables.clientId, 'tags'] })
+      }, 15000)
       toast.success(
         t('pages.clients.modals.addNote.successMessage', 'Interaction added successfully')
       )

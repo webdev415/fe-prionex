@@ -3291,6 +3291,7 @@
         },
         "operators": {
           "eq": "дорівнює",
+          "ne": "не дорівнює",
           "neq": "не дорівнює",
           "gt": "більше",
           "gte": "більше або дорівнює",
@@ -3397,6 +3398,9 @@
           "replace_tag": "Замінити тег"
         },
         "selectField": "Оберіть поле",
+        "selectEvent": "Оберіть подію...",
+        "customEvent": "Своє значення...",
+        "eventHint": "Оберіть системну подію або введіть свою",
         "executionCount": "Виконань",
         "lastExecuted": "Останній запуск",
         "neverExecuted": "—",
@@ -3416,6 +3420,49 @@
           "status": "Статус клієнта",
           "has_tag": "Має тег",
           "not_has_tag": "Не має тег"
+        },
+        "eventPayloadFields": {
+          "interaction_id": "ID взаємодії",
+          "result_name": "Результат",
+          "type_code": "Тип взаємодії",
+          "channel": "Канал",
+          "direction": "Напрямок",
+          "payment_id": "ID платежу",
+          "payment_number": "Номер платежу",
+          "debt_id": "ID боргу",
+          "amount": "Сума",
+          "payment_method": "Метод оплати",
+          "payment_date": "Дата платежу",
+          "payment_confirmation_date": "Дата підтвердження платежу",
+          "status": "Статус",
+          "verified_by_user_id": "Верифікував (ID)",
+          "verified_at": "Дата верифікації",
+          "recorded_by_user_id": "Записав (ID)",
+          "remaining_debt": "Залишок боргу",
+          "sms_id": "ID SMS",
+          "message_id": "ID повідомлення",
+          "phone_number": "Номер телефону",
+          "template_name": "Шаблон SMS",
+          "segments": "Сегменти SMS",
+          "gateway_provider": "Шлюз провайдера",
+          "call_id": "ID дзвінка",
+          "outcome": "Результат дзвінка",
+          "disposition": "Диспозиція",
+          "agent_extension": "Внутрішній номер оператора",
+          "score": "Бал",
+          "risk_score": "Бал ризику",
+          "previous_score": "Попередній бал",
+          "score_change": "Зміна балу",
+          "algorithm_version": "Версія алгоритму",
+          "calculation_reason": "Причина розрахунку",
+          "tax_id": "ІПН",
+          "source": "Джерело",
+          "import_batch_id": "ID пакета імпорту",
+          "contract_number": "Номер договору",
+          "old_amount": "Стара сума",
+          "new_amount": "Нова сума",
+          "old_status": "Старий статус",
+          "new_status": "Новий статус"
         },
         "validation": {
           "nameRequired": "Назва обов'язкова",
@@ -3470,7 +3517,28 @@
               "Threatens": "Погрожує",
               "Sent documents": "Надіслано документи",
               "No numbers": "Немає номерів",
-              "Numbers found": "Номери знайдено"
+              "Numbers found": "Номери знайдено",
+              "Agreement - Full payment": "Обіцянка — повна оплата",
+              "Agreement - Partial payment": "Обіцянка — часткова оплата",
+              "Agreement - Restructuring": "Обіцянка — реструктуризація",
+              "Agreement - Potential payment": "Обіцянка — можлива оплата",
+              "Payment reminder": "Нагадування про оплату"
+            },
+            "type_code": {
+              "INCOMING": "Вхідна",
+              "OUTGOING": "Вихідна",
+              "SEARCHING": "Пошук"
+            },
+            "channel": {
+              "call": "Дзвінок",
+              "messenger": "Месенджер",
+              "mail": "Пошта",
+              "chat": "Чат"
+            },
+            "direction": {
+              "inbound": "Вхідний",
+              "outbound": "Вихідний",
+              "system": "Системний"
             }
           }
         }
@@ -3505,6 +3573,18 @@
       },
       "helpBanner": "Потрібна допомога з налаштуванням тегів?",
       "helpLink": "Документація",
+      "trace": {
+        "cta": "Чому?",
+        "openAllHint": "Переглянути активність тегів цього клієнта",
+        "titleAll": "Активність тегів клієнта",
+        "titleSingle": "Чому «{{tag}}»?",
+        "empty": "Активність тегів для цього клієнта поки не зафіксована.",
+        "emptyForTag": "Для цього тега ще немає історії — можливо, його призначили вручну або до увімкнення трасування.",
+        "loadFailed": "Не вдалося завантажити трасування",
+        "entriesCount": "{{count}} подій на стрічці часу (новіші зверху)",
+        "actor": "ініціатор",
+        "action": "дія"
+      },
       "settings": {
         "description": "Управління випадаючими списками, подіями та умовами правил. Зміни застосовуються одразу до всіх форм.",
         "dictionarySettings": "Довідник тегів",

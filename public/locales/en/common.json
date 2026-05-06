@@ -2812,6 +2812,7 @@
         },
         "operators": {
           "eq": "equals",
+          "ne": "not equals",
           "neq": "not equals",
           "gt": "greater than",
           "gte": "greater or equal",
@@ -2918,6 +2919,9 @@
           "replace_tag": "Replace Tag"
         },
         "selectField": "Select field",
+        "selectEvent": "Select event...",
+        "customEvent": "Custom value...",
+        "eventHint": "Pick a system event or enter your own",
         "executionCount": "Executions",
         "lastExecuted": "Last Run",
         "neverExecuted": "—",
@@ -2937,6 +2941,49 @@
           "status": "Client Status",
           "has_tag": "Has Tag",
           "not_has_tag": "Does Not Have Tag"
+        },
+        "eventPayloadFields": {
+          "interaction_id": "Interaction ID",
+          "result_name": "Result",
+          "type_code": "Interaction type",
+          "channel": "Channel",
+          "direction": "Direction",
+          "payment_id": "Payment ID",
+          "payment_number": "Payment number",
+          "debt_id": "Debt ID",
+          "amount": "Amount",
+          "payment_method": "Payment method",
+          "payment_date": "Payment date",
+          "payment_confirmation_date": "Payment confirmation date",
+          "status": "Status",
+          "verified_by_user_id": "Verified by (user ID)",
+          "verified_at": "Verified at",
+          "recorded_by_user_id": "Recorded by (user ID)",
+          "remaining_debt": "Remaining debt",
+          "sms_id": "SMS ID",
+          "message_id": "Message ID",
+          "phone_number": "Phone number",
+          "template_name": "SMS template",
+          "segments": "SMS segments",
+          "gateway_provider": "Gateway provider",
+          "call_id": "Call ID",
+          "outcome": "Call outcome",
+          "disposition": "Disposition",
+          "agent_extension": "Agent extension",
+          "score": "Score",
+          "risk_score": "Risk score",
+          "previous_score": "Previous score",
+          "score_change": "Score change",
+          "algorithm_version": "Algorithm version",
+          "calculation_reason": "Calculation reason",
+          "tax_id": "Tax ID",
+          "source": "Source",
+          "import_batch_id": "Import batch ID",
+          "contract_number": "Contract number",
+          "old_amount": "Previous amount",
+          "new_amount": "New amount",
+          "old_status": "Previous status",
+          "new_status": "New status"
         },
         "validation": {
           "nameRequired": "Name is required",
@@ -2991,7 +3038,28 @@
               "Threatens": "Threatens",
               "Sent documents": "Sent documents",
               "No numbers": "No numbers",
-              "Numbers found": "Numbers found"
+              "Numbers found": "Numbers found",
+              "Agreement - Full payment": "Agreement - Full payment",
+              "Agreement - Partial payment": "Agreement - Partial payment",
+              "Agreement - Restructuring": "Agreement - Restructuring",
+              "Agreement - Potential payment": "Agreement - Potential payment",
+              "Payment reminder": "Payment reminder"
+            },
+            "type_code": {
+              "INCOMING": "Incoming",
+              "OUTGOING": "Outgoing",
+              "SEARCHING": "Searching"
+            },
+            "channel": {
+              "call": "Call",
+              "messenger": "Messenger",
+              "mail": "Mail",
+              "chat": "Chat"
+            },
+            "direction": {
+              "inbound": "Inbound",
+              "outbound": "Outbound",
+              "system": "System"
             }
           }
         }
@@ -3026,6 +3094,18 @@
       },
       "helpBanner": "Need help configuring tags?",
       "helpLink": "View documentation",
+      "trace": {
+        "cta": "Why?",
+        "openAllHint": "View tag activity for this client",
+        "titleAll": "Tag activity for this client",
+        "titleSingle": "Why \"{{tag}}\"?",
+        "empty": "No tag activity recorded for this client.",
+        "emptyForTag": "No history yet for this tag — it may have been assigned manually or before tracing was enabled.",
+        "loadFailed": "Failed to load trace",
+        "entriesCount": "{{count}} events on the timeline (newest first)",
+        "actor": "actor",
+        "action": "action"
+      },
       "settings": {
         "description": "Manage dropdown options, events, and rule conditions. Changes apply immediately to all forms.",
         "dictionarySettings": "Tag Dictionary",
