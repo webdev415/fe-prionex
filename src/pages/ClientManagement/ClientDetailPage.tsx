@@ -2785,11 +2785,14 @@ export function ClientDetailPage() {
                             </td>
                             <td className="py-2 pr-3">
                               <span className="text-dark-500 font-medium tracking-[-0.24px]">
-                                {contact.contactTypeCode
-                                  ? t(`contactTypes.${contact.contactTypeCode}`, {
-                                      defaultValue: contact.contactType,
-                                    })
-                                  : contact.contactType}
+                                {i18n.language === 'uk'
+                                  ? contact.contactType
+                                  : contact.contactTypeCode
+                                    ? t(`contactTypes.${contact.contactTypeCode}`, {
+                                        defaultValue: contact.contactType,
+                                      })
+                                    : contact.contactType}
+
                               </span>
                             </td>
                             <td className="py-2 pr-3">
@@ -2839,7 +2842,10 @@ export function ClientDetailPage() {
                                     <SelectContent>
                                       {contactTypes.map((ct) => (
                                         <SelectItem key={ct.id} value={String(ct.id)}>
-                                          {ct.name}
+                                           {i18n.language === 'uk'
+                                            ? ct.name
+                                            : t(`contactTypes.${ct.code}`)}
+
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
