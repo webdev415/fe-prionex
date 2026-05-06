@@ -7,6 +7,7 @@ import { setupChunkLoadRecovery } from './lib/chunkLoadRecovery.ts'
 import './lib/i18n'
 import './index.css'
 import App from './App.tsx'
+import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,9 +23,7 @@ setupChunkLoadRecovery()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <Suspense
-        fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}
-      >
+      <Suspense fallback={<AppLoadingFallback variant="shell" />}>
         <App />
         <Toaster />
       </Suspense>
