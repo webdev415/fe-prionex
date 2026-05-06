@@ -588,6 +588,8 @@ export function TagsPage() {
             triggerDetail = r.trigger_event
           } else if (r.trigger_type === 'schedule' && r.cron_expression) {
             triggerDetail = humanizeCron(r.cron_expression, t)
+          } else if (r.trigger_type === 'tag_expired' && r.trigger_tag_code) {
+            triggerDetail = r.trigger_tag_code
           }
 
           return (
