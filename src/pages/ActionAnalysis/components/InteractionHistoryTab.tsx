@@ -162,6 +162,7 @@ export function InteractionHistoryTab() {
             sortBy={barState.sort_by ?? 'date'}
             sortDir={barState.sort_dir ?? 'desc'}
             onSortChange={handleSortChange}
+            internalDateType={barState.internal_date_type}
           />
           {total > PAGE_SIZE && (
             <Pagination

@@ -17,10 +17,19 @@ export function GuestRoute({ children }: GuestRouteProps) {
   // Check both store state AND token existence (for page refresh scenarios)
   const hasToken = !!getAccessToken()
 
-  // If authenticated or has valid token, redirect to dashboard
+  // If authenticated or has valid token, redirect to dashboard.
+  // Preserve the original search + hash so shareable URLs (e.g. Action
+  // Analysis `?call_id=…`) survive a stale-token round-trip.
   if (isAuthenticated || hasToken) {
-    const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard'
-    return <Navigate to={from} replace />
+    const fromLocation = (
+      location.state as {
+        from?: { pathname: string; search?: string; hash?: string }
+      }
+    )?.from
+    const fromPath = fromLocation
+      ? `${fromLocation.pathname}${fromLocation.search ?? ''}${fromLocation.hash ?? ''}`
+      : '/dashboard'
+    return <Navigate to={fromPath} replace />
   }
 
   return <>{children}</>
