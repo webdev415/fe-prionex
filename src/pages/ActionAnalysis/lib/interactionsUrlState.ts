@@ -1,4 +1,5 @@
 import type {
+  InteractionInternalDateType,
   InteractionMonitoringFilters,
   InteractionMonitoringSortBy,
   InteractionMonitoringSortDir,
@@ -11,19 +12,12 @@ const DEFAULT_PERIOD: CallMonitoringPeriod = 'last_7d'
 const DEFAULT_SORT_BY: InteractionMonitoringSortBy = 'date'
 const DEFAULT_SORT_DIR: InteractionMonitoringSortDir = 'desc'
 
-export const INTERACTION_FILTERS_DEFAULT: InteractionBarState = {
-  period: DEFAULT_PERIOD,
-  customFromDate: undefined,
-  customToDate: undefined,
-  departmentId: null,
-  employeeIds: [],
-  result_ids: undefined,
-  contact_type_ids: undefined,
-  promise_amount_min: undefined,
-  promise_amount_max: undefined,
-  sort_by: DEFAULT_SORT_BY,
-  sort_dir: DEFAULT_SORT_DIR,
-}
+const INTERNAL_DATE_TYPES: InteractionInternalDateType[] = [
+  'promise_to_pay',
+  'next_action',
+  'follow_up',
+  'any',
+]
 
 export interface InteractionBarState {
   period?: CallMonitoringPeriod
@@ -35,8 +29,33 @@ export interface InteractionBarState {
   contact_type_ids?: number[]
   promise_amount_min?: number
   promise_amount_max?: number
+  // KAN-409 follow-up: internal-date filter (one combined filter; the date
+  // type chooses which column on the row to compare). Bounds are stored as
+  // local YYYY-MM-DD strings so they round-trip cleanly through the URL.
+  internal_date_type?: InteractionInternalDateType
+  internal_date_from?: string
+  internal_date_to?: string
+  channel?: string
   sort_by?: InteractionMonitoringSortBy
   sort_dir?: InteractionMonitoringSortDir
+}
+
+export const INTERACTION_FILTERS_DEFAULT: InteractionBarState = {
+  period: DEFAULT_PERIOD,
+  customFromDate: undefined,
+  customToDate: undefined,
+  departmentId: null,
+  employeeIds: [],
+  result_ids: undefined,
+  contact_type_ids: undefined,
+  promise_amount_min: undefined,
+  promise_amount_max: undefined,
+  internal_date_type: undefined,
+  internal_date_from: undefined,
+  internal_date_to: undefined,
+  channel: undefined,
+  sort_by: DEFAULT_SORT_BY,
+  sort_dir: DEFAULT_SORT_DIR,
 }
 
 export function readInteractionBarState(params: URLSearchParams): InteractionBarState {
@@ -54,6 +73,14 @@ export function readInteractionBarState(params: URLSearchParams): InteractionBar
     .map((s) => Number(s))
     .filter((n) => Number.isFinite(n) && n > 0)
 
+  const rawInternalType = params.get('internal_date_type')
+  const internalDateType = (INTERNAL_DATE_TYPES as readonly string[]).includes(
+    rawInternalType ?? ''
+  )
+    ? (rawInternalType as InteractionInternalDateType)
+    : undefined
+  const channelParam = params.get('channel')
+
   return {
     period,
     customFromDate: params.get('from_date') ?? undefined,
@@ -64,6 +91,10 @@ export function readInteractionBarState(params: URLSearchParams): InteractionBar
     contact_type_ids: contactTypeId ? [Number(contactTypeId)] : undefined,
     promise_amount_min: promiseMin ? Number(promiseMin) : undefined,
     promise_amount_max: promiseMax ? Number(promiseMax) : undefined,
+    internal_date_type: internalDateType,
+    internal_date_from: params.get('internal_from') ?? undefined,
+    internal_date_to: params.get('internal_to') ?? undefined,
+    channel: channelParam || undefined,
     sort_by: sortBy,
     sort_dir: sortDir,
   }
@@ -85,6 +116,10 @@ export function writeInteractionBarState(
   next.delete('sort_dir')
   next.delete('from_date')
   next.delete('to_date')
+  next.delete('internal_date_type')
+  next.delete('internal_from')
+  next.delete('internal_to')
+  next.delete('channel')
 
   if (state.departmentId != null) {
     next.set('department_id', String(state.departmentId))
@@ -101,6 +136,10 @@ export function writeInteractionBarState(
   if (contactTypeId) next.set('contact_type_id', String(contactTypeId))
   if (state.promise_amount_min != null) next.set('promise_min', String(state.promise_amount_min))
   if (state.promise_amount_max != null) next.set('promise_max', String(state.promise_amount_max))
+  if (state.internal_date_type) next.set('internal_date_type', state.internal_date_type)
+  if (state.internal_date_from) next.set('internal_from', state.internal_date_from)
+  if (state.internal_date_to) next.set('internal_to', state.internal_date_to)
+  if (state.channel) next.set('channel', state.channel)
   if (state.sort_by && state.sort_by !== DEFAULT_SORT_BY) next.set('sort_by', state.sort_by)
   if (state.sort_dir && state.sort_dir !== DEFAULT_SORT_DIR) next.set('sort_dir', state.sort_dir)
   if (state.period === 'custom' && state.customFromDate && state.customToDate) {
@@ -142,12 +181,30 @@ export function toInteractionMonitoringQuery(
     to_datetime = r.to_datetime
   }
 
+  // Internal-date range: convert YYYY-MM-DD bounds to ISO datetimes the
+  // backend can bind. Only forwarded when both a date type AND at least one
+  // bound are set — backend treats a date type with no bounds as a no-op.
+  let internal_date_from: string | undefined
+  let internal_date_to: string | undefined
+  if (state.internal_date_type && (state.internal_date_from || state.internal_date_to)) {
+    const r = localDateStringsToIsoRange(
+      state.internal_date_from ?? state.internal_date_to ?? '',
+      state.internal_date_to ?? state.internal_date_from ?? ''
+    )
+    internal_date_from = state.internal_date_from ? r.from_datetime : undefined
+    internal_date_to = state.internal_date_to ? r.to_datetime : undefined
+  }
+
   return {
     period: state.period,
     result_ids: state.result_ids,
     contact_type_ids: state.contact_type_ids,
     promise_amount_min: state.promise_amount_min,
     promise_amount_max: state.promise_amount_max,
+    internal_date_type: state.internal_date_type,
+    internal_date_from,
+    internal_date_to,
+    channel: state.channel,
     sort_by: state.sort_by,
     sort_dir: state.sort_dir,
     user_ids,

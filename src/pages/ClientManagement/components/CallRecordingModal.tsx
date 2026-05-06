@@ -6,6 +6,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { Modal, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -26,6 +27,13 @@ export interface CallRecordingModalProps {
     duration: string
     phone: string
     call_id?: string // Optional call ID for fetching recording
+    /**
+     * Optional client ID. When set, the rendered `clientName` becomes a
+     * clickable link to `/dashboard/clients/{clientId}`. Used by the Action
+     * Analysis Call List flow (KAN-409 follow-up); operator-side call sites
+     * leave it unset and get the legacy plain-text rendering.
+     */
+    clientId?: number | null
   }
   onMinimize?: () => void
 }
@@ -292,7 +300,18 @@ export function CallRecordingModal({
             {callData.type}
           </div>
           <div className="text-dark-500 self-stretch text-center text-sm leading-[150%] font-light tracking-[-0.36px] sm:text-[18px]">
-            {callData.clientName} - {formatDate(callData.date, callData.time)}
+            {callData.clientId != null ? (
+              <Link
+                to={`/dashboard/clients/${callData.clientId}`}
+                className="text-primary-600 hover:underline"
+                onClick={onClose}
+              >
+                {callData.clientName}
+              </Link>
+            ) : (
+              callData.clientName
+            )}{' '}
+            - {formatDate(callData.date, callData.time)}
           </div>
           <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:gap-2">
             <div className="flex w-full flex-1 items-start gap-2 sm:w-auto">

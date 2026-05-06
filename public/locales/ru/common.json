@@ -307,6 +307,18 @@
           "all": "Все",
           "answered": "Отвечен",
           "notAnswered": "Не отвечен"
+        },
+        "channel": "Канал",
+        "allChannels": "Все",
+        "internalDateType": "Внутренняя дата",
+        "internalDateTypeNone": "Выкл.",
+        "internalDateFrom": "Внутренняя дата от",
+        "internalDateTo": "Внутренняя дата до",
+        "internalDateTypes": {
+          "promiseToPay": "Обещание оплаты",
+          "nextAction": "Перезвонить / следующее действие",
+          "followUp": "Уточнение",
+          "any": "Любая из перечисленных"
         }
       },
       "columns": {
@@ -324,7 +336,11 @@
         "employee": "Сотрудник",
         "contactType": "Тип контакта",
         "result": "Результат",
-        "promiseAmount": "Сумма обещания"
+        "promiseAmount": "Сумма обещания",
+        "responsibleAtCreation": "Ответственный на момент создания",
+        "currentResponsible": "Текущий ответственный",
+        "internalDate": "Дата (обещание / перезвон)",
+        "channel": "Канал"
       },
       "callType": {
         "incoming": "Входящий",
@@ -365,7 +381,8 @@
         "loadHeatmapFailed": "Не удалось загрузить тепловую карту.",
         "loadScriptAnalyticsFailed": "Не удалось загрузить аналитику скриптов.",
         "departmentNoOperators": "В этом отделе нет операторов в текущем проекте.",
-        "exportFailed": "Не удалось экспортировать"
+        "exportFailed": "Не удалось экспортировать",
+        "callNotFound": "Звонок не найден"
       },
       "calls": {
         "placeholder": "Вкладка «Звонки» — скоро будет доступна"

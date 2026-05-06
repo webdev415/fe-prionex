@@ -54,6 +54,8 @@ export interface CallMonitoringResponse {
 export type InteractionMonitoringSortBy = 'date' | 'promise_amount'
 export type InteractionMonitoringSortDir = 'asc' | 'desc'
 
+export type InteractionInternalDateType = 'promise_to_pay' | 'next_action' | 'follow_up' | 'any'
+
 export interface InteractionMonitoringFilters {
   user_ids?: number[]
   period?: CallMonitoringPeriod
@@ -63,6 +65,14 @@ export interface InteractionMonitoringFilters {
   promise_amount_max?: number
   result_ids?: number[]
   contact_type_ids?: number[]
+  // KAN-409 follow-up: filter on the manager-set internal interaction dates
+  // (promise / next-action / follow-up). `internal_date_type='any'` ORs
+  // across all three columns; date bounds are required for the filter to
+  // apply.
+  internal_date_type?: InteractionInternalDateType
+  internal_date_from?: string
+  internal_date_to?: string
+  channel?: string
   sort_by?: InteractionMonitoringSortBy
   sort_dir?: InteractionMonitoringSortDir
   page?: number
@@ -85,6 +95,11 @@ export interface InteractionMonitoringItem {
   result_code: string | null
   promise_to_pay_amount: string | null
   promise_to_pay_date: string | null
+  next_action_date: string | null
+  follow_up_date: string | null
+  channel: string | null
+  current_responsible_user_id: number | null
+  current_responsible_user_name: string | null
   summary: string | null
 }
 

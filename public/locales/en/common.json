@@ -304,6 +304,18 @@
           "all": "All",
           "answered": "Answered",
           "notAnswered": "Not answered"
+        },
+        "channel": "Channel",
+        "allChannels": "All",
+        "internalDateType": "Internal date",
+        "internalDateTypeNone": "Off",
+        "internalDateFrom": "Internal date from",
+        "internalDateTo": "Internal date to",
+        "internalDateTypes": {
+          "promiseToPay": "Promise to pay",
+          "nextAction": "Callback / next action",
+          "followUp": "Follow-up",
+          "any": "Any of the above"
         }
       },
       "columns": {
@@ -321,7 +333,11 @@
         "employee": "Employee",
         "contactType": "Contact type",
         "result": "Result",
-        "promiseAmount": "Promise amount"
+        "promiseAmount": "Promise amount",
+        "responsibleAtCreation": "Responsible at creation",
+        "currentResponsible": "Current responsible",
+        "internalDate": "Date (promise / callback)",
+        "channel": "Channel"
       },
       "callType": {
         "incoming": "Incoming",
@@ -362,7 +378,8 @@
         "loadHeatmapFailed": "Failed to load the heatmap.",
         "loadScriptAnalyticsFailed": "Failed to load script analytics.",
         "departmentNoOperators": "No operators in this department for the current project.",
-        "exportFailed": "Export failed"
+        "exportFailed": "Export failed",
+        "callNotFound": "Call not found"
       },
       "calls": {
         "placeholder": "Calls tab — coming soon"

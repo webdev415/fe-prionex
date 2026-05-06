@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { LinkButton } from '@/components/ui/LinkButton'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatDateTime } from '@/lib/formatters'
@@ -24,11 +23,16 @@ function isAnswered(c: CallMonitoringItem): boolean {
 interface Props {
   data: CallMonitoringItem[]
   loading?: boolean
-  onPlayRecording: (call: CallMonitoringItem) => void
-  onViewDetail: (call: CallMonitoringItem) => void
+  /**
+   * Single open-the-call entry point — the row's recording button writes
+   * `?call_id=…` to the URL, the parent (`CallsTab`) opens the merged
+   * Recording + Details modal in response. KAN-409 follow-up collapsed the
+   * separate "View detail" action into this same path.
+   */
+  onOpenCall: (call: CallMonitoringItem) => void
 }
 
-export function CallsTable({ data, onPlayRecording, onViewDetail }: Props) {
+export function CallsTable({ data, onOpenCall }: Props) {
   const { t } = useTranslation('common')
 
   const rows: Row[] = data.map((c) => ({ ...c, id: c.call_id }))
@@ -125,7 +129,7 @@ export function CallsTable({ data, onPlayRecording, onViewDetail }: Props) {
           <button
             type="button"
             disabled={!enabled}
-            onClick={() => enabled && onPlayRecording(r)}
+            onClick={() => enabled && onOpenCall(r)}
             aria-label={t('pages.actionAnalysis.actions.playRecording', 'Play recording')}
             className={cn(
               'inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors',
@@ -138,24 +142,6 @@ export function CallsTable({ data, onPlayRecording, onViewDetail }: Props) {
           </button>
         )
       },
-    },
-    {
-      key: 'viewDetail',
-      header: t('pages.actionAnalysis.columns.viewDetail', 'View detail'),
-      align: 'left',
-      render: (r) =>
-        isAnswered(r) ? (
-          <LinkButton
-            variant="regular-secondary"
-            size="xs"
-            onClick={() => onViewDetail(r)}
-            leftIcon={<Icons.View size={14} strokeWidth={2} />}
-          >
-            {t('pages.actionAnalysis.actions.viewDetail', 'View detail')}
-          </LinkButton>
-        ) : (
-          <span className="text-sm text-gray-400">—</span>
-        ),
     },
   ]
 
