@@ -65,6 +65,16 @@
     "logout": "Вийти",
     "loggingOut": "Вихід..."
   },
+  "components": {
+    "pagination": {
+      "rowsPerPage": "Рядків на сторінці:",
+      "previousPage": "Попередня сторінка",
+      "nextPage": "Наступна сторінка",
+      "goToPage": "Перейти на сторінку {{page}}",
+      "page": "Сторінка",
+      "of": "з"
+    }
+  },
   "status": {
     "loading": "Завантаження...",
     "success": "Успішно",

@@ -65,6 +65,16 @@
     "logout": "Выйти",
     "loggingOut": "Выход..."
   },
+  "components": {
+    "pagination": {
+      "rowsPerPage": "Строк на странице:",
+      "previousPage": "Предыдущая страница",
+      "nextPage": "Следующая страница",
+      "goToPage": "Перейти на страницу {{page}}",
+      "page": "Страница",
+      "of": "из"
+    }
+  },
   "status": {
     "loading": "Загрузка...",
     "success": "Успешно",

@@ -65,6 +65,16 @@
     "logout": "Logout",
     "loggingOut": "Logging out..."
   },
+  "components": {
+    "pagination": {
+      "rowsPerPage": "Rows per page:",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "goToPage": "Go to page {{page}}",
+      "page": "Page",
+      "of": "of"
+    }
+  },
   "status": {
     "loading": "Loading...",
     "success": "Success",

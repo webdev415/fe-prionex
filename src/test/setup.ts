@@ -300,6 +300,12 @@ vi.mock('react-i18next', () => ({
         'pages.clients.modals.tagsDropdown.apply': 'Apply',
         'pages.clients.filters.min': 'Min',
         'pages.clients.filters.max': 'Max',
+        'components.pagination.rowsPerPage': 'Rows per page:',
+        'components.pagination.previousPage': 'Previous page',
+        'components.pagination.nextPage': 'Next page',
+        'components.pagination.goToPage': 'Go to page {{page}}',
+        'components.pagination.page': 'Page',
+        'components.pagination.of': 'of',
       }
       const template = translations[key] || key
       if (options && typeof template === 'string' && template.includes('{{')) {
