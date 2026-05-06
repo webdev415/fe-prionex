@@ -24,6 +24,7 @@
     "chainBuilder": "Конструктор ланцюжків",
     "taManagement": "Цільові дії",
     "interactionLog": "Журнал взаємодій",
+    "documentGeneration": "Генерація документів",
     "transactions": "Транзакції",
     "operations": "Операції",
     "bulkOperatorAssignment": "Масове призначення операторів",
@@ -2446,8 +2447,12 @@
         "notInPast": "Дата не може бути в минулому"
       },
       "modals": {
-        "create": { "title": "Створення ланцюжка TA" },
-        "edit": { "title": "Редагування ланцюжка TA" }
+        "create": {
+          "title": "Створення ланцюжка TA"
+        },
+        "edit": {
+          "title": "Редагування ланцюжка TA"
+        }
       },
       "errors": {
         "nameRequired": "Назва обов'язкова",
@@ -2511,8 +2516,12 @@
         "addValuePlaceholder": "Додати значення..."
       },
       "modals": {
-        "create": { "title": "Створення цільової дії" },
-        "edit": { "title": "Редагування цільової дії" }
+        "create": {
+          "title": "Створення цільової дії"
+        },
+        "edit": {
+          "title": "Редагування цільової дії"
+        }
       },
       "errors": {
         "nameRequired": "Назва обов'язкова",
@@ -2526,6 +2535,118 @@
         "cloned": "Цільову дію скопійовано",
         "hidden": "Цільову дію приховано",
         "unhidden": "Цільову дію відновлено"
+      }
+    },
+    "documentGeneration": {
+      "title": "Генерація документів",
+      "tabs": {
+        "journal": "Журнал документів",
+        "templates": "Шаблони документів"
+      },
+      "documentTypes": {
+        "passport": "Паспорт",
+        "inn": "ІНН",
+        "contract": "Договір",
+        "income": "Довідка про доходи",
+        "outcome": "Витяг / виписка",
+        "signature": "Цифровий підпис",
+        "other": "Інше"
+      },
+      "actions": {
+        "uploaded": "Завантажено",
+        "generated": "Згенеровано"
+      },
+      "filters": {
+        "documentType": "Тип документа",
+        "action": "Дія",
+        "operator": "Оператор",
+        "client": "Клієнт",
+        "clientPlaceholder": "Ім'я",
+        "creditor": "Кредитор",
+        "creditorPlaceholder": "ID кредиту або назва кредитора",
+        "dateFrom": "Дата від",
+        "dateTo": "Дата до",
+        "all": "Усі",
+        "reset": "Скинути"
+      },
+      "journal": {
+        "columns": {
+          "documentName": "Назва документа",
+          "documentType": "Тип документа",
+          "client": "Клієнт",
+          "creditId": "ID кредиту",
+          "creditor": "Кредитор",
+          "action": "Дія",
+          "performedBy": "Виконав",
+          "dateTime": "Дата та час"
+        },
+        "loading": "Завантаження…",
+        "empty": "Документи не знайдено.",
+        "loadError": "Не вдалося завантажити журнал документів."
+      },
+      "templates": {
+        "comingSoon": "Керування шаблонами буде додано в наступному релізі.",
+        "create": "Створити шаблон",
+        "intro": "Багаторазові шаблони документів зі змінними-плейсхолдерами.",
+        "empty": "Ще немає шаблонів.",
+        "loading": "Завантаження...",
+        "loadError": "Не вдалося завантажити шаблони.",
+        "columns": {
+          "name": "Назва шаблона",
+          "preview": "Превʼю",
+          "variables": "Змінні",
+          "updated": "Оновлено",
+          "actions": "Дії"
+        },
+        "modals": {
+          "createTitle": "Створити шаблон",
+          "editTitle": "Редагувати шаблон",
+          "subtitle": "Використовуйте {{variable_name}} для вставки динамічних даних.",
+          "deleteTitle": "Видалити шаблон",
+          "deleteConfirm": "Ви впевнені, що хочете видалити цей шаблон?",
+          "deleteWarning": "Цю дію не можна скасувати."
+        },
+        "form": {
+          "name": "Назва шаблона",
+          "namePlaceholder": "напр. Лист-вимога",
+          "body": "Тіло шаблона",
+          "bodyPlaceholder": "Складайте шаблон тут. Вставляйте змінні з правої панелі.",
+          "preview": "Превʼю (тестові дані)",
+          "previewEmpty": "Почніть друкувати, щоб побачити превʼю.",
+          "variables": "Змінні",
+          "variablesHelp": "Натисніть змінну, щоб вставити її в позицію курсора."
+        },
+        "variableGroups": {
+          "client": "Клієнт",
+          "credit": "Кредит",
+          "system": "Система"
+        },
+        "variables": {
+          "clientFullName": "Повне імʼя клієнта",
+          "clientFirstName": "Імʼя клієнта",
+          "clientLastName": "Прізвище клієнта",
+          "clientTaxId": "Податковий номер (ІПН)",
+          "clientPhone": "Основний телефон",
+          "clientEmail": "Основний email",
+          "clientAddress": "Зареєстрована адреса",
+          "creditId": "ID кредиту / номер договору",
+          "creditorName": "Назва кредитора",
+          "debtAmount": "Сума заборгованості",
+          "debtCurrency": "Валюта боргу",
+          "contractDate": "Дата підписання договору",
+          "dueDate": "Наступна дата платежу",
+          "today": "Сьогоднішня дата",
+          "operatorName": "Повне імʼя оператора"
+        },
+        "errors": {
+          "nameRequired": "Назва шаблона обовʼязкова",
+          "bodyRequired": "Тіло шаблона обовʼязкове"
+        },
+        "messages": {
+          "created": "Шаблон створено",
+          "updated": "Шаблон оновлено",
+          "deleted": "Шаблон видалено"
+        }
       }
     },
     "smsTemplates": {

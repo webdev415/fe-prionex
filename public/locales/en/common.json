@@ -24,6 +24,7 @@
     "chainBuilder": "Chain Builder",
     "taManagement": "Target Actions",
     "interactionLog": "Interaction Log",
+    "documentGeneration": "Document Generation",
     "transactions": "Transactions",
     "operations": "Operations",
     "bulkOperatorAssignment": "Bulk Operator Assignment",
@@ -2346,6 +2347,118 @@
         "removed": "Template removed"
       }
     },
+    "documentGeneration": {
+      "title": "Document Generation",
+      "tabs": {
+        "journal": "Document Journal",
+        "templates": "Document Templates"
+      },
+      "documentTypes": {
+        "passport": "Passport",
+        "inn": "Tax ID",
+        "contract": "Contract",
+        "income": "Income statement",
+        "outcome": "Extract / statement",
+        "signature": "Digital signature",
+        "other": "Other"
+      },
+      "actions": {
+        "uploaded": "Uploaded",
+        "generated": "Generated"
+      },
+      "filters": {
+        "documentType": "Document type",
+        "action": "Action",
+        "operator": "Operator",
+        "client": "Client",
+        "clientPlaceholder": "Name",
+        "creditor": "Creditor",
+        "creditorPlaceholder": "Credit ID or creditor name",
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "all": "All",
+        "reset": "Reset"
+      },
+      "journal": {
+        "columns": {
+          "documentName": "Document Name",
+          "documentType": "Document Type",
+          "client": "Client",
+          "creditId": "Credit ID",
+          "creditor": "Creditor",
+          "action": "Action",
+          "performedBy": "Performed by",
+          "dateTime": "Date and time"
+        },
+        "loading": "Loading…",
+        "empty": "No documents found.",
+        "loadError": "Failed to load document journal."
+      },
+      "templates": {
+        "comingSoon": "Template management is coming in a follow-up release.",
+        "create": "Create template",
+        "intro": "Reusable document bodies with variable placeholders.",
+        "empty": "No templates yet.",
+        "loading": "Loading...",
+        "loadError": "Failed to load templates.",
+        "columns": {
+          "name": "Template name",
+          "preview": "Preview",
+          "variables": "Variables",
+          "updated": "Updated",
+          "actions": "Actions"
+        },
+        "modals": {
+          "createTitle": "Create template",
+          "editTitle": "Edit template",
+          "subtitle": "Use {{variable_name}} to insert dynamic data.",
+          "deleteTitle": "Delete template",
+          "deleteConfirm": "Are you sure you want to delete this template?",
+          "deleteWarning": "This action cannot be undone."
+        },
+        "form": {
+          "name": "Template name",
+          "namePlaceholder": "e.g. Demand letter",
+          "body": "Template body",
+          "bodyPlaceholder": "Compose your template here. Insert variables from the right-hand panel.",
+          "preview": "Preview (sample data)",
+          "previewEmpty": "Start typing to see a live preview.",
+          "variables": "Variables",
+          "variablesHelp": "Click a variable to insert it at the cursor."
+        },
+        "variableGroups": {
+          "client": "Client",
+          "credit": "Credit",
+          "system": "System"
+        },
+        "variables": {
+          "clientFullName": "Client's full name",
+          "clientFirstName": "Client's first name",
+          "clientLastName": "Client's last name",
+          "clientTaxId": "Tax ID (TIN)",
+          "clientPhone": "Primary phone",
+          "clientEmail": "Primary email",
+          "clientAddress": "Registered address",
+          "creditId": "Credit ID / contract number",
+          "creditorName": "Creditor name",
+          "debtAmount": "Outstanding debt amount",
+          "debtCurrency": "Debt currency",
+          "contractDate": "Contract sign date",
+          "dueDate": "Next payment due date",
+          "today": "Today's date",
+          "operatorName": "Operator full name"
+        },
+        "errors": {
+          "nameRequired": "Template name is required",
+          "bodyRequired": "Template body is required"
+        },
+        "messages": {
+          "created": "Template created",
+          "updated": "Template updated",
+          "deleted": "Template deleted"
+        }
+      }
+    },
     "interactionLog": {
       "title": "Interaction Log",
       "export": "Export CSV",
@@ -2470,8 +2583,12 @@
         "notInPast": "Date cannot be in the past"
       },
       "modals": {
-        "create": { "title": "Create TA Chain" },
-        "edit": { "title": "Edit TA Chain" }
+        "create": {
+          "title": "Create TA Chain"
+        },
+        "edit": {
+          "title": "Edit TA Chain"
+        }
       },
       "errors": {
         "nameRequired": "Name is required",
@@ -2539,8 +2656,12 @@
         "positive": "Positive"
       },
       "modals": {
-        "create": { "title": "Create Target Action" },
-        "edit": { "title": "Edit Target Action" }
+        "create": {
+          "title": "Create Target Action"
+        },
+        "edit": {
+          "title": "Edit Target Action"
+        }
       },
       "errors": {
         "nameRequired": "Name is required",
