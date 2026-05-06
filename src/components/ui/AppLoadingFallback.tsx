@@ -25,12 +25,15 @@ export function AppLoadingFallback({ variant = 'shell' }: AppLoadingFallbackProp
       )}
     >
       <span className="sr-only">{t('status.loading')}</span>
+      {/* Shell: gray ring + green top segment (same pattern as SearchResults spinner).
+          Avoid mixing border-t-transparent with competing border-* utilities — merge order
+          can drop the accent stroke on light backgrounds so the spinner looks like a dead gray dot. */}
       <div
         className={cn(
-          'h-10 w-10 animate-spin rounded-full border-2 border-t-transparent',
+          'shrink-0 rounded-full border-[3px] motion-safe:animate-spin',
           variant === 'auth'
-            ? 'border-white/20 border-t-white'
-            : 'border-t-secondary-800 border-gray-200'
+            ? 'h-12 w-12 border-white/25 border-t-white'
+            : 'border-t-primary-600 h-12 w-12 border-gray-300'
         )}
         aria-hidden
       />
