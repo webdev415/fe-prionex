@@ -8,6 +8,7 @@ import {
   type CallMonitoringFilters,
   type CallMonitoringItem,
 } from '@/features/actionAnalysis'
+import { useCallDetail } from '@/features/calls/hooks/useCall'
 import { Pagination } from '@/components/ui/Pagination'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import { formatDateTime } from '@/lib/formatters'
@@ -19,9 +20,9 @@ import {
   toCallMonitoringQuery,
 } from '../lib/callsUrlState'
 import type { CallFiltersBarValue } from './CallFiltersBar'
-import { CallDetailModal } from './CallDetailModal'
 import { CallFiltersBar } from './CallFiltersBar'
 import { CallsTable } from './CallsTable'
+import { CallDetailsPanel, type CallDetailLike } from './CallDetailsPanel'
 
 const PAGE_SIZE = 20
 const CALL_ID_PARAM = 'call_id'
@@ -73,23 +74,51 @@ export function CallsTab() {
   }
   const { data, isFetching, error } = useCallMonitoring(queryFilters, callsQueryEnabled)
 
-  const [recordingCall, setRecordingCall] = useState<CallMonitoringItem | null>(null)
-
-  // Detail modal: source of truth is the URL (?call_id=…) so links are shareable.
+  // Modal state lives entirely in the URL (?call_id=…) so deep-links work:
+  // pasting the URL into another browser opens the modal with that exact call.
   const selectedCallId = searchParams.get(CALL_ID_PARAM)
   const calls = useMemo(() => data?.calls ?? [], [data?.calls])
-  const selectedCall = useMemo(
+  const callFromList = useMemo<CallMonitoringItem | null>(
     () => (selectedCallId ? (calls.find((c) => c.call_id === selectedCallId) ?? null) : null),
     [selectedCallId, calls]
   )
 
-  const handleViewDetail = (call: CallMonitoringItem) => {
+  // Deep-link fallback: when the URL references a call that isn't in the
+  // current page (different filters / different page / fresh tab), fetch it
+  // directly from the call-service. The modal still opens; the detail panel
+  // shows whatever fields the single-fetch endpoint returns.
+  const needsFallbackFetch = !!selectedCallId && !callFromList
+  const { data: fetchedDetail, isFetching: isFetchingDetail } = useCallDetail(
+    needsFallbackFetch ? selectedCallId : null
+  )
+
+  const detailForModal = useMemo<CallDetailLike | null>(() => {
+    if (callFromList) return callFromList
+    if (fetchedDetail) {
+      return {
+        call_id: fetchedDetail.call_id,
+        agent_extension: fetchedDetail.agent_extension,
+        customer_number: fetchedDetail.customer_number,
+        direction: null,
+        state: fetchedDetail.state,
+        outcome: fetchedDetail.outcome ?? null,
+        initiated_at: fetchedDetail.initiated_at,
+        talk_duration: fetchedDetail.talk_duration ?? null,
+        client_id: null,
+      }
+    }
+    return null
+  }, [callFromList, fetchedDetail])
+
+  const isModalOpen = !!selectedCallId && (!!callFromList || !!fetchedDetail || isFetchingDetail)
+
+  const handleOpenCall = (call: CallMonitoringItem) => {
     const next = new URLSearchParams(searchParams)
     next.set(CALL_ID_PARAM, call.call_id)
     setSearchParams(next, { replace: false })
   }
 
-  const handleCloseDetail = () => {
+  const handleCloseCall = () => {
     const next = new URLSearchParams(searchParams)
     next.delete(CALL_ID_PARAM)
     setSearchParams(next, { replace: false })
@@ -133,6 +162,24 @@ export function CallsTab() {
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
+  // Modal feed: prefer the row from the listing (richer fields like client_id
+  // and direction), fall back to the single-fetch when deep-linked.
+  const modalCallData = useMemo(() => {
+    if (!detailForModal) return null
+    const dt = formatDateTime(detailForModal.initiated_at)
+    const [date = '', time = ''] = dt.split(' ')
+    return {
+      type: detailForModal.direction ?? 'call',
+      clientName: detailForModal.client_id ? `#${detailForModal.client_id}` : '',
+      date,
+      time,
+      operator: operatorLookup[detailForModal.agent_extension] ?? detailForModal.agent_extension,
+      duration: formatDuration(detailForModal.talk_duration),
+      phone: detailForModal.customer_number,
+      call_id: detailForModal.call_id,
+    }
+  }, [detailForModal, operatorLookup])
+
   return (
     <div className="flex flex-col gap-4">
       <CallFiltersBar
@@ -164,12 +211,7 @@ export function CallsTab() {
         </div>
       ) : (
         <>
-          <CallsTable
-            data={calls}
-            loading={isFetching}
-            onPlayRecording={setRecordingCall}
-            onViewDetail={handleViewDetail}
-          />
+          <CallsTable data={calls} loading={isFetching} onOpenCall={handleOpenCall} />
           {total > PAGE_SIZE && (
             <Pagination
               currentPage={page}
@@ -182,30 +224,22 @@ export function CallsTab() {
         </>
       )}
 
-      {recordingCall && (
+      {isModalOpen && modalCallData && (
         <CallRecordingModal
           open={true}
-          onClose={() => setRecordingCall(null)}
-          callData={{
-            type: recordingCall.direction ?? 'call',
-            clientName: recordingCall.client_id ? `#${recordingCall.client_id}` : '',
-            date: formatDateTime(recordingCall.initiated_at).split(' ')[0] ?? '',
-            time: formatDateTime(recordingCall.initiated_at).split(' ')[1] ?? '',
-            operator:
-              operatorLookup[recordingCall.agent_extension] ?? recordingCall.agent_extension,
-            duration: formatDuration(recordingCall.talk_duration),
-            phone: recordingCall.customer_number,
-            call_id: recordingCall.call_id,
-          }}
+          onClose={handleCloseCall}
+          callData={modalCallData}
+          detailPanel={
+            <CallDetailsPanel
+              detail={detailForModal}
+              operatorName={
+                detailForModal ? operatorLookup[detailForModal.agent_extension] : undefined
+              }
+              onClientLinkClick={handleCloseCall}
+            />
+          }
         />
       )}
-
-      <CallDetailModal
-        open={!!selectedCall}
-        onClose={handleCloseDetail}
-        call={selectedCall}
-        operatorName={selectedCall ? operatorLookup[selectedCall.agent_extension] : undefined}
-      />
     </div>
   )
 }

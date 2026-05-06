@@ -30,6 +30,21 @@ export function useCallDetails(callId: string | null) {
   })
 }
 
+/**
+ * Non-polling variant of useCallDetails. Designed for the deep-link case
+ * (e.g. opening Action Analysis with `?call_id=…` for a call that's outside
+ * the current filter window) — completed calls don't change, so a 5-minute
+ * staleTime is plenty.
+ */
+export function useCallDetail(callId: string | null) {
+  return useQuery({
+    queryKey: ['callDetails', callId],
+    queryFn: () => callService.getCallDetails(callId!),
+    enabled: !!callId,
+    staleTime: 5 * 60_000,
+  })
+}
+
 export function useCallHistory(clientId: number | null, filters?: CallHistoryFilters) {
   return useQuery({
     queryKey: ['callHistory', clientId, filters],

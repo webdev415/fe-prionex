@@ -28,6 +28,12 @@ export interface CallRecordingModalProps {
     call_id?: string // Optional call ID for fetching recording
   }
   onMinimize?: () => void
+  /**
+   * Optional content rendered between the call summary and the audio player.
+   * Action Analysis uses this to host a collapsible Call Details panel
+   * (KAN-409 follow-up).
+   */
+  detailPanel?: React.ReactNode
 }
 
 const formatTime = (seconds: number): string => {
@@ -41,6 +47,7 @@ export function CallRecordingModal({
   onClose,
   callData,
   onMinimize,
+  detailPanel,
 }: CallRecordingModalProps) {
   const { t } = useTranslation('common')
   const { setMinimizedCall, setOpenCallModal, minimizedCall } = useCallStore()
@@ -321,6 +328,8 @@ export function CallRecordingModal({
             </div>
           </div>
         </div>
+
+        {detailPanel}
 
         {/* Audio Player */}
         <div className="relative">

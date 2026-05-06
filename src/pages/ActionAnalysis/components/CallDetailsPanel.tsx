@@ -1,19 +1,37 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
-import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatDateTime } from '@/lib/formatters'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
-import type { CallMonitoringItem } from '@/features/actionAnalysis'
 
-interface CallDetailModalProps {
-  open: boolean
-  onClose: () => void
-  call: CallMonitoringItem | null
+/**
+ * Subset of fields the panel renders. Both `CallMonitoringItem` (table row)
+ * and `CallDetailResponse` (deep-link single fetch) satisfy this shape — the
+ * panel is intentionally permissive so a partially-loaded detail still
+ * renders gracefully.
+ */
+export interface CallDetailLike {
+  call_id: string
+  agent_extension: string
+  customer_number: string
+  direction?: string | null
+  state?: string | null
+  outcome?: string | null
+  initiated_at: string
+  talk_duration?: number | null
+  client_id?: number | null
+}
+
+interface Props {
+  detail: CallDetailLike | null | undefined
   /** Resolve agent_extension → full name (looked up from operators in the parent). */
   operatorName?: string
+  /** Optional close callback for the parent modal — passed to the client link's onClick. */
+  onClientLinkClick?: () => void
+  /** Default-collapsed; pass `true` to open by default. */
+  defaultOpen?: boolean
 }
 
 function formatDuration(seconds: number | null | undefined): string {
@@ -23,8 +41,8 @@ function formatDuration(seconds: number | null | undefined): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-function isAnswered(c: CallMonitoringItem): boolean {
-  return c.outcome === 'answered' || c.state === 'COMPLETED'
+function isAnswered(d: CallDetailLike): boolean {
+  return d.outcome === 'answered' || d.state === 'COMPLETED'
 }
 
 interface FieldRowProps {
@@ -43,24 +61,42 @@ function FieldRow({ label, children }: FieldRowProps) {
   )
 }
 
-export function CallDetailModal({ open, onClose, call, operatorName }: CallDetailModalProps) {
+export function CallDetailsPanel({
+  detail,
+  operatorName,
+  onClientLinkClick,
+  defaultOpen = false,
+}: Props) {
   const { t } = useTranslation('common')
+  const [open, setOpen] = useState(defaultOpen)
 
-  if (!call) return null
+  if (!detail) return null
 
-  const answered = isAnswered(call)
-  const isInbound = call.direction === 'inbound'
+  const answered = isAnswered(detail)
+  const isInbound = detail.direction === 'inbound'
 
   return (
-    <Modal open={open} onClose={onClose} maxWidth="lg">
-      <ModalHeader
-        icon={<Icons.Headset size={24} className="text-dark-500" strokeWidth={1.5} />}
-        title={t('pages.actionAnalysis.callDetail.title', 'Call details')}
-      />
-      <ModalContent>
-        <div className="flex flex-col gap-3 sm:gap-4">
+    <div className="rounded-md border border-gray-200 bg-white">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left transition-colors hover:bg-gray-50 sm:px-4"
+      >
+        <span className="text-dark-500 text-sm font-medium">
+          {t('pages.actionAnalysis.callDetail.title', 'Call details')}
+        </span>
+        <Icons.ArrowDown
+          size={16}
+          className={cn('text-gray-500 transition-transform', open && 'rotate-180')}
+          strokeWidth={1.5}
+        />
+      </button>
+
+      {open && (
+        <div className="flex flex-col gap-3 border-t border-gray-100 px-3 py-3 sm:gap-4 sm:px-4">
           <FieldRow label={t('pages.actionAnalysis.callDetail.fields.dateTime', 'Date / Time')}>
-            {formatDateTime(call.initiated_at)}
+            {formatDateTime(detail.initiated_at)}
           </FieldRow>
 
           <FieldRow label={t('pages.actionAnalysis.callDetail.fields.status', 'Status')}>
@@ -94,39 +130,36 @@ export function CallDetailModal({ open, onClose, call, operatorName }: CallDetai
           </FieldRow>
 
           <FieldRow label={t('pages.actionAnalysis.callDetail.fields.employee', 'Employee')}>
-            {operatorName ?? call.agent_extension}
+            {operatorName ?? detail.agent_extension}
           </FieldRow>
 
           <FieldRow label={t('pages.actionAnalysis.callDetail.fields.phone', 'Phone')}>
-            {formatUkrainePhoneForDisplay(call.customer_number, call.customer_number)}
+            {formatUkrainePhoneForDisplay(detail.customer_number, detail.customer_number)}
           </FieldRow>
 
           <FieldRow label={t('pages.actionAnalysis.callDetail.fields.duration', 'Duration')}>
-            {formatDuration(call.talk_duration)}
+            {formatDuration(detail.talk_duration)}
           </FieldRow>
 
-          {call.client_id != null && (
+          {detail.client_id != null && (
             <FieldRow label={t('pages.actionAnalysis.callDetail.fields.client', 'Client')}>
               <Link
-                to={`/dashboard/clients/${call.client_id}`}
+                to={`/dashboard/clients/${detail.client_id}`}
                 className="text-primary-600 hover:underline"
-                onClick={onClose}
+                onClick={onClientLinkClick}
               >
-                #{call.client_id}
+                #{detail.client_id}
               </Link>
             </FieldRow>
           )}
 
           <FieldRow label={t('pages.actionAnalysis.callDetail.fields.callId', 'Call ID')}>
-            <span className="font-mono text-xs break-all text-gray-600">{call.call_id}</span>
+            <span className="font-mono text-xs break-all text-gray-600">{detail.call_id}</span>
           </FieldRow>
         </div>
-      </ModalContent>
-      <ModalFooter>
-        <Button variant="outline" onClick={onClose}>
-          {t('actions.close', 'Close')}
-        </Button>
-      </ModalFooter>
-    </Modal>
+      )}
+    </div>
   )
 }
+
+export default CallDetailsPanel
