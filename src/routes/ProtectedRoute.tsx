@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { Icons } from '@/lib/icons'
+import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -23,14 +23,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }, []) // Empty dependency array - only run once on mount
 
   if (isLoading) {
-    return (
-      <div className="bg-dark-500 flex min-h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Icons.Spinner />
-          <p className="text-gray-400">Loading...</p>
-        </div>
-      </div>
-    )
+    return <AppLoadingFallback variant="shell" />
   }
 
   if (!isAuthenticated) {
