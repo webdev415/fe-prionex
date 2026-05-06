@@ -122,25 +122,30 @@ export function ChainExecutor({
 }: Props) {
   const { t } = useTranslation('common')
 
-  // Operator's department drives chain visibility — they should only
-  // see chains assigned to their own department. Admins (manage_settings)
-  // bypass the filter and see every chain.
+  // Department drives chain & quick-pick visibility for users on a
+  // department-scoped role. Two cases bypass the department filter and
+  // see every chain/pick in the project:
+  //   1. Admins (`manage_settings` permission).
+  //   2. Users on a default role with no `department_id` — the built-in
+  //      "Operator" / "Supervisor" roles ship with `department_id = NULL`
+  //      (see auth/models/role.py: "only for custom roles"). Treating
+  //      these like admins means a fresh install works without forcing
+  //      every project to define custom department-scoped roles.
   const { user } = useAuthStore()
   const isAdmin = user?.permissions?.includes('manage_settings') ?? false
   const operatorDepartmentId = user?.active_department_id ?? undefined
+  const seesAllDepartments = isAdmin || operatorDepartmentId === undefined
 
-  // Available chains (manual only, active). For non-admins, scoped to
-  // the operator's department via the backend's single-id query param.
+  // Available chains (manual only, active). Department-scoped users get
+  // their own department's chains; admins and default-role users get all.
   const { data: chainsData } = useTAChains({
     include_inactive: false,
-    department_id: isAdmin ? undefined : operatorDepartmentId,
+    department_id: seesAllDepartments ? undefined : operatorDepartmentId,
   })
-  const manualChains = useMemo(() => {
-    // Non-admins with no department: hide everything (better than leaking
-    // other departments' chains via a missing filter). Admins always see all.
-    if (!isAdmin && operatorDepartmentId === undefined) return []
-    return (chainsData?.items ?? []).filter((c) => c.chain_type === 'manual')
-  }, [chainsData, operatorDepartmentId, isAdmin])
+  const manualChains = useMemo(
+    () => (chainsData?.items ?? []).filter((c) => c.chain_type === 'manual'),
+    [chainsData]
+  )
 
   // Full TA data (for dropdown values + flags)
   const { data: tasData } = useTargetActions({ include_hidden: false })
@@ -160,16 +165,17 @@ export function ChainExecutor({
   }, [tagsList])
 
   // Quick picks are scoped per department: each pick row carries its own
-  // `department_id`, and the server filters by it. The lookup must use the
-  // OPERATOR'S department — not "the first department of the first manual
+  // `department_id`, and the server filters by it. The lookup uses the
+  // operator's department — not "the first department of the first manual
   // chain", which is fragile (chains can belong to several departments,
-  // and the order of `department_ids[]` is not meaningful). Admins (who
-  // can run any chain) get the unfiltered set, mirroring how the chain
-  // list itself is fetched (line 134–137). Picks whose chain isn't in
-  // the visible manual chain list are dropped below as a safety net.
-  const { data: quickPicksData } = useQuickPicks(isAdmin ? undefined : operatorDepartmentId, {
-    fetchAll: isAdmin,
-  })
+  // and the order of `department_ids[]` is not meaningful). Users who
+  // see every chain (admins and default-role users without a department)
+  // also get every pick; the chain-id filter below still drops picks for
+  // chains they can't actually run.
+  const { data: quickPicksData } = useQuickPicks(
+    seesAllDepartments ? undefined : operatorDepartmentId,
+    { fetchAll: seesAllDepartments }
+  )
   const quickPicks = useMemo(() => {
     const manualIds = new Set(manualChains.map((c) => c.id))
     return (quickPicksData ?? []).filter((qp) => manualIds.has(qp.chain_id))
