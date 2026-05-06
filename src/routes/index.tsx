@@ -7,6 +7,8 @@ import { GuestRoute } from './GuestRoute'
 import { DashboardLayout } from '@/components/layout'
 import { RouteErrorElement } from '@/components/RouteErrorElement'
 import { PERMISSIONS } from '@/constants/permissions'
+import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOperatorAssignmentPageSkeleton'
+import { BulkPaymentVerificationPageSkeleton } from '@/pages/Operations/BulkPaymentVerificationPageSkeleton'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
 const ForceChangePasswordPage = lazy(() => import('@/pages/auth/ForceChangePasswordPage'))
@@ -293,7 +295,9 @@ export const router = createBrowserRouter([
         path: 'operations/bulk-operator-assignment',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.EDIT}>
-            {withSuspense(<BulkOperatorAssignmentPage />)}
+            <Suspense fallback={<BulkOperatorAssignmentPageSkeleton />}>
+              <BulkOperatorAssignmentPage />
+            </Suspense>
           </PermissionRoute>
         ),
       },
@@ -301,7 +305,9 @@ export const router = createBrowserRouter([
         path: 'operations/bulk-payment-import',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT_PAYMENTS}>
-            {withSuspense(<BulkPaymentVerificationPage />)}
+            <Suspense fallback={<BulkPaymentVerificationPageSkeleton />}>
+              <BulkPaymentVerificationPage />
+            </Suspense>
           </PermissionRoute>
         ),
       },

@@ -211,12 +211,10 @@
   .select-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: #b5b5b5 #f0f0f0;
-    scrollbar-gutter: stable;
-    overflow-y: scroll !important;
+    overflow-y: auto;
   }
   .select-scrollbar::-webkit-scrollbar {
     width: 8px;
-    display: block !important;
   }
   .select-scrollbar::-webkit-scrollbar-track {
     background: #f0f0f0;
