@@ -164,16 +164,10 @@ export function InteractionHistoryTable({
       header: t('pages.actionAnalysis.columns.promiseAmount', 'Promise amount'),
       sortable: true,
       align: 'right',
+      // Promise *date* lives in the dedicated "Internal date" column now —
+      // showing it again as a sub-line here was duplicate noise.
       render: (r) => (
-        <div className="flex flex-col items-end gap-0.5 text-sm text-gray-700">
-          <span>{formatAmount(r.promise_to_pay_amount)}</span>
-          {r.promise_to_pay_date ? (
-            <span className="text-xs text-gray-500">
-              {t('pages.actionAnalysis.columns.promiseDate', 'Promise date')}:{' '}
-              {formatDate(r.promise_to_pay_date)}
-            </span>
-          ) : null}
-        </div>
+        <span className="text-sm text-gray-700">{formatAmount(r.promise_to_pay_amount)}</span>
       ),
     },
   ]

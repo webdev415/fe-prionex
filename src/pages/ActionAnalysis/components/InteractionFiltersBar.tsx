@@ -122,7 +122,7 @@ export function InteractionFiltersBar({
 
         <div className="h-px w-full bg-gray-200" />
 
-        <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
+        <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4 xl:grid-cols-5">
           <div className="flex flex-col gap-1.5">
             <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.department', 'Department')}
@@ -275,16 +275,15 @@ export function InteractionFiltersBar({
               }}
             />
           </div>
-        </div>
 
-        {/*
-          Internal-date filter (KAN-409 follow-up): one combined filter that
-          targets a chosen date column inside the interaction (promise / next
-          action / follow-up, or `any` = OR). The bounds are required for the
-          filter to apply, so picking a type alone is a no-op on the backend.
-        */}
-        <div className="h-px w-full bg-gray-200" />
-        <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
+          {/*
+            Internal-date filter (KAN-409 follow-up): one combined filter that
+            targets a chosen date column inside the interaction (promise / next
+            action / follow-up, or `any` = OR). Bounds are required for the
+            filter to apply, so picking a type alone is a no-op on the backend.
+            Lives in the same grid as the other filters so the row layout
+            stays exactly 2 rows of 5 at xl+ (10 cells total).
+          */}
           <div className="flex flex-col gap-1.5">
             <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.internalDateType', 'Internal date')}
