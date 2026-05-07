@@ -6,12 +6,16 @@ export {
 } from './hooks/useInteractionMonitoring'
 export { useExportInteractions } from './hooks/useExportInteractions'
 export { useInteractionChannels, interactionChannelsKeys } from './hooks/useInteractionChannels'
+export { useTaHistory, taHistoryKeys } from './hooks/useTaHistory'
+export { useExportTaHistory } from './hooks/useExportTaHistory'
 export {
   getCallMonitoring,
   exportCallMonitoring,
   getInteractionMonitoring,
   exportInteractionMonitoring,
   listInteractionChannels,
+  getTaHistory,
+  exportTaHistory,
   actionAnalysisService,
 } from './api/actionAnalysisService'
 export type {

@@ -18,6 +18,13 @@ export interface TAInteraction {
   recorded_by_name: string | null
   call_id: number | null
   assigned_operator_id: number | null
+  /**
+   * Resolved name for `assigned_operator_id`. Populated by the trainer-side
+   * TA History tab handler (KAN-409 follow-up); legacy admin-page callers
+   * receive `null` because the lookup is gated on `assigned_operator_id`
+   * being present.
+   */
+  assigned_operator_name: string | null
   created_at: string
   archived: boolean
   is_pinned: boolean
@@ -40,6 +47,12 @@ export interface TAInteractionListParams {
   notes_search?: string
   skip?: number
   limit?: number
+  // KAN-409 follow-up — trainer-side TA History tab params.
+  recorded_by_in?: number[]
+  assigned_operator_id?: number
+  target_action_id?: number
+  promise_date_from?: string
+  promise_date_to?: string
 }
 
 export interface TAInteractionUpdate {

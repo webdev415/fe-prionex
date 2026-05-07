@@ -319,7 +319,15 @@
           "nextAction": "Перезвонить / следующее действие",
           "followUp": "Уточнение",
           "any": "Любая из перечисленных"
-        }
+        },
+        "chain": "Цепочка",
+        "allChains": "Все цепочки",
+        "chainStep": "Шаг",
+        "allChainSteps": "Все шаги",
+        "promiseDateFrom": "Дата обещания от",
+        "promiseDateTo": "Дата обещания до",
+        "notesSearch": "Поиск по заметкам",
+        "notesSearchPlaceholder": "Поиск в заметках…"
       },
       "columns": {
         "dateTime": "Дата / Время",
@@ -340,7 +348,8 @@
         "responsibleAtCreation": "Ответственный на момент создания",
         "currentResponsible": "Текущий ответственный",
         "internalDate": "Дата (обещание / перезвон)",
-        "channel": "Канал"
+        "channel": "Канал",
+        "chain": "Цепочка"
       },
       "callType": {
         "incoming": "Входящий",
@@ -373,6 +382,7 @@
       },
       "empty": "Нет звонков, соответствующих фильтрам",
       "interactionsEmpty": "Нет взаимодействий, соответствующих фильтрам",
+      "taHistoryEmpty": "Нет ТА-взаимодействий, соответствующих фильтрам",
       "errors": {
         "loadFailed": "Не удалось загрузить звонки",
         "loadInteractionsFailed": "Не удалось загрузить взаимодействия",
@@ -380,6 +390,7 @@
         "loadScreenTimeFailed": "Не удалось загрузить данные экранного времени.",
         "loadHeatmapFailed": "Не удалось загрузить тепловую карту.",
         "loadScriptAnalyticsFailed": "Не удалось загрузить аналитику скриптов.",
+        "loadTaHistoryFailed": "Не удалось загрузить историю ТА",
         "departmentNoOperators": "В этом отделе нет операторов в текущем проекте.",
         "exportFailed": "Не удалось экспортировать",
         "callNotFound": "Звонок не найден"
@@ -400,6 +411,7 @@
       "subTabs": {
         "list": "Список звонков",
         "interactions": "История взаимодействий",
+        "taHistory": "История ТА",
         "timeline": "Таймлайн",
         "screenTime": "Экранное время",
         "heatmap": "Тепловая карта",

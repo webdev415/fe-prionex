@@ -159,9 +159,10 @@ export const PERMISSIONS = {
   },
 
   /**
-   * Action Analysis Category (5 permissions)
+   * Action Analysis Category (6 permissions)
    * Controls access to the Action Analysis page and its drill-downs
-   * (KAN-409 added the four operator-analytics sub-permissions).
+   * (KAN-409 added the four operator-analytics sub-permissions; the
+   * follow-up added `view_ta_history` for the TA History sub-tab).
    */
   ACTION_ANALYSIS: {
     VIEW: 'view_action_analysis',
@@ -169,6 +170,7 @@ export const PERMISSIONS = {
     VIEW_SCREEN_TIME: 'view_screen_time',
     VIEW_ACTIVITY_HEATMAP: 'view_activity_heatmap',
     VIEW_SCRIPT_ANALYTICS: 'view_script_analytics',
+    VIEW_TA_HISTORY: 'view_ta_history',
   },
 } as const
 
@@ -300,4 +302,5 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   view_activity_heatmap: 'View Activity Heatmap (per-hour operator state grid)',
   view_script_analytics:
     'View Script Analytics & anomaly detection (interaction-result distribution and auto-flags)',
+  view_ta_history: 'View TA History sub-tab (chain interactions with chain + step filters)',
 }
