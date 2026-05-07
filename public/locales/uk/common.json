@@ -1881,6 +1881,8 @@
           "selectedCount": "{{selected}} з {{total}} тегів вибрано",
           "noTagsMatch": "За запитом тегів не знайдено",
           "noTagsAvailable": "Немає доступних тегів",
+          "payloadTagBadge": "потрібна ЦД",
+          "payloadTagHint": "Цей тег потребує ЦД та/або суму — відкриється окрема форма",
           "saveTags": "Зберегти теги",
           "tagsUpdated": "Теги оновлено для {{name}}",
           "updateFailed": "Не вдалося оновити теги"

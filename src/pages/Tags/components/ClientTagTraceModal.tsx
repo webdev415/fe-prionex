@@ -44,10 +44,10 @@ const ACTION_BADGE_COLORS: Record<string, string> = {
   bulk_removed: 'bg-orange-50 text-orange-700',
 }
 
-function formatTimestamp(value: string): string {
+function formatTimestamp(value: string, locale: string): string {
   try {
     const d = new Date(value)
-    return d.toLocaleString('uk-UA', {
+    return d.toLocaleString(locale, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -61,7 +61,7 @@ function formatTimestamp(value: string): string {
 }
 
 function TraceEntryRow({ entry }: { entry: TraceTimelineEntry }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
 
   const isAssignment = entry.source === 'assignment'
   const action = isAssignment
@@ -82,7 +82,7 @@ function TraceEntryRow({ entry }: { entry: TraceTimelineEntry }) {
             </span>
             {isAssignment && entry.actor_type && (
               <span className="text-[11px] text-gray-500">
-                {t('pages.tags.trace.actor', 'actor')}: {entry.actor_type}
+                {t('pages.tags.trace.actor')}: {entry.actor_type}
                 {entry.actor_id ? ` #${entry.actor_id}` : ''}
               </span>
             )}
@@ -99,7 +99,7 @@ function TraceEntryRow({ entry }: { entry: TraceTimelineEntry }) {
           </div>
           {entry.action_taken && (
             <div className="text-xs text-gray-700">
-              <span className="text-gray-500">{t('pages.tags.trace.action', 'action')}:</span>{' '}
+              <span className="text-gray-500">{t('pages.tags.trace.action')}:</span>{' '}
               {entry.action_taken}
             </div>
           )}
@@ -114,7 +114,7 @@ function TraceEntryRow({ entry }: { entry: TraceTimelineEntry }) {
           )}
         </div>
         <div className="text-[11px] whitespace-nowrap text-gray-500">
-          {formatTimestamp(entry.timestamp)}
+          {formatTimestamp(entry.timestamp, i18n.language || 'en-US')}
         </div>
       </div>
     </div>
@@ -155,8 +155,8 @@ export function ClientTagTraceModal({
   })
 
   const title = tagName
-    ? t('pages.tags.trace.titleSingle', `Why "${tagName}"?`, { tag: tagName })
-    : t('pages.tags.trace.titleAll', 'Tag activity for this client')
+    ? t('pages.tags.trace.titleSingle', { tag: tagName })
+    : t('pages.tags.trace.titleAll')
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="2xl">
@@ -178,37 +178,24 @@ export function ClientTagTraceModal({
 
         {isError && (
           <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            <p className="mb-2 font-medium">
-              {t('pages.tags.trace.loadFailed', 'Failed to load trace')}
-            </p>
-            <p className="text-xs">
-              {(error as Error)?.message || t('common.unknownError', 'Unknown error')}
-            </p>
+            <p className="mb-2 font-medium">{t('pages.tags.trace.loadFailed')}</p>
+            <p className="text-xs">{(error as Error)?.message || t('common.unknownError')}</p>
             <Button size="sm" variant="outline" className="mt-2" onClick={() => refetch()}>
-              {t('common.retry', 'Retry')}
+              {t('common.retry')}
             </Button>
           </div>
         )}
 
         {!isLoading && !isError && data && data.entries.length === 0 && (
           <div className="py-10 text-center text-sm text-gray-500">
-            {tagCode
-              ? t(
-                  'pages.tags.trace.emptyForTag',
-                  'No history yet for this tag — it may have been assigned manually or before tracing was enabled.'
-                )
-              : t('pages.tags.trace.empty', 'No tag activity recorded for this client.')}
+            {tagCode ? t('pages.tags.trace.emptyForTag') : t('pages.tags.trace.empty')}
           </div>
         )}
 
         {!isLoading && !isError && data && data.entries.length > 0 && (
           <div className="space-y-2">
             <p className="text-xs text-gray-500">
-              {t(
-                'pages.tags.trace.entriesCount',
-                `${data.entries.length} event${data.entries.length === 1 ? '' : 's'} on the timeline (newest first)`,
-                { count: data.entries.length }
-              )}
+              {t('pages.tags.trace.entriesCount', { count: data.entries.length })}
             </p>
             <div className="space-y-2">
               {data.entries.map((entry, idx) => (
@@ -221,7 +208,7 @@ export function ClientTagTraceModal({
 
       <ModalFooter>
         <Button variant="outline" onClick={onClose}>
-          {t('common.close', 'Close')}
+          {t('actions.close')}
         </Button>
       </ModalFooter>
     </Modal>

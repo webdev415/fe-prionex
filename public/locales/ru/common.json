@@ -1880,6 +1880,8 @@
           "selectedCount": "Выбрано {{selected}} из {{total}} тегов",
           "noTagsMatch": "По запросу теги не найдены",
           "noTagsAvailable": "Нет доступных тегов",
+          "payloadTagBadge": "требует ЦД",
+          "payloadTagHint": "Тег требует ЦД и/или сумму — откроется отдельная форма",
           "saveTags": "Сохранить теги",
           "tagsUpdated": "Теги обновлены для {{name}}",
           "updateFailed": "Не удалось обновить теги"

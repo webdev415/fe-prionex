@@ -208,8 +208,8 @@ export const TagSelectorModal = memo(function TagSelectorModal({
             <div className="max-h-64 space-y-2 overflow-y-auto sm:max-h-96">
               {filteredTags && filteredTags.length > 0 ? (
                 filteredTags.map((tag) => {
-                  const t = tag as unknown as TagWithPayloadFlag
-                  const isPayloadTag = !!t.requires_payload
+                  const payloadTag = tag as unknown as TagWithPayloadFlag
+                  const isPayloadTag = !!payloadTag.requires_payload
                   return (
                     <label
                       key={tag.id}
@@ -217,16 +217,16 @@ export const TagSelectorModal = memo(function TagSelectorModal({
                     >
                       <Checkbox
                         checked={selectedTagIds.has(tag.id)}
-                        onCheckedChange={() => handleToggleTag(t)}
+                        onCheckedChange={() => handleToggleTag(payloadTag)}
                         disabled={!canAssignTags}
                       />
                       <TagBadge name={tag.name} color={tag.color} size="sm" />
                       {isPayloadTag && (
                         <span
                           className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
-                          title="Тег требует ЦД и/или сумму — откроется отдельная форма"
+                          title={t('pages.clients.modals.tagSelector.payloadTagHint')}
                         >
-                          требует ЦД
+                          {t('pages.clients.modals.tagSelector.payloadTagBadge')}
                         </span>
                       )}
                       {tag.description && (

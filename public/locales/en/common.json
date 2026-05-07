@@ -1587,6 +1587,8 @@
           "selectedCount": "{{selected}} of {{total}} tags selected",
           "noTagsMatch": "No tags found matching your search",
           "noTagsAvailable": "No tags available",
+          "payloadTagBadge": "requires PTP",
+          "payloadTagHint": "This tag requires PTP date and/or amount — a separate form will open",
           "saveTags": "Save Tags",
           "tagsUpdated": "Tags updated for {{name}}",
           "updateFailed": "Failed to update tags"
