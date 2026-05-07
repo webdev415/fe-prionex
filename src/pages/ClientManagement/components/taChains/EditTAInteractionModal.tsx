@@ -81,6 +81,24 @@ function ContactStepEdit({
   )
 }
 
+function EditInteractionSkeleton() {
+  return (
+    <div className="space-y-3" aria-hidden="true">
+      <div className="h-9 animate-pulse rounded-lg border border-gray-200 bg-gray-100" />
+      {Array.from({ length: 4 }).map((_, idx) => (
+        <div key={idx} className="space-y-2 rounded-lg border border-gray-200 bg-gray-50/60 p-3">
+          <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
+          <div className="h-10 w-full animate-pulse rounded-md bg-gray-200" />
+        </div>
+      ))}
+      <div className="space-y-2">
+        <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
+        <div className="h-20 w-full animate-pulse rounded-md bg-gray-200" />
+      </div>
+    </div>
+  )
+}
+
 interface Props {
   open: boolean
   interactionId: number | null
@@ -248,7 +266,7 @@ export function EditTAInteractionModal({
           notes: trimmedNotes || '',
         },
       })
-      toast.success(t('pages.clientChains.editInteraction.savedToast', 'Interaction updated'))
+      toast.success(t('pages.clientChains.editInteraction.savedToast'))
       onSaved?.()
       onClose()
     } catch (err) {
@@ -263,19 +281,19 @@ export function EditTAInteractionModal({
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader
         icon={
-          <div className="bg-primary-300 flex h-7 w-7 items-center justify-center rounded-full">
-            <Icons.PencilEdit size={18} className="text-dark-500" strokeWidth={2} />
+          <div className="bg-primary-300 flex h-10 w-10 items-center justify-center rounded-full">
+            <Icons.PencilEdit size={22} className="text-dark-500" strokeWidth={1.8} />
           </div>
         }
-        title={t('pages.clientChains.editInteraction.title', 'Edit interaction')}
+        title={t('pages.clientChains.editInteraction.title')}
       />
       <ModalContent>
         {!interaction || !chain ? (
-          <div className="text-sm text-gray-500">{t('common.loading')}</div>
+          <EditInteractionSkeleton />
         ) : (
           <div className="flex flex-col gap-4">
             <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-              {t('pages.clientChains.editInteraction.chainLabel', 'Chain')}:{' '}
+              {t('pages.clientChains.editInteraction.chainLabel')}:{' '}
               <span className="font-medium text-gray-800">{chain.name}</span>
             </div>
 
@@ -325,8 +343,7 @@ export function EditTAInteractionModal({
                           />
                           {value && !isValid && (
                             <span className="text-xs text-amber-600">
-                              {t('pages.clientChains.editInteraction.savedValue', 'Saved value')}:{' '}
-                              {value}{' '}
+                              {t('pages.clientChains.editInteraction.savedValue')}: {value}{' '}
                               <span className="text-amber-500">
                                 {t('pages.clientChains.contactStale', '(stale)')}
                               </span>
@@ -393,7 +410,14 @@ export function EditTAInteractionModal({
                                       {d.remaining_debt_amount
                                         ? ` — ${formatMoneyKopeckTight(d.remaining_debt_amount)}`
                                         : ''}
-                                      {d.days_past_due ? ` — overdue ${d.days_past_due}d` : ''}
+                                      {d.days_past_due
+                                        ? ` — ${t(
+                                            'pages.clientChains.editInteraction.overdueDays',
+                                            {
+                                              count: d.days_past_due,
+                                            }
+                                          )}`
+                                        : ''}
                                     </span>
                                   </label>
                                 )

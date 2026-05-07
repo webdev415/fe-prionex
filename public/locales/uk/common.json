@@ -2352,6 +2352,13 @@
         "deleteConfirm": "Видалити цю взаємодію? Цю дію не можна скасувати.",
         "deleteSuccess": "Взаємодію видалено"
       },
+      "editInteraction": {
+        "title": "Редагувати взаємодію",
+        "chainLabel": "Ланцюжок",
+        "savedToast": "Взаємодію оновлено",
+        "savedValue": "Збережене значення",
+        "overdueDays": "прострочено {{count}} дн."
+      },
       "templatePlaceholder": "Оберіть шаблон…",
       "templateSearchPlaceholder": "Пошук шаблонів…",
       "templateNoneFound": "Немає відповідних шаблонів.",

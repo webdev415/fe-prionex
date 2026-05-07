@@ -2356,6 +2356,13 @@
         "deleteConfirm": "Удалить это взаимодействие? Это действие нельзя отменить.",
         "deleteSuccess": "Взаимодействие удалено"
       },
+      "editInteraction": {
+        "title": "Редактировать взаимодействие",
+        "chainLabel": "Цепочка",
+        "savedToast": "Взаимодействие обновлено",
+        "savedValue": "Сохраненное значение",
+        "overdueDays": "просрочено {{count}} дн."
+      },
       "templatePlaceholder": "Выберите шаблон…",
       "templateSearchPlaceholder": "Поиск шаблонов…",
       "templateNoneFound": "Нет подходящих шаблонов.",
