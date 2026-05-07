@@ -1,13 +1,18 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { DataTable, type Column } from '@/components/ui/DataTable'
-import { formatDate, formatDateTime } from '@/lib/formatters'
+import { formatDate, formatDateTime, formatMoneyKopeckTight } from '@/lib/formatters'
 import type { TAInteraction } from '@/features/taInteractions/api/types'
+import type { TAChain } from '@/features/taChains/api/types'
+import type { TargetAction } from '@/features/targetActions/api/types'
 
 type Row = TAInteraction & { id: number }
 
 interface Props {
   data: TAInteraction[]
+  chains: TAChain[]
+  tasById: Map<number, TargetAction>
+  userTimezone?: string | null
 }
 
 function formatAmount(value: string | null): string {
@@ -17,12 +22,100 @@ function formatAmount(value: string | null): string {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-function pickResultName(r: TAInteraction): string {
-  // leaf_node_name is the pre-dropdown-migration fallback.
-  return r.dropdown_value_name ?? r.leaf_node_name ?? '—'
+interface ResultEntry {
+  value: string
+  followUps: string[]
 }
 
-export function TaHistoryTable({ data }: Props) {
+function buildResultEntries(
+  row: TAInteraction,
+  chains: TAChain[],
+  tasById: Map<number, TargetAction>,
+  userTimezone?: string | null
+): ResultEntry[] {
+  const formatStepValue = (fieldType: string | undefined, val: string): string => {
+    if (fieldType === 'credit') {
+      return val
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((id) => {
+          const numId = parseInt(id, 10)
+          return Number.isNaN(numId) ? id : `#${numId}`
+        })
+        .join(', ')
+    }
+    if (fieldType === 'amount') return formatMoneyKopeckTight(val)
+    if (fieldType === 'date') return formatDateTime(val, userTimezone ?? undefined)
+    return val
+  }
+
+  const entries: ResultEntry[] = []
+  let consumedPromiseDate = false
+  let consumedPromiseAmount = false
+  let consumedCredit = false
+
+  if (row.step_data && Object.keys(row.step_data).length > 0) {
+    const chain = chains.find((c) => c.id === row.chain_id)
+    const stepsOrdered = chain?.steps
+      ? [...chain.steps].sort((a, b) => a.step_order - b.step_order)
+      : []
+
+    if (stepsOrdered.length > 0) {
+      for (const step of stepsOrdered) {
+        const sd = row.step_data as Record<string, string>
+        const val = sd[String(step.step_order)] ?? sd[String(step.target_action_id)]
+        if (!val) continue
+        // Phone (contact-type) values render in a dedicated way on the per-client
+        // page; here we just include them inline since we have no Phone column.
+        const ta = tasById.get(step.target_action_id)
+        const followUps: string[] = []
+
+        if (ta?.field_type === 'dropdown') {
+          const picked = ta.dropdown_values.find((dv) => dv.value === val)
+          if (picked) {
+            if (picked.require_promise_date && row.promise_date && !consumedPromiseDate) {
+              followUps.push(formatDate(row.promise_date))
+              consumedPromiseDate = true
+            }
+            if (picked.require_promise_amount && row.promise_amount && !consumedPromiseAmount) {
+              followUps.push(formatMoneyKopeckTight(row.promise_amount))
+              consumedPromiseAmount = true
+            }
+            if (picked.require_credit && row.credit_id && !consumedCredit) {
+              followUps.push(`#${row.credit_id}`)
+              consumedCredit = true
+            }
+          }
+        }
+
+        entries.push({
+          value: formatStepValue(step.target_action_field_type ?? undefined, val),
+          followUps,
+        })
+      }
+    } else {
+      for (const [, val] of Object.entries(row.step_data as Record<string, string>)) {
+        if (val) entries.push({ value: val, followUps: [] })
+      }
+    }
+  }
+
+  const orphan: string[] = []
+  if (row.promise_date && !consumedPromiseDate) orphan.push(formatDate(row.promise_date))
+  if (row.promise_amount && !consumedPromiseAmount) {
+    orphan.push(formatMoneyKopeckTight(row.promise_amount))
+  }
+  if (row.credit_id && !consumedCredit) orphan.push(`#${row.credit_id}`)
+  if (orphan.length > 0) {
+    if (entries.length > 0) entries[entries.length - 1].followUps.push(...orphan)
+    else entries.push({ value: '', followUps: orphan })
+  }
+
+  return entries
+}
+
+export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
   const { t } = useTranslation('common')
 
   const rows: Row[] = data.map((i) => ({ ...i, id: i.id }))
@@ -53,7 +146,29 @@ export function TaHistoryTable({ data }: Props) {
     {
       key: 'result',
       header: t('pages.actionAnalysis.columns.result', 'Result'),
-      render: (r) => <span className="text-sm text-gray-700">{pickResultName(r)}</span>,
+      render: (r) => {
+        const entries = buildResultEntries(r, chains, tasById, userTimezone)
+        if (entries.length === 0) {
+          const fallback =
+            r.dropdown_value_name ??
+            r.leaf_node_name ??
+            (r.dictionary_path.length > 0 ? r.dictionary_path.join(' > ') : '—')
+          return <span className="text-sm text-gray-700">{fallback}</span>
+        }
+        return (
+          <span className="text-sm text-gray-700">
+            {entries.map((e, i) => (
+              <span key={i}>
+                {e.value}
+                {e.followUps.length > 0 && (
+                  <span className="text-gray-500"> ({e.followUps.join(', ')})</span>
+                )}
+                {i < entries.length - 1 && ' -> '}
+              </span>
+            ))}
+          </span>
+        )
+      },
     },
     {
       key: 'internalDate',

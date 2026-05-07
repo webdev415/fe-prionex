@@ -4,6 +4,8 @@ import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import { useTAChains } from '@/features/taChains/hooks/useTAChains'
+import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
+import type { TargetAction } from '@/features/targetActions/api/types'
 import { useTaHistory } from '@/features/actionAnalysis'
 import { Pagination } from '@/components/ui/Pagination'
 import { defaultCustomDateRange } from '../lib/dateRange'
@@ -28,6 +30,12 @@ export function TaHistoryTab() {
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const { data: chainsResp } = useTAChains({ include_inactive: true })
   const chains = useMemo(() => chainsResp?.items ?? [], [chainsResp])
+  const { data: tasResp } = useTargetActions({ include_hidden: true })
+  const tasById = useMemo(() => {
+    const m = new Map<number, TargetAction>()
+    for (const ta of tasResp?.items ?? []) m.set(ta.id, ta)
+    return m
+  }, [tasResp])
 
   const barState = useMemo(() => readTaHistoryUrlState(searchParams), [searchParams])
 
@@ -137,7 +145,12 @@ export function TaHistoryTab() {
         </div>
       ) : (
         <>
-          <TaHistoryTable data={items} />
+          <TaHistoryTable
+            data={items}
+            chains={chains}
+            tasById={tasById}
+            userTimezone={userTimezone}
+          />
           {total > PAGE_SIZE && (
             <Pagination
               currentPage={page}
