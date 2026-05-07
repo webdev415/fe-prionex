@@ -7,36 +7,23 @@
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
-export type AppLoadingFallbackVariant = 'shell' | 'auth'
-
-export interface AppLoadingFallbackProps {
-  variant?: AppLoadingFallbackVariant
-}
-
 const SPINNER_BOX =
   'box-border h-12 w-12 shrink-0 animate-spin rounded-full border-[3px] border-solid'
 
-export function AppLoadingFallback({ variant = 'shell' }: AppLoadingFallbackProps) {
+export function AppLoadingFallback() {
   const { t } = useTranslation('common')
 
-  const spinnerStyle =
-    variant === 'auth'
-      ? {
-          borderColor: 'rgba(255, 255, 255, 0.25)',
-          borderTopColor: '#ffffff',
-        }
-      : {
-          borderColor: 'var(--color-gray-300)',
-          borderTopColor: 'var(--color-primary-600)',
-        }
+  const spinnerStyle = {
+    borderColor: 'var(--color-gray-300)',
+    borderTopColor: 'var(--color-primary-600)',
+  }
 
   return (
     <div
       role="status"
       aria-live="polite"
       className={cn(
-        'flex min-h-dvh w-full flex-col items-center justify-center',
-        variant === 'auth' ? 'bg-black' : 'bg-gradient-to-br from-[#F5F6F3] to-[#EBECE8]'
+        'flex min-h-dvh w-full flex-col items-center justify-center bg-gradient-to-br from-[#F5F6F3] to-[#EBECE8]'
       )}
     >
       <span className="sr-only">{t('status.loading')}</span>

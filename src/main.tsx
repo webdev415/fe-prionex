@@ -23,7 +23,7 @@ setupChunkLoadRecovery()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <Suspense fallback={<AppLoadingFallback variant="shell" />}>
+      <Suspense fallback={<AppLoadingFallback />}>
         <App />
         <Toaster />
       </Suspense>
