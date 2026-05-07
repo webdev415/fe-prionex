@@ -528,8 +528,15 @@ export function ImportHistoryPage() {
   ])
 
   const handleGoToImportClients = useCallback(() => {
+    // When the page was opened with the tag_assignment filter active (i.e.
+    // arrived from the Bulk Tag Assignment page), Back should return there
+    // rather than the global Import landing page.
+    if (importTypeFilter === 'tag_assignment') {
+      navigate('/dashboard/operations/bulk-tag-assignment')
+      return
+    }
     navigate('/dashboard/import')
-  }, [navigate])
+  }, [navigate, importTypeFilter])
 
   // Check if any filters are active
   const hasActiveFilters = useMemo(() => {
