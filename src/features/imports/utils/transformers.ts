@@ -8,11 +8,13 @@ import type {
   ImportJob,
   ImportJobDetail,
   ImportJobStatus,
+  ImportType,
   ImportError,
   // ImportJobsListResponse,
   // ImportErrorsResponse,
   UploadImportResponse,
   CancelImportResponse,
+  TagAssignmentMode,
   VendorFileLogical,
   VendorFilePhase,
   VendorPhaseStatus,
@@ -145,6 +147,12 @@ function extractMetadata(importOptions: Record<string, unknown> | null): {
  */
 export function transformImportJob(backend: BackendImportJobResponse): ImportJob {
   const metadata = extractMetadata(backend.import_options)
+  const importType =
+    (backend.import_type as ImportType) || (metadata.import_type as ImportType) || 'simple'
+  const tagMode =
+    importType === 'tag_assignment'
+      ? (backend.import_options?.mode as TagAssignmentMode | undefined)
+      : undefined
 
   return {
     id: backend.id,
@@ -153,10 +161,8 @@ export function transformImportJob(backend: BackendImportJobResponse): ImportJob
     uploaded_at: backend.created_at,
     status: mapStatus(backend.status),
     errors_count: backend.failed_records,
-    import_type:
-      (backend.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
-      (metadata.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
-      'simple',
+    import_type: importType,
+    tag_mode: tagMode,
     seller_creditor: metadata.seller_creditor,
     project_code: metadata.project_code,
     purchase_date: metadata.purchase_date,
@@ -244,9 +250,11 @@ export function transformImportJobDetail(backend: BackendImportJobResponse): Imp
   const metadata = extractMetadata(backend.import_options)
   const status = mapStatus(backend.status)
   const importType =
-    (backend.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
-    (metadata.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
-    'simple'
+    (backend.import_type as ImportType) || (metadata.import_type as ImportType) || 'simple'
+  const tagMode =
+    importType === 'tag_assignment'
+      ? (backend.import_options?.mode as TagAssignmentMode | undefined)
+      : undefined
 
   return {
     id: backend.id,
@@ -255,11 +263,17 @@ export function transformImportJobDetail(backend: BackendImportJobResponse): Imp
     uploaded_at: backend.created_at,
     status,
     total_rows: backend.total_records,
-    new_clients: backend.successful_records, // Assuming successful = new
-    updated_clients: backend.updated_records,
+    // Tag-assignment imports don't create or update client records; the
+    // "successful" counter from the worker tracks applied (client, tag) pairs,
+    // which is what the user wants to see under "Updated Clients" on this
+    // page. New Clients is hidden in the page render for this import type.
+    new_clients: importType === 'tag_assignment' ? 0 : backend.successful_records,
+    updated_clients:
+      importType === 'tag_assignment' ? backend.successful_records : backend.updated_records,
     errors_count: backend.failed_records,
     processing_time: formatProcessingTime(backend.processing_duration),
     import_type: importType,
+    tag_mode: tagMode,
     seller_creditor: metadata.seller_creditor,
     project_code: metadata.project_code,
     purchase_date: metadata.purchase_date,

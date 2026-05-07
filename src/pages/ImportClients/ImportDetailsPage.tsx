@@ -143,6 +143,7 @@ export function ImportDetailsPage() {
   const exportErrorsMutation = useExportImportErrors()
 
   const isVendor = jobDetail?.import_type === 'vendor'
+  const isTagAssignment = jobDetail?.import_type === 'tag_assignment'
 
   // Convert API data to component format
   const importDetail = jobDetail
@@ -369,25 +370,31 @@ export function ImportDetailsPage() {
               <div className="flex flex-col items-start gap-3 self-stretch">
                 <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
                   <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
-                    {t('pages.imports.details.totalRows')}
+                    {isTagAssignment
+                      ? t('pages.imports.details.updatedClients')
+                      : t('pages.imports.details.totalRows')}
                   </span>
                   <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                     {importDetail.totalRows.toLocaleString()}
                   </span>
                 </div>
 
-                <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
-                  <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
-                    {t('pages.imports.details.newClients')}
-                  </span>
-                  <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
-                    {importDetail.newClients.toLocaleString()}
-                  </span>
-                </div>
+                {!isTagAssignment && (
+                  <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
+                    <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
+                      {t('pages.imports.details.newClients')}
+                    </span>
+                    <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+                      {importDetail.newClients.toLocaleString()}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
                   <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
-                    {t('pages.imports.details.updatedClients')}
+                    {isTagAssignment
+                      ? t('pages.imports.details.tagsApplied', 'Tags Applied')
+                      : t('pages.imports.details.updatedClients')}
                   </span>
                   <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                     {importDetail.updatedClients.toLocaleString()}

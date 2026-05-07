@@ -8,6 +8,7 @@ import { DashboardLayout } from '@/components/layout'
 import { RouteErrorElement } from '@/components/RouteErrorElement'
 import { PERMISSIONS } from '@/constants/permissions'
 import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOperatorAssignmentPageSkeleton'
+import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignmentPageSkeleton'
 import { BulkPaymentVerificationPageSkeleton } from '@/pages/Operations/BulkPaymentVerificationPageSkeleton'
 import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 
@@ -122,6 +123,11 @@ const BulkOperatorAssignmentPage = lazy(() =>
 const BulkPaymentVerificationPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
     default: m.BulkPaymentVerificationPage,
+  }))
+)
+const BulkTagAssignmentPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkTagAssignmentPage,
   }))
 )
 
@@ -311,6 +317,16 @@ export const router = createBrowserRouter([
           <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.EDIT}>
             <Suspense fallback={<BulkOperatorAssignmentPageSkeleton />}>
               <BulkOperatorAssignmentPage />
+            </Suspense>
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'operations/bulk-tag-assignment',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.EDIT}>
+            <Suspense fallback={<BulkTagAssignmentPageSkeleton />}>
+              <BulkTagAssignmentPage />
             </Suspense>
           </PermissionRoute>
         ),
