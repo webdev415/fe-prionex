@@ -87,6 +87,15 @@ export function TaHistoryTable({ data }: Props) {
         </span>
       ),
     },
+    {
+      key: 'notes',
+      header: t('pages.actionAnalysis.columns.notes', 'Notes'),
+      render: (r) => (
+        <span className="text-sm text-gray-600" title={r.notes ?? undefined}>
+          {r.notes ? (r.notes.length > 60 ? `${r.notes.slice(0, 60)}…` : r.notes) : '—'}
+        </span>
+      ),
+    },
   ]
 
   return (

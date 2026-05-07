@@ -346,7 +346,8 @@
         "currentResponsible": "Current responsible",
         "internalDate": "Date (promise / callback)",
         "channel": "Channel",
-        "chain": "Chain"
+        "chain": "Chain",
+        "notes": "Notes"
       },
       "callType": {
         "incoming": "Incoming",
