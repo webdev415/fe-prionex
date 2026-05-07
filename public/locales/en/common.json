@@ -2603,6 +2603,10 @@
           "has_tag": "Has Tag",
           "not_has_tag": "Does Not Have Tag"
         },
+        "eventPayloadFields": {
+          "previous_responsible_id": "Previous responsible (ID)",
+          "new_responsible_id": "New responsible (ID)"
+        },
         "validation": {
           "nameRequired": "Name is required",
           "nameMax": "Max 100 characters",

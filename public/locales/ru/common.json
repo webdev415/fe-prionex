@@ -2979,6 +2979,8 @@
           "type_code": "Тип взаимодействия",
           "channel": "Канал",
           "direction": "Направление",
+          "previous_responsible_id": "Предыдущий ответственный (ID)",
+          "new_responsible_id": "Новый ответственный (ID)",
           "payment_id": "ID платежа",
           "payment_number": "Номер платежа",
           "debt_id": "ID долга",
