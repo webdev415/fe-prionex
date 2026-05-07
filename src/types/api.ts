@@ -74,6 +74,8 @@ export interface CurrentUserResponse {
   is_agent?: boolean
   agent_status?: string
   must_change_password?: boolean
+  /** Whether the user has Google Authenticator (TOTP) enabled. */
+  two_factor_enabled?: boolean
 }
 
 export interface User {
@@ -97,6 +99,8 @@ export interface User {
   /** Backend UI language preference (uk | en | ru). */
   language?: string
   mustChangePassword?: boolean
+  /** Mirrors backend `two_factor_enabled` for the dashboard 2FA toggle. */
+  twoFactorEnabled?: boolean
 }
 
 /** PATCH /api/v1/users/me — self-service profile (no admin permission). */
@@ -117,8 +121,59 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  token: string
-  user: User
+  /** JWT access token. Absent when `two_factor_required` is true. */
+  token?: string
+  /** User info from the auth service. Absent when `two_factor_required` is true. */
+  user?: User
+  /** True when the account has 2FA enabled — caller must POST /login/verify-two-factor. */
+  two_factor_required?: boolean
+  /** Short-lived challenge token to replay to /login/verify-two-factor. */
+  two_factor_token?: string
+}
+
+export interface VerifyTwoFactorRequest {
+  two_factor_token: string
+  /** 6-digit TOTP code or 17-char `xxxxxxxx-xxxxxxxx` backup code. */
+  code: string
+}
+
+// ─── Two-Factor Authentication (Google Authenticator) ──────────────────────
+export interface TwoFactorStatusResponse {
+  enabled: boolean
+  backup_codes_remaining: number
+  enabled_at?: string | null
+}
+
+export interface TwoFactorSetupResponse {
+  secret: string
+  otpauth_uri: string
+  /** Server-rendered PNG, base64-encoded (no `data:` prefix). */
+  qr_png_base64: string
+}
+
+export interface TwoFactorEnableRequest {
+  code: string
+}
+
+export interface TwoFactorEnableResponse {
+  success: boolean
+  message: string
+  /** Shown ONCE; not retrievable afterwards. */
+  backup_codes: string[]
+}
+
+export interface TwoFactorDisableRequest {
+  password: string
+  code: string
+}
+
+export interface TwoFactorRegenerateRequest {
+  password: string
+  code: string
+}
+
+export interface TwoFactorBackupCodesResponse {
+  backup_codes: string[]
 }
 
 export interface ImpersonationResponse {
@@ -200,6 +255,7 @@ export type AuthErrorState =
   | 'ALREADY_LOGGED_IN'
   | 'SESSION_EXPIRED'
   | 'TOO_MANY_ATTEMPTS'
+  | 'TWO_FACTOR_REQUIRED'
 
 export interface AuthErrorResponse extends ApiError {
   state: AuthErrorState

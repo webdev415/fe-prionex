@@ -24,9 +24,11 @@
     "chainBuilder": "Chain Builder",
     "taManagement": "Target Actions",
     "interactionLog": "Interaction Log",
+    "documentGeneration": "Document Generation",
     "transactions": "Transactions",
     "operations": "Operations",
     "bulkOperatorAssignment": "Bulk Operator Assignment",
+    "bulkPaymentVerification": "Bulk Payment Verification",
     "auditLogs": "Audit Logs",
     "reports": "Reports",
     "scoringConfiguration": "Scoring Configuration",
@@ -64,6 +66,16 @@
     "logout": "Logout",
     "loggingOut": "Logging out..."
   },
+  "components": {
+    "pagination": {
+      "rowsPerPage": "Rows per page:",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "goToPage": "Go to page {{page}}",
+      "page": "Page",
+      "of": "of"
+    }
+  },
   "status": {
     "loading": "Loading...",
     "success": "Success",
@@ -75,6 +87,64 @@
     "en": "English",
     "uk": "Ukrainian",
     "ru": "Russian"
+  },
+  "notificationBell": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "ariaLabel": "Notifications",
+    "ariaLabelWithCount": "Notifications ({{count}})",
+    "noNotifications": "No notifications",
+    "sections": {
+      "pendingPayments": "Pending Payments",
+      "tasks": "Tasks",
+      "calls": "Calls",
+      "tags": "Tags",
+      "taChains": "TA Chains"
+    },
+    "payment": {
+      "pending": "pending",
+      "daysPending_one": "{{count}}d",
+      "daysPending_other": "{{count}}d"
+    },
+    "paymentMethod": {
+      "bank_transfer": "Bank transfer",
+      "online_gateway": "Online gateway",
+      "cash": "Cash",
+      "card": "Card",
+      "other": "Other"
+    },
+    "clientNumber": "Client #{{id}}",
+    "idLabel": "ID: {{id}}",
+    "debtLabel": "Debt: {{id}}",
+    "chainLabel": "Chain:",
+    "resultLabel": "Result:",
+    "byOperator": "by {{name}}",
+    "errors": {
+      "dismissFailed": "Failed to dismiss notification",
+      "markAllReadFailed": "Failed to mark all as read"
+    },
+    "taskPriority": {
+      "high": "high",
+      "normal": "normal",
+      "low": "low"
+    },
+    "taskStatus": {
+      "pending": "pending",
+      "in_progress": "in progress",
+      "completed": "completed",
+      "extended": "extended",
+      "rejected": "rejected",
+      "incoming_line_result": "incoming line result"
+    },
+    "relative": {
+      "justNow": "just now",
+      "minutesAgo": "{{count}} min ago",
+      "hoursAgo_one": "{{count}}h ago",
+      "hoursAgo_other": "{{count}}h ago",
+      "daysAgo_one": "{{count}}d ago",
+      "daysAgo_other": "{{count}}d ago"
+    },
+    "dismissAria": "Dismiss notification"
   },
   "common": {
     "step": "Step",
@@ -200,6 +270,8 @@
         "allDepartments": "All departments",
         "employees": "Employees",
         "employeesCount": "{{count}} selected",
+        "phone": "Phone",
+        "phonePlaceholder": "e.g. 0631234567",
         "searchEmployees": "Search by name…",
         "noOperatorsMatch": "No matches",
         "clearEmployees": "Clear",
@@ -223,28 +295,66 @@
           "yesterday": "Yesterday",
           "last_7d": "Last 7 days",
           "last_30d": "Last 30 days",
+          "last7d": "Last 7 days",
+          "last30d": "Last 30 days",
           "custom": "Custom"
         },
+        "selectCustomRange": "Pick a custom date range to load data.",
         "statuses": {
           "all": "All",
           "answered": "Answered",
           "notAnswered": "Not answered"
+        },
+        "channel": "Channel",
+        "allChannels": "All",
+        "internalDateType": "Internal date",
+        "internalDateTypeNone": "Off",
+        "internalDateFrom": "Internal date from",
+        "internalDateTo": "Internal date to",
+        "internalDateTypes": {
+          "promiseToPay": "Promise to pay",
+          "nextAction": "Callback / next action",
+          "followUp": "Follow-up",
+          "any": "Any of the above"
         }
       },
       "columns": {
         "dateTime": "Date / Time",
         "duration": "Duration",
         "status": "Status",
+        "callType": "Call type",
         "phone": "Phone",
-        "agent": "Operator",
+        "agent": "Employee",
         "client": "Client",
         "clientId": "Client ID",
         "promiseDate": "Promise date",
         "recording": "Recording",
+        "viewDetail": "View detail",
         "employee": "Employee",
         "contactType": "Contact type",
         "result": "Result",
-        "promiseAmount": "Promise amount"
+        "promiseAmount": "Promise amount",
+        "responsibleAtCreation": "Responsible at creation",
+        "currentResponsible": "Current responsible",
+        "internalDate": "Date (promise / callback)",
+        "channel": "Channel"
+      },
+      "callType": {
+        "incoming": "Incoming",
+        "outgoing": "Outgoing"
+      },
+      "callDetail": {
+        "title": "Call details",
+        "fields": {
+          "dateTime": "Date / Time",
+          "status": "Status",
+          "callType": "Call type",
+          "employee": "Employee",
+          "phone": "Phone",
+          "duration": "Duration",
+          "client": "Client",
+          "callId": "Call ID"
+        }
       },
       "summary": {
         "total": "total",
@@ -255,27 +365,91 @@
       "actions": {
         "exportExcel": "Export to Excel",
         "exporting": "Exporting…",
-        "playRecording": "Play recording"
-      },
-      "phoneSearch": {
-        "title": "Phone number search",
-        "placeholder": "Enter phone number",
-        "search": "Search",
-        "summary": "{{total}} call(s), {{answered}} answered"
+        "playRecording": "Play recording",
+        "viewDetail": "View detail"
       },
       "empty": "No calls match the current filters",
       "interactionsEmpty": "No interactions match the current filters",
       "errors": {
         "loadFailed": "Failed to load calls",
         "loadInteractionsFailed": "Failed to load interactions",
+        "loadTimelineFailed": "Failed to load the timeline.",
+        "loadScreenTimeFailed": "Failed to load screen-time data.",
+        "loadHeatmapFailed": "Failed to load the heatmap.",
+        "loadScriptAnalyticsFailed": "Failed to load script analytics.",
         "departmentNoOperators": "No operators in this department for the current project.",
-        "exportFailed": "Export failed"
+        "exportFailed": "Export failed",
+        "callNotFound": "Call not found"
       },
       "calls": {
         "placeholder": "Calls tab — coming soon"
       },
       "interactions": {
         "placeholder": "Interaction History tab — coming soon"
+      },
+      "topTabs": {
+        "calls": "Calls",
+        "scores": "Scores",
+        "training": "Training",
+        "settings": "Settings"
+      },
+      "topTabsComingSoon": "This section will be enabled in a follow-up release.",
+      "subTabs": {
+        "list": "Call List",
+        "interactions": "Interaction History",
+        "timeline": "Timeline",
+        "screenTime": "Screen Time",
+        "heatmap": "Heatmap",
+        "scriptAnalytics": "Script Analytics"
+      },
+      "timeline": {
+        "callId": "Call ID",
+        "callIdPlaceholder": "Paste a call UUID to load the timeline",
+        "empty": "Enter a call ID above to inspect its operator action timeline.",
+        "noEvents": "No tracking events recorded for this call.",
+        "columns": {
+          "offset": "Offset",
+          "event": "Event",
+          "page": "Page",
+          "timestamp": "Timestamp"
+        }
+      },
+      "screenTime": {
+        "empty": "No screen-time data for the selected filters.",
+        "columns": {
+          "operator": "Operator",
+          "cardOpen": "Avg call→card",
+          "formSubmit": "Avg form submit",
+          "idle": "Idle total",
+          "afterCall": "After-call",
+          "deviation": "Δ vs team"
+        }
+      },
+      "heatmap": {
+        "operator": "Operator",
+        "empty": "No heatmap data for the selected filters.",
+        "filters": {
+          "state": "State filter"
+        },
+        "states": {
+          "all": "All states",
+          "active_call": "Active call",
+          "post_call": "Post-call",
+          "waiting": "Waiting",
+          "idle": "Idle",
+          "break": "Break"
+        }
+      },
+      "scriptAnalytics": {
+        "empty": "No script-analytics data for the selected filters.",
+        "teamDistribution": "Team distribution",
+        "flagsHeading": "Auto-flags",
+        "columns": {
+          "operator": "Operator",
+          "totalInteractions": "Interactions",
+          "fastResultPct": "Fast %",
+          "distribution": "Distribution"
+        }
       }
     },
     "users": {
@@ -303,7 +477,9 @@
         "status": "Status",
         "activate": "Activate",
         "deactivate": "Deactivate",
-        "resetPassword": "Reset Password"
+        "resetPassword": "Reset Password",
+        "disableTwoFactor": "Disable 2FA",
+        "reenableTwoFactor": "Re-enable 2FA"
       },
       "messages": {
         "nowViewingAs": "Now viewing as {{username}}",
@@ -346,6 +522,15 @@
           "confirmDetail": "The new password will be: {{password}}",
           "failed": "Failed to reset password",
           "resetting": "Resetting..."
+        },
+        "adminToggleTwoFactor": {
+          "disableTitle": "Disable Two-Factor Authentication",
+          "reenableTitle": "Re-enable Two-Factor Authentication",
+          "disableBody": "The user will be able to log in with their password only on next login. Their authenticator secret and unused backup codes are kept so you can re-enable 2FA for them later. The user's active session will be terminated. This action is recorded in the audit log.",
+          "reenableBody": "Two-factor authentication will be turned back on using the user's previously enrolled authenticator. They will be required to enter a 6-digit code on next login. The user's active session will be terminated. This action is recorded in the audit log.",
+          "disabling": "Disabling...",
+          "reenabling": "Re-enabling...",
+          "failed": "Failed to update two-factor authentication"
         },
         "changeStatus": {
           "activateTitle": "Activate User",
@@ -902,11 +1087,28 @@
       },
       "operatorAssignment": {
         "title": "Bulk Operator Assignment",
-        "viewHistory": "View History",
+        "viewHistory": "Import History",
+        "noProjectToast": "Please select an active project before uploading.",
+        "upload": {
+          "sectionTitle": "Upload CSV File",
+          "description": "CSV with client_id and operator_id columns",
+          "downloadTemplate": "Download Template",
+          "downloading": "Downloading...",
+          "clickToUpload": "Click to upload",
+          "orDragAndDrop": "or drag and drop",
+          "constraints": "CSV only, max 10 MB, max 10,000 rows",
+          "validating": "Validating CSV...",
+          "errors": {
+            "onlyCsv": "Only CSV files are supported.",
+            "fileTooLarge": "File exceeds maximum size of 10 MB ({{size}} MB)."
+          }
+        },
         "preview": {
           "title": "Validation Preview",
           "fileInfo": "File: {{filename}} · {{totalRecords}} records · Batch: {{batchId}}",
           "previewRows": "Preview (first {{count}} rows)",
+          "emptyPreview": "No preview rows",
+          "emptyErrors": "No errors",
           "errors": "Errors ({{count}})",
           "readyToAssign": "Ready to assign",
           "noChange": "No change",
@@ -942,10 +1144,87 @@
           "successful": "Successful",
           "failed": "Failed",
           "processingTime": "Processing time: {{time}}",
+          "errorDetails": "Error Details",
           "cancel": "Cancel",
           "downloadErrors": "Download Errors",
           "startNewImport": "Start New Import",
           "jobStarted": "Operator assignment job started"
+        }
+      },
+      "bulkPaymentVerification": {
+        "title": "Bulk Payment Verification",
+        "viewHistory": "Import History",
+        "noProjectToast": "Please select an active project before uploading.",
+        "upload": {
+          "sectionTitle": "Upload Bank CSV",
+          "descriptionIntro": "Verifies existing pending payments or auto-creates verified records. Required columns:",
+          "optionalIntro": "Optional:",
+          "downloadTemplate": "Download Template",
+          "downloading": "Downloading...",
+          "clickToUpload": "Click to upload",
+          "orDragAndDrop": "or drag and drop",
+          "constraints": "CSV only, max 10 MB, max 10,000 rows",
+          "validating": "Validating CSV and resolving contracts...",
+          "errors": {
+            "onlyCsv": "Only CSV files are supported.",
+            "fileTooLarge": "File exceeds maximum size of 10 MB ({{size}} MB)."
+          }
+        },
+        "preview": {
+          "title": "Preview Payment Verification",
+          "fileInfo": "File: {{filename}} · {{totalRecords}} records · Batch: {{batchId}}",
+          "summary": {
+            "ready": "Ready",
+            "warnings": "Warnings",
+            "invalid": "Invalid",
+            "totalAmount": "Total Amount",
+            "uniqueContracts": "Unique Contracts"
+          },
+          "previewTableTitle": "Preview ({{count}} rows)",
+          "errorsTableTitle": "Errors ({{count}} rows)",
+          "emptyPreview": "No preview rows",
+          "emptyErrors": "No errors",
+          "skipWarnings": "Skip rows with warnings ({{count}} rows)",
+          "commentPlaceholder": "Optional comment for this import...",
+          "cancel": "Cancel",
+          "verifyPayments": "Verify {{count}} Payments",
+          "starting": "Starting...",
+          "columns": {
+            "row": "Row",
+            "contractNumber": "Contract Number",
+            "tin": "TIN",
+            "client": "Client",
+            "amount": "Amount",
+            "date": "Date",
+            "method": "Method",
+            "type": "Type",
+            "status": "Status",
+            "note": "Note"
+          },
+          "rowType": {
+            "pending": "Pending",
+            "new": "New"
+          },
+          "rowStatus": {
+            "ready": "Ready",
+            "warning": "Warning",
+            "error": "Error"
+          }
+        },
+        "progress": {
+          "complete": "Payment Verification Complete",
+          "verificationFailed": "Payment Verification Failed",
+          "cancelled": "Payment Verification Cancelled",
+          "processing": "Verifying Payments...",
+          "progressLabel": "Progress",
+          "totalRecords": "Total Records",
+          "paymentsVerified": "Payments Verified",
+          "failedRows": "Failed",
+          "errorDetails": "Error Details",
+          "processingTime": "Processing time: {{time}}",
+          "cancelJob": "Cancel Import",
+          "downloadErrors": "Download Errors",
+          "startNewImport": "Start New Import"
         }
       }
     },
@@ -1016,6 +1295,8 @@
         "selectSearcher": "Select searcher",
         "unassignedOnly": "Unassigned only",
         "more": "more",
+        "min": "Min",
+        "max": "Max",
         "days": "days",
         "noUsersAvailable": "No users available"
       },
@@ -1282,6 +1563,49 @@
           "noPortfoliosFound": "No portfolios found",
           "clear": "Clear",
           "apply": "Apply"
+        },
+        "tagsDropdown": {
+          "searchTags": "Search tags...",
+          "noTagsFound": "No tags found",
+          "clear": "Clear",
+          "apply": "Apply"
+        },
+        "tagSelector": {
+          "title": "Manage Tags — {{name}}",
+          "loadingTags": "Loading tags...",
+          "searchTags": "Search tags...",
+          "selectedCount": "{{selected}} of {{total}} tags selected",
+          "noTagsMatch": "No tags found matching your search",
+          "noTagsAvailable": "No tags available",
+          "saveTags": "Save Tags",
+          "tagsUpdated": "Tags updated for {{name}}",
+          "updateFailed": "Failed to update tags"
+        },
+        "deleteClient": {
+          "title": "Delete Client",
+          "softDeleteWarning": "This action will remove the client from active records (soft delete). Data can be recovered by administrators if needed.",
+          "clientDetails": "Client Details",
+          "fieldName": "Name:",
+          "fieldTaxId": "Tax ID:",
+          "fieldPhone": "Phone:",
+          "fieldTotalDebt": "Total Debt:",
+          "impactTitle": "What Will Happen:",
+          "impact1": "Client will be marked as deleted (soft delete)",
+          "impact2": "Client will disappear from client lists",
+          "impact3": "Historical data (notes, calls, payments) will be preserved",
+          "impact4": "This action cannot be undone without admin intervention",
+          "debtsSummary": "Associated debts: {{count}} debt(s) totaling {{amount}}",
+          "confirmCheckbox": "I understand this action will remove the client from active records",
+          "submitDelete": "Delete Client",
+          "deleting": "Deleting...",
+          "deletedSuccess": "Client deleted successfully",
+          "deleteFailed": "Failed to delete client"
+        },
+        "documentPreview": {
+          "loading": "Loading...",
+          "loadFailed": "Failed to load document",
+          "previewNotAvailable": "Preview not available",
+          "download": "Download"
         },
         "recordPayment": {
           "title": "Record Payment",
@@ -1627,6 +1951,22 @@
       "detail": {
         "clientNotFound": "Client not found",
         "backToClients": "Back to Clients",
+        "documentUploadTitle": "Upload document",
+        "documentUploadAction": "Upload",
+        "generateDocument": "Generate document",
+        "comingSoon": "Coming soon",
+        "dropFileOrClick": "Drag a file here or click to select",
+        "loan": "Loan",
+        "documentsUnlinked": "Not linked to a loan",
+        "documentTypes": {
+          "passport": "Passport",
+          "inn": "Tax ID",
+          "contract": "Contract",
+          "income": "Income statement",
+          "outcome": "Extract / statement",
+          "signature": "Digital signature",
+          "other": "Other"
+        },
         "department": "Department",
         "phones": "Phones",
         "tin": "TIN",
@@ -1801,6 +2141,7 @@
         "viewAll": "View All",
         "showLess": "Show Less",
         "tableHeaders": {
+          "paymentDate": "Payment Date",
           "date": "Payment Added Date",
           "paymentConfirmationDate": "Payment Confirmation Date",
           "amount": "Amount",
@@ -1962,6 +2303,7 @@
         "title": "Interaction history",
         "date": "Date",
         "chain": "Chain",
+        "phone": "Phone",
         "result": "Result",
         "dictionaryPath": "Category path",
         "promise": "Promise",
@@ -1976,8 +2318,30 @@
         "from": "From",
         "to": "To",
         "searchNotes": "Notes",
-        "searchNotesPlaceholder": "Search notes..."
-      }
+        "searchNotesPlaceholder": "Search notes...",
+        "deleteTitle": "Delete interaction",
+        "deleteConfirm": "Are you sure you want to delete this interaction? This cannot be undone.",
+        "deleteSuccess": "Interaction deleted"
+      },
+      "templatePlaceholder": "Pick a template…",
+      "templateSearchPlaceholder": "Search templates…",
+      "templateNoneFound": "No templates match.",
+      "startWithTemplate": "Start with this template",
+      "chainSearchPlaceholder": "Search chains…",
+      "chainNoneFound": "No chains match.",
+      "pinnedGroup": "Pinned",
+      "allGroup": "All chains",
+      "clientPinHint": "Pinned via this client’s history",
+      "clientPinTag": "client",
+      "pin": "Pin",
+      "unpin": "Unpin",
+      "previewHint": "Review the chain on the right and click Start when ready.",
+      "stepCount": "{{count}} steps",
+      "rewindWarningTitle": "Change branching step?",
+      "rewindWarningBody": "Steps after step {{order}} will be cleared and you will re-walk them.",
+      "rewindConfirm": "Yes, reset & re-walk",
+      "saving": "Saving…",
+      "noContacts": "No phones available for this source."
     },
     "chainBuilder": {
       "title": "Chain Builder",
@@ -2018,6 +2382,118 @@
         "removed": "Template removed"
       }
     },
+    "documentGeneration": {
+      "title": "Document Generation",
+      "tabs": {
+        "journal": "Document Journal",
+        "templates": "Document Templates"
+      },
+      "documentTypes": {
+        "passport": "Passport",
+        "inn": "Tax ID",
+        "contract": "Contract",
+        "income": "Income statement",
+        "outcome": "Extract / statement",
+        "signature": "Digital signature",
+        "other": "Other"
+      },
+      "actions": {
+        "uploaded": "Uploaded",
+        "generated": "Generated"
+      },
+      "filters": {
+        "documentType": "Document type",
+        "action": "Action",
+        "operator": "Operator",
+        "client": "Client",
+        "clientPlaceholder": "Name",
+        "creditor": "Creditor",
+        "creditorPlaceholder": "Credit ID or creditor name",
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "all": "All",
+        "reset": "Reset"
+      },
+      "journal": {
+        "columns": {
+          "documentName": "Document Name",
+          "documentType": "Document Type",
+          "client": "Client",
+          "creditId": "Credit ID",
+          "creditor": "Creditor",
+          "action": "Action",
+          "performedBy": "Performed by",
+          "dateTime": "Date and time"
+        },
+        "loading": "Loading…",
+        "empty": "No documents found.",
+        "loadError": "Failed to load document journal."
+      },
+      "templates": {
+        "comingSoon": "Template management is coming in a follow-up release.",
+        "create": "Create template",
+        "intro": "Reusable document bodies with variable placeholders.",
+        "empty": "No templates yet.",
+        "loading": "Loading...",
+        "loadError": "Failed to load templates.",
+        "columns": {
+          "name": "Template name",
+          "preview": "Preview",
+          "variables": "Variables",
+          "updated": "Updated",
+          "actions": "Actions"
+        },
+        "modals": {
+          "createTitle": "Create template",
+          "editTitle": "Edit template",
+          "subtitle": "Use {{variable_name}} to insert dynamic data.",
+          "deleteTitle": "Delete template",
+          "deleteConfirm": "Are you sure you want to delete this template?",
+          "deleteWarning": "This action cannot be undone."
+        },
+        "form": {
+          "name": "Template name",
+          "namePlaceholder": "e.g. Demand letter",
+          "body": "Template body",
+          "bodyPlaceholder": "Compose your template here. Insert variables from the right-hand panel.",
+          "preview": "Preview (sample data)",
+          "previewEmpty": "Start typing to see a live preview.",
+          "variables": "Variables",
+          "variablesHelp": "Click a variable to insert it at the cursor."
+        },
+        "variableGroups": {
+          "client": "Client",
+          "credit": "Credit",
+          "system": "System"
+        },
+        "variables": {
+          "clientFullName": "Client's full name",
+          "clientFirstName": "Client's first name",
+          "clientLastName": "Client's last name",
+          "clientTaxId": "Tax ID (TIN)",
+          "clientPhone": "Primary phone",
+          "clientEmail": "Primary email",
+          "clientAddress": "Registered address",
+          "creditId": "Credit ID / contract number",
+          "creditorName": "Creditor name",
+          "debtAmount": "Outstanding debt amount",
+          "debtCurrency": "Debt currency",
+          "contractDate": "Contract sign date",
+          "dueDate": "Next payment due date",
+          "today": "Today's date",
+          "operatorName": "Operator full name"
+        },
+        "errors": {
+          "nameRequired": "Template name is required",
+          "bodyRequired": "Template body is required"
+        },
+        "messages": {
+          "created": "Template created",
+          "updated": "Template updated",
+          "deleted": "Template deleted"
+        }
+      }
+    },
     "interactionLog": {
       "title": "Interaction Log",
       "export": "Export CSV",
@@ -2036,12 +2512,19 @@
       },
       "filters": {
         "clientId": "Client ID",
+        "clientIdPlaceholder": "ID",
         "chain": "Chain",
         "allChains": "All chains",
         "from": "From",
         "to": "To",
         "notes": "Notes",
         "notesPlaceholder": "Search notes..."
+      },
+      "pagination": {
+        "rangeOfTotal": "{{start}}–{{end}} / {{total}}",
+        "pageOfPages": "{{page}} / {{totalPages}}",
+        "previousPage": "Previous page",
+        "nextPage": "Next page"
       }
     },
     "taDictionary": {
@@ -2135,8 +2618,12 @@
         "notInPast": "Date cannot be in the past"
       },
       "modals": {
-        "create": { "title": "Create TA Chain" },
-        "edit": { "title": "Edit TA Chain" }
+        "create": {
+          "title": "Create TA Chain"
+        },
+        "edit": {
+          "title": "Edit TA Chain"
+        }
       },
       "errors": {
         "nameRequired": "Name is required",
@@ -2204,8 +2691,12 @@
         "positive": "Positive"
       },
       "modals": {
-        "create": { "title": "Create Target Action" },
-        "edit": { "title": "Edit Target Action" }
+        "create": {
+          "title": "Create Target Action"
+        },
+        "edit": {
+          "title": "Edit Target Action"
+        }
       },
       "errors": {
         "nameRequired": "Name is required",
@@ -2477,6 +2968,7 @@
         },
         "operators": {
           "eq": "equals",
+          "ne": "not equals",
           "neq": "not equals",
           "gt": "greater than",
           "gte": "greater or equal",
@@ -2583,6 +3075,9 @@
           "replace_tag": "Replace Tag"
         },
         "selectField": "Select field",
+        "selectEvent": "Select event...",
+        "customEvent": "Custom value...",
+        "eventHint": "Pick a system event or enter your own",
         "executionCount": "Executions",
         "lastExecuted": "Last Run",
         "neverExecuted": "—",
@@ -2605,7 +3100,48 @@
         },
         "eventPayloadFields": {
           "previous_responsible_id": "Previous responsible (ID)",
-          "new_responsible_id": "New responsible (ID)"
+          "new_responsible_id": "New responsible (ID)",
+          "interaction_id": "Interaction ID",
+          "result_name": "Result",
+          "type_code": "Interaction type",
+          "channel": "Channel",
+          "direction": "Direction",
+          "payment_id": "Payment ID",
+          "payment_number": "Payment number",
+          "debt_id": "Debt ID",
+          "amount": "Amount",
+          "payment_method": "Payment method",
+          "payment_date": "Payment date",
+          "payment_confirmation_date": "Payment confirmation date",
+          "status": "Status",
+          "verified_by_user_id": "Verified by (user ID)",
+          "verified_at": "Verified at",
+          "recorded_by_user_id": "Recorded by (user ID)",
+          "remaining_debt": "Remaining debt",
+          "sms_id": "SMS ID",
+          "message_id": "Message ID",
+          "phone_number": "Phone number",
+          "template_name": "SMS template",
+          "segments": "SMS segments",
+          "gateway_provider": "Gateway provider",
+          "call_id": "Call ID",
+          "outcome": "Call outcome",
+          "disposition": "Disposition",
+          "agent_extension": "Agent extension",
+          "score": "Score",
+          "risk_score": "Risk score",
+          "previous_score": "Previous score",
+          "score_change": "Score change",
+          "algorithm_version": "Algorithm version",
+          "calculation_reason": "Calculation reason",
+          "tax_id": "Tax ID",
+          "source": "Source",
+          "import_batch_id": "Import batch ID",
+          "contract_number": "Contract number",
+          "old_amount": "Previous amount",
+          "new_amount": "New amount",
+          "old_status": "Previous status",
+          "new_status": "New status"
         },
         "validation": {
           "nameRequired": "Name is required",
@@ -2660,7 +3196,28 @@
               "Threatens": "Threatens",
               "Sent documents": "Sent documents",
               "No numbers": "No numbers",
-              "Numbers found": "Numbers found"
+              "Numbers found": "Numbers found",
+              "Agreement - Full payment": "Agreement - Full payment",
+              "Agreement - Partial payment": "Agreement - Partial payment",
+              "Agreement - Restructuring": "Agreement - Restructuring",
+              "Agreement - Potential payment": "Agreement - Potential payment",
+              "Payment reminder": "Payment reminder"
+            },
+            "type_code": {
+              "INCOMING": "Incoming",
+              "OUTGOING": "Outgoing",
+              "SEARCHING": "Searching"
+            },
+            "channel": {
+              "call": "Call",
+              "messenger": "Messenger",
+              "mail": "Mail",
+              "chat": "Chat"
+            },
+            "direction": {
+              "inbound": "Inbound",
+              "outbound": "Outbound",
+              "system": "System"
             }
           }
         }
@@ -2695,6 +3252,18 @@
       },
       "helpBanner": "Need help configuring tags?",
       "helpLink": "View documentation",
+      "trace": {
+        "cta": "Why?",
+        "openAllHint": "View tag activity for this client",
+        "titleAll": "Tag activity for this client",
+        "titleSingle": "Why \"{{tag}}\"?",
+        "empty": "No tag activity recorded for this client.",
+        "emptyForTag": "No history yet for this tag — it may have been assigned manually or before tracing was enabled.",
+        "loadFailed": "Failed to load trace",
+        "entriesCount": "{{count}} events on the timeline (newest first)",
+        "actor": "actor",
+        "action": "action"
+      },
       "settings": {
         "description": "Manage dropdown options, events, and rule conditions. Changes apply immediately to all forms.",
         "dictionarySettings": "Tag Dictionary",

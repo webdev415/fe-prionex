@@ -71,6 +71,18 @@ if (typeof globalThis.HTMLAudioElement === 'undefined') {
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
+      if (key === 'pages.imports.operatorAssignment.preview.fileInfo' && options) {
+        return `File: ${String(options.filename)} · ${String(options.totalRecords)} records · Batch: ${String(options.batchId)}`
+      }
+      if (key === 'pages.imports.operatorAssignment.preview.previewRows' && options) {
+        return `Preview (first ${String(options.count)} rows)`
+      }
+      if (key === 'pages.imports.operatorAssignment.preview.errors' && options) {
+        return `Errors (${String(options.count)})`
+      }
+      if (key === 'pages.imports.operatorAssignment.preview.confirm' && options) {
+        return `Confirm & Assign ${String(options.count)} Clients`
+      }
       // Map translation keys to readable text for testing
       const translations: Record<string, string> = {
         'login.title': 'Sign In',
@@ -182,8 +194,128 @@ vi.mock('react-i18next', () => ({
         'pages.clients.detail.tableHeaders.status': 'Status',
         'actions.cancel': 'Cancel',
         'actions.close': 'Close',
+        // Two-Factor Authentication
+        'twoFactor.title': 'Two-Factor Authentication',
+        'twoFactor.subtitle': 'Enter the 6-digit code from your authenticator app',
+        'twoFactor.subtitleBackup': 'Enter one of your backup recovery codes',
+        'twoFactor.signedInAs': `Signed in as ${options?.username ?? '{{username}}'}`,
+        'twoFactor.codeLabel': 'Authentication code',
+        'twoFactor.codePlaceholder': '123456',
+        'twoFactor.backupCodeLabel': 'Backup code',
+        'twoFactor.backupCodePlaceholder': 'xxxxxxxx-xxxxxxxx',
+        'twoFactor.submit': 'Verify',
+        'twoFactor.useBackupCode': 'Use a backup code instead',
+        'twoFactor.useAuthenticatorApp': 'Use authenticator code instead',
+        'twoFactor.backToLogin': 'Cancel and back to login',
+        'twoFactor.errors.codeFormat': 'Enter the 6-digit code from your authenticator app',
+        'twoFactor.errors.backupTooShort': 'Backup code looks too short',
+        'twoFactor.errors.verifyFailed': 'Verification failed',
+        'twoFactor.section.title': 'Two-Factor Authentication',
+        'twoFactor.section.description': 'Protect your account with Google Authenticator',
+        'twoFactor.section.statusEnabled': 'Enabled',
+        'twoFactor.section.statusDisabled': 'Disabled',
+        'twoFactor.section.loading': 'Loading status…',
+        'twoFactor.section.enable': 'Enable Google Authenticator',
+        'twoFactor.section.disable': 'Disable',
+        'twoFactor.section.regenerate': 'Regenerate backup codes',
+        'twoFactor.section.backupRemaining': `${options?.count ?? 0} backup codes remaining`,
+        'twoFactor.section.lowBackupWarning': '— consider regenerating.',
+        // Setup modal
+        'twoFactor.setup.title': 'Enable Two-Factor Authentication',
+        'twoFactor.setup.backupTitle': 'Save your backup codes',
+        'twoFactor.setup.qrInstructions': 'Scan this QR code with Google Authenticator.',
+        'twoFactor.setup.qrAlt': 'Two-factor authentication QR code',
+        'twoFactor.setup.manualEntry': 'Manual entry secret:',
+        'twoFactor.setup.copySecret': 'Copy',
+        'twoFactor.setup.verifyInstructions':
+          'Enter the 6-digit code your authenticator app shows now.',
+        'twoFactor.setup.verifyAndEnable': 'Verify and enable',
+        'twoFactor.setup.next': 'Next',
+        'twoFactor.setup.back': 'Back',
+        'twoFactor.setup.cancel': 'Cancel',
+        'twoFactor.setup.done': 'Done',
+        'twoFactor.setup.backupIntro': 'Save these backup codes somewhere safe.',
+        'twoFactor.setup.acknowledge': 'I have saved my backup codes in a safe place.',
+        'twoFactor.setup.errors.cannotStart': 'Could not start setup.',
+        'twoFactor.setup.errors.mustSaveCodes': 'Confirm that you have saved the backup codes.',
+        // Disable modal
+        'twoFactor.disable.title': 'Disable Two-Factor Authentication',
+        'twoFactor.disable.warning': 'Disabling 2FA makes your account easier to compromise.',
+        'twoFactor.disable.passwordLabel': 'Current password',
+        'twoFactor.disable.codeLabel': 'Authenticator code or backup code',
+        'twoFactor.disable.codePlaceholder': '123456 or xxxx-xxxx',
+        'twoFactor.disable.cancel': 'Cancel',
+        'twoFactor.disable.confirm': 'Disable 2FA',
+        'twoFactor.disable.success': 'Two-factor authentication disabled',
+        'twoFactor.disable.errors.passwordRequired': 'Password is required',
+        'twoFactor.disable.errors.codeRequired': 'Authentication code is required',
+        'twoFactor.disable.errors.failed': 'Failed to disable 2FA',
+        'twoFactor.disable.errors.backupAlreadyUsedHint':
+          'If you’ve already used this backup code, it cannot be used again — try a different one from your saved list.',
+        // Regenerate modal
+        'twoFactor.regenerate.title': 'Regenerate backup codes',
+        'twoFactor.regenerate.intro': 'Generate a fresh batch of backup codes.',
+        'twoFactor.regenerate.successIntro': 'Your new backup codes are ready.',
+        'twoFactor.regenerate.invalidatesOld': 'Save these now.',
+        'twoFactor.regenerate.confirm': 'Regenerate',
+        'twoFactor.regenerate.success': 'New backup codes generated',
+        'twoFactor.regenerate.errors.failed': 'Failed to regenerate backup codes',
+        // Backup codes panel
+        'twoFactor.backupCodes.warning': 'These codes are shown only once.',
+        'twoFactor.backupCodes.copyAll': 'Copy all',
+        'twoFactor.backupCodes.copied': 'Copied',
+        'twoFactor.backupCodes.copyFailed': 'Could not copy to clipboard',
+        'twoFactor.backupCodes.download': 'Download .txt',
+        'pages.clients.modals.deleteClient.title': 'Delete Client',
+        'pages.clients.modals.deleteClient.softDeleteWarning':
+          'This action will remove the client from active records (soft delete). Data can be recovered by administrators if needed.',
+        'pages.clients.modals.deleteClient.clientDetails': 'Client Details',
+        'pages.clients.modals.deleteClient.fieldName': 'Name:',
+        'pages.clients.modals.deleteClient.fieldTaxId': 'Tax ID:',
+        'pages.clients.modals.deleteClient.fieldPhone': 'Phone:',
+        'pages.clients.modals.deleteClient.fieldTotalDebt': 'Total Debt:',
+        'pages.clients.modals.deleteClient.impactTitle': 'What Will Happen:',
+        'pages.clients.modals.deleteClient.impact1':
+          'Client will be marked as deleted (soft delete)',
+        'pages.clients.modals.deleteClient.impact2': 'Client will disappear from client lists',
+        'pages.clients.modals.deleteClient.impact3':
+          'Historical data (notes, calls, payments) will be preserved',
+        'pages.clients.modals.deleteClient.impact4':
+          'This action cannot be undone without admin intervention',
+        'pages.clients.modals.deleteClient.debtsSummary':
+          'Associated debts: {{count}} debt(s) totaling {{amount}}',
+        'pages.clients.modals.deleteClient.confirmCheckbox':
+          'I understand this action will remove the client from active records',
+        'pages.clients.modals.deleteClient.submitDelete': 'Delete Client',
+        'pages.clients.modals.deleteClient.deleting': 'Deleting...',
+        'pages.clients.modals.deleteClient.deletedSuccess': 'Client deleted successfully',
+        'pages.clients.modals.deleteClient.deleteFailed': 'Failed to delete client',
+        'pages.clients.detail.tagsDropdown.searchTags': 'Search tags...',
+        'pages.clients.detail.tagsDropdown.noTagsFound': 'No tags found',
+        'pages.clients.detail.tagsDropdown.clear': 'Clear',
+        'pages.clients.detail.tagsDropdown.apply': 'Apply',
+        'pages.clients.modals.tagsDropdown.searchTags': 'Search tags...',
+        'pages.clients.modals.tagsDropdown.noTagsFound': 'No tags found',
+        'pages.clients.modals.tagsDropdown.clear': 'Clear',
+        'pages.clients.modals.tagsDropdown.apply': 'Apply',
+        'pages.clients.filters.min': 'Min',
+        'pages.clients.filters.max': 'Max',
+        'components.pagination.rowsPerPage': 'Rows per page:',
+        'components.pagination.previousPage': 'Previous page',
+        'components.pagination.nextPage': 'Next page',
+        'components.pagination.goToPage': 'Go to page {{page}}',
+        'components.pagination.page': 'Page',
+        'components.pagination.of': 'of',
       }
-      return translations[key] || key
+      const template = translations[key] || key
+      if (options && typeof template === 'string' && template.includes('{{')) {
+        return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) =>
+          name in (options as Record<string, unknown>)
+            ? String((options as Record<string, unknown>)[name])
+            : `{{${name}}}`
+        )
+      }
+      return template
     },
     i18n: {
       language: 'en',

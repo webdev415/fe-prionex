@@ -211,12 +211,10 @@
   .select-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: #b5b5b5 #f0f0f0;
-    scrollbar-gutter: stable;
-    overflow-y: scroll !important;
+    overflow-y: auto;
   }
   .select-scrollbar::-webkit-scrollbar {
     width: 8px;
-    display: block !important;
   }
   .select-scrollbar::-webkit-scrollbar-track {
     background: #f0f0f0;
@@ -506,4 +504,45 @@
 
 .animate-bell-shake {
   animation: bell-shake 0.8s ease-in-out;
+}
+
+/* Make native date/time inputs visually fill their container — Chrome leaves the
+ * datetime-edit cluster left-aligned by default, so the box looks half-empty. */
+input[type='date'],
+input[type='datetime-local'],
+input[type='month'],
+input[type='time'],
+input[type='week'] {
+  display: inline-flex;
+  align-items: center;
+}
+
+input[type='date']::-webkit-datetime-edit,
+input[type='datetime-local']::-webkit-datetime-edit,
+input[type='month']::-webkit-datetime-edit,
+input[type='time']::-webkit-datetime-edit,
+input[type='week']::-webkit-datetime-edit {
+  flex: 1;
+  padding: 0;
+}
+
+input[type='date']::-webkit-datetime-edit-fields-wrapper,
+input[type='datetime-local']::-webkit-datetime-edit-fields-wrapper,
+input[type='month']::-webkit-datetime-edit-fields-wrapper {
+  width: 100%;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator,
+input[type='month']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator,
+input[type='week']::-webkit-calendar-picker-indicator {
+  margin-left: auto;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator:hover,
+input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
 }

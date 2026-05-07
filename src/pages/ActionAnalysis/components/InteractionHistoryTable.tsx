@@ -4,6 +4,7 @@ import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTab
 import { formatDate, formatDateTime } from '@/lib/formatters'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
 import type {
+  InteractionInternalDateType,
   InteractionMonitoringItem,
   InteractionMonitoringSortBy,
   InteractionMonitoringSortDir,
@@ -16,6 +17,25 @@ interface Props {
   sortBy: InteractionMonitoringSortBy
   sortDir: InteractionMonitoringSortDir
   onSortChange: (sortBy: InteractionMonitoringSortBy, sortDir: InteractionMonitoringSortDir) => void
+  /**
+   * Active internal-date filter. Controls which of `promise_to_pay_date` /
+   * `next_action_date` / `follow_up_date` is rendered in the "Internal date"
+   * column. When unset (or `'any'`), the column shows the first non-null of
+   * the three. KAN-409 follow-up.
+   */
+  internalDateType?: InteractionInternalDateType
+}
+
+function pickInternalDate(
+  row: InteractionMonitoringItem,
+  type: InteractionInternalDateType | undefined
+): string | null {
+  if (type === 'promise_to_pay') return row.promise_to_pay_date
+  if (type === 'next_action') return row.next_action_date
+  if (type === 'follow_up') return row.follow_up_date
+  // No filter or `any` → fall back to whichever date is present, in the
+  // order PM ranked them when describing the column.
+  return row.promise_to_pay_date ?? row.next_action_date ?? row.follow_up_date ?? null
 }
 
 function formatAmount(value: string | null): string {
@@ -25,7 +45,13 @@ function formatAmount(value: string | null): string {
   return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-export function InteractionHistoryTable({ data, sortBy, sortDir, onSortChange }: Props) {
+export function InteractionHistoryTable({
+  data,
+  sortBy,
+  sortDir,
+  onSortChange,
+  internalDateType,
+}: Props) {
   const { t } = useTranslation('common')
 
   const rows: Row[] = data.map((i) => ({ ...i, id: i.id }))
@@ -87,9 +113,32 @@ export function InteractionHistoryTable({ data, sortBy, sortDir, onSortChange }:
       ),
     },
     {
-      key: 'employee',
-      header: t('pages.actionAnalysis.columns.employee', 'Employee'),
+      key: 'responsibleAtCreation',
+      header: t('pages.actionAnalysis.columns.responsibleAtCreation', 'Responsible at creation'),
       render: (r) => <span className="text-sm text-gray-700">{r.user_name ?? '—'}</span>,
+    },
+    {
+      key: 'currentResponsible',
+      header: t('pages.actionAnalysis.columns.currentResponsible', 'Current responsible'),
+      render: (r) => (
+        <span className="text-sm text-gray-700">
+          {r.current_responsible_user_name ??
+            (r.current_responsible_user_id ? `#${r.current_responsible_user_id}` : '—')}
+        </span>
+      ),
+    },
+    {
+      key: 'internalDate',
+      header: t('pages.actionAnalysis.columns.internalDate', 'Date (promise / callback)'),
+      render: (r) => {
+        const value = pickInternalDate(r, internalDateType)
+        return <span className="text-sm text-gray-700">{value ? formatDate(value) : '—'}</span>
+      },
+    },
+    {
+      key: 'channel',
+      header: t('pages.actionAnalysis.columns.channel', 'Channel'),
+      render: (r) => <span className="text-sm text-gray-700">{r.channel ?? '—'}</span>,
     },
     {
       key: 'contactType',
@@ -115,16 +164,10 @@ export function InteractionHistoryTable({ data, sortBy, sortDir, onSortChange }:
       header: t('pages.actionAnalysis.columns.promiseAmount', 'Promise amount'),
       sortable: true,
       align: 'right',
+      // Promise *date* lives in the dedicated "Internal date" column now —
+      // showing it again as a sub-line here was duplicate noise.
       render: (r) => (
-        <div className="flex flex-col items-end gap-0.5 text-sm text-gray-700">
-          <span>{formatAmount(r.promise_to_pay_amount)}</span>
-          {r.promise_to_pay_date ? (
-            <span className="text-xs text-gray-500">
-              {t('pages.actionAnalysis.columns.promiseDate', 'Promise date')}:{' '}
-              {formatDate(r.promise_to_pay_date)}
-            </span>
-          ) : null}
-        </div>
+        <span className="text-sm text-gray-700">{formatAmount(r.promise_to_pay_amount)}</span>
       ),
     },
   ]

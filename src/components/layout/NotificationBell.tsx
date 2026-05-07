@@ -11,6 +11,8 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import type { TFunction } from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
@@ -29,7 +31,20 @@ import { useNotificationSocket } from '@/features/notifications/hooks/useNotific
 import { NotificationType } from '@/features/notifications/types'
 import type { NotificationItem } from '@/features/notifications/types'
 
-function formatDateTime(isoDate: string, timezone?: string): string {
+function getIntlLocale(language: string): string {
+  const base = language.split('-')[0] ?? 'en'
+  if (base === 'uk') return 'uk-UA'
+  if (base === 'ru') return 'ru-RU'
+  return 'en-GB'
+}
+
+function translatePaymentMethod(method: string | undefined, t: TFunction): string {
+  if (!method) return ''
+  const key = `notificationBell.paymentMethod.${method.toLowerCase()}`
+  return t(key, { defaultValue: method })
+}
+
+function formatDateTime(isoDate: string, timezone: string | undefined, language: string): string {
   try {
     // Convention: DB stores UTC. Naive strings (no Z/offset) are interpreted
     // as UTC; we display in the user's profile timezone.
@@ -38,7 +53,8 @@ function formatDateTime(isoDate: string, timezone?: string): string {
       dateStr += 'Z'
     }
     const tz = timezone ?? 'UTC'
-    const parts = new Intl.DateTimeFormat('en-GB', {
+    const intlLocale = getIntlLocale(language)
+    const parts = new Intl.DateTimeFormat(intlLocale, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -54,25 +70,26 @@ function formatDateTime(isoDate: string, timezone?: string): string {
   }
 }
 
-function formatRelativeTime(isoDate: string): string {
+function formatRelativeTime(isoDate: string, t: TFunction): string {
   try {
     const date = new Date(isoDate)
     const now = new Date()
     const diffMs = now.getTime() - date.getTime()
     const diffMin = Math.floor(diffMs / 60000)
 
-    if (diffMin < 1) return 'just now'
-    if (diffMin < 60) return `${diffMin} min ago`
+    if (diffMin < 1) return t('notificationBell.relative.justNow')
+    if (diffMin < 60) return t('notificationBell.relative.minutesAgo', { count: diffMin })
     const diffHr = Math.floor(diffMin / 60)
-    if (diffHr < 24) return `${diffHr}h ago`
+    if (diffHr < 24) return t('notificationBell.relative.hoursAgo', { count: diffHr })
     const diffDays = Math.floor(diffHr / 24)
-    return `${diffDays}d ago`
+    return t('notificationBell.relative.daysAgo', { count: diffDays })
   } catch {
     return isoDate
   }
 }
 
 export function NotificationBell() {
+  const { t } = useTranslation('common')
   const navigate = useNavigate()
   const userTimezone = useAuthStore((state) => state.user?.timezone)
 
@@ -166,7 +183,7 @@ export function NotificationBell() {
     try {
       await dismissMutation.mutateAsync(notificationId)
     } catch {
-      toast.error('Failed to dismiss notification')
+      toast.error(t('notificationBell.errors.dismissFailed'))
     }
   }
 
@@ -175,7 +192,11 @@ export function NotificationBell() {
       {/* Bell button */}
       <button
         type="button"
-        aria-label={`Notifications${hasNotifications ? ` (${count})` : ''}`}
+        aria-label={
+          hasNotifications
+            ? t('notificationBell.ariaLabelWithCount', { count })
+            : t('notificationBell.ariaLabel')
+        }
         onClick={() => setIsOpen((prev) => !prev)}
         className="relative flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100 focus:outline-none"
       >
@@ -200,7 +221,9 @@ export function NotificationBell() {
         <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-            <span className="text-dark-500 text-sm font-semibold">Notifications</span>
+            <span className="text-dark-500 text-sm font-semibold">
+              {t('notificationBell.title')}
+            </span>
             <div className="flex items-center gap-2">
               {hasNotifications && (
                 <>
@@ -208,12 +231,12 @@ export function NotificationBell() {
                     type="button"
                     onClick={() =>
                       markAllReadMutation.mutate(undefined, {
-                        onError: () => toast.error('Failed to mark all as read'),
+                        onError: () => toast.error(t('notificationBell.errors.markAllReadFailed')),
                       })
                     }
                     className="text-[10px] font-medium text-blue-500 hover:text-blue-700"
                   >
-                    Mark all read
+                    {t('notificationBell.markAllRead')}
                   </button>
                   <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
                     {count}
@@ -228,14 +251,14 @@ export function NotificationBell() {
             {notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-2 px-4 py-8 text-gray-300">
                 <Icons.Bell size={28} strokeWidth={1.5} />
-                <p className="text-xs text-gray-400">No notifications</p>
+                <p className="text-xs text-gray-400">{t('notificationBell.noNotifications')}</p>
               </div>
             ) : (
               <>
                 {/* Pending Payments section */}
                 {paymentNotifications.length > 0 && (
                   <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold text-black">
-                    Pending Payments
+                    {t('notificationBell.sections.pendingPayments')}
                   </div>
                 )}
                 {paymentNotifications.map((n) => (
@@ -250,7 +273,7 @@ export function NotificationBell() {
                 {/* Tasks section */}
                 {taskNotifications.length > 0 && (
                   <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold text-black">
-                    Tasks
+                    {t('notificationBell.sections.tasks')}
                   </div>
                 )}
                 {taskNotifications.map((n) => (
@@ -266,7 +289,7 @@ export function NotificationBell() {
                 {/* Calls section */}
                 {callNotifications.length > 0 && (
                   <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold text-black">
-                    Calls
+                    {t('notificationBell.sections.calls')}
                   </div>
                 )}
                 {callNotifications.map((n) => (
@@ -281,7 +304,7 @@ export function NotificationBell() {
                 {/* Tags section */}
                 {tagNotifications.length > 0 && (
                   <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold text-black">
-                    Tags
+                    {t('notificationBell.sections.tags')}
                   </div>
                 )}
                 {tagNotifications.map((n) => (
@@ -296,7 +319,7 @@ export function NotificationBell() {
                 {/* TA Chains section */}
                 {taChainNotifications.length > 0 && (
                   <div className="border-b border-gray-100 px-4 py-2 text-xs font-semibold text-black">
-                    TA Chains
+                    {t('notificationBell.sections.taChains')}
                   </div>
                 )}
                 {taChainNotifications.map((n) => (
@@ -332,7 +355,9 @@ function PaymentNotificationItem({
   userTimezone?: string
   onNavigate: NavigateFn
 }) {
+  const { t, i18n } = useTranslation('common')
   const meta = n.metadata
+  const daysPending = Number(meta.days_pending) || 0
   return (
     <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
       <button
@@ -344,25 +369,27 @@ function PaymentNotificationItem({
         <div className="flex flex-wrap items-center gap-1.5">
           {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
           <p className="line-clamp-1 text-xs font-semibold text-black">
-            {meta.client_name ?? `Client #${meta.client_id}`}
-            <span className="ml-1 font-normal text-black">(ID: {meta.client_id})</span>
+            {meta.client_name ?? t('notificationBell.clientNumber', { id: meta.client_id })}
+            <span className="ml-1 font-normal text-black">
+              ({t('notificationBell.idLabel', { id: meta.client_id })})
+            </span>
             <span className="ml-1 font-normal text-black">/ {meta.payment_number}</span>
           </p>
           <span className="rounded bg-yellow-100 px-1.5 py-0.5 text-[10px] font-medium text-yellow-600">
-            pending
+            {t('notificationBell.payment.pending')}
           </span>
           <span className="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-600">
-            {meta.days_pending}d
+            {t('notificationBell.payment.daysPending', { count: daysPending })}
           </span>
         </div>
         <p className="w-full min-w-0 truncate text-xs text-black">
           ₴ {Number(meta.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-          <span className="ml-2 uppercase">{meta.payment_method}</span>
+          <span className="ml-2">{translatePaymentMethod(meta.payment_method, t)}</span>
         </p>
         <div className="flex items-center gap-1 text-black">
           <Icons.Clock01 size={11} strokeWidth={1.5} />
           <span className="text-[11px]">
-            {meta.recorded_at ? formatDateTime(meta.recorded_at, userTimezone) : '—'}
+            {meta.recorded_at ? formatDateTime(meta.recorded_at, userTimezone, i18n.language) : '—'}
           </span>
         </div>
       </button>
@@ -383,6 +410,7 @@ function TaskNotificationItem({
   onDismiss: DismissFn
   userTimezone?: string
 }) {
+  const { t } = useTranslation('common')
   const meta = n.metadata
   return (
     <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
@@ -395,12 +423,16 @@ function TaskNotificationItem({
         <div className="flex flex-wrap items-center gap-1.5 pr-5">
           {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
           <p className="line-clamp-1 text-xs font-semibold text-black">
-            {meta.client_name ?? `Client #${meta.client_id}`}
+            {meta.client_name ?? t('notificationBell.clientNumber', { id: meta.client_id })}
             {meta.client_id && (
-              <span className="ml-1 font-normal text-black">(ID: {meta.client_id})</span>
+              <span className="ml-1 font-normal text-black">
+                ({t('notificationBell.idLabel', { id: meta.client_id })})
+              </span>
             )}
             {meta.debt_id && (
-              <span className="ml-1 font-normal text-black">/ Debt: {meta.debt_id}</span>
+              <span className="ml-1 font-normal text-black">
+                / {t('notificationBell.debtLabel', { id: meta.debt_id })}
+              </span>
             )}
           </p>
           {meta.priority && (
@@ -412,7 +444,9 @@ function TaskNotificationItem({
                 meta.priority === 'low' && 'bg-gray-100 text-gray-500'
               )}
             >
-              {meta.priority}
+              {t(`notificationBell.taskPriority.${meta.priority}`, {
+                defaultValue: meta.priority,
+              })}
             </span>
           )}
           {meta.status && (
@@ -427,7 +461,9 @@ function TaskNotificationItem({
                 meta.status === 'incoming_line_result' && 'bg-orange-100 text-orange-600'
               )}
             >
-              {meta.status?.replace(/_/g, ' ')}
+              {t(`notificationBell.taskStatus.${meta.status}`, {
+                defaultValue: meta.status?.replace(/_/g, ' ') ?? '',
+              })}
             </span>
           )}
           {meta.subject_name && !meta.status && (
@@ -448,7 +484,7 @@ function TaskNotificationItem({
       </button>
       <button
         type="button"
-        aria-label="Dismiss notification"
+        aria-label={t('notificationBell.dismissAria')}
         onClick={(e) => onDismiss(e, n.id)}
         className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-600"
       >
@@ -469,6 +505,7 @@ function CallNotificationItem({
   onNavigate: NavigateFn
   onDismiss: DismissFn
 }) {
+  const { t } = useTranslation('common')
   const meta = n.metadata
   return (
     <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
@@ -485,12 +522,12 @@ function CallNotificationItem({
         </div>
         <p className="text-xs text-black">{n.body}</p>
         <span className="text-[11px] text-gray-400">
-          {n.created_at ? formatRelativeTime(n.created_at) : ''}
+          {n.created_at ? formatRelativeTime(n.created_at, t) : ''}
         </span>
       </button>
       <button
         type="button"
-        aria-label="Dismiss notification"
+        aria-label={t('notificationBell.dismissAria')}
         onClick={(e) => onDismiss(e, n.id)}
         className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-600"
       >
@@ -511,6 +548,7 @@ function TagNotificationItem({
   onNavigate: NavigateFn
   onDismiss: DismissFn
 }) {
+  const { t } = useTranslation('common')
   const meta = n.metadata
   return (
     <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
@@ -527,12 +565,12 @@ function TagNotificationItem({
         </div>
         {n.body && <p className="text-xs text-black">{n.body}</p>}
         <span className="text-[11px] text-gray-400">
-          {n.created_at ? formatRelativeTime(n.created_at) : ''}
+          {n.created_at ? formatRelativeTime(n.created_at, t) : ''}
         </span>
       </button>
       <button
         type="button"
-        aria-label="Dismiss notification"
+        aria-label={t('notificationBell.dismissAria')}
         onClick={(e) => onDismiss(e, n.id)}
         className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-600"
       >
@@ -553,6 +591,7 @@ function TaChainNotificationItem({
   onNavigate: NavigateFn
   onDismiss: DismissFn
 }) {
+  const { t } = useTranslation('common')
   const meta = n.metadata
   return (
     <div className="group relative flex border-b border-gray-100 transition-colors last:border-b-0 hover:bg-gray-50">
@@ -566,35 +605,40 @@ function TaChainNotificationItem({
           {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
           <Icons.Bell size={14} strokeWidth={1.5} className="text-emerald-600" />
           <p className="line-clamp-1 text-xs font-semibold text-black">
-            {meta.client_name ?? `Client #${meta.client_id}`}
+            {meta.client_name ?? t('notificationBell.clientNumber', { id: meta.client_id })}
             {meta.client_id && (
-              <span className="ml-1 font-normal text-black">(ID: {meta.client_id})</span>
+              <span className="ml-1 font-normal text-black">
+                ({t('notificationBell.idLabel', { id: meta.client_id })})
+              </span>
             )}
           </p>
         </div>
         {meta.chain_name && (
           <p className="line-clamp-1 text-xs text-black">
-            <span className="font-medium">Chain:</span> {meta.chain_name}
+            <span className="font-medium">{t('notificationBell.chainLabel')}</span>{' '}
+            {meta.chain_name}
           </p>
         )}
         {meta.result_name && (
           <p className="line-clamp-1 text-xs text-black">
-            <span className="font-medium">Result:</span>{' '}
+            <span className="font-medium">{t('notificationBell.resultLabel')}</span>{' '}
             <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
               {meta.result_name}
             </span>
           </p>
         )}
         {meta.operator_name && (
-          <p className="line-clamp-1 text-[11px] text-gray-500">by {meta.operator_name}</p>
+          <p className="line-clamp-1 text-[11px] text-gray-500">
+            {t('notificationBell.byOperator', { name: meta.operator_name })}
+          </p>
         )}
         <span className="text-[11px] text-gray-400">
-          {n.created_at ? formatRelativeTime(n.created_at) : ''}
+          {n.created_at ? formatRelativeTime(n.created_at, t) : ''}
         </span>
       </button>
       <button
         type="button"
-        aria-label="Dismiss notification"
+        aria-label={t('notificationBell.dismissAria')}
         onClick={(e) => onDismiss(e, n.id)}
         className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:text-gray-600"
       >

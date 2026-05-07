@@ -1,17 +1,17 @@
 export { useCallMonitoring, callMonitoringKeys } from './hooks/useCallMonitoring'
-export { useCallsByPhone } from './hooks/useCallsByPhone'
 export { useExportCalls } from './hooks/useExportCalls'
 export {
   useInteractionMonitoring,
   interactionMonitoringKeys,
 } from './hooks/useInteractionMonitoring'
 export { useExportInteractions } from './hooks/useExportInteractions'
+export { useInteractionChannels, interactionChannelsKeys } from './hooks/useInteractionChannels'
 export {
   getCallMonitoring,
-  getCallsByPhone,
   exportCallMonitoring,
   getInteractionMonitoring,
   exportInteractionMonitoring,
+  listInteractionChannels,
   actionAnalysisService,
 } from './api/actionAnalysisService'
 export type {
@@ -22,10 +22,10 @@ export type {
   CallMonitoringSort,
   CallMonitoringPeriod,
   CallMonitoringOutcomeFilter,
-  CallsByPhoneFilters,
   InteractionMonitoringFilters,
   InteractionMonitoringItem,
   InteractionMonitoringResponse,
   InteractionMonitoringSortBy,
   InteractionMonitoringSortDir,
+  InteractionInternalDateType,
 } from './types'

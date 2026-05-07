@@ -1,4 +1,57 @@
-npm run typecheck || exit 1
-npm run format:check || exit 1
-npm run lint || exit 1
-npm run test:run || exit 1
+#!/usr/bin/env sh
+# fe-prionex pre-commit hook.
+#
+# Goal: a clean run here implies a green CI run.
+#
+# Phase 1 — auto-fix:
+#   * prettier --write on staged files (formatting)
+#   * eslint --fix on staged JS/TS files (lint)
+#   * re-stage the fixed files so the commit captures the changes
+#
+# Phase 2 — CI parity verifications (same commands as .github/workflows/CI.yml):
+#   * format:check
+#   * lint (with --max-warnings=0)
+#   * typecheck
+#   * test:run
+#
+# `npm run build` lives in .husky/pre-push instead — typecheck catches the
+# vast majority of build-blocking errors, and bundling adds ~30–60s per
+# commit. Push-time still gives full CI parity before anything leaves the
+# machine.
+
+set -e
+
+# Hooks are invoked from the repo root by git, but anchor explicitly so this
+# works the same way regardless of how it's launched.
+cd "$(dirname "$0")/.."
+
+# Files staged for commit, restricted to types prettier/eslint understand.
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.(ts|tsx|js|jsx|mjs|cjs|css|json)$' || true)
+
+if [ -n "$STAGED" ]; then
+  echo "→ Auto-formatting staged files (prettier --write)..."
+  echo "$STAGED" | tr '\n' '\0' | xargs -0 npx --no-install prettier --write --ignore-unknown
+
+  LINTABLE=$(echo "$STAGED" | grep -E '\.(ts|tsx|js|jsx|mjs|cjs)$' || true)
+  if [ -n "$LINTABLE" ]; then
+    echo "→ Auto-fixing lint on staged files (eslint --fix --max-warnings=0)..."
+    echo "$LINTABLE" | tr '\n' '\0' | xargs -0 npx --no-install eslint --fix --max-warnings=0
+  fi
+
+  echo "→ Re-staging auto-fixed files..."
+  echo "$STAGED" | tr '\n' '\0' | xargs -0 git add
+fi
+
+echo "→ format:check (matches CI lint job)..."
+npm run format:check
+
+echo "→ lint --max-warnings=0 (matches CI lint job)..."
+npm run lint
+
+echo "→ typecheck (matches CI typecheck job)..."
+npm run typecheck
+
+echo "→ test:run (matches CI test job)..."
+npm run test:run
+
+echo "✓ Pre-commit checks passed (build runs at push time)."

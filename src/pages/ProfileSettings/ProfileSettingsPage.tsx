@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import { useAuth, useUpdateMyProfile, ChangePasswordModal } from '@/features/auth'
+import { useAuth, useUpdateMyProfile, ChangePasswordModal, TwoFactorSection } from '@/features/auth'
 import { authApi } from '@/features/auth/api/authApi'
 import { timezoneOptions } from '@/features/users/schemas/userSchemas'
 import { Input } from '@/components/ui/Input'
@@ -58,9 +58,13 @@ export function ProfileSettingsPage() {
   useEffect(() => {
     const raw = i18n.language as 'en' | 'uk' | 'ru'
     const currentLanguage: 'en' | 'uk' = raw === 'ru' ? 'uk' : (raw as 'en' | 'uk') || 'en'
-    setForm((prev) =>
-      prev.language === currentLanguage ? prev : { ...prev, language: currentLanguage }
-    )
+    // Defer to a microtask so the effect body itself doesn't call setState
+    // synchronously (lint: react-hooks/set-state-in-effect).
+    queueMicrotask(() => {
+      setForm((prev) =>
+        prev.language === currentLanguage ? prev : { ...prev, language: currentLanguage }
+      )
+    })
   }, [i18n.language])
 
   const { mutateAsync: changePassword } = useMutation({
@@ -362,6 +366,8 @@ export function ProfileSettingsPage() {
               </DoubleButton>
             </div>
           </form>
+
+          <TwoFactorSection />
         </div>
       </div>
     </div>

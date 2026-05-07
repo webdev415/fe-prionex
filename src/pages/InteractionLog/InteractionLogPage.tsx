@@ -172,7 +172,7 @@ export function InteractionLogPage() {
           <Input
             type="text"
             className="h-8 w-32 text-xs"
-            placeholder="ID"
+            placeholder={t('pages.interactionLog.filters.clientIdPlaceholder')}
             value={clientSearch}
             onChange={(e) => {
               setClientSearch(e.target.value)
@@ -264,7 +264,11 @@ export function InteractionLogPage() {
       {totalCount > pageSize && (
         <div className="flex w-full items-center justify-between text-xs text-gray-600">
           <span>
-            {page * pageSize + 1}–{Math.min((page + 1) * pageSize, totalCount)} / {totalCount}
+            {t('pages.interactionLog.pagination.rangeOfTotal', {
+              start: page * pageSize + 1,
+              end: Math.min((page + 1) * pageSize, totalCount),
+              total: totalCount,
+            })}
           </span>
           <div className="flex gap-2">
             <button
@@ -272,17 +276,22 @@ export function InteractionLogPage() {
               disabled={page === 0}
               onClick={() => setPage((p) => p - 1)}
               className="rounded border px-2 py-1 disabled:opacity-30"
+              aria-label={t('pages.interactionLog.pagination.previousPage')}
             >
               &lt;
             </button>
             <span className="px-1">
-              {page + 1} / {totalPages}
+              {t('pages.interactionLog.pagination.pageOfPages', {
+                page: page + 1,
+                totalPages,
+              })}
             </span>
             <button
               type="button"
               disabled={page >= totalPages - 1}
               onClick={() => setPage((p) => p + 1)}
               className="rounded border px-2 py-1 disabled:opacity-30"
+              aria-label={t('pages.interactionLog.pagination.nextPage')}
             >
               &gt;
             </button>

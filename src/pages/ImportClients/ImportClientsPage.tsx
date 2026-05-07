@@ -246,6 +246,7 @@ export function ImportClientsPage() {
     purchaseDate: getInitialPurchaseDate(), // UTC datetime (backend will store as UTC)
     comment: '',
     importType: 'simple',
+    schemaCode: '',
   })
 
   const [step2Data, setStep2Data] = useState<Step2Data>({
@@ -280,9 +281,12 @@ export function ImportClientsPage() {
   }
 
   const isStep1Valid = () => {
-    return (
+    const baseValid =
       step1Data.sellerId !== '' && step1Data.projectCode !== '' && step1Data.purchaseDate !== ''
-    )
+    if (!baseValid) return false
+    // Vendor flow needs a schema selected before step 2 can proceed.
+    if (step1Data.importType === 'vendor' && !step1Data.schemaCode) return false
+    return true
   }
 
   const handleViewHistory = () => {

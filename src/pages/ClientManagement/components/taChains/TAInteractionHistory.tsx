@@ -129,7 +129,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     },
     {
       key: 'phone',
-      header: t('pages.clientChains.history.phone', 'Phone'),
+      header: t('pages.clientChains.history.phone'),
       align: 'left',
       render: (row) => {
         if (!row.step_data) return <span className="text-xs text-gray-700">-</span>
@@ -350,8 +350,8 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
                 ? 'text-amber-500 hover:bg-amber-50'
                 : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'
             }`}
-            aria-label={row.is_pinned ? t('actions.unpin', 'Unpin') : t('actions.pin', 'Pin')}
-            title={row.is_pinned ? t('actions.unpin', 'Unpin') : t('actions.pin', 'Pin')}
+            aria-label={row.is_pinned ? t('pages.clientChains.unpin') : t('pages.clientChains.pin')}
+            title={row.is_pinned ? t('pages.clientChains.unpin') : t('pages.clientChains.pin')}
           >
             <Icons.Pin size={14} strokeWidth={1.5} />
           </button>
@@ -369,8 +369,8 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               type="button"
               onClick={() => setDeletingId(row.id)}
               className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
-              aria-label={t('actions.delete', 'Delete')}
-              title={t('actions.delete', 'Delete')}
+              aria-label={t('actions.delete')}
+              title={t('actions.delete')}
             >
               <Icons.Delete size={14} strokeWidth={1.5} />
             </button>
@@ -476,14 +476,9 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
           </div>
           <div className="flex flex-col gap-1.5">
             <h3 className="text-base font-semibold text-gray-900">
-              {t('pages.clientChains.history.deleteTitle', 'Delete Interaction')}
+              {t('pages.clientChains.history.deleteTitle')}
             </h3>
-            <p className="text-sm text-gray-500">
-              {t(
-                'pages.clientChains.history.deleteConfirm',
-                'Are you sure you want to delete this interaction? This action cannot be undone.'
-              )}
-            </p>
+            <p className="text-sm text-gray-500">{t('pages.clientChains.history.deleteConfirm')}</p>
           </div>
           <div className="mt-2 flex w-full gap-3">
             <Button
@@ -492,7 +487,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               onClick={() => setDeletingId(null)}
               disabled={deleteMut.isPending}
             >
-              {t('actions.cancel', 'Cancel')}
+              {t('actions.cancel')}
             </Button>
             <Button
               variant="danger"
@@ -502,15 +497,13 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
                 try {
                   await deleteMut.mutateAsync(deletingId!)
                   setDeletingId(null)
-                  toast.success(
-                    t('pages.clientChains.history.deleteSuccess', 'Interaction deleted')
-                  )
+                  toast.success(t('pages.clientChains.history.deleteSuccess'))
                 } catch (err) {
                   toast.error(getErrorMessage(err))
                 }
               }}
             >
-              {t('actions.delete', 'Delete')}
+              {t('actions.delete')}
             </Button>
           </div>
         </div>
@@ -520,7 +513,11 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       {totalCount > pageSize && (
         <div className="flex items-center justify-between text-xs text-gray-600">
           <span>
-            {page * pageSize + 1}–{Math.min((page + 1) * pageSize, totalCount)} / {totalCount}
+            {t('pages.interactionLog.pagination.rangeOfTotal', {
+              start: page * pageSize + 1,
+              end: Math.min((page + 1) * pageSize, totalCount),
+              total: totalCount,
+            })}
           </span>
           <div className="flex gap-2">
             <button
@@ -528,14 +525,22 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               disabled={page === 0}
               onClick={() => setPage((p) => p - 1)}
               className="rounded border px-2 py-1 disabled:opacity-30"
+              aria-label={t('pages.interactionLog.pagination.previousPage')}
             >
               &lt;
             </button>
+            <span className="px-1">
+              {t('pages.interactionLog.pagination.pageOfPages', {
+                page: page + 1,
+                totalPages,
+              })}
+            </span>
             <button
               type="button"
               disabled={page >= totalPages - 1}
               onClick={() => setPage((p) => p + 1)}
               className="rounded border px-2 py-1 disabled:opacity-30"
+              aria-label={t('pages.interactionLog.pagination.nextPage')}
             >
               &gt;
             </button>

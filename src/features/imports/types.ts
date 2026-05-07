@@ -25,6 +25,23 @@ export interface ImportJob {
   comment?: string
 }
 
+// Vendor file logical name — the four CSV/XLSX files in a vendor bundle
+export type VendorFileLogical = 'users' | 'credits' | 'payments' | 'write_offs'
+
+// Per-file phase status used by the vendor Import Details panel
+export type VendorPhaseStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
+
+// One row of the vendor phase panel — derived from import_options.vendor
+export interface VendorFilePhase {
+  logical_name: VendorFileLogical
+  display_name: string // human label (e.g., "Users", "Credits", "Payments", "Write-offs")
+  filename: string // basename from import_options.vendor.bundle[logical_name]
+  target_db: string // human label of the downstream DB (e.g., "client-DB clients+debts")
+  status: VendorPhaseStatus
+  processed?: number
+  total?: number
+}
+
 // Import Job Detail (from GET /api/import/jobs/{id})
 export interface ImportJobDetail {
   id: number | string
@@ -45,6 +62,10 @@ export interface ImportJobDetail {
   progress_percentage?: number // 0-100, only for in_progress
   processing_row?: number // Current row being processed, only for in_progress
   error_summary?: Record<string, unknown> | string | null // Error details on failure
+  // Vendor flow only — populated from import_options.vendor.* when
+  // import_type === 'vendor'. Order matches the receiver's dispatch order.
+  vendor_phases?: VendorFilePhase[]
+  vendor_error?: string // top-level error string from import_options.error
 }
 
 // Import Error (from GET /api/import/jobs/{id}/errors)
@@ -87,6 +108,15 @@ export interface UploadImportRequest {
   purchase_date: string
   comment?: string
   import_type: ImportType
+  // Vendor flow only — vendor_schemas.code discriminator. Required when
+  // import_type === 'vendor', ignored otherwise.
+  schema_code?: string
+}
+
+// Vendor schema (from GET /api/v1/import/vendor-schemas)
+export interface VendorSchema {
+  code: string
+  display_name: string
 }
 
 // Upload Import Response

@@ -94,13 +94,30 @@ export function CallFiltersBar({ value, operators, onApply, onClear, userTimezon
 
         <div className="h-px w-full bg-gray-200" />
 
-        <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
+        <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4 xl:grid-cols-5">
           <EmployeeFilterDropdown
             operators={operatorsWithExt}
             selectedIds={selectedOperatorIds}
             onChange={handleEmployeesChange}
             label={t('pages.actionAnalysis.filters.employee', 'Employee')}
           />
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+              {t('pages.actionAnalysis.filters.phone', 'Phone')}
+            </span>
+            <Input
+              type="tel"
+              inputMode="tel"
+              className="h-[45px]"
+              placeholder={t('pages.actionAnalysis.filters.phonePlaceholder', 'e.g. 0631234567')}
+              value={draft.phone_number ?? ''}
+              onChange={(e) => {
+                const v = e.target.value
+                update({ phone_number: v === '' ? undefined : v })
+              }}
+            />
+          </div>
 
           <div className="flex flex-col gap-1.5">
             <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">

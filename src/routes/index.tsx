@@ -7,6 +7,12 @@ import { GuestRoute } from './GuestRoute'
 import { DashboardLayout } from '@/components/layout'
 import { RouteErrorElement } from '@/components/RouteErrorElement'
 import { PERMISSIONS } from '@/constants/permissions'
+import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOperatorAssignmentPageSkeleton'
+import { BulkPaymentVerificationPageSkeleton } from '@/pages/Operations/BulkPaymentVerificationPageSkeleton'
+import {
+  AppLoadingFallback,
+  type AppLoadingFallbackVariant,
+} from '@/components/ui/AppLoadingFallback'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
 const ForceChangePasswordPage = lazy(() => import('@/pages/auth/ForceChangePasswordPage'))
@@ -67,6 +73,11 @@ const InteractionLogPage = lazy(() =>
     default: m.InteractionLogPage,
   }))
 )
+const DocumentGenerationPage = lazy(() =>
+  import('@/pages/DocumentGeneration').then((m) => ({
+    default: m.DocumentGenerationPage,
+  }))
+)
 const ReportsDashboardPage = lazy(() =>
   import('@/pages/ReportsDashboard').then((m) => ({
     default: m.ReportsDashboardPage,
@@ -111,15 +122,16 @@ const BulkOperatorAssignmentPage = lazy(() =>
     default: m.BulkOperatorAssignmentPage,
   }))
 )
-const BulkPaymentImportPage = lazy(() =>
+const BulkPaymentVerificationPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
-    default: m.BulkPaymentImportPage,
+    default: m.BulkPaymentVerificationPage,
   }))
 )
 
-const withSuspense = (element: React.ReactElement) => (
-  <Suspense fallback={<div>Loading...</div>}>{element}</Suspense>
-)
+const withSuspense = (
+  element: React.ReactElement,
+  variant: AppLoadingFallbackVariant = 'shell'
+) => <Suspense fallback={<AppLoadingFallback variant={variant} />}>{element}</Suspense>
 
 const DashboardLayoutRoute = () => (
   <ProtectedRoute>
@@ -132,7 +144,7 @@ const DashboardLayoutRoute = () => (
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: <GuestRoute>{withSuspense(<LoginPage />)}</GuestRoute>,
+    element: <GuestRoute>{withSuspense(<LoginPage />, 'auth')}</GuestRoute>,
     errorElement: <RouteErrorElement />,
   },
   {
@@ -290,10 +302,20 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'system-settings/document-generation',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            {withSuspense(<DocumentGenerationPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
         path: 'operations/bulk-operator-assignment',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.EDIT}>
-            {withSuspense(<BulkOperatorAssignmentPage />)}
+            <Suspense fallback={<BulkOperatorAssignmentPageSkeleton />}>
+              <BulkOperatorAssignmentPage />
+            </Suspense>
           </PermissionRoute>
         ),
       },
@@ -301,7 +323,9 @@ export const router = createBrowserRouter([
         path: 'operations/bulk-payment-import',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT_PAYMENTS}>
-            {withSuspense(<BulkPaymentImportPage />)}
+            <Suspense fallback={<BulkPaymentVerificationPageSkeleton />}>
+              <BulkPaymentVerificationPage />
+            </Suspense>
           </PermissionRoute>
         ),
       },
