@@ -28,20 +28,20 @@ interface AssignRoleModalProps {
   onAssign: (data: { userId: string; reason?: string }) => void
 }
 
-const assignmentReasons = [
-  'New Client',
-  'Workload Distribution',
-  'Specialist Required',
-  'Reassignment',
-  'Other',
-]
+const assignmentReasonKeys = [
+  'newClient',
+  'workloadDistribution',
+  'specialistRequired',
+  'reassignment',
+  'other',
+] as const
 
-const reasonKeyMap: Record<string, string> = {
-  'New Client': 'newClient',
-  'Workload Distribution': 'workloadDistribution',
-  'Specialist Required': 'specialistRequired',
-  Reassignment: 'reassignment',
-  Other: 'other',
+const assignmentReasonValueMap: Record<(typeof assignmentReasonKeys)[number], string> = {
+  newClient: 'New Client',
+  workloadDistribution: 'Workload Distribution',
+  specialistRequired: 'Specialist Required',
+  reassignment: 'Reassignment',
+  other: 'Other',
 }
 
 export function AssignRoleModal({
@@ -107,12 +107,12 @@ export function AssignRoleModal({
     : 'pages.clients.modals.assignRole.titleSearcher'
 
   const selectPlaceholder = isEmployee
-    ? t('pages.clients.modals.assignClient.selectEmployee')
-    : t('pages.clients.modals.assignClient.selectSearcher')
+    ? t('pages.clients.modals.assignRole.selectEmployee')
+    : t('pages.clients.modals.assignRole.selectSearcher')
 
   const labelKey = isEmployee
-    ? 'pages.clients.modals.assignClient.employee'
-    : 'pages.clients.modals.assignClient.searcher'
+    ? 'pages.clients.modals.assignRole.employee'
+    : 'pages.clients.modals.assignRole.searcher'
 
   return (
     <Modal open={open} onClose={handleCancel} maxWidth="md">
@@ -122,7 +122,7 @@ export function AssignRoleModal({
             <Icons.Tick02 size={20} className="text-dark-500" strokeWidth={1.5} />
           </div>
         }
-        title={t(titleKey, isEmployee ? 'Assign Employee' : 'Assign Searcher')}
+        title={t(titleKey)}
       />
       <ModalContent>
         <div className="flex flex-col gap-5">
@@ -146,21 +146,21 @@ export function AssignRoleModal({
           {/* Assignment Reason — required for both employee and searcher */}
           <div className="flex flex-col gap-2">
             <Label className="text-dark-500 text-xs leading-[140%] font-medium tracking-[-0.24px]">
-              {t('pages.clients.modals.assignClient.assignmentReason')}
+              {t('pages.clients.modals.assignRole.assignmentReason')}
             </Label>
             <RadioGroup value={reason} onValueChange={setReason}>
               <div className="flex flex-col gap-2">
-                {assignmentReasons.map((assignmentReason) => {
-                  const reasonKey = reasonKeyMap[assignmentReason] || assignmentReason.toLowerCase()
-                  const translationKey = `pages.clients.modals.assignClient.reasons.${reasonKey}`
+                {assignmentReasonKeys.map((reasonKey) => {
+                  const translationKey = `pages.clients.modals.assignRole.reasons.${reasonKey}`
+                  const reasonValue = assignmentReasonValueMap[reasonKey]
                   return (
-                    <div key={assignmentReason} className="flex items-center gap-2">
-                      <RadioItem value={assignmentReason} id={`role-reason-${assignmentReason}`} />
+                    <div key={reasonKey} className="flex items-center gap-2">
+                      <RadioItem value={reasonValue} id={`role-reason-${reasonKey}`} />
                       <Label
-                        htmlFor={`role-reason-${assignmentReason}`}
+                        htmlFor={`role-reason-${reasonKey}`}
                         className="text-dark-500 text-xs font-light tracking-[-0.24px]"
                       >
-                        {t(translationKey, assignmentReason)}
+                        {t(translationKey)}
                       </Label>
                     </div>
                   )
@@ -177,7 +177,7 @@ export function AssignRoleModal({
           onClick={handleCancel}
           className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
-          {t('actions.cancel', 'Cancel')}
+          {t('actions.cancel')}
         </Button>
         <Button
           type="button"
@@ -186,7 +186,7 @@ export function AssignRoleModal({
           disabled={!canSubmit}
           className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
         >
-          {t('pages.clients.modals.assignClient.assignClient', 'Assign')}
+          {t('pages.clients.modals.assignRole.assign')}
         </Button>
       </ModalFooter>
     </Modal>

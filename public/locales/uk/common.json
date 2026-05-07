@@ -1647,6 +1647,23 @@
           "successMessage": "Взаємодію успішно додано",
           "errorMessage": "Не вдалося додати взаємодію"
         },
+        "assignRole": {
+          "titleEmployee": "Призначити співробітника",
+          "titleSearcher": "Призначити шукача",
+          "employee": "Співробітник (необов'язково)",
+          "searcher": "Шукач (необов'язково)",
+          "selectEmployee": "Виберіть співробітника...",
+          "selectSearcher": "Виберіть шукача...",
+          "assignmentReason": "Причина призначення",
+          "assign": "Призначити",
+          "reasons": {
+            "newClient": "Новий клієнт",
+            "workloadDistribution": "Розподіл навантаження",
+            "specialistRequired": "Потрібен спеціаліст",
+            "reassignment": "Перепризначення",
+            "other": "Інше"
+          }
+        },
         "editInteraction": {
           "title": "Редагувати взаємодію",
           "aria": {

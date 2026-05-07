@@ -1347,6 +1347,23 @@
           "successMessage": "Interaction added successfully",
           "errorMessage": "Failed to add interaction"
         },
+        "assignRole": {
+          "titleEmployee": "Assign Employee",
+          "titleSearcher": "Assign Searcher",
+          "employee": "Employee (Optional)",
+          "searcher": "Searcher (Optional)",
+          "selectEmployee": "Select employee...",
+          "selectSearcher": "Select searcher...",
+          "assignmentReason": "Assignment Reason",
+          "assign": "Assign",
+          "reasons": {
+            "newClient": "New Client",
+            "workloadDistribution": "Workload Distribution",
+            "specialistRequired": "Specialist Required",
+            "reassignment": "Reassignment",
+            "other": "Other"
+          }
+        },
         "editInteraction": {
           "title": "Edit Interaction",
           "aria": {

@@ -1646,6 +1646,23 @@
           "successMessage": "Взаимодействие успешно добавлено",
           "errorMessage": "Не удалось добавить взаимодействие"
         },
+        "assignRole": {
+          "titleEmployee": "Назначить сотрудника",
+          "titleSearcher": "Назначить поисковика",
+          "employee": "Сотрудник (необязательно)",
+          "searcher": "Поисковик (необязательно)",
+          "selectEmployee": "Выберите сотрудника...",
+          "selectSearcher": "Выберите поисковика...",
+          "assignmentReason": "Причина назначения",
+          "assign": "Назначить",
+          "reasons": {
+            "newClient": "Новый клиент",
+            "workloadDistribution": "Распределение нагрузки",
+            "specialistRequired": "Требуется специалист",
+            "reassignment": "Переназначение",
+            "other": "Другое"
+          }
+        },
         "editInteraction": {
           "title": "Редактировать взаимодействие",
           "aria": {
