@@ -10,6 +10,7 @@ import { PERMISSIONS } from '@/constants/permissions'
 import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOperatorAssignmentPageSkeleton'
 import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignmentPageSkeleton'
 import { BulkPaymentVerificationPageSkeleton } from '@/pages/Operations/BulkPaymentVerificationPageSkeleton'
+import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
 const ForceChangePasswordPage = lazy(() => import('@/pages/auth/ForceChangePasswordPage'))
@@ -70,6 +71,11 @@ const InteractionLogPage = lazy(() =>
     default: m.InteractionLogPage,
   }))
 )
+const DocumentGenerationPage = lazy(() =>
+  import('@/pages/DocumentGeneration').then((m) => ({
+    default: m.DocumentGenerationPage,
+  }))
+)
 const ReportsDashboardPage = lazy(() =>
   import('@/pages/ReportsDashboard').then((m) => ({
     default: m.ReportsDashboardPage,
@@ -126,7 +132,7 @@ const BulkTagAssignmentPage = lazy(() =>
 )
 
 const withSuspense = (element: React.ReactElement) => (
-  <Suspense fallback={<div>Loading...</div>}>{element}</Suspense>
+  <Suspense fallback={<AppLoadingFallback />}>{element}</Suspense>
 )
 
 const DashboardLayoutRoute = () => (
@@ -294,6 +300,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
             {withSuspense(<InteractionLogPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/document-generation',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+            {withSuspense(<DocumentGenerationPage />)}
           </PermissionRoute>
         ),
       },

@@ -135,11 +135,16 @@ const DEFAULT_INTERACTION_RESULT_OPTIONS: ConfigItem[] = [
   { value: 'Numbers found', label: 'Numbers found' },
 ]
 
-const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
+// NOTE: Mirror of `api-prionex/services/tag/app/seed/system_event_registry.py`
+// (BE = source of truth). `event_type` and `fields[*].name`/`type` must stay
+// in sync with the registry — drift causes BE to publish payload that the UI
+// can't reference in rule conditions. See docs/domain-events-architecture.md.
+export const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
   {
     value: 'interaction.created',
     label: 'Interaction created',
     fields: [
+      { value: 'interaction_id', label: 'interaction_id', type: 'number' },
       {
         value: 'result_name',
         label: 'result_name',
@@ -196,6 +201,7 @@ const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
       { value: 'status', label: 'status', type: 'text' },
       { value: 'verified_by_user_id', label: 'verified_by_user_id', type: 'number' },
       { value: 'verified_at', label: 'verified_at', type: 'text' },
+      { value: 'payment_confirmation_date', label: 'payment_confirmation_date', type: 'text' },
       { value: 'remaining_debt', label: 'remaining_debt', type: 'number' },
     ],
   },
@@ -287,6 +293,7 @@ const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
       { value: 'payment_date', label: 'payment_date', type: 'text' },
       { value: 'status', label: 'status', type: 'text' },
       { value: 'recorded_by_user_id', label: 'recorded_by_user_id', type: 'number' },
+      { value: 'payment_confirmation_date', label: 'payment_confirmation_date', type: 'text' },
     ],
   },
   {
@@ -302,6 +309,7 @@ const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
       { value: 'status', label: 'status', type: 'text' },
       { value: 'verified_by_user_id', label: 'verified_by_user_id', type: 'number' },
       { value: 'verified_at', label: 'verified_at', type: 'text' },
+      { value: 'payment_confirmation_date', label: 'payment_confirmation_date', type: 'text' },
       { value: 'remaining_debt', label: 'remaining_debt', type: 'number' },
     ],
   },
@@ -315,6 +323,14 @@ const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
       { value: 'score_change', label: 'score_change', type: 'number' },
       { value: 'algorithm_version', label: 'algorithm_version', type: 'text' },
       { value: 'calculation_reason', label: 'calculation_reason', type: 'text' },
+    ],
+  },
+  {
+    value: 'contact.responsible_changed',
+    label: 'Contact responsible changed',
+    fields: [
+      { value: 'previous_responsible_id', label: 'previous_responsible_id', type: 'number' },
+      { value: 'new_responsible_id', label: 'new_responsible_id', type: 'number' },
     ],
   },
 ]

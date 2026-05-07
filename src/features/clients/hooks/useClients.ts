@@ -61,6 +61,8 @@ export function useClients(params: GetClientsParams = {}) {
   return useQuery({
     queryKey: clientKeys.list(params),
     queryFn: () => clientApi.getClients(params),
+    // Keep previous page/filter/sort results while refetching to avoid full-page loader flicker.
+    placeholderData: (previousData) => previousData,
     staleTime: 30000, // 30 seconds
     refetchInterval: 60000, // Refetch every 60 seconds
     enabled: true,
@@ -210,6 +212,19 @@ export function useAssignClient() {
       // Invalidate specific client and lists to show updated assignments
       queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+      // The `contact.responsible_changed` event is published after this
+      // request returns and the tag-service applies any matching auto-tag
+      // rules asynchronously (RabbitMQ → Celery). Refetch the client's
+      // tags immediately and again after short delays so the new tag
+      // surfaces without requiring the operator to navigate away.
+      // Mirrors the pattern in useNoteInteraction.ts.
+      queryClient.invalidateQueries({ queryKey: ['clients', variables.clientId, 'tags'] })
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['clients', variables.clientId, 'tags'] })
+      }, 2000)
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['clients', variables.clientId, 'tags'] })
+      }, 5000)
       toast.success('Client assigned successfully')
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
@@ -228,9 +243,24 @@ export function useBulkAssignClients() {
 
   return useMutation({
     mutationFn: (data: BulkAssignClientRequest) => clientApi.bulkAssignClients(data),
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       // Invalidate clients list to show updated assignments
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
+
+      // Each affected client publishes its own `contact.responsible_changed`
+      // event, and tags are applied asynchronously by the rule engine.
+      // Refetch tags per client immediately and again after delays so the
+      // operator sees auto-tags without navigating away. Mirrors the
+      // single-assign hook above and useNoteInteraction.ts.
+      const ids = variables.client_ids ?? []
+      const refetchAll = () => {
+        for (const id of ids) {
+          queryClient.invalidateQueries({ queryKey: ['clients', id, 'tags'] })
+        }
+      }
+      refetchAll()
+      setTimeout(refetchAll, 2000)
+      setTimeout(refetchAll, 5000)
 
       // Show appropriate success message
       if (result.failed_count === 0) {

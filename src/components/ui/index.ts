@@ -49,3 +49,4 @@ export { StepIndicator, type Step, type StepIndicatorProps } from './StepIndicat
 export { SearchResults, type SearchResult } from './SearchResults'
 export { ProgressBar, type ProgressBarProps } from './ProgressBar'
 export { Slider, type SliderProps } from './Slider'
+export { AppLoadingFallback } from './AppLoadingFallback'

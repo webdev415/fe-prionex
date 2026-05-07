@@ -91,7 +91,7 @@ export function TagsDropdown({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('pages.clients.detail.tagsDropdown.searchTags')}
+            placeholder={t('pages.clients.modals.tagsDropdown.searchTags')}
             className="text-dark-500 focus:border-primary-500 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-gray-400"
           />
         </div>
@@ -100,7 +100,7 @@ export function TagsDropdown({
         <div className="max-h-[200px] overflow-y-auto p-2">
           {filteredTags.length === 0 ? (
             <div className="py-4 text-center text-sm text-gray-500">
-              {t('pages.clients.detail.tagsDropdown.noTagsFound')}
+              {t('pages.clients.modals.tagsDropdown.noTagsFound')}
             </div>
           ) : (
             <div className="space-y-1">
@@ -127,10 +127,10 @@ export function TagsDropdown({
         <div className="border-t border-gray-200 p-3">
           <div className="flex items-center gap-2">
             <Button variant="cancel" onClick={handleClear} className="flex flex-1">
-              {t('pages.clients.detail.tagsDropdown.clear')}
+              {t('pages.clients.modals.tagsDropdown.clear')}
             </Button>
             <Button variant="primary" onClick={handleApply} className="flex flex-1">
-              {t('pages.clients.detail.tagsDropdown.apply')}
+              {t('pages.clients.modals.tagsDropdown.apply')}
             </Button>
           </div>
         </div>

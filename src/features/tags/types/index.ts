@@ -173,6 +173,8 @@ export interface TagRule {
   description?: string
   trigger_type: RuleTriggerType
   trigger_event?: string
+  /** Tag whose TTL expiry fires this rule (trigger_type === tag_expired) */
+  trigger_tag_code?: string
   cron_expression?: string
   conditions: RuleCondition[]
   action_type: RuleActionType
@@ -193,6 +195,7 @@ export interface TagRuleCreate {
   description?: string
   trigger_type: RuleTriggerType
   trigger_event?: string
+  trigger_tag_code?: string
   cron_expression?: string
   conditions: RuleCondition[]
   action_type: RuleActionType
@@ -208,6 +211,7 @@ export interface TagRuleUpdate {
   description?: string
   trigger_type?: RuleTriggerType
   trigger_event?: string
+  trigger_tag_code?: string
   cron_expression?: string
   conditions?: RuleCondition[]
   action_type?: RuleActionType

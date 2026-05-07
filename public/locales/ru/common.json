@@ -19,11 +19,12 @@
     "departments": "Отделы",
     "smsTemplates": "SMS Шаблоны",
     "targetActions": "Целевые действия",
-    "taChains": "Цепочки TA",
+    "taChains": "Цепочки ЦД",
     "taDictionary": "Словарь",
     "chainBuilder": "Конструктор цепочек",
     "taManagement": "Целевые действия",
     "interactionLog": "Журнал взаимодействий",
+    "documentGeneration": "Генерация документов",
     "transactions": "Транзакции",
     "operations": "Операции",
     "bulkOperatorAssignment": "Массовое назначение операторов",
@@ -66,6 +67,16 @@
     "logout": "Выйти",
     "loggingOut": "Выход..."
   },
+  "components": {
+    "pagination": {
+      "rowsPerPage": "Строк на странице:",
+      "previousPage": "Предыдущая страница",
+      "nextPage": "Следующая страница",
+      "goToPage": "Перейти на страницу {{page}}",
+      "page": "Страница",
+      "of": "из"
+    }
+  },
   "status": {
     "loading": "Загрузка...",
     "success": "Успешно",
@@ -89,7 +100,7 @@
       "tasks": "Задачи",
       "calls": "Звонки",
       "tags": "Теги",
-      "taChains": "Цепочки TA"
+      "taChains": "Цепочки ЦД"
     },
     "payment": {
       "pending": "ожидает",
@@ -297,6 +308,18 @@
           "all": "Все",
           "answered": "Отвечен",
           "notAnswered": "Не отвечен"
+        },
+        "channel": "Канал",
+        "allChannels": "Все",
+        "internalDateType": "Внутренняя дата",
+        "internalDateTypeNone": "Выкл.",
+        "internalDateFrom": "Внутренняя дата от",
+        "internalDateTo": "Внутренняя дата до",
+        "internalDateTypes": {
+          "promiseToPay": "Обещание оплаты",
+          "nextAction": "Перезвонить / следующее действие",
+          "followUp": "Уточнение",
+          "any": "Любая из перечисленных"
         }
       },
       "columns": {
@@ -314,7 +337,11 @@
         "employee": "Сотрудник",
         "contactType": "Тип контакта",
         "result": "Результат",
-        "promiseAmount": "Сумма обещания"
+        "promiseAmount": "Сумма обещания",
+        "responsibleAtCreation": "Ответственный на момент создания",
+        "currentResponsible": "Текущий ответственный",
+        "internalDate": "Дата (обещание / перезвон)",
+        "channel": "Канал"
       },
       "callType": {
         "incoming": "Входящий",
@@ -355,7 +382,8 @@
         "loadHeatmapFailed": "Не удалось загрузить тепловую карту.",
         "loadScriptAnalyticsFailed": "Не удалось загрузить аналитику скриптов.",
         "departmentNoOperators": "В этом отделе нет операторов в текущем проекте.",
-        "exportFailed": "Не удалось экспортировать"
+        "exportFailed": "Не удалось экспортировать",
+        "callNotFound": "Звонок не найден"
       },
       "calls": {
         "placeholder": "Вкладка «Звонки» — скоро будет доступна"
@@ -1349,6 +1377,8 @@
         "tags": "Теги",
         "noUsersAvailable": "Нет доступных пользователей",
         "more": "больше",
+        "min": "Мин",
+        "max": "Макс",
         "days": "дней"
       },
       "statuses": {
@@ -1628,7 +1658,7 @@
           "tasks": "Задания",
           "docs": "Документы",
           "callSms": "Звонок / SMS",
-          "taChains": "Цепочки TA"
+          "taChains": "Цепочки ЦД"
         },
         "maritalStatuses": {
           "1": "Холост/Не замужем",
@@ -2315,7 +2345,7 @@
     },
     "clientChains": {
       "logInteraction": "Записать взаимодействие",
-      "taChainLabel": "Цепочка TA",
+      "taChainLabel": "Цепочка ЦД",
       "startChain": "Начать цепочку",
       "selectChain": "Цепочка",
       "selectChainPlaceholder": "Выберите цепочку...",
@@ -2480,11 +2510,11 @@
       }
     },
     "taChains": {
-      "title": "Цепочки TA",
+      "title": "Цепочки ЦД",
       "createButton": "Создать цепочку",
       "searchPlaceholder": "Поиск цепочек...",
       "showInactive": "Показывать неактивные",
-      "empty": "Цепочки TA не найдены. Нажмите «Создать цепочку», чтобы создать первую.",
+      "empty": "Цепочки ЦД не найдены. Нажмите «Создать цепочку», чтобы создать первую.",
       "noTargetActionsHint": "Сначала создайте хотя бы одно активное целевое действие в Системных настройках → Целевые действия.",
       "table": {
         "department": "Отдел"
@@ -2522,39 +2552,43 @@
         "empty": "Шагов пока нет. Нажмите «Добавить шаг», чтобы создать первый.",
         "stepLabel": "Шаг {{index}}",
         "targetAction": "Целевое действие",
-        "selectTA": "Выберите TA",
+        "selectTA": "Выберите ЦД",
         "delayMinutes": "Задержка (мин)",
         "required": "Обязательно",
         "notInPast": "Дата не может быть в прошлом"
       },
       "modals": {
-        "create": { "title": "Создание цепочки TA" },
-        "edit": { "title": "Редактирование цепочки TA" }
+        "create": {
+          "title": "Создание цепочки ЦД"
+        },
+        "edit": {
+          "title": "Редактирование цепочки ЦД"
+        }
       },
       "errors": {
         "nameRequired": "Название обязательно",
         "departmentRequired": "Выберите хотя бы один отдел"
       },
       "toasts": {
-        "created": "Цепочка TA создана",
-        "updated": "Цепочка TA обновлена",
-        "cloned": "Цепочка TA скопирована",
-        "activated": "Цепочка TA активирована",
-        "deactivated": "Цепочка TA деактивирована"
+        "created": "Цепочка ЦД создана",
+        "updated": "Цепочка ЦД обновлена",
+        "cloned": "Цепочка ЦД скопирована",
+        "activated": "Цепочка ЦД активирована",
+        "deactivated": "Цепочка ЦД деактивирована"
       }
     },
     "taManagement": {
       "tabs": {
         "targetActions": "Целевые действия",
-        "taChains": "Цепочки TA",
+        "taChains": "Цепочки ЦД",
         "dictionary": "Словарь",
         "chainBuilder": "Конструктор цепочек"
       }
     },
     "targetActions": {
       "title": "Целевые действия",
-      "createButton": "Создать TA",
-      "searchPlaceholder": "Поиск TA...",
+      "createButton": "Создать ЦД",
+      "searchPlaceholder": "Поиск ЦД...",
       "showHidden": "Показывать скрытые",
       "empty": "Целевые действия не найдены",
       "lockedHint": "Это целевое действие уже используется в одной или нескольких цепочках и больше не редактируется. Создайте копию.",
@@ -2593,8 +2627,12 @@
         "addValuePlaceholder": "Добавить значение..."
       },
       "modals": {
-        "create": { "title": "Создание целевого действия" },
-        "edit": { "title": "Редактирование целевого действия" }
+        "create": {
+          "title": "Создание целевого действия"
+        },
+        "edit": {
+          "title": "Редактирование целевого действия"
+        }
       },
       "errors": {
         "nameRequired": "Название обязательно",
@@ -2608,6 +2646,118 @@
         "cloned": "Целевое действие скопировано",
         "hidden": "Целевое действие скрыто",
         "unhidden": "Целевое действие восстановлено"
+      }
+    },
+    "documentGeneration": {
+      "title": "Генерация документов",
+      "tabs": {
+        "journal": "Журнал документов",
+        "templates": "Шаблоны документов"
+      },
+      "documentTypes": {
+        "passport": "Паспорт",
+        "inn": "ИНН",
+        "contract": "Договор",
+        "income": "Справка о доходах",
+        "outcome": "Выписка / выдержка",
+        "signature": "Цифровая подпись",
+        "other": "Другое"
+      },
+      "actions": {
+        "uploaded": "Загружено",
+        "generated": "Сгенерировано"
+      },
+      "filters": {
+        "documentType": "Тип документа",
+        "action": "Действие",
+        "operator": "Оператор",
+        "client": "Клиент",
+        "clientPlaceholder": "Имя",
+        "creditor": "Кредитор",
+        "creditorPlaceholder": "ID кредита или название кредитора",
+        "dateFrom": "Дата с",
+        "dateTo": "Дата по",
+        "all": "Все",
+        "reset": "Сбросить"
+      },
+      "journal": {
+        "columns": {
+          "documentName": "Название документа",
+          "documentType": "Тип документа",
+          "client": "Клиент",
+          "creditId": "ID кредита",
+          "creditor": "Кредитор",
+          "action": "Действие",
+          "performedBy": "Выполнил",
+          "dateTime": "Дата и время"
+        },
+        "loading": "Загрузка…",
+        "empty": "Документы не найдены.",
+        "loadError": "Не удалось загрузить журнал документов."
+      },
+      "templates": {
+        "comingSoon": "Управление шаблонами появится в следующем релизе.",
+        "create": "Создать шаблон",
+        "intro": "Многоразовые шаблоны документов с переменными-плейсхолдерами.",
+        "empty": "Шаблонов пока нет.",
+        "loading": "Загрузка...",
+        "loadError": "Не удалось загрузить шаблоны.",
+        "columns": {
+          "name": "Название шаблона",
+          "preview": "Превью",
+          "variables": "Переменные",
+          "updated": "Обновлено",
+          "actions": "Действия"
+        },
+        "modals": {
+          "createTitle": "Создать шаблон",
+          "editTitle": "Редактировать шаблон",
+          "subtitle": "Используйте {{variable_name}} для вставки динамических данных.",
+          "deleteTitle": "Удалить шаблон",
+          "deleteConfirm": "Вы уверены, что хотите удалить этот шаблон?",
+          "deleteWarning": "Это действие нельзя отменить."
+        },
+        "form": {
+          "name": "Название шаблона",
+          "namePlaceholder": "напр. Письмо-требование",
+          "body": "Тело шаблона",
+          "bodyPlaceholder": "Составьте шаблон здесь. Вставляйте переменные с правой панели.",
+          "preview": "Превью (тестовые данные)",
+          "previewEmpty": "Начните вводить, чтобы увидеть превью.",
+          "variables": "Переменные",
+          "variablesHelp": "Нажмите на переменную, чтобы вставить её в позицию курсора."
+        },
+        "variableGroups": {
+          "client": "Клиент",
+          "credit": "Кредит",
+          "system": "Система"
+        },
+        "variables": {
+          "clientFullName": "Полное имя клиента",
+          "clientFirstName": "Имя клиента",
+          "clientLastName": "Фамилия клиента",
+          "clientTaxId": "Налоговый номер (ИНН)",
+          "clientPhone": "Основной телефон",
+          "clientEmail": "Основной email",
+          "clientAddress": "Зарегистрированный адрес",
+          "creditId": "ID кредита / номер договора",
+          "creditorName": "Название кредитора",
+          "debtAmount": "Сумма задолженности",
+          "debtCurrency": "Валюта долга",
+          "contractDate": "Дата подписания договора",
+          "dueDate": "Следующая дата платежа",
+          "today": "Сегодняшняя дата",
+          "operatorName": "Полное имя оператора"
+        },
+        "errors": {
+          "nameRequired": "Название шаблона обязательно",
+          "bodyRequired": "Тело шаблона обязательно"
+        },
+        "messages": {
+          "created": "Шаблон создан",
+          "updated": "Шаблон обновлён",
+          "deleted": "Шаблон удалён"
+        }
       }
     },
     "smsTemplates": {
@@ -3480,6 +3630,9 @@
           "replace_tag": "Заменить тег"
         },
         "selectField": "Выберите поле",
+        "selectEvent": "Выберите событие...",
+        "customEvent": "Своё значение...",
+        "eventHint": "Выберите системное событие или введите своё",
         "executionCount": "Выполнений",
         "lastExecuted": "Последний запуск",
         "neverExecuted": "—",
@@ -3505,6 +3658,8 @@
           "type_code": "Тип взаимодействия",
           "channel": "Канал",
           "direction": "Направление",
+          "previous_responsible_id": "Предыдущий ответственный (ID)",
+          "new_responsible_id": "Новый ответственный (ID)",
           "payment_id": "ID платежа",
           "payment_number": "Номер платежа",
           "debt_id": "ID долга",
@@ -3532,7 +3687,16 @@
           "old_amount": "Старая сумма",
           "new_amount": "Новая сумма",
           "old_status": "Старый статус",
-          "new_status": "Новый статус"
+          "new_status": "Новый статус",
+          "status": "Статус",
+          "remaining_debt": "Остаток долга",
+          "message_id": "ID сообщения",
+          "phone_number": "Номер телефона",
+          "segments": "Сегменты SMS",
+          "gateway_provider": "Шлюз провайдера",
+          "agent_extension": "Внутренний номер оператора",
+          "interaction_id": "ID взаимодействия",
+          "payment_confirmation_date": "Дата подтверждения платежа"
         },
         "validation": {
           "nameRequired": "Название обязательно",
@@ -3571,23 +3735,44 @@
         "eventOptions": {
           "interaction.created": {
             "result_name": {
-              "No contact": "Немає контакту",
-              "Refusal to pay": "Відмова від оплати",
-              "Agreement": "Обіцянка оплати",
-              "Call back by appointment": "Перезвонити за домовленістю",
-              "Consent to interact": "Згода на взаємодію",
-              "Waiting for a call": "Очікує дзвінка",
-              "Hanged up": "Поклав слухавку",
-              "Request for documents": "Запит документів",
-              "Disconnected": "Відключений",
-              "Refused payment": "Відмовився платити",
-              "Will provide information": "Надасть інформацію",
-              "Will not provide information": "Не надасть інформацію",
-              "Refused consent to interact": "Відмовив у згоді на взаємодію",
-              "Threatens": "Погрожує",
-              "Sent documents": "Надіслано документи",
-              "No numbers": "Немає номерів",
-              "Numbers found": "Номери знайдено"
+              "No contact": "Нет контакта",
+              "Refusal to pay": "Отказ от оплаты",
+              "Agreement": "Обещание оплаты",
+              "Call back by appointment": "Перезвонить по договорённости",
+              "Consent to interact": "Согласие на взаимодействие",
+              "Waiting for a call": "Ожидает звонка",
+              "Hanged up": "Положил трубку",
+              "Request for documents": "Запрос документов",
+              "Disconnected": "Отключён",
+              "Refused payment": "Отказался платить",
+              "Will provide information": "Предоставит информацию",
+              "Will not provide information": "Не предоставит информацию",
+              "Refused consent to interact": "Отказал в согласии на взаимодействие",
+              "Threatens": "Угрожает",
+              "Sent documents": "Отправлены документы",
+              "No numbers": "Нет номеров",
+              "Numbers found": "Номера найдены",
+              "Agreement - Full payment": "Обещание — полная оплата",
+              "Agreement - Partial payment": "Обещание — частичная оплата",
+              "Agreement - Restructuring": "Обещание — реструктуризация",
+              "Agreement - Potential payment": "Обещание — возможная оплата",
+              "Payment reminder": "Напоминание об оплате"
+            },
+            "type_code": {
+              "INCOMING": "Входящая",
+              "OUTGOING": "Исходящая",
+              "SEARCHING": "Поиск"
+            },
+            "channel": {
+              "call": "Звонок",
+              "messenger": "Мессенджер",
+              "mail": "Почта",
+              "chat": "Чат"
+            },
+            "direction": {
+              "inbound": "Входящее",
+              "outbound": "Исходящее",
+              "system": "Системное"
             }
           }
         }
@@ -3622,6 +3807,18 @@
       },
       "helpBanner": "Нужна помощь с настройкой тегов?",
       "helpLink": "Документация",
+      "trace": {
+        "cta": "Почему?",
+        "openAllHint": "Посмотреть активность тегов этого клиента",
+        "titleAll": "Активность тегов клиента",
+        "titleSingle": "Почему «{{tag}}»?",
+        "empty": "Активность тегов для этого клиента ещё не зафиксирована.",
+        "emptyForTag": "Для этого тега пока нет истории — возможно, он назначен вручную или до включения трассировки.",
+        "loadFailed": "Не удалось загрузить трассировку",
+        "entriesCount": "{{count}} событий в хронологии (свежие сверху)",
+        "actor": "инициатор",
+        "action": "действие"
+      },
       "settings": {
         "description": "Управление выпадающими списками, событиями и условиями правил. Изменения применяются сразу ко всем формам.",
         "dictionarySettings": "Справочник тегов",
