@@ -4330,7 +4330,7 @@ export function ClientDetailPage() {
               variant="cancel"
               size="sm"
               onClick={() => setIsConnectRrOpen(false)}
-              className="w-full rounded-md sm:w-auto"
+              className="w-full rounded-md"
             >
               {t('actions.cancel')}
             </Button>
@@ -4431,7 +4431,7 @@ export function ClientDetailPage() {
                   }
                 )
               }}
-              className="w-full rounded-md sm:w-auto"
+              className="w-full rounded-md"
             >
               {isCreatingRr ? '...' : t('pages.clients.detail.connectRR')}
             </Button>
