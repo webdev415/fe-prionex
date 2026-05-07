@@ -9,6 +9,7 @@ import { forwardRef, useId } from 'react'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { Icons } from '@/lib/icons'
+import { cn } from '@/lib/utils'
 
 export interface DateSelectProps {
   label?: string
@@ -86,22 +87,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
             .date-select-wrapper .react-datepicker__input-container {
               width: 100%;
             }
-            .date-select-wrapper .react-datepicker__input-container input {
-              width: 100%;
-              height: 45px;
-              padding-left: 2.5rem;
-              padding-right: 1rem;
-              border-radius: 0.5rem;
-              border: 1px solid ${error ? '#EF4444' : '#D1D5DB'};
-              background-color: white;
-              font-size: 14px;
-              font-weight: 300;
-              color: #05040D;
-              outline: none;
-              transition: all 0.2s;
-            }
             .date-select-wrapper .react-datepicker__input-container input:focus {
-              border-color: ${error ? '#EF4444' : 'var(--color-primary-500)'};
               box-shadow: 0 0 0 2px ${error ? 'rgba(239, 68, 68, 0.2)' : 'rgba(128, 216, 10, 0.2)'};
             }
             .date-select-wrapper .react-datepicker__input-container input:disabled {
@@ -206,6 +192,13 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
             <DatePicker
               ref={ref}
               id={inputId}
+              className={cn(
+                'h-[45px] w-full rounded-md border bg-white pr-4 pl-10 text-sm font-light text-[#05040D] transition-all outline-none placeholder:text-gray-500',
+                error
+                  ? 'border-red-500 focus:border-red-500'
+                  : 'border-gray-300 focus:border-[var(--color-primary-500)]',
+                className
+              )}
               selected={parseDate(value)}
               onChange={handleChange}
               onChangeRaw={(e) => e?.preventDefault()}

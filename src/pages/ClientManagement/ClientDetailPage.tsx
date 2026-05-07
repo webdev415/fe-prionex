@@ -4247,6 +4247,7 @@ export function ClientDetailPage() {
                   }
                   format="dd-MM-yyyy"
                   placeholder={t('pages.clients.detail.rrConnectionDate')}
+                  className="rounded-lg border-gray-400"
                 />
                 <Input
                   label={`${t('pages.clients.detail.rrRestructuringAmount')} *`}
@@ -4298,6 +4299,7 @@ export function ClientDetailPage() {
                         }}
                         format="dd-MM-yyyy"
                         placeholder={t('pages.clients.detail.rrPaymentDate')}
+                        className="rounded-lg border-gray-400"
                       />
                       <Input
                         label={`${t('pages.clients.detail.rrPaymentAmount')} ${idx + 1} *`}
