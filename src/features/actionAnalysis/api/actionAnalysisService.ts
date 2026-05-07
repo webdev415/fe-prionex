@@ -97,10 +97,60 @@ export async function listInteractionChannels(): Promise<string[]> {
   return response.data
 }
 
+import type {
+  TAInteractionListParams,
+  TAInteractionListResponse,
+} from '@/features/taInteractions/api/types'
+
+function buildTaHistoryParams(filters: TAInteractionListParams): URLSearchParams {
+  // Repeated `?key=val&key=val` for list params — FastAPI's
+  // `Optional[List[int]] = Query(None)` rejects Axios's default `[]` suffix.
+  const params = new URLSearchParams()
+  if (filters.client_id != null) params.set('client_id', String(filters.client_id))
+  if (filters.chain_id != null) params.set('chain_id', String(filters.chain_id))
+  if (filters.recorded_by != null) params.set('recorded_by', String(filters.recorded_by))
+  if (filters.leaf_node_id != null) params.set('leaf_node_id', String(filters.leaf_node_id))
+  if (filters.date_from) params.set('date_from', filters.date_from)
+  if (filters.date_to) params.set('date_to', filters.date_to)
+  if (filters.notes_search) params.set('notes_search', filters.notes_search)
+  filters.recorded_by_in?.forEach((id) => params.append('recorded_by_in', String(id)))
+  if (filters.assigned_operator_id != null) {
+    params.set('assigned_operator_id', String(filters.assigned_operator_id))
+  }
+  if (filters.target_action_id != null) {
+    params.set('target_action_id', String(filters.target_action_id))
+  }
+  if (filters.promise_date_from) params.set('promise_date_from', filters.promise_date_from)
+  if (filters.promise_date_to) params.set('promise_date_to', filters.promise_date_to)
+  if (filters.skip != null) params.set('skip', String(filters.skip))
+  if (filters.limit != null) params.set('limit', String(filters.limit))
+  return params
+}
+
+export async function getTaHistory(
+  filters: TAInteractionListParams
+): Promise<TAInteractionListResponse> {
+  const response = await api.get<TAInteractionListResponse>('/api/v1/ta-interactions', {
+    params: buildTaHistoryParams(filters),
+  })
+  return response.data
+}
+
+export async function exportTaHistory(filters: TAInteractionListParams): Promise<Blob> {
+  const response = await api.get<Blob>('/api/v1/ta-interactions/export', {
+    params: buildTaHistoryParams(filters),
+    responseType: 'blob',
+    timeout: 120_000,
+  })
+  return response.data
+}
+
 export const actionAnalysisService = {
   getCallMonitoring,
   exportCallMonitoring,
   getInteractionMonitoring,
   exportInteractionMonitoring,
   listInteractionChannels,
+  getTaHistory,
+  exportTaHistory,
 }

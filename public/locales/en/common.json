@@ -317,7 +317,15 @@
           "nextAction": "Callback / next action",
           "followUp": "Follow-up",
           "any": "Any of the above"
-        }
+        },
+        "chain": "Chain",
+        "allChains": "All chains",
+        "chainStep": "Step",
+        "allChainSteps": "All steps",
+        "promiseDateFrom": "Promise date from",
+        "promiseDateTo": "Promise date to",
+        "notesSearch": "Notes search",
+        "notesSearchPlaceholder": "Search in notes…"
       },
       "columns": {
         "dateTime": "Date / Time",
@@ -338,7 +346,8 @@
         "responsibleAtCreation": "Responsible at creation",
         "currentResponsible": "Current responsible",
         "internalDate": "Date (promise / callback)",
-        "channel": "Channel"
+        "channel": "Channel",
+        "chain": "Chain"
       },
       "callType": {
         "incoming": "Incoming",
@@ -371,6 +380,7 @@
       },
       "empty": "No calls match the current filters",
       "interactionsEmpty": "No interactions match the current filters",
+      "taHistoryEmpty": "No TA interactions match the current filters",
       "errors": {
         "loadFailed": "Failed to load calls",
         "loadInteractionsFailed": "Failed to load interactions",
@@ -378,6 +388,7 @@
         "loadScreenTimeFailed": "Failed to load screen-time data.",
         "loadHeatmapFailed": "Failed to load the heatmap.",
         "loadScriptAnalyticsFailed": "Failed to load script analytics.",
+        "loadTaHistoryFailed": "Failed to load TA history",
         "departmentNoOperators": "No operators in this department for the current project.",
         "exportFailed": "Export failed",
         "callNotFound": "Call not found"
@@ -398,6 +409,7 @@
       "subTabs": {
         "list": "Call List",
         "interactions": "Interaction History",
+        "taHistory": "TA History",
         "timeline": "Timeline",
         "screenTime": "Screen Time",
         "heatmap": "Heatmap",

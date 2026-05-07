@@ -320,7 +320,15 @@
           "nextAction": "Передзвонити / наступна дія",
           "followUp": "Уточнення",
           "any": "Будь-яка з перелічених"
-        }
+        },
+        "chain": "Ланцюг",
+        "allChains": "Усі ланцюги",
+        "chainStep": "Крок",
+        "allChainSteps": "Усі кроки",
+        "promiseDateFrom": "Дата обіцянки від",
+        "promiseDateTo": "Дата обіцянки до",
+        "notesSearch": "Пошук у нотатках",
+        "notesSearchPlaceholder": "Пошук у нотатках…"
       },
       "columns": {
         "dateTime": "Дата / Час",
@@ -341,7 +349,8 @@
         "responsibleAtCreation": "Відповідальний на момент створення",
         "currentResponsible": "Поточний відповідальний",
         "internalDate": "Дата (обіцянка / передзвін)",
-        "channel": "Канал"
+        "channel": "Канал",
+        "chain": "Ланцюг"
       },
       "callType": {
         "incoming": "Вхідний",
@@ -374,6 +383,7 @@
       },
       "empty": "Немає дзвінків, що відповідають фільтрам",
       "interactionsEmpty": "Немає взаємодій, що відповідають фільтрам",
+      "taHistoryEmpty": "Немає ТА-взаємодій, що відповідають фільтрам",
       "errors": {
         "loadFailed": "Не вдалося завантажити дзвінки",
         "loadInteractionsFailed": "Не вдалося завантажити взаємодії",
@@ -381,6 +391,7 @@
         "loadScreenTimeFailed": "Не вдалося завантажити дані екранного часу.",
         "loadHeatmapFailed": "Не вдалося завантажити теплову карту.",
         "loadScriptAnalyticsFailed": "Не вдалося завантажити аналітику скриптів.",
+        "loadTaHistoryFailed": "Не вдалося завантажити історію ТА",
         "departmentNoOperators": "У цьому відділі немає операторів у поточному проєкті.",
         "exportFailed": "Не вдалося експортувати",
         "callNotFound": "Дзвінок не знайдено"
@@ -401,6 +412,7 @@
       "subTabs": {
         "list": "Список дзвінків",
         "interactions": "Історія взаємодій",
+        "taHistory": "Історія ТА",
         "timeline": "Таймлайн",
         "screenTime": "Екранний час",
         "heatmap": "Теплова карта",

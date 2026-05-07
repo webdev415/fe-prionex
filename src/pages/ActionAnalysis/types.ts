@@ -3,6 +3,7 @@ export type ActionAnalysisTopTabId = 'calls' | 'scores' | 'training' | 'settings
 export type ActionAnalysisCallsSubTabId =
   | 'list'
   | 'interactions'
+  | 'ta-history'
   | 'timeline'
   | 'screen-time'
   | 'heatmap'
@@ -18,6 +19,7 @@ export const ACTION_ANALYSIS_TOP_TABS: ActionAnalysisTopTabId[] = [
 export const ACTION_ANALYSIS_CALLS_SUB_TABS: ActionAnalysisCallsSubTabId[] = [
   'list',
   'interactions',
+  'ta-history',
   'timeline',
   'screen-time',
   'heatmap',
