@@ -91,8 +91,8 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               height: 45px;
               padding-left: 2.5rem;
               padding-right: 1rem;
-              border-radius: 12px;
-              border: 1px solid ${error ? '#EF4444' : '#adadad'};
+              border-radius: 0.5rem;
+              border: 1px solid ${error ? '#EF4444' : '#D1D5DB'};
               background-color: white;
               font-size: 14px;
               font-weight: 300;

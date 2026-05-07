@@ -2342,8 +2342,12 @@
         "allChains": "Усі ланцюжки",
         "from": "Від",
         "to": "До",
+        "selectStartDate": "Виберіть дату початку",
+        "selectEndDate": "Виберіть дату закінчення",
         "searchNotes": "Нотатки",
         "searchNotesPlaceholder": "Пошук у нотатках...",
+        "applyFilters": "Застосувати фільтр",
+        "clearFilters": "Очистити",
         "deleteTitle": "Видалити взаємодію",
         "deleteConfirm": "Видалити цю взаємодію? Цю дію не можна скасувати.",
         "deleteSuccess": "Взаємодію видалено"

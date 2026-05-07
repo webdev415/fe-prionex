@@ -2346,8 +2346,12 @@
         "allChains": "Все цепочки",
         "from": "С",
         "to": "По",
+        "selectStartDate": "Выберите дату начала",
+        "selectEndDate": "Выберите дату окончания",
         "searchNotes": "Заметки",
         "searchNotesPlaceholder": "Поиск по заметкам...",
+        "applyFilters": "Применить фильтр",
+        "clearFilters": "Очистить",
         "deleteTitle": "Удалить взаимодействие",
         "deleteConfirm": "Удалить это взаимодействие? Это действие нельзя отменить.",
         "deleteSuccess": "Взаимодействие удалено"
