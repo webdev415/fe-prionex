@@ -126,7 +126,6 @@ type RuleFormData = {
   description: string
   trigger_type: RuleTriggerType
   trigger_event: string
-  trigger_tag_code: string
   cron_expression: string
   conditions: { field: string; op: string; value: string }[]
   action_type: RuleActionType
@@ -170,7 +169,6 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
             'import_complete',
           ]),
           trigger_event: z.string().optional().default(''),
-          trigger_tag_code: z.string().optional().default(''),
           cron_expression: z.string().optional().default(''),
           conditions: z.array(
             z.object({
@@ -208,16 +206,6 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               path: ['cron_expression'],
             })
           }
-          if (data.trigger_type === 'tag_expired' && !data.trigger_tag_code?.trim()) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: t(
-                'pages.tags.rules.validation.triggerTagRequired',
-                'Select which tag expiry should trigger this rule'
-              ),
-              path: ['trigger_tag_code'],
-            })
-          }
         }),
     [t]
   )
@@ -241,7 +229,6 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
       description: '',
       trigger_type: 'event',
       trigger_event: '',
-      trigger_tag_code: '',
       cron_expression: '',
       conditions: [],
       action_type: 'add_tag',
@@ -362,7 +349,6 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
         description: rule?.description ?? '',
         trigger_type: rule?.trigger_type ?? 'event',
         trigger_event: rule?.trigger_event ?? '',
-        trigger_tag_code: rule?.trigger_tag_code ?? '',
         cron_expression: rule?.cron_expression ?? '',
         conditions: (rule?.conditions ?? []).map((c) => ({
           field: c.field,
@@ -391,10 +377,6 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
         trigger_event: data.trigger_type === 'event' ? data.trigger_event || undefined : undefined,
         cron_expression:
           data.trigger_type === 'schedule' ? data.cron_expression || undefined : undefined,
-        trigger_tag_code:
-          data.trigger_type === 'tag_expired'
-            ? data.trigger_tag_code?.trim() || undefined
-            : undefined,
         conditions: data.conditions.map((c) => ({
           field: c.field,
           op: c.op,
@@ -479,8 +461,6 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                         trigger_type: preset.trigger_type as RuleTriggerType,
                         trigger_event: preset.trigger_event ?? '',
                         cron_expression: preset.cron_expression ?? '',
-                        trigger_tag_code:
-                          (preset as { trigger_tag_code?: string }).trigger_tag_code ?? '',
                         conditions: preset.conditions,
                         action_type: preset.action_type as RuleActionType,
                         target_tag_code: preset.target_tag_code,
@@ -629,51 +609,11 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                     placeholder="0 9 * * *"
                     error={errors.cron_expression?.message}
                     helperText={t(
-                      'pages.tags.rules.cronHelpTz',
-                      'Standard cron (min hour dom mon dow). Times are evaluated in Europe/Kyiv (stored UTC in the database).'
+                      'pages.tags.rules.cronHelp',
+                      'Standard cron format (min hour dom mon dow)'
                     )}
                   />
                   {cronValue && <CronPreview expression={cronValue} t={t} />}
-                </div>
-              )}
-
-              {triggerType === 'tag_expired' && (
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label required>
-                    {t('pages.tags.rules.triggerTagCode', 'Tag whose expiry triggers this rule')}
-                  </Label>
-                  <Controller
-                    name="trigger_tag_code"
-                    control={control}
-                    render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue
-                            placeholder={t('pages.tags.rules.selectTriggerTag', 'Select tag')}
-                          />
-                        </SelectTrigger>
-                        <SelectContent
-                          searchable
-                          searchPlaceholder={t('pages.tags.searchTags', 'Search...')}
-                        >
-                          {tagCodeOptions.map((o) => (
-                            <SelectItem key={o.value} value={o.value}>
-                              {o.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.trigger_tag_code?.message && (
-                    <p className="text-error-500 text-xs">{errors.trigger_tag_code.message}</p>
-                  )}
-                  <p className="text-xs text-gray-500">
-                    {t(
-                      'pages.tags.rules.triggerTagHint',
-                      'The rule runs when this tag reaches its TTL and is removed from the client.'
-                    )}
-                  </p>
                 </div>
               )}
             </div>
