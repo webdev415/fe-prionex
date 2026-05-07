@@ -1347,6 +1347,16 @@
           "successMessage": "Interaction added successfully",
           "errorMessage": "Failed to add interaction"
         },
+        "editInteraction": {
+          "title": "Edit Interaction",
+          "aria": {
+            "type": "Type",
+            "channel": "Channel",
+            "contactType": "Contact type",
+            "result": "Result",
+            "creditNumber": "Credit number"
+          }
+        },
         "assignClient": {
           "title": "Assign Client: {{fullName}}",
           "clientInformation": "Client Information",

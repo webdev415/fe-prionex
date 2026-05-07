@@ -1646,6 +1646,16 @@
           "successMessage": "Взаимодействие успешно добавлено",
           "errorMessage": "Не удалось добавить взаимодействие"
         },
+        "editInteraction": {
+          "title": "Редактировать взаимодействие",
+          "aria": {
+            "type": "Тип",
+            "channel": "Канал",
+            "contactType": "Тип контакта",
+            "result": "Результат",
+            "creditNumber": "Номер кредита"
+          }
+        },
         "assignClient": {
           "title": "Назначить клиента: {{fullName}}",
           "clientInformation": "Информация о клиенте",
