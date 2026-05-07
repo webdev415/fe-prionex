@@ -136,6 +136,7 @@ import {
   CallIncoming04Icon,
   AiBrain03Icon,
   Mic02Icon,
+  Tag01Icon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -237,6 +238,7 @@ export const Icons = {
   LogoutSquare01: (props: Omit<IconProps, 'icon'>) => <Icon icon={LogoutSquare01Icon} {...props} />,
   ChartRing: (props: Omit<IconProps, 'icon'>) => <Icon icon={ChartRingIcon} {...props} />,
   Brochure: (props: Omit<IconProps, 'icon'>) => <Icon icon={BrochureIcon} {...props} />,
+  Tag01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Tag01Icon} {...props} />,
 
   UserCircle02Icon: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserCircle02Icon} {...props} />,
   UserSearch01: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserSearch01Icon} {...props} />,

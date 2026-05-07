@@ -638,6 +638,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             requiredPermission: PERMISSIONS.CLIENTS.EDIT,
           },
           {
+            path: '/dashboard/operations/bulk-tag-assignment',
+            label: t('navigation.bulkTagAssignment', 'Bulk Tag Assignment'),
+            icon: 'tag-01',
+            requiredPermission: PERMISSIONS.CLIENTS.EDIT,
+          },
+          {
             path: '/dashboard/operations/bulk-payment-import',
             label: t('navigation.bulkPaymentVerification'),
             icon: 'transaction-history',

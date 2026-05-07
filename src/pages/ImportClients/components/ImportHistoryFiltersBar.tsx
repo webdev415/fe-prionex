@@ -284,6 +284,9 @@ export function ImportHistoryFiltersBar({
                             'Operator Assignment'
                           )}
                         </SelectItem>
+                        <SelectItem value="tag_assignment">
+                          {t('pages.imports.history.importTypes.tagAssignment', 'Tag assignment')}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -406,6 +409,9 @@ export function ImportHistoryFiltersBar({
                         'pages.imports.history.importTypes.operatorAssignment',
                         'Operator Assignment'
                       )}
+                    </SelectItem>
+                    <SelectItem value="tag_assignment">
+                      {t('pages.imports.history.importTypes.tagAssignment', 'Tag assignment')}
                     </SelectItem>
                   </SelectContent>
                 </Select>

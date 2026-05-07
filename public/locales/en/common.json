@@ -28,6 +28,7 @@
     "operations": "Operations",
     "bulkOperatorAssignment": "Bulk Operator Assignment",
     "bulkPaymentVerification": "Bulk Payment Verification",
+    "bulkTagAssignment": "Bulk Tag Assignment",
     "auditLogs": "Audit Logs",
     "reports": "Reports",
     "scoringConfiguration": "Scoring Configuration",
@@ -971,7 +972,9 @@
         "importTypes": {
           "simple": "Simple",
           "vendor": "Vendor Dump",
-          "operatorAssignment": "Operator Assignment"
+          "operatorAssignment": "Operator Assignment",
+          "tagAssignment": "Tag assignment",
+          "tagRemoval": "Tag removal"
         },
         "uploadedBy": "Uploaded by:",
         "view": "View",
@@ -1012,6 +1015,7 @@
         "totalRows": "Total rows:",
         "newClients": "New clients:",
         "updatedClients": "Updated clients:",
+        "tagsApplied": "Tags Applied:",
         "errors": "Errors:",
         "processingTime": "Processing time:",
         "progress": "Progress",
@@ -1121,6 +1125,80 @@
           "downloadErrors": "Download Errors",
           "startNewImport": "Start New Import",
           "jobStarted": "Operator assignment job started"
+        }
+      },
+      "tagAssignment": {
+        "title": "Bulk Tag Assignment",
+        "viewHistory": "Import History",
+        "noProjectToast": "Please select an active project before uploading.",
+        "upload": {
+          "sectionTitle": "Upload tag assignment file",
+          "description": "Each row: tax_id, tags (comma-separated tag names). Accepts CSV or Excel (.xlsx). Operation applies to all listed tags.",
+          "downloadTemplate": "Download Template",
+          "downloading": "Downloading...",
+          "clickToUpload": "Click to upload",
+          "orDragAndDrop": "or drag and drop",
+          "constraints": "CSV or Excel (.xlsx), max 10 MB, max 10,000 rows",
+          "validating": "Validating file...",
+          "modeLabel": "Operation",
+          "modeAssign": "Assign tags",
+          "modeRemove": "Remove tags",
+          "modeAssignHint": "Listed tags will be added to each client. Tags already present are skipped.",
+          "modeRemoveHint": "Listed tags will be removed from each client. Protected tags cannot be removed via bulk.",
+          "errors": {
+            "onlyCsv": "Only CSV files are supported.",
+            "onlyCsvOrXlsx": "Only CSV or Excel (.xlsx) files are accepted.",
+            "fileTooLarge": "File exceeds maximum size of 10 MB ({{size}} MB)."
+          }
+        },
+        "preview": {
+          "title": "Review tag operation",
+          "fileInfo": "File: {{filename}} · {{totalRecords}} records · Batch: {{batchId}}",
+          "modeAssign": "Mode: Assign tags",
+          "modeRemove": "Mode: Remove tags",
+          "previewRows": "Preview (first {{count}} rows)",
+          "emptyPreview": "No preview rows",
+          "emptyErrors": "No errors",
+          "errors": "Errors ({{count}})",
+          "readyToAssign": "Ready to assign",
+          "readyToRemove": "Ready to remove",
+          "noChange": "No change",
+          "invalid": "Invalid",
+          "uniqueTags": "Unique tags",
+          "columns": {
+            "rowNumber": "#",
+            "client": "Client",
+            "tags": "Tags",
+            "status": "Status",
+            "note": "Note",
+            "unknownTagTitle": "Tag not found in this project"
+          },
+          "statuses": {
+            "ready": "Ready",
+            "noChange": "No Change",
+            "warning": "Warning",
+            "error": "Error"
+          },
+          "cancel": "Cancel",
+          "confirmAssign": "Assign tags to {{count}} Clients",
+          "confirmRemove": "Remove tags from {{count}} Clients",
+          "starting": "Starting..."
+        },
+        "progress": {
+          "headingComplete": "Tag operation complete",
+          "headingFailed": "Tag operation failed",
+          "headingCancelled": "Tag operation cancelled",
+          "processing": "Processing tags...",
+          "progress": "Progress",
+          "totalRecords": "Total Records",
+          "successful": "Applied",
+          "failed": "Failed",
+          "processingTime": "Processing time: {{time}}",
+          "errorDetails": "Error Details",
+          "cancel": "Cancel",
+          "downloadErrors": "Download Errors",
+          "startNew": "Start a new operation",
+          "jobStarted": "Tag operation started"
         }
       },
       "bulkPaymentVerification": {

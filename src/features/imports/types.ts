@@ -8,7 +8,15 @@
 export type ImportJobStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled'
 
 // Import Type
-export type ImportType = 'simple' | 'vendor' | 'operator_assignment' | 'payment_import'
+export type ImportType =
+  | 'simple'
+  | 'vendor'
+  | 'operator_assignment'
+  | 'payment_import'
+  | 'tag_assignment'
+
+// Mode for tag_assignment imports
+export type TagAssignmentMode = 'assign' | 'remove'
 
 // Import Job (from GET /api/import/jobs)
 export interface ImportJob {
@@ -19,6 +27,7 @@ export interface ImportJob {
   status: ImportJobStatus
   errors_count: number
   import_type: ImportType
+  tag_mode?: TagAssignmentMode // Only set when import_type === 'tag_assignment'
   seller_creditor?: string // Seller code for display (from job metadata)
   project_code?: string
   purchase_date?: string
@@ -59,6 +68,7 @@ export interface ImportJobDetail {
   project_code?: string
   purchase_date?: string
   comment?: string
+  tag_mode?: TagAssignmentMode // Only set when import_type === 'tag_assignment'
   progress_percentage?: number // 0-100, only for in_progress
   processing_row?: number // Current row being processed, only for in_progress
   error_summary?: Record<string, unknown> | string | null // Error details on failure

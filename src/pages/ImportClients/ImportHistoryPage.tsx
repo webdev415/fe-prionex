@@ -34,6 +34,7 @@ export interface ImportHistoryItem {
   status: 'done' | 'failed' | 'in_progress' | 'pending' | 'cancelled'
   errors: number
   importType: string
+  tagMode?: 'assign' | 'remove'
 }
 
 // Helper to convert API ImportJob to ImportHistoryItem
@@ -58,6 +59,7 @@ function mapImportJobToHistoryItem(job: ImportJob): ImportHistoryItem {
                 : 'done', // Default fallback
     errors: job.errors_count,
     importType: job.import_type || 'simple',
+    tagMode: job.tag_mode,
   }
 }
 
@@ -114,7 +116,13 @@ function ImportStatusBadge({
 }
 
 // Import Type Badge Component
-function ImportTypeBadge({ importType }: { importType: string }) {
+function ImportTypeBadge({
+  importType,
+  tagMode,
+}: {
+  importType: string
+  tagMode?: 'assign' | 'remove'
+}) {
   const { t } = useTranslation('common')
 
   const config: Record<string, { label: string; className: string }> = {
@@ -130,6 +138,21 @@ function ImportTypeBadge({ importType }: { importType: string }) {
       label: t('pages.imports.history.importTypes.operatorAssignment', 'Operator Assignment'),
       className: 'bg-primary-700 text-white',
     },
+  }
+
+  if (importType === 'tag_assignment') {
+    const isRemove = tagMode === 'remove'
+    return (
+      <span
+        className={`inline-flex h-[28px] items-center rounded-full px-2.5 text-[11px] font-medium ${
+          isRemove ? 'bg-red-500 text-white' : 'bg-emerald-500 text-white'
+        }`}
+      >
+        {isRemove
+          ? t('pages.imports.history.importTypes.tagRemoval', 'Tag removal')
+          : t('pages.imports.history.importTypes.tagAssignment', 'Tag assignment')}
+      </span>
+    )
   }
 
   const cfg = config[importType] || config.simple
@@ -551,7 +574,7 @@ export function ImportHistoryPage() {
       key: 'importType',
       header: t('pages.imports.history.tableHeaders.type', 'Type'),
       sortable: true,
-      render: (item) => <ImportTypeBadge importType={item.importType} />,
+      render: (item) => <ImportTypeBadge importType={item.importType} tagMode={item.tagMode} />,
     },
     {
       key: 'status',
