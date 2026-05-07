@@ -11,6 +11,13 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Modal, ModalHeader, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { documentApi } from '@/features/clients/api/documentApi'
 import { clientKeys } from '@/features/clients/hooks/useClients'
 import { Icons } from '@/lib/icons'
@@ -178,44 +185,59 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
             <label className="text-secondary-700 mb-1 block text-sm font-medium">
               {t('pages.clients.detail.documentType')}
             </label>
-            <select
-              value={docType}
-              onChange={(e) => setDocType(e.target.value)}
-              className="border-secondary-300 text-secondary-900 focus:border-primary-400 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none"
-            >
-              {DOC_TYPE_VALUES.map((value) => (
-                <option key={value} value={value}>
-                  {t(`pages.clients.detail.documentTypes.${value}`)}
-                </option>
-              ))}
-            </select>
+            <Select value={docType} onValueChange={(value) => setDocType(value)}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DOC_TYPE_VALUES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t(`pages.clients.detail.documentTypes.${value}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
             <label className="text-secondary-700 mb-1 block text-sm font-medium">
               {t('pages.clients.detail.loan')}
             </label>
-            <select
-              value={debtId ?? ''}
-              onChange={(e) => setDebtId(e.target.value ? Number(e.target.value) : null)}
-              className="border-secondary-300 text-secondary-900 focus:border-primary-400 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none"
+            <Select
+              value={debtId == null ? 'unlinked' : String(debtId)}
+              onValueChange={(value) => setDebtId(value === 'unlinked' ? null : Number(value))}
             >
-              <option value="">{t('pages.clients.detail.documentsUnlinked')}</option>
-              {loans.map((loan) => (
-                <option key={loan.id} value={loan.id}>
-                  #{loan.loanNumber} — {loan.counterparty}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unlinked">
+                  {t('pages.clients.detail.documentsUnlinked')}
+                </SelectItem>
+                {loans.map((loan) => (
+                  <SelectItem key={loan.id} value={String(loan.id)}>
+                    #{loan.loanNumber} — {loan.counterparty}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
 
       <ModalFooter>
-        <Button variant="outline" onClick={handleClose}>
+        <Button
+          variant="outline"
+          onClick={handleClose}
+          className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
+        >
           {t('actions.cancel')}
         </Button>
-        <Button onClick={handleUpload} disabled={!file || uploading}>
+        <Button
+          onClick={handleUpload}
+          disabled={!file || uploading}
+          className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
+        >
           {uploading ? t('status.loading') : t('pages.clients.detail.documentUploadAction')}
         </Button>
       </ModalFooter>
