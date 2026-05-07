@@ -83,6 +83,19 @@ interface InstantStepValue {
   creditId: string
 }
 
+function ChainExecutorSkeleton() {
+  return (
+    <div className="space-y-4" aria-hidden="true">
+      <div className="h-10 w-full animate-pulse rounded-md border border-gray-200 bg-gray-100" />
+      <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50/60 p-3">
+        <div className="h-4 w-48 animate-pulse rounded bg-gray-200" />
+        <div className="h-10 w-full animate-pulse rounded-md bg-gray-200" />
+        <div className="h-10 w-full animate-pulse rounded-md bg-gray-200" />
+      </div>
+    </div>
+  )
+}
+
 const EMPTY_INSTANT_VALUE: InstantStepValue = {
   value: '',
   promiseDate: '',
@@ -138,7 +151,7 @@ export function ChainExecutor({
 
   // Available chains (manual only, active). Department-scoped users get
   // their own department's chains; admins and default-role users get all.
-  const { data: chainsData } = useTAChains({
+  const { data: chainsData, isLoading: isLoadingChains } = useTAChains({
     include_inactive: false,
     department_id: seesAllDepartments ? undefined : operatorDepartmentId,
   })
@@ -1067,7 +1080,9 @@ export function ChainExecutor({
         )}
       </div>
 
-      {manualChains.length === 0 ? (
+      {isLoadingChains ? (
+        <ChainExecutorSkeleton />
+      ) : manualChains.length === 0 ? (
         <p className="text-sm text-gray-500">{t('pages.clientChains.noChains')}</p>
       ) : (
         <>
