@@ -350,7 +350,8 @@
         "currentResponsible": "Поточний відповідальний",
         "internalDate": "Дата (обіцянка / передзвін)",
         "channel": "Канал",
-        "chain": "Ланцюг"
+        "chain": "Ланцюг",
+        "notes": "Нотатки"
       },
       "callType": {
         "incoming": "Вхідний",

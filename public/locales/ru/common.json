@@ -350,7 +350,8 @@
         "currentResponsible": "Текущий ответственный",
         "internalDate": "Дата (обещание / перезвон)",
         "channel": "Канал",
-        "chain": "Цепочка"
+        "chain": "Цепочка",
+        "notes": "Заметки"
       },
       "callType": {
         "incoming": "Входящий",
