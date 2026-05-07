@@ -97,17 +97,14 @@ export async function listInteractionChannels(): Promise<string[]> {
   return response.data
 }
 
-// --- TA History sub-tab (KAN-409 follow-up) ---
-
 import type {
   TAInteractionListParams,
   TAInteractionListResponse,
 } from '@/features/taInteractions/api/types'
 
 function buildTaHistoryParams(filters: TAInteractionListParams): URLSearchParams {
-  // Custom serializer (vs. Axios default) so list params produce repeated
-  // ?key=val&key=val pairs that FastAPI's `Optional[List[int]] = Query(None)`
-  // recognizes — the default Axios `[]` suffix serializer doesn't bind.
+  // Repeated `?key=val&key=val` for list params — FastAPI's
+  // `Optional[List[int]] = Query(None)` rejects Axios's default `[]` suffix.
   const params = new URLSearchParams()
   if (filters.client_id != null) params.set('client_id', String(filters.client_id))
   if (filters.chain_id != null) params.set('chain_id', String(filters.chain_id))

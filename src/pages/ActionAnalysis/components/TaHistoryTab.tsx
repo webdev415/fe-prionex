@@ -26,8 +26,6 @@ export function TaHistoryTab() {
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const userTimezone = useAuthStore((s) => s.user?.timezone)
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
-  // Pull the chain list once for the filter bar — `useTAChains` shape carries
-  // each chain's `steps[]`, which the bar uses to populate the Step dropdown.
   const { data: chainsResp } = useTAChains({ include_inactive: true })
   const chains = useMemo(() => chainsResp?.items ?? [], [chainsResp])
 
@@ -48,8 +46,6 @@ export function TaHistoryTab() {
     )
   }, [searchParams, setSearchParams, userTimezone])
 
-  // Resolve operator IDs from department selection + multi-select.
-  // Mirrors the InteractionHistory tab pattern.
   const recordedByIn = useMemo<number[] | undefined>(() => {
     if (barState.departmentId != null) {
       const ids = operators
@@ -61,7 +57,6 @@ export function TaHistoryTab() {
     return undefined
   }, [barState.departmentId, barState.employeeIds, operators])
 
-  // "department selected but no operators in it" → render empty state
   const isDeptEmpty =
     barState.departmentId != null && (recordedByIn == null || recordedByIn.length === 0)
 

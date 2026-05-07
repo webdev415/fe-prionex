@@ -1,11 +1,3 @@
-/**
- * URL state for the TA History sub-tab (KAN-409 follow-up).
- *
- * URL keys map 1:1 to the trainer-friendly filter cells. Defaults (period =
- * `last_7d`, no operators, no chain, etc.) are stripped from the written URL
- * so shareable links stay tidy.
- */
-
 import type { CallMonitoringPeriod } from '@/features/actionAnalysis'
 import type { TAInteractionListParams } from '@/features/taInteractions/api/types'
 import { localDateStringsToIsoRange } from './dateRange'
@@ -19,7 +11,6 @@ export interface TaHistoryBarState {
   departmentId: number | null
   employeeIds: number[]
   chainId?: number
-  /** Step within the picked chain (target_action_id). Cleared when chain is cleared. */
   targetActionId?: number
   promiseDateFrom?: string
   promiseDateTo?: string
@@ -50,8 +41,6 @@ export function readTaHistoryUrlState(params: URLSearchParams): TaHistoryBarStat
   const chainIdRaw = params.get('chain_id')
   const chainId = chainIdRaw ? Number(chainIdRaw) : undefined
   const stepRaw = params.get('step')
-  // Step only takes effect when a chain is also picked — otherwise we can't
-  // resolve which chain the step belongs to.
   const targetActionId = chainId && stepRaw ? Number(stepRaw) : undefined
 
   return {
@@ -108,10 +97,8 @@ export function writeTaHistoryUrlState(
   return next
 }
 
-/** Convert FE bar state → backend `/api/v1/ta-interactions` query params. */
 export function toTaHistoryQuery(
   state: TaHistoryBarState,
-  /** Operator IDs already resolved (e.g. via department membership). */
   recordedByIn: number[] | undefined
 ): TAInteractionListParams {
   let date_from: string | undefined

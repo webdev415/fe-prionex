@@ -18,9 +18,7 @@ function formatAmount(value: string | null): string {
 }
 
 function pickResultName(r: TAInteraction): string {
-  // dropdown_value_name is the canonical "result" on new TA interactions;
-  // leaf_node_name is the legacy fallback for rows recorded before the
-  // dropdown migration (KAN-326+ era).
+  // leaf_node_name is the pre-dropdown-migration fallback.
   return r.dropdown_value_name ?? r.leaf_node_name ?? '—'
 }
 

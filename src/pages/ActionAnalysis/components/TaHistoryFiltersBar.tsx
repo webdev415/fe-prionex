@@ -87,8 +87,6 @@ export function TaHistoryFiltersBar({
       ? (departmentOptions.find((d) => d.id === draft.departmentId)?.name ?? undefined)
       : undefined
 
-  // Step dropdown is gated by Chain. The picked chain's steps[] feeds the
-  // options; clearing the chain auto-clears the step.
   const pickedChain = useMemo(
     () => (draft.chainId ? (chains.find((c) => c.id === draft.chainId) ?? null) : null),
     [chains, draft.chainId]
@@ -159,8 +157,6 @@ export function TaHistoryFiltersBar({
             label={t('pages.actionAnalysis.filters.employee', 'Employee')}
           />
 
-          {/* Chain → Step cascade. Picking a chain enables Step; clearing the
-              chain auto-clears the step. */}
           <div className="flex flex-col gap-1.5">
             <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.chain', 'Chain')}
