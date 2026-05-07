@@ -34,6 +34,7 @@ import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { Pagination } from '@/components/ui/Pagination'
 import { EditTAInteractionModal } from './EditTAInteractionModal'
 
 interface Props {
@@ -65,8 +66,8 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   const [notesSearch, setNotesSearch] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-  const [page, setPage] = useState(0)
-  const pageSize = 10
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const { data: chainsData } = useTAChains({ include_inactive: true })
   const chains = chainsData?.items ?? []
@@ -100,7 +101,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     notes_search: notesSearch || undefined,
     date_from: dateFrom || undefined,
     date_to: dateTo ? `${dateTo}T23:59:59` : undefined,
-    skip: page * pageSize,
+    skip: (page - 1) * pageSize,
     limit: pageSize,
   })
 
@@ -380,7 +381,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     },
   ]
 
-  if (isLoading && page === 0) return <TableSkeleton columns={9} rows={3} />
+  if (isLoading && page === 1) return <TableSkeleton columns={9} rows={3} />
 
   return (
     <div className="flex flex-col gap-3">
@@ -394,7 +395,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             value={chainFilter}
             onValueChange={(v) => {
               setChainFilter(v === 'all' ? '' : v)
-              setPage(0)
+              setPage(1)
             }}
           >
             <SelectTrigger className="h-8 w-40 text-xs">
@@ -420,7 +421,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             value={dateFrom}
             onChange={(e) => {
               setDateFrom(e.target.value)
-              setPage(0)
+              setPage(1)
             }}
           />
         </div>
@@ -432,7 +433,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             value={dateTo}
             onChange={(e) => {
               setDateTo(e.target.value)
-              setPage(0)
+              setPage(1)
             }}
           />
         </div>
@@ -447,7 +448,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
             value={notesSearch}
             onChange={(e) => {
               setNotesSearch(e.target.value)
-              setPage(0)
+              setPage(1)
             }}
           />
         </div>
@@ -515,41 +516,16 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       </Modal>
 
       {/* Pagination */}
-      {totalCount > pageSize && (
-        <div className="flex items-center justify-between text-xs text-gray-600">
-          <span>
-            {t('pages.interactionLog.pagination.rangeOfTotal', {
-              start: page * pageSize + 1,
-              end: Math.min((page + 1) * pageSize, totalCount),
-              total: totalCount,
-            })}
-          </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={page === 0}
-              onClick={() => setPage((p) => p - 1)}
-              className="rounded border px-2 py-1 disabled:opacity-30"
-              aria-label={t('pages.interactionLog.pagination.previousPage')}
-            >
-              &lt;
-            </button>
-            <span className="px-1">
-              {t('pages.interactionLog.pagination.pageOfPages', {
-                page: page + 1,
-                totalPages,
-              })}
-            </span>
-            <button
-              type="button"
-              disabled={page >= totalPages - 1}
-              onClick={() => setPage((p) => p + 1)}
-              className="rounded border px-2 py-1 disabled:opacity-30"
-              aria-label={t('pages.interactionLog.pagination.nextPage')}
-            >
-              &gt;
-            </button>
-          </div>
+      {totalCount > 0 && (
+        <div className="flex w-full items-center justify-center">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            pageSizeOptions={[10, 20, 50, 100]}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
     </div>
