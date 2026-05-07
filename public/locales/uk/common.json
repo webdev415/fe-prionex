@@ -1729,8 +1729,40 @@
           "selectDate": "Виберіть дату",
           "promiseAmount": "Сума обіцянки",
           "callbackDate": "Дата зворотного дзвінка",
+          "callbackDateRequired": "Дата зворотного дзвінка є обов'язковою",
+          "callbackDateFuture": "Дата зворотного дзвінка має бути пізніше поточного часу",
+          "promiseDateRequired": "Дата обіцянки є обов'язковою",
+          "promiseDateFuture": "Дата обіцянки має бути пізніше поточного часу",
+          "promiseAmountPositive": "Сума обіцянки має бути більшою за 0",
           "successMessage": "Взаємодію успішно додано",
           "errorMessage": "Не вдалося додати взаємодію"
+        },
+        "assignRole": {
+          "titleEmployee": "Призначити співробітника",
+          "titleSearcher": "Призначити шукача",
+          "employee": "Співробітник (необов'язково)",
+          "searcher": "Шукач (необов'язково)",
+          "selectEmployee": "Виберіть співробітника...",
+          "selectSearcher": "Виберіть шукача...",
+          "assignmentReason": "Причина призначення",
+          "assign": "Призначити",
+          "reasons": {
+            "newClient": "Новий клієнт",
+            "workloadDistribution": "Розподіл навантаження",
+            "specialistRequired": "Потрібен спеціаліст",
+            "reassignment": "Перепризначення",
+            "other": "Інше"
+          }
+        },
+        "editInteraction": {
+          "title": "Редагувати взаємодію",
+          "aria": {
+            "type": "Тип",
+            "channel": "Канал",
+            "contactType": "Тип контакту",
+            "result": "Результат",
+            "creditNumber": "Номер кредиту"
+          }
         },
         "assignClient": {
           "title": "Призначити клієнта: {{fullName}}",
@@ -1956,6 +1988,8 @@
           "selectedCount": "{{selected}} з {{total}} тегів вибрано",
           "noTagsMatch": "За запитом тегів не знайдено",
           "noTagsAvailable": "Немає доступних тегів",
+          "payloadTagBadge": "потрібна ЦД",
+          "payloadTagHint": "Цей тег потребує ЦД та/або суму — відкриється окрема форма",
           "saveTags": "Зберегти теги",
           "tagsUpdated": "Теги оновлено для {{name}}",
           "updateFailed": "Не вдалося оновити теги"
@@ -2432,11 +2466,22 @@
         "allChains": "Усі ланцюжки",
         "from": "Від",
         "to": "До",
+        "selectStartDate": "Виберіть дату початку",
+        "selectEndDate": "Виберіть дату закінчення",
         "searchNotes": "Нотатки",
         "searchNotesPlaceholder": "Пошук у нотатках...",
+        "applyFilters": "Застосувати фільтр",
+        "clearFilters": "Очистити",
         "deleteTitle": "Видалити взаємодію",
         "deleteConfirm": "Видалити цю взаємодію? Цю дію не можна скасувати.",
         "deleteSuccess": "Взаємодію видалено"
+      },
+      "editInteraction": {
+        "title": "Редагувати взаємодію",
+        "chainLabel": "Ланцюжок",
+        "savedToast": "Взаємодію оновлено",
+        "savedValue": "Збережене значення",
+        "overdueDays": "прострочено {{count}} дн."
       },
       "templatePlaceholder": "Оберіть шаблон…",
       "templateSearchPlaceholder": "Пошук шаблонів…",

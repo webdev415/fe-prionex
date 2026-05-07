@@ -3626,7 +3626,7 @@ export function ClientDetailPage() {
             (isActivitiesLoading ? (
               <TableSkeleton columns={12} rows={3} className="w-full" />
             ) : displayedActivities.length === 0 ? (
-              <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
+              <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
                   <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
                   <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
@@ -3664,7 +3664,7 @@ export function ClientDetailPage() {
             (isProfileLoading ? (
               <TableSkeleton columns={1} rows={3} className="w-full" />
             ) : !profile?.sale_notes?.trim() ? (
-              <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
+              <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
                   <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
                   <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
@@ -3687,7 +3687,7 @@ export function ClientDetailPage() {
             (isDialHistoryLoading ? (
               <TableSkeleton columns={2} rows={3} className="w-full" />
             ) : dialHistory.length === 0 ? (
-              <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
+              <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
                   <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
                   <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
@@ -4247,6 +4247,7 @@ export function ClientDetailPage() {
                   }
                   format="dd-MM-yyyy"
                   placeholder={t('pages.clients.detail.rrConnectionDate')}
+                  className="rounded-lg border-gray-400"
                 />
                 <Input
                   label={`${t('pages.clients.detail.rrRestructuringAmount')} *`}
@@ -4298,6 +4299,7 @@ export function ClientDetailPage() {
                         }}
                         format="dd-MM-yyyy"
                         placeholder={t('pages.clients.detail.rrPaymentDate')}
+                        className="rounded-lg border-gray-400"
                       />
                       <Input
                         label={`${t('pages.clients.detail.rrPaymentAmount')} ${idx + 1} *`}
@@ -4330,7 +4332,7 @@ export function ClientDetailPage() {
               variant="cancel"
               size="sm"
               onClick={() => setIsConnectRrOpen(false)}
-              className="w-full rounded-md sm:w-auto"
+              className="w-full rounded-md"
             >
               {t('actions.cancel')}
             </Button>
@@ -4431,7 +4433,7 @@ export function ClientDetailPage() {
                   }
                 )
               }}
-              className="w-full rounded-md sm:w-auto"
+              className="w-full rounded-md"
             >
               {isCreatingRr ? '...' : t('pages.clients.detail.connectRR')}
             </Button>

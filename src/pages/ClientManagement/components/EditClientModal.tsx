@@ -5,6 +5,7 @@ import type { AxiosError } from 'axios'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { DateSelect } from '@/components/ui/DateSelect'
 import { Icons } from '@/lib/icons'
 import {
   Select,
@@ -84,6 +85,21 @@ function legacyNamePartsFromFullName(fullName: string): {
     middle: tokens.slice(1, -1).join(' '),
     last: tokens[tokens.length - 1]!,
   }
+}
+
+function dateToYmd(date: Date | null): string {
+  if (!date) return ''
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function ymdToDate(value?: string): Date | null {
+  if (!value) return null
+  const [year, month, day] = value.split('-').map(Number)
+  if (!year || !month || !day) return null
+  return new Date(year, month - 1, day)
 }
 
 interface EditFormProps {
@@ -517,13 +533,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <label className="text-dark-500 text-xs font-medium sm:text-sm">
                 {t('pages.clients.editModal.dateOfBirth')}
               </label>
-              <Input
-                type="date"
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
+              <DateSelect
+                value={ymdToDate(dateOfBirth)}
+                onChange={({ value }) => setDateOfBirth(dateToYmd(value))}
                 disabled={!canEditAll}
-                inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                placeholder={t('pages.clients.modals.addNote.selectDate')}
+                format="yyyy-MM-dd"
+                className="border-gray-400"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
@@ -531,7 +547,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 {t('pages.clients.detail.maritalStatus')}
               </label>
               <Select value={maritalStatus} onValueChange={setMaritalStatus} disabled={!canEditAll}>
-                <SelectTrigger className="text-dark-500 h-[42px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-50">
+                <SelectTrigger className="text-dark-500 h-[45px] rounded-md border border-gray-400 bg-white px-3 text-sm font-light disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-50">
                   <SelectValue placeholder="-" />
                 </SelectTrigger>
                 <SelectContent>
@@ -672,13 +688,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <label className="text-dark-500 text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.issuedDate')}
               </label>
-              <Input
-                type="date"
-                value={issuedDate}
-                onChange={(e) => setIssuedDate(e.target.value)}
+              <DateSelect
+                value={ymdToDate(issuedDate)}
+                onChange={({ value }) => setIssuedDate(dateToYmd(value))}
                 disabled={!canEditAll}
-                inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                placeholder={t('pages.clients.modals.addNote.selectDate')}
+                format="yyyy-MM-dd"
+                className="border-gray-400"
               />
             </div>
           </div>
@@ -687,13 +703,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
               <label className="text-dark-500 text-xs font-medium sm:text-sm">
                 {t('pages.clients.detail.expiresDate')}
               </label>
-              <Input
-                type="date"
-                value={expiresDate}
-                onChange={(e) => setExpiresDate(e.target.value)}
+              <DateSelect
+                value={ymdToDate(expiresDate)}
+                onChange={({ value }) => setExpiresDate(dateToYmd(value))}
                 disabled={!canEditAll}
-                inputSize="md"
-                className="rounded-md disabled:bg-gray-50"
+                placeholder={t('pages.clients.modals.addNote.selectDate')}
+                format="yyyy-MM-dd"
+                className="border-gray-400"
               />
             </div>
             <div className="flex flex-1 flex-col gap-1">
@@ -855,7 +871,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                 onValueChange={setEmploymentType}
                 disabled={!canEditAll}
               >
-                <SelectTrigger className="text-dark-500 h-[42px] rounded-lg border border-gray-400 bg-white px-3 text-sm font-light disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-50">
+                <SelectTrigger className="text-dark-500 h-[45px] rounded-md border border-gray-400 bg-white px-3 text-sm font-light disabled:cursor-not-allowed disabled:bg-gray-50 disabled:opacity-50">
                   <SelectValue placeholder="-" />
                 </SelectTrigger>
                 <SelectContent>

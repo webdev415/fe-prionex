@@ -1736,6 +1736,33 @@
           "successMessage": "Взаимодействие успешно добавлено",
           "errorMessage": "Не удалось добавить взаимодействие"
         },
+        "assignRole": {
+          "titleEmployee": "Назначить сотрудника",
+          "titleSearcher": "Назначить поисковика",
+          "employee": "Сотрудник (необязательно)",
+          "searcher": "Поисковик (необязательно)",
+          "selectEmployee": "Выберите сотрудника...",
+          "selectSearcher": "Выберите поисковика...",
+          "assignmentReason": "Причина назначения",
+          "assign": "Назначить",
+          "reasons": {
+            "newClient": "Новый клиент",
+            "workloadDistribution": "Распределение нагрузки",
+            "specialistRequired": "Требуется специалист",
+            "reassignment": "Переназначение",
+            "other": "Другое"
+          }
+        },
+        "editInteraction": {
+          "title": "Редактировать взаимодействие",
+          "aria": {
+            "type": "Тип",
+            "channel": "Канал",
+            "contactType": "Тип контакта",
+            "result": "Результат",
+            "creditNumber": "Номер кредита"
+          }
+        },
         "assignClient": {
           "title": "Назначить клиента: {{fullName}}",
           "clientInformation": "Информация о клиенте",
@@ -1960,6 +1987,8 @@
           "selectedCount": "Выбрано {{selected}} из {{total}} тегов",
           "noTagsMatch": "По запросу теги не найдены",
           "noTagsAvailable": "Нет доступных тегов",
+          "payloadTagBadge": "требует ЦД",
+          "payloadTagHint": "Тег требует ЦД и/или сумму — откроется отдельная форма",
           "saveTags": "Сохранить теги",
           "tagsUpdated": "Теги обновлены для {{name}}",
           "updateFailed": "Не удалось обновить теги"
@@ -2436,11 +2465,22 @@
         "allChains": "Все цепочки",
         "from": "С",
         "to": "По",
+        "selectStartDate": "Выберите дату начала",
+        "selectEndDate": "Выберите дату окончания",
         "searchNotes": "Заметки",
         "searchNotesPlaceholder": "Поиск по заметкам...",
+        "applyFilters": "Применить фильтр",
+        "clearFilters": "Очистить",
         "deleteTitle": "Удалить взаимодействие",
         "deleteConfirm": "Удалить это взаимодействие? Это действие нельзя отменить.",
         "deleteSuccess": "Взаимодействие удалено"
+      },
+      "editInteraction": {
+        "title": "Редактировать взаимодействие",
+        "chainLabel": "Цепочка",
+        "savedToast": "Взаимодействие обновлено",
+        "savedValue": "Сохраненное значение",
+        "overdueDays": "просрочено {{count}} дн."
       },
       "templatePlaceholder": "Выберите шаблон…",
       "templateSearchPlaceholder": "Поиск шаблонов…",

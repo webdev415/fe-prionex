@@ -34,6 +34,8 @@ import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { Pagination } from '@/components/ui/Pagination'
+import { DateSelect } from '@/components/ui/DateSelect'
 import { EditTAInteractionModal } from './EditTAInteractionModal'
 
 interface Props {
@@ -44,13 +46,20 @@ interface Props {
   }>
 }
 
+function toIsoOrUndefined(v?: string, endOfDay = false): string | undefined {
+  if (!v) return undefined
+  const d = new Date(`${v}T00:00:00`)
+  if (Number.isNaN(d.getTime())) return undefined
+  return `${v}T${endOfDay ? '23:59:59.999' : '00:00:00'}`
+}
+
 export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const deleteMut = useDeleteTAInteraction()
   // Map debt ID → contract number for display
   const debtContractMap = new Map(debts.map((d) => [d.id, `#${d.contract_number ?? d.id}`]))
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const togglePinMut = useTogglePinTAInteraction()
   const handleTogglePin = async (id: number) => {
     try {
@@ -61,12 +70,20 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   }
 
   // Filters
-  const [chainFilter, setChainFilter] = useState<string>('')
-  const [notesSearch, setNotesSearch] = useState('')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
-  const [page, setPage] = useState(0)
-  const pageSize = 10
+  const [pendingFilters, setPendingFilters] = useState({
+    chainFilter: '',
+    notesSearch: '',
+    dateFrom: '',
+    dateTo: '',
+  })
+  const [appliedFilters, setAppliedFilters] = useState({
+    chainFilter: '',
+    notesSearch: '',
+    dateFrom: '',
+    dateTo: '',
+  })
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const { data: chainsData } = useTAChains({ include_inactive: true })
   const chains = chainsData?.items ?? []
@@ -96,17 +113,46 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   }, [operators])
 
   const { data, isLoading } = useClientTAInteractions(clientId, {
-    chain_id: chainFilter ? parseInt(chainFilter, 10) : undefined,
-    notes_search: notesSearch || undefined,
-    date_from: dateFrom || undefined,
-    date_to: dateTo ? `${dateTo}T23:59:59` : undefined,
-    skip: page * pageSize,
+    chain_id: appliedFilters.chainFilter ? parseInt(appliedFilters.chainFilter, 10) : undefined,
+    notes_search: appliedFilters.notesSearch || undefined,
+    date_from: toIsoOrUndefined(appliedFilters.dateFrom, false),
+    date_to: toIsoOrUndefined(appliedFilters.dateTo, true),
+    skip: (page - 1) * pageSize,
     limit: pageSize,
   })
 
   const items = data?.items ?? []
   const totalCount = data?.total_count ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+
+  const parseDateString = (value: string): Date | null => {
+    if (!value) return null
+    const [year, month, day] = value.split('-').map(Number)
+    if (!year || !month || !day) return null
+    return new Date(year, month - 1, day)
+  }
+
+  const formatDateString = (value: Date | null): string => {
+    if (!value) return ''
+    const year = value.getFullYear()
+    const month = String(value.getMonth() + 1).padStart(2, '0')
+    const day = String(value.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const handleApplyFilters = () => {
+    setAppliedFilters(pendingFilters)
+    setPage(1)
+  }
+
+  const handleClearFilters = () => {
+    const cleared = { chainFilter: '', notesSearch: '', dateFrom: '', dateTo: '' }
+    setPendingFilters(cleared)
+    setAppliedFilters(cleared)
+    setPage(1)
+  }
+
+  const dateInputFormat = i18n.language?.startsWith('en') ? 'MM/dd/yyyy' : 'dd/MM/yyyy'
 
   const columns: Column<TAInteraction>[] = [
     {
@@ -380,84 +426,114 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     },
   ]
 
-  if (isLoading && page === 0) return <TableSkeleton columns={9} rows={3} />
-
   return (
     <div className="flex flex-col gap-3">
       {/* Filters */}
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="flex flex-col gap-0.5">
-          <label className="text-[10px] text-gray-500">
-            {t('pages.clientChains.history.filterChain')}
-          </label>
-          <Select
-            value={chainFilter}
-            onValueChange={(v) => {
-              setChainFilter(v === 'all' ? '' : v)
-              setPage(0)
-            }}
-          >
-            <SelectTrigger className="h-8 w-40 text-xs">
-              <SelectValue placeholder={t('pages.clientChains.history.allChains')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('pages.clientChains.history.allChains')}</SelectItem>
-              {chains.map((c) => (
-                <SelectItem key={c.id} value={String(c.id)}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-col gap-0.5">
-          <label className="text-[10px] text-gray-500">
-            {t('pages.clientChains.history.from')}
-          </label>
-          <Input
-            type="date"
-            className="h-8 w-36 text-xs"
-            value={dateFrom}
-            onChange={(e) => {
-              setDateFrom(e.target.value)
-              setPage(0)
-            }}
-          />
-        </div>
-        <div className="flex flex-col gap-0.5">
-          <label className="text-[10px] text-gray-500">{t('pages.clientChains.history.to')}</label>
-          <Input
-            type="date"
-            className="h-8 w-36 text-xs"
-            value={dateTo}
-            onChange={(e) => {
-              setDateTo(e.target.value)
-              setPage(0)
-            }}
-          />
-        </div>
-        <div className="flex flex-col gap-0.5">
-          <label className="text-[10px] text-gray-500">
-            {t('pages.clientChains.history.searchNotes')}
-          </label>
-          <Input
-            type="text"
-            className="h-8 w-44 text-xs"
-            placeholder={t('pages.clientChains.history.searchNotesPlaceholder')}
-            value={notesSearch}
-            onChange={(e) => {
-              setNotesSearch(e.target.value)
-              setPage(0)
-            }}
-          />
+      <div className="rounded-xl bg-white/50 p-3 sm:p-4">
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px]">
+                {t('pages.clientChains.history.filterChain')}
+              </label>
+              <Select
+                value={pendingFilters.chainFilter}
+                onValueChange={(v) =>
+                  setPendingFilters((prev) => ({ ...prev, chainFilter: v === 'all' ? '' : v }))
+                }
+              >
+                <SelectTrigger className="max-h-[45px] w-full rounded-md border border-gray-200 bg-white text-xs">
+                  <SelectValue placeholder={t('pages.clientChains.history.allChains')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('pages.clientChains.history.allChains')}</SelectItem>
+                  {chains.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px]">
+                {t('pages.clientChains.history.from')}
+              </label>
+              <DateSelect
+                value={parseDateString(pendingFilters.dateFrom)}
+                onChange={({ value }) =>
+                  setPendingFilters((prev) => ({ ...prev, dateFrom: formatDateString(value) }))
+                }
+                max={parseDateString(pendingFilters.dateTo) || undefined}
+                placeholder={t('pages.clientChains.history.selectStartDate')}
+                format={dateInputFormat}
+                className="[&_input]:h-[45px] [&_input]:rounded-md [&_input]:border-gray-200 [&_input]:text-xs [&_input]:font-normal"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px]">
+                {t('pages.clientChains.history.to')}
+              </label>
+              <DateSelect
+                value={parseDateString(pendingFilters.dateTo)}
+                onChange={({ value }) =>
+                  setPendingFilters((prev) => ({ ...prev, dateTo: formatDateString(value) }))
+                }
+                min={parseDateString(pendingFilters.dateFrom) || undefined}
+                placeholder={t('pages.clientChains.history.selectEndDate')}
+                format={dateInputFormat}
+                className="[&_input]:h-[45px] [&_input]:rounded-md [&_input]:border-gray-200 [&_input]:text-xs [&_input]:font-normal"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-dark-500 text-xs leading-[150%] font-medium tracking-[-0.28px]">
+                {t('pages.clientChains.history.searchNotes')}
+              </label>
+              <Input
+                type="text"
+                className="max-h-[45px] w-full rounded-md border border-gray-200 bg-white text-xs"
+                placeholder={t('pages.clientChains.history.searchNotesPlaceholder')}
+                value={pendingFilters.notesSearch}
+                onChange={(e) =>
+                  setPendingFilters((prev) => ({ ...prev, notesSearch: e.target.value }))
+                }
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-[45px] rounded sm:min-w-[160px]"
+              onClick={handleApplyFilters}
+            >
+              {t('pages.clientChains.history.applyFilters')}
+            </Button>
+            <Button
+              type="button"
+              variant="white-secondary"
+              className="h-[45px] rounded sm:min-w-[140px]"
+              leftIcon={<Icons.Reload size={16} />}
+              onClick={handleClearFilters}
+            >
+              {t('pages.clientChains.history.clearFilters')}
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Table */}
-      {items.length === 0 ? (
-        <p className="py-4 text-center text-xs text-gray-500">
-          {t('pages.clientChains.history.empty')}
-        </p>
+      {isLoading ? (
+        <TableSkeleton columns={9} rows={3} />
+      ) : items.length === 0 ? (
+        <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
+          <div className="flex flex-col items-center justify-center gap-4 self-stretch py-8 sm:flex-row md:gap-6">
+            <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
+            <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+              {t('pages.clientChains.history.empty')}
+            </p>
+          </div>
+        </div>
       ) : (
         <DataTable columns={columns} data={items} className="w-full" />
       )}
@@ -510,41 +586,16 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       </Modal>
 
       {/* Pagination */}
-      {totalCount > pageSize && (
-        <div className="flex items-center justify-between text-xs text-gray-600">
-          <span>
-            {t('pages.interactionLog.pagination.rangeOfTotal', {
-              start: page * pageSize + 1,
-              end: Math.min((page + 1) * pageSize, totalCount),
-              total: totalCount,
-            })}
-          </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={page === 0}
-              onClick={() => setPage((p) => p - 1)}
-              className="rounded border px-2 py-1 disabled:opacity-30"
-              aria-label={t('pages.interactionLog.pagination.previousPage')}
-            >
-              &lt;
-            </button>
-            <span className="px-1">
-              {t('pages.interactionLog.pagination.pageOfPages', {
-                page: page + 1,
-                totalPages,
-              })}
-            </span>
-            <button
-              type="button"
-              disabled={page >= totalPages - 1}
-              onClick={() => setPage((p) => p + 1)}
-              className="rounded border px-2 py-1 disabled:opacity-30"
-              aria-label={t('pages.interactionLog.pagination.nextPage')}
-            >
-              &gt;
-            </button>
-          </div>
+      {totalCount > 0 && (
+        <div className="flex w-full items-center justify-center">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            pageSizeOptions={[10, 20, 50, 100]}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       )}
     </div>

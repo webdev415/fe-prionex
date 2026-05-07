@@ -1437,6 +1437,33 @@
           "successMessage": "Interaction added successfully",
           "errorMessage": "Failed to add interaction"
         },
+        "assignRole": {
+          "titleEmployee": "Assign Employee",
+          "titleSearcher": "Assign Searcher",
+          "employee": "Employee (Optional)",
+          "searcher": "Searcher (Optional)",
+          "selectEmployee": "Select employee...",
+          "selectSearcher": "Select searcher...",
+          "assignmentReason": "Assignment Reason",
+          "assign": "Assign",
+          "reasons": {
+            "newClient": "New Client",
+            "workloadDistribution": "Workload Distribution",
+            "specialistRequired": "Specialist Required",
+            "reassignment": "Reassignment",
+            "other": "Other"
+          }
+        },
+        "editInteraction": {
+          "title": "Edit Interaction",
+          "aria": {
+            "type": "Type",
+            "channel": "Channel",
+            "contactType": "Contact type",
+            "result": "Result",
+            "creditNumber": "Credit number"
+          }
+        },
         "assignClient": {
           "title": "Assign Client: {{fullName}}",
           "clientInformation": "Client Information",
@@ -1667,6 +1694,8 @@
           "selectedCount": "{{selected}} of {{total}} tags selected",
           "noTagsMatch": "No tags found matching your search",
           "noTagsAvailable": "No tags available",
+          "payloadTagBadge": "requires PTP",
+          "payloadTagHint": "This tag requires PTP date and/or amount — a separate form will open",
           "saveTags": "Save Tags",
           "tagsUpdated": "Tags updated for {{name}}",
           "updateFailed": "Failed to update tags"
@@ -2407,11 +2436,22 @@
         "allChains": "All chains",
         "from": "From",
         "to": "To",
+        "selectStartDate": "Select start date",
+        "selectEndDate": "Select end date",
         "searchNotes": "Notes",
         "searchNotesPlaceholder": "Search notes...",
+        "applyFilters": "Apply filter",
+        "clearFilters": "Clear",
         "deleteTitle": "Delete interaction",
         "deleteConfirm": "Are you sure you want to delete this interaction? This cannot be undone.",
         "deleteSuccess": "Interaction deleted"
+      },
+      "editInteraction": {
+        "title": "Edit interaction",
+        "chainLabel": "Chain",
+        "savedToast": "Interaction updated",
+        "savedValue": "Saved value",
+        "overdueDays": "overdue {{count}}d"
       },
       "templatePlaceholder": "Pick a template…",
       "templateSearchPlaceholder": "Search templates…",

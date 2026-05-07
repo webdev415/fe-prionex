@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { Icons } from '@/lib/icons'
 import { documentApi, type ClientDocument } from '@/features/clients/api/documentApi'
 import { DocumentPreviewModal } from './DocumentPreviewModal'
 import { clientKeys } from '@/features/clients/hooks/useClients'
@@ -258,19 +259,13 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
 
   if (documents.length === 0) {
     return (
-      <div className="text-secondary-400 flex w-full flex-col items-center justify-center py-12">
-        <svg
-          width="48"
-          height="48"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-        >
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-        </svg>
-        <p className="mt-3">{t('common.noDataFound', 'No data found')}</p>
+      <div className="flex flex-col items-center gap-4 self-stretch py-45 md:gap-6">
+        <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
+          <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
+          <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+            {t('common.noDataFound', 'No data found')}
+          </p>
+        </div>
       </div>
     )
   }
