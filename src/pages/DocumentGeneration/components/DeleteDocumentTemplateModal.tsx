@@ -2,6 +2,7 @@
  * Confirmation modal for deleting a document template (KAN-403 Tab 2).
  */
 
+import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Modal } from '@/components/ui/Modal'
@@ -32,9 +33,9 @@ export function DeleteDocumentTemplateModal({ open, template, onClose }: Props) 
   return (
     <Modal open={open} onClose={onClose} maxWidth="md">
       <div className="flex flex-col gap-4">
-        <h2 className="text-dark-500 text-lg font-semibold">
+        <DialogPrimitive.Title className="text-dark-500 text-lg font-semibold">
           {t('pages.documentGeneration.templates.modals.deleteTitle', 'Delete template')}
-        </h2>
+        </DialogPrimitive.Title>
         <p className="text-sm text-gray-700">
           {t(
             'pages.documentGeneration.templates.modals.deleteConfirm',
