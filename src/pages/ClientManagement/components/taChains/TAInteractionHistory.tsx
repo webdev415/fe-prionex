@@ -455,9 +455,14 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
 
       {/* Table */}
       {items.length === 0 ? (
-        <p className="py-4 text-center text-xs text-gray-500">
-          {t('pages.clientChains.history.empty')}
-        </p>
+        <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
+          <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
+            <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
+            <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+              {t('pages.clientChains.history.empty')}
+            </p>
+          </div>
+        </div>
       ) : (
         <DataTable columns={columns} data={items} className="w-full" />
       )}
