@@ -325,6 +325,14 @@ export const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
       { value: 'calculation_reason', label: 'calculation_reason', type: 'text' },
     ],
   },
+  {
+    value: 'contact.responsible_changed',
+    label: 'Contact responsible changed',
+    fields: [
+      { value: 'previous_responsible_id', label: 'previous_responsible_id', type: 'number' },
+      { value: 'new_responsible_id', label: 'new_responsible_id', type: 'number' },
+    ],
+  },
 ]
 
 export const DEFAULT_EVENT_LABELS = Object.fromEntries(

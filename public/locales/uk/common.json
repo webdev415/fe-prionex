@@ -3572,6 +3572,8 @@
           "not_has_tag": "Не має тег"
         },
         "eventPayloadFields": {
+          "previous_responsible_id": "Попередній відповідальний (ID)",
+          "new_responsible_id": "Новий відповідальний (ID)",
           "interaction_id": "ID взаємодії",
           "result_name": "Результат",
           "type_code": "Тип взаємодії",

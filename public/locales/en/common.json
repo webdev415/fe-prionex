@@ -3099,6 +3099,8 @@
           "not_has_tag": "Does Not Have Tag"
         },
         "eventPayloadFields": {
+          "previous_responsible_id": "Previous responsible (ID)",
+          "new_responsible_id": "New responsible (ID)",
           "interaction_id": "Interaction ID",
           "result_name": "Result",
           "type_code": "Interaction type",
