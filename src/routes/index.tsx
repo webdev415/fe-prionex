@@ -9,10 +9,7 @@ import { RouteErrorElement } from '@/components/RouteErrorElement'
 import { PERMISSIONS } from '@/constants/permissions'
 import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOperatorAssignmentPageSkeleton'
 import { BulkPaymentVerificationPageSkeleton } from '@/pages/Operations/BulkPaymentVerificationPageSkeleton'
-import {
-  AppLoadingFallback,
-  type AppLoadingFallbackVariant,
-} from '@/components/ui/AppLoadingFallback'
+import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
 const ForceChangePasswordPage = lazy(() => import('@/pages/auth/ForceChangePasswordPage'))
@@ -128,10 +125,9 @@ const BulkPaymentVerificationPage = lazy(() =>
   }))
 )
 
-const withSuspense = (
-  element: React.ReactElement,
-  variant: AppLoadingFallbackVariant = 'shell'
-) => <Suspense fallback={<AppLoadingFallback variant={variant} />}>{element}</Suspense>
+const withSuspense = (element: React.ReactElement) => (
+  <Suspense fallback={<AppLoadingFallback />}>{element}</Suspense>
+)
 
 const DashboardLayoutRoute = () => (
   <ProtectedRoute>
@@ -144,7 +140,7 @@ const DashboardLayoutRoute = () => (
 export const router = createBrowserRouter([
   {
     path: '/login',
-    element: <GuestRoute>{withSuspense(<LoginPage />, 'auth')}</GuestRoute>,
+    element: <GuestRoute>{withSuspense(<LoginPage />)}</GuestRoute>,
     errorElement: <RouteErrorElement />,
   },
   {

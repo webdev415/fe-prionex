@@ -23,7 +23,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }, []) // Empty dependency array - only run once on mount
 
   if (isLoading) {
-    return <AppLoadingFallback variant="shell" />
+    return <AppLoadingFallback />
   }
 
   if (!isAuthenticated) {
