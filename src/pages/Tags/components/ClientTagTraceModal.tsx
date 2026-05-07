@@ -121,6 +121,26 @@ function TraceEntryRow({ entry }: { entry: TraceTimelineEntry }) {
   )
 }
 
+function TraceModalSkeleton() {
+  return (
+    <div className="space-y-3" aria-hidden="true">
+      <div className="h-4 w-52 animate-pulse rounded bg-gray-200" />
+      {Array.from({ length: 4 }).map((_, idx) => (
+        <div key={idx} className="rounded-md border border-gray-200 bg-white p-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div className="h-5 w-28 animate-pulse rounded-full bg-gray-200" />
+            <div className="h-3 w-32 animate-pulse rounded bg-gray-200" />
+          </div>
+          <div className="space-y-2">
+            <div className="h-3 w-11/12 animate-pulse rounded bg-gray-100" />
+            <div className="h-3 w-8/12 animate-pulse rounded bg-gray-100" />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function ClientTagTraceModal({
   open,
   clientId,
@@ -151,8 +171,8 @@ export function ClientTagTraceModal({
 
       <ModalContent>
         {isLoading && (
-          <div className="py-12 text-center text-sm text-gray-500">
-            {t('common.loading', 'Loading...')}
+          <div className="py-2">
+            <TraceModalSkeleton />
           </div>
         )}
 
