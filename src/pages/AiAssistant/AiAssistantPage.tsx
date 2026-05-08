@@ -772,10 +772,8 @@ export function AiAssistantPage() {
       <div
         ref={dockRef}
         className={cn(
-          'from-light-50 via-light-50/95 pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center bg-gradient-to-t to-transparent px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[left] duration-300 sm:px-8 sm:pt-6 md:px-10 lg:left-9',
-          /* Match DashboardLayout <main> lg:px-[28px] + this page's horizontal padding so composer lines up with chat */
-          'lg:px-[calc(28px+3.5rem)] xl:px-[calc(28px+5rem)]',
-          isOpenSideBar && 'lg:left-60'
+          'from-light-50 via-light-50/95 pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center bg-gradient-to-t to-transparent px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[left] duration-300 sm:px-8 sm:pt-6 md:px-10 lg:left-9 lg:px-14 xl:px-20',
+          isOpenSideBar && 'lg:left-30'
         )}
       >
         {hasConversation && showScrollToLatest && (
