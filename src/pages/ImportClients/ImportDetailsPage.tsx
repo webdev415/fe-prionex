@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Icons } from '@/lib/icons'
 import { SemiCircularProgress, VendorPhaseProgress } from './components'
 import {
@@ -134,7 +135,11 @@ export function ImportDetailsPage() {
   // errors table in sync with the live `errors_count` while a vendor
   // import is mid-flight — the backend now flushes per-file errors as
   // each file completes, so polling reveals them progressively.
-  const { data: errorsData } = useImportJobErrors(
+  const {
+    data: errorsData,
+    isLoading: isLoadingErrors,
+    isFetching: isFetchingErrors,
+  } = useImportJobErrors(
     id,
     { page: errorPage, page_size: errorPageSize },
     {
@@ -143,6 +148,14 @@ export function ImportDetailsPage() {
       refetchInterval: jobDetail?.status === 'in_progress' ? 5000 : false,
     }
   )
+
+  // Show skeleton while the errors query is loading the current page
+  // (initial load or pagination), but NOT during background polling
+  // refetches when the import is still in progress — those should leave
+  // the table on screen.
+  const isPollingErrors = jobDetail?.status === 'in_progress'
+  const showErrorsSkeleton =
+    isLoadingErrors || (isFetchingErrors && !isPollingErrors && !errorsData)
 
   // Export errors mutation
   const exportErrorsMutation = useExportImportErrors()
@@ -509,11 +522,15 @@ export function ImportDetailsPage() {
               {t('pages.imports.details.errorsTitle')} ({importDetail.errors.toLocaleString()})
             </h2>
 
-            <DataTable
-              columns={errorColumns}
-              data={importDetail.errorList}
-              emptyMessage={t('pages.imports.details.noErrors')}
-            />
+            {showErrorsSkeleton ? (
+              <TableSkeleton columns={errorColumns.length} rows={errorPageSize} />
+            ) : (
+              <DataTable
+                columns={errorColumns}
+                data={importDetail.errorList}
+                emptyMessage={t('pages.imports.details.noErrors')}
+              />
+            )}
 
             {/* Pagination Controls */}
             {errorsData && errorsData.total > errorPageSize && (
@@ -576,11 +593,15 @@ export function ImportDetailsPage() {
           <h2 className="text-dark-500 mb-4 text-lg font-light sm:mb-6 sm:text-xl">
             {t('pages.imports.details.errorsTitle')} ({importDetail.errors.toLocaleString()})
           </h2>
-          <DataTable
-            columns={errorColumns}
-            data={importDetail.errorList}
-            emptyMessage={t('pages.imports.details.noErrors')}
-          />
+          {showErrorsSkeleton ? (
+            <TableSkeleton columns={errorColumns.length} rows={errorPageSize} />
+          ) : (
+            <DataTable
+              columns={errorColumns}
+              data={importDetail.errorList}
+              emptyMessage={t('pages.imports.details.noErrors')}
+            />
+          )}
           {errorsData && errorsData.total > errorPageSize && (
             <Pagination
               currentPage={errorPage}
