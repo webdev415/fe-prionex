@@ -22,6 +22,7 @@ export type TagAssignmentMode = 'assign' | 'remove'
 export interface ImportJob {
   id: number | string
   file_name: string
+  user_id?: number
   uploaded_by: string
   uploaded_at: string // ISO datetime string
   status: ImportJobStatus
@@ -55,12 +56,23 @@ export interface VendorFilePhase {
 export interface ImportJobDetail {
   id: number | string
   file_name: string
+  user_id?: number
   uploaded_by: string
   uploaded_at: string // ISO datetime string
   status: ImportJobStatus
   total_rows: number
   new_clients: number
   updated_clients: number
+  // Tag-assignment imports only: count of unique clients that had at least one
+  // tag successfully applied. Distinct from updated_clients (which carries the
+  // applied (client, tag) pair count for tag imports — shown as "Tags Applied").
+  successful_clients?: number
+  // Tag-assignment imports only: count of unique clients in the uploaded file
+  // (carried over from the validation summary). Drives the post-execution
+  // "Failed = unique_clients − successful_clients" calculation on the progress
+  // page, so the Failed card is a real per-client tally rather than a
+  // total − errors_count subtraction.
+  unique_clients?: number
   errors_count: number
   processing_time: string // e.g., "7 min 42 s"
   import_type: ImportType
@@ -101,6 +113,7 @@ export interface ImportJobsListParams {
   page_size?: number
   search?: string // Search by filename
   status?: ImportJobStatus
+  user_id?: number // Restrict results to jobs owned by this user
   uploaded_by?: string
   date_from?: string // ISO date string
   date_to?: string // ISO date string

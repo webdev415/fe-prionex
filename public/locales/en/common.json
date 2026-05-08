@@ -1110,6 +1110,7 @@
       "operatorAssignment": {
         "title": "Bulk Operator Assignment",
         "viewHistory": "Import History",
+        "bannerInProgress": "Operator assignment in progress",
         "noProjectToast": "Please select an active project before uploading.",
         "upload": {
           "sectionTitle": "Upload CSV File",
@@ -1176,6 +1177,7 @@
       "tagAssignment": {
         "title": "Bulk Tag Assignment",
         "viewHistory": "Import History",
+        "bannerInProgress": "Tag operation in progress",
         "noProjectToast": "Please select an active project before uploading.",
         "upload": {
           "sectionTitle": "Upload tag assignment file",

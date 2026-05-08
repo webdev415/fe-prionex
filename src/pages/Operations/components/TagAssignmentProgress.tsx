@@ -40,10 +40,22 @@ export function TagAssignmentProgress({ jobId, onComplete }: Props) {
   const isComplete = job.status === 'completed'
   const isFailed = job.status === 'failed'
   const isCancelled = job.status === 'cancelled'
+  const isTerminal = isComplete || isFailed || isCancelled
   const hasErrors = job.errors_count > 0
   const progressPct =
     job.progress_percentage ??
     (job.total_rows > 0 ? Math.round((job.new_clients / job.total_rows) * 100) : 0)
+
+  // Applied/Failed are per-client tallies derived from the DB-truth fields
+  // (successful_clients = unique clients with ≥1 successful tag op;
+  // unique_clients = distinct clients in the upload). Both stay at 0 until
+  // the operation reaches a terminal state — no DB writes have happened yet
+  // during pending/in_progress, so showing partial sums there would be
+  // misleading.
+  const appliedClients = isTerminal ? (job.successful_clients ?? 0) : 0
+  const failedClients = isTerminal
+    ? Math.max(0, (job.unique_clients ?? 0) - (job.successful_clients ?? 0))
+    : 0
 
   const p = 'pages.imports.tagAssignment.progress'
 
@@ -86,11 +98,11 @@ export function TagAssignmentProgress({ jobId, onComplete }: Props) {
           <p className="text-xs text-gray-600">{t(`${p}.totalRecords`, 'Total records')}</p>
         </div>
         <div className="border-success-200 bg-success-50 rounded-xl border px-4 py-3 shadow-sm">
-          <p className="text-success-700 text-2xl font-bold">{job.new_clients}</p>
+          <p className="text-success-700 text-2xl font-bold">{appliedClients}</p>
           <p className="text-xs text-gray-600">{t(`${p}.successful`, 'Applied')}</p>
         </div>
         <div className="border-error-200 bg-error-50 rounded-xl border px-4 py-3 shadow-sm">
-          <p className="text-error-700 text-2xl font-bold">{job.errors_count}</p>
+          <p className="text-error-700 text-2xl font-bold">{failedClients}</p>
           <p className="text-xs text-gray-600">{t(`${p}.failed`, 'Failed')}</p>
         </div>
       </div>

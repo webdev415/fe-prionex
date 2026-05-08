@@ -10,6 +10,7 @@ import type { TagAssignmentMode, TagPreviewResponse } from '@/features/imports/t
 import { TagAssignmentUpload } from './components/TagAssignmentUpload'
 import { TagAssignmentPreview } from './components/TagAssignmentPreview'
 import { TagAssignmentProgress } from './components/TagAssignmentProgress'
+import { BulkJobBanner } from './components/BulkJobBanner'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { toast } from 'sonner'
@@ -118,6 +119,13 @@ export function BulkTagAssignmentPage() {
           <TagAssignmentProgress jobId={activeJobId} onComplete={handleComplete} />
         )}
       </div>
+
+      <BulkJobBanner
+        importType="tag_assignment"
+        label={t('pages.imports.tagAssignment.bannerInProgress', 'Tag operation in progress')}
+        onViewHistory={handleViewHistory}
+        hidden={state === 'processing'}
+      />
     </div>
   )
 }

@@ -5,6 +5,7 @@
  * Shows import summary and error details.
  */
 
+import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useURLState, useAutoPersistedState } from '@/hooks'
@@ -101,6 +102,14 @@ export function ImportDetailsPage() {
   // URL state for pagination
   const [errorPage, setErrorPage] = useURLState<number>('page', 1)
   const [errorPageSize, setErrorPageSize] = useURLState<number>('pageSize', 50)
+
+  // Reset to page 1 whenever the route's job id changes. Without this, stale
+  // ?page=N from a previous (large-error) job carries over to a new job and
+  // makes the errors fetch hit a non-existent offset, returning empty.
+  useEffect(() => {
+    setErrorPage(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
 
   // Add persistence for state
   useAutoPersistedState(
@@ -211,6 +220,7 @@ export function ImportDetailsPage() {
         totalRows: jobDetail.total_rows,
         newClients: jobDetail.new_clients,
         updatedClients: jobDetail.updated_clients,
+        successfulClients: jobDetail.successful_clients ?? 0,
         errors: jobDetail.errors_count,
         processingTime: jobDetail.processing_time,
         errorList: (errorsData?.items || []).map((err) => ({
@@ -375,7 +385,9 @@ export function ImportDetailsPage() {
                       : t('pages.imports.details.totalRows')}
                   </span>
                   <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
-                    {importDetail.totalRows.toLocaleString()}
+                    {isTagAssignment
+                      ? importDetail.successfulClients.toLocaleString()
+                      : importDetail.totalRows.toLocaleString()}
                   </span>
                 </div>
 

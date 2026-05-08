@@ -1113,6 +1113,7 @@
       "operatorAssignment": {
         "title": "Массовое назначение операторов",
         "viewHistory": "История импорта",
+        "bannerInProgress": "Идёт назначение операторов",
         "noProjectToast": "Выберите активный проект перед загрузкой файла.",
         "upload": {
           "sectionTitle": "Загрузка CSV",
@@ -1179,6 +1180,7 @@
       "tagAssignment": {
         "title": "Массовое назначение тегов",
         "viewHistory": "История импорта",
+        "bannerInProgress": "Идёт операция с тегами",
         "noProjectToast": "Выберите активный проект перед загрузкой файла.",
         "upload": {
           "sectionTitle": "Загрузка файла для тегов",

@@ -641,7 +641,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             path: '/dashboard/operations/bulk-tag-assignment',
             label: t('navigation.bulkTagAssignment', 'Bulk Tag Assignment'),
             icon: 'tag-01',
-            requiredPermission: PERMISSIONS.CLIENTS.EDIT,
+            requiredPermission: PERMISSIONS.CLIENTS.ASSIGN_TAGS,
           },
           {
             path: '/dashboard/operations/bulk-payment-import',

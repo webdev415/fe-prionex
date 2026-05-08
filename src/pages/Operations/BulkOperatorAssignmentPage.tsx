@@ -10,6 +10,7 @@ import type { OAPreviewResponse } from '@/features/imports/types/operatorAssignm
 import { OperatorAssignmentUpload } from './components/OperatorAssignmentUpload'
 import { OperatorAssignmentPreview } from './components/OperatorAssignmentPreview'
 import { OperatorAssignmentProgress } from './components/OperatorAssignmentProgress'
+import { BulkJobBanner } from './components/BulkJobBanner'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { toast } from 'sonner'
@@ -118,6 +119,16 @@ export function BulkOperatorAssignmentPage() {
           <OperatorAssignmentProgress jobId={activeJobId} onComplete={handleComplete} />
         )}
       </div>
+
+      <BulkJobBanner
+        importType="operator_assignment"
+        label={t(
+          'pages.imports.operatorAssignment.bannerInProgress',
+          'Operator assignment in progress'
+        )}
+        onViewHistory={handleViewHistory}
+        hidden={state === 'processing'}
+      />
     </div>
   )
 }
