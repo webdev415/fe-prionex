@@ -136,7 +136,7 @@ export function TimelineTab() {
             <tbody>
               {events.map((event, index) => (
                 <tr key={`${event.ts}-${index}`} className="border-t border-gray-100">
-                  <td className="px-4 py-2 font-mono text-xs">
+                  <td className="px-4 py-2 font-mono text-xs text-gray-700">
                     {formatOffset(event.offset_seconds)}
                   </td>
                   <td className="px-4 py-2 font-medium text-gray-800">{event.event_type}</td>

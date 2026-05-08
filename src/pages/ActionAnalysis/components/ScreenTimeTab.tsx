@@ -150,11 +150,13 @@ export function ScreenTimeTab() {
                   <td className="px-4 py-2 font-medium text-gray-800">
                     {operatorById.get(op.operator_id) ?? `#${op.operator_id}`}
                   </td>
-                  <td className="px-4 py-2">{formatMs(op.time_to_card_open_ms)}</td>
-                  <td className="px-4 py-2">{formatMs(op.time_to_form_submit_ms)}</td>
-                  <td className="px-4 py-2">{formatMs(op.idle_total_ms)}</td>
-                  <td className="px-4 py-2">{formatMs(op.after_call_processing_ms)}</td>
-                  <td className="px-4 py-2 font-mono text-xs">
+                  <td className="px-4 py-2 text-gray-700">{formatMs(op.time_to_card_open_ms)}</td>
+                  <td className="px-4 py-2 text-gray-700">{formatMs(op.time_to_form_submit_ms)}</td>
+                  <td className="px-4 py-2 text-gray-700">{formatMs(op.idle_total_ms)}</td>
+                  <td className="px-4 py-2 text-gray-700">
+                    {formatMs(op.after_call_processing_ms)}
+                  </td>
+                  <td className="px-4 py-2 font-mono text-xs text-gray-700">
                     {op.deviation_pct == null
                       ? '—'
                       : `${op.deviation_pct > 0 ? '+' : ''}${op.deviation_pct}%`}
