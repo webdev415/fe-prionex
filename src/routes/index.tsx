@@ -324,7 +324,7 @@ export const router = createBrowserRouter([
       {
         path: 'operations/bulk-tag-assignment',
         element: (
-          <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.EDIT}>
+          <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
             <Suspense fallback={<BulkTagAssignmentPageSkeleton />}>
               <BulkTagAssignmentPage />
             </Suspense>

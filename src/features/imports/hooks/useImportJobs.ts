@@ -22,10 +22,12 @@ export const importJobsKeys = {
       page_size: params.page_size,
       search: params.search,
       status: params.status,
+      user_id: params.user_id,
       uploaded_by: params.uploaded_by,
       date_from: params.date_from,
       date_to: params.date_to,
       exclude_status: params.exclude_status,
+      import_type: params.import_type,
     }
     return [...importJobsKeys.lists(), serializedParams] as const
   },

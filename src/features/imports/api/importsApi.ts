@@ -138,6 +138,15 @@ export async function getImportJobs(
   // The backend already filters by user_project_ids, so users will see jobs from all their projects
   // If we send project_id, it will filter to only that project, which may hide jobs from other projects
 
+  // Forward user_id so callers can scope to a single uploader. The persistent
+  // banner on the Import Clients / Bulk Tag / Bulk Operator pages relies on
+  // this to keep itself personal — without it the BE returns every job in the
+  // user's accessible projects and the banner could surface another user's
+  // running import.
+  if (params.user_id !== undefined) {
+    backendParams.user_id = params.user_id
+  }
+
   // Add status filter
   if (backendStatus) {
     backendParams.status = backendStatus

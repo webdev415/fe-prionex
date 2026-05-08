@@ -157,6 +157,7 @@ export function transformImportJob(backend: BackendImportJobResponse): ImportJob
   return {
     id: backend.id,
     file_name: backend.filename,
+    user_id: backend.user_id,
     uploaded_by: backend.username || 'Unknown',
     uploaded_at: backend.created_at,
     status: mapStatus(backend.status),
@@ -259,6 +260,7 @@ export function transformImportJobDetail(backend: BackendImportJobResponse): Imp
   return {
     id: backend.id,
     file_name: backend.filename,
+    user_id: backend.user_id,
     uploaded_by: backend.username || 'Unknown',
     uploaded_at: backend.created_at,
     status,
@@ -270,6 +272,17 @@ export function transformImportJobDetail(backend: BackendImportJobResponse): Imp
     new_clients: importType === 'tag_assignment' ? 0 : backend.successful_records,
     updated_clients:
       importType === 'tag_assignment' ? backend.successful_records : backend.updated_records,
+    // For tag_assignment, the worker stores the unique successful client count
+    // in updated_records (otherwise unused for this import type).
+    successful_clients: importType === 'tag_assignment' ? backend.updated_records : undefined,
+    // Tag imports stash the validation summary on import_options.summary; the
+    // unique_clients figure (distinct tax_ids in the file) is what we subtract
+    // successful_clients from to get the "Failed" client count.
+    unique_clients:
+      importType === 'tag_assignment'
+        ? ((backend.import_options?.summary as Record<string, unknown> | undefined)
+            ?.unique_clients as number | undefined)
+        : undefined,
     errors_count: backend.failed_records,
     processing_time: formatProcessingTime(backend.processing_duration),
     import_type: importType,
