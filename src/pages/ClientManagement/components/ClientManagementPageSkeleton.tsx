@@ -14,27 +14,27 @@ export function ClientManagementPageSkeleton() {
   return (
     <div className="flex w-full flex-col items-start gap-3 px-2 pt-1 pb-6 sm:gap-4 sm:px-0 sm:pr-7 sm:pl-7">
       {/* Priority Cards Skeleton */}
-      <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+      <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 xl:gap-5">
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={index}
-            className="flex flex-1 flex-col items-start gap-3 rounded-xl border border-white bg-white/50 p-4 sm:gap-4 sm:p-5 lg:p-6"
+            className="flex min-w-0 flex-1 flex-col items-start gap-3 rounded-xl border-2 border-white bg-white/50 p-4 sm:gap-4 sm:p-5 xl:p-6"
           >
             {/* Badge and Title */}
-            <div className="flex items-start gap-2 sm:gap-3">
-              <div className="h-[20px] w-14 animate-pulse rounded-[16px] bg-gray-200 sm:h-[25px] sm:w-16" />
-              <div className="h-5 w-24 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-32" />
+            <div className="flex w-full min-w-0 items-start gap-2 sm:gap-3">
+              <div className="h-[20px] w-full shrink-0 animate-pulse rounded-[16px] bg-gray-200 sm:h-[25px]" />
+              <div className="h-5 min-w-0 flex-1 animate-pulse rounded bg-gray-200 sm:h-6" />
             </div>
 
             {/* Stats */}
             <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:justify-between sm:gap-0">
-              <div className="flex flex-row items-start gap-1">
-                <div className="h-4 w-12 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-16" />
-                <div className="h-4 w-16 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-20" />
+              <div className="flex min-w-0 flex-row items-start gap-1">
+                <div className="h-4 w-12 shrink-0 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-16" />
+                <div className="h-4 min-w-[3.5rem] flex-1 animate-pulse rounded bg-gray-200 sm:h-5 sm:min-w-[4rem]" />
               </div>
-              <div className="flex flex-row items-start gap-1">
-                <div className="h-4 w-10 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-12" />
-                <div className="h-4 w-6 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-8" />
+              <div className="flex min-w-0 flex-row items-start gap-1">
+                <div className="h-4 w-10 shrink-0 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-12" />
+                <div className="h-4 min-w-[1.5rem] flex-1 animate-pulse rounded bg-gray-200 sm:h-5 sm:min-w-[2rem]" />
               </div>
             </div>
           </div>

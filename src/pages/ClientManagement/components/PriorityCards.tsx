@@ -127,7 +127,7 @@ export function PriorityCards({ priorityStats, selected = [], onToggle }: Priori
   }
 
   return (
-    <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+    <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 xl:gap-5">
       {priorityCards.map((card) => {
         const isSelected = selected.includes(card.priority)
         const colors = getColorClasses(card.color, isSelected)
@@ -142,7 +142,7 @@ export function PriorityCards({ priorityStats, selected = [], onToggle }: Priori
             aria-label={`${card.label}: ${card.clientCount} clients, ${formatCurrency(card.totalDebt)} UAH total debt${isSelected ? ' (selected)' : ''}`}
             onClick={() => isClickable && handleCardClick(card.priority)}
             onKeyDown={(e) => isClickable && handleKeyDown(e, card.priority)}
-            className={`flex flex-1 flex-col items-start gap-3 rounded-xl border-2 bg-white/50 p-4 transition-all duration-200 sm:gap-4 sm:p-5 lg:p-6 ${colors.card} ${isClickable ? 'cursor-pointer focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none' : ''} `}
+            className={`flex flex-1 flex-col items-start gap-3 rounded-xl border-2 bg-white/50 p-4 transition-all duration-200 sm:gap-4 sm:p-5 xl:p-6 ${colors.card} ${isClickable ? 'cursor-pointer focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none' : ''} `}
           >
             <div className="flex items-start gap-2 sm:gap-3">
               <PriorityBadge priority={card.priority} />
