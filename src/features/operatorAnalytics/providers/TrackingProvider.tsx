@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, type PropsWithChildren } from 'react'
 import { useCallStore } from '@/stores/callStore'
+import { api, getAccessToken } from '@/lib/api'
 import { ingestEvents, buildIngestEventsBody } from '../api/operatorAnalyticsService'
 import type { TrackingEventPayload } from '../types'
 import { TrackingContext, type Tracker } from './trackingContext'
@@ -57,13 +58,27 @@ export function TrackingProvider({
 
       const body = buildIngestEventsBody({ events })
 
-      if (useBeacon && typeof navigator !== 'undefined' && 'sendBeacon' in navigator) {
+      // Unload-safe path: `fetch` with `keepalive: true` survives page hide
+      // like `sendBeacon` did, but unlike beacon it can carry the Bearer
+      // header — required by the analytics events endpoint.
+      if (useBeacon && typeof fetch !== 'undefined') {
         try {
-          const blob = new Blob([body], { type: 'application/json' })
-          navigator.sendBeacon(endpoint, blob)
+          const url = `${api.defaults.baseURL ?? ''}${endpoint}`
+          const token = getAccessToken()
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+          }
+          if (token) headers.Authorization = `Bearer ${token}`
+          void fetch(url, {
+            method: 'POST',
+            headers,
+            body,
+            credentials: 'include',
+            keepalive: true,
+          })
           return
         } catch {
-          // fall through to fetch attempt below
+          // fall through to axios attempt below
         }
       }
 
