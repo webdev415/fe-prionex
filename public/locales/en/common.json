@@ -1966,12 +1966,6 @@
           "verified": "Verified",
           "rejected": "Rejected"
         },
-        "tagsDropdown": {
-          "searchTags": "Search tags...",
-          "noTagsFound": "No tags found",
-          "clear": "Clear",
-          "apply": "Apply"
-        },
         "bulkTag": {
           "addTags": "Add Tags",
           "removeTags": "Remove Tags",
