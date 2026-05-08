@@ -19,7 +19,11 @@ import {
   ImportHistoryFiltersBar,
   type ImportHistoryFilters,
 } from './components/ImportHistoryFiltersBar'
-import { useImportJobs, useExportImportErrors } from '@/features/imports'
+import {
+  useImportJobs,
+  useExportImportErrors,
+  computeImportUiStatusFromJob,
+} from '@/features/imports'
 import type { ImportJob, ImportJobsListParams } from '@/features/imports'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { useAuthStore } from '@/stores/authStore'
@@ -31,32 +35,23 @@ export interface ImportHistoryItem {
   dateTime: string
   fileName: string
   uploadedBy: string
-  status: 'done' | 'failed' | 'in_progress' | 'pending' | 'cancelled'
+  status: 'done' | 'failed' | 'completed_with_errors' | 'in_progress' | 'pending' | 'cancelled'
   errors: number
   importType: string
   tagMode?: 'assign' | 'remove'
 }
 
-// Helper to convert API ImportJob to ImportHistoryItem
-// Note: Only converts completed or failed jobs (in_progress jobs are filtered out)
+// Helper to convert API ImportJob to ImportHistoryItem.
+// The status mapping defers to computeImportUiStatusFromJob so a vendor
+// job that "completed" but had a downstream phase silently drop every
+// row renders as 'completed_with_errors', not green 'done'.
 function mapImportJobToHistoryItem(job: ImportJob): ImportHistoryItem {
   return {
     id: job.id,
     dateTime: job.uploaded_at,
     fileName: job.file_name,
     uploadedBy: job.uploaded_by,
-    status:
-      job.status === 'completed'
-        ? 'done'
-        : job.status === 'failed'
-          ? 'failed'
-          : job.status === 'in_progress'
-            ? 'in_progress'
-            : job.status === 'pending'
-              ? 'pending'
-              : job.status === 'cancelled'
-                ? 'cancelled'
-                : 'done', // Default fallback
+    status: computeImportUiStatusFromJob(job),
     errors: job.errors_count,
     importType: job.import_type || 'simple',
     tagMode: job.tag_mode,
@@ -67,7 +62,7 @@ function mapImportJobToHistoryItem(job: ImportJob): ImportHistoryItem {
 function ImportStatusBadge({
   status,
 }: {
-  status: 'done' | 'failed' | 'in_progress' | 'pending' | 'cancelled'
+  status: 'done' | 'failed' | 'completed_with_errors' | 'in_progress' | 'pending' | 'cancelled'
 }) {
   const { t } = useTranslation('common')
 
@@ -76,6 +71,15 @@ function ImportStatusBadge({
       <span className="bg-secondary-800 inline-flex h-[33px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-white">
         <span className="h-2 w-2 rounded-full bg-white" />
         {t('pages.imports.history.statuses.done')}
+      </span>
+    )
+  }
+
+  if (status === 'completed_with_errors') {
+    return (
+      <span className="inline-flex h-[33px] items-center gap-1.5 rounded-full bg-gray-600 px-3 text-xs font-medium text-white">
+        <Icons.Warning size={14} className="text-white" />
+        {t('pages.imports.history.statuses.completedWithErrors')}
       </span>
     )
   }

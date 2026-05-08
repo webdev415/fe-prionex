@@ -32,6 +32,11 @@ export interface ImportJob {
   project_code?: string
   purchase_date?: string
   comment?: string
+  // Vendor flow only — populated from import_options.vendor.phase_results
+  // when the list endpoint returns it. The list-page badge derivation
+  // reads this so a vendor job whose write-offs phase silently dropped
+  // every row doesn't render as a green "done".
+  vendor_phases?: VendorFilePhase[]
 }
 
 // Vendor file logical name — the four CSV/XLSX files in a vendor bundle
@@ -39,6 +44,36 @@ export type VendorFileLogical = 'users' | 'credits' | 'payments' | 'write_offs'
 
 // Per-file phase status used by the vendor Import Details panel
 export type VendorPhaseStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
+
+// Sister-service receiver response carried on each phase. Shape is
+// service-specific — the FE inspects known keys to decide whether the
+// phase silently dropped rows. See the backend
+// VendorImportService._dispatch and the per-receiver client wrappers.
+//
+// Known broken-data keys today:
+//   • bulk_write_offs:  skipped_unresolved_debt    (number)
+//   • bulk_record_pay:  failed                      (number)
+//   • bulk_clients:     debts_skipped_duplicate     (number, benign — duplicates)
+//
+// Anything else is informational; status helpers only escalate on the
+// explicit broken-data keys, never on duplicate-skip counters.
+export interface VendorDownstreamSummary {
+  // bulk_clients (users + credits combined)
+  clients_created?: number
+  clients_existing?: number
+  debts_created?: number
+  debts_skipped_duplicate?: number
+  // bulk_write_offs
+  created?: number
+  skipped_unresolved_debt?: number
+  // bulk_record_payments
+  processed?: number
+  success?: number
+  failed?: number
+  // common
+  errors?: unknown[]
+  [key: string]: unknown
+}
 
 // One row of the vendor phase panel — derived from import_options.vendor
 export interface VendorFilePhase {
@@ -49,6 +84,14 @@ export interface VendorFilePhase {
   status: VendorPhaseStatus
   processed?: number
   total?: number
+  // Per-phase counters from the backend's VendorFileResult, populated
+  // from import_options.vendor.phase_results[]. Absent on jobs that
+  // predate the backend phase_results rollout.
+  total_rows?: number
+  accepted_rows?: number
+  failed_rows?: number
+  skipped_rows?: number
+  downstream_summary?: VendorDownstreamSummary | null
 }
 
 // Import Job Detail (from GET /api/import/jobs/{id})

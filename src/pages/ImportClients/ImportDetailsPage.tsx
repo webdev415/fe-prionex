@@ -14,7 +14,12 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Icons } from '@/lib/icons'
 import { SemiCircularProgress, VendorPhaseProgress } from './components'
-import { useImportJob, useImportJobErrors, useExportImportErrors } from '@/features/imports'
+import {
+  useImportJob,
+  useImportJobErrors,
+  useExportImportErrors,
+  computeImportUiStatusFromDetail,
+} from '@/features/imports'
 import { ImportDetailsPageSkeleton } from './components/ImportDetailsPageSkeleton'
 import { useAuthStore } from '@/stores/authStore'
 import { convertUTCToUserTimezone } from '@/lib/formatters'
@@ -152,62 +157,10 @@ export function ImportDetailsPage() {
         file: jobDetail.file_name,
         uploadedBy: jobDetail.uploaded_by,
         uploadedAt: convertUTCToUserTimezone(jobDetail.uploaded_at, userTimezone),
-        status:
-          jobDetail.status === 'completed'
-            ? jobDetail.errors_count > 0
-              ? ('completed_with_errors' as
-                  | 'done'
-                  | 'failed'
-                  | 'completed_with_errors'
-                  | 'in_progress'
-                  | 'pending'
-                  | 'cancelled')
-              : ('done' as
-                  | 'done'
-                  | 'failed'
-                  | 'completed_with_errors'
-                  | 'in_progress'
-                  | 'pending'
-                  | 'cancelled')
-            : jobDetail.status === 'failed'
-              ? ('failed' as
-                  | 'done'
-                  | 'failed'
-                  | 'completed_with_errors'
-                  | 'in_progress'
-                  | 'pending'
-                  | 'cancelled')
-              : jobDetail.status === 'in_progress'
-                ? ('in_progress' as
-                    | 'done'
-                    | 'failed'
-                    | 'completed_with_errors'
-                    | 'in_progress'
-                    | 'pending'
-                    | 'cancelled')
-                : jobDetail.status === 'pending'
-                  ? ('pending' as
-                      | 'done'
-                      | 'failed'
-                      | 'completed_with_errors'
-                      | 'in_progress'
-                      | 'pending'
-                      | 'cancelled')
-                  : jobDetail.status === 'cancelled'
-                    ? ('cancelled' as
-                        | 'done'
-                        | 'failed'
-                        | 'completed_with_errors'
-                        | 'in_progress'
-                        | 'pending'
-                        | 'cancelled')
-                    : ('done' as
-                        | 'done'
-                        | 'failed'
-                        | 'completed_with_errors'
-                        | 'in_progress'
-                        | 'pending'
-                        | 'cancelled'),
+        // Single source of truth for the badge status; aggregates per-phase
+        // signals so vendor jobs whose downstream phase silently dropped
+        // rows render as 'completed_with_errors' instead of green 'done'.
+        status: computeImportUiStatusFromDetail(jobDetail),
         totalRows: jobDetail.total_rows,
         newClients: jobDetail.new_clients,
         updatedClients: jobDetail.updated_clients,

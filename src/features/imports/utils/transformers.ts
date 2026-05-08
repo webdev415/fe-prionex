@@ -15,6 +15,7 @@ import type {
   UploadImportResponse,
   CancelImportResponse,
   TagAssignmentMode,
+  VendorDownstreamSummary,
   VendorFileLogical,
   VendorFilePhase,
   VendorPhaseStatus,
@@ -154,12 +155,13 @@ export function transformImportJob(backend: BackendImportJobResponse): ImportJob
       ? (backend.import_options?.mode as TagAssignmentMode | undefined)
       : undefined
 
+  const status = mapStatus(backend.status)
   return {
     id: backend.id,
     file_name: backend.filename,
     uploaded_by: backend.username || 'Unknown',
     uploaded_at: backend.created_at,
-    status: mapStatus(backend.status),
+    status,
     errors_count: backend.failed_records,
     import_type: importType,
     tag_mode: tagMode,
@@ -167,6 +169,12 @@ export function transformImportJob(backend: BackendImportJobResponse): ImportJob
     project_code: metadata.project_code,
     purchase_date: metadata.purchase_date,
     comment: metadata.comment,
+    // Surface vendor_phases on list-page rows too so the status badge
+    // can detect silent-drop failures without an extra detail fetch.
+    // The list endpoint already returns import_options; only the FE
+    // transform was discarding it.
+    vendor_phases:
+      importType === 'vendor' ? buildVendorPhases(backend.import_options, status) : undefined,
   }
 }
 
@@ -174,6 +182,11 @@ export function transformImportJob(backend: BackendImportJobResponse): ImportJob
  * Vendor file order matches the receiver's dispatch order (users → credits
  * → payments → write_offs). Display labels and target-DB labels are kept
  * close to the dispatch route so the UI surfaces what the worker actually does.
+ *
+ * Order matters: the previous version had write_offs before payments, which
+ * disagreed with the backend's INGESTION_ORDER and made phase-progress logic
+ * (current_file vs files_completed) inconsistent across pages. Fixed to
+ * match backend so any aggregate built from this array is reliable.
  */
 const VENDOR_PHASE_DISPLAY: Array<{
   logical_name: VendorFileLogical
@@ -182,12 +195,12 @@ const VENDOR_PHASE_DISPLAY: Array<{
 }> = [
   { logical_name: 'users', display_name: 'Users', target_db: 'client-DB clients' },
   { logical_name: 'credits', display_name: 'Credits', target_db: 'client-DB debts' },
+  { logical_name: 'payments', display_name: 'Payments', target_db: 'payment-DB payments' },
   {
     logical_name: 'write_offs',
     display_name: 'Write-offs',
     target_db: 'client-DB debt_writeoffs',
   },
-  { logical_name: 'payments', display_name: 'Payments', target_db: 'payment-DB payments' },
 ]
 
 function basenameFromPath(path: string): string {
@@ -196,10 +209,31 @@ function basenameFromPath(path: string): string {
   return parts[parts.length - 1] || path
 }
 
+// Shape of one entry in import_options.vendor.phase_results[] (backend
+// VendorImportService._phase_results_payload). All fields optional from
+// the FE's perspective — pre-rollout jobs omit the array entirely.
+interface BackendPhaseResult {
+  logical_name?: string
+  physical_filename?: string
+  total_rows?: number
+  accepted_rows?: number
+  failed_rows?: number
+  skipped_rows?: number
+  downstream_summary?: VendorDownstreamSummary | null
+}
+
 /**
  * Build the per-file phase rows from import_options.vendor.* + the job's
  * top-level status. Mirrors the worker's dispatch order so a 4-row table
  * tells the user where the import got stuck (or how far it got).
+ *
+ * When ``phase_results`` is present on import_options.vendor (post-PR1
+ * backend), each phase row is enriched with the per-phase counters and
+ * raw downstream-service summary so status helpers can downgrade
+ * "completed" → "completed_with_errors" on silent-drop signals like
+ * ``skipped_unresolved_debt`` or payment ``failed``. Pre-PR1 jobs fall
+ * back to the original files_completed/current_file logic and produce
+ * phases without the extra counters — the helper handles both.
  */
 function buildVendorPhases(
   importOptions: Record<string, unknown> | null,
@@ -216,6 +250,15 @@ function buildVendorPhases(
   const currentDone = vendor.current_file_records_done as number | undefined
   const currentTotal = vendor.current_file_total_records as number | undefined
 
+  const phaseResults = Array.isArray(vendor.phase_results)
+    ? (vendor.phase_results as BackendPhaseResult[])
+    : []
+  const phaseByLogical = new Map<string, BackendPhaseResult>(
+    phaseResults
+      .filter((p) => typeof p.logical_name === 'string')
+      .map((p) => [p.logical_name as string, p])
+  )
+
   return VENDOR_PHASE_DISPLAY.map(({ logical_name, display_name, target_db }) => {
     const path = bundle[logical_name] || ''
     let status: VendorPhaseStatus
@@ -231,14 +274,20 @@ function buildVendorPhases(
       status = 'pending'
     }
 
+    const result = phaseByLogical.get(logical_name)
     return {
       logical_name,
       display_name,
-      filename: basenameFromPath(path),
+      filename: basenameFromPath(path) || result?.physical_filename || '',
       target_db,
       status,
       processed: currentFile === logical_name ? currentDone : undefined,
       total: currentFile === logical_name ? currentTotal : undefined,
+      total_rows: result?.total_rows,
+      accepted_rows: result?.accepted_rows,
+      failed_rows: result?.failed_rows,
+      skipped_rows: result?.skipped_rows,
+      downstream_summary: result?.downstream_summary ?? undefined,
     }
   })
 }

@@ -1023,6 +1023,7 @@
         "exporting": "Exporting...",
         "statuses": {
           "done": "Done",
+          "completedWithErrors": "Completed with errors",
           "inProgress": "In progress",
           "failed": "Failed",
           "pending": "Pending",
