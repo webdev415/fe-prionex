@@ -122,6 +122,7 @@ export function TaHistoryTab() {
         value={barState}
         operators={operators}
         chains={chains}
+        tasById={tasById}
         onApply={handleApply}
         onClear={handleClear}
         userTimezone={userTimezone}

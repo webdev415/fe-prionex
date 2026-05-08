@@ -12,8 +12,9 @@ export interface TaHistoryBarState {
   employeeIds: number[]
   chainId?: number
   targetActionId?: number
-  promiseDateFrom?: string
-  promiseDateTo?: string
+  stepValueEq?: string
+  stepValueMin?: string
+  stepValueMax?: string
   notesSearch?: string
 }
 
@@ -25,8 +26,9 @@ export const TA_HISTORY_FILTERS_DEFAULT: TaHistoryBarState = {
   employeeIds: [],
   chainId: undefined,
   targetActionId: undefined,
-  promiseDateFrom: undefined,
-  promiseDateTo: undefined,
+  stepValueEq: undefined,
+  stepValueMin: undefined,
+  stepValueMax: undefined,
   notesSearch: undefined,
 }
 
@@ -43,6 +45,8 @@ export function readTaHistoryUrlState(params: URLSearchParams): TaHistoryBarStat
   const stepRaw = params.get('step')
   const targetActionId = chainId && stepRaw ? Number(stepRaw) : undefined
 
+  // Step value sub-filters only carry meaning when a step is picked.
+  const hasStep = chainId != null && targetActionId != null
   return {
     period,
     customFromDate: params.get('from_date') ?? undefined,
@@ -51,8 +55,9 @@ export function readTaHistoryUrlState(params: URLSearchParams): TaHistoryBarStat
     employeeIds,
     chainId: Number.isFinite(chainId) ? chainId : undefined,
     targetActionId: Number.isFinite(targetActionId) ? targetActionId : undefined,
-    promiseDateFrom: params.get('promise_from') ?? undefined,
-    promiseDateTo: params.get('promise_to') ?? undefined,
+    stepValueEq: hasStep ? (params.get('step_value') ?? undefined) : undefined,
+    stepValueMin: hasStep ? (params.get('step_min') ?? undefined) : undefined,
+    stepValueMax: hasStep ? (params.get('step_max') ?? undefined) : undefined,
     notesSearch: params.get('notes') ?? undefined,
   }
 }
@@ -69,8 +74,9 @@ export function writeTaHistoryUrlState(
   next.delete('employee_id')
   next.delete('chain_id')
   next.delete('step')
-  next.delete('promise_from')
-  next.delete('promise_to')
+  next.delete('step_value')
+  next.delete('step_min')
+  next.delete('step_max')
   next.delete('notes')
 
   if (state.period && state.period !== DEFAULT_PERIOD) next.set('period', state.period)
@@ -88,9 +94,10 @@ export function writeTaHistoryUrlState(
   if (state.chainId != null) next.set('chain_id', String(state.chainId))
   if (state.chainId != null && state.targetActionId != null) {
     next.set('step', String(state.targetActionId))
+    if (state.stepValueEq) next.set('step_value', state.stepValueEq)
+    if (state.stepValueMin) next.set('step_min', state.stepValueMin)
+    if (state.stepValueMax) next.set('step_max', state.stepValueMax)
   }
-  if (state.promiseDateFrom) next.set('promise_from', state.promiseDateFrom)
-  if (state.promiseDateTo) next.set('promise_to', state.promiseDateTo)
   if (state.notesSearch && state.notesSearch.trim()) {
     next.set('notes', state.notesSearch.trim())
   }
@@ -130,25 +137,15 @@ export function toTaHistoryQuery(
     date_to = now.toISOString()
   }
 
-  let promise_date_from: string | undefined
-  let promise_date_to: string | undefined
-  if (state.promiseDateFrom || state.promiseDateTo) {
-    const r = localDateStringsToIsoRange(
-      state.promiseDateFrom ?? state.promiseDateTo ?? '',
-      state.promiseDateTo ?? state.promiseDateFrom ?? ''
-    )
-    promise_date_from = state.promiseDateFrom ? r.from_datetime : undefined
-    promise_date_to = state.promiseDateTo ? r.to_datetime : undefined
-  }
-
   return {
     chain_id: state.chainId,
     target_action_id: state.targetActionId,
     recorded_by_in: recordedByIn,
     date_from,
     date_to,
-    promise_date_from,
-    promise_date_to,
+    step_value_eq: state.stepValueEq,
+    step_value_min: state.stepValueMin,
+    step_value_max: state.stepValueMax,
     notes_search: state.notesSearch,
   }
 }

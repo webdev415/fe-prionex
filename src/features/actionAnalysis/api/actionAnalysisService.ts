@@ -120,8 +120,9 @@ function buildTaHistoryParams(filters: TAInteractionListParams): URLSearchParams
   if (filters.target_action_id != null) {
     params.set('target_action_id', String(filters.target_action_id))
   }
-  if (filters.promise_date_from) params.set('promise_date_from', filters.promise_date_from)
-  if (filters.promise_date_to) params.set('promise_date_to', filters.promise_date_to)
+  if (filters.step_value_eq) params.set('step_value_eq', filters.step_value_eq)
+  if (filters.step_value_min) params.set('step_value_min', filters.step_value_min)
+  if (filters.step_value_max) params.set('step_value_max', filters.step_value_max)
   if (filters.skip != null) params.set('skip', String(filters.skip))
   if (filters.limit != null) params.set('limit', String(filters.limit))
   return params
