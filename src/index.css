@@ -174,8 +174,8 @@
   }
 
   body {
-    background-color: var(--color-dark-500);
-    color: white;
+    background-color: var(--color-light-50);
+    color: var(--color-dark-500);
     min-height: 100vh;
   }
 
