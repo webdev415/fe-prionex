@@ -57,7 +57,7 @@ describe('TwoFactorSection', () => {
     expect(screen.getByText(/^enabled$/i)).toBeInTheDocument()
     expect(screen.getByText(/7 backup codes remaining/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^disable$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /regenerate backup codes/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /new backup codes/i })).toBeInTheDocument()
   })
 
   it('flags low backup-code count with the regenerate warning', () => {
@@ -109,11 +109,9 @@ describe('TwoFactorSection', () => {
 
     render(<TwoFactorSection />)
 
-    await user.click(screen.getByRole('button', { name: /regenerate backup codes/i }))
+    await user.click(screen.getByRole('button', { name: /new backup codes/i }))
 
-    // The section button and modal title share copy — two matches confirms
-    // the modal opened.
-    expect(screen.getAllByText(/regenerate backup codes/i).length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText(/^Regenerate backup codes$/i)).toBeInTheDocument()
   })
 
   it('treats undefined status as disabled and still offers the Enable CTA', () => {

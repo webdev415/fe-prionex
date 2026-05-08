@@ -3081,6 +3081,7 @@
     },
     "profile": {
       "title": "Настройки профиля",
+      "accountSecurity": "Безопасность аккаунта",
       "roleLabel": "Роль:",
       "resetPassword": "Сбросить пароль",
       "passwordChanged": "Пароль изменён",

@@ -3648,6 +3648,7 @@
     },
     "profile": {
       "title": "Profile Settings",
+      "accountSecurity": "Account Security",
       "roleLabel": "Role:",
       "resetPassword": "Reset Password",
       "passwordChanged": "Password changed",

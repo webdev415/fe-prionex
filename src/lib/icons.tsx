@@ -137,6 +137,7 @@ import {
   AiBrain03Icon,
   Mic02Icon,
   Tag01Icon,
+  LockComputerIcon,
 } from '@hugeicons/core-free-icons'
 /**
  * Icon component props
@@ -330,6 +331,7 @@ export const Icons = {
   CallIncoming04: (props: Omit<IconProps, 'icon'>) => <Icon icon={CallIncoming04Icon} {...props} />,
   AiBrain03: (props: Omit<IconProps, 'icon'>) => <Icon icon={AiBrain03Icon} {...props} />,
   Mic02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Mic02Icon} {...props} />,
+  LockComputer: (props: Omit<IconProps, 'icon'>) => <Icon icon={LockComputerIcon} {...props} />,
 }
 
 /**
@@ -457,6 +459,7 @@ export {
   CallIncoming04Icon,
   AiBrain03Icon,
   Mic02Icon,
+  LockComputerIcon,
 }
 
 /**

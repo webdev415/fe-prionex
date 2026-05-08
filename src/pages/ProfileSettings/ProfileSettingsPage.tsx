@@ -131,9 +131,9 @@ export function ProfileSettingsPage() {
         {t('pages.profile.title')}
       </span>
 
-      <div className="flex flex-col items-start gap-4 self-stretch lg:flex-row lg:gap-5">
+      <div className="flex flex-col items-start gap-4 self-stretch 2xl:flex-row 2xl:gap-5">
         {/* Left panel */}
-        <div className="flex w-full flex-col items-center gap-4 self-stretch rounded-xl bg-white/50 px-4 py-6 sm:gap-5 sm:px-6 sm:py-8 lg:w-[25%] lg:py-11">
+        <div className="flex w-full flex-col items-center gap-4 self-stretch rounded-xl bg-white/50 px-4 py-6 sm:gap-5 sm:px-6 sm:py-8 2xl:w-[25%] 2xl:py-11">
           <div className="flex flex-col items-center gap-4 self-stretch">
             <div className="bg-secondary-800 relative flex flex-col items-center justify-center gap-[10px] rounded-full border border-white p-3">
               <div className="border-primary-300 absolute flex h-15 w-15 items-center justify-center rounded-full border-2 bg-transparent"></div>
@@ -172,7 +172,7 @@ export function ProfileSettingsPage() {
           <Button
             onClick={() => setIsChangePasswordOpen(true)}
             variant="secondary"
-            className="h-12 w-full rounded-md lg:w-auto"
+            className="h-12 w-full rounded-md 2xl:w-auto"
             leftIcon={<Icons.LockSync01 size={24} />}
           >
             {t('pages.profile.resetPassword')}
@@ -192,10 +192,17 @@ export function ProfileSettingsPage() {
               }
             }}
           />
+
+          <div className="mt-6 flex w-full flex-col gap-3 self-stretch border-t border-gray-200 pt-6">
+            <span className="text-dark-500 self-start text-sm font-semibold tracking-[-0.28px]">
+              {t('pages.profile.accountSecurity')}
+            </span>
+            <TwoFactorSection />
+          </div>
         </div>
 
         {/* Right: form */}
-        <div className="flex w-full flex-1 flex-col items-start gap-3 rounded-xl bg-white/50 p-4 sm:p-6">
+        <div className="flex w-full flex-1 flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
           <form
             onSubmit={handleSave}
             className="flex w-full flex-col items-center gap-4 self-stretch sm:gap-6"
@@ -204,7 +211,7 @@ export function ProfileSettingsPage() {
               {t('pages.users.modals.edit.title')}
             </span>
             <div className="flex w-full flex-col items-center gap-4 self-stretch">
-              <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
+              <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
                 <Input
                   label={t('pages.users.forms.username')}
                   value={form.username}
@@ -221,7 +228,7 @@ export function ProfileSettingsPage() {
                   className="w-full"
                 />
               </div>
-              <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
+              <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
                 <Input
                   label={t('pages.users.forms.firstName')}
                   value={form.first_name}
@@ -238,7 +245,7 @@ export function ProfileSettingsPage() {
                   className="w-full"
                 />
               </div>
-              <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
+              <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
                 <Input
                   label={t('pages.users.forms.middleName')}
                   value={form.middle_name}
@@ -254,7 +261,7 @@ export function ProfileSettingsPage() {
                   className="w-full"
                 />
               </div>
-              <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
+              <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
                 <div className="flex w-full flex-col gap-2 self-stretch">
                   <Label htmlFor="language">{t('pages.users.forms.language')}</Label>
                   <LanguageSwitcher
@@ -287,7 +294,7 @@ export function ProfileSettingsPage() {
 
               {/* Call Settings Section - Only visible for agents */}
               {user?.is_agent && (
-                <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
+                <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
                   <Input
                     label={t('pages.users.forms.asteriskExtension') || 'Asterisk Extension'}
                     value={user?.asterisk_extension || ''}
@@ -354,7 +361,7 @@ export function ProfileSettingsPage() {
               </Button>
               <DoubleButton
                 type="submit"
-                icon={<Icons.Success size={28} />}
+                icon={<Icons.Tick02 size={28} />}
                 iconPosition="left"
                 disabled={isUpdatingLocal || isChangingLocal}
                 className="h-12 w-48"
@@ -366,8 +373,6 @@ export function ProfileSettingsPage() {
               </DoubleButton>
             </div>
           </form>
-
-          <TwoFactorSection />
         </div>
       </div>
     </div>

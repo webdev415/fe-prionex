@@ -217,7 +217,7 @@ vi.mock('react-i18next', () => ({
         'twoFactor.section.loading': 'Loading status…',
         'twoFactor.section.enable': 'Enable Google Authenticator',
         'twoFactor.section.disable': 'Disable',
-        'twoFactor.section.regenerate': 'Regenerate backup codes',
+        'twoFactor.section.regenerate': 'New backup codes',
         'twoFactor.section.backupRemaining': `${options?.count ?? 0} backup codes remaining`,
         'twoFactor.section.lowBackupWarning': '— consider regenerating.',
         // Setup modal
