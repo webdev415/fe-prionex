@@ -3082,6 +3082,7 @@
     },
     "profile": {
       "title": "Налаштування профілю",
+      "accountSecurity": "Безпека облікового запису",
       "roleLabel": "Роль:",
       "resetPassword": "Скинути пароль",
       "passwordChanged": "Пароль змінено",
