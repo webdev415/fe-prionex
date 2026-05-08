@@ -164,12 +164,15 @@ export function HeatmapTab() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl bg-white/80 p-4 shadow-sm">
-          <div className="flex items-center gap-3 pb-3 text-xs">
+          <div className="flex flex-wrap items-center gap-2 pb-3">
             {(['active_call', 'post_call', 'waiting', 'idle', 'break'] as HeatmapState[]).map(
               (state) => (
-                <span key={state} className="flex items-center gap-1.5">
+                <span
+                  key={state}
+                  className="flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700"
+                >
                   <span
-                    className="inline-block h-3 w-3 rounded-sm"
+                    className="inline-block h-2.5 w-2.5 rounded-full"
                     style={{ backgroundColor: STATE_COLORS[state] }}
                   />
                   {t(`pages.actionAnalysis.heatmap.states.${state}`, state)}

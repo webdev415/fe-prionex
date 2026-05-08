@@ -157,9 +157,9 @@ export function ScriptAnalyticsTab() {
                     <td className="px-4 py-2 font-medium text-gray-800">
                       {operatorById.get(op.operator_id) ?? `#${op.operator_id}`}
                     </td>
-                    <td className="px-4 py-2 font-mono">{op.total_interactions}</td>
-                    <td className="px-4 py-2 font-mono">{op.fast_result_pct}%</td>
-                    <td className="px-4 py-2 text-xs">
+                    <td className="px-4 py-2 font-mono text-gray-700">{op.total_interactions}</td>
+                    <td className="px-4 py-2 font-mono text-gray-700">{op.fast_result_pct}%</td>
+                    <td className="px-4 py-2 text-xs text-gray-700">
                       {Object.entries(op.distribution).map(([result, count]) => (
                         <span
                           key={result}
