@@ -65,6 +65,7 @@ export function InteractionLogPage() {
   })
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
+  const [isExporting, setIsExporting] = useState(false)
 
   const { data: chainsData } = useTAChains({ include_inactive: true })
   const chains = chainsData?.items ?? []
@@ -133,23 +134,28 @@ export function InteractionLogPage() {
   const dateInputFormat = i18n.language?.startsWith('en') ? 'MM/dd/yyyy' : 'dd/MM/yyyy'
 
   const handleExport = async () => {
-    const params = new URLSearchParams()
-    if (appliedClientId != null) params.set('client_id', String(appliedClientId))
-    if (appliedFilters.chainFilter) params.set('chain_id', appliedFilters.chainFilter)
-    if (appliedFilters.notesSearch) params.set('notes_search', appliedFilters.notesSearch)
-    if (appliedFilters.dateFrom) params.set('date_from', `${appliedFilters.dateFrom}T00:00:00`)
-    if (appliedFilters.dateTo) params.set('date_to', `${appliedFilters.dateTo}T23:59:59.999`)
+    try {
+      setIsExporting(true)
+      const params = new URLSearchParams()
+      if (appliedClientId != null) params.set('client_id', String(appliedClientId))
+      if (appliedFilters.chainFilter) params.set('chain_id', appliedFilters.chainFilter)
+      if (appliedFilters.notesSearch) params.set('notes_search', appliedFilters.notesSearch)
+      if (appliedFilters.dateFrom) params.set('date_from', `${appliedFilters.dateFrom}T00:00:00`)
+      if (appliedFilters.dateTo) params.set('date_to', `${appliedFilters.dateTo}T23:59:59.999`)
 
-    const resp = await api.get('/api/v1/ta-interactions/export', {
-      params,
-      responseType: 'blob',
-    })
-    const url = window.URL.createObjectURL(new Blob([resp.data]))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'ta_interactions_export.csv'
-    a.click()
-    window.URL.revokeObjectURL(url)
+      const resp = await api.get('/api/v1/ta-interactions/export', {
+        params,
+        responseType: 'blob',
+      })
+      const url = window.URL.createObjectURL(new Blob([resp.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'ta_interactions_export.csv'
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   const columns: Column<TAInteraction>[] = [
@@ -238,8 +244,17 @@ export function InteractionLogPage() {
     <div className="flex w-full flex-col items-start gap-4">
       <div className="flex w-full items-center justify-between">
         <h1 className="text-dark-500 text-2xl font-light">{t('pages.interactionLog.title')}</h1>
-        <Button variant="cancel" size="sm" onClick={handleExport}>
-          {t('pages.interactionLog.export')}
+        <Button
+          variant="primary"
+          size="md"
+          onClick={handleExport}
+          disabled={isExporting}
+          leftIcon={<Icons.Csv02 size={20} />}
+          className="rounded-full"
+        >
+          {isExporting
+            ? t('pages.reports.exporting', 'Exporting...')
+            : t('pages.interactionLog.export')}
         </Button>
       </div>
 
