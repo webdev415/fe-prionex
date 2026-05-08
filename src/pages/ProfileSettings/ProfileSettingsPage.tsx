@@ -52,6 +52,27 @@ export function ProfileSettingsPage() {
   }, [user, i18n.language])
 
   const [form, setForm] = useState(initialForm)
+  const [savedProfileSnapshot, setSavedProfileSnapshot] = useState(() => ({
+    email: initialForm.email,
+    first_name: initialForm.first_name,
+    last_name: initialForm.last_name,
+    middle_name: initialForm.middle_name,
+    phone: initialForm.phone,
+    language: initialForm.language,
+    timezone: initialForm.timezone,
+  }))
+
+  const hasProfileChanges = useMemo(() => {
+    return (
+      form.email !== savedProfileSnapshot.email ||
+      form.first_name !== savedProfileSnapshot.first_name ||
+      form.last_name !== savedProfileSnapshot.last_name ||
+      form.middle_name !== savedProfileSnapshot.middle_name ||
+      form.phone !== savedProfileSnapshot.phone ||
+      form.language !== savedProfileSnapshot.language ||
+      form.timezone !== savedProfileSnapshot.timezone
+    )
+  }, [form, savedProfileSnapshot])
 
   // Sync when i18n changes externally only (e.g. header switcher). Do not depend on form.language —
   // i18n.changeLanguage is async; including form.language would revert the profile dropdown immediately.
@@ -115,6 +136,15 @@ export function ProfileSettingsPage() {
       setIsUpdatingLocal(true)
       await updateMyProfileMutateAsync(updatePayload)
 
+      setSavedProfileSnapshot({
+        email: form.email,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        middle_name: form.middle_name,
+        phone: form.phone,
+        language: form.language,
+        timezone: form.timezone,
+      })
       setForm((f) => ({ ...f, currentPassword: '', newPassword: '' }))
     } finally {
       setIsUpdatingLocal(false)
@@ -122,7 +152,18 @@ export function ProfileSettingsPage() {
   }
 
   const handleCancel = () => {
-    setForm(initialForm)
+    setForm((prev) => ({
+      ...prev,
+      email: savedProfileSnapshot.email,
+      first_name: savedProfileSnapshot.first_name,
+      last_name: savedProfileSnapshot.last_name,
+      middle_name: savedProfileSnapshot.middle_name,
+      phone: savedProfileSnapshot.phone,
+      language: savedProfileSnapshot.language,
+      timezone: savedProfileSnapshot.timezone,
+      currentPassword: '',
+      newPassword: '',
+    }))
   }
 
   return (
@@ -210,7 +251,7 @@ export function ProfileSettingsPage() {
             <span className="text-dark-500 self-stretch text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
               {t('pages.users.modals.edit.title')}
             </span>
-            <div className="flex w-full flex-col items-center gap-4 self-stretch">
+            <div className="flex w-full flex-col items-center gap-6 self-stretch">
               <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
                 <Input
                   label={t('pages.users.forms.username')}
@@ -350,28 +391,30 @@ export function ProfileSettingsPage() {
                 </div>
               )}
             </div>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
-              <Button
-                type="button"
-                variant="cancel"
-                onClick={handleCancel}
-                className="h-12 w-48 rounded-full px-10"
-              >
-                {t('actions.cancel')}
-              </Button>
-              <DoubleButton
-                type="submit"
-                icon={<Icons.Tick02 size={28} />}
-                iconPosition="left"
-                disabled={isUpdatingLocal || isChangingLocal}
-                className="h-12 w-48"
-                onClick={() => {
-                  // Handle double button click
-                }}
-              >
-                {t('pages.profile.saveChanges')}
-              </DoubleButton>
-            </div>
+            {hasProfileChanges && (
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
+                <Button
+                  type="button"
+                  variant="cancel"
+                  onClick={handleCancel}
+                  className="h-12 w-48 rounded-full px-10"
+                >
+                  {t('actions.cancel')}
+                </Button>
+                <DoubleButton
+                  type="submit"
+                  icon={<Icons.Tick02 size={28} />}
+                  iconPosition="left"
+                  disabled={isUpdatingLocal || isChangingLocal}
+                  className="h-12 w-48"
+                  onClick={() => {
+                    // Handle double button click
+                  }}
+                >
+                  {t('pages.profile.saveChanges')}
+                </DoubleButton>
+              </div>
+            )}
           </form>
         </div>
       </div>
