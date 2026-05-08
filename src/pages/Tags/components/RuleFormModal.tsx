@@ -126,6 +126,7 @@ type RuleFormData = {
   description: string
   trigger_type: RuleTriggerType
   trigger_event: string
+  trigger_tag_code: string
   cron_expression: string
   conditions: { field: string; op: string; value: string }[]
   action_type: RuleActionType
@@ -169,6 +170,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
             'import_complete',
           ]),
           trigger_event: z.string().optional().default(''),
+          trigger_tag_code: z.string().optional().default(''),
           cron_expression: z.string().optional().default(''),
           conditions: z.array(
             z.object({
@@ -206,6 +208,16 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               path: ['cron_expression'],
             })
           }
+          if (data.trigger_type === 'tag_expired' && !data.trigger_tag_code) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: t(
+                'pages.tags.rules.validation.triggerTagRequired',
+                'Trigger tag is required for tag expiry triggers'
+              ),
+              path: ['trigger_tag_code'],
+            })
+          }
         }),
     [t]
   )
@@ -229,6 +241,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
       description: '',
       trigger_type: 'event',
       trigger_event: '',
+      trigger_tag_code: '',
       cron_expression: '',
       conditions: [],
       action_type: 'add_tag',
@@ -349,6 +362,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
         description: rule?.description ?? '',
         trigger_type: rule?.trigger_type ?? 'event',
         trigger_event: rule?.trigger_event ?? '',
+        trigger_tag_code: rule?.trigger_tag_code ?? '',
         cron_expression: rule?.cron_expression ?? '',
         conditions: (rule?.conditions ?? []).map((c) => ({
           field: c.field,
@@ -375,6 +389,8 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
         description: data.description || undefined,
         trigger_type: data.trigger_type,
         trigger_event: data.trigger_type === 'event' ? data.trigger_event || undefined : undefined,
+        trigger_tag_code:
+          data.trigger_type === 'tag_expired' ? data.trigger_tag_code || undefined : undefined,
         cron_expression:
           data.trigger_type === 'schedule' ? data.cron_expression || undefined : undefined,
         conditions: data.conditions.map((c) => ({
@@ -460,6 +476,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                         description: preset.description,
                         trigger_type: preset.trigger_type as RuleTriggerType,
                         trigger_event: preset.trigger_event ?? '',
+                        trigger_tag_code: preset.trigger_tag_code ?? '',
                         cron_expression: preset.cron_expression ?? '',
                         conditions: preset.conditions,
                         action_type: preset.action_type as RuleActionType,
@@ -614,6 +631,39 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                     )}
                   />
                   {cronValue && <CronPreview expression={cronValue} t={t} />}
+                </div>
+              )}
+
+              {/* Trigger Tag (if tag_expired) */}
+              {triggerType === 'tag_expired' && (
+                <div className="space-y-1.5">
+                  <Label required>{t('pages.tags.rules.triggerTag', 'Expired Tag')}</Label>
+                  <Controller
+                    name="trigger_tag_code"
+                    control={control}
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={t('pages.tags.rules.selectTag', 'Select tag')}
+                          />
+                        </SelectTrigger>
+                        <SelectContent
+                          searchable
+                          searchPlaceholder={t('pages.tags.searchTags', 'Search tags...')}
+                        >
+                          {tagCodeOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.trigger_tag_code?.message && (
+                    <p className="text-error-500 text-xs">{errors.trigger_tag_code.message}</p>
+                  )}
                 </div>
               )}
             </div>

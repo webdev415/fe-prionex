@@ -3158,6 +3158,7 @@
         "active": "Active",
         "priority": "Priority",
         "targetTag": "Target Tag",
+        "triggerTag": "Expired Tag",
         "replaceTag": "Replace With Tag",
         "selectTag": "Select tag",
         "empty": "No rules found. Create a rule to automate tag assignments.",
@@ -3278,6 +3279,7 @@
           "nameRequired": "Name is required",
           "nameMax": "Max 100 characters",
           "targetRequired": "Target tag is required",
+          "triggerTagRequired": "Trigger tag is required for tag expiry triggers",
           "eventRequired": "Event name is required for event triggers",
           "cronRequired": "Cron expression is required for schedule triggers"
         },

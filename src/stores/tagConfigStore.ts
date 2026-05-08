@@ -41,6 +41,7 @@ export interface RulePreset {
   description: string
   trigger_type: string
   trigger_event?: string
+  trigger_tag_code?: string
   cron_expression?: string
   conditions: Array<{ field: string; op: string; value: string }>
   action_type: string
