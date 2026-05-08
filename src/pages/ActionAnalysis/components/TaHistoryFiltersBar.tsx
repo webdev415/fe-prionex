@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { CallMonitoringPeriod } from '@/features/actionAnalysis'
 import type { OperatorUser } from '@/features/users/api/usersApi'
 import type { TAChain } from '@/features/taChains/api/types'
+import type { TargetAction } from '@/features/targetActions/api/types'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { Input } from '@/components/ui/Input'
@@ -25,6 +26,7 @@ interface Props {
   value: TaHistoryBarState
   operators: OperatorUser[]
   chains: TAChain[]
+  tasById: Map<number, TargetAction>
   onApply: (next: TaHistoryBarState) => void
   onClear: () => void
   userTimezone?: string | null
@@ -59,6 +61,7 @@ export function TaHistoryFiltersBar({
   value,
   operators,
   chains,
+  tasById,
   onApply,
   onClear,
   userTimezone,
@@ -91,10 +94,22 @@ export function TaHistoryFiltersBar({
     () => (draft.chainId ? (chains.find((c) => c.id === draft.chainId) ?? null) : null),
     [chains, draft.chainId]
   )
-  const chainSteps = pickedChain?.steps ?? []
+  const chainSteps = useMemo(() => pickedChain?.steps ?? [], [pickedChain])
+  const pickedStep = useMemo(
+    () =>
+      draft.targetActionId != null
+        ? (chainSteps.find((s) => s.target_action_id === draft.targetActionId) ?? null)
+        : null,
+    [chainSteps, draft.targetActionId]
+  )
+  const pickedTa: TargetAction | null = useMemo(
+    () => (pickedStep ? (tasById.get(pickedStep.target_action_id) ?? null) : null),
+    [pickedStep, tasById]
+  )
+  const fieldType = pickedTa?.field_type ?? null
 
-  const parsedPromiseFrom = parseYmd(draft.promiseDateFrom)
-  const parsedPromiseTo = parseYmd(draft.promiseDateTo)
+  const parsedStepDateMin = parseYmd(draft.stepValueMin)
+  const parsedStepDateMax = parseYmd(draft.stepValueMax)
 
   const handleApply = () => onApply(draft)
   const handleClearAll = () => {
@@ -164,10 +179,16 @@ export function TaHistoryFiltersBar({
             <Select
               value={draft.chainId != null ? String(draft.chainId) : 'all'}
               onValueChange={(v) => {
+                const next = {
+                  targetActionId: undefined,
+                  stepValueEq: undefined,
+                  stepValueMin: undefined,
+                  stepValueMax: undefined,
+                }
                 if (v === 'all') {
-                  update({ chainId: undefined, targetActionId: undefined })
+                  update({ chainId: undefined, ...next })
                 } else {
-                  update({ chainId: Number(v), targetActionId: undefined })
+                  update({ chainId: Number(v), ...next })
                 }
               }}
             >
@@ -200,7 +221,12 @@ export function TaHistoryFiltersBar({
                   : 'all'
               }
               onValueChange={(v) => {
-                update({ targetActionId: v === 'all' ? undefined : Number(v) })
+                update({
+                  targetActionId: v === 'all' ? undefined : Number(v),
+                  stepValueEq: undefined,
+                  stepValueMin: undefined,
+                  stepValueMax: undefined,
+                })
               }}
               disabled={draft.chainId == null}
             >
@@ -227,33 +253,122 @@ export function TaHistoryFiltersBar({
             </Select>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
-              {t('pages.actionAnalysis.filters.promiseDateFrom', 'Promise date from')}
-            </span>
-            <DateSelect
-              value={parsedPromiseFrom}
-              onChange={({ value }) => update({ promiseDateFrom: formatYmd(value) ?? undefined })}
-              placeholder={t('pages.actionAnalysis.filters.selectStartDate', 'Select start date')}
-              max={parsedPromiseTo ?? undefined}
-              format="yyyy-MM-dd"
-              className="[&_input]:h-[45px]"
-            />
-          </div>
+          {fieldType === 'date' && (
+            <>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                  {t('pages.actionAnalysis.filters.stepValueFrom', 'Step value from')}
+                </span>
+                <DateSelect
+                  value={parsedStepDateMin}
+                  onChange={({ value }) => update({ stepValueMin: formatYmd(value) ?? undefined })}
+                  placeholder={t(
+                    'pages.actionAnalysis.filters.selectStartDate',
+                    'Select start date'
+                  )}
+                  max={parsedStepDateMax ?? undefined}
+                  format="yyyy-MM-dd"
+                  className="[&_input]:h-[45px]"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                  {t('pages.actionAnalysis.filters.stepValueTo', 'Step value to')}
+                </span>
+                <DateSelect
+                  value={parsedStepDateMax}
+                  onChange={({ value }) => update({ stepValueMax: formatYmd(value) ?? undefined })}
+                  placeholder={t('pages.actionAnalysis.filters.selectEndDate', 'Select end date')}
+                  min={parsedStepDateMin ?? undefined}
+                  format="yyyy-MM-dd"
+                  className="[&_input]:h-[45px]"
+                />
+              </div>
+            </>
+          )}
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
-              {t('pages.actionAnalysis.filters.promiseDateTo', 'Promise date to')}
-            </span>
-            <DateSelect
-              value={parsedPromiseTo}
-              onChange={({ value }) => update({ promiseDateTo: formatYmd(value) ?? undefined })}
-              placeholder={t('pages.actionAnalysis.filters.selectEndDate', 'Select end date')}
-              min={parsedPromiseFrom ?? undefined}
-              format="yyyy-MM-dd"
-              className="[&_input]:h-[45px]"
-            />
-          </div>
+          {fieldType === 'amount' && (
+            <>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                  {t('pages.actionAnalysis.filters.stepValueMin', 'Step value min')}
+                </span>
+                <Input
+                  type="number"
+                  className="h-[45px]"
+                  placeholder="0.00"
+                  value={draft.stepValueMin ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    update({ stepValueMin: v === '' ? undefined : v })
+                  }}
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                  {t('pages.actionAnalysis.filters.stepValueMax', 'Step value max')}
+                </span>
+                <Input
+                  type="number"
+                  className="h-[45px]"
+                  placeholder="0.00"
+                  value={draft.stepValueMax ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    update({ stepValueMax: v === '' ? undefined : v })
+                  }}
+                />
+              </div>
+            </>
+          )}
+
+          {fieldType === 'dropdown' && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                {t('pages.actionAnalysis.filters.stepValue', 'Step value')}
+              </span>
+              <Select
+                value={draft.stepValueEq ?? 'all'}
+                onValueChange={(v) => update({ stepValueEq: v === 'all' ? undefined : v })}
+              >
+                <SelectTrigger className="h-[45px] w-full">
+                  <SelectValue
+                    placeholder={t('pages.actionAnalysis.filters.allStepValues', 'All values')}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    {t('pages.actionAnalysis.filters.allStepValues', 'All values')}
+                  </SelectItem>
+                  {(pickedTa?.dropdown_values ?? [])
+                    .filter((dv) => !dv.is_hidden)
+                    .map((dv) => (
+                      <SelectItem key={dv.id} value={dv.value}>
+                        {dv.value}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {(fieldType === 'text' || fieldType === 'credit' || fieldType === 'contact') && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                {t('pages.actionAnalysis.filters.stepValue', 'Step value')}
+              </span>
+              <Input
+                type="text"
+                className="h-[45px]"
+                placeholder={t('pages.actionAnalysis.filters.stepValuePlaceholder', 'Search…')}
+                value={draft.stepValueEq ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value
+                  update({ stepValueEq: v === '' ? undefined : v })
+                }}
+              />
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">

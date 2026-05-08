@@ -15,13 +15,6 @@ interface Props {
   userTimezone?: string | null
 }
 
-function formatAmount(value: string | null): string {
-  if (!value) return '—'
-  const n = Number(value)
-  if (Number.isNaN(n)) return value
-  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
 interface ResultEntry {
   value: string
   followUps: string[]
@@ -169,23 +162,6 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
           </span>
         )
       },
-    },
-    {
-      key: 'internalDate',
-      header: t('pages.actionAnalysis.columns.internalDate', 'Date (promise / callback)'),
-      render: (r) => (
-        <span className="text-sm text-gray-700">
-          {r.promise_date ? formatDate(r.promise_date) : '—'}
-        </span>
-      ),
-    },
-    {
-      key: 'promiseAmount',
-      header: t('pages.actionAnalysis.columns.promiseAmount', 'Promise amount'),
-      align: 'right',
-      render: (r) => (
-        <span className="text-sm text-gray-700">{formatAmount(r.promise_amount)}</span>
-      ),
     },
     {
       key: 'responsibleAtCreation',

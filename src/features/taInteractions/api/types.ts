@@ -44,8 +44,9 @@ export interface TAInteractionListParams {
   recorded_by_in?: number[]
   assigned_operator_id?: number
   target_action_id?: number
-  promise_date_from?: string
-  promise_date_to?: string
+  step_value_eq?: string
+  step_value_min?: string
+  step_value_max?: string
 }
 
 export interface TAInteractionUpdate {
