@@ -11,6 +11,8 @@ import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { useDocumentTemplates, type DocumentTemplate } from '@/features/documents'
+import { useHasPermission } from '@/hooks'
+import { PERMISSIONS } from '@/constants/permissions'
 import { DocumentTemplateEditor } from './DocumentTemplateEditor'
 import { DeleteDocumentTemplateModal } from './DeleteDocumentTemplateModal'
 
@@ -27,6 +29,8 @@ function htmlToPreview(html: string, max = PREVIEW_LENGTH): string {
 
 export function DocumentTemplatesTab() {
   const { t, i18n } = useTranslation('common')
+  const canCreateEdit = useHasPermission(PERMISSIONS.DOCUMENT_GENERATION.CREATE_EDIT_TEMPLATES)
+  const canDelete = useHasPermission(PERMISSIONS.DOCUMENT_GENERATION.DELETE_TEMPLATES)
   const { data, isLoading, isError } = useDocumentTemplates(false)
 
   const [editorOpen, setEditorOpen] = useState(false)
@@ -86,30 +90,34 @@ export function DocumentTemplatesTab() {
         align: 'right',
         render: (row) => (
           <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              title={t('actions.edit', 'Edit')}
-              onClick={() => {
-                setEditingTemplate(row)
-                setEditorOpen(true)
-              }}
-              className="text-dark-500 hover:bg-primary-50 inline-flex h-8 w-8 items-center justify-center rounded-md"
-            >
-              <Icons.PencilEdit size={16} strokeWidth={1.5} />
-            </button>
-            <button
-              type="button"
-              title={t('actions.delete', 'Delete')}
-              onClick={() => setDeleting(row)}
-              className="text-error-600 hover:bg-error-50 inline-flex h-8 w-8 items-center justify-center rounded-md"
-            >
-              <Icons.Delete size={16} strokeWidth={1.5} />
-            </button>
+            {canCreateEdit && (
+              <button
+                type="button"
+                title={t('actions.edit', 'Edit')}
+                onClick={() => {
+                  setEditingTemplate(row)
+                  setEditorOpen(true)
+                }}
+                className="text-dark-500 hover:bg-primary-50 inline-flex h-8 w-8 items-center justify-center rounded-md"
+              >
+                <Icons.PencilEdit size={16} strokeWidth={1.5} />
+              </button>
+            )}
+            {canDelete && (
+              <button
+                type="button"
+                title={t('actions.delete', 'Delete')}
+                onClick={() => setDeleting(row)}
+                className="text-error-600 hover:bg-error-50 inline-flex h-8 w-8 items-center justify-center rounded-md"
+              >
+                <Icons.Delete size={16} strokeWidth={1.5} />
+              </button>
+            )}
           </div>
         ),
       },
     ],
-    [t, dateFormatter]
+    [t, dateFormatter, canCreateEdit, canDelete]
   )
 
   return (
@@ -121,15 +129,17 @@ export function DocumentTemplatesTab() {
             'Reusable document bodies with variable placeholders.'
           )}
         </p>
-        <Button
-          onClick={() => {
-            setEditingTemplate(null)
-            setEditorOpen(true)
-          }}
-        >
-          <Icons.Add size={16} strokeWidth={2} className="mr-1" />
-          {t('pages.documentGeneration.templates.create', 'Create template')}
-        </Button>
+        {canCreateEdit && (
+          <Button
+            onClick={() => {
+              setEditingTemplate(null)
+              setEditorOpen(true)
+            }}
+          >
+            <Icons.Add size={16} strokeWidth={2} className="mr-1" />
+            {t('pages.documentGeneration.templates.create', 'Create template')}
+          </Button>
+        )}
       </div>
 
       {isError ? (

@@ -5,7 +5,7 @@
  * These permissions control access to features, routes, and UI elements.
  *
  * Backend Source: /home/pst/dev/prionex/api-prionex/services/auth/alembic/versions/20251122_0002_002_seed_initial_data.py
- * Total Permissions: 38 (34 pre-existing + 3 interaction/task + 1 close_client_debt)
+ * Total Permissions: 43
  */
 
 export const PERMISSIONS = {
@@ -172,6 +172,19 @@ export const PERMISSIONS = {
     VIEW_SCRIPT_ANALYTICS: 'view_script_analytics',
     VIEW_TA_HISTORY: 'view_ta_history',
   },
+
+  /**
+   * Document Generation Category (5 permissions)
+   * Each permission is atomic — any role holding it gains the
+   * corresponding ability, regardless of the other four.
+   */
+  DOCUMENT_GENERATION: {
+    VIEW_JOURNAL: 'view_document_journal',
+    VIEW_TEMPLATES: 'view_document_templates',
+    CREATE_EDIT_TEMPLATES: 'create_edit_document_templates',
+    DELETE_TEMPLATES: 'delete_document_templates',
+    GENERATE: 'generate_document',
+  },
 } as const
 
 /**
@@ -222,6 +235,7 @@ export const PERMISSION_CATEGORIES = {
   SCORING_CONFIG: 'Scoring Configuration',
   TA_CHAINS: 'TA Chains',
   ACTION_ANALYSIS: 'Action Analysis',
+  DOCUMENT_GENERATION: 'Document Generation',
 } as const
 
 /**
@@ -303,4 +317,11 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   view_script_analytics:
     'View Script Analytics & anomaly detection (interaction-result distribution and auto-flags)',
   view_ta_history: 'View TA History sub-tab (chain interactions with chain + step filters)',
+
+  // Document Generation
+  view_document_journal: 'View the journal of all generated and uploaded documents',
+  view_document_templates: 'View the list of document templates',
+  create_edit_document_templates: 'Create and edit document templates',
+  delete_document_templates: 'Delete document templates',
+  generate_document: 'Generate a document on the client card',
 }
