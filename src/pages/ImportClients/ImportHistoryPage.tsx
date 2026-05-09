@@ -138,6 +138,10 @@ function ImportTypeBadge({
       label: t('pages.imports.history.importTypes.operatorAssignment', 'Operator Assignment'),
       className: 'bg-primary-700 text-white',
     },
+    payment_import: {
+      label: t('pages.imports.history.importTypes.paymentImport', 'Payment Import'),
+      className: 'bg-blue-600 text-white',
+    },
   }
 
   if (importType === 'tag_assignment') {
@@ -528,14 +532,22 @@ export function ImportHistoryPage() {
   ])
 
   const handleGoToImportClients = useCallback(() => {
-    // When the page was opened with the tag_assignment filter active (i.e.
-    // arrived from the Bulk Tag Assignment page), Back should return there
-    // rather than the global Import landing page.
-    if (importTypeFilter === 'tag_assignment') {
-      navigate('/dashboard/operations/bulk-tag-assignment')
-      return
+    // Route Back based on the import_type the page was opened with so the
+    // user returns to the originating bulk-import page rather than the
+    // global Import Clients landing page.
+    switch (importTypeFilter) {
+      case 'tag_assignment':
+        navigate('/dashboard/import/bulk-tag-assignment')
+        return
+      case 'operator_assignment':
+        navigate('/dashboard/import/bulk-operator-assignment')
+        return
+      case 'payment_import':
+        navigate('/dashboard/import/bulk-payment-import')
+        return
+      default:
+        navigate('/dashboard/import/clients')
     }
-    navigate('/dashboard/import')
   }, [navigate, importTypeFilter])
 
   // Check if any filters are active

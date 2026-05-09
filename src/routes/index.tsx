@@ -185,6 +185,10 @@ export const router = createBrowserRouter([
       },
       {
         path: 'import',
+        element: <Navigate to="/dashboard/import/clients" replace />,
+      },
+      {
+        path: 'import/clients',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT}>
             {withSuspense(<ImportClientsPage />)}
@@ -320,7 +324,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'operations/bulk-operator-assignment',
+        path: 'import/bulk-operator-assignment',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.EDIT}>
             <Suspense fallback={<BulkOperatorAssignmentPageSkeleton />}>
@@ -330,7 +334,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'operations/bulk-tag-assignment',
+        path: 'import/bulk-tag-assignment',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
             <Suspense fallback={<BulkTagAssignmentPageSkeleton />}>
@@ -340,7 +344,7 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'operations/bulk-payment-import',
+        path: 'import/bulk-payment-import',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT_PAYMENTS}>
             <Suspense fallback={<BulkPaymentVerificationPageSkeleton />}>

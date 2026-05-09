@@ -10,6 +10,7 @@ import type { PaymentImportPreviewResponse } from '@/features/imports/types/paym
 import { PaymentImportUpload } from './components/PaymentImportUpload'
 import { PaymentImportPreview } from './components/PaymentImportPreview'
 import { PaymentImportProgress } from './components/PaymentImportProgress'
+import { BulkJobBanner } from './components/BulkJobBanner'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { toast } from 'sonner'
@@ -120,6 +121,16 @@ export function BulkPaymentVerificationPage() {
           <PaymentImportProgress jobId={activeJobId} onComplete={handleComplete} />
         )}
       </div>
+
+      <BulkJobBanner
+        importType="payment_import"
+        label={t(
+          'pages.imports.bulkPaymentVerification.bannerInProgress',
+          'Payment import in progress'
+        )}
+        onViewHistory={handleViewHistory}
+        hidden={state === 'processing'}
+      />
     </div>
   )
 }

@@ -626,25 +626,25 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         label: t('navigation.import', 'Import'),
         subItems: [
           {
-            path: '/dashboard/import',
+            path: '/dashboard/import/clients',
             label: t('navigation.importClients'),
             icon: 'file-import',
             requiredPermission: PERMISSIONS.DATA.IMPORT,
           },
           {
-            path: '/dashboard/operations/bulk-operator-assignment',
+            path: '/dashboard/import/bulk-operator-assignment',
             label: t('navigation.bulkOperatorAssignment', 'Bulk Operator Assignment'),
             icon: 'user-multiple-02',
             requiredPermission: PERMISSIONS.CLIENTS.EDIT,
           },
           {
-            path: '/dashboard/operations/bulk-tag-assignment',
+            path: '/dashboard/import/bulk-tag-assignment',
             label: t('navigation.bulkTagAssignment', 'Bulk Tag Assignment'),
             icon: 'tag-01',
             requiredPermission: PERMISSIONS.CLIENTS.ASSIGN_TAGS,
           },
           {
-            path: '/dashboard/operations/bulk-payment-import',
+            path: '/dashboard/import/bulk-payment-import',
             label: t('navigation.bulkPaymentVerification'),
             icon: 'transaction-history',
             requiredPermission: PERMISSIONS.DATA.IMPORT_PAYMENTS,
