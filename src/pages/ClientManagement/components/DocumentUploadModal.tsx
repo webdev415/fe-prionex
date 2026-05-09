@@ -22,6 +22,8 @@ import { documentApi } from '@/features/clients/api/documentApi'
 import { clientKeys } from '@/features/clients/hooks/useClients'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { PermissionGuard } from '@/components/auth/PermissionGuard'
+import { PERMISSIONS } from '@/constants/permissions'
 
 interface Loan {
   id: number
@@ -100,15 +102,17 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
       <ModalHeader title={t('pages.clients.detail.documentUploadTitle')} />
 
       <div className="flex flex-col gap-4 p-4 md:p-6">
-        <Button
-          variant="outline"
-          type="button"
-          className="w-full"
-          leftIcon={<Icons.AddInvoice size={16} />}
-          onClick={() => toast.info(t('pages.clients.detail.comingSoon'))}
-        >
-          {t('pages.clients.detail.generateDocument')}
-        </Button>
+        <PermissionGuard permission={PERMISSIONS.DOCUMENT_GENERATION.GENERATE}>
+          <Button
+            variant="outline"
+            type="button"
+            className="w-full"
+            leftIcon={<Icons.AddInvoice size={16} />}
+            onClick={() => toast.info(t('pages.clients.detail.comingSoon'))}
+          >
+            {t('pages.clients.detail.generateDocument')}
+          </Button>
+        </PermissionGuard>
 
         {/* File drop zone */}
         <div

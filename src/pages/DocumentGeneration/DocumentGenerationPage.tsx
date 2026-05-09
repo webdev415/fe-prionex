@@ -32,6 +32,8 @@ import {
 } from '@/features/documents'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
+import { useHasPermission, useHasAnyPermission } from '@/hooks'
+import { PERMISSIONS } from '@/constants/permissions'
 import { DocumentTemplatesTab } from './components'
 
 const DOCUMENT_TYPES: DocumentType[] = [
@@ -100,7 +102,13 @@ function ymdToDate(s?: string): Date | null {
 
 export function DocumentGenerationPage() {
   const { t, i18n } = useTranslation('common')
-  const [tab, setTab] = useState<Tab>('journal')
+  const canViewJournal = useHasPermission(PERMISSIONS.DOCUMENT_GENERATION.VIEW_JOURNAL)
+  const canViewTemplates = useHasAnyPermission([
+    PERMISSIONS.DOCUMENT_GENERATION.VIEW_TEMPLATES,
+    PERMISSIONS.DOCUMENT_GENERATION.CREATE_EDIT_TEMPLATES,
+    PERMISSIONS.DOCUMENT_GENERATION.DELETE_TEMPLATES,
+  ])
+  const [tab, setTab] = useState<Tab>(canViewJournal ? 'journal' : 'templates')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [filters, setFilters] = useState<Filters>({})
@@ -244,33 +252,37 @@ export function DocumentGenerationPage() {
       </h1>
 
       <div className="flex gap-2 border-b border-gray-200">
-        <button
-          type="button"
-          onClick={() => setTab('journal')}
-          className={cn(
-            '-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors',
-            tab === 'journal'
-              ? 'border-primary-600 text-primary-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          )}
-        >
-          {t('pages.documentGeneration.tabs.journal', 'Document Journal')}
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('templates')}
-          className={cn(
-            '-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors',
-            tab === 'templates'
-              ? 'border-primary-600 text-primary-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
-          )}
-        >
-          {t('pages.documentGeneration.tabs.templates', 'Document Templates')}
-        </button>
+        {canViewJournal && (
+          <button
+            type="button"
+            onClick={() => setTab('journal')}
+            className={cn(
+              '-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors',
+              tab === 'journal'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            )}
+          >
+            {t('pages.documentGeneration.tabs.journal', 'Document Journal')}
+          </button>
+        )}
+        {canViewTemplates && (
+          <button
+            type="button"
+            onClick={() => setTab('templates')}
+            className={cn(
+              '-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors',
+              tab === 'templates'
+                ? 'border-primary-600 text-primary-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            )}
+          >
+            {t('pages.documentGeneration.tabs.templates', 'Document Templates')}
+          </button>
+        )}
       </div>
 
-      {tab === 'journal' ? (
+      {tab === 'journal' && canViewJournal ? (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex flex-col gap-1">
@@ -429,9 +441,9 @@ export function DocumentGenerationPage() {
             />
           )}
         </div>
-      ) : (
+      ) : tab === 'templates' && canViewTemplates ? (
         <DocumentTemplatesTab />
-      )}
+      ) : null}
     </div>
   )
 }

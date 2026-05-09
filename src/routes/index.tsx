@@ -306,7 +306,15 @@ export const router = createBrowserRouter([
       {
         path: 'system-settings/document-generation',
         element: (
-          <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.DOCUMENT_GENERATION.VIEW_JOURNAL,
+              PERMISSIONS.DOCUMENT_GENERATION.VIEW_TEMPLATES,
+              PERMISSIONS.DOCUMENT_GENERATION.CREATE_EDIT_TEMPLATES,
+              PERMISSIONS.DOCUMENT_GENERATION.DELETE_TEMPLATES,
+            ]}
+            mode="any"
+          >
             {withSuspense(<DocumentGenerationPage />)}
           </PermissionRoute>
         ),
