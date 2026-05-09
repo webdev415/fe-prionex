@@ -138,6 +138,10 @@ function ImportTypeBadge({
       label: t('pages.imports.history.importTypes.operatorAssignment', 'Operator Assignment'),
       className: 'bg-primary-700 text-white',
     },
+    payment_import: {
+      label: t('pages.imports.history.importTypes.paymentImport', 'Payment Import'),
+      className: 'bg-blue-600 text-white',
+    },
   }
 
   if (importType === 'tag_assignment') {

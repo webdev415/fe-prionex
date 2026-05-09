@@ -298,13 +298,16 @@ export function ImportClientsPage() {
     return true
   }
 
+  // Pass an explicit empty `import_type` so the History page sees a non-empty
+  // URL on arrival. Without it, useAutoPersistedState restores whichever
+  // import_type was last saved (e.g. payment_import from a prior visit via
+  // the Bulk Payment page) and injects it back into the URL.
   const handleViewHistory = () => {
-    navigate('/dashboard/import/history')
+    navigate('/dashboard/import/history?import_type=')
   }
 
   const handleGoToImportHistory = () => {
-    // Navigate to Import History page
-    navigate('/dashboard/import/history')
+    navigate('/dashboard/import/history?import_type=')
   }
 
   const handleViewDetails = () => {
