@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { operatorAssignmentApi } from '../api/operatorAssignmentApi'
+import { importsApi } from '../api/importsApi'
 import { importJobsKeys } from './useImportJobs'
 import { getErrorMessage } from '@/lib/errors'
 import type { OAExecuteRequest } from '../types/operatorAssignment'
@@ -37,8 +38,19 @@ export function useOperatorAssignmentExecute() {
       toast.success(t('pages.imports.operatorAssignment.progress.jobStarted'))
       queryClient.invalidateQueries({ queryKey: importJobsKeys.lists() })
     },
-    onError: (error) => {
+    onError: async (error, { jobId }) => {
       toast.error(getErrorMessage(error))
+      // Cancel the orphaned pending job so the BulkJobBanner doesn't surface
+      // it as "Queued" indefinitely. Upload created the job server-side; if
+      // execute rejects (e.g. invalid operator_id), nothing else transitions
+      // its status, so we cancel explicitly.
+      try {
+        await importsApi.cancelImportJob(jobId)
+      } catch (cancelError) {
+        console.error('Failed to cancel orphaned operator assignment job:', cancelError)
+      }
+      queryClient.invalidateQueries({ queryKey: importJobsKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: importJobsKeys.detail(jobId) })
     },
   })
 }

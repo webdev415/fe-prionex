@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { tagAssignmentApi } from '../api/tagAssignmentApi'
+import { importsApi } from '../api/importsApi'
 import { importJobsKeys } from './useImportJobs'
 import { getErrorMessage } from '@/lib/errors'
 import type { TagAssignmentMode, TagExecuteRequest } from '../types/tagAssignment'
@@ -38,8 +39,17 @@ export function useTagAssignmentExecute() {
       toast.success(t('pages.imports.tagAssignment.progress.jobStarted', 'Tag operation started'))
       queryClient.invalidateQueries({ queryKey: importJobsKeys.lists() })
     },
-    onError: (error) => {
+    onError: async (error, { jobId }) => {
       toast.error(getErrorMessage(error))
+      // Cancel the orphaned pending job so the BulkJobBanner doesn't surface
+      // it as "Queued" indefinitely after a failed execute.
+      try {
+        await importsApi.cancelImportJob(jobId)
+      } catch (cancelError) {
+        console.error('Failed to cancel orphaned tag assignment job:', cancelError)
+      }
+      queryClient.invalidateQueries({ queryKey: importJobsKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: importJobsKeys.detail(jobId) })
     },
   })
 }

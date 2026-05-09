@@ -32,18 +32,26 @@ export function ImportClientsPage() {
   const previousStatusRef = useRef<string | null>(null)
   const lastShownJobIdRef = useRef<number | string | null>(null)
 
+  // Scope to the current user so this page's banner doesn't surface another
+  // user's running import in the same accessible project.
+  const currentUserId = user?.id ? Number(user.id) : undefined
+
   // Fetch latest pending or in-progress import job (check both currentJobId and latest pending/in-progress)
   // Filter to client import types only — exclude payment_import jobs
   const { data: importJobsData, refetch: refetchImportJobs } = useImportJobs({
     page: 1,
     page_size: 10, // Get more jobs to filter client-side
+    user_id: currentUserId,
   })
 
-  // Get the latest pending or in-progress job, excluding payment_import jobs
+  // Get the latest pending or in-progress job for the simple/vendor flows
+  // this page handles. Bulk operator/tag/payment imports surface their own
+  // banner on their dedicated pages, so excluding them here prevents one
+  // queued job from appearing on multiple pages at once.
   const latestInProgressJob = importJobsData?.items?.find(
     (job) =>
       (job.status === 'pending' || job.status === 'in_progress') &&
-      job.import_type !== 'payment_import'
+      (job.import_type === 'simple' || job.import_type === 'vendor')
   )
 
   // Use currentJobId if set, otherwise use latest in-progress job ID
@@ -192,6 +200,7 @@ export function ImportClientsPage() {
   const { data: latestJobData } = useImportJobs({
     page: 1,
     page_size: 1,
+    user_id: currentUserId,
   })
   const latestJob = latestJobData?.items?.find(
     (job) => job.status !== 'in_progress' && job.status !== 'pending'
