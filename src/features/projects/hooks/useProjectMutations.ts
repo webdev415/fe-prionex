@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { projectsApi } from '../api/projectsApi'
 import { projectsKeys } from './useProjects'
 import { getErrorMessage } from '@/lib/errors'
+import { useAuthStore } from '@/stores/authStore'
 import type { CreateProjectInput, UpdateProjectInput, ExportParams } from '../types'
 
 /**
@@ -20,9 +21,12 @@ export function useCreateProject() {
 
   return useMutation({
     mutationFn: (data: CreateProjectInput) => projectsApi.createProject(data),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Project created successfully')
       queryClient.invalidateQueries({ queryKey: projectsKeys.lists() })
+      // Profile Settings project selector is sourced from authStore.user.projects.
+      // Refresh user profile so newly-created own projects appear immediately.
+      await useAuthStore.getState().refreshUser()
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))

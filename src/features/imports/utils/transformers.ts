@@ -8,11 +8,17 @@ import type {
   ImportJob,
   ImportJobDetail,
   ImportJobStatus,
+  ImportType,
   ImportError,
   // ImportJobsListResponse,
   // ImportErrorsResponse,
   UploadImportResponse,
   CancelImportResponse,
+  TagAssignmentMode,
+  VendorDownstreamSummary,
+  VendorFileLogical,
+  VendorFilePhase,
+  VendorPhaseStatus,
 } from '../types'
 
 /**
@@ -142,23 +148,149 @@ function extractMetadata(importOptions: Record<string, unknown> | null): {
  */
 export function transformImportJob(backend: BackendImportJobResponse): ImportJob {
   const metadata = extractMetadata(backend.import_options)
+  const importType =
+    (backend.import_type as ImportType) || (metadata.import_type as ImportType) || 'simple'
+  const tagMode =
+    importType === 'tag_assignment'
+      ? (backend.import_options?.mode as TagAssignmentMode | undefined)
+      : undefined
 
+  const status = mapStatus(backend.status)
   return {
     id: backend.id,
     file_name: backend.filename,
+    user_id: backend.user_id,
     uploaded_by: backend.username || 'Unknown',
     uploaded_at: backend.created_at,
-    status: mapStatus(backend.status),
+    status,
     errors_count: backend.failed_records,
-    import_type:
-      (backend.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
-      (metadata.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
-      'simple',
+    import_type: importType,
+    tag_mode: tagMode,
     seller_creditor: metadata.seller_creditor,
     project_code: metadata.project_code,
     purchase_date: metadata.purchase_date,
     comment: metadata.comment,
+    // Surface vendor_phases on list-page rows too so the status badge
+    // can detect silent-drop failures without an extra detail fetch.
+    // The list endpoint already returns import_options; only the FE
+    // transform was discarding it.
+    vendor_phases:
+      importType === 'vendor' ? buildVendorPhases(backend.import_options, status) : undefined,
   }
+}
+
+/**
+ * Vendor file order matches the receiver's dispatch order (users → credits
+ * → payments → write_offs). Display labels and target-DB labels are kept
+ * close to the dispatch route so the UI surfaces what the worker actually does.
+ *
+ * Order matters: the previous version had write_offs before payments, which
+ * disagreed with the backend's INGESTION_ORDER and made phase-progress logic
+ * (current_file vs files_completed) inconsistent across pages. Fixed to
+ * match backend so any aggregate built from this array is reliable.
+ */
+const VENDOR_PHASE_DISPLAY: Array<{
+  logical_name: VendorFileLogical
+  display_name: string
+  target_db: string
+}> = [
+  { logical_name: 'users', display_name: 'Users', target_db: 'client-DB clients' },
+  { logical_name: 'credits', display_name: 'Credits', target_db: 'client-DB debts' },
+  { logical_name: 'payments', display_name: 'Payments', target_db: 'payment-DB payments' },
+  {
+    logical_name: 'write_offs',
+    display_name: 'Write-offs',
+    target_db: 'client-DB debt_writeoffs',
+  },
+]
+
+function basenameFromPath(path: string): string {
+  if (!path) return ''
+  const parts = path.split('/')
+  return parts[parts.length - 1] || path
+}
+
+// Shape of one entry in import_options.vendor.phase_results[] (backend
+// VendorImportService._phase_results_payload). All fields optional from
+// the FE's perspective — pre-rollout jobs omit the array entirely.
+interface BackendPhaseResult {
+  logical_name?: string
+  physical_filename?: string
+  total_rows?: number
+  accepted_rows?: number
+  failed_rows?: number
+  skipped_rows?: number
+  downstream_summary?: VendorDownstreamSummary | null
+}
+
+/**
+ * Build the per-file phase rows from import_options.vendor.* + the job's
+ * top-level status. Mirrors the worker's dispatch order so a 4-row table
+ * tells the user where the import got stuck (or how far it got).
+ *
+ * When ``phase_results`` is present on import_options.vendor (post-PR1
+ * backend), each phase row is enriched with the per-phase counters and
+ * raw downstream-service summary so status helpers can downgrade
+ * "completed" → "completed_with_errors" on silent-drop signals like
+ * ``skipped_unresolved_debt`` or payment ``failed``. Pre-PR1 jobs fall
+ * back to the original files_completed/current_file logic and produce
+ * phases without the extra counters — the helper handles both.
+ */
+function buildVendorPhases(
+  importOptions: Record<string, unknown> | null,
+  jobStatus: ImportJobStatus
+): VendorFilePhase[] | undefined {
+  const vendor = importOptions?.vendor as Record<string, unknown> | undefined
+  if (!vendor) return undefined
+
+  const bundle = (vendor.bundle as Record<string, string> | undefined) ?? {}
+  const filesCompleted = new Set(
+    Array.isArray(vendor.files_completed) ? (vendor.files_completed as string[]) : []
+  )
+  const currentFile = vendor.current_file as string | undefined
+  const currentDone = vendor.current_file_records_done as number | undefined
+  const currentTotal = vendor.current_file_total_records as number | undefined
+
+  const phaseResults = Array.isArray(vendor.phase_results)
+    ? (vendor.phase_results as BackendPhaseResult[])
+    : []
+  const phaseByLogical = new Map<string, BackendPhaseResult>(
+    phaseResults
+      .filter((p) => typeof p.logical_name === 'string')
+      .map((p) => [p.logical_name as string, p])
+  )
+
+  return VENDOR_PHASE_DISPLAY.map(({ logical_name, display_name, target_db }) => {
+    const path = bundle[logical_name] || ''
+    let status: VendorPhaseStatus
+    if (filesCompleted.has(logical_name)) {
+      status = 'completed'
+    } else if (currentFile === logical_name) {
+      // Job ended while this file was the active one — that's where it failed
+      status = jobStatus === 'failed' ? 'failed' : 'in_progress'
+    } else if (jobStatus === 'completed') {
+      // Job completed without listing this file → effectively skipped/done
+      status = 'completed'
+    } else {
+      status = 'pending'
+    }
+
+    const result = phaseByLogical.get(logical_name)
+    return {
+      logical_name,
+      display_name,
+      filename: basenameFromPath(path) || result?.physical_filename || '',
+      target_db,
+      status,
+      processed: currentFile === logical_name ? currentDone : undefined,
+      total: currentFile === logical_name ? currentTotal : undefined,
+      total_rows: result?.total_rows,
+      accepted_rows: result?.accepted_rows,
+      failed_rows: result?.failed_rows,
+      skipped_rows: result?.skipped_rows,
+      downstream_summary: result?.downstream_summary ?? undefined,
+    }
+  })
 }
 
 /**
@@ -167,22 +299,43 @@ export function transformImportJob(backend: BackendImportJobResponse): ImportJob
 export function transformImportJobDetail(backend: BackendImportJobResponse): ImportJobDetail {
   const metadata = extractMetadata(backend.import_options)
   const status = mapStatus(backend.status)
+  const importType =
+    (backend.import_type as ImportType) || (metadata.import_type as ImportType) || 'simple'
+  const tagMode =
+    importType === 'tag_assignment'
+      ? (backend.import_options?.mode as TagAssignmentMode | undefined)
+      : undefined
 
   return {
     id: backend.id,
     file_name: backend.filename,
+    user_id: backend.user_id,
     uploaded_by: backend.username || 'Unknown',
     uploaded_at: backend.created_at,
     status,
     total_rows: backend.total_records,
-    new_clients: backend.successful_records, // Assuming successful = new
-    updated_clients: backend.updated_records,
+    // Tag-assignment imports don't create or update client records; the
+    // "successful" counter from the worker tracks applied (client, tag) pairs,
+    // which is what the user wants to see under "Updated Clients" on this
+    // page. New Clients is hidden in the page render for this import type.
+    new_clients: importType === 'tag_assignment' ? 0 : backend.successful_records,
+    updated_clients:
+      importType === 'tag_assignment' ? backend.successful_records : backend.updated_records,
+    // For tag_assignment, the worker stores the unique successful client count
+    // in updated_records (otherwise unused for this import type).
+    successful_clients: importType === 'tag_assignment' ? backend.updated_records : undefined,
+    // Tag imports stash the validation summary on import_options.summary; the
+    // unique_clients figure (distinct tax_ids in the file) is what we subtract
+    // successful_clients from to get the "Failed" client count.
+    unique_clients:
+      importType === 'tag_assignment'
+        ? ((backend.import_options?.summary as Record<string, unknown> | undefined)
+            ?.unique_clients as number | undefined)
+        : undefined,
     errors_count: backend.failed_records,
     processing_time: formatProcessingTime(backend.processing_duration),
-    import_type:
-      (backend.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
-      (metadata.import_type as 'simple' | 'vendor' | 'operator_assignment') ||
-      'simple',
+    import_type: importType,
+    tag_mode: tagMode,
     seller_creditor: metadata.seller_creditor,
     project_code: metadata.project_code,
     purchase_date: metadata.purchase_date,
@@ -194,6 +347,10 @@ export function transformImportJobDetail(backend: BackendImportJobResponse): Imp
         : undefined,
     processing_row: status === 'in_progress' ? backend.processed_records : undefined,
     error_summary: backend.error_summary ?? null,
+    vendor_phases:
+      importType === 'vendor' ? buildVendorPhases(backend.import_options, status) : undefined,
+    vendor_error:
+      importType === 'vendor' ? (backend.import_options?.error as string | undefined) : undefined,
   }
 }
 

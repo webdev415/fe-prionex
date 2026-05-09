@@ -125,6 +125,12 @@ export function useClientTags(clientId: number, options?: { includeHidden?: bool
     select: (tags) => filterTagsForRole(tags, roleName, includeHidden),
     enabled: !!clientId,
     staleTime: 0, // Always refetch on invalidation (auto-tagging is async)
+    // Cron-driven and cross-session tag changes (другой оператор / scheduled
+    // правило) не триггерят локальный invalidate — без polling они не появятся
+    // до F5. 30s — компромисс: операторы видят свежие теги без слишком частого
+    // дёргания client-service.
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
   })
 }
 

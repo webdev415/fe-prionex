@@ -1,23 +1,27 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
 import {
-  usePaymentImportUpload,
-  usePaymentImportExecute,
-} from '@/features/imports/hooks/usePaymentImport'
-import type { PaymentImportPreviewResponse } from '@/features/imports/types/paymentImport'
-import { PaymentImportUpload } from './components/PaymentImportUpload'
-import { PaymentImportPreview } from './components/PaymentImportPreview'
-import { PaymentImportProgress } from './components/PaymentImportProgress'
+  useTagAssignmentExecute,
+  useTagAssignmentUpload,
+} from '@/features/imports/hooks/useTagAssignment'
+import type { TagAssignmentMode, TagPreviewResponse } from '@/features/imports/types/tagAssignment'
+import { TagAssignmentUpload } from './components/TagAssignmentUpload'
+import { TagAssignmentPreview } from './components/TagAssignmentPreview'
+import { TagAssignmentProgress } from './components/TagAssignmentProgress'
+import { BulkJobBanner } from './components/BulkJobBanner'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { toast } from 'sonner'
 
 type PageState = 'upload' | 'preview' | 'processing'
 
-export function BulkPaymentImportPage() {
+export function BulkTagAssignmentPage() {
+  const { t } = useTranslation('common')
   const [state, setState] = useState<PageState>('upload')
-  const [preview, setPreview] = useState<PaymentImportPreviewResponse | null>(null)
+  const [mode, setMode] = useState<TagAssignmentMode>('assign')
+  const [preview, setPreview] = useState<TagPreviewResponse | null>(null)
   const [activeJobId, setActiveJobId] = useState<number | null>(null)
   const navigate = useNavigate()
 
@@ -25,17 +29,19 @@ export function BulkPaymentImportPage() {
     s.user?.active_project_id ? Number(s.user.active_project_id) : null
   )
 
-  const uploadMutation = usePaymentImportUpload()
-  const executeMutation = usePaymentImportExecute()
+  const uploadMutation = useTagAssignmentUpload()
+  const executeMutation = useTagAssignmentExecute()
 
   const handleFileSelected = (file: File) => {
     if (!activeProjectId) {
-      toast.error('Please select an active project before uploading.')
+      toast.error(
+        t('pages.imports.tagAssignment.noProjectToast', 'Select a project before uploading.')
+      )
       return
     }
 
     uploadMutation.mutate(
-      { file, projectId: activeProjectId },
+      { file, projectId: activeProjectId, mode },
       {
         onSuccess: (data) => {
           setPreview(data)
@@ -45,17 +51,10 @@ export function BulkPaymentImportPage() {
     )
   }
 
-  const handleConfirm = (options: { skipWarnings: boolean; comment: string }) => {
+  const handleConfirm = () => {
     if (!preview) return
-
     executeMutation.mutate(
-      {
-        jobId: preview.job_id,
-        request: {
-          skip_warnings: options.skipWarnings,
-          comment: options.comment || undefined,
-        },
-      },
+      { jobId: preview.job_id, request: {} },
       {
         onSuccess: () => {
           setActiveJobId(preview.job_id)
@@ -77,14 +76,15 @@ export function BulkPaymentImportPage() {
   }
 
   const handleViewHistory = () => {
-    navigate('/dashboard/import/history?import_type=payment_import')
+    navigate('/dashboard/import/history?import_type=tag_assignment')
   }
 
   return (
     <div>
-      {/* Page Header */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">Bulk Payment Verification</h1>
+        <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+          {t('pages.imports.tagAssignment.title', 'Bulk Tag Assignment')}
+        </h1>
 
         <Button
           variant="primary"
@@ -92,20 +92,22 @@ export function BulkPaymentImportPage() {
           leftIcon={<Icons.TransactionHistory size={20} className="text-dark-500" />}
           className="flex h-10 w-full flex-row items-center justify-center rounded-full text-xs leading-[150%] font-medium sm:h-12 sm:w-auto"
         >
-          Import History
+          {t('pages.imports.tagAssignment.viewHistory', 'Import History')}
         </Button>
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
         {state === 'upload' && (
-          <PaymentImportUpload
+          <TagAssignmentUpload
+            mode={mode}
+            onModeChange={setMode}
             onFileSelected={handleFileSelected}
             isUploading={uploadMutation.isPending}
           />
         )}
 
         {state === 'preview' && preview && (
-          <PaymentImportPreview
+          <TagAssignmentPreview
             preview={preview}
             onConfirm={handleConfirm}
             onCancel={handleCancel}
@@ -114,9 +116,16 @@ export function BulkPaymentImportPage() {
         )}
 
         {state === 'processing' && activeJobId && (
-          <PaymentImportProgress jobId={activeJobId} onComplete={handleComplete} />
+          <TagAssignmentProgress jobId={activeJobId} onComplete={handleComplete} />
         )}
       </div>
+
+      <BulkJobBanner
+        importType="tag_assignment"
+        label={t('pages.imports.tagAssignment.bannerInProgress', 'Tag operation in progress')}
+        onViewHistory={handleViewHistory}
+        hidden={state === 'processing'}
+      />
     </div>
   )
 }

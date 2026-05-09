@@ -5,7 +5,7 @@
  * These permissions control access to features, routes, and UI elements.
  *
  * Backend Source: /home/pst/dev/prionex/api-prionex/services/auth/alembic/versions/20251122_0002_002_seed_initial_data.py
- * Total Permissions: 38 (34 pre-existing + 3 interaction/task + 1 close_client_debt)
+ * Total Permissions: 43
  */
 
 export const PERMISSIONS = {
@@ -89,15 +89,20 @@ export const PERMISSIONS = {
   },
 
   /**
-   * Tags Category (4 permissions)
-   * Controls access to tag management
-   * Note: Tags are admin-only
+   * Tags Category (6 permissions)
+   * Controls access to tag management.
+   * Note: Tags are admin-only for create/edit/delete; view is granted to operators.
+   * Settings (manage_tag_settings) and system rules (manage_system_rules) are
+   * gated separately so non-admin operators cannot reshape category lists or
+   * delete protected system rules.
    */
   TAGS: {
     VIEW: 'view_tags',
     CREATE: 'create_tags',
     EDIT: 'edit_tags',
     DELETE: 'delete_tags',
+    MANAGE_SETTINGS: 'manage_tag_settings',
+    MANAGE_SYSTEM_RULES: 'manage_system_rules',
   },
 
   /**
@@ -152,6 +157,34 @@ export const PERMISSIONS = {
   TA_CHAINS: {
     DELETE: 'delete_ta_chains',
   },
+
+  /**
+   * Action Analysis Category (6 permissions)
+   * Controls access to the Action Analysis page and its drill-downs
+   * (KAN-409 added the four operator-analytics sub-permissions; the
+   * follow-up added `view_ta_history` for the TA History sub-tab).
+   */
+  ACTION_ANALYSIS: {
+    VIEW: 'view_action_analysis',
+    VIEW_CLICK_TRACKING: 'view_click_tracking',
+    VIEW_SCREEN_TIME: 'view_screen_time',
+    VIEW_ACTIVITY_HEATMAP: 'view_activity_heatmap',
+    VIEW_SCRIPT_ANALYTICS: 'view_script_analytics',
+    VIEW_TA_HISTORY: 'view_ta_history',
+  },
+
+  /**
+   * Document Generation Category (5 permissions)
+   * Each permission is atomic — any role holding it gains the
+   * corresponding ability, regardless of the other four.
+   */
+  DOCUMENT_GENERATION: {
+    VIEW_JOURNAL: 'view_document_journal',
+    VIEW_TEMPLATES: 'view_document_templates',
+    CREATE_EDIT_TEMPLATES: 'create_edit_document_templates',
+    DELETE_TEMPLATES: 'delete_document_templates',
+    GENERATE: 'generate_document',
+  },
 } as const
 
 /**
@@ -201,6 +234,8 @@ export const PERMISSION_CATEGORIES = {
   SELLERS: 'Sellers',
   SCORING_CONFIG: 'Scoring Configuration',
   TA_CHAINS: 'TA Chains',
+  ACTION_ANALYSIS: 'Action Analysis',
+  DOCUMENT_GENERATION: 'Document Generation',
 } as const
 
 /**
@@ -255,6 +290,9 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   create_tags: 'Create new tags',
   edit_tags: 'Edit existing tags',
   delete_tags: 'Delete tags',
+  manage_tag_settings:
+    'Manage tag-service global settings (categories, presets, event registry view)',
+  manage_system_rules: 'Edit and delete system-protected tag rules',
 
   // Sellers
   view_sellers: 'View seller/creditor list and details',
@@ -270,4 +308,20 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
 
   // TA Chains
   delete_ta_chains: 'Delete TA Chains (refused if the chain has any recorded history)',
+  // Action Analysis
+  view_action_analysis: 'View Action Analysis page (call monitoring & interaction history)',
+  view_click_tracking:
+    'View Click Tracking timeline (operator action history synced to call recording)',
+  view_screen_time: 'View Screen Time analysis (time-per-section with team benchmarking)',
+  view_activity_heatmap: 'View Activity Heatmap (per-hour operator state grid)',
+  view_script_analytics:
+    'View Script Analytics & anomaly detection (interaction-result distribution and auto-flags)',
+  view_ta_history: 'View TA History sub-tab (chain interactions with chain + step filters)',
+
+  // Document Generation
+  view_document_journal: 'View the journal of all generated and uploaded documents',
+  view_document_templates: 'View the list of document templates',
+  create_edit_document_templates: 'Create and edit document templates',
+  delete_document_templates: 'Delete document templates',
+  generate_document: 'Generate a document on the client card',
 }

@@ -75,6 +75,7 @@ const iconMap: Record<
   'mail-send-01': (props) => <Icons.MailSend01 {...props} />,
   'sliders-horizontal': (props) => <Icons.SlidersHorizontal {...props} />,
   'user-multiple-02': (props) => <Icons.UserMultiple02 {...props} />,
+  'tag-01': (props) => <Icons.Tag01 {...props} />,
 }
 
 /**

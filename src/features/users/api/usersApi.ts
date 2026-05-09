@@ -117,6 +117,32 @@ export async function unlockAccount(userId: number): Promise<UnlockAccountRespon
 }
 
 /**
+ * Admin soft-disable of a user's 2FA. The TOTP secret and unused backup codes
+ * are preserved so re-enable doesn't require re-enrollment.
+ */
+export async function adminDisableTwoFactor(
+  userId: number
+): Promise<{ success: boolean; message: string }> {
+  const response = await api.post<{ success: boolean; message: string }>(
+    `/api/v1/admin/users/${userId}/2fa/disable`
+  )
+  return response.data
+}
+
+/**
+ * Admin re-enable of a user's 2FA using their preserved TOTP secret.
+ * Backend rejects if the user never enrolled in 2FA themselves.
+ */
+export async function adminReenableTwoFactor(
+  userId: number
+): Promise<{ success: boolean; message: string }> {
+  const response = await api.post<{ success: boolean; message: string }>(
+    `/api/v1/admin/users/${userId}/2fa/reenable`
+  )
+  return response.data
+}
+
+/**
  * Exported API object for easier importing
  */
 
@@ -129,6 +155,10 @@ export interface OperatorUser {
   last_name: string
   email: string
   status: string
+  asterisk_extension?: string | null
+  /** Role's department in the active project (operators list only). */
+  department_id?: number | null
+  department_name?: string | null
 }
 
 /**
@@ -169,6 +199,8 @@ export const usersApi = {
   reactivateUser,
   resetPassword,
   unlockAccount,
+  adminDisableTwoFactor,
+  adminReenableTwoFactor,
   getOperators,
   getUserDepartment,
 }

@@ -5,6 +5,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { paymentImportApi } from '../api/paymentImportApi'
+import { importsApi } from '../api/importsApi'
 import { importJobsKeys } from './useImportJobs'
 import { getErrorMessage } from '@/lib/errors'
 import type { PaymentImportExecuteRequest } from '../types/paymentImport'
@@ -35,8 +36,17 @@ export function usePaymentImportExecute() {
       toast.success('Payment import job started')
       queryClient.invalidateQueries({ queryKey: importJobsKeys.lists() })
     },
-    onError: (error) => {
+    onError: async (error, { jobId }) => {
       toast.error(getErrorMessage(error))
+      // Cancel the orphaned pending job so it doesn't linger as "Queued" in
+      // any banner / history view after a failed execute.
+      try {
+        await importsApi.cancelImportJob(jobId)
+      } catch (cancelError) {
+        console.error('Failed to cancel orphaned payment import job:', cancelError)
+      }
+      queryClient.invalidateQueries({ queryKey: importJobsKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: importJobsKeys.detail(jobId) })
     },
   })
 }

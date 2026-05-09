@@ -18,6 +18,7 @@ export interface TAInteraction {
   recorded_by_name: string | null
   call_id: number | null
   assigned_operator_id: number | null
+  assigned_operator_name: string | null
   created_at: string
   archived: boolean
   is_pinned: boolean
@@ -40,6 +41,12 @@ export interface TAInteractionListParams {
   notes_search?: string
   skip?: number
   limit?: number
+  recorded_by_in?: number[]
+  assigned_operator_id?: number
+  target_action_id?: number
+  step_value_eq?: string
+  step_value_min?: string
+  step_value_max?: string
 }
 
 export interface TAInteractionUpdate {

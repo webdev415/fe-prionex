@@ -41,6 +41,7 @@ export interface RulePreset {
   description: string
   trigger_type: string
   trigger_event?: string
+  trigger_tag_code?: string
   cron_expression?: string
   conditions: Array<{ field: string; op: string; value: string }>
   action_type: string
@@ -107,6 +108,12 @@ interface TagConfigState {
   addSegmentPreset: (preset: SegmentPreset) => void
   updateSegmentPreset: (oldKey: string, preset: SegmentPreset) => void
   resetToDefaults: () => void
+  /**
+   * Replace all config sections with values from backend (PR2-BE).
+   * Unknown keys are ignored; missing keys keep current state. Safe to call
+   * on every successful useTagSettings fetch.
+   */
+  loadFromServer: (value: Record<string, unknown>) => void
 }
 
 const DEFAULT_INTERACTION_RESULT_OPTIONS: ConfigItem[] = [
@@ -129,11 +136,16 @@ const DEFAULT_INTERACTION_RESULT_OPTIONS: ConfigItem[] = [
   { value: 'Numbers found', label: 'Numbers found' },
 ]
 
-const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
+// NOTE: Mirror of `api-prionex/services/tag/app/seed/system_event_registry.py`
+// (BE = source of truth). `event_type` and `fields[*].name`/`type` must stay
+// in sync with the registry — drift causes BE to publish payload that the UI
+// can't reference in rule conditions. See docs/domain-events-architecture.md.
+export const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
   {
     value: 'interaction.created',
     label: 'Interaction created',
     fields: [
+      { value: 'interaction_id', label: 'interaction_id', type: 'number' },
       {
         value: 'result_name',
         label: 'result_name',
@@ -190,6 +202,7 @@ const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
       { value: 'status', label: 'status', type: 'text' },
       { value: 'verified_by_user_id', label: 'verified_by_user_id', type: 'number' },
       { value: 'verified_at', label: 'verified_at', type: 'text' },
+      { value: 'payment_confirmation_date', label: 'payment_confirmation_date', type: 'text' },
       { value: 'remaining_debt', label: 'remaining_debt', type: 'number' },
     ],
   },
@@ -281,6 +294,7 @@ const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
       { value: 'payment_date', label: 'payment_date', type: 'text' },
       { value: 'status', label: 'status', type: 'text' },
       { value: 'recorded_by_user_id', label: 'recorded_by_user_id', type: 'number' },
+      { value: 'payment_confirmation_date', label: 'payment_confirmation_date', type: 'text' },
     ],
   },
   {
@@ -296,6 +310,7 @@ const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
       { value: 'status', label: 'status', type: 'text' },
       { value: 'verified_by_user_id', label: 'verified_by_user_id', type: 'number' },
       { value: 'verified_at', label: 'verified_at', type: 'text' },
+      { value: 'payment_confirmation_date', label: 'payment_confirmation_date', type: 'text' },
       { value: 'remaining_debt', label: 'remaining_debt', type: 'number' },
     ],
   },
@@ -309,6 +324,14 @@ const DEFAULT_AVAILABLE_EVENTS: EventConfig[] = [
       { value: 'score_change', label: 'score_change', type: 'number' },
       { value: 'algorithm_version', label: 'algorithm_version', type: 'text' },
       { value: 'calculation_reason', label: 'calculation_reason', type: 'text' },
+    ],
+  },
+  {
+    value: 'contact.responsible_changed',
+    label: 'Contact responsible changed',
+    fields: [
+      { value: 'previous_responsible_id', label: 'previous_responsible_id', type: 'number' },
+      { value: 'new_responsible_id', label: 'new_responsible_id', type: 'number' },
     ],
   },
 ]
@@ -973,6 +996,34 @@ export const useTagConfigStore = create<TagConfigState>()(
         }),
 
       resetToDefaults: () => set(cloneDefaultConfig()),
+
+      loadFromServer: (value) =>
+        set((state) => {
+          if (!value || typeof value !== 'object') return state
+          const next: Partial<TagConfigState> = {}
+          const known: Array<keyof TagConfigState> = [
+            'categories',
+            'visibilities',
+            'expiryTypes',
+            'presetColors',
+            'triggerTypes',
+            'availableEvents',
+            'actionTypes',
+            'conditionFields',
+            'operators',
+            'refreshModes',
+            'rulePresets',
+            'segmentPresets',
+          ]
+          for (const key of known) {
+            const incoming = (value as Record<string, unknown>)[key]
+            if (incoming !== undefined) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ;(next as Record<string, unknown>)[key] = incoming as any
+            }
+          }
+          return { ...state, ...next }
+        }),
     }),
     {
       name: 'tag-config-storage',

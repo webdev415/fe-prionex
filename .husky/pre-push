@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+# fe-prionex pre-push hook.
+#
+# Runs `npm run build` (the one CI step that's not already covered by the
+# pre-commit hook) so a successful push implies a green CI build.
+set -e
+
+cd "$(dirname "$0")/.."
+
+echo "→ build (matches CI build job)..."
+npm run build
+
+echo "✓ Build passed — push proceeding."

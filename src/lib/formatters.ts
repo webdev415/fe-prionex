@@ -162,11 +162,36 @@ export function formatDateDotDMY(dateStr?: string | null): string {
 
 /**
  * Format datetime for display → DD-MM-YYYY HH:MM
+ *
+ * If `timezone` is given, the value is formatted in that IANA tz instead of
+ * browser-local. Naive strings without Z/offset are interpreted as UTC
+ * (matches the DB convention).
  */
-export function formatDateTime(dateStr?: string): string {
+export function formatDateTime(dateStr?: string, timezone?: string | null): string {
   if (!dateStr) return '—'
-  const d = new Date(dateStr)
+  let normalized = dateStr.replace(' ', 'T')
+  if (!normalized.endsWith('Z') && !/[-+]\d{2}:\d{2}$/.test(normalized)) {
+    normalized += 'Z'
+  }
+  const d = new Date(normalized)
   if (isNaN(d.getTime())) return '—'
+  if (timezone) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).formatToParts(d)
+      const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '00'
+      return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}`
+    } catch {
+      // fall through to browser-local
+    }
+  }
   const hour = String(d.getHours()).padStart(2, '0')
   const minute = String(d.getMinutes()).padStart(2, '0')
   return `${toDMY(d)} ${hour}:${minute}`
@@ -189,41 +214,41 @@ function hasExplicitTimeZoneOffset(isoDate: string): boolean {
 /**
  * Format a Task Service `due_date` for the notification bell and similar UI.
  *
- * The task DB stores `due_date` as naive datetime in Europe/Kyiv wall time; the API
- * uses `isoformat()` (no `Z`). Interpreting that as UTC (e.g. by appending `Z`)
- * shifts the label by the Kyiv–UTC offset. For naive values we render the stored
- * calendar time in Europe/Kyiv. If the string includes `Z` or a numeric offset,
- * it is treated as an absolute instant and shown in Europe/Kyiv.
+ * Convention (post-KAN-451): the task DB stores `due_date` as UTC naive
+ * datetime, and the API returns `isoformat()` without `Z`. Naive strings
+ * are therefore treated as UTC and rendered in the user's profile
+ * timezone (falls back to Europe/Kyiv if not provided). Strings with an
+ * explicit Z or numeric offset are absolute instants, shown in the same
+ * target timezone.
  */
-export function formatTaskDueDateForDisplay(isoDate: string | null | undefined): string {
+export function formatTaskDueDateForDisplay(
+  isoDate: string | null | undefined,
+  timezone?: string | null
+): string {
   if (isoDate == null || String(isoDate).trim() === '') return '—'
   const s = String(isoDate).trim()
 
-  if (hasExplicitTimeZoneOffset(s)) {
-    try {
-      const d = new Date(s)
-      if (isNaN(d.getTime())) return '—'
-      const parts = new Intl.DateTimeFormat('en-GB', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-        timeZone: TASK_SERVICE_WALL_TIMEZONE,
-      }).formatToParts(d)
-      const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
-      return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}`
-    } catch {
-      return '—'
-    }
-  }
+  // Treat naive strings as UTC by appending Z; offset-aware strings pass through.
+  const absolute = hasExplicitTimeZoneOffset(s) ? s : `${s.replace(' ', 'T')}Z`
+  const d = new Date(absolute)
+  if (isNaN(d.getTime())) return '—'
 
-  const normalized = s.replace(' ', 'T')
-  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?/.exec(normalized)
-  if (!m) return '—'
-  const [, year, month, day, hour, minute] = m
-  return `${day}-${month}-${year} ${hour}:${minute}`
+  const targetTz = timezone || TASK_SERVICE_WALL_TIMEZONE
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: targetTz,
+    }).formatToParts(d)
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
+    return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}`
+  } catch {
+    return '—'
+  }
 }
 /**
  * Truncate text with ellipsis

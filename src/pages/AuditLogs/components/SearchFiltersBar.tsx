@@ -379,7 +379,7 @@ export function SearchFiltersBar({
                   onClick={() => handlePeriodChange('today')}
                   className={cn(
                     'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
-                    period === 'today' ? 'bg-primary-300 text-white' : 'hover:bg-gray-50'
+                    period === 'today' ? 'bg-primary-500 text-white' : 'hover:bg-gray-50'
                   )}
                 >
                   {t('pages.auditLogs.searchFilters.today')}
@@ -389,7 +389,7 @@ export function SearchFiltersBar({
                   onClick={() => handlePeriodChange('yesterday')}
                   className={cn(
                     'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
-                    period === 'yesterday' ? 'bg-primary-300 text-white' : 'hover:bg-gray-50'
+                    period === 'yesterday' ? 'bg-primary-500 text-white' : 'hover:bg-gray-50'
                   )}
                 >
                   {t('pages.auditLogs.searchFilters.yesterday')}
@@ -399,7 +399,7 @@ export function SearchFiltersBar({
                   onClick={() => handlePeriodChange('last_7')}
                   className={cn(
                     'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
-                    period === 'last_7' ? 'bg-primary-300 text-white' : 'hover:bg-gray-50'
+                    period === 'last_7' ? 'bg-primary-500 text-white' : 'hover:bg-gray-50'
                   )}
                 >
                   {t('pages.auditLogs.searchFilters.last7')}
@@ -409,7 +409,7 @@ export function SearchFiltersBar({
                   onClick={() => handlePeriodChange('last_30')}
                   className={cn(
                     'text-dark-500 flex cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px] shadow-sm sm:flex-1 sm:px-4',
-                    period === 'last_30' ? 'bg-primary-300 text-white' : 'hover:bg-gray-50'
+                    period === 'last_30' ? 'bg-primary-500 text-white' : 'hover:bg-gray-50'
                   )}
                 >
                   {t('pages.auditLogs.searchFilters.last30')}

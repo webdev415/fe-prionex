@@ -15,6 +15,9 @@ export function useAuth() {
     error,
     errorState,
     lockoutMinutes,
+    // 2FA challenge state
+    twoFactorToken,
+    twoFactorUsername,
     // Impersonation state
     isImpersonating,
     impersonatedUser,
@@ -23,6 +26,8 @@ export function useAuth() {
     login: storeLogin,
     logout: storeLogout,
     forceLogin: storeForceLogin,
+    verifyTwoFactor: storeVerifyTwoFactor,
+    cancelTwoFactor: storeCancelTwoFactor,
     checkAuth,
     refreshUser,
     updateCurrentUser,
@@ -31,21 +36,30 @@ export function useAuth() {
     exitImpersonation: storeExitImpersonation,
   } = useAuthStore()
 
+  const navigateAfterLogin = useCallback(() => {
+    const currentUser = useAuthStore.getState().user
+    if (currentUser?.mustChangePassword) {
+      navigate('/change-password')
+    } else {
+      navigate('/dashboard')
+    }
+  }, [navigate])
+
   const login = useCallback(
     async (credentials: LoginRequest) => {
       try {
         await storeLogin(credentials)
-        const currentUser = useAuthStore.getState().user
-        if (currentUser?.mustChangePassword) {
-          navigate('/change-password')
-        } else {
-          navigate('/dashboard')
+        // If 2FA was triggered the store stays in TWO_FACTOR_REQUIRED state and
+        // there's no user yet — the page will render TwoFactorCodeCard instead.
+        const stateAfter = useAuthStore.getState()
+        if (stateAfter.isAuthenticated) {
+          navigateAfterLogin()
         }
       } catch {
         // Error is handled by the store
       }
     },
-    [storeLogin, navigate]
+    [storeLogin, navigateAfterLogin]
   )
 
   const logout = useCallback(async () => {
@@ -57,16 +71,26 @@ export function useAuth() {
   const forceLogin = useCallback(async () => {
     try {
       await storeForceLogin()
-      const currentUser = useAuthStore.getState().user
-      if (currentUser?.mustChangePassword) {
-        navigate('/change-password')
-      } else {
-        navigate('/dashboard')
+      const stateAfter = useAuthStore.getState()
+      if (stateAfter.isAuthenticated) {
+        navigateAfterLogin()
       }
     } catch {
       // Error is handled by the store
     }
-  }, [storeForceLogin, navigate])
+  }, [storeForceLogin, navigateAfterLogin])
+
+  const verifyTwoFactor = useCallback(
+    async (code: string) => {
+      try {
+        await storeVerifyTwoFactor(code)
+        navigateAfterLogin()
+      } catch {
+        // Error is handled by the store
+      }
+    },
+    [storeVerifyTwoFactor, navigateAfterLogin]
+  )
 
   const startImpersonation = useCallback(
     async (userId: number) => {
@@ -87,6 +111,9 @@ export function useAuth() {
     error,
     errorState,
     lockoutMinutes,
+    // 2FA challenge state
+    twoFactorToken,
+    twoFactorUsername,
     // Impersonation state
     isImpersonating,
     impersonatedUser,
@@ -95,6 +122,8 @@ export function useAuth() {
     login,
     logout,
     forceLogin,
+    verifyTwoFactor,
+    cancelTwoFactor: storeCancelTwoFactor,
     checkAuth,
     refreshUser,
     updateCurrentUser,

@@ -19,19 +19,23 @@
     "departments": "Відділи",
     "smsTemplates": "SMS Шаблони",
     "targetActions": "Цільові дії",
-    "taChains": "Ланцюжки TA",
+    "taChains": "Ланцюжки ЦД",
     "taDictionary": "Словник",
     "chainBuilder": "Конструктор ланцюжків",
     "taManagement": "Цільові дії",
     "interactionLog": "Журнал взаємодій",
+    "documentGeneration": "Генерація документів",
     "transactions": "Транзакції",
     "operations": "Операції",
     "bulkOperatorAssignment": "Масове призначення операторів",
+    "bulkPaymentVerification": "Масова верифікація платежів",
+    "bulkTagAssignment": "Масове призначення тегів",
     "auditLogs": "Журнал аудиту",
     "reports": "Звіти",
     "scoringConfiguration": "Конфігурація оцінки",
     "systemSettings": "Системні налаштування",
-    "tags": "Теги"
+    "tags": "Теги",
+    "actionAnalysis": "Аналіз дій"
   },
   "search": {
     "placeholder": "Пошук",
@@ -63,6 +67,16 @@
     "logout": "Вийти",
     "loggingOut": "Вихід..."
   },
+  "components": {
+    "pagination": {
+      "rowsPerPage": "Рядків на сторінці:",
+      "previousPage": "Попередня сторінка",
+      "nextPage": "Наступна сторінка",
+      "goToPage": "Перейти на сторінку {{page}}",
+      "page": "Сторінка",
+      "of": "з"
+    }
+  },
   "status": {
     "loading": "Завантаження...",
     "success": "Успішно",
@@ -74,6 +88,67 @@
     "en": "Англійська",
     "uk": "Українська",
     "ru": "Російська"
+  },
+  "notificationBell": {
+    "title": "Повідомлення",
+    "markAllRead": "Позначити як прочитані",
+    "ariaLabel": "Повідомлення",
+    "ariaLabelWithCount": "Повідомлення ({{count}})",
+    "noNotifications": "Немає повідомлень",
+    "sections": {
+      "pendingPayments": "Очікуючі оплати",
+      "tasks": "Завдання",
+      "calls": "Дзвінки",
+      "tags": "Теги",
+      "taChains": "Ланцюжки ЦД"
+    },
+    "payment": {
+      "pending": "очікує",
+      "daysPending_one": "{{count}} день",
+      "daysPending_few": "{{count}} дні",
+      "daysPending_many": "{{count}} днів"
+    },
+    "paymentMethod": {
+      "bank_transfer": "Банківський переказ",
+      "online_gateway": "Онлайн-шлюз",
+      "cash": "Готівка",
+      "card": "Картка",
+      "other": "Інше"
+    },
+    "clientNumber": "Клієнт №{{id}}",
+    "idLabel": "ID: {{id}}",
+    "debtLabel": "Борг: {{id}}",
+    "chainLabel": "Ланцюжок:",
+    "resultLabel": "Результат:",
+    "byOperator": "від {{name}}",
+    "errors": {
+      "dismissFailed": "Не вдалося приховати повідомлення",
+      "markAllReadFailed": "Не вдалося позначити всі як прочитані"
+    },
+    "taskPriority": {
+      "high": "високий",
+      "normal": "нормальний",
+      "low": "низький"
+    },
+    "taskStatus": {
+      "pending": "очікує",
+      "in_progress": "в роботі",
+      "completed": "завершено",
+      "extended": "продовжено",
+      "rejected": "відхилено",
+      "incoming_line_result": "результат вхідної лінії"
+    },
+    "relative": {
+      "justNow": "щойно",
+      "minutesAgo": "{{count}} хв тому",
+      "hoursAgo_one": "{{count}} год тому",
+      "hoursAgo_few": "{{count}} год тому",
+      "hoursAgo_many": "{{count}} год тому",
+      "daysAgo_one": "{{count}} день тому",
+      "daysAgo_few": "{{count}} дні тому",
+      "daysAgo_many": "{{count}} днів тому"
+    },
+    "dismissAria": "Закрити повідомлення"
   },
   "common": {
     "step": "Крок",
@@ -173,6 +248,232 @@
       "mockTableRowDebt": "Борг у зоні ризику",
       "mockTableRowOverdue": "Частка прострочених"
     },
+    "actionAnalysis": {
+      "title": "Аналіз дій",
+      "subtitle": "Моніторинг дзвінків та історія взаємодій для команди тренерів.",
+      "tabs": {
+        "calls": "Дзвінки",
+        "interactions": "Історія взаємодій"
+      },
+      "filters": {
+        "operator": "Оператор",
+        "allOperators": "Усі оператори",
+        "employee": "Співробітник",
+        "allEmployees": "Усі співробітники",
+        "period": "Період",
+        "status": "Статус",
+        "minDuration": "Мін. тривалість (с)",
+        "maxDuration": "Макс. тривалість (с)",
+        "contactType": "Тип контакту",
+        "allContactTypes": "Усі",
+        "result": "Результат",
+        "allResults": "Усі",
+        "promiseMin": "Обіцянка від",
+        "promiseMax": "Обіцянка до",
+        "department": "Відділ",
+        "allDepartments": "Усі відділи",
+        "employees": "Співробітники",
+        "employeesCount": "Обрано: {{count}}",
+        "phone": "Телефон",
+        "phonePlaceholder": "напр. 0631234567",
+        "searchEmployees": "Пошук за іменем…",
+        "noOperatorsMatch": "Немає збігів",
+        "clearEmployees": "Очистити",
+        "applyEmployees": "Застосувати",
+        "dateFrom": "Від",
+        "dateTo": "До",
+        "selectDate": "Оберіть дату",
+        "selectStartDate": "Оберіть початкову дату",
+        "selectEndDate": "Оберіть кінцеву дату",
+        "dateRange": "Період",
+        "quickRanges": "Швидко",
+        "minDurationPlaceholder": "напр. 30",
+        "maxDurationPlaceholder": "напр. 600",
+        "promiseMinPlaceholder": "0.00",
+        "promiseMaxPlaceholder": "напр. 1000",
+        "searchEmployeesPlaceholder": "Пошук",
+        "applyFilters": "Застосувати фільтри",
+        "clearAll": "Скинути",
+        "periods": {
+          "today": "Сьогодні",
+          "yesterday": "Вчора",
+          "last_7d": "Останні 7 днів",
+          "last_30d": "Останні 30 днів",
+          "last7d": "Останні 7 днів",
+          "last30d": "Останні 30 днів",
+          "custom": "Довільний"
+        },
+        "selectCustomRange": "Виберіть довільний діапазон, щоб завантажити дані.",
+        "statuses": {
+          "all": "Усі",
+          "answered": "Відповідь",
+          "notAnswered": "Без відповіді"
+        },
+        "channel": "Канал",
+        "allChannels": "Усі",
+        "internalDateType": "Внутрішня дата",
+        "internalDateTypeNone": "Вимк.",
+        "internalDateFrom": "Внутрішня дата від",
+        "internalDateTo": "Внутрішня дата до",
+        "internalDateTypes": {
+          "promiseToPay": "Обіцянка оплати",
+          "nextAction": "Передзвонити / наступна дія",
+          "followUp": "Уточнення",
+          "any": "Будь-яка з перелічених"
+        },
+        "chain": "Ланцюг",
+        "allChains": "Усі ланцюги",
+        "chainStep": "Крок",
+        "allChainSteps": "Усі кроки",
+        "stepValue": "Значення кроку",
+        "stepValueFrom": "Значення кроку від",
+        "stepValueTo": "Значення кроку до",
+        "stepValueMin": "Значення кроку мін",
+        "stepValueMax": "Значення кроку макс",
+        "stepValuePlaceholder": "Пошук…",
+        "allStepValues": "Усі значення",
+        "notesSearch": "Пошук у нотатках",
+        "notesSearchPlaceholder": "Пошук у нотатках…"
+      },
+      "columns": {
+        "dateTime": "Дата / Час",
+        "duration": "Тривалість",
+        "status": "Статус",
+        "callType": "Тип дзвінка",
+        "phone": "Телефон",
+        "agent": "Співробітник",
+        "client": "Клієнт",
+        "clientId": "ID клієнта",
+        "promiseDate": "Дата обіцянки",
+        "recording": "Запис",
+        "viewDetail": "Деталі",
+        "employee": "Співробітник",
+        "contactType": "Тип контакту",
+        "result": "Результат",
+        "promiseAmount": "Сума обіцянки",
+        "responsibleAtCreation": "Відповідальний на момент створення",
+        "currentResponsible": "Поточний відповідальний",
+        "internalDate": "Дата (обіцянка / передзвін)",
+        "channel": "Канал",
+        "chain": "Ланцюг",
+        "notes": "Нотатки"
+      },
+      "callType": {
+        "incoming": "Вхідний",
+        "outgoing": "Вихідний"
+      },
+      "callDetail": {
+        "title": "Деталі дзвінка",
+        "fields": {
+          "dateTime": "Дата / Час",
+          "status": "Статус",
+          "callType": "Тип дзвінка",
+          "employee": "Співробітник",
+          "phone": "Телефон",
+          "duration": "Тривалість",
+          "client": "Клієнт",
+          "callId": "ID дзвінка"
+        }
+      },
+      "summary": {
+        "total": "всього",
+        "outgoing": "вихідних",
+        "answered": "відповідей",
+        "totalInteractions": "взаємодій"
+      },
+      "actions": {
+        "exportExcel": "Експорт в Excel",
+        "exporting": "Експорт…",
+        "playRecording": "Відтворити запис",
+        "viewDetail": "Деталі"
+      },
+      "empty": "Немає дзвінків, що відповідають фільтрам",
+      "interactionsEmpty": "Немає взаємодій, що відповідають фільтрам",
+      "taHistoryEmpty": "Немає ТА-взаємодій, що відповідають фільтрам",
+      "errors": {
+        "loadFailed": "Не вдалося завантажити дзвінки",
+        "loadInteractionsFailed": "Не вдалося завантажити взаємодії",
+        "loadTimelineFailed": "Не вдалося завантажити таймлайн.",
+        "loadScreenTimeFailed": "Не вдалося завантажити дані екранного часу.",
+        "loadHeatmapFailed": "Не вдалося завантажити теплову карту.",
+        "loadScriptAnalyticsFailed": "Не вдалося завантажити аналітику скриптів.",
+        "loadTaHistoryFailed": "Не вдалося завантажити історію ТА",
+        "departmentNoOperators": "У цьому відділі немає операторів у поточному проєкті.",
+        "exportFailed": "Не вдалося експортувати",
+        "callNotFound": "Дзвінок не знайдено"
+      },
+      "calls": {
+        "placeholder": "Вкладка «Дзвінки» — незабаром"
+      },
+      "interactions": {
+        "placeholder": "Вкладка «Історія взаємодій» — незабаром"
+      },
+      "topTabs": {
+        "calls": "Дзвінки",
+        "scores": "Оцінки",
+        "training": "Навчання",
+        "settings": "Налаштування"
+      },
+      "topTabsComingSoon": "Цей розділ буде доступний у наступних релізах.",
+      "subTabs": {
+        "list": "Список дзвінків",
+        "interactions": "Історія взаємодій",
+        "taHistory": "Історія ТА",
+        "timeline": "Таймлайн",
+        "screenTime": "Екранний час",
+        "heatmap": "Теплова карта",
+        "scriptAnalytics": "Аналітика скриптів"
+      },
+      "timeline": {
+        "callId": "ID дзвінка",
+        "callIdPlaceholder": "Вставте UUID дзвінка, щоб завантажити таймлайн",
+        "empty": "Введіть ID дзвінка вище, щоб переглянути дії оператора.",
+        "noEvents": "Для цього дзвінка немає записаних подій.",
+        "columns": {
+          "offset": "Зсув",
+          "event": "Подія",
+          "page": "Сторінка",
+          "timestamp": "Час"
+        }
+      },
+      "screenTime": {
+        "empty": "Немає даних екранного часу за вибраними фільтрами.",
+        "columns": {
+          "operator": "Оператор",
+          "cardOpen": "Сер. дзвінок→картка",
+          "formSubmit": "Сер. відправка форми",
+          "idle": "Простій",
+          "afterCall": "Постобробка",
+          "deviation": "Δ до команди"
+        }
+      },
+      "heatmap": {
+        "operator": "Оператор",
+        "empty": "Немає даних теплової карти за вибраними фільтрами.",
+        "filters": {
+          "state": "Фільтр стану"
+        },
+        "states": {
+          "all": "Усі стани",
+          "active_call": "Активний дзвінок",
+          "post_call": "Після дзвінка",
+          "waiting": "Очікування",
+          "idle": "Простій",
+          "break": "Перерва"
+        }
+      },
+      "scriptAnalytics": {
+        "empty": "Немає даних за вибраними фільтрами.",
+        "teamDistribution": "Розподіл команди",
+        "flagsHeading": "Авто-прапорці",
+        "columns": {
+          "operator": "Оператор",
+          "totalInteractions": "Взаємодії",
+          "fastResultPct": "% швидких",
+          "distribution": "Розподіл"
+        }
+      }
+    },
     "users": {
       "title": "Управління користувачами",
       "addNewUser": "Новий користувач",
@@ -198,7 +499,9 @@
         "status": "Статус",
         "activate": "Активувати",
         "deactivate": "Деактивувати",
-        "resetPassword": "Скинути пароль"
+        "resetPassword": "Скинути пароль",
+        "disableTwoFactor": "Вимкнути 2FA",
+        "reenableTwoFactor": "Увімкнути 2FA"
       },
       "messages": {
         "nowViewingAs": "Тепер перегляд як {{username}}",
@@ -241,6 +544,15 @@
           "confirmDetail": "Новий пароль буде: {{password}}",
           "failed": "Не вдалося скинути пароль",
           "resetting": "Скидання..."
+        },
+        "adminToggleTwoFactor": {
+          "disableTitle": "Вимкнути двофакторну автентифікацію",
+          "reenableTitle": "Увімкнути двофакторну автентифікацію",
+          "disableBody": "Користувач зможе увійти лише за паролем при наступному вході. Його секрет автентифікатора та невикористані резервні коди зберігаються, щоб ви могли пізніше знову увімкнути 2FA. Активну сесію користувача буде завершено. Дія фіксується в журналі аудиту.",
+          "reenableBody": "Двофакторну автентифікацію буде знову ввімкнено з раніше зареєстрованим автентифікатором користувача. При наступному вході знадобиться ввести 6-значний код. Активну сесію користувача буде завершено. Дія фіксується в журналі аудиту.",
+          "disabling": "Вимкнення...",
+          "reenabling": "Увімкнення...",
+          "failed": "Не вдалося оновити двофакторну автентифікацію"
         },
         "changeStatus": {
           "activateTitle": "Активувати користувача",
@@ -709,7 +1021,9 @@
         "importTypes": {
           "simple": "Простий",
           "vendor": "Вивантаження продавця",
-          "operatorAssignment": "Призначення операторів"
+          "operatorAssignment": "Призначення операторів",
+          "tagAssignment": "Призначення тегів",
+          "tagRemoval": "Видалення тегів"
         },
         "uploadedBy": "Завантажено:",
         "view": "Перегляд",
@@ -717,6 +1031,7 @@
         "exporting": "Експорт...",
         "statuses": {
           "done": "Готово",
+          "completedWithErrors": "Завершено з помилками",
           "inProgress": "В процесі",
           "failed": "Не вдалося",
           "pending": "Очікування",
@@ -750,6 +1065,7 @@
         "totalRows": "Всього рядків:",
         "newClients": "Нових клієнтів:",
         "updatedClients": "Оновлено клієнтів:",
+        "tagsApplied": "Застосовано тегів:",
         "errors": "Помилки:",
         "processingTime": "Час обробки:",
         "progress": "Прогрес",
@@ -797,10 +1113,29 @@
       },
       "operatorAssignment": {
         "title": "Масове призначення операторів",
-        "viewHistory": "Історія",
+        "viewHistory": "Історія імпорту",
+        "bannerInProgress": "Триває призначення операторів",
+        "noProjectToast": "Оберіть активний проєкт перед завантаженням файлу.",
+        "upload": {
+          "sectionTitle": "Завантаження CSV",
+          "description": "Файл CSV зі стовпцями client_id та operator_id",
+          "downloadTemplate": "Завантажити шаблон",
+          "downloading": "Завантаження...",
+          "clickToUpload": "Натисніть для завантаження",
+          "orDragAndDrop": "або перетягніть файл сюди",
+          "constraints": "Лише CSV, максимум 10 МБ, до 10 000 рядків",
+          "validating": "Перевірка CSV...",
+          "errors": {
+            "onlyCsv": "Підтримуються лише файли CSV.",
+            "fileTooLarge": "Файл перевищує максимальний розмір 10 МБ ({{size}} МБ)."
+          }
+        },
         "preview": {
           "title": "Попередній перегляд",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записів · Партія: {{batchId}}",
           "previewRows": "Попередній перегляд (перші {{count}} рядків)",
+          "emptyPreview": "Немає рядків для перегляду",
+          "emptyErrors": "Немає помилок",
           "errors": "Помилки ({{count}})",
           "readyToAssign": "Готово до призначення",
           "noChange": "Без змін",
@@ -824,8 +1159,7 @@
           "assignmentReasonPlaceholder": "напр., Перерозподіл портфеля березень 2026",
           "cancel": "Скасувати",
           "confirm": "Підтвердити та призначити {{count}} клієнтів",
-          "starting": "Запуск...",
-          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записів · Партія: {{batchId}}"
+          "starting": "Запуск..."
         },
         "progress": {
           "assignmentComplete": "Призначення завершено",
@@ -837,10 +1171,162 @@
           "successful": "Успішно",
           "failed": "Не вдалося",
           "processingTime": "Час обробки: {{time}}",
+          "errorDetails": "Деталі помилки",
           "cancel": "Скасувати",
           "downloadErrors": "Завантажити помилки",
           "startNewImport": "Новий імпорт",
           "jobStarted": "Призначення операторів запущено"
+        }
+      },
+      "tagAssignment": {
+        "title": "Масове призначення тегів",
+        "viewHistory": "Історія імпорту",
+        "bannerInProgress": "Триває операція з тегами",
+        "noProjectToast": "Оберіть активний проєкт перед завантаженням файлу.",
+        "upload": {
+          "sectionTitle": "Завантаження файлу для тегів",
+          "description": "Кожен рядок: tax_id, tags (теги, розділені комами). Підтримуються файли CSV або Excel (.xlsx). Операція застосовується до всіх перелічених тегів.",
+          "downloadTemplate": "Завантажити шаблон",
+          "downloading": "Завантаження...",
+          "clickToUpload": "Натисніть для завантаження",
+          "orDragAndDrop": "або перетягніть файл сюди",
+          "constraints": "CSV або Excel (.xlsx), максимум 10 МБ, до 10 000 рядків",
+          "validating": "Перевірка файлу...",
+          "modeLabel": "Операція",
+          "modeAssign": "Призначити теги",
+          "modeRemove": "Видалити теги",
+          "modeAssignHint": "Перелічені теги будуть додані до кожного клієнта. Вже наявні — пропускаються.",
+          "modeRemoveHint": "Перелічені теги будуть видалені у кожного клієнта. Захищені теги не видаляються через масову операцію.",
+          "errors": {
+            "onlyCsv": "Підтримуються лише файли CSV.",
+            "onlyCsvOrXlsx": "Підтримуються лише файли CSV або Excel (.xlsx).",
+            "fileTooLarge": "Файл перевищує максимальний розмір 10 МБ ({{size}} МБ)."
+          }
+        },
+        "preview": {
+          "title": "Перегляд операції з тегами",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записів · Партія: {{batchId}}",
+          "modeAssign": "Режим: Призначення тегів",
+          "modeRemove": "Режим: Видалення тегів",
+          "previewRows": "Попередній перегляд (перші {{count}} рядків)",
+          "emptyPreview": "Немає рядків для перегляду",
+          "emptyErrors": "Немає помилок",
+          "errors": "Помилки ({{count}})",
+          "readyToAssign": "Готово до призначення",
+          "readyToRemove": "Готово до видалення",
+          "noChange": "Без змін",
+          "invalid": "Недійсний",
+          "uniqueTags": "Унікальні теги",
+          "columns": {
+            "rowNumber": "#",
+            "client": "Клієнт",
+            "tags": "Теги",
+            "status": "Статус",
+            "note": "Примітка",
+            "unknownTagTitle": "Тег не знайдено в цьому проєкті"
+          },
+          "statuses": {
+            "ready": "Готово",
+            "noChange": "Без змін",
+            "warning": "Попередження",
+            "error": "Помилка"
+          },
+          "cancel": "Скасувати",
+          "confirmAssign": "Призначити теги {{count}} клієнтам",
+          "confirmRemove": "Видалити теги з {{count}} клієнтів",
+          "starting": "Запуск..."
+        },
+        "progress": {
+          "headingComplete": "Операцію з тегами завершено",
+          "headingFailed": "Операцію з тегами не вдалося виконати",
+          "headingCancelled": "Операцію з тегами скасовано",
+          "processing": "Обробка тегів...",
+          "progress": "Прогрес",
+          "totalRecords": "Всього записів",
+          "successful": "Застосовано",
+          "failed": "Не вдалося",
+          "processingTime": "Час обробки: {{time}}",
+          "errorDetails": "Деталі помилки",
+          "cancel": "Скасувати",
+          "downloadErrors": "Завантажити помилки",
+          "startNew": "Нова операція",
+          "jobStarted": "Операцію з тегами запущено"
+        }
+      },
+      "bulkPaymentVerification": {
+        "title": "Масова верифікація платежів",
+        "viewHistory": "Історія імпорту",
+        "noProjectToast": "Оберіть активний проєкт перед завантаженням файлу.",
+        "upload": {
+          "sectionTitle": "Завантаження банківського CSV",
+          "descriptionIntro": "Перевіряє наявні очікувані платежі або автоматично створює перевірені записи. Обов'язкові стовпці:",
+          "optionalIntro": "Необов'язково:",
+          "downloadTemplate": "Завантажити шаблон",
+          "downloading": "Завантаження...",
+          "clickToUpload": "Натисніть для завантаження",
+          "orDragAndDrop": "або перетягніть файл сюди",
+          "constraints": "Лише CSV, максимум 10 МБ, до 10 000 рядків",
+          "validating": "Перевірка CSV та зіставлення договорів...",
+          "errors": {
+            "onlyCsv": "Підтримуються лише файли CSV.",
+            "fileTooLarge": "Файл перевищує максимальний розмір 10 МБ ({{size}} МБ)."
+          }
+        },
+        "preview": {
+          "title": "Попередній перегляд верифікації платежів",
+          "fileInfo": "Файл: {{filename}} · {{totalRecords}} записів · Партія: {{batchId}}",
+          "summary": {
+            "ready": "Готово",
+            "warnings": "Попередження",
+            "invalid": "Недійсні",
+            "totalAmount": "Загальна сума",
+            "uniqueContracts": "Унікальні договори"
+          },
+          "previewTableTitle": "Попередній перегляд ({{count}} рядків)",
+          "errorsTableTitle": "Помилки ({{count}} рядків)",
+          "emptyPreview": "Немає рядків для перегляду",
+          "emptyErrors": "Немає помилок",
+          "skipWarnings": "Пропустити рядки з попередженнями ({{count}} рядків)",
+          "commentPlaceholder": "Необов'язковий коментар до цього імпорту...",
+          "cancel": "Скасувати",
+          "verifyPayments": "Верифікувати {{count}} платежів",
+          "starting": "Запуск...",
+          "columns": {
+            "row": "Рядок",
+            "contractNumber": "Номер договору",
+            "tin": "ІПН",
+            "client": "Клієнт",
+            "amount": "Сума",
+            "date": "Дата",
+            "method": "Спосіб",
+            "type": "Тип",
+            "status": "Статус",
+            "note": "Примітка"
+          },
+          "rowType": {
+            "pending": "Очікує",
+            "new": "Новий"
+          },
+          "rowStatus": {
+            "ready": "Готово",
+            "warning": "Попередження",
+            "error": "Помилка"
+          }
+        },
+        "progress": {
+          "complete": "Верифікацію платежів завершено",
+          "verificationFailed": "Верифікацію платежів не вдалося виконати",
+          "cancelled": "Верифікацію платежів скасовано",
+          "processing": "Верифікація платежів...",
+          "progressLabel": "Прогрес",
+          "totalRecords": "Всього записів",
+          "paymentsVerified": "Платежі верифіковано",
+          "failedRows": "Помилки",
+          "errorDetails": "Деталі помилки",
+          "processingTime": "Час обробки: {{time}}",
+          "cancelJob": "Скасувати імпорт",
+          "downloadErrors": "Завантажити помилки",
+          "startNewImport": "Новий імпорт"
         }
       }
     },
@@ -912,6 +1398,8 @@
         "tags": "Теги",
         "noUsersAvailable": "Немає доступних користувачів",
         "more": "більше",
+        "min": "Мін",
+        "max": "Макс",
         "days": "днів"
       },
       "statuses": {
@@ -1021,6 +1509,22 @@
       "detail": {
         "clientNotFound": "Клієнта не знайдено",
         "backToClients": "Назад до клієнтів",
+        "documentUploadTitle": "Завантажити документ",
+        "documentUploadAction": "Завантажити",
+        "generateDocument": "Згенерувати документ",
+        "comingSoon": "Незабаром",
+        "dropFileOrClick": "Перетягніть файл або натисніть для вибору",
+        "loan": "Кредит",
+        "documentsUnlinked": "Без прив'язки",
+        "documentTypes": {
+          "passport": "Паспорт",
+          "inn": "ІПН",
+          "contract": "Договір",
+          "income": "Довідка про доходи",
+          "outcome": "Витяг",
+          "signature": "ЕЦП",
+          "other": "Інше"
+        },
         "department": "Відділ",
         "phones": "Телефони",
         "tin": "ІПН",
@@ -1176,7 +1680,7 @@
           "tasks": "Завдання",
           "docs": "Документи",
           "callSms": "Дзвінок / SMS",
-          "taChains": "Ланцюжки TA"
+          "taChains": "Ланцюжки ЦД"
         },
         "maritalStatuses": {
           "1": "Неодружений/Незаміжня",
@@ -1234,8 +1738,40 @@
           "selectDate": "Виберіть дату",
           "promiseAmount": "Сума обіцянки",
           "callbackDate": "Дата зворотного дзвінка",
+          "callbackDateRequired": "Дата зворотного дзвінка є обов'язковою",
+          "callbackDateFuture": "Дата зворотного дзвінка має бути пізніше поточного часу",
+          "promiseDateRequired": "Дата обіцянки є обов'язковою",
+          "promiseDateFuture": "Дата обіцянки має бути пізніше поточного часу",
+          "promiseAmountPositive": "Сума обіцянки має бути більшою за 0",
           "successMessage": "Взаємодію успішно додано",
           "errorMessage": "Не вдалося додати взаємодію"
+        },
+        "assignRole": {
+          "titleEmployee": "Призначити співробітника",
+          "titleSearcher": "Призначити шукача",
+          "employee": "Співробітник (необов'язково)",
+          "searcher": "Шукач (необов'язково)",
+          "selectEmployee": "Виберіть співробітника...",
+          "selectSearcher": "Виберіть шукача...",
+          "assignmentReason": "Причина призначення",
+          "assign": "Призначити",
+          "reasons": {
+            "newClient": "Новий клієнт",
+            "workloadDistribution": "Розподіл навантаження",
+            "specialistRequired": "Потрібен спеціаліст",
+            "reassignment": "Перепризначення",
+            "other": "Інше"
+          }
+        },
+        "editInteraction": {
+          "title": "Редагувати взаємодію",
+          "aria": {
+            "type": "Тип",
+            "channel": "Канал",
+            "contactType": "Тип контакту",
+            "result": "Результат",
+            "creditNumber": "Номер кредиту"
+          }
         },
         "assignClient": {
           "title": "Призначити клієнта: {{fullName}}",
@@ -1453,6 +1989,45 @@
           "noPortfoliosFound": "Портфелів не знайдено",
           "clear": "Очистити",
           "apply": "Застосувати"
+        },
+        "tagSelector": {
+          "title": "Керування тегами — {{name}}",
+          "loadingTags": "Завантаження тегів...",
+          "searchTags": "Пошук тегів...",
+          "selectedCount": "{{selected}} з {{total}} тегів вибрано",
+          "noTagsMatch": "За запитом тегів не знайдено",
+          "noTagsAvailable": "Немає доступних тегів",
+          "payloadTagBadge": "потрібна ЦД",
+          "payloadTagHint": "Цей тег потребує ЦД та/або суму — відкриється окрема форма",
+          "saveTags": "Зберегти теги",
+          "tagsUpdated": "Теги оновлено для {{name}}",
+          "updateFailed": "Не вдалося оновити теги"
+        },
+        "deleteClient": {
+          "title": "Видалити клієнта",
+          "softDeleteWarning": "Ця дія прибере клієнта з активних записів (м'яке видалення). За потреби адміністратори можуть відновити дані.",
+          "clientDetails": "Дані клієнта",
+          "fieldName": "ПІБ:",
+          "fieldTaxId": "ІПН:",
+          "fieldPhone": "Телефон:",
+          "fieldTotalDebt": "Загальний борг:",
+          "impactTitle": "Що станеться:",
+          "impact1": "Клієнта буде позначено як видаленого (м'яке видалення)",
+          "impact2": "Клієнт зникне зі списків клієнтів",
+          "impact3": "Історичні дані (нотатки, дзвінки, платежі) збережуться",
+          "impact4": "Скасувати дію без участі адміністратора неможливо",
+          "debtsSummary": "Пов'язані борги: {{count}} на суму {{amount}}",
+          "confirmCheckbox": "Я розумію, що клієнта буде прибрано з активних записів",
+          "submitDelete": "Видалити клієнта",
+          "deleting": "Видалення...",
+          "deletedSuccess": "Клієнта успішно видалено",
+          "deleteFailed": "Не вдалося видалити клієнта"
+        },
+        "documentPreview": {
+          "loading": "Завантаження...",
+          "loadFailed": "Не вдалося завантажити документ",
+          "previewNotAvailable": "Попередній перегляд недоступний",
+          "download": "Завантажити"
         },
         "recordPayment": {
           "title": "Записати платіж",
@@ -1724,6 +2299,7 @@
         "viewAll": "Переглянути всі",
         "showLess": "Показати менше",
         "tableHeaders": {
+          "paymentDate": "Дата платежу",
           "date": "Дата додавання платежу",
           "paymentConfirmationDate": "Дата підтвердження платежу",
           "amount": "Сума",
@@ -1818,6 +2394,157 @@
         "commentPlaceholder": "Необов'язковий коментар..."
       }
     },
+    "clientChains": {
+      "logInteraction": "Журнал взаємодії",
+      "taChainLabel": "Ланцюжок ЦД",
+      "startChain": "Почати ланцюжок",
+      "selectChain": "Ланцюжок",
+      "selectChainPlaceholder": "Оберіть ланцюжок...",
+      "noChains": "Немає доступних активних ланцюжків.",
+      "noCredits": "Для цього клієнта не знайдено відкритих кредитів.",
+      "steps": "кроків",
+      "start": "Почати",
+      "activeLabel": "у процесі",
+      "cancel": "Скасувати ланцюжок",
+      "selectValue": "Оберіть значення...",
+      "selectResult": "Оберіть результат",
+      "selected": "Обрано",
+      "requiredByLeaf": "Обов'язково за налаштуванням вузла",
+      "promiseDate": "Дата обіцянки",
+      "promiseAmount": "Сума обіцянки",
+      "promiseAmountUAH": "Сума обіцянки (₴)",
+      "credit": "Кредит",
+      "creditPlaceholder": "Оберіть кредит...",
+      "notes": "Нотатки",
+      "notesPlaceholder": "Нотатки (необов'язково)...",
+      "stepLabel": "Крок {{order}}",
+      "delayWaiting": "Цей крок буде доступний за {{minutes}} хв",
+      "delayWaitingSeconds": "Цей крок буде доступний за {{seconds}} с",
+      "delayHint": "Попередній крок щойно завершено. Зачекайте, поки пройде затримка.",
+      "saveInteraction": "Зберегти взаємодію",
+      "continueToNext": "Далі →",
+      "quickPicks": "Швидкий старт",
+      "chainProgress": "Перебіг ланцюжка",
+      "stepOf": "крок {{current}} з {{total}}",
+      "current": "поточний",
+      "branch": "гілка",
+      "effectsOnSave": "Наслідки після збереження",
+      "effectTag": "Тег",
+      "effectRemoveTag": "Зняти тег",
+      "effectTask": "Завдання: зворотний дзвінок створено",
+      "effectSMS": "Подія: SMS надіслано",
+      "effectSpam": "Додано до списку спаму",
+      "dictionary": {
+        "level1": "Рівень 1 — Тип взаємодії",
+        "level2": "Рівень 2 — Категорія",
+        "level3": "Рівень 3 — Результат",
+        "selectPlaceholder": "Оберіть..."
+      },
+      "errors": {
+        "selectResult": "Оберіть результат у дереві.",
+        "promiseDateRequired": "Для цього результату потрібна дата обіцянки.",
+        "promiseAmountRequired": "Для цього результату потрібна сума обіцянки.",
+        "creditRequired": "Для цього результату потрібно обрати кредит.",
+        "stepFieldRequired": "Поле «{{name}}» обов'язкове.",
+        "stepRequired": "Заповніть цей крок перед продовженням."
+      },
+      "pickToContinue": "Оберіть ланцюжок вище, щоб продовжити.",
+      "stepsPreview": "Кроки в цьому ланцюжку",
+      "notifyResponsible": "Повідомити відповідального співробітника",
+      "toasts": {
+        "started": "Ланцюжок запущено",
+        "completed": "Взаємодію збережено, ланцюжок завершено",
+        "advanced": "Збережено — перехід до кроку {{step}}",
+        "cancelled": "Ланцюжок скасовано"
+      },
+      "history": {
+        "title": "Історія взаємодій",
+        "date": "Дата",
+        "chain": "Ланцюжок",
+        "phone": "Телефон",
+        "result": "Результат",
+        "dictionaryPath": "Шлях категорії",
+        "promise": "Обіцянка",
+        "notes": "Нотатки",
+        "operator": "Оператор",
+        "promiseDate": "Дата обіцянки",
+        "promiseAmount": "Сума",
+        "credit": "Номер кредиту",
+        "empty": "Взаємодій ще не записано.",
+        "filterChain": "Ланцюжок",
+        "allChains": "Усі ланцюжки",
+        "from": "Від",
+        "to": "До",
+        "selectStartDate": "Виберіть дату початку",
+        "selectEndDate": "Виберіть дату закінчення",
+        "searchNotes": "Нотатки",
+        "searchNotesPlaceholder": "Пошук у нотатках...",
+        "applyFilters": "Застосувати фільтр",
+        "clearFilters": "Очистити",
+        "deleteTitle": "Видалити взаємодію",
+        "deleteConfirm": "Видалити цю взаємодію? Цю дію не можна скасувати.",
+        "deleteSuccess": "Взаємодію видалено"
+      },
+      "editInteraction": {
+        "title": "Редагувати взаємодію",
+        "chainLabel": "Ланцюжок",
+        "savedToast": "Взаємодію оновлено",
+        "savedValue": "Збережене значення",
+        "overdueDays": "прострочено {{count}} дн."
+      },
+      "templatePlaceholder": "Оберіть шаблон…",
+      "templateSearchPlaceholder": "Пошук шаблонів…",
+      "templateNoneFound": "Немає відповідних шаблонів.",
+      "startWithTemplate": "Почати з цим шаблоном",
+      "chainSearchPlaceholder": "Пошук ланцюжків…",
+      "chainNoneFound": "Немає відповідних ланцюжків.",
+      "pinnedGroup": "Закріплені",
+      "allGroup": "Усі ланцюжки",
+      "clientPinHint": "Закріплено через історію цього клієнта",
+      "clientPinTag": "клієнт",
+      "pin": "Закріпити",
+      "unpin": "Відкріпити",
+      "previewHint": "Перегляньте ланцюжок праворуч і натисніть «Почати», коли будете готові.",
+      "stepCount": "{{count}} кроків",
+      "rewindWarningTitle": "Змінити крок з розгалуженням?",
+      "rewindWarningBody": "Кроки після кроку {{order}} буде очищено, і ви пройдете їх знову.",
+      "rewindConfirm": "Так, скинути й пройти знову",
+      "saving": "Збереження…",
+      "noContacts": "Немає доступних телефонів для цього джерела."
+    },
+    "interactionLog": {
+      "title": "Журнал взаємодій",
+      "export": "Експорт CSV",
+      "empty": "За вашими фільтрами взаємодій не знайдено.",
+      "columns": {
+        "date": "Дата",
+        "clientId": "Клієнт",
+        "chain": "Ланцюжок",
+        "dictionaryPath": "Шлях категорії",
+        "promise": "Обіцянка",
+        "promiseDate": "Дата обіцянки",
+        "promiseAmount": "Сума",
+        "creditNumber": "Номер кредиту",
+        "notes": "Нотатки",
+        "operator": "Оператор"
+      },
+      "filters": {
+        "clientId": "ID клієнта",
+        "clientIdPlaceholder": "ID",
+        "chain": "Ланцюжок",
+        "allChains": "Усі ланцюжки",
+        "from": "Від",
+        "to": "До",
+        "notes": "Нотатки",
+        "notesPlaceholder": "Пошук у нотатках..."
+      },
+      "pagination": {
+        "rangeOfTotal": "{{start}}–{{end}} / {{total}}",
+        "pageOfPages": "{{page}} / {{totalPages}}",
+        "previousPage": "Попередня сторінка",
+        "nextPage": "Наступна сторінка"
+      }
+    },
     "taDictionary": {
       "title": "Словник",
       "selectChain": "Оберіть ланцюжок",
@@ -1845,11 +2572,11 @@
       }
     },
     "taChains": {
-      "title": "Ланцюжки TA",
+      "title": "Ланцюжки ЦД",
       "createButton": "Створити ланцюжок",
       "searchPlaceholder": "Пошук ланцюжків...",
       "showInactive": "Показати неактивні",
-      "empty": "Ланцюжки TA не знайдено. Натисніть «Створити ланцюжок», щоб створити перший.",
+      "empty": "Ланцюжки ЦД не знайдено. Натисніть «Створити ланцюжок», щоб створити перший.",
       "noTargetActionsHint": "Спочатку створіть хоча б одну активну цільову дію в Системних налаштуваннях → Цільові дії.",
       "table": {
         "department": "Відділ"
@@ -1887,39 +2614,43 @@
         "empty": "Кроків ще немає. Натисніть «Додати крок», щоб створити перший.",
         "stepLabel": "Крок {{index}}",
         "targetAction": "Цільова дія",
-        "selectTA": "Оберіть TA",
+        "selectTA": "Оберіть ЦД",
         "delayMinutes": "Затримка (хв)",
         "required": "Обов'язково",
         "notInPast": "Дата не може бути в минулому"
       },
       "modals": {
-        "create": { "title": "Створення ланцюжка TA" },
-        "edit": { "title": "Редагування ланцюжка TA" }
+        "create": {
+          "title": "Створення ланцюжка ЦД"
+        },
+        "edit": {
+          "title": "Редагування ланцюжка ЦД"
+        }
       },
       "errors": {
         "nameRequired": "Назва обов'язкова",
         "departmentRequired": "Оберіть хоча б один відділ"
       },
       "toasts": {
-        "created": "Ланцюжок TA створено",
-        "updated": "Ланцюжок TA оновлено",
-        "cloned": "Ланцюжок TA скопійовано",
-        "activated": "Ланцюжок TA активовано",
-        "deactivated": "Ланцюжок TA деактивовано"
+        "created": "Ланцюжок ЦД створено",
+        "updated": "Ланцюжок ЦД оновлено",
+        "cloned": "Ланцюжок ЦД скопійовано",
+        "activated": "Ланцюжок ЦД активовано",
+        "deactivated": "Ланцюжок ЦД деактивовано"
       }
     },
     "taManagement": {
       "tabs": {
         "targetActions": "Цільові дії",
-        "taChains": "Ланцюжки TA",
+        "taChains": "Ланцюжки ЦД",
         "dictionary": "Словник",
         "chainBuilder": "Конструктор ланцюжків"
       }
     },
     "targetActions": {
       "title": "Цільові дії",
-      "createButton": "Створити TA",
-      "searchPlaceholder": "Пошук TA...",
+      "createButton": "Створити ЦД",
+      "searchPlaceholder": "Пошук ЦД...",
       "showHidden": "Показати приховані",
       "empty": "Цільові дії не знайдено",
       "lockedHint": "Цю цільову дію вже використано в одному або декількох ланцюжках і її більше не можна редагувати. Створіть копію.",
@@ -1958,8 +2689,12 @@
         "addValuePlaceholder": "Додати значення..."
       },
       "modals": {
-        "create": { "title": "Створення цільової дії" },
-        "edit": { "title": "Редагування цільової дії" }
+        "create": {
+          "title": "Створення цільової дії"
+        },
+        "edit": {
+          "title": "Редагування цільової дії"
+        }
       },
       "errors": {
         "nameRequired": "Назва обов'язкова",
@@ -1973,6 +2708,118 @@
         "cloned": "Цільову дію скопійовано",
         "hidden": "Цільову дію приховано",
         "unhidden": "Цільову дію відновлено"
+      }
+    },
+    "documentGeneration": {
+      "title": "Генерація документів",
+      "tabs": {
+        "journal": "Журнал документів",
+        "templates": "Шаблони документів"
+      },
+      "documentTypes": {
+        "passport": "Паспорт",
+        "inn": "ІНН",
+        "contract": "Договір",
+        "income": "Довідка про доходи",
+        "outcome": "Витяг / виписка",
+        "signature": "Цифровий підпис",
+        "other": "Інше"
+      },
+      "actions": {
+        "uploaded": "Завантажено",
+        "generated": "Згенеровано"
+      },
+      "filters": {
+        "documentType": "Тип документа",
+        "action": "Дія",
+        "operator": "Оператор",
+        "client": "Клієнт",
+        "clientPlaceholder": "Ім'я",
+        "creditor": "Кредитор",
+        "creditorPlaceholder": "ID кредиту або назва кредитора",
+        "dateFrom": "Дата від",
+        "dateTo": "Дата до",
+        "all": "Усі",
+        "reset": "Скинути"
+      },
+      "journal": {
+        "columns": {
+          "documentName": "Назва документа",
+          "documentType": "Тип документа",
+          "client": "Клієнт",
+          "creditId": "ID кредиту",
+          "creditor": "Кредитор",
+          "action": "Дія",
+          "performedBy": "Виконав",
+          "dateTime": "Дата та час"
+        },
+        "loading": "Завантаження…",
+        "empty": "Документи не знайдено.",
+        "loadError": "Не вдалося завантажити журнал документів."
+      },
+      "templates": {
+        "comingSoon": "Керування шаблонами буде додано в наступному релізі.",
+        "create": "Створити шаблон",
+        "intro": "Багаторазові шаблони документів зі змінними-плейсхолдерами.",
+        "empty": "Ще немає шаблонів.",
+        "loading": "Завантаження...",
+        "loadError": "Не вдалося завантажити шаблони.",
+        "columns": {
+          "name": "Назва шаблона",
+          "preview": "Превʼю",
+          "variables": "Змінні",
+          "updated": "Оновлено",
+          "actions": "Дії"
+        },
+        "modals": {
+          "createTitle": "Створити шаблон",
+          "editTitle": "Редагувати шаблон",
+          "subtitle": "Використовуйте {{variable_name}} для вставки динамічних даних.",
+          "deleteTitle": "Видалити шаблон",
+          "deleteConfirm": "Ви впевнені, що хочете видалити цей шаблон?",
+          "deleteWarning": "Цю дію не можна скасувати."
+        },
+        "form": {
+          "name": "Назва шаблона",
+          "namePlaceholder": "напр. Лист-вимога",
+          "body": "Тіло шаблона",
+          "bodyPlaceholder": "Складайте шаблон тут. Вставляйте змінні з правої панелі.",
+          "preview": "Превʼю (тестові дані)",
+          "previewEmpty": "Почніть друкувати, щоб побачити превʼю.",
+          "variables": "Змінні",
+          "variablesHelp": "Натисніть змінну, щоб вставити її в позицію курсора."
+        },
+        "variableGroups": {
+          "client": "Клієнт",
+          "credit": "Кредит",
+          "system": "Система"
+        },
+        "variables": {
+          "clientFullName": "Повне імʼя клієнта",
+          "clientFirstName": "Імʼя клієнта",
+          "clientLastName": "Прізвище клієнта",
+          "clientTaxId": "Податковий номер (ІПН)",
+          "clientPhone": "Основний телефон",
+          "clientEmail": "Основний email",
+          "clientAddress": "Зареєстрована адреса",
+          "creditId": "ID кредиту / номер договору",
+          "creditorName": "Назва кредитора",
+          "debtAmount": "Сума заборгованості",
+          "debtCurrency": "Валюта боргу",
+          "contractDate": "Дата підписання договору",
+          "dueDate": "Наступна дата платежу",
+          "today": "Сьогоднішня дата",
+          "operatorName": "Повне імʼя оператора"
+        },
+        "errors": {
+          "nameRequired": "Назва шаблона обовʼязкова",
+          "bodyRequired": "Тіло шаблона обовʼязкове"
+        },
+        "messages": {
+          "created": "Шаблон створено",
+          "updated": "Шаблон оновлено",
+          "deleted": "Шаблон видалено"
+        }
       }
     },
     "smsTemplates": {
@@ -1994,7 +2841,7 @@
         "actions": "Дії"
       },
       "categories": {
-        "paymentReminder": "Нагадування про платіж",
+        "paymentReminder": "Нагадування про оплату",
         "urgentContact": "Терміновий контакт",
         "general": "Загальне"
       },
@@ -2243,6 +3090,7 @@
     },
     "profile": {
       "title": "Налаштування профілю",
+      "accountSecurity": "Безпека облікового запису",
       "roleLabel": "Роль:",
       "resetPassword": "Скинути пароль",
       "passwordChanged": "Пароль змінено",
@@ -2738,6 +3586,7 @@
         },
         "operators": {
           "eq": "дорівнює",
+          "ne": "не дорівнює",
           "neq": "не дорівнює",
           "gt": "більше",
           "gte": "більше або дорівнює",
@@ -2796,6 +3645,7 @@
         "active": "Активне",
         "priority": "Пріоритет",
         "targetTag": "Цільовий тег",
+        "triggerTag": "Тег, що закінчився",
         "replaceTag": "Замінити на тег",
         "selectTag": "Оберіть тег",
         "empty": "Правила не знайдено. Створіть правило для автоматизації призначення тегів.",
@@ -2844,6 +3694,9 @@
           "replace_tag": "Замінити тег"
         },
         "selectField": "Оберіть поле",
+        "selectEvent": "Оберіть подію...",
+        "customEvent": "Своє значення...",
+        "eventHint": "Оберіть системну подію або введіть свою",
         "executionCount": "Виконань",
         "lastExecuted": "Останній запуск",
         "neverExecuted": "—",
@@ -2864,10 +3717,56 @@
           "has_tag": "Має тег",
           "not_has_tag": "Не має тег"
         },
+        "eventPayloadFields": {
+          "previous_responsible_id": "Попередній відповідальний (ID)",
+          "new_responsible_id": "Новий відповідальний (ID)",
+          "interaction_id": "ID взаємодії",
+          "result_name": "Результат",
+          "type_code": "Тип взаємодії",
+          "channel": "Канал",
+          "direction": "Напрямок",
+          "payment_id": "ID платежу",
+          "payment_number": "Номер платежу",
+          "debt_id": "ID боргу",
+          "amount": "Сума",
+          "payment_method": "Метод оплати",
+          "payment_date": "Дата платежу",
+          "payment_confirmation_date": "Дата підтвердження платежу",
+          "status": "Статус",
+          "verified_by_user_id": "Верифікував (ID)",
+          "verified_at": "Дата верифікації",
+          "recorded_by_user_id": "Записав (ID)",
+          "remaining_debt": "Залишок боргу",
+          "sms_id": "ID SMS",
+          "message_id": "ID повідомлення",
+          "phone_number": "Номер телефону",
+          "template_name": "Шаблон SMS",
+          "segments": "Сегменти SMS",
+          "gateway_provider": "Шлюз провайдера",
+          "call_id": "ID дзвінка",
+          "outcome": "Результат дзвінка",
+          "disposition": "Диспозиція",
+          "agent_extension": "Внутрішній номер оператора",
+          "score": "Бал",
+          "risk_score": "Бал ризику",
+          "previous_score": "Попередній бал",
+          "score_change": "Зміна балу",
+          "algorithm_version": "Версія алгоритму",
+          "calculation_reason": "Причина розрахунку",
+          "tax_id": "ІПН",
+          "source": "Джерело",
+          "import_batch_id": "ID пакета імпорту",
+          "contract_number": "Номер договору",
+          "old_amount": "Стара сума",
+          "new_amount": "Нова сума",
+          "old_status": "Старий статус",
+          "new_status": "Новий статус"
+        },
         "validation": {
           "nameRequired": "Назва обов'язкова",
           "nameMax": "Максимум 100 символів",
           "targetRequired": "Цільовий тег обов'язковий",
+          "triggerTagRequired": "Тег-тригер обов'язковий для правил закінчення тега",
           "eventRequired": "Назва події обов'язкова для event-тригерів",
           "cronRequired": "Cron-вираз обов'язковий для тригерів за розкладом"
         },
@@ -2904,7 +3803,7 @@
               "No contact": "Немає контакту",
               "Refusal to pay": "Відмова від оплати",
               "Agreement": "Обіцянка оплати",
-              "Call back by appointment": "Перезвонити за домовленістю",
+              "Call back by appointment": "Передзвонити",
               "Consent to interact": "Згода на взаємодію",
               "Waiting for a call": "Очікує дзвінка",
               "Hanged up": "Поклав слухавку",
@@ -2917,7 +3816,28 @@
               "Threatens": "Погрожує",
               "Sent documents": "Надіслано документи",
               "No numbers": "Немає номерів",
-              "Numbers found": "Номери знайдено"
+              "Numbers found": "Номери знайдено",
+              "Agreement - Full payment": "Обіцянка — повна оплата",
+              "Agreement - Partial payment": "Обіцянка — часткова оплата",
+              "Agreement - Restructuring": "Обіцянка — реструктуризація",
+              "Agreement - Potential payment": "Обіцянка — можлива оплата",
+              "Payment reminder": "Нагадування про оплату"
+            },
+            "type_code": {
+              "INCOMING": "Вхідна",
+              "OUTGOING": "Вихідна",
+              "SEARCHING": "Пошук"
+            },
+            "channel": {
+              "call": "Дзвінок",
+              "messenger": "Месенджер",
+              "mail": "Пошта",
+              "chat": "Чат"
+            },
+            "direction": {
+              "inbound": "Вхідний",
+              "outbound": "Вихідний",
+              "system": "Системний"
             }
           }
         }
@@ -2952,6 +3872,18 @@
       },
       "helpBanner": "Потрібна допомога з налаштуванням тегів?",
       "helpLink": "Документація",
+      "trace": {
+        "cta": "Чому?",
+        "openAllHint": "Переглянути активність тегів цього клієнта",
+        "titleAll": "Активність тегів клієнта",
+        "titleSingle": "Чому «{{tag}}»?",
+        "empty": "Активність тегів для цього клієнта поки не зафіксована.",
+        "emptyForTag": "Для цього тега ще немає історії — можливо, його призначили вручну або до увімкнення трасування.",
+        "loadFailed": "Не вдалося завантажити трасування",
+        "entriesCount": "{{count}} подій на стрічці часу (новіші зверху)",
+        "actor": "ініціатор",
+        "action": "дія"
+      },
       "settings": {
         "description": "Управління випадаючими списками, подіями та умовами правил. Зміни застосовуються одразу до всіх форм.",
         "dictionarySettings": "Довідник тегів",

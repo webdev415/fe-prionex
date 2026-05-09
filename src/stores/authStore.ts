@@ -31,6 +31,7 @@ function mapBackendUserToUser(backendUser: CurrentUserResponse): User {
     timezone: backendUser.timezone,
     language: backendUser.language,
     mustChangePassword: backendUser.must_change_password ?? false,
+    twoFactorEnabled: backendUser.two_factor_enabled ?? false,
   }
 }
 
@@ -44,6 +45,10 @@ interface AuthState {
   pendingCredentials: LoginRequest | null
   hasCheckedAuth: boolean
 
+  // 2FA challenge state — set when /login replies with two_factor_required
+  twoFactorToken: string | null
+  twoFactorUsername: string | null
+
   // Impersonation state
   isImpersonating: boolean
   impersonatedUser: User | null
@@ -52,6 +57,8 @@ interface AuthState {
   login: (credentials: LoginRequest) => Promise<void>
   logout: () => Promise<void>
   forceLogin: () => Promise<void>
+  verifyTwoFactor: (code: string) => Promise<void>
+  cancelTwoFactor: () => void
   checkAuth: () => Promise<void>
   refreshUser: () => Promise<void>
   updateCurrentUser: (updates: Partial<User>) => void
@@ -87,17 +94,43 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   pendingCredentials: null,
   hasCheckedAuth: false,
 
+  // 2FA challenge initial state
+  twoFactorToken: null,
+  twoFactorUsername: null,
+
   // Impersonation initial state
   isImpersonating: false,
   impersonatedUser: null,
   originalAdminUser: null,
 
   login: async (credentials: LoginRequest) => {
-    set({ isLoading: true, error: null, errorState: null, pendingCredentials: null })
+    set({
+      isLoading: true,
+      error: null,
+      errorState: null,
+      pendingCredentials: null,
+      twoFactorToken: null,
+      twoFactorUsername: null,
+    })
 
     try {
       const response = await authApi.login(credentials)
-      const { token, user: loginUser } = response.data
+      const { token, user: loginUser, two_factor_required, two_factor_token } = response.data
+
+      // 2FA branch — password OK but the second factor is required.
+      if (two_factor_required && two_factor_token) {
+        set({
+          isLoading: false,
+          twoFactorToken: two_factor_token,
+          twoFactorUsername: credentials.username,
+          errorState: 'TWO_FACTOR_REQUIRED',
+        })
+        return
+      }
+
+      if (!token || !loginUser) {
+        throw new Error('Login response missing token or user')
+      }
 
       setAccessToken(token)
 
@@ -223,6 +256,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         error: null,
         errorState: null,
         hasCheckedAuth: false,
+        twoFactorToken: null,
+        twoFactorUsername: null,
         // Clear impersonation state
         isImpersonating: false,
         impersonatedUser: null,
@@ -239,11 +274,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return
     }
 
-    set({ isLoading: true, error: null })
+    set({ isLoading: true, error: null, twoFactorToken: null, twoFactorUsername: null })
 
     try {
       const response = await authApi.forceLogin(pendingCredentials)
-      const { token, user: loginUser } = response.data
+      const { token, user: loginUser, two_factor_required, two_factor_token } = response.data
+
+      // 2FA branch (also possible after force-login)
+      if (two_factor_required && two_factor_token) {
+        set({
+          isLoading: false,
+          twoFactorToken: two_factor_token,
+          twoFactorUsername: pendingCredentials.username,
+          errorState: 'TWO_FACTOR_REQUIRED',
+        })
+        return
+      }
+
+      if (!token || !loginUser) {
+        throw new Error('Force login response missing token or user')
+      }
 
       setAccessToken(token)
 
@@ -315,6 +365,132 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       })
       throw error
     }
+  },
+
+  verifyTwoFactor: async (code: string) => {
+    const { twoFactorToken } = get()
+
+    if (!twoFactorToken) {
+      set({ error: '2FA challenge expired. Please log in again.', errorState: null })
+      throw new Error('No active 2FA challenge')
+    }
+
+    set({ isLoading: true, error: null })
+
+    try {
+      const response = await authApi.verifyTwoFactor({
+        two_factor_token: twoFactorToken,
+        code,
+      })
+      const { token, user: loginUser } = response.data
+
+      if (!token || !loginUser) {
+        throw new Error('Verify-2FA response missing token or user')
+      }
+
+      setAccessToken(token)
+
+      // Mirrors the `login()` success path: prefer /users/me for full
+      // profile + permissions, fall back to login response if it fails.
+      try {
+        const userResponse = await authApi.me()
+        const backendUser = userResponse.data
+
+        const user = mapBackendUserToUser(backendUser)
+        applyPersistedLanguageFromServer(backendUser.language)
+
+        set({
+          user,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+          errorState: null,
+          twoFactorToken: null,
+          twoFactorUsername: null,
+          pendingCredentials: null,
+          hasCheckedAuth: true,
+        })
+      } catch {
+        const user: User = {
+          id: String(loginUser.id),
+          username: loginUser.username,
+          email: undefined,
+          firstName: undefined,
+          lastName: undefined,
+          projects:
+            loginUser.projects?.map((projectId) => ({
+              id: String(projectId),
+              name: '',
+              roles: [],
+            })) || [],
+          active_project_id: loginUser.active_project_id
+            ? String(loginUser.active_project_id)
+            : null,
+          active_role_id: loginUser.active_role_id ? String(loginUser.active_role_id) : null,
+          active_role_name: loginUser.active_role_name || null,
+          active_department_id: null,
+          permissions: [],
+          createdAt: undefined,
+          updatedAt: undefined,
+          mustChangePassword: false,
+          twoFactorEnabled: true, // they just used 2FA, so it's on
+        }
+
+        set({
+          user,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+          errorState: null,
+          twoFactorToken: null,
+          twoFactorUsername: null,
+          pendingCredentials: null,
+          hasCheckedAuth: true,
+        })
+      }
+    } catch (error: unknown) {
+      const err = error as {
+        response?: {
+          status?: number
+          data?: { detail?: string | { code?: string; message?: string } }
+        }
+      }
+      const detail = err.response?.data?.detail
+      let errorCode: string | null = null
+      let errorMessage = 'Verification failed'
+
+      if (typeof detail === 'object' && detail !== null) {
+        errorCode = detail.code || null
+        errorMessage = detail.message || errorMessage
+      } else if (typeof detail === 'string') {
+        errorMessage = detail
+      }
+
+      // If the challenge expired or got invalidated, kick the user back
+      // to the password screen so they re-enter credentials.
+      const challengeDead =
+        errorCode === 'TWO_FACTOR_CHALLENGE_EXPIRED' || errorCode === 'TWO_FACTOR_CHALLENGE_INVALID'
+
+      set({
+        isLoading: false,
+        error: errorMessage,
+        errorState: challengeDead ? null : 'TWO_FACTOR_REQUIRED',
+        twoFactorToken: challengeDead ? null : get().twoFactorToken,
+        twoFactorUsername: challengeDead ? null : get().twoFactorUsername,
+      })
+
+      throw error
+    }
+  },
+
+  cancelTwoFactor: () => {
+    set({
+      twoFactorToken: null,
+      twoFactorUsername: null,
+      errorState: null,
+      error: null,
+      pendingCredentials: null,
+    })
   },
 
   checkAuth: async () => {
@@ -534,7 +710,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   clearError: () => {
-    set({ error: null, errorState: null, lockoutMinutes: null, pendingCredentials: null })
+    set({
+      error: null,
+      errorState: null,
+      lockoutMinutes: null,
+      pendingCredentials: null,
+      twoFactorToken: null,
+      twoFactorUsername: null,
+    })
   },
 
   startImpersonation: async (userId: number) => {

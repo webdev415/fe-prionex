@@ -420,7 +420,7 @@ export function EditInteractionModal({
             <Icons.PencilEdit size={20} className="text-dark-500 sm:size-6" strokeWidth={1.5} />
           </div>
         }
-        title={t('pages.clients.modals.editInteraction.title', 'Edit Interaction')}
+        title={t('pages.clients.modals.editInteraction.title')}
       />
       <ModalContent>
         <div className="flex flex-col gap-4 md:gap-6">
@@ -454,7 +454,11 @@ export function EditInteractionModal({
               <div className="text-xs text-gray-500">{t('common.loading', 'Loading...')}</div>
             ) : (
               <Select value={safeTypeValue} onValueChange={handleTypeChange}>
-                <SelectTrigger className="w-full" id="edit-interaction-type" aria-label="Type">
+                <SelectTrigger
+                  className="w-full"
+                  id="edit-interaction-type"
+                  aria-label={t('pages.clients.modals.editInteraction.aria.type')}
+                >
                   <SelectValue
                     placeholder={t(
                       'pages.clients.modals.addNote.selectTypeOfAction',
@@ -489,7 +493,7 @@ export function EditInteractionModal({
                   <SelectTrigger
                     className="w-full"
                     id="edit-interaction-channel"
-                    aria-label="Channel"
+                    aria-label={t('pages.clients.modals.editInteraction.aria.channel')}
                   >
                     <SelectValue
                       placeholder={t(
@@ -526,7 +530,7 @@ export function EditInteractionModal({
                   <SelectTrigger
                     className="w-full"
                     id="edit-interaction-contact-type"
-                    aria-label="Contact type"
+                    aria-label={t('pages.clients.modals.editInteraction.aria.contactType')}
                   >
                     <SelectValue
                       placeholder={t(
@@ -567,7 +571,7 @@ export function EditInteractionModal({
                   <SelectTrigger
                     className="w-full"
                     id="edit-interaction-result"
-                    aria-label="Result"
+                    aria-label={t('pages.clients.modals.editInteraction.aria.result')}
                   >
                     <SelectValue
                       placeholder={t(
@@ -645,7 +649,7 @@ export function EditInteractionModal({
                 <SelectTrigger
                   className="w-full"
                   id="edit-interaction-credit-number"
-                  aria-label="Credit number"
+                  aria-label={t('pages.clients.modals.editInteraction.aria.creditNumber')}
                 >
                   <SelectValue
                     placeholder={t(

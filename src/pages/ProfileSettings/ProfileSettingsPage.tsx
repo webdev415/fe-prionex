@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import { useAuth, useUpdateMyProfile, ChangePasswordModal } from '@/features/auth'
+import { useAuth, useUpdateMyProfile, ChangePasswordModal, TwoFactorSection } from '@/features/auth'
 import { authApi } from '@/features/auth/api/authApi'
 import { timezoneOptions } from '@/features/users/schemas/userSchemas'
 import { Input } from '@/components/ui/Input'
@@ -52,15 +52,40 @@ export function ProfileSettingsPage() {
   }, [user, i18n.language])
 
   const [form, setForm] = useState(initialForm)
+  const [savedProfileSnapshot, setSavedProfileSnapshot] = useState(() => ({
+    email: initialForm.email,
+    first_name: initialForm.first_name,
+    last_name: initialForm.last_name,
+    middle_name: initialForm.middle_name,
+    phone: initialForm.phone,
+    language: initialForm.language,
+    timezone: initialForm.timezone,
+  }))
+
+  const hasProfileChanges = useMemo(() => {
+    return (
+      form.email !== savedProfileSnapshot.email ||
+      form.first_name !== savedProfileSnapshot.first_name ||
+      form.last_name !== savedProfileSnapshot.last_name ||
+      form.middle_name !== savedProfileSnapshot.middle_name ||
+      form.phone !== savedProfileSnapshot.phone ||
+      form.language !== savedProfileSnapshot.language ||
+      form.timezone !== savedProfileSnapshot.timezone
+    )
+  }, [form, savedProfileSnapshot])
 
   // Sync when i18n changes externally only (e.g. header switcher). Do not depend on form.language —
   // i18n.changeLanguage is async; including form.language would revert the profile dropdown immediately.
   useEffect(() => {
     const raw = i18n.language as 'en' | 'uk' | 'ru'
     const currentLanguage: 'en' | 'uk' = raw === 'ru' ? 'uk' : (raw as 'en' | 'uk') || 'en'
-    setForm((prev) =>
-      prev.language === currentLanguage ? prev : { ...prev, language: currentLanguage }
-    )
+    // Defer to a microtask so the effect body itself doesn't call setState
+    // synchronously (lint: react-hooks/set-state-in-effect).
+    queueMicrotask(() => {
+      setForm((prev) =>
+        prev.language === currentLanguage ? prev : { ...prev, language: currentLanguage }
+      )
+    })
   }, [i18n.language])
 
   const { mutateAsync: changePassword } = useMutation({
@@ -111,6 +136,15 @@ export function ProfileSettingsPage() {
       setIsUpdatingLocal(true)
       await updateMyProfileMutateAsync(updatePayload)
 
+      setSavedProfileSnapshot({
+        email: form.email,
+        first_name: form.first_name,
+        last_name: form.last_name,
+        middle_name: form.middle_name,
+        phone: form.phone,
+        language: form.language,
+        timezone: form.timezone,
+      })
       setForm((f) => ({ ...f, currentPassword: '', newPassword: '' }))
     } finally {
       setIsUpdatingLocal(false)
@@ -118,7 +152,18 @@ export function ProfileSettingsPage() {
   }
 
   const handleCancel = () => {
-    setForm(initialForm)
+    setForm((prev) => ({
+      ...prev,
+      email: savedProfileSnapshot.email,
+      first_name: savedProfileSnapshot.first_name,
+      last_name: savedProfileSnapshot.last_name,
+      middle_name: savedProfileSnapshot.middle_name,
+      phone: savedProfileSnapshot.phone,
+      language: savedProfileSnapshot.language,
+      timezone: savedProfileSnapshot.timezone,
+      currentPassword: '',
+      newPassword: '',
+    }))
   }
 
   return (
@@ -127,9 +172,9 @@ export function ProfileSettingsPage() {
         {t('pages.profile.title')}
       </span>
 
-      <div className="flex flex-col items-start gap-4 self-stretch lg:flex-row lg:gap-5">
+      <div className="flex flex-col items-start gap-4 self-stretch 2xl:flex-row 2xl:gap-5">
         {/* Left panel */}
-        <div className="flex w-full flex-col items-center gap-4 self-stretch rounded-xl bg-white/50 px-4 py-6 sm:gap-5 sm:px-6 sm:py-8 lg:w-[25%] lg:py-11">
+        <div className="flex w-full flex-col items-center gap-4 self-stretch rounded-xl bg-white/50 px-4 py-6 sm:gap-5 sm:px-6 sm:py-8 2xl:w-[25%] 2xl:py-11">
           <div className="flex flex-col items-center gap-4 self-stretch">
             <div className="bg-secondary-800 relative flex flex-col items-center justify-center gap-[10px] rounded-full border border-white p-3">
               <div className="border-primary-300 absolute flex h-15 w-15 items-center justify-center rounded-full border-2 bg-transparent"></div>
@@ -168,7 +213,7 @@ export function ProfileSettingsPage() {
           <Button
             onClick={() => setIsChangePasswordOpen(true)}
             variant="secondary"
-            className="h-12 w-full rounded-md lg:w-auto"
+            className="h-12 w-full rounded-md 2xl:w-auto"
             leftIcon={<Icons.LockSync01 size={24} />}
           >
             {t('pages.profile.resetPassword')}
@@ -188,10 +233,17 @@ export function ProfileSettingsPage() {
               }
             }}
           />
+
+          <div className="mt-6 flex w-full flex-col gap-3 self-stretch border-t border-gray-200 pt-6">
+            <span className="text-dark-500 self-start text-sm font-semibold tracking-[-0.28px]">
+              {t('pages.profile.accountSecurity')}
+            </span>
+            <TwoFactorSection />
+          </div>
         </div>
 
         {/* Right: form */}
-        <div className="flex w-full flex-1 flex-col items-start gap-3 rounded-xl bg-white/50 p-4 sm:p-6">
+        <div className="flex w-full flex-1 flex-col items-start gap-3 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
           <form
             onSubmit={handleSave}
             className="flex w-full flex-col items-center gap-4 self-stretch sm:gap-6"
@@ -199,8 +251,8 @@ export function ProfileSettingsPage() {
             <span className="text-dark-500 self-stretch text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
               {t('pages.users.modals.edit.title')}
             </span>
-            <div className="flex w-full flex-col items-center gap-4 self-stretch">
-              <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
+            <div className="flex w-full flex-col items-center gap-6 self-stretch">
+              <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
                 <Input
                   label={t('pages.users.forms.username')}
                   value={form.username}
@@ -217,7 +269,7 @@ export function ProfileSettingsPage() {
                   className="w-full"
                 />
               </div>
-              <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
+              <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
                 <Input
                   label={t('pages.users.forms.firstName')}
                   value={form.first_name}
@@ -234,7 +286,7 @@ export function ProfileSettingsPage() {
                   className="w-full"
                 />
               </div>
-              <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
+              <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
                 <Input
                   label={t('pages.users.forms.middleName')}
                   value={form.middle_name}
@@ -250,7 +302,7 @@ export function ProfileSettingsPage() {
                   className="w-full"
                 />
               </div>
-              <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
+              <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
                 <div className="flex w-full flex-col gap-2 self-stretch">
                   <Label htmlFor="language">{t('pages.users.forms.language')}</Label>
                   <LanguageSwitcher
@@ -283,7 +335,7 @@ export function ProfileSettingsPage() {
 
               {/* Call Settings Section - Only visible for agents */}
               {user?.is_agent && (
-                <div className="flex w-full flex-col items-start gap-4 self-stretch lg:flex-row">
+                <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
                   <Input
                     label={t('pages.users.forms.asteriskExtension') || 'Asterisk Extension'}
                     value={user?.asterisk_extension || ''}
@@ -339,28 +391,30 @@ export function ProfileSettingsPage() {
                 </div>
               )}
             </div>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
-              <Button
-                type="button"
-                variant="cancel"
-                onClick={handleCancel}
-                className="h-12 w-48 rounded-full px-10"
-              >
-                {t('actions.cancel')}
-              </Button>
-              <DoubleButton
-                type="submit"
-                icon={<Icons.Success size={28} />}
-                iconPosition="left"
-                disabled={isUpdatingLocal || isChangingLocal}
-                className="h-12 w-48"
-                onClick={() => {
-                  // Handle double button click
-                }}
-              >
-                {t('pages.profile.saveChanges')}
-              </DoubleButton>
-            </div>
+            {hasProfileChanges && (
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
+                <Button
+                  type="button"
+                  variant="cancel"
+                  onClick={handleCancel}
+                  className="h-12 w-48 rounded-full px-10"
+                >
+                  {t('actions.cancel')}
+                </Button>
+                <DoubleButton
+                  type="submit"
+                  icon={<Icons.Tick02 size={28} />}
+                  iconPosition="left"
+                  disabled={isUpdatingLocal || isChangingLocal}
+                  className="h-12 w-48"
+                  onClick={() => {
+                    // Handle double button click
+                  }}
+                >
+                  {t('pages.profile.saveChanges')}
+                </DoubleButton>
+              </div>
+            )}
           </form>
         </div>
       </div>

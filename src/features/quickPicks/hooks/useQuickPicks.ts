@@ -9,11 +9,12 @@ import type { QuickPickCreate } from '../api/types'
 
 const KEY = ['quick-picks'] as const
 
-export function useQuickPicks(departmentId?: number) {
+export function useQuickPicks(departmentId?: number, opts?: { fetchAll?: boolean }) {
+  const fetchAll = opts?.fetchAll ?? false
   return useQuery({
-    queryKey: [...KEY, departmentId],
-    queryFn: () => getQuickPicks(departmentId),
-    enabled: departmentId !== undefined,
+    queryKey: [...KEY, fetchAll ? 'all' : (departmentId ?? null)],
+    queryFn: () => getQuickPicks(fetchAll ? undefined : departmentId),
+    enabled: fetchAll || departmentId !== undefined,
   })
 }
 

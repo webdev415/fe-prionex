@@ -6,7 +6,7 @@
  * - Other types: download-only prompt
  */
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { documentApi } from '@/features/clients/api/documentApi'
@@ -42,7 +42,7 @@ export function DocumentPreviewModal({
   filename,
   mimeType,
 }: DocumentPreviewModalProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation('common')
 
   const isImage = PREVIEWABLE_IMAGE_TYPES.has(mimeType)
   const isPdf = mimeType === 'application/pdf'
@@ -54,7 +54,7 @@ export function DocumentPreviewModal({
   const dragStart = useRef({ x: 0, y: 0 })
 
   const {
-    data: previewData,
+    data: blob,
     isLoading: loading,
     error,
   } = useQuery({
@@ -64,13 +64,17 @@ export function DocumentPreviewModal({
     staleTime: 60000,
   })
 
-  const blobUrl = previewData?.url ?? null
-
+  // Mint a fresh object URL whenever the blob arrives or changes, and revoke
+  // it on unmount/blob change. Caching only the Blob (not the URL) in React
+  // Query lets a re-open of the same document produce a new URL instead of
+  // reusing one that was already revoked on the previous close.
+  const blobUrl = useMemo(() => (blob ? URL.createObjectURL(blob) : null), [blob])
   useEffect(() => {
+    if (!blobUrl) return
     return () => {
-      if (previewData?.url) URL.revokeObjectURL(previewData.url)
+      URL.revokeObjectURL(blobUrl)
     }
-  }, [previewData?.url])
+  }, [blobUrl])
 
   const handleDownload = () => {
     documentApi.download(clientId, documentId, filename)
@@ -135,7 +139,7 @@ export function DocumentPreviewModal({
                 onClick={handleDownload}
                 className="border-white/30 text-white hover:bg-white/10"
               >
-                {t('common.download', 'Download')}
+                {t('pages.clients.modals.documentPreview.download')}
               </Button>
               <button
                 onClick={onClose}
@@ -176,11 +180,15 @@ export function DocumentPreviewModal({
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                   />
                 </svg>
-                Loading...
+                {t('pages.clients.modals.documentPreview.loading')}
               </div>
             )}
 
-            {error && <div className="text-red-400">Failed to load document</div>}
+            {error && (
+              <div className="text-red-400">
+                {t('pages.clients.modals.documentPreview.loadFailed')}
+              </div>
+            )}
 
             {/* Image: dark bg, fill viewport */}
             {!loading && !error && isImage && blobUrl && (
@@ -230,11 +238,13 @@ export function DocumentPreviewModal({
                   <polyline points="14 2 14 8 20 8" />
                 </svg>
                 <p className="text-center">
-                  Preview not available
+                  {t('pages.clients.modals.documentPreview.previewNotAvailable')}
                   <br />
                   <span className="text-sm text-white/40">{mimeType}</span>
                 </p>
-                <Button onClick={handleDownload}>{t('common.download', 'Download')}</Button>
+                <Button onClick={handleDownload}>
+                  {t('pages.clients.modals.documentPreview.download')}
+                </Button>
               </div>
             )}
           </div>

@@ -34,6 +34,7 @@ import { AssignRoleModal, type AssignRoleMode } from './components/AssignRoleMod
 import { PriorityBadge } from './components/PriorityBadge'
 import type { Priority } from './types'
 import { TagBadge } from '@/components/ui/TagBadge'
+import { ClientTagTraceModal } from '@/pages/Tags/components/ClientTagTraceModal'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { CallRecordingModal } from './components/CallRecordingModal'
 import { ViewSMSModal } from './components/ViewSMSModal'
@@ -80,6 +81,7 @@ import {
 import type { InteractionResponse } from '@/features/clients/api/types'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
+import { useTrackEvent } from '@/features/operatorAnalytics'
 import { useCallStore } from '@/stores/callStore'
 import { useClientTags } from '@/features/tags/hooks/useTags'
 import { TagSelectorModal } from './components/TagSelectorModal'
@@ -140,6 +142,16 @@ export function ClientDetailPage() {
   const { isCallActive, setOpenCallModal } = useCallStore()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const trackEvent = useTrackEvent()
+
+  useEffect(() => {
+    if (!id) return
+    const numericId = Number(id)
+    trackEvent('client_card_open', {
+      clientId: Number.isFinite(numericId) ? numericId : null,
+      meta: { client_id: id },
+    })
+  }, [id, trackEvent])
 
   // Returns true if the value looks like a Ukrainian phone number,
   // regardless of the contact type's isPhone flag
@@ -253,6 +265,11 @@ export function ClientDetailPage() {
   const deleteTaskMutation = useDeleteTask(clientId)
   // Fetch client tags from API (real)
   const { data: clientTags } = useClientTags(clientId)
+  const [traceModal, setTraceModal] = useState<{
+    open: boolean
+    tagCode?: string
+    tagName?: string
+  }>({ open: false })
 
   // Fetch department of responsible employee
   const { data: responsibleEmployeeDepartment } = useUserDepartment(
@@ -898,6 +915,15 @@ export function ClientDetailPage() {
       }
     }
   }, [activeClientCardTab]) // Re-check when tab changes
+
+  useEffect(() => {
+    if (!id) return
+    const numericId = Number(id)
+    trackEvent('client_card_tab_switch', {
+      clientId: Number.isFinite(numericId) ? numericId : null,
+      meta: { tab: activeClientCardTab },
+    })
+  }, [activeClientCardTab, id, trackEvent])
 
   // Scroll active tab into view when it changes
   useEffect(() => {
@@ -1674,14 +1700,27 @@ export function ClientDetailPage() {
                     {clientTags && clientTags.length > 0 ? (
                       <>
                         {clientTags.slice(0, 3).map((tag) => (
-                          <TagBadge
+                          <button
                             key={tag.id}
-                            name={tag.name}
-                            color={tag.color}
-                            size="sm"
-                            isProtected={tag.is_protected}
-                            expiryType={tag.expiry_type}
-                          />
+                            type="button"
+                            onClick={() =>
+                              setTraceModal({
+                                open: true,
+                                tagCode: (tag as { code?: string }).code,
+                                tagName: tag.name,
+                              })
+                            }
+                            title={t('pages.tags.trace.openHint', 'Why this tag?')}
+                            className="cursor-pointer rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1"
+                          >
+                            <TagBadge
+                              name={tag.name}
+                              color={tag.color}
+                              size="sm"
+                              isProtected={tag.is_protected}
+                              expiryType={tag.expiry_type}
+                            />
+                          </button>
                         ))}
                         {clientTags.length > 3 && (
                           <button
@@ -1694,6 +1733,17 @@ export function ClientDetailPage() {
                             })}
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => setTraceModal({ open: true })}
+                          title={t(
+                            'pages.tags.trace.openAllHint',
+                            'View tag activity for this client'
+                          )}
+                          className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700 transition-colors hover:bg-indigo-100"
+                        >
+                          {t('pages.tags.trace.cta', 'Why?')}
+                        </button>
                       </>
                     ) : (
                       <span className="text-xs leading-[140%] font-light tracking-[-0.24px] text-gray-700">
@@ -3576,7 +3626,7 @@ export function ClientDetailPage() {
             (isActivitiesLoading ? (
               <TableSkeleton columns={12} rows={3} className="w-full" />
             ) : displayedActivities.length === 0 ? (
-              <div className="flex flex-col items-center gap-4 self-stretch md:gap-6">
+              <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
                   <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
                   <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
@@ -3614,7 +3664,7 @@ export function ClientDetailPage() {
             (isProfileLoading ? (
               <TableSkeleton columns={1} rows={3} className="w-full" />
             ) : !profile?.sale_notes?.trim() ? (
-              <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
+              <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
                   <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
                   <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
@@ -3637,7 +3687,7 @@ export function ClientDetailPage() {
             (isDialHistoryLoading ? (
               <TableSkeleton columns={2} rows={3} className="w-full" />
             ) : dialHistory.length === 0 ? (
-              <div className="flex flex-col items-center gap-4 self-stretch py-8 md:gap-6">
+              <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
                   <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
                   <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
@@ -3803,6 +3853,15 @@ export function ClientDetailPage() {
           clientName={client.fullName}
           projectId={1}
           onClose={() => setIsTagModalOpen(false)}
+        />
+
+        {/* Tag Trace Modal — "Why this tag?" timeline (PR3 commit 3.10) */}
+        <ClientTagTraceModal
+          open={traceModal.open}
+          clientId={clientId}
+          tagCode={traceModal.tagCode}
+          tagName={traceModal.tagName}
+          onClose={() => setTraceModal({ open: false })}
         />
 
         {/* Edit Client Modal */}
@@ -4188,6 +4247,7 @@ export function ClientDetailPage() {
                   }
                   format="dd-MM-yyyy"
                   placeholder={t('pages.clients.detail.rrConnectionDate')}
+                  className="rounded-lg border-gray-400"
                 />
                 <Input
                   label={`${t('pages.clients.detail.rrRestructuringAmount')} *`}
@@ -4239,6 +4299,7 @@ export function ClientDetailPage() {
                         }}
                         format="dd-MM-yyyy"
                         placeholder={t('pages.clients.detail.rrPaymentDate')}
+                        className="rounded-lg border-gray-400"
                       />
                       <Input
                         label={`${t('pages.clients.detail.rrPaymentAmount')} ${idx + 1} *`}
@@ -4271,7 +4332,7 @@ export function ClientDetailPage() {
               variant="cancel"
               size="sm"
               onClick={() => setIsConnectRrOpen(false)}
-              className="w-full rounded-md sm:w-auto"
+              className="w-full rounded-md"
             >
               {t('actions.cancel')}
             </Button>
@@ -4372,7 +4433,7 @@ export function ClientDetailPage() {
                   }
                 )
               }}
-              className="w-full rounded-md sm:w-auto"
+              className="w-full rounded-md"
             >
               {isCreatingRr ? '...' : t('pages.clients.detail.connectRR')}
             </Button>

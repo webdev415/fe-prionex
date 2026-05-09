@@ -406,7 +406,7 @@ export function SendSMSModal({
                     value={clientNameField}
                     onChange={(e) => setClientNameField(e.target.value)}
                     readOnly
-                    className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none sm:text-sm"
+                    className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 h-[45px] w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light focus:ring-2 focus:outline-none sm:text-sm"
                   />
                 </div>
                 <div className="flex flex-col gap-2">
@@ -434,7 +434,7 @@ export function SendSMSModal({
                       type="text"
                       value="—"
                       readOnly
-                      className="text-dark-500 w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light sm:text-sm"
+                      className="text-dark-500 h-[45px] w-full rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light sm:text-sm"
                     />
                   )}
                 </div>

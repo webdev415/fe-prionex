@@ -11,9 +11,19 @@ import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Modal, ModalHeader, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { documentApi } from '@/features/clients/api/documentApi'
 import { clientKeys } from '@/features/clients/hooks/useClients'
+import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { PermissionGuard } from '@/components/auth/PermissionGuard'
+import { PERMISSIONS } from '@/constants/permissions'
 
 interface Loan {
   id: number
@@ -28,18 +38,18 @@ interface DocumentUploadModalProps {
   loans: Loan[]
 }
 
-const DOC_TYPES = [
-  { value: 'passport', label: 'Паспорт' },
-  { value: 'inn', label: 'ІНН' },
-  { value: 'contract', label: 'Договір' },
-  { value: 'income', label: 'Довідка про доходи' },
-  { value: 'outcome', label: 'Витяг' },
-  { value: 'signature', label: 'ЕЦП' },
-  { value: 'other', label: 'Інше' },
-]
+const DOC_TYPE_VALUES = [
+  'passport',
+  'inn',
+  'contract',
+  'income',
+  'outcome',
+  'signature',
+  'other',
+] as const
 
 export function DocumentUploadModal({ open, onClose, clientId, loans }: DocumentUploadModalProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation('common')
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -67,14 +77,14 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
     try {
       await documentApi.upload(clientId, file, docType, debtId)
       queryClient.invalidateQueries({ queryKey: clientKeys.documents(clientId) })
-      toast.success(t('common.success', 'Success'))
+      toast.success(t('status.success'))
       // Reset and close
       setFile(null)
       setDocType('other')
       setDebtId(null)
       onClose()
     } catch {
-      toast.error(t('common.error', 'Error'))
+      toast.error(t('status.error'))
     } finally {
       setUploading(false)
     }
@@ -89,9 +99,21 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
 
   return (
     <Modal open={open} onClose={handleClose} maxWidth="md">
-      <ModalHeader title={t('pages.clients.detail.uploadDocument', 'Завантажити документ')} />
+      <ModalHeader title={t('pages.clients.detail.documentUploadTitle')} />
 
       <div className="flex flex-col gap-4 p-4 md:p-6">
+        <PermissionGuard permission={PERMISSIONS.DOCUMENT_GENERATION.GENERATE}>
+          <Button
+            variant="outline"
+            type="button"
+            className="w-full"
+            leftIcon={<Icons.AddInvoice size={16} />}
+            onClick={() => toast.info(t('pages.clients.detail.comingSoon'))}
+          >
+            {t('pages.clients.detail.generateDocument')}
+          </Button>
+        </PermissionGuard>
+
         {/* File drop zone */}
         <div
           role="button"
@@ -155,61 +177,72 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
                 <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
               <span className="text-secondary-600 text-sm">
-                {t(
-                  'pages.clients.detail.dropFileHere',
-                  'Перетягніть файл або натисніть для вибору'
-                )}
+                {t('pages.clients.detail.dropFileOrClick')}
               </span>
             </div>
           )}
         </div>
 
-        {/* Document type */}
-        <div>
-          <label className="text-secondary-700 mb-1 block text-sm font-medium">
-            {t('pages.clients.detail.tableHeaders.documentType', 'Тип документа')}
-          </label>
-          <select
-            value={docType}
-            onChange={(e) => setDocType(e.target.value)}
-            className="border-secondary-300 text-secondary-900 focus:border-primary-400 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none"
-          >
-            {DOC_TYPES.map((dt) => (
-              <option key={dt.value} value={dt.value}>
-                {dt.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Document type & Credit */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-secondary-700 mb-1 block text-sm font-medium">
+              {t('pages.clients.detail.documentType')}
+            </label>
+            <Select value={docType} onValueChange={(value) => setDocType(value)}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DOC_TYPE_VALUES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t(`pages.clients.detail.documentTypes.${value}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        {/* Credit (optional) */}
-        <div>
-          <label className="text-secondary-700 mb-1 block text-sm font-medium">
-            {t('pages.clients.detail.loan', 'Кредит')}
-          </label>
-          <select
-            value={debtId ?? ''}
-            onChange={(e) => setDebtId(e.target.value ? Number(e.target.value) : null)}
-            className="border-secondary-300 text-secondary-900 focus:border-primary-400 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none"
-          >
-            <option value="">{t('pages.clients.detail.documentsUnlinked', "Без прив'язки")}</option>
-            {loans.map((loan) => (
-              <option key={loan.id} value={loan.id}>
-                #{loan.loanNumber} — {loan.counterparty}
-              </option>
-            ))}
-          </select>
+          <div>
+            <label className="text-secondary-700 mb-1 block text-sm font-medium">
+              {t('pages.clients.detail.loan')}
+            </label>
+            <Select
+              value={debtId == null ? 'unlinked' : String(debtId)}
+              onValueChange={(value) => setDebtId(value === 'unlinked' ? null : Number(value))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unlinked">
+                  {t('pages.clients.detail.documentsUnlinked')}
+                </SelectItem>
+                {loans.map((loan) => (
+                  <SelectItem key={loan.id} value={String(loan.id)}>
+                    #{loan.loanNumber} — {loan.counterparty}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
       <ModalFooter>
-        <Button variant="outline" onClick={handleClose}>
-          {t('common.cancel', 'Скасувати')}
+        <Button
+          variant="outline"
+          onClick={handleClose}
+          className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
+        >
+          {t('actions.cancel')}
         </Button>
-        <Button onClick={handleUpload} disabled={!file || uploading}>
-          {uploading
-            ? t('common.loading', 'Завантаження...')
-            : t('pages.clients.detail.uploadDocument', 'Завантажити')}
+        <Button
+          onClick={handleUpload}
+          disabled={!file || uploading}
+          className="h-10 flex-1 text-xs sm:h-[45px] sm:text-sm"
+        >
+          {uploading ? t('status.loading') : t('pages.clients.detail.documentUploadAction')}
         </Button>
       </ModalFooter>
     </Modal>

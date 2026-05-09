@@ -5,7 +5,8 @@
  * Supports event-based, schedule-based, and other trigger types.
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { RuleExecutionsModal } from './RuleExecutionsModal'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -30,8 +31,6 @@ import {
   SelectItem,
 } from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
-import { generateCode } from '@/lib/utils'
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/Tooltip'
 import { useCreateRule, useUpdateRule } from '@/features/tags'
 import type { TagRule, RuleTriggerType, RuleActionType, Tag } from '@/features/tags'
 
@@ -92,23 +91,6 @@ function CronPreview({
 
 // Rule presets loaded from tagConfigStore (manageable via Settings tab)
 
-function FieldTooltip({ text }: { text: string }) {
-  return (
-    <TooltipProvider delayDuration={200}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="ml-1 inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full bg-gray-200 text-[10px] font-bold text-gray-500">
-            ?
-          </span>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-xs">
-          {text}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  )
-}
-
 function getEventDisplayLabel(
   eventValue: string,
   eventLabel: string,
@@ -141,10 +123,10 @@ function mergeOptions(...groups: Array<ConfigItem[] | undefined>): ConfigItem[] 
 
 type RuleFormData = {
   name: string
-  code: string
   description: string
   trigger_type: RuleTriggerType
   trigger_event: string
+  trigger_tag_code: string
   cron_expression: string
   conditions: { field: string; op: string; value: string }[]
   action_type: RuleActionType
@@ -179,18 +161,6 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
             .string()
             .min(1, t('pages.tags.rules.validation.nameRequired', 'Name is required'))
             .max(100, t('pages.tags.rules.validation.nameMax', 'Max 100 characters')),
-          code: z
-            .string()
-            .max(100, t('pages.tags.rules.validation.codeMax', 'Max 100 characters'))
-            .regex(
-              /^[a-z0-9_]*$/,
-              t(
-                'pages.tags.rules.validation.codeFormat',
-                'Only lowercase letters, numbers, underscores'
-              )
-            )
-            .optional()
-            .default(''),
           description: z.string().max(500).optional().default(''),
           trigger_type: z.enum([
             'event',
@@ -200,6 +170,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
             'import_complete',
           ]),
           trigger_event: z.string().optional().default(''),
+          trigger_tag_code: z.string().optional().default(''),
           cron_expression: z.string().optional().default(''),
           conditions: z.array(
             z.object({
@@ -237,11 +208,22 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               path: ['cron_expression'],
             })
           }
+          if (data.trigger_type === 'tag_expired' && !data.trigger_tag_code) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: t(
+                'pages.tags.rules.validation.triggerTagRequired',
+                'Trigger tag is required for tag expiry triggers'
+              ),
+              path: ['trigger_tag_code'],
+            })
+          }
         }),
     [t]
   )
 
   const [isCustomEvent, setIsCustomEvent] = useState(false)
+  const [executionsOpen, setExecutionsOpen] = useState(false)
 
   const {
     register,
@@ -256,10 +238,10 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
     resolver: zodResolver(ruleSchema) as any,
     defaultValues: {
       name: '',
-      code: '',
       description: '',
       trigger_type: 'event',
       trigger_event: '',
+      trigger_tag_code: '',
       cron_expression: '',
       conditions: [],
       action_type: 'add_tag',
@@ -371,26 +353,16 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
   }
   const actionType = watch('action_type')
   const cronValue = watch('cron_expression')
-  const nameValue = watch('name')
-  const codeManuallyEdited = useRef(false)
-
-  // Auto-generate code from name (when not manually edited; also on edit if legacy rule has no code)
-  useEffect(() => {
-    if (!codeManuallyEdited.current) {
-      setValue('code', nameValue ? generateCode(nameValue) : '', { shouldValidate: !!nameValue })
-    }
-  }, [nameValue, setValue])
 
   // Reset form when modal opens
   useEffect(() => {
     if (open) {
-      codeManuallyEdited.current = !!rule?.code
       reset({
         name: rule?.name ?? '',
-        code: rule?.code ?? '',
         description: rule?.description ?? '',
         trigger_type: rule?.trigger_type ?? 'event',
         trigger_event: rule?.trigger_event ?? '',
+        trigger_tag_code: rule?.trigger_tag_code ?? '',
         cron_expression: rule?.cron_expression ?? '',
         conditions: (rule?.conditions ?? []).map((c) => ({
           field: c.field,
@@ -414,10 +386,11 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
     async (data: RuleFormData) => {
       const payload = {
         name: data.name,
-        code: data.code || undefined,
         description: data.description || undefined,
         trigger_type: data.trigger_type,
         trigger_event: data.trigger_type === 'event' ? data.trigger_event || undefined : undefined,
+        trigger_tag_code:
+          data.trigger_type === 'tag_expired' ? data.trigger_tag_code || undefined : undefined,
         cron_expression:
           data.trigger_type === 'schedule' ? data.cron_expression || undefined : undefined,
         conditions: data.conditions.map((c) => ({
@@ -493,7 +466,6 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                   onValueChange={(key) => {
                     const preset = RULE_PRESETS.find((p) => p.key === key)
                     if (preset) {
-                      codeManuallyEdited.current = false
                       setIsCustomEvent(
                         preset.trigger_event
                           ? !AVAILABLE_EVENTS.some((event) => event.value === preset.trigger_event)
@@ -501,10 +473,10 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       )
                       reset({
                         name: preset.name,
-                        code: generateCode(preset.name),
                         description: preset.description,
                         trigger_type: preset.trigger_type as RuleTriggerType,
                         trigger_event: preset.trigger_event ?? '',
+                        trigger_tag_code: preset.trigger_tag_code ?? '',
                         cron_expression: preset.cron_expression ?? '',
                         conditions: preset.conditions,
                         action_type: preset.action_type as RuleActionType,
@@ -548,29 +520,9 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               />
             </div>
 
-            {/* Code */}
-            <div className="space-y-1.5">
-              <Label htmlFor="rule-code" required>
-                {t('pages.tags.rules.code', 'Code')}
-                <FieldTooltip
-                  text={t(
-                    'pages.tags.fields.tooltips.code',
-                    'Unique API identifier. Auto-generated from name.'
-                  )}
-                />
-              </Label>
-              <Input
-                id="rule-code"
-                {...register('code', {
-                  onChange: () => {
-                    codeManuallyEdited.current = true
-                  },
-                })}
-                placeholder="vysokiy_risk_prosrochki"
-                error={errors.code?.message}
-                disabled={isEdit && !!rule?.code}
-              />
-            </div>
+            {/* Code field hidden — backend rule schema does not persist `code` yet.
+                Will be re-introduced in PR4 (feature/KAN-tags-rule-safety-dryrun)
+                together with the migration that adds tag_rules.code. */}
 
             {/* Description */}
             <div className="space-y-1.5">
@@ -681,6 +633,39 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                   {cronValue && <CronPreview expression={cronValue} t={t} />}
                 </div>
               )}
+
+              {/* Trigger Tag (if tag_expired) */}
+              {triggerType === 'tag_expired' && (
+                <div className="space-y-1.5">
+                  <Label required>{t('pages.tags.rules.triggerTag', 'Expired Tag')}</Label>
+                  <Controller
+                    name="trigger_tag_code"
+                    control={control}
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={t('pages.tags.rules.selectTag', 'Select tag')}
+                          />
+                        </SelectTrigger>
+                        <SelectContent
+                          searchable
+                          searchPlaceholder={t('pages.tags.searchTags', 'Search tags...')}
+                        >
+                          {tagCodeOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.trigger_tag_code?.message && (
+                    <p className="text-error-500 text-xs">{errors.trigger_tag_code.message}</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Conditions */}
@@ -694,14 +679,17 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               </p>
               <div className="space-y-2">
                 {fields.map((field, index) => (
-                  <div key={field.id} className="flex items-start gap-2">
+                  <div
+                    key={field.id}
+                    className="grid grid-cols-1 gap-2 lg:grid-cols-[minmax(0,1.2fr)_minmax(180px,0.8fr)_minmax(0,1fr)_auto] lg:items-start"
+                  >
                     <Controller
                       name={`conditions.${index}.field`}
                       control={control}
                       render={({ field: fieldCtrl }) => (
                         <div className="min-w-0">
                           <Select value={fieldCtrl.value} onValueChange={fieldCtrl.onChange}>
-                            <SelectTrigger className="h-9 w-40 shrink-0 text-xs">
+                            <SelectTrigger className="h-9 w-full min-w-0 text-xs">
                               <SelectValue
                                 placeholder={t('pages.tags.rules.selectField', 'Select field')}
                               />
@@ -727,7 +715,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       control={control}
                       render={({ field: opField }) => (
                         <Select value={opField.value} onValueChange={opField.onChange}>
-                          <SelectTrigger className="h-9 w-28 shrink-0 text-xs">
+                          <SelectTrigger className="h-9 w-full min-w-0 text-xs">
                             <SelectValue placeholder={t('pages.tags.rules.operator', 'Op')} />
                           </SelectTrigger>
                           <SelectContent>
@@ -750,7 +738,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                             control={control}
                             render={({ field: valField }) => (
                               <Select value={valField.value} onValueChange={valField.onChange}>
-                                <SelectTrigger className="h-9 min-w-[140px] flex-1 text-xs">
+                                <SelectTrigger className="h-9 w-full min-w-0 text-xs">
                                   <SelectValue
                                     placeholder={t('pages.tags.rules.selectTag', 'Select tag')}
                                   />
@@ -778,7 +766,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                             control={control}
                             render={({ field: valField }) => (
                               <Select value={valField.value} onValueChange={valField.onChange}>
-                                <SelectTrigger className="h-9 min-w-[140px] flex-1 text-xs">
+                                <SelectTrigger className="h-9 w-full min-w-0 text-xs">
                                   <SelectValue
                                     placeholder={t(
                                       'pages.tags.rules.valuePlaceholder',
@@ -804,7 +792,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       return (
                         <Input
                           inputSize="sm"
-                          className="h-9 text-xs"
+                          className="h-9 w-full min-w-0 text-xs"
                           placeholder={t('pages.tags.rules.valuePlaceholder', 'e.g. 80')}
                           {...register(`conditions.${index}.value`)}
                         />
@@ -814,7 +802,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       type="button"
                       variant="ghost"
                       size="icon-xs"
-                      className="mt-0.5 shrink-0 text-gray-400 hover:text-red-500"
+                      className="self-start text-gray-400 hover:text-red-500"
                       onClick={() => remove(index)}
                       aria-label={t('actions.remove', 'Remove')}
                     >
@@ -954,6 +942,17 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
         </ModalContent>
 
         <ModalFooter>
+          {isEdit && rule && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setExecutionsOpen(true)}
+              className="mr-auto"
+            >
+              <Icons.Clock01 size={14} strokeWidth={2} className="mr-1" />
+              {t('pages.tags.rules.viewExecutions', 'View executions')}
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -970,6 +969,14 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
           </Button>
         </ModalFooter>
       </form>
+      {isEdit && rule && (
+        <RuleExecutionsModal
+          open={executionsOpen}
+          ruleId={rule.id}
+          ruleName={rule.name}
+          onClose={() => setExecutionsOpen(false)}
+        />
+      )}
     </Modal>
   )
 }

@@ -5,7 +5,12 @@ import { ProtectedRoute } from './ProtectedRoute'
 import { PermissionRoute } from './PermissionRoute'
 import { GuestRoute } from './GuestRoute'
 import { DashboardLayout } from '@/components/layout'
+import { RouteErrorElement } from '@/components/RouteErrorElement'
 import { PERMISSIONS } from '@/constants/permissions'
+import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOperatorAssignmentPageSkeleton'
+import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignmentPageSkeleton'
+import { BulkPaymentVerificationPageSkeleton } from '@/pages/Operations/BulkPaymentVerificationPageSkeleton'
+import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
 const ForceChangePasswordPage = lazy(() => import('@/pages/auth/ForceChangePasswordPage'))
@@ -66,9 +71,19 @@ const InteractionLogPage = lazy(() =>
     default: m.InteractionLogPage,
   }))
 )
+const DocumentGenerationPage = lazy(() =>
+  import('@/pages/DocumentGeneration').then((m) => ({
+    default: m.DocumentGenerationPage,
+  }))
+)
 const ReportsDashboardPage = lazy(() =>
   import('@/pages/ReportsDashboard').then((m) => ({
     default: m.ReportsDashboardPage,
+  }))
+)
+const ActionAnalysisPage = lazy(() =>
+  import('@/pages/ActionAnalysis').then((m) => ({
+    default: m.ActionAnalysisPage,
   }))
 )
 const SellerManagementPage = lazy(() =>
@@ -105,14 +120,19 @@ const BulkOperatorAssignmentPage = lazy(() =>
     default: m.BulkOperatorAssignmentPage,
   }))
 )
-const BulkPaymentImportPage = lazy(() =>
+const BulkPaymentVerificationPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
-    default: m.BulkPaymentImportPage,
+    default: m.BulkPaymentVerificationPage,
+  }))
+)
+const BulkTagAssignmentPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkTagAssignmentPage,
   }))
 )
 
 const withSuspense = (element: React.ReactElement) => (
-  <Suspense fallback={<div>Loading...</div>}>{element}</Suspense>
+  <Suspense fallback={<AppLoadingFallback />}>{element}</Suspense>
 )
 
 const DashboardLayoutRoute = () => (
@@ -127,14 +147,17 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <GuestRoute>{withSuspense(<LoginPage />)}</GuestRoute>,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '/change-password',
     element: <ProtectedRoute>{withSuspense(<ForceChangePasswordPage />)}</ProtectedRoute>,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '/dashboard',
     element: <DashboardLayoutRoute />,
+    errorElement: <RouteErrorElement />,
     children: [
       {
         index: true,
@@ -162,6 +185,10 @@ export const router = createBrowserRouter([
       },
       {
         path: 'import',
+        element: <Navigate to="/dashboard/import/clients" replace />,
+      },
+      {
+        path: 'import/clients',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT}>
             {withSuspense(<ImportClientsPage />)}
@@ -213,6 +240,14 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.REPORTS.VIEW_ALL_REPORTS}>
             {withSuspense(<ReportsDashboardPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'action-analysis',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.ACTION_ANALYSIS.VIEW}>
+            {withSuspense(<ActionAnalysisPage />)}
           </PermissionRoute>
         ),
       },
@@ -273,18 +308,48 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'operations/bulk-operator-assignment',
+        path: 'system-settings/document-generation',
         element: (
-          <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.EDIT}>
-            {withSuspense(<BulkOperatorAssignmentPage />)}
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.DOCUMENT_GENERATION.VIEW_JOURNAL,
+              PERMISSIONS.DOCUMENT_GENERATION.VIEW_TEMPLATES,
+              PERMISSIONS.DOCUMENT_GENERATION.CREATE_EDIT_TEMPLATES,
+              PERMISSIONS.DOCUMENT_GENERATION.DELETE_TEMPLATES,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<DocumentGenerationPage />)}
           </PermissionRoute>
         ),
       },
       {
-        path: 'operations/bulk-payment-import',
+        path: 'import/bulk-operator-assignment',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.EDIT}>
+            <Suspense fallback={<BulkOperatorAssignmentPageSkeleton />}>
+              <BulkOperatorAssignmentPage />
+            </Suspense>
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'import/bulk-tag-assignment',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
+            <Suspense fallback={<BulkTagAssignmentPageSkeleton />}>
+              <BulkTagAssignmentPage />
+            </Suspense>
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'import/bulk-payment-import',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.DATA.IMPORT_PAYMENTS}>
-            {withSuspense(<BulkPaymentImportPage />)}
+            <Suspense fallback={<BulkPaymentVerificationPageSkeleton />}>
+              <BulkPaymentVerificationPage />
+            </Suspense>
           </PermissionRoute>
         ),
       },
@@ -334,21 +399,26 @@ export const router = createBrowserRouter([
   {
     path: '/dashboard/scoring-configuration',
     element: <Navigate to="/dashboard/system-settings/scoring-configuration" replace />,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '/dashboard/scoring-configuration/history',
     element: <Navigate to="/dashboard/system-settings/scoring-configuration/history" replace />,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '/dashboard/sms-templates',
     element: <Navigate to="/dashboard/system-settings/sms-templates" replace />,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '/',
     element: <Navigate to="/dashboard" replace />,
+    errorElement: <RouteErrorElement />,
   },
   {
     path: '*',
     element: <Navigate to="/dashboard" replace />,
+    errorElement: <RouteErrorElement />,
   },
 ])

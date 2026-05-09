@@ -16,7 +16,12 @@ import { Step2VendorDump, type Step2VendorDumpData } from './components/Step2Ven
 import { Icons } from '@/lib/icons'
 import { ImportHistoryModal, type ImportHistoryData } from './components/ImportHistoryModal'
 import { useNavigate } from 'react-router-dom'
-import { useImportJobs, useImportJob, useCancelImport } from '@/features/imports'
+import {
+  useImportJobs,
+  useImportJob,
+  useCancelImport,
+  computeImportUiStatusFromDetail,
+} from '@/features/imports'
 import { useAuthStore } from '@/stores/authStore'
 import { convertUTCToUserTimezone } from '@/lib/formatters'
 
@@ -32,18 +37,26 @@ export function ImportClientsPage() {
   const previousStatusRef = useRef<string | null>(null)
   const lastShownJobIdRef = useRef<number | string | null>(null)
 
+  // Scope to the current user so this page's banner doesn't surface another
+  // user's running import in the same accessible project.
+  const currentUserId = user?.id ? Number(user.id) : undefined
+
   // Fetch latest pending or in-progress import job (check both currentJobId and latest pending/in-progress)
   // Filter to client import types only — exclude payment_import jobs
   const { data: importJobsData, refetch: refetchImportJobs } = useImportJobs({
     page: 1,
     page_size: 10, // Get more jobs to filter client-side
+    user_id: currentUserId,
   })
 
-  // Get the latest pending or in-progress job, excluding payment_import jobs
+  // Get the latest pending or in-progress job for the simple/vendor flows
+  // this page handles. Bulk operator/tag/payment imports surface their own
+  // banner on their dedicated pages, so excluding them here prevents one
+  // queued job from appearing on multiple pages at once.
   const latestInProgressJob = importJobsData?.items?.find(
     (job) =>
       (job.status === 'pending' || job.status === 'in_progress') &&
-      job.import_type !== 'payment_import'
+      (job.import_type === 'simple' || job.import_type === 'vendor')
   )
 
   // Use currentJobId if set, otherwise use latest in-progress job ID
@@ -192,6 +205,7 @@ export function ImportClientsPage() {
   const { data: latestJobData } = useImportJobs({
     page: 1,
     page_size: 1,
+    user_id: currentUserId,
   })
   const latestJob = latestJobData?.items?.find(
     (job) => job.status !== 'in_progress' && job.status !== 'pending'
@@ -214,14 +228,17 @@ export function ImportClientsPage() {
         file: jobDetailForModal.file_name,
         uploadedBy: jobDetailForModal.uploaded_by,
         uploadedAt: convertUTCToUserTimezone(jobDetailForModal.uploaded_at, user?.timezone),
-        status:
-          jobDetailForModal.status === 'completed'
-            ? jobDetailForModal.errors_count > 0
-              ? 'completed_with_errors'
-              : 'completed'
-            : jobDetailForModal.status === 'failed'
-              ? 'failed'
-              : 'completed',
+        // Reuse the shared status helper, then collapse the broader UI
+        // vocabulary onto the modal's narrower {completed |
+        // completed_with_errors | failed} type. The modal only ever sees
+        // terminal jobs (the wrapping condition filters in_progress /
+        // pending), so the unmapped values are unreachable.
+        status: (() => {
+          const ui = computeImportUiStatusFromDetail(jobDetailForModal)
+          if (ui === 'failed') return 'failed' as const
+          if (ui === 'completed_with_errors') return 'completed_with_errors' as const
+          return 'completed' as const
+        })(),
         totalRows: jobDetailForModal.total_rows,
         newClients: jobDetailForModal.new_clients,
         updatedClients: jobDetailForModal.updated_clients,
@@ -246,6 +263,7 @@ export function ImportClientsPage() {
     purchaseDate: getInitialPurchaseDate(), // UTC datetime (backend will store as UTC)
     comment: '',
     importType: 'simple',
+    schemaCode: '',
   })
 
   const [step2Data, setStep2Data] = useState<Step2Data>({
@@ -280,18 +298,24 @@ export function ImportClientsPage() {
   }
 
   const isStep1Valid = () => {
-    return (
+    const baseValid =
       step1Data.sellerId !== '' && step1Data.projectCode !== '' && step1Data.purchaseDate !== ''
-    )
+    if (!baseValid) return false
+    // Vendor flow needs a schema selected before step 2 can proceed.
+    if (step1Data.importType === 'vendor' && !step1Data.schemaCode) return false
+    return true
   }
 
+  // Pass an explicit empty `import_type` so the History page sees a non-empty
+  // URL on arrival. Without it, useAutoPersistedState restores whichever
+  // import_type was last saved (e.g. payment_import from a prior visit via
+  // the Bulk Payment page) and injects it back into the URL.
   const handleViewHistory = () => {
-    navigate('/dashboard/import/history')
+    navigate('/dashboard/import/history?import_type=')
   }
 
   const handleGoToImportHistory = () => {
-    // Navigate to Import History page
-    navigate('/dashboard/import/history')
+    navigate('/dashboard/import/history?import_type=')
   }
 
   const handleViewDetails = () => {

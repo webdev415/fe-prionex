@@ -5,6 +5,7 @@
  * Shows import summary and error details.
  */
 
+import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useURLState, useAutoPersistedState } from '@/hooks'
@@ -12,9 +13,15 @@ import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Icons } from '@/lib/icons'
-import { SemiCircularProgress } from './components'
-import { useImportJob, useImportJobErrors, useExportImportErrors } from '@/features/imports'
+import { SemiCircularProgress, VendorPhaseProgress } from './components'
+import {
+  useImportJob,
+  useImportJobErrors,
+  useExportImportErrors,
+  computeImportUiStatusFromDetail,
+} from '@/features/imports'
 import { ImportDetailsPageSkeleton } from './components/ImportDetailsPageSkeleton'
 import { useAuthStore } from '@/stores/authStore'
 import { convertUTCToUserTimezone } from '@/lib/formatters'
@@ -102,6 +109,14 @@ export function ImportDetailsPage() {
   const [errorPage, setErrorPage] = useURLState<number>('page', 1)
   const [errorPageSize, setErrorPageSize] = useURLState<number>('pageSize', 50)
 
+  // Reset to page 1 whenever the route's job id changes. Without this, stale
+  // ?page=N from a previous (large-error) job carries over to a new job and
+  // makes the errors fetch hit a non-existent offset, returning empty.
+  useEffect(() => {
+    setErrorPage(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
   // Add persistence for state
   useAutoPersistedState(
     'import-details-state',
@@ -124,14 +139,38 @@ export function ImportDetailsPage() {
     },
   })
 
-  // Fetch import errors with pagination
-  const { data: errorsData } = useImportJobErrors(id, {
-    page: errorPage,
-    page_size: errorPageSize,
-  })
+  // Fetch import errors with pagination. `refetchOnMount: 'always'`
+  // dodges a stale failed-state cache. `refetchInterval` keeps the
+  // errors table in sync with the live `errors_count` while a vendor
+  // import is mid-flight — the backend now flushes per-file errors as
+  // each file completes, so polling reveals them progressively.
+  const {
+    data: errorsData,
+    isLoading: isLoadingErrors,
+    isFetching: isFetchingErrors,
+  } = useImportJobErrors(
+    id,
+    { page: errorPage, page_size: errorPageSize },
+    {
+      refetchOnMount: 'always',
+      retry: 2,
+      refetchInterval: jobDetail?.status === 'in_progress' ? 5000 : false,
+    }
+  )
+
+  // Show skeleton while the errors query is loading the current page
+  // (initial load or pagination), but NOT during background polling
+  // refetches when the import is still in progress — those should leave
+  // the table on screen.
+  const isPollingErrors = jobDetail?.status === 'in_progress'
+  const showErrorsSkeleton =
+    isLoadingErrors || (isFetchingErrors && !isPollingErrors && !errorsData)
 
   // Export errors mutation
   const exportErrorsMutation = useExportImportErrors()
+
+  const isVendor = jobDetail?.import_type === 'vendor'
+  const isTagAssignment = jobDetail?.import_type === 'tag_assignment'
 
   // Convert API data to component format
   const importDetail = jobDetail
@@ -140,65 +179,14 @@ export function ImportDetailsPage() {
         file: jobDetail.file_name,
         uploadedBy: jobDetail.uploaded_by,
         uploadedAt: convertUTCToUserTimezone(jobDetail.uploaded_at, userTimezone),
-        status:
-          jobDetail.status === 'completed'
-            ? jobDetail.errors_count > 0
-              ? ('completed_with_errors' as
-                  | 'done'
-                  | 'failed'
-                  | 'completed_with_errors'
-                  | 'in_progress'
-                  | 'pending'
-                  | 'cancelled')
-              : ('done' as
-                  | 'done'
-                  | 'failed'
-                  | 'completed_with_errors'
-                  | 'in_progress'
-                  | 'pending'
-                  | 'cancelled')
-            : jobDetail.status === 'failed'
-              ? ('failed' as
-                  | 'done'
-                  | 'failed'
-                  | 'completed_with_errors'
-                  | 'in_progress'
-                  | 'pending'
-                  | 'cancelled')
-              : jobDetail.status === 'in_progress'
-                ? ('in_progress' as
-                    | 'done'
-                    | 'failed'
-                    | 'completed_with_errors'
-                    | 'in_progress'
-                    | 'pending'
-                    | 'cancelled')
-                : jobDetail.status === 'pending'
-                  ? ('pending' as
-                      | 'done'
-                      | 'failed'
-                      | 'completed_with_errors'
-                      | 'in_progress'
-                      | 'pending'
-                      | 'cancelled')
-                  : jobDetail.status === 'cancelled'
-                    ? ('cancelled' as
-                        | 'done'
-                        | 'failed'
-                        | 'completed_with_errors'
-                        | 'in_progress'
-                        | 'pending'
-                        | 'cancelled')
-                    : ('done' as
-                        | 'done'
-                        | 'failed'
-                        | 'completed_with_errors'
-                        | 'in_progress'
-                        | 'pending'
-                        | 'cancelled'),
+        // Single source of truth for the badge status; aggregates per-phase
+        // signals so vendor jobs whose downstream phase silently dropped
+        // rows render as 'completed_with_errors' instead of green 'done'.
+        status: computeImportUiStatusFromDetail(jobDetail),
         totalRows: jobDetail.total_rows,
         newClients: jobDetail.new_clients,
         updatedClients: jobDetail.updated_clients,
+        successfulClients: jobDetail.successful_clients ?? 0,
         errors: jobDetail.errors_count,
         processingTime: jobDetail.processing_time,
         errorList: (errorsData?.items || []).map((err) => ({
@@ -350,31 +338,41 @@ export function ImportDetailsPage() {
           {/* Divider */}
           <div className="my-4 h-px w-full bg-gray-200" />
 
-          {/* Summary Statistics - Grid Layout */}
-          {importDetail.status !== 'failed' && (
+          {/* Summary Statistics - Grid Layout. Vendor jobs use the
+              right-hand VendorPhaseProgress panel instead of these
+              client-CSV-shaped counters, so skip this block. */}
+          {importDetail.status !== 'failed' && !isVendor && (
             <>
               <div className="flex flex-col items-start gap-3 self-stretch">
                 <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
                   <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
-                    {t('pages.imports.details.totalRows')}
+                    {isTagAssignment
+                      ? t('pages.imports.details.updatedClients')
+                      : t('pages.imports.details.totalRows')}
                   </span>
                   <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
-                    {importDetail.totalRows.toLocaleString()}
+                    {isTagAssignment
+                      ? importDetail.successfulClients.toLocaleString()
+                      : importDetail.totalRows.toLocaleString()}
                   </span>
                 </div>
 
-                <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
-                  <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
-                    {t('pages.imports.details.newClients')}
-                  </span>
-                  <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
-                    {importDetail.newClients.toLocaleString()}
-                  </span>
-                </div>
+                {!isTagAssignment && (
+                  <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
+                    <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
+                      {t('pages.imports.details.newClients')}
+                    </span>
+                    <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+                      {importDetail.newClients.toLocaleString()}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
                   <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
-                    {t('pages.imports.details.updatedClients')}
+                    {isTagAssignment
+                      ? t('pages.imports.details.tagsApplied', 'Tags Applied')
+                      : t('pages.imports.details.updatedClients')}
                   </span>
                   <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                     {importDetail.updatedClients.toLocaleString()}
@@ -402,10 +400,56 @@ export function ImportDetailsPage() {
               </div>
             </>
           )}
+
+          {/* Vendor jobs: per-target totals derived from the same counters
+              the worker reported, so the user can see at a glance how many
+              of each downstream record actually persisted. */}
+          {!!isVendor && (
+            <div className="flex flex-col items-start gap-3 self-stretch">
+              <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
+                <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[140px] sm:text-base">
+                  {t('pages.imports.details.totalRows')}
+                </span>
+                <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+                  {importDetail.totalRows.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
+                <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[140px] sm:text-base">
+                  {t('pages.imports.details.vendor.accepted', 'Accepted')}
+                </span>
+                <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+                  {importDetail.newClients.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
+                <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[140px] sm:text-base">
+                  {t('pages.imports.details.errors')}
+                </span>
+                <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+                  {importDetail.errors.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-6">
+                <span className="text-dark-500 w-full text-sm leading-[155%] font-light tracking-[-0.32px] sm:w-[140px] sm:text-base">
+                  {t('pages.imports.details.processingTime')}
+                </span>
+                <span className="text-dark-500 flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+                  {importDetail.processingTime}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Errors Card or Progress Card */}
-        {importDetail.status === 'failed' ? (
+        {/* Right-hand card. Vendor jobs render the multi-file phase
+            panel; simple jobs keep the legacy progress / errors UI. */}
+        {isVendor && jobDetail?.vendor_phases ? (
+          <VendorPhaseProgress
+            phases={jobDetail.vendor_phases}
+            errorMessage={importDetail.status === 'failed' ? jobDetail.vendor_error : undefined}
+          />
+        ) : importDetail.status === 'failed' ? (
           <div className="flex min-h-[448px] flex-1 flex-col items-center gap-3 self-stretch rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
             <h2 className="text-dark-500 self-stretch text-lg leading-[150%] font-light tracking-[-0.4px] sm:text-xl">
               {t('pages.imports.details.progress')}
@@ -490,11 +534,15 @@ export function ImportDetailsPage() {
               {t('pages.imports.details.errorsTitle')} ({importDetail.errors.toLocaleString()})
             </h2>
 
-            <DataTable
-              columns={errorColumns}
-              data={importDetail.errorList}
-              emptyMessage={t('pages.imports.details.noErrors')}
-            />
+            {showErrorsSkeleton ? (
+              <TableSkeleton columns={errorColumns.length} rows={errorPageSize} />
+            ) : (
+              <DataTable
+                columns={errorColumns}
+                data={importDetail.errorList}
+                emptyMessage={t('pages.imports.details.noErrors')}
+              />
+            )}
 
             {/* Pagination Controls */}
             {errorsData && errorsData.total > errorPageSize && (
@@ -548,6 +596,38 @@ export function ImportDetailsPage() {
           </div>
         )}
       </div>
+
+      {/* Vendor jobs: errors table renders BELOW the 2-column grid because
+          the right-hand slot is occupied by VendorPhaseProgress. Only show
+          when there are real errors to surface. */}
+      {!!isVendor && importDetail.errors > 0 && (
+        <div className="mt-6 rounded-xl border border-gray-200 bg-white/50 p-4 shadow-sm sm:p-6">
+          <h2 className="text-dark-500 mb-4 text-lg font-light sm:mb-6 sm:text-xl">
+            {t('pages.imports.details.errorsTitle')} ({importDetail.errors.toLocaleString()})
+          </h2>
+          {showErrorsSkeleton ? (
+            <TableSkeleton columns={errorColumns.length} rows={errorPageSize} />
+          ) : (
+            <DataTable
+              columns={errorColumns}
+              data={importDetail.errorList}
+              emptyMessage={t('pages.imports.details.noErrors')}
+            />
+          )}
+          {errorsData && errorsData.total > errorPageSize && (
+            <Pagination
+              currentPage={errorPage}
+              totalPages={Math.ceil(errorsData.total / errorPageSize)}
+              pageSize={errorPageSize}
+              onPageChange={setErrorPage}
+              onPageSizeChange={(newSize) => {
+                setErrorPageSize(newSize)
+                setErrorPage(1)
+              }}
+            />
+          )}
+        </div>
+      )}
     </div>
   )
 }

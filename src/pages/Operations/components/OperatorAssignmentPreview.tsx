@@ -152,8 +152,11 @@ export function OperatorAssignmentPreview({ preview, onConfirm, onCancel, isExec
             {t('pages.imports.operatorAssignment.preview.title')}
           </h3>
           <p className="text-sm text-gray-600">
-            File: <span className="font-medium">{preview.filename}</span> &middot;{' '}
-            {preview.total_records} records &middot; Batch: {preview.batch_id}
+            {t('pages.imports.operatorAssignment.preview.fileInfo', {
+              filename: preview.filename,
+              totalRecords: preview.total_records,
+              batchId: preview.batch_id,
+            })}
           </p>
         </div>
       </div>
@@ -193,7 +196,7 @@ export function OperatorAssignmentPreview({ preview, onConfirm, onCancel, isExec
           <DataTable<OAPreviewRowWithId>
             columns={columns}
             data={previewRowsWithId}
-            emptyMessage="No preview rows"
+            emptyMessage={t('pages.imports.operatorAssignment.preview.emptyPreview')}
           />
         </div>
       )}
@@ -209,7 +212,7 @@ export function OperatorAssignmentPreview({ preview, onConfirm, onCancel, isExec
           <DataTable<OAPreviewRowWithId>
             columns={columns}
             data={errorRowsWithId}
-            emptyMessage="No errors"
+            emptyMessage={t('pages.imports.operatorAssignment.preview.emptyErrors')}
           />
         </div>
       )}
