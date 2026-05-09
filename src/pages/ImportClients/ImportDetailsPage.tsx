@@ -13,9 +13,15 @@ import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Icons } from '@/lib/icons'
 import { SemiCircularProgress, VendorPhaseProgress } from './components'
-import { useImportJob, useImportJobErrors, useExportImportErrors } from '@/features/imports'
+import {
+  useImportJob,
+  useImportJobErrors,
+  useExportImportErrors,
+  computeImportUiStatusFromDetail,
+} from '@/features/imports'
 import { ImportDetailsPageSkeleton } from './components/ImportDetailsPageSkeleton'
 import { useAuthStore } from '@/stores/authStore'
 import { convertUTCToUserTimezone } from '@/lib/formatters'
@@ -138,7 +144,11 @@ export function ImportDetailsPage() {
   // errors table in sync with the live `errors_count` while a vendor
   // import is mid-flight — the backend now flushes per-file errors as
   // each file completes, so polling reveals them progressively.
-  const { data: errorsData } = useImportJobErrors(
+  const {
+    data: errorsData,
+    isLoading: isLoadingErrors,
+    isFetching: isFetchingErrors,
+  } = useImportJobErrors(
     id,
     { page: errorPage, page_size: errorPageSize },
     {
@@ -147,6 +157,14 @@ export function ImportDetailsPage() {
       refetchInterval: jobDetail?.status === 'in_progress' ? 5000 : false,
     }
   )
+
+  // Show skeleton while the errors query is loading the current page
+  // (initial load or pagination), but NOT during background polling
+  // refetches when the import is still in progress — those should leave
+  // the table on screen.
+  const isPollingErrors = jobDetail?.status === 'in_progress'
+  const showErrorsSkeleton =
+    isLoadingErrors || (isFetchingErrors && !isPollingErrors && !errorsData)
 
   // Export errors mutation
   const exportErrorsMutation = useExportImportErrors()
@@ -161,62 +179,10 @@ export function ImportDetailsPage() {
         file: jobDetail.file_name,
         uploadedBy: jobDetail.uploaded_by,
         uploadedAt: convertUTCToUserTimezone(jobDetail.uploaded_at, userTimezone),
-        status:
-          jobDetail.status === 'completed'
-            ? jobDetail.errors_count > 0
-              ? ('completed_with_errors' as
-                  | 'done'
-                  | 'failed'
-                  | 'completed_with_errors'
-                  | 'in_progress'
-                  | 'pending'
-                  | 'cancelled')
-              : ('done' as
-                  | 'done'
-                  | 'failed'
-                  | 'completed_with_errors'
-                  | 'in_progress'
-                  | 'pending'
-                  | 'cancelled')
-            : jobDetail.status === 'failed'
-              ? ('failed' as
-                  | 'done'
-                  | 'failed'
-                  | 'completed_with_errors'
-                  | 'in_progress'
-                  | 'pending'
-                  | 'cancelled')
-              : jobDetail.status === 'in_progress'
-                ? ('in_progress' as
-                    | 'done'
-                    | 'failed'
-                    | 'completed_with_errors'
-                    | 'in_progress'
-                    | 'pending'
-                    | 'cancelled')
-                : jobDetail.status === 'pending'
-                  ? ('pending' as
-                      | 'done'
-                      | 'failed'
-                      | 'completed_with_errors'
-                      | 'in_progress'
-                      | 'pending'
-                      | 'cancelled')
-                  : jobDetail.status === 'cancelled'
-                    ? ('cancelled' as
-                        | 'done'
-                        | 'failed'
-                        | 'completed_with_errors'
-                        | 'in_progress'
-                        | 'pending'
-                        | 'cancelled')
-                    : ('done' as
-                        | 'done'
-                        | 'failed'
-                        | 'completed_with_errors'
-                        | 'in_progress'
-                        | 'pending'
-                        | 'cancelled'),
+        // Single source of truth for the badge status; aggregates per-phase
+        // signals so vendor jobs whose downstream phase silently dropped
+        // rows render as 'completed_with_errors' instead of green 'done'.
+        status: computeImportUiStatusFromDetail(jobDetail),
         totalRows: jobDetail.total_rows,
         newClients: jobDetail.new_clients,
         updatedClients: jobDetail.updated_clients,
@@ -568,11 +534,15 @@ export function ImportDetailsPage() {
               {t('pages.imports.details.errorsTitle')} ({importDetail.errors.toLocaleString()})
             </h2>
 
-            <DataTable
-              columns={errorColumns}
-              data={importDetail.errorList}
-              emptyMessage={t('pages.imports.details.noErrors')}
-            />
+            {showErrorsSkeleton ? (
+              <TableSkeleton columns={errorColumns.length} rows={errorPageSize} />
+            ) : (
+              <DataTable
+                columns={errorColumns}
+                data={importDetail.errorList}
+                emptyMessage={t('pages.imports.details.noErrors')}
+              />
+            )}
 
             {/* Pagination Controls */}
             {errorsData && errorsData.total > errorPageSize && (
@@ -635,11 +605,15 @@ export function ImportDetailsPage() {
           <h2 className="text-dark-500 mb-4 text-lg font-light sm:mb-6 sm:text-xl">
             {t('pages.imports.details.errorsTitle')} ({importDetail.errors.toLocaleString()})
           </h2>
-          <DataTable
-            columns={errorColumns}
-            data={importDetail.errorList}
-            emptyMessage={t('pages.imports.details.noErrors')}
-          />
+          {showErrorsSkeleton ? (
+            <TableSkeleton columns={errorColumns.length} rows={errorPageSize} />
+          ) : (
+            <DataTable
+              columns={errorColumns}
+              data={importDetail.errorList}
+              emptyMessage={t('pages.imports.details.noErrors')}
+            />
+          )}
           {errorsData && errorsData.total > errorPageSize && (
             <Pagination
               currentPage={errorPage}

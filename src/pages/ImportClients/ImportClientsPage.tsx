@@ -16,7 +16,12 @@ import { Step2VendorDump, type Step2VendorDumpData } from './components/Step2Ven
 import { Icons } from '@/lib/icons'
 import { ImportHistoryModal, type ImportHistoryData } from './components/ImportHistoryModal'
 import { useNavigate } from 'react-router-dom'
-import { useImportJobs, useImportJob, useCancelImport } from '@/features/imports'
+import {
+  useImportJobs,
+  useImportJob,
+  useCancelImport,
+  computeImportUiStatusFromDetail,
+} from '@/features/imports'
 import { useAuthStore } from '@/stores/authStore'
 import { convertUTCToUserTimezone } from '@/lib/formatters'
 
@@ -223,14 +228,17 @@ export function ImportClientsPage() {
         file: jobDetailForModal.file_name,
         uploadedBy: jobDetailForModal.uploaded_by,
         uploadedAt: convertUTCToUserTimezone(jobDetailForModal.uploaded_at, user?.timezone),
-        status:
-          jobDetailForModal.status === 'completed'
-            ? jobDetailForModal.errors_count > 0
-              ? 'completed_with_errors'
-              : 'completed'
-            : jobDetailForModal.status === 'failed'
-              ? 'failed'
-              : 'completed',
+        // Reuse the shared status helper, then collapse the broader UI
+        // vocabulary onto the modal's narrower {completed |
+        // completed_with_errors | failed} type. The modal only ever sees
+        // terminal jobs (the wrapping condition filters in_progress /
+        // pending), so the unmapped values are unreachable.
+        status: (() => {
+          const ui = computeImportUiStatusFromDetail(jobDetailForModal)
+          if (ui === 'failed') return 'failed' as const
+          if (ui === 'completed_with_errors') return 'completed_with_errors' as const
+          return 'completed' as const
+        })(),
         totalRows: jobDetailForModal.total_rows,
         newClients: jobDetailForModal.new_clients,
         updatedClients: jobDetailForModal.updated_clients,

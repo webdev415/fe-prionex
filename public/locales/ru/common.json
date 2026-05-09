@@ -1031,6 +1031,7 @@
         "exporting": "Экспорт...",
         "statuses": {
           "done": "Готово",
+          "completedWithErrors": "Завершено с ошибками",
           "inProgress": "В процессе",
           "failed": "Не удалось",
           "pending": "Ожидание",
