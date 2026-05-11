@@ -2223,6 +2223,7 @@
         "primaryCreditorCommentsDescription": "Historical interaction data from the debt seller will appear here when available.",
         "spamCallHistory": "Spam Call History",
         "noSpamCallHistory": "No spam call history",
+        "noSearcherComments": "No searcher comments yet",
         "totalCost": "Total Cost",
         "deliveryRate": "Delivery Rate",
         "delivered": "delivered",
@@ -2244,7 +2245,8 @@
           "tasks": "Tasks",
           "docs": "Docs",
           "callSms": "Call / SMS",
-          "taChains": "TA Chains"
+          "taChains": "TA Chains",
+          "searcherComments": "Searcher Comments"
         }
       },
       "debtSummary": {
