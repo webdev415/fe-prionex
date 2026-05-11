@@ -270,7 +270,7 @@ export function TaHistoryFiltersBar({
             <span className="text-dark-500 text-xs font-semibold tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.stepValuesHeading', 'Step value filters')}
             </span>
-            <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
               {selectedStepRows.map(({ step, ta }) => (
                 <StepValueRow
                   key={step.id}
@@ -323,13 +323,14 @@ function StepValueRow({ step, ta, value, onChange }: StepValueRowProps) {
   const stepLabel = `${step.step_order}. ${step.target_action_name ?? ta?.name ?? t('pages.actionAnalysis.filters.chainStep', 'Step')}`
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-4">
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <span className="text-dark-500 truncate text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
-          {stepLabel}
-        </span>
-      </div>
-      <div className="flex flex-1 flex-col gap-2 sm:flex-[3] sm:flex-row sm:items-end sm:gap-3">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+      <span
+        className="text-dark-500 truncate text-xs font-medium tracking-[-0.24px] sm:w-44 sm:shrink-0 sm:text-sm sm:tracking-[-0.28px]"
+        title={stepLabel}
+      >
+        {stepLabel}
+      </span>
+      <div className="flex min-w-0 flex-1 flex-row items-center gap-2 sm:gap-3">
         {fieldType === 'date' && (
           <>
             <DateSelect
@@ -338,7 +339,7 @@ function StepValueRow({ step, ta, value, onChange }: StepValueRowProps) {
               placeholder={t('pages.actionAnalysis.filters.selectStartDate', 'Select start date')}
               max={maxDate ?? undefined}
               format="yyyy-MM-dd"
-              className="flex-1 [&_input]:h-[45px]"
+              className="min-w-0 flex-1 [&_input]:h-[45px]"
             />
             <DateSelect
               value={maxDate}
@@ -346,7 +347,7 @@ function StepValueRow({ step, ta, value, onChange }: StepValueRowProps) {
               placeholder={t('pages.actionAnalysis.filters.selectEndDate', 'Select end date')}
               min={minDate ?? undefined}
               format="yyyy-MM-dd"
-              className="flex-1 [&_input]:h-[45px]"
+              className="min-w-0 flex-1 [&_input]:h-[45px]"
             />
           </>
         )}
@@ -354,7 +355,7 @@ function StepValueRow({ step, ta, value, onChange }: StepValueRowProps) {
           <>
             <Input
               type="number"
-              className="h-[45px] flex-1"
+              className="h-[45px] min-w-0 flex-1"
               placeholder={t('pages.actionAnalysis.filters.stepValueMin', 'Step value min')}
               value={value.min ?? ''}
               onChange={(e) => {
@@ -364,7 +365,7 @@ function StepValueRow({ step, ta, value, onChange }: StepValueRowProps) {
             />
             <Input
               type="number"
-              className="h-[45px] flex-1"
+              className="h-[45px] min-w-0 flex-1"
               placeholder={t('pages.actionAnalysis.filters.stepValueMax', 'Step value max')}
               value={value.max ?? ''}
               onChange={(e) => {
