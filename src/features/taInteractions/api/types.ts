@@ -16,6 +16,7 @@ export interface TAInteraction {
   step_data: Record<string, unknown> | null
   recorded_by: number | null
   recorded_by_name: string | null
+  recorded_by_full_name: string | null
   call_id: number | null
   assigned_operator_id: number | null
   assigned_operator_name: string | null
@@ -43,10 +44,11 @@ export interface TAInteractionListParams {
   limit?: number
   recorded_by_in?: number[]
   assigned_operator_id?: number
-  target_action_id?: number
-  step_value_eq?: string
-  step_value_min?: string
-  step_value_max?: string
+  target_action_id_in?: number[]
+  // Each item is "<target_action_id>:<value>"
+  step_value_eq?: string[]
+  step_value_min?: string[]
+  step_value_max?: string[]
 }
 
 export interface TAInteractionUpdate {

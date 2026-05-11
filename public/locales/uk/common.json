@@ -332,6 +332,9 @@
         "stepValueMax": "Значення кроку макс",
         "stepValuePlaceholder": "Пошук…",
         "allStepValues": "Усі значення",
+        "stepValuesHeading": "Фільтри значень кроків",
+        "stepValueUnsupported": "Для цього кроку немає фільтра за значенням.",
+        "selectedStepsCount": "Обрано: {{count}}",
         "notesSearch": "Пошук у нотатках",
         "notesSearchPlaceholder": "Пошук у нотатках…"
       },

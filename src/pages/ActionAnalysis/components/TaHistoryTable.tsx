@@ -166,7 +166,11 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
     {
       key: 'responsibleAtCreation',
       header: t('pages.actionAnalysis.columns.responsibleAtCreation', 'Responsible at creation'),
-      render: (r) => <span className="text-sm text-gray-700">{r.recorded_by_name ?? '—'}</span>,
+      render: (r) => (
+        <span className="text-sm text-gray-700">
+          {r.recorded_by_full_name ?? r.recorded_by_name ?? '—'}
+        </span>
+      ),
     },
     {
       key: 'currentResponsible',

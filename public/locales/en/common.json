@@ -329,6 +329,9 @@
         "stepValueMax": "Step value max",
         "stepValuePlaceholder": "Search…",
         "allStepValues": "All values",
+        "stepValuesHeading": "Step value filters",
+        "stepValueUnsupported": "No value filter available for this step.",
+        "selectedStepsCount": "{{count}} selected",
         "notesSearch": "Notes search",
         "notesSearchPlaceholder": "Search in notes…"
       },
