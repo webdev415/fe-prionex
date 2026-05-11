@@ -1445,6 +1445,7 @@
           "loanNumber": "Номер позики",
           "phone": "Телефон",
           "type": "Тип",
+          "channel": "Канал",
           "subtype": "Підтип",
           "contactType": "Тип контакту",
           "result": "Результат",

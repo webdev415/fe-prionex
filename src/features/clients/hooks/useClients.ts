@@ -549,6 +549,7 @@ export function useClientActivitiesPaginated(
     queryFn: () => interactionApi.getClientInteractions(clientId, params),
     enabled: enabled && clientId > 0,
     staleTime: 30000,
+    placeholderData: (previousData) => previousData,
   })
 }
 

@@ -2009,6 +2009,7 @@
           "loanNumber": "Loan Number",
           "phone": "Phone",
           "type": "Type",
+          "channel": "Channel",
           "subtype": "Subtype",
           "contactType": "Contact Type",
           "result": "Result",
