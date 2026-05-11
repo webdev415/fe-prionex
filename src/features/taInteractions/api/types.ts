@@ -43,10 +43,11 @@ export interface TAInteractionListParams {
   limit?: number
   recorded_by_in?: number[]
   assigned_operator_id?: number
-  target_action_id?: number
-  step_value_eq?: string
-  step_value_min?: string
-  step_value_max?: string
+  target_action_id_in?: number[]
+  // Each item is "<target_action_id>:<value>"
+  step_value_eq?: string[]
+  step_value_min?: string[]
+  step_value_max?: string[]
 }
 
 export interface TAInteractionUpdate {

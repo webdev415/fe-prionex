@@ -332,6 +332,9 @@
         "stepValueMax": "Значение шага макс",
         "stepValuePlaceholder": "Поиск…",
         "allStepValues": "Все значения",
+        "stepValuesHeading": "Фильтры значений шагов",
+        "stepValueUnsupported": "Для этого шага нет фильтра по значению.",
+        "selectedStepsCount": "Выбрано: {{count}}",
         "notesSearch": "Поиск по заметкам",
         "notesSearchPlaceholder": "Поиск в заметках…"
       },
