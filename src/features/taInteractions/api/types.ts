@@ -18,8 +18,16 @@ export interface TAInteraction {
   recorded_by_name: string | null
   recorded_by_full_name: string | null
   call_id: number | null
+  // Snapshot of the client's responsible employee at the moment the
+  // interaction was created. Field name is historical; semantic is now
+  // "Responsible at creation" in the TA History tab.
   assigned_operator_id: number | null
   assigned_operator_name: string | null
+  // Live `clients.responsible_employee_id` resolved at query time — who
+  // owns the client right now. Populated only by the TA History list
+  // handler; null on other endpoints.
+  current_responsible_id: number | null
+  current_responsible_name: string | null
   created_at: string
   archived: boolean
   is_pinned: boolean
