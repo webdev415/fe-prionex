@@ -82,20 +82,38 @@ export function RecordPaymentModal({
   const [paymentMethodDetails, setPaymentMethodDetails] = useState<string>('')
   const [last4DigitsError, setLast4DigitsError] = useState<string | null>(null)
 
-  const activeDebts = useMemo(
+  // Debts a user can pick in this modal. Closed debts are normally hidden,
+  // but users with verify_payment permission (canVerify) may select them
+  // to record a technical correction / migration payment. The backend
+  // mirrors this rule.
+  const selectableDebts = useMemo(
     () =>
       (debts || [])
-        .filter((debt) => debt.status === 'active' || !debt.status)
+        .filter((debt) => {
+          if (!debt.status || debt.status === 'active') return true
+          if (canVerify && debt.status === 'closed') return true
+          return false
+        })
         .sort((a, b) => a.id - b.id),
-    [debts]
+    [debts, canVerify]
   )
   const [selectedDebtId, setSelectedDebtId] = useState<number | null>(
-    () => activeDebts[0]?.id ?? null
+    () => selectableDebts[0]?.id ?? null
   )
+
+  const selectedDebt = useMemo(
+    () => selectableDebts.find((d) => d.id === selectedDebtId) ?? null,
+    [selectableDebts, selectedDebtId]
+  )
+  // A closed-debt selection is a technical correction. It bypasses the
+  // amount-vs-current-debt cap on both client and server — closed debts
+  // by definition report zero remaining balance, otherwise the feature
+  // is useless.
+  const isClosedDebtCorrection = selectedDebt?.status === 'closed'
 
   const amountValue = parseFloat(paymentAmount) || 0
   const minAmount = 100
-  const maxAmount = currentDebt
+  const maxAmount = isClosedDebtCorrection ? Number.POSITIVE_INFINITY : currentDebt
   const newDebt = currentDebt - amountValue
   const hasDebt = newDebt > 0
 
@@ -134,7 +152,7 @@ export function RecordPaymentModal({
     amountValue < minAmount ||
     amountValue > maxAmount ||
     (paymentMethod === 'Card' && last4Digits.length !== 4) ||
-    (activeDebts.length > 1 && !selectedDebtId)
+    (selectableDebts.length > 1 && !selectedDebtId)
 
   // Validate payment amount on change
   const handleAmountChange = (value: string) => {
@@ -150,8 +168,8 @@ export function RecordPaymentModal({
       return
     }
 
-    // Validate: cannot exceed current debt
-    if (numValue > currentDebt) {
+    // Validate: cannot exceed current debt (skipped for closed-debt corrections)
+    if (!isClosedDebtCorrection && numValue > currentDebt) {
       setAmountError(
         t('pages.clients.modals.recordPayment.validationPaymentExceedsDebt', {
           amount: formatMoneyUAHTwoDecimals(currentDebt),
@@ -168,7 +186,7 @@ export function RecordPaymentModal({
       return
     }
 
-    if (amountValue > currentDebt) {
+    if (!isClosedDebtCorrection && amountValue > currentDebt) {
       setAmountError(
         t('pages.clients.modals.recordPayment.validationPaymentExceedsDebt', {
           amount: formatMoneyUAHTwoDecimals(currentDebt),
@@ -208,7 +226,7 @@ export function RecordPaymentModal({
     setLast4Digits('')
     setPaymentMethodDetails('')
     setLast4DigitsError(null)
-    setSelectedDebtId(activeDebts[0]?.id ?? null)
+    setSelectedDebtId(selectableDebts[0]?.id ?? null)
     onClose()
   }
 
@@ -224,7 +242,7 @@ export function RecordPaymentModal({
     setLast4Digits('')
     setPaymentMethodDetails('')
     setLast4DigitsError(null)
-    setSelectedDebtId(activeDebts[0]?.id ?? null)
+    setSelectedDebtId(selectableDebts[0]?.id ?? null)
     onClose()
   }
 
@@ -285,14 +303,16 @@ export function RecordPaymentModal({
                       <Icons.Money01 size={20} className="text-gray-700" />
                       <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-gray-700">
                         ({t('pages.clients.modals.recordPayment.min')}{' '}
-                        {formatMoneyUAHTwoDecimals(minAmount)},{' '}
-                        {t('pages.clients.modals.recordPayment.max')}{' '}
-                        {formatMoneyUAHTwoDecimals(maxAmount)})
+                        {formatMoneyUAHTwoDecimals(minAmount)}
+                        {isClosedDebtCorrection
+                          ? ''
+                          : `, ${t('pages.clients.modals.recordPayment.max')} ${formatMoneyUAHTwoDecimals(maxAmount)}`}
+                        )
                       </span>
                     </div>
                   )}
                 </div>
-                {activeDebts.length > 1 && (
+                {selectableDebts.length > 1 && (
                   <div className="flex flex-col items-start gap-2 self-stretch">
                     <Label
                       required
@@ -313,16 +333,27 @@ export function RecordPaymentModal({
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {activeDebts.map((debt) => (
+                        {selectableDebts.map((debt) => (
                           <SelectItem key={debt.id} value={String(debt.id)}>
                             {debt.contract_number}
                             {debt.remaining_debt_amount
                               ? ` • ${formatMoneyUAHTwoDecimals(debt.remaining_debt_amount)}`
                               : ''}
+                            {debt.status === 'closed'
+                              ? ` • ${t('pages.clients.modals.recordPayment.closedDebtBadge')}`
+                              : ''}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                )}
+                {isClosedDebtCorrection && (
+                  <div className="flex items-start gap-2 self-stretch rounded-md border border-amber-300 bg-amber-50 p-3">
+                    <Icons.Warning size={18} className="mt-0.5 shrink-0 text-amber-600" />
+                    <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-amber-900">
+                      {t('pages.clients.modals.recordPayment.closedDebtCorrectionHint')}
+                    </span>
                   </div>
                 )}
                 {/* Payment Date */}

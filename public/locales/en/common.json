@@ -1778,7 +1778,9 @@
           "min": "min:",
           "max": "max:",
           "validationPaymentExceedsDebt": "Payment cannot exceed current debt ({{amount}})",
-          "validationPaymentMustBePositive": "Payment amount must be positive."
+          "validationPaymentMustBePositive": "Payment amount must be positive.",
+          "closedDebtBadge": "Closed",
+          "closedDebtCorrectionHint": "This debt is closed. The payment is recorded as a technical correction and will not reopen the debt."
         },
         "editPayment": {
           "title": "Edit Payment #{{paymentId}}",

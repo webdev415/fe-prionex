@@ -2071,7 +2071,9 @@
           "min": "мин:",
           "max": "макс:",
           "validationPaymentExceedsDebt": "Платеж не может превышать текущий долг ({{amount}})",
-          "validationPaymentMustBePositive": "Сумма платежа должна быть положительной."
+          "validationPaymentMustBePositive": "Сумма платежа должна быть положительной.",
+          "closedDebtBadge": "Закрыт",
+          "closedDebtCorrectionHint": "Этот долг закрыт. Платеж записывается как техническое исправление и не возобновляет долг."
         },
         "editPayment": {
           "title": "Редактировать платеж #{{paymentId}}",
