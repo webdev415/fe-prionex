@@ -860,93 +860,144 @@ export function PaymentHistoryPage() {
             ))}
           </div>
 
-          {/* Right Column Skeleton - Payment History Table */}
+          {/* Right Column Skeleton - Payment History (3 filters + 9-col table + pagination layout) */}
           <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
             <div className="flex flex-col items-start gap-3 self-stretch">
-              <div className="h-4 w-40 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-48" />
+              <div className="h-4 w-48 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-56" />
 
-              {/* Filters Skeleton */}
-              <div className="flex flex-col items-start gap-3 self-stretch rounded-t-xl border border-b-0 border-[#EBECE8] bg-white p-3 sm:flex-row sm:gap-5 sm:p-4">
-                <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 sm:w-auto">
-                  <div className="h-3 w-12 animate-pulse rounded bg-gray-200" />
-                  <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
+              <div className="flex flex-col items-start self-stretch">
+                <div className="flex flex-col items-start gap-3 self-stretch rounded-t-xl border border-b-0 border-[#EBECE8] bg-white p-3 sm:flex-row sm:gap-5 sm:p-4">
+                  <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 self-stretch sm:w-auto">
+                    <div className="h-3 w-12 animate-pulse rounded bg-gray-200" />
+                    <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
+                  </div>
+                  <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 self-stretch sm:w-auto">
+                    <div className="h-3 w-16 animate-pulse rounded bg-gray-200" />
+                    <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
+                  </div>
+                  <div className="flex flex-col items-start justify-center gap-1 self-stretch sm:min-w-0 sm:flex-1">
+                    <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
+                    <div className="flex items-center gap-3 self-stretch">
+                      <div className="h-[45px] min-w-0 flex-1 animate-pulse rounded-md bg-gray-200" />
+                      <div className="h-3 w-2 shrink-0 animate-pulse rounded bg-gray-200" />
+                      <div className="h-[45px] min-w-0 flex-1 animate-pulse rounded-md bg-gray-200" />
+                    </div>
+                  </div>
                 </div>
-                <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 sm:w-auto">
-                  <div className="h-3 w-16 animate-pulse rounded bg-gray-200" />
-                  <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
-                </div>
-                <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 sm:w-auto">
-                  <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
-                  <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
-                </div>
-                <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 sm:w-auto">
-                  <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
-                  <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
-                </div>
-              </div>
 
-              {/* Table Skeleton */}
-              <div className="w-full overflow-x-auto overflow-y-hidden rounded-xl rounded-t-none border border-[#EBECE8] bg-[#EBECE8] shadow-sm">
-                <table className="min-w-full border-collapse">
-                  <thead>
-                    <tr className="bg-white">
-                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
-                        <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
-                      </th>
-                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-right sm:px-6">
-                        <div className="ml-auto h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
-                      </th>
-                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
-                        <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
-                      </th>
-                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
-                        <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
-                      </th>
-                      <th className="h-[49px] px-3 text-center sm:px-6">
-                        <div className="mx-auto h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.from({ length: 10 }).map((_, rowIndex) => (
-                      <tr
-                        key={rowIndex}
-                        className={rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'}
-                      >
-                        <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
-                          <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
-                        </td>
-                        <td className="h-[49px] border-r border-[#EBECE8] px-3 text-right sm:px-6">
-                          <div className="ml-auto h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
-                        </td>
-                        <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
-                          <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
-                        </td>
-                        <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
-                          <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 animate-pulse rounded-full bg-gray-200" />
-                            <div className="hidden h-4 w-16 animate-pulse rounded bg-gray-200 sm:block sm:w-20" />
+                <div className="data-table-scroll w-full overflow-x-auto overflow-y-hidden rounded-xl rounded-t-none border border-[#EBECE8] bg-[#EBECE8] shadow-sm">
+                  <table className="min-w-full border-collapse">
+                    <thead>
+                      <tr className="bg-white">
+                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
+                          <div className="flex items-center gap-1">
+                            <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+                            <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
                           </div>
-                        </td>
-                        <td className="h-[49px] px-3 text-center sm:px-6">
-                          <div className="mx-auto h-5 w-20 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-24" />
-                        </td>
+                        </th>
+                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
+                          <div className="h-3 w-24 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-28" />
+                        </th>
+                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
+                          <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
+                        </th>
+                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-right sm:px-6">
+                          <div className="ml-auto flex items-center justify-end gap-1">
+                            <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-14" />
+                            <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+                          </div>
+                        </th>
+                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
+                          <div className="flex items-center gap-1">
+                            <div className="h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+                            <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+                          </div>
+                        </th>
+                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
+                          <div className="flex items-center gap-1">
+                            <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
+                            <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+                          </div>
+                        </th>
+                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
+                          <div className="flex items-center gap-1">
+                            <div className="h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+                            <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+                          </div>
+                        </th>
+                        <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
+                          <div className="flex items-center gap-1">
+                            <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-14" />
+                            <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+                          </div>
+                        </th>
+                        <th className="h-[49px] px-3 text-center sm:px-6">
+                          <div className="mx-auto h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {Array.from({ length: 10 }).map((_, rowIndex) => (
+                        <tr
+                          key={rowIndex}
+                          className={rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'}
+                        >
+                          <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
+                            <div className="h-3 w-28 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-32" />
+                          </td>
+                          <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
+                            <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
+                          </td>
+                          <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
+                            <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
+                          </td>
+                          <td className="h-[49px] border-r border-[#EBECE8] px-3 text-right sm:px-6">
+                            <div className="ml-auto h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
+                          </td>
+                          <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
+                            <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
+                          </td>
+                          <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
+                            <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
+                          </td>
+                          <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
+                            <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+                          </td>
+                          <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
+                            <div className="flex items-center gap-2">
+                              <div className="h-3 w-3 shrink-0 animate-pulse rounded-full bg-gray-200" />
+                              <div className="h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+                            </div>
+                          </td>
+                          <td className="h-[49px] px-3 text-center sm:px-6">
+                            <div className="mx-auto h-5 w-24 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-28" />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
-              {/* Pagination Skeleton */}
-              <div className="flex flex-col items-start gap-3 self-stretch sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
-                  <div className="h-9 w-18 animate-pulse rounded bg-gray-200 sm:h-10 sm:w-20" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-9 w-9 animate-pulse rounded bg-gray-200 sm:h-10 sm:w-10" />
-                  <div className="h-9 w-9 animate-pulse rounded bg-gray-200 sm:h-10 sm:w-10" />
-                  <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
+              <div className="flex w-full justify-end">
+                <div className="flex w-full flex-wrap items-center justify-between gap-2 py-4 sm:gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="hidden h-3 w-28 animate-pulse rounded bg-gray-200 md:block" />
+                    <div className="h-8 w-12 animate-pulse rounded-md bg-gray-200 sm:h-9 sm:w-14" />
+                  </div>
+                  <div className="flex max-w-full items-center gap-1 overflow-hidden sm:gap-2">
+                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
+                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
+                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
+                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
+                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="hidden h-3 w-10 animate-pulse rounded bg-gray-200 md:block" />
+                    <div className="h-3 w-5 animate-pulse rounded bg-gray-200" />
+                    <div className="h-3 w-4 animate-pulse rounded bg-gray-200" />
+                    <div className="h-3 w-5 animate-pulse rounded bg-gray-200" />
+                  </div>
                 </div>
               </div>
             </div>
