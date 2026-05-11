@@ -1434,6 +1434,7 @@
         "fromDate": "С даты",
         "toDate": "До даты",
         "clearAll": "Очистить все",
+        "latestOnly": "Показать только последнее взаимодействие",
         "noActivityRecordedYet": "Активность еще не записана",
         "resetFilters": "Сбросить фильтры",
         "tableHeaders": {
@@ -1444,6 +1445,7 @@
           "loanNumber": "Номер займа",
           "phone": "Телефон",
           "type": "Тип",
+          "channel": "Канал",
           "subtype": "Подтип",
           "contactType": "Тип контакта",
           "result": "Результат",
