@@ -4,7 +4,7 @@
  * React Query hook for fetching and caching dashboard data.
  */
 
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { reportApi } from '../api/reportApi'
 import type { DashboardParams } from '../api/types'
 import { transformDashboard, mapPeriodToBackend } from '../utils/transformers'
@@ -65,6 +65,7 @@ export function useDashboard({
       const data = await reportApi.getDashboard(backendParams)
       return transformDashboard(data)
     },
+    placeholderData: keepPreviousData,
     enabled: enabled && !!projectId,
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: 'always', // Always refetch when component mounts
