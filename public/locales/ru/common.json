@@ -354,6 +354,7 @@
         "contactType": "Тип контакта",
         "result": "Результат",
         "promiseAmount": "Сумма обещания",
+        "createdBy": "Кем создано",
         "responsibleAtCreation": "Ответственный на момент создания",
         "currentResponsible": "Текущий ответственный",
         "internalDate": "Дата (обещание / перезвон)",

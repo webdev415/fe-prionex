@@ -351,6 +351,7 @@
         "contactType": "Contact type",
         "result": "Result",
         "promiseAmount": "Promise amount",
+        "createdBy": "Created by",
         "responsibleAtCreation": "Responsible at creation",
         "currentResponsible": "Current responsible",
         "internalDate": "Date (promise / callback)",

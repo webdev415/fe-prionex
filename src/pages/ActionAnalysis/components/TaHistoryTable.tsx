@@ -164,8 +164,8 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
       },
     },
     {
-      key: 'responsibleAtCreation',
-      header: t('pages.actionAnalysis.columns.responsibleAtCreation', 'Responsible at creation'),
+      key: 'createdBy',
+      header: t('pages.actionAnalysis.columns.createdBy', 'Created by'),
       render: (r) => (
         <span className="text-sm text-gray-700">
           {r.recorded_by_full_name ?? r.recorded_by_name ?? '—'}
@@ -173,13 +173,17 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
       ),
     },
     {
+      key: 'responsibleAtCreation',
+      header: t('pages.actionAnalysis.columns.responsibleAtCreation', 'Responsible at creation'),
+      render: (r) => (
+        <span className="text-sm text-gray-700">{r.assigned_operator_name ?? '—'}</span>
+      ),
+    },
+    {
       key: 'currentResponsible',
       header: t('pages.actionAnalysis.columns.currentResponsible', 'Current responsible'),
       render: (r) => (
-        <span className="text-sm text-gray-700">
-          {r.assigned_operator_name ??
-            (r.assigned_operator_id ? `#${r.assigned_operator_id}` : '—')}
-        </span>
+        <span className="text-sm text-gray-700">{r.current_responsible_name ?? '—'}</span>
       ),
     },
     {
