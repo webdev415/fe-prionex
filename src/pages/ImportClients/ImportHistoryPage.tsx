@@ -174,6 +174,42 @@ function ImportTypeBadge({
   )
 }
 
+function ImportHistoryHeaderSkeleton() {
+  return (
+    <div className="flex items-center gap-2 sm:gap-4">
+      <div className="h-10 w-24 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-11 sm:w-28" />
+      <div className="h-7 w-44 animate-pulse rounded bg-gray-200 sm:h-8 sm:w-56" />
+    </div>
+  )
+}
+
+/** Matches ImportHistoryFiltersBar + Download Errors row layout */
+function ImportHistoryToolbarSkeleton() {
+  return (
+    <>
+      <div className="flex min-w-0 flex-1 items-center justify-between">
+        <div className="border-light-100 flex h-11 min-w-0 flex-1 items-center gap-2 rounded-full border bg-white pr-2 pl-3 sm:gap-3 sm:pl-4 lg:pr-2">
+          <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200 lg:hidden" />
+          <div className="h-4 min-w-0 flex-1 animate-pulse rounded bg-gray-200" />
+          <div className="mx-2 hidden h-5 w-px shrink-0 bg-gray-200 lg:block" />
+          <div className="hidden items-center gap-4 lg:flex">
+            <div className="h-4 w-[72px] animate-pulse rounded bg-gray-200" />
+            <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+            <div className="h-4 w-14 animate-pulse rounded bg-gray-200" />
+            <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
+          </div>
+          <div className="h-9 w-9 shrink-0 animate-pulse rounded-full bg-gray-200 lg:hidden" />
+          <div className="hidden h-9 w-9 shrink-0 animate-pulse rounded-full bg-gray-200 lg:flex" />
+        </div>
+      </div>
+      <div className="flex w-[30%] shrink-0 items-center justify-end gap-2">
+        <div className="hidden h-[45px] w-full max-w-[220px] animate-pulse rounded-full bg-gray-200 lg:flex" />
+        <div className="flex h-10 w-10 shrink-0 animate-pulse rounded-full bg-gray-200 lg:hidden" />
+      </div>
+    </>
+  )
+}
+
 export function ImportHistoryPage() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
@@ -324,13 +360,17 @@ export function ImportHistoryPage() {
     return params
   }, [currentPage, rowsPerPage, filters])
 
-  // Fetch import jobs from API
-  const { data: importJobsData, isLoading, refetch } = useImportJobs(apiParams)
+  // Fetch import jobs from API — keep previous page/filter results while refetching so header/filters stay mounted
+  const {
+    data: importJobsData,
+    isPending,
+    isFetching,
+  } = useImportJobs(apiParams, {
+    placeholderData: (previousData) => previousData,
+  })
 
-  // Optional: Explicitly refetch when apiParams changes (though React Query should do this automatically)
-  useEffect(() => {
-    refetch()
-  }, [apiParams, refetch])
+  const showFullPageSkeleton = isPending
+  const showTableSkeleton = isPending || isFetching
 
   // Convert API data to ImportHistoryItem format
   // Filter out any in_progress and pending jobs as a safety measure (should be handled by API, but filter client-side too)
@@ -566,7 +606,7 @@ export function ImportHistoryPage() {
   }, [filters])
 
   // Check if there's any data at all (not just filtered)
-  const hasNoData = !isLoading && (importJobsData?.total || 0) === 0
+  const hasNoData = !isPending && !isFetching && (importJobsData?.total || 0) === 0
 
   // Table columns definition
   const columns: Column<ImportHistoryItem>[] = [
@@ -639,76 +679,86 @@ export function ImportHistoryPage() {
     <div>
       {/* Page Header */}
       <div className="mb-4 flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 sm:gap-4">
-          <LinkButton
-            variant="regular-black"
-            onClick={handleGoToImportClients}
-            leftIcon={<Icons.ArrowLeft size={16} className="text-dark-500" />}
-            className="text-sm"
-          >
-            {t('common.back', 'Back')}
-          </LinkButton>
-          <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
-            {t('pages.imports.history.title')}
-          </h1>
-        </div>
+        {showFullPageSkeleton ? (
+          <ImportHistoryHeaderSkeleton />
+        ) : (
+          <div className="flex items-center gap-2 sm:gap-4">
+            <LinkButton
+              variant="regular-black"
+              onClick={handleGoToImportClients}
+              leftIcon={<Icons.ArrowLeft size={16} className="text-dark-500" />}
+              className="text-sm"
+            >
+              {t('common.back', 'Back')}
+            </LinkButton>
+            <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
+              {t('pages.imports.history.title')}
+            </h1>
+          </div>
+        )}
       </div>
       <div className="mb-6">
         <div className="mb-6 flex w-full flex-row items-center justify-between gap-3">
-          {/* Filters Section - using the reusable component */}
-          <ImportHistoryFiltersBar
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            availableUsers={availableUsers}
-            isLoading={isLoading}
-          />
+          {showFullPageSkeleton ? (
+            <ImportHistoryToolbarSkeleton />
+          ) : (
+            <>
+              {/* Filters Section - using the reusable component */}
+              <ImportHistoryFiltersBar
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                availableUsers={availableUsers}
+                isLoading={isPending}
+              />
 
-          {/* Action Buttons */}
-          <div className="flex w-[30%] items-center justify-end gap-2">
-            {/* Download Errors Button - icon-only on mobile/tablet, full on desktop */}
-            <Button
-              onClick={handleDownloadErrors}
-              variant="primary"
-              size="md"
-              disabled={
-                exportErrorsMutation.isPending ||
-                (!selectedJobId && paginatedData.length === 0) ||
-                (selectedJobId
-                  ? !paginatedData.find((item) => item.id === selectedJobId)?.errors
-                  : !paginatedData[0]?.errors)
-              }
-              leftIcon={<Icons.FileDownload size={16} className="text-dark-500" />}
-              className="hidden h-[45px] rounded-full text-xs lg:flex"
-            >
-              {exportErrorsMutation.isPending
-                ? t('pages.imports.history.exporting')
-                : t('pages.imports.history.downloadErrors')}
-            </Button>
-            {/* Mobile/Tablet: Icon-only button */}
-            <button
-              type="button"
-              onClick={handleDownloadErrors}
-              disabled={
-                exportErrorsMutation.isPending ||
-                (!selectedJobId && paginatedData.length === 0) ||
-                (selectedJobId
-                  ? !paginatedData.find((item) => item.id === selectedJobId)?.errors
-                  : !paginatedData[0]?.errors)
-              }
-              className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60 lg:hidden"
-              aria-label={t('pages.imports.history.downloadErrors')}
-            >
-              <Icons.FileDownload size={18} className="text-dark-500" strokeWidth={1.5} />
-            </button>
-          </div>
+              {/* Action Buttons */}
+              <div className="flex w-[30%] items-center justify-end gap-2">
+                {/* Download Errors Button - icon-only on mobile/tablet, full on desktop */}
+                <Button
+                  onClick={handleDownloadErrors}
+                  variant="primary"
+                  size="md"
+                  disabled={
+                    exportErrorsMutation.isPending ||
+                    (!selectedJobId && paginatedData.length === 0) ||
+                    (selectedJobId
+                      ? !paginatedData.find((item) => item.id === selectedJobId)?.errors
+                      : !paginatedData[0]?.errors)
+                  }
+                  leftIcon={<Icons.FileDownload size={16} className="text-dark-500" />}
+                  className="hidden h-[45px] rounded-full text-xs lg:flex"
+                >
+                  {exportErrorsMutation.isPending
+                    ? t('pages.imports.history.exporting')
+                    : t('pages.imports.history.downloadErrors')}
+                </Button>
+                {/* Mobile/Tablet: Icon-only button */}
+                <button
+                  type="button"
+                  onClick={handleDownloadErrors}
+                  disabled={
+                    exportErrorsMutation.isPending ||
+                    (!selectedJobId && paginatedData.length === 0) ||
+                    (selectedJobId
+                      ? !paginatedData.find((item) => item.id === selectedJobId)?.errors
+                      : !paginatedData[0]?.errors)
+                  }
+                  className="bg-primary-300 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60 lg:hidden"
+                  aria-label={t('pages.imports.history.downloadErrors')}
+                >
+                  <Icons.FileDownload size={18} className="text-dark-500" strokeWidth={1.5} />
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
       {/* Data Table or Empty State */}
       <div className="rounded-xl bg-white/50 p-4 shadow-sm sm:p-6">
-        {isLoading ? (
-          // Loading State - Show skeleton table while fetching data
-          <TableSkeleton columns={5} rows={rowsPerPage} />
+        {showTableSkeleton ? (
+          // Loading: full page on first paint; table-only when filters/page refetch
+          <TableSkeleton columns={columns.length} rows={rowsPerPage} />
         ) : filteredAndSortedData.length === 0 && hasActiveFilters ? (
           // Empty State - No results for filters
           <div className="flex flex-col items-center justify-center py-16">

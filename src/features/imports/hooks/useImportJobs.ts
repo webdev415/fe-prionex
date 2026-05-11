@@ -4,9 +4,9 @@
  * React Query hook for fetching paginated import jobs list.
  */
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { importsApi } from '../api/importsApi'
-import type { ImportJobsListParams } from '../types'
+import type { ImportJobsListParams, ImportJobsListResponse } from '../types'
 
 /**
  * Query key factory for import jobs queries
@@ -46,13 +46,15 @@ export const importJobsKeys = {
  *
  * const { data, isLoading, error } = useImportJobs({ page: 1, status: 'completed' })
  *  */
-export function useImportJobs(params: ImportJobsListParams = {}) {
+export function useImportJobs(
+  params: ImportJobsListParams = {},
+  options?: Omit<UseQueryOptions<ImportJobsListResponse>, 'queryKey' | 'queryFn'>
+) {
   return useQuery({
     queryKey: importJobsKeys.list(params),
     queryFn: () => importsApi.getImportJobs(params),
-    // Ensure query refetches when params change
-    enabled: true, // Explicitly enable the query
-    // Refetch when window regains focus (optional, but good for UX)
-    refetchOnWindowFocus: false, // Set to false if you don't want auto-refetch on focus
+    enabled: true,
+    refetchOnWindowFocus: false,
+    ...options,
   })
 }
