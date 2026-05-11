@@ -1659,6 +1659,7 @@
         "primaryCreditorCommentsDescription": "Історичні дані про взаємодію від продавця боргу з'являться тут, коли будуть доступні.",
         "spamCallHistory": "Історія спам-дзвінків",
         "noSpamCallHistory": "Історія спам-дзвінків відсутня",
+        "noSearcherComments": "Поки що немає коментарів пошуковика",
         "totalCost": "Загальна вартість",
         "deliveryRate": "Рівень доставки",
         "delivered": "доставлено",
@@ -1680,7 +1681,8 @@
           "tasks": "Завдання",
           "docs": "Документи",
           "callSms": "Дзвінок / SMS",
-          "taChains": "Ланцюжки ЦД"
+          "taChains": "Ланцюжки ЦД",
+          "searcherComments": "Коментарі пошуковика"
         },
         "maritalStatuses": {
           "1": "Неодружений/Незаміжня",

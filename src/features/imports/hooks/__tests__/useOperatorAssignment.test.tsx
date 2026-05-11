@@ -20,6 +20,16 @@ vi.mock('@/features/imports/api/operatorAssignmentApi', () => ({
   },
 }))
 
+// useOperatorAssignmentExecute's onError calls importsApi.cancelImportJob to
+// clean up the orphaned job. Without this mock the test hits the real axios
+// client (jsdom XHR), which delays the mutation observable from settling
+// inside waitFor's window.
+vi.mock('@/features/imports/api/importsApi', () => ({
+  importsApi: {
+    cancelImportJob: vi.fn().mockResolvedValue({ status: 'cancelled' }),
+  },
+}))
+
 import {
   useOperatorAssignmentUpload,
   useOperatorAssignmentExecute,

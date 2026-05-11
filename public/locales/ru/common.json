@@ -1658,6 +1658,7 @@
         "primaryCreditorCommentsDescription": "Исторические данные о взаимодействии от продавца долга появятся здесь, когда будут доступны.",
         "spamCallHistory": "История спам-звонков",
         "noSpamCallHistory": "История спам-звонков отсутствует",
+        "noSearcherComments": "Пока нет комментариев поисковика",
         "totalCost": "Общая стоимость",
         "deliveryRate": "Уровень доставки",
         "delivered": "доставлено",
@@ -1679,7 +1680,8 @@
           "tasks": "Задания",
           "docs": "Документы",
           "callSms": "Звонок / SMS",
-          "taChains": "Цепочки ЦД"
+          "taChains": "Цепочки ЦД",
+          "searcherComments": "Комментарии поисковика"
         },
         "maritalStatuses": {
           "1": "Холост/Не замужем",
