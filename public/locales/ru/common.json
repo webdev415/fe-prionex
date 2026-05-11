@@ -1581,6 +1581,7 @@
           "loanAmount": "Сумма займа",
           "principalDebt": "Основная задолженность",
           "principalAmount": "Основная сумма",
+          "eligibleForReturn": "Подлежит возврату",
           "remainingDebtAmount": "Остаток долга",
           "rrAmount": "Сумма РР",
           "rrConnectionDate": "Дата подключения РР",

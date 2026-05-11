@@ -38,6 +38,10 @@ export interface DebtDetail {
   principal_debt?: string | null
   total_paid_amount?: string | null
   total_to_return?: string | null
+
+  // Legacy TABLE460.f53 — total amount eligible for return after sale.
+  // Surfaced on the loans table only when it differs from remaining_debt_amount.
+  legacy_f53?: string | null
 }
 
 export interface RestructuringAgreementSummary {
