@@ -3712,7 +3712,8 @@
       },
       "agentPerformance": {
         "title": "Agent Performance ({{count}} operators)",
-        "exportTable": "Export Table"
+        "exportTable": "Export Table",
+        "noData": "No operator performance found"
       },
       "tableHeaders": {
         "operator": "Operator",

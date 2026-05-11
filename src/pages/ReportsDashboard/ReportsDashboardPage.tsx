@@ -123,7 +123,11 @@ export function ReportsDashboardPage() {
   })
 
   // Fetch operator performance data for table with date range and filters
-  const { data: agentPerformance, isLoading: isOperatorLoading } = useAgentPerformanceTable({
+  const {
+    data: agentPerformance,
+    isLoading: isOperatorLoading,
+    isFetching: isOperatorFetching,
+  } = useAgentPerformanceTable({
     projectId,
     operatorId: selectedOperator ?? undefined,
     fromDate: actualDateRange.from,
@@ -155,8 +159,7 @@ export function ReportsDashboardPage() {
     userTimezone,
   })
 
-  // Combined loading state
-  const isLoading = isDashboardLoading || isOperatorLoading
+  const isTableLoading = isOperatorLoading || isOperatorFetching
 
   // Fallback KPIs derived from operator performance (useful when dashboard KPIs are zero/lagging)
   const callsFromOperators = useMemo(() => {
@@ -232,8 +235,8 @@ export function ReportsDashboardPage() {
     )
   }
 
-  // Show loading skeleton
-  if (isLoading) {
+  // Show full-page skeleton only on initial dashboard load.
+  if (isDashboardLoading && !dashboardData) {
     return <ReportsDashboardPageSkeleton />
   }
 
@@ -342,6 +345,7 @@ export function ReportsDashboardPage() {
         <div className="flex flex-1 self-stretch">
           <AgentPerformanceTable
             data={agentPerformance || []}
+            isLoading={isTableLoading}
             selectedPeriod={selectedPeriod}
             selectedOperator={selectedOperator}
             onOperatorChange={setSelectedOperator}
