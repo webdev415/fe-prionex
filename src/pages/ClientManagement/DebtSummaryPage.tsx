@@ -598,31 +598,30 @@ export function DebtSummaryPage() {
   if (isLoadingClient || !debtSummary) {
     return (
       <div className="flex flex-1 flex-col items-start gap-5 self-stretch">
-        {/* Header Skeleton */}
-        <div className="flex flex-col gap-3 self-stretch sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-10 w-10 animate-pulse rounded-full bg-gray-200" />
-            <div className="h-6 w-32 animate-pulse rounded bg-gray-200 sm:h-8 sm:w-40" />
+        {/* Header — matches loaded row: back + title | record payment */}
+        <div className="flex flex-row items-center justify-between gap-3 self-stretch">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="h-10 w-10 shrink-0 animate-pulse rounded-full bg-gray-200" />
+            <div className="h-7 max-w-md min-w-0 flex-1 animate-pulse rounded bg-gray-200 sm:h-8" />
           </div>
-          <div className="h-10 w-10 animate-pulse rounded-full bg-gray-200 sm:h-12 sm:w-40" />
+          <div className="h-10 w-36 shrink-0 animate-pulse rounded-full bg-gray-200 sm:w-44" />
         </div>
 
-        {/* Main Content Skeleton */}
+        {/* Main content — xl row, left 35%, right flex-1 + min-w-0 (same as loaded) */}
         <div className="flex flex-col items-start gap-5 self-stretch xl:flex-row">
-          {/* Left Panel Skeleton */}
           <div className="flex w-full flex-col items-start gap-5 self-stretch xl:w-[35%]">
-            {/* Client Info Card Skeleton */}
-            <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-4 sm:p-6">
-              {/* Client Name Skeleton */}
+            {/* Client card — no min-height (matches loaded debt summary card) */}
+            <div className="flex flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-4 sm:p-6">
               <div className="flex flex-col items-center justify-center gap-4 self-stretch">
                 <div className="flex items-center justify-center gap-2 sm:gap-4">
-                  <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
+                  <div className="flex items-center gap-2.5 rounded-full bg-white/80 p-2">
+                    <div className="h-5 w-5 animate-pulse rounded-full bg-gray-200 sm:h-6 sm:w-6" />
+                  </div>
                   <div className="h-5 w-36 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-48" />
                 </div>
-                <div className="h-6 w-20 animate-pulse rounded-full bg-gray-200 sm:h-8 sm:w-24" />
+                <div className="h-6 w-28 animate-pulse rounded-full bg-gray-200 sm:h-7 sm:w-32" />
               </div>
 
-              {/* Progress Circle Skeleton */}
               <div className="mb-6 flex justify-center">
                 <div className="relative flex h-[120px] w-[120px] items-center justify-center sm:h-[150px] sm:w-[150px]">
                   <div className="h-[120px] w-[120px] animate-pulse rounded-full bg-gray-200 sm:h-[150px] sm:w-[150px]" />
@@ -630,47 +629,56 @@ export function DebtSummaryPage() {
                 </div>
               </div>
 
-              {/* Total Paid Skeleton */}
               <div className="flex flex-col items-center gap-5 self-stretch">
-                <div className="h-5 w-28 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-32" />
-                <div className="h-9 w-full animate-pulse rounded bg-gray-200 sm:h-10" />
-                <div className="h-9 w-full animate-pulse rounded bg-gray-200 sm:h-10" />
+                <div className="h-5 w-40 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-48" />
               </div>
 
-              {/* Action Buttons Skeleton */}
+              {/* View payment history / generate plan — pill shapes like LinkButtons */}
+              <div className="flex w-full flex-col items-center gap-3 self-stretch">
+                <div className="h-10 w-full max-w-[280px] animate-pulse rounded-full bg-gray-200" />
+                <div className="h-10 w-full max-w-[280px] animate-pulse rounded-full bg-gray-200" />
+              </div>
+
               <div className="flex w-full flex-col items-start gap-3 sm:flex-row">
-                <div className="h-10 w-full flex-1 animate-pulse rounded-full bg-gray-200 sm:w-auto" />
-                <div className="h-10 w-full flex-1 animate-pulse rounded-full bg-gray-200 sm:w-auto" />
+                <div className="h-10 w-full flex-1 animate-pulse rounded-full bg-gray-200 sm:w-auto sm:flex-1" />
+                <div className="h-10 w-full flex-1 animate-pulse rounded-full bg-gray-200 sm:w-auto sm:flex-1" />
               </div>
             </div>
 
-            {/* Last Payment Card Skeleton */}
-            <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white/100 bg-white/50 p-4 px-0 sm:p-5">
-              <div className="flex flex-col items-start gap-2 self-stretch px-4 sm:flex-row sm:items-start sm:justify-between sm:px-6">
-                <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
-                <div className="h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+            {/* Last payment — p-4 like loaded */}
+            <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white/100 bg-white/50 p-4">
+              <div className="flex flex-row items-start justify-between gap-2 self-stretch">
+                <div className="flex items-center gap-3">
+                  <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200 sm:h-[18px] sm:w-[18px]" />
+                  <div className="h-3 w-24 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-28" />
+                </div>
+                <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-14" />
               </div>
-              <div className="flex flex-col items-start gap-2 self-stretch px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
+              <div className="flex flex-row items-center justify-between gap-2 self-stretch">
                 <div className="h-5 w-28 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-32" />
-                <div className="h-4 w-20 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-24" />
+                <div className="h-4 w-24 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-28" />
               </div>
             </div>
 
-            {/* Total Debt Card Skeleton */}
+            {/* Total debt — icon row + gradient accent strip */}
             <div className="relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
-              <div className="flex flex-col items-start gap-2 self-stretch px-4 sm:flex-row sm:items-start sm:justify-between sm:px-6">
-                <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
-                <div className="h-3 w-28 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-32" />
+              <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 sm:px-6">
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200 sm:h-[18px] sm:w-[18px]" />
+                  <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
+                </div>
+                <div className="h-3 w-24 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-28" />
               </div>
-              <div className="flex flex-col items-start gap-2 self-stretch px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
+              <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 sm:px-6 sm:py-0">
                 <div className="h-5 w-28 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-32" />
-                <div className="h-4 w-36 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-40" />
+                <div className="h-4 w-10 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-12" />
               </div>
+              <div className="from-primary-300 to-secondary-800 absolute bottom-0 h-[3px] w-full bg-gradient-to-r opacity-60" />
             </div>
           </div>
 
-          {/* Right Panel Skeleton - Payment History (matches 9-col table + view-all bar + summary) */}
-          <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
+          {/* Right: payment history panel */}
+          <div className="flex min-h-[740px] w-full min-w-0 flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
             <div className="flex flex-col items-start gap-3 self-stretch">
               <div className="h-4 w-48 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-56" />
 
