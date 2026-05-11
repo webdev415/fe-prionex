@@ -775,8 +775,7 @@ export function PaymentHistoryPage() {
     return filteredPayments.slice(start, end)
   }, [filteredPayments, currentPage, pageSize])
 
-  // Calculate display range subtitle for title
-  const getPaymentHistorySubtitle = () => {
+  const paymentHistorySubtitle = useMemo(() => {
     if (!paymentHistory || filteredPayments.length === 0) {
       return null
     }
@@ -785,17 +784,15 @@ export function PaymentHistoryPage() {
     const start = (currentPage - 1) * pageSize + 1
     const end = Math.min(currentPage * pageSize, total)
 
-    // If showing first page with 10 items, show "Last 10"
     if (currentPage === 1 && pageSize === 10 && total >= 10) {
       return t('pages.clients.paymentHistory.subtitle.last10')
     }
 
-    // Otherwise show the range
     if (start === end) {
       return t('pages.clients.paymentHistory.subtitle.single', { index: start, total })
     }
     return t('pages.clients.paymentHistory.subtitle.range', { start, end, total })
-  }
+  }, [paymentHistory, filteredPayments, currentPage, pageSize, t])
 
   // Show loading state while fetching client or payment history
   if (isLoadingClient || isLoadingPayments || !paymentHistory) {
@@ -1248,9 +1245,12 @@ export function PaymentHistoryPage() {
         <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
           <div className="flex flex-col items-start gap-3 self-stretch">
             <span className="text-dark-500 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
-              {t('pages.clients.paymentHistory.title')}{' '}
-              {getPaymentHistorySubtitle() && (
-                <span className="font-light">({getPaymentHistorySubtitle()})</span>
+              {t('pages.clients.paymentHistory.title')}
+              {paymentHistorySubtitle && (
+                <>
+                  {' '}
+                  <span className="font-light">({paymentHistorySubtitle})</span>
+                </>
               )}
             </span>
             <div className="flex flex-col items-start self-stretch">

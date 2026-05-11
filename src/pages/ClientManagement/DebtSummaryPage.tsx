@@ -1150,14 +1150,19 @@ export function DebtSummaryPage() {
         <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
           <div className="flex flex-col items-start gap-3 self-stretch">
             <span className="text-dark-500 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
-              {t('pages.clients.debtSummary.paymentHistory')}{' '}
-              <span className="font-light">
-                (
-                {showAllPayments
-                  ? t('pages.clients.debtSummary.all')
-                  : t('pages.clients.debtSummary.last10')}
-                )
-              </span>
+              {t('pages.clients.debtSummary.paymentHistory')}
+              {debtSummary.payments.length > 0 && (
+                <>
+                  {' '}
+                  <span className="font-light">
+                    (
+                    {showAllPayments
+                      ? t('pages.clients.debtSummary.all')
+                      : t('pages.clients.debtSummary.last10')}
+                    )
+                  </span>
+                </>
+              )}
             </span>
 
             {/* Custom Table */}
@@ -1391,22 +1396,24 @@ export function DebtSummaryPage() {
                 </table>
               </div>
 
-              {/* View All Link - Part of table structure */}
-              <div className="flex w-full items-center justify-center gap-[1px] self-stretch rounded-none border-x border-[#EBECE8]">
-                <div className="flex min-h-[49px] flex-1 items-center justify-center gap-1 bg-[linear-gradient(0deg,#f2f3f0,#f2f3f0),#ffffff] p-2 px-4">
-                  <LinkButton
-                    variant="regular-secondary"
-                    leftIcon={<Icons.Reload size={16} />}
-                    onClick={() => {
-                      setShowAllPayments(!showAllPayments)
-                    }}
-                  >
-                    {showAllPayments
-                      ? t('pages.clients.debtSummary.showLess')
-                      : `${t('pages.clients.debtSummary.viewAll')} (${debtSummary.payments.length})`}
-                  </LinkButton>
+              {/* View All / Show Less when there are payments */}
+              {debtSummary.payments.length > 0 && (
+                <div className="flex w-full items-center justify-center gap-[1px] self-stretch rounded-none border-x border-[#EBECE8]">
+                  <div className="flex min-h-[49px] flex-1 items-center justify-center gap-1 bg-[linear-gradient(0deg,#f2f3f0,#f2f3f0),#ffffff] p-2 px-4">
+                    <LinkButton
+                      variant="regular-secondary"
+                      leftIcon={<Icons.Reload size={16} />}
+                      onClick={() => {
+                        setShowAllPayments(!showAllPayments)
+                      }}
+                    >
+                      {showAllPayments
+                        ? t('pages.clients.debtSummary.showLess')
+                        : `${t('pages.clients.debtSummary.viewAll')} (${debtSummary.payments.length})`}
+                    </LinkButton>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Summary Row - Part of table structure */}
               <div className="flex w-full flex-col items-stretch border-[#EBECE8] bg-white sm:flex-row sm:items-center sm:justify-between">
