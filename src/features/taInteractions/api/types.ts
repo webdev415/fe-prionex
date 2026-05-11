@@ -16,6 +16,7 @@ export interface TAInteraction {
   step_data: Record<string, unknown> | null
   recorded_by: number | null
   recorded_by_name: string | null
+  recorded_by_full_name: string | null
   call_id: number | null
   assigned_operator_id: number | null
   assigned_operator_name: string | null
