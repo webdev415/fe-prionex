@@ -2145,6 +2145,7 @@
           "saleDate": "Sale Date",
           "principalAmount": "Principal Amount",
           "principalDebt": "Principal Debt",
+          "eligibleForReturn": "Eligible for Return",
           "remainingDebtAmount": "Remaining Debt Amount",
           "totalToReturn": "Total To Return",
           "rrAmount": "RR Amount",

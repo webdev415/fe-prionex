@@ -442,6 +442,10 @@ export function ClientDetailPage() {
         principalDebt: Number(d.principal_debt ?? d.principal_amount ?? 0),
         remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
         totalToReturn: Number(d.total_to_return ?? 0),
+        // Legacy TABLE460.f53 — eligible-for-return amount carried over from
+        // the sale. Surfaced as its own column only when at least one loan row
+        // has it and it diverges from remainingDebtAmount (see loanColumns).
+        eligibleForReturn: d.legacy_f53 != null ? Number(d.legacy_f53) : null,
         status: d.status,
       })),
       // Payments mapped from PaymentResponse to UI shape
@@ -1042,6 +1046,14 @@ export function ClientDetailPage() {
     )
   }
 
+  // Show the "Eligible for Return" column (TABLE460.f53) only when at least
+  // one loan has a populated value AND it diverges from the live Remaining
+  // Debt. If every row matches, the column would carry no information beyond
+  // what Remaining Debt already shows, so we omit it entirely (per ticket).
+  const showEligibleForReturnColumn = client.loans.some(
+    (loan) => loan.eligibleForReturn != null && loan.eligibleForReturn !== loan.remainingDebtAmount
+  )
+
   const loanColumns: Column<(typeof client.loans)[0]>[] = [
     { key: 'loanNumber', header: t('pages.clients.detail.tableHeaders.loanNumber'), align: 'left' },
     { key: 'issueDate', header: t('pages.clients.detail.tableHeaders.issueDate'), align: 'left' },
@@ -1063,6 +1075,19 @@ export function ClientDetailPage() {
       align: 'right',
       render: (loan) => formatMoneyUAHTwoDecimals(loan.principalDebt),
     },
+    ...(showEligibleForReturnColumn
+      ? [
+          {
+            key: 'eligibleForReturn' as const,
+            header: t('pages.clients.detail.tableHeaders.eligibleForReturn'),
+            align: 'right' as const,
+            render: (loan: (typeof client.loans)[0]) =>
+              loan.eligibleForReturn != null
+                ? formatMoneyUAHTwoDecimals(loan.eligibleForReturn)
+                : '-',
+          },
+        ]
+      : []),
     {
       key: 'remainingDebtAmount',
       header: t('pages.clients.detail.tableHeaders.remainingDebtAmount'),
