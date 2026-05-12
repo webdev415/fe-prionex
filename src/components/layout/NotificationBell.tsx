@@ -34,7 +34,6 @@ import type { NotificationItem } from '@/features/notifications/types'
 function getIntlLocale(language: string): string {
   const base = language.split('-')[0] ?? 'en'
   if (base === 'uk') return 'uk-UA'
-  if (base === 'ru') return 'ru-RU'
   return 'en-GB'
 }
 

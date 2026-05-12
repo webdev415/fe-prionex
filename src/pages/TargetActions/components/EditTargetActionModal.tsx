@@ -7,6 +7,7 @@ import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/M
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { TargetActionForm } from './TargetActionForm'
+import { EditTargetActionFormSkeleton } from './EditTargetActionFormSkeleton'
 import { useTargetAction } from '@/features/targetActions/hooks/useTargetActions'
 
 interface EditTargetActionModalProps {
@@ -25,7 +26,7 @@ export function EditTargetActionModal({
   onSuccess,
 }: EditTargetActionModalProps) {
   const { t } = useTranslation('common')
-  const { data: ta, isLoading } = useTargetAction(taId)
+  const { data: ta, isPending } = useTargetAction(taId)
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="2xl">
@@ -38,9 +39,9 @@ export function EditTargetActionModal({
         title={t('pages.targetActions.modals.edit.title')}
       />
       <ModalContent>
-        {isLoading || !ta ? (
-          <div className="text-sm text-gray-500">{t('common.loading')}</div>
-        ) : (
+        {isPending ? (
+          <EditTargetActionFormSkeleton />
+        ) : ta ? (
           <TargetActionForm
             formId={FORM_ID}
             initial={ta}
@@ -49,6 +50,10 @@ export function EditTargetActionModal({
               onClose()
             }}
           />
+        ) : (
+          <div className="py-8 text-center text-sm text-gray-600">
+            {t('pages.targetActions.modals.edit.notFound')}
+          </div>
         )}
       </ModalContent>
       <ModalFooter>

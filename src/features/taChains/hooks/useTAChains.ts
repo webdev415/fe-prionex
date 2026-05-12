@@ -2,7 +2,7 @@
  * React Query hooks for TA Chains (KAN-318).
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   activateTAChain,
   cloneTAChain,
@@ -23,6 +23,7 @@ export function useTAChains(params?: TAChainListParams) {
   return useQuery({
     queryKey: [...KEY, params],
     queryFn: () => getTAChains(params),
+    placeholderData: keepPreviousData,
   })
 }
 

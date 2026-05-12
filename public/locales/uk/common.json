@@ -65,7 +65,8 @@
     "next": "Далі",
     "close": "Закрити",
     "logout": "Вийти",
-    "loggingOut": "Вихід..."
+    "loggingOut": "Вихід...",
+    "deleting": "Видалення…"
   },
   "components": {
     "pagination": {
@@ -86,8 +87,7 @@
   "language": {
     "select": "Виберіть мову",
     "en": "Англійська",
-    "uk": "Українська",
-    "ru": "Російська"
+    "uk": "Українська"
   },
   "notificationBell": {
     "title": "Повідомлення",
@@ -2439,7 +2439,7 @@
       "delayHint": "Попередній крок щойно завершено. Зачекайте, поки пройде затримка.",
       "saveInteraction": "Зберегти взаємодію",
       "continueToNext": "Далі →",
-      "quickPicks": "Швидкий старт",
+      "quickPicks": "Швидкі шаблони",
       "chainProgress": "Перебіг ланцюжка",
       "stepOf": "крок {{current}} з {{total}}",
       "current": "поточний",
@@ -2595,6 +2595,9 @@
       "empty": "Ланцюжки ЦД не знайдено. Натисніть «Створити ланцюжок», щоб створити перший.",
       "noTargetActionsHint": "Спочатку створіть хоча б одну активну цільову дію в Системних налаштуваннях → Цільові дії.",
       "table": {
+        "name": "Назва",
+        "steps": "Кроки",
+        "type": "Тип",
         "department": "Відділ"
       },
       "chainTypes": {
@@ -2609,7 +2612,8 @@
       "actions": {
         "clone": "Копія",
         "activate": "Активувати",
-        "deactivate": "Деактивувати"
+        "deactivate": "Деактивувати",
+        "delete": "Видалити"
       },
       "form": {
         "name": "Назва",
@@ -2640,7 +2644,19 @@
           "title": "Створення ланцюжка ЦД"
         },
         "edit": {
-          "title": "Редагування ланцюжка ЦД"
+          "title": "Редагування ланцюжка ЦД",
+          "notFound": "Ланцюжок ЦД не знайдено"
+        },
+        "delete": {
+          "title": "Видалення ланцюжка ЦД",
+          "warning": "Цю дію неможливо скасувати. Ланцюжок буде остаточно видалено.",
+          "chainDetails": "Відомості про ланцюжок",
+          "whatHappensTitle": "Що станеться:",
+          "bulletRemoveRow": "Визначення ланцюжка буде остаточно видалено.",
+          "bulletRefusedIfUsed": "Якщо за ланцюжком є зафіксовані взаємодії або запущені екземпляри, видалення буде відхилено. Натомість деактивуйте ланцюжок.",
+          "bulletCascadeChildren": "Пов’язані кроки, блокування, тригери та швидкі шаблони видаляються разом із ланцюжком.",
+          "acknowledge": "Я розумію, що цю дію неможливо скасувати.",
+          "deleting": "Видалення…"
         }
       },
       "errors": {
@@ -2652,7 +2668,8 @@
         "updated": "Ланцюжок ЦД оновлено",
         "cloned": "Ланцюжок ЦД скопійовано",
         "activated": "Ланцюжок ЦД активовано",
-        "deactivated": "Ланцюжок ЦД деактивовано"
+        "deactivated": "Ланцюжок ЦД деактивовано",
+        "deleted": "Ланцюжок ЦД видалено"
       }
     },
     "taManagement": {
@@ -2660,7 +2677,8 @@
         "targetActions": "Цільові дії",
         "taChains": "Ланцюжки ЦД",
         "dictionary": "Словник",
-        "chainBuilder": "Конструктор ланцюжків"
+        "chainBuilder": "Конструктор ланцюжків",
+        "quickPicks": "Швидкі шаблони"
       }
     },
     "targetActions": {
@@ -2709,7 +2727,8 @@
           "title": "Створення цільової дії"
         },
         "edit": {
-          "title": "Редагування цільової дії"
+          "title": "Редагування цільової дії",
+          "notFound": "Цільову дію не знайдено"
         }
       },
       "errors": {
@@ -2724,6 +2743,148 @@
         "cloned": "Цільову дію скопійовано",
         "hidden": "Цільову дію приховано",
         "unhidden": "Цільову дію відновлено"
+      }
+    },
+    "chainBuilder": {
+      "title": "Конструктор ланцюжків",
+      "selectChain": "Оберіть ланцюжок...",
+      "selectChainHint": "Оберіть ланцюжок вище, щоб відкрити візуальний конструктор.",
+      "steps": "кроків",
+      "loadingChains": "Завантаження ланцюжків...",
+      "loadingChain": "Завантаження ланцюжка...",
+      "loadingBuilder": "Завантаження даних конструктора...",
+      "triggers": "Тригери",
+      "blockers": "Блокування",
+      "effects": "Ефекти",
+      "branches": "Гілки",
+      "stepConfig": "Налаштування кроку",
+      "delay": "Затримка",
+      "delayMinutes": "{{minutes}} хв",
+      "required": "Обов'язковий",
+      "selectStepHint": "Натисніть крок на схемі, щоб налаштувати його.",
+      "branchTo": "Гілка до кроку...",
+      "conditionLeaf": "Якщо результат... (інакше = за замовчуванням)",
+      "conditionElse": "інакше (за замовчуванням / без умови)",
+      "branchAddedCondition": "Додано умовну гілку",
+      "effectCondition": "Завжди (або оберіть умови...)",
+      "branchAddedElse": "Додано гілку за замовчуванням (else)",
+      "removeItem": "Вилучити",
+      "taFallback": "ЦД #{{id}}",
+      "branchElse": "інакше",
+      "orLower": "або",
+      "ifPrefix": "якщо",
+      "branchElseShort": "(інакше)",
+      "branchIfLeaf": "якщо лист #{{id}}",
+      "branchUnknownStep": "крок #{{id}}",
+      "branchEdgeIfDropdown": "якщо #{{id}}",
+      "branchEdgeLeaf": "лист #{{id}}",
+      "addToSpamNoContactSteps": "У цьому ланцюжку немає кроків типу «контакт». Додайте крок із телефоном перед налаштуванням add_to_spam.",
+      "placeholders": {
+        "selectTag": "Оберіть тег...",
+        "selectSourceChain": "Оберіть вихідний ланцюжок...",
+        "selectBlockingChain": "Оберіть ланцюжок-блок...",
+        "resultCode": "Код результату",
+        "debtStatus": "Статус (напр. прострочка)",
+        "daysCooldown": "Днів (напр. 30)",
+        "selectSmsTemplate": "Оберіть SMS-шаблон...",
+        "subjectRequired": "Тема (обов'язково)",
+        "searchSubjects": "Пошук тем...",
+        "titleOptional": "Заголовок (необов'язково)",
+        "descriptionOptional": "Опис (необов'язково)",
+        "assigneeRequired": "Виконавець... (обов'язково)",
+        "pickUser": "Оберіть користувача...",
+        "searchUsers": "Пошук користувачів...",
+        "dueDateNone": "Термін — немає (необов'язково)",
+        "phoneSourceRequired": "Джерело телефону... (обов'язково)"
+      },
+      "dueDateRefs": {
+        "chain_entry_date": "Дата входу в ланцюжок",
+        "chain_completion_date": "Дата завершення ланцюжка"
+      },
+      "assigneeModes": {
+        "created_by": "Хто запустив ланцюжок",
+        "client_responsible": "Відповідальний оператор",
+        "specific_user": "Конкретний користувач"
+      },
+      "taskPriority": {
+        "low": "Низький",
+        "normal": "Звичайний",
+        "high": "Високий",
+        "urgent": "Терміновий",
+        "critical": "Критичний"
+      },
+      "addTrigger": "+ Додати тригер",
+      "addBlocker": "+ Додати блокування",
+      "addEffect": "+ Додати ефект",
+      "toasts": {
+        "triggerAdded": "Тригер додано",
+        "blockerAdded": "Блокування додано",
+        "effectAdded": "Ефект додано"
+      },
+      "types": {
+        "trigger": {
+          "tag_change": "Зміна тегу",
+          "call_result": "Результат дзвінка",
+          "date_reached": "Дата настала",
+          "debt_status": "Статус боргу",
+          "chain_completed": "Ланцюжок завершено",
+          "role_action": "Дія ролі"
+        },
+        "blocker": {
+          "already_launched": "Вже запущено",
+          "launched_within": "Запуск упродовж періоду",
+          "chain_active": "Ланцюжок активний",
+          "tag_present": "Тег присутній",
+          "in_cooldown": "Період очікування"
+        },
+        "effect": {
+          "add_tag": "Додати тег",
+          "remove_tag": "Зняти тег",
+          "create_task": "Створити задачу",
+          "send_sms": "Надіслати SMS",
+          "add_to_spam": "У спам"
+        }
+      },
+      "config": {
+        "tag": "тег: {{label}}",
+        "template": "шаблон: {{label}}",
+        "chain": "ланцюжок: {{label}}",
+        "subject": "тема: {{label}}",
+        "user": "користувач: {{label}}",
+        "assignee": "виконавець: {{label}}",
+        "dueChainEntry": "термін: дата входу в ланцюжок",
+        "dueChainCompletion": "термін: дата завершення ланцюжка",
+        "dueStep": "термін: {{step}}",
+        "dueStepOrderUnknown": "термін: порядок кроку {{order}}",
+        "phone": "телефон: {{step}}",
+        "phoneUnknown": "телефон: крок #{{id}}",
+        "generic": "{{key}}: {{value}}",
+        "stepRef": "Крок {{order}} — {{name}}"
+      }
+    },
+    "quickPicks": {
+      "title": "Швидкі шаблони",
+      "description": "Створюйте іменовані шаблони з попередньо заповненими значеннями кроків. Оператор обирає шаблон — ланцюжок заповнюється автоматично.",
+      "selectDepartment": "Оберіть відділ...",
+      "selectDepartmentHint": "Оберіть відділ, щоб керувати його шаблонами.",
+      "selectChain": "Оберіть ланцюжок...",
+      "loadingDepartments": "Завантаження відділів...",
+      "loadingTemplates": "Завантаження шаблонів…",
+      "loadingStepPresets": "Завантаження полів кроків…",
+      "empty": "Для цього відділу шаблони ще не налаштовані.",
+      "addTemplate": "Додати шаблон",
+      "templateName": "Назва шаблону",
+      "templateNamePlaceholder": "напр. PTP — стандарт",
+      "presetValues": "Попереднє заповнення кроків (залиште порожнім, щоб пропустити)",
+      "leaveEmpty": "Залишити порожнім...",
+      "creditAutoFill": "Кредит оператор обирає з даних клієнта",
+      "addButton": "Додати шаблон",
+      "chainFallback": "Ланцюжок #{{id}}",
+      "taFallback": "ЦД #{{id}}",
+      "presetChip": "{{label}}: {{value}}",
+      "toasts": {
+        "added": "Шаблон додано",
+        "removed": "Шаблон вилучено"
       }
     },
     "documentGeneration": {
@@ -2778,7 +2939,7 @@
         "create": "Створити шаблон",
         "intro": "Багаторазові шаблони документів зі змінними-плейсхолдерами.",
         "empty": "Ще немає шаблонів.",
-        "loading": "Завантаження...",
+        "loading": "Завантаження…",
         "loadError": "Не вдалося завантажити шаблони.",
         "columns": {
           "name": "Назва шаблона",

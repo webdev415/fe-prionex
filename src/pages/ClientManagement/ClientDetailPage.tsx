@@ -3334,11 +3334,7 @@ export function ClientDetailPage() {
                                       : (item as unknown as ExtendedCallItem & { itemType: 'call' })
                                           .initiated_at || item.date
                                   const locale =
-                                    i18n.language === 'uk'
-                                      ? 'uk-UA'
-                                      : i18n.language === 'ru'
-                                        ? 'ru-RU'
-                                        : 'en-GB'
+                                    i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
                                   const date = new Date(String(timestamp)).toLocaleDateString(
                                     locale,
                                     {
@@ -3519,11 +3515,7 @@ export function ClientDetailPage() {
                                         ? call.initiated_at
                                         : call.date
                                     const locale =
-                                      i18n.language === 'uk'
-                                        ? 'uk-UA'
-                                        : i18n.language === 'ru'
-                                          ? 'ru-RU'
-                                          : 'en-GB'
+                                      i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
                                     const date = new Date(String(timestamp)).toLocaleDateString(
                                       locale,
                                       {
@@ -3647,11 +3639,7 @@ export function ClientDetailPage() {
                                     const timestamp =
                                       'sent_at' in sms && sms.sent_at ? sms.sent_at : sms.date
                                     const locale =
-                                      i18n.language === 'uk'
-                                        ? 'uk-UA'
-                                        : i18n.language === 'ru'
-                                          ? 'ru-RU'
-                                          : 'en-GB'
+                                      i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
                                     const date = new Date(String(timestamp)).toLocaleDateString(
                                       locale,
                                       {

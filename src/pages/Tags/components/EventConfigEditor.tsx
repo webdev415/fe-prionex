@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/Input'
 import { Icons } from '@/lib/icons'
 
 const FIELD_TYPES: Array<EventField['type']> = ['text', 'number', 'select']
-const LANGS = ['en', 'ru', 'uk'] as const
+const LANGS = ['en', 'uk'] as const
 const EVENT_PREFIX = 'pages.tags.rules.events'
 const OPTION_PREFIX = 'pages.tags.rules.eventOptions'
 
@@ -30,7 +30,7 @@ function buildNestedObj(dotPath: string, value: string): Record<string, unknown>
 }
 
 function emptyLangs(): Record<string, string> {
-  return { en: '', ru: '', uk: '' }
+  return { en: '', uk: '' }
 }
 
 function getEventDisplayLabel(
@@ -667,7 +667,7 @@ export function EventConfigEditor() {
 
   // Pre-load all 3 languages for translation editing
   useEffect(() => {
-    i18n.loadLanguages(['en', 'ru', 'uk'])
+    i18n.loadLanguages(['en', 'uk'])
   }, [i18n])
 
   const handleAddEvent = () => {
