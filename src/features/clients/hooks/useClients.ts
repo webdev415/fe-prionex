@@ -673,6 +673,140 @@ export function useCompleteRestructuringAgreement() {
   })
 }
 
+/**
+ * Manual status transition between non-terminal statuses (Connected /
+ * Violated / Cancelled). Backend enforces the allowed-transition matrix.
+ */
+export function useTransitionRRStatus() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      raId,
+      targetStatusId,
+      reason,
+    }: {
+      clientId: number
+      raId: number
+      targetStatusId: 1 | 2 | 3
+      reason?: string
+    }) =>
+      clientApi.transitionRestructuringAgreementStatus(clientId, raId, {
+        target_status_id: targetStatusId,
+        reason,
+      }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringAgreements(variables.clientId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringDetail(variables.clientId, variables.raId),
+      })
+      toast.success('Restructuring status updated')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to update restructuring status'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Manual disconnect of an RR — flips status to Cancelled with a
+ * mandatory reason. Use when the RR was created by mistake.
+ */
+export function useDisconnectRR() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, raId, reason }: { clientId: number; raId: number; reason: string }) =>
+      clientApi.disconnectRestructuringAgreement(clientId, raId, { reason }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringAgreements(variables.clientId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringDetail(variables.clientId, variables.raId),
+      })
+      toast.success('Restructuring disconnected')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to disconnect restructuring'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Newest-first audit log of status changes for one RR.
+ */
+export function useRRStatusHistory(clientId: number, raId: number, enabled = true) {
+  return useQuery({
+    queryKey: [...clientKeys.restructuringDetail(clientId, raId), 'status-history'] as const,
+    queryFn: () => clientApi.getRestructuringAgreementStatusHistory(clientId, raId),
+    enabled: enabled && clientId > 0 && raId > 0,
+    staleTime: 30000,
+  })
+}
+
+/**
+ * List overpayments recorded against an RR (newest-first).
+ */
+export function useRROverpayments(clientId: number, raId: number, enabled = true) {
+  return useQuery({
+    queryKey: [...clientKeys.restructuringDetail(clientId, raId), 'overpayments'] as const,
+    queryFn: () => clientApi.getRROverpayments(clientId, raId),
+    enabled: enabled && clientId > 0 && raId > 0,
+    staleTime: 30000,
+  })
+}
+
+/**
+ * Record an overpayment against an RR. Append-only — multiple
+ * overpayment rows per RR are allowed; corrective rows over mutation.
+ */
+export function useRecordRROverpayment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      raId,
+      amount,
+      allocationTarget,
+      reason,
+    }: {
+      clientId: number
+      raId: number
+      amount: number
+      allocationTarget: 'next' | 'last'
+      reason?: string
+    }) =>
+      clientApi.recordRROverpayment(clientId, raId, {
+        amount,
+        allocation_target: allocationTarget,
+        reason,
+      }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: [
+          ...clientKeys.restructuringDetail(variables.clientId, variables.raId),
+          'overpayments',
+        ],
+      })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringAgreements(variables.clientId),
+      })
+      toast.success('Overpayment recorded')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to record overpayment'
+      toast.error(message)
+    },
+  })
+}
+
 // --- Task mutations ---
 
 /**

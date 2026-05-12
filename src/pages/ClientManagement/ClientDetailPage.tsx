@@ -66,6 +66,11 @@ import {
   useCreateRestructuringAgreement,
   useCloseDebt,
   useCompleteRestructuringAgreement,
+  useTransitionRRStatus,
+  useDisconnectRR,
+  useRecordRROverpayment,
+  useRRStatusHistory,
+  useRROverpayments,
   useUpdateTask,
   useDeleteTask,
   useCreateContact,
@@ -74,6 +79,7 @@ import {
   useContactTypes,
 } from '@/features/clients/hooks/useClients'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
+import type { OverpaymentResponse, RRStatusHistoryEntry } from '@/features/clients/api/clientApi'
 import {
   useCreateNoteInteraction,
   useUpdateInteraction,
@@ -172,6 +178,22 @@ export function ClientDetailPage() {
   const [connectRrError, setConnectRrError] = useState<string | null>(null)
   const [closeLoanConfirm, setCloseLoanConfirm] = useState<number | null>(null) // debtId to close
   const [completeRrConfirm, setCompleteRrConfirm] = useState<number | null>(null) // raId to complete
+  // Disconnect modal: holds the raId to disconnect + the operator's reason.
+  // null when closed; reason starts empty and is required by the backend.
+  const [disconnectRrConfirm, setDisconnectRrConfirm] = useState<{
+    raId: number
+    reason: string
+  } | null>(null)
+  // Overpayment modal: open while non-null. ``amount`` is held as a
+  // string so the operator can type freely; we parse + validate before
+  // submit. ``allocationTarget`` defaults to 'next' (debtor's next
+  // installment is reduced) — the more common case per ops.
+  const [overpaymentModal, setOverpaymentModal] = useState<{
+    raId: number
+    amount: string
+    allocationTarget: 'next' | 'last'
+    reason: string
+  } | null>(null)
   const [activeCommentTab, setActiveCommentTab] = useState<
     'ta-chains' | 'comments' | 'primary' | 'dial-history'
   >('ta-chains')
@@ -222,9 +244,24 @@ export function ClientDetailPage() {
     selectedRaId ?? 0,
     !!selectedRaId
   )
+  // History + overpayments only fetched while the detail modal is open;
+  // 30s staleTime keeps the modal cheap to re-open without a network round-trip.
+  const { data: rrStatusHistory = [], isLoading: isStatusHistoryLoading } = useRRStatusHistory(
+    clientId,
+    selectedRaId ?? 0,
+    !!selectedRaId
+  )
+  const { data: rrOverpayments = [], isLoading: isOverpaymentsLoading } = useRROverpayments(
+    clientId,
+    selectedRaId ?? 0,
+    !!selectedRaId
+  )
   const { mutate: createRr, isPending: isCreatingRr } = useCreateRestructuringAgreement()
   const { mutate: closeDebt, isPending: isClosingDebt } = useCloseDebt()
   const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
+  const { mutate: transitionRr, isPending: isTransitioningRr } = useTransitionRRStatus()
+  const { mutate: disconnectRr, isPending: isDisconnectingRr } = useDisconnectRR()
+  const { mutate: recordOverpayment, isPending: isRecordingOverpayment } = useRecordRROverpayment()
   const { data: paymentsSection, isLoading: isPaymentsLoading } = useClientPaymentsSection(
     clientId,
     isValidClientId
@@ -1091,14 +1128,26 @@ export function ClientDetailPage() {
       header: t('pages.clients.detail.tableHeaders.status', 'Статус'),
       align: 'center',
       render: (row) => {
+        // restructuring_statuses lookup ids:
+        //   1 Connected, 2 Violated, 3 Cancelled,
+        //   4 Completed, 5 Completed Early
+        // Pick a colour per status so all five are visually distinct.
+        // Backend `status_name` is rendered as-is; localisation of the
+        // label is the server's responsibility.
         const sid = row.status_id
         const label = row.status_name ?? '-'
         const cls =
-          sid === 4
-            ? 'bg-green-100 text-green-800'
-            : sid === 1
-              ? 'bg-blue-100 text-blue-800'
-              : 'bg-gray-100 text-gray-600'
+          sid === 1
+            ? 'bg-blue-100 text-blue-800' // Connected — paying on time
+            : sid === 2
+              ? 'bg-amber-100 text-amber-800' // Violated — overdue 30d+
+              : sid === 3
+                ? 'bg-red-100 text-red-800' // Cancelled — overdue 60d+ or manually disconnected
+                : sid === 4
+                  ? 'bg-green-100 text-green-800' // Completed
+                  : sid === 5
+                    ? 'bg-emerald-100 text-emerald-800' // Completed Early
+                    : 'bg-gray-100 text-gray-600'
         return (
           <span
             className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}
@@ -1112,27 +1161,91 @@ export function ClientDetailPage() {
       key: 'id',
       header: t('pages.clients.detail.tableHeaders.actions'),
       align: 'center',
-      render: (row) => (
-        <div className="flex items-center justify-center gap-1">
-          <button
-            onClick={() => setSelectedRaId(row.id)}
-            className="text-secondary-800 hover:text-secondary-600 p-1"
-            title={t('pages.clients.detail.viewDetail')}
-          >
-            <Icons.Eye size={18} />
-          </button>
-          {row.status_id !== 4 && (
+      render: (row) => {
+        // Allowed-transition matrix mirrors the backend's
+        // ALLOWED_MANUAL_TRANSITIONS in rr_status_service.py:
+        //   1 Connected  → 2 Violated
+        //   2 Violated   → 1 Connected (restore)
+        //   3 Cancelled  → 1 Connected (restore)
+        // Terminal statuses (4 Completed / 5 Completed Early) get
+        // "view only". Disconnect is offered for any non-terminal
+        // status; it goes through a dedicated endpoint that records a
+        // mandatory reason.
+        const sid = row.status_id
+        const isTerminal = sid === 3 || sid === 4 || sid === 5
+        const isCompleted = sid === 4 || sid === 5
+        const canMarkViolated = sid === 1
+        const canRestore = sid === 2 || sid === 3
+        const transitionBusy = isTransitioningRr || isDisconnectingRr
+        return (
+          <div className="flex items-center justify-center gap-1">
             <button
-              onClick={() => setCompleteRrConfirm(row.id)}
-              disabled={isCompletingRa}
-              className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
-              title={t('pages.clients.detail.completeRR', 'Complete RR')}
+              onClick={() => setSelectedRaId(row.id)}
+              className="text-secondary-800 hover:text-secondary-600 p-1"
+              title={t('pages.clients.detail.viewDetail')}
             >
-              <Icons.Success size={18} />
+              <Icons.Eye size={18} />
             </button>
-          )}
-        </div>
-      ),
+            {canMarkViolated && (
+              <button
+                onClick={() => transitionRr({ clientId, raId: row.id, targetStatusId: 2 })}
+                disabled={transitionBusy}
+                className="p-1 text-amber-600 hover:text-amber-800 disabled:opacity-50"
+                title={t('pages.clients.detail.markRRViolated', 'Mark Violated')}
+              >
+                <Icons.Warning size={18} />
+              </button>
+            )}
+            {canRestore && (
+              <button
+                onClick={() => transitionRr({ clientId, raId: row.id, targetStatusId: 1 })}
+                disabled={transitionBusy}
+                className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                title={t('pages.clients.detail.restoreRRConnected', 'Restore to Connected')}
+              >
+                <Icons.Reload size={18} />
+              </button>
+            )}
+            {!isTerminal && (
+              <button
+                onClick={() => setCompleteRrConfirm(row.id)}
+                disabled={isCompletingRa || transitionBusy}
+                className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+                title={t('pages.clients.detail.completeRR', 'Complete RR')}
+              >
+                <Icons.Success size={18} />
+              </button>
+            )}
+            {!isTerminal && (
+              <button
+                onClick={() =>
+                  setOverpaymentModal({
+                    raId: row.id,
+                    amount: '',
+                    allocationTarget: 'next',
+                    reason: '',
+                  })
+                }
+                disabled={transitionBusy || isRecordingOverpayment}
+                className="p-1 text-emerald-600 hover:text-emerald-800 disabled:opacity-50"
+                title={t('pages.clients.detail.recordOverpayment', 'Record Overpayment')}
+              >
+                <Icons.MoneyReceive01 size={18} />
+              </button>
+            )}
+            {!isCompleted && sid !== 3 && (
+              <button
+                onClick={() => setDisconnectRrConfirm({ raId: row.id, reason: '' })}
+                disabled={transitionBusy}
+                className="p-1 text-red-600 hover:text-red-800 disabled:opacity-50"
+                title={t('pages.clients.detail.disconnectRR', 'Disconnect RR')}
+              >
+                <Icons.CancelCircle size={18} />
+              </button>
+            )}
+          </div>
+        )
+      },
     },
   ]
 
@@ -4010,6 +4123,119 @@ export function ClientDetailPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Overpayments: append-only list, newest-first.
+                    Hidden when there are none — saves vertical space on
+                    the most common case (debtor pays exactly the schedule). */}
+                {(isOverpaymentsLoading || rrOverpayments.length > 0) && (
+                  <div className="pt-2">
+                    <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                      {t('pages.clients.detail.rrOverpayments', 'Overpayments')}
+                    </h3>
+                    {isOverpaymentsLoading ? (
+                      <div className="flex justify-center py-4">
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                      </div>
+                    ) : (
+                      <div className="max-h-48 overflow-y-auto">
+                        <DataTable<OverpaymentResponse>
+                          columns={[
+                            {
+                              key: 'created_at',
+                              header: t('pages.clients.detail.rrPaymentDate'),
+                              render: (o) =>
+                                formatDate(o.created_at) +
+                                ' ' +
+                                new Date(o.created_at).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                }),
+                            },
+                            {
+                              key: 'amount',
+                              header: t('pages.clients.detail.rrPaymentAmount'),
+                              align: 'right',
+                              render: (o) => formatMoneyUAHTwoDecimals(Number(o.amount ?? 0)),
+                            },
+                            {
+                              key: 'allocation_target',
+                              header: t(
+                                'pages.clients.detail.allocationTarget',
+                                'Allocate excess to'
+                              ),
+                              render: (o) =>
+                                o.allocation_target === 'next'
+                                  ? t('pages.clients.detail.allocationTargetNext', 'Next')
+                                  : t('pages.clients.detail.allocationTargetLast', 'Last'),
+                            },
+                            {
+                              key: 'reason',
+                              header: t('pages.clients.detail.overpaymentReason', 'Reason'),
+                              render: (o) => o.reason ?? '-',
+                            },
+                          ]}
+                          data={rrOverpayments}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Status history: same audit log used by manual + auto +
+                    disconnect transitions. ``change_source`` discriminates
+                    so an operator can see whether the daily job or a person
+                    flipped the RR. */}
+                <div className="pt-2">
+                  <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
+                    {t('pages.clients.detail.rrStatusHistory', 'Status history')}
+                  </h3>
+                  {isStatusHistoryLoading ? (
+                    <div className="flex justify-center py-4">
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                    </div>
+                  ) : rrStatusHistory.length === 0 ? (
+                    <p className="text-dark-300 py-2 text-sm">
+                      {t(
+                        'pages.clients.detail.rrStatusHistoryEmpty',
+                        'No status changes recorded yet.'
+                      )}
+                    </p>
+                  ) : (
+                    <div className="max-h-56 overflow-y-auto">
+                      <DataTable<RRStatusHistoryEntry>
+                        columns={[
+                          {
+                            key: 'changed_at',
+                            header: t('pages.clients.detail.rrPaymentDate'),
+                            render: (h) =>
+                              formatDate(h.changed_at) +
+                              ' ' +
+                              new Date(h.changed_at).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              }),
+                          },
+                          {
+                            key: 'status',
+                            header: t('pages.clients.detail.rrStatusHistoryStatus', 'Status'),
+                            render: (h) => h.status_name ?? '-',
+                          },
+                          {
+                            key: 'change_source',
+                            header: t('pages.clients.detail.rrStatusHistorySource', 'Source'),
+                            render: (h) => h.change_source,
+                          },
+                          {
+                            key: 'change_reason',
+                            header: t('pages.clients.detail.overpaymentReason', 'Reason'),
+                            render: (h) => h.change_reason ?? '-',
+                          },
+                        ]}
+                        data={rrStatusHistory}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="flex justify-center py-8">
@@ -4190,6 +4416,221 @@ export function ClientDetailPage() {
               {isCompletingRa
                 ? t('actions.saving', 'Saving...')
                 : t('pages.clients.detail.completeRR', 'Complete RR')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Disconnect RR Confirmation Modal — reason required */}
+        <Modal
+          open={disconnectRrConfirm !== null}
+          onClose={() => setDisconnectRrConfirm(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-100">
+                <Icons.CancelCircle size={20} className="text-red-600" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.disconnectRR', 'Disconnect RR')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 mb-3 text-base font-light">
+              {t(
+                'pages.clients.detail.confirmDisconnectRR',
+                'Disconnecting will mark this restructuring agreement as Cancelled. Please provide a reason — it will be recorded in the audit log.'
+              )}
+            </p>
+            <textarea
+              value={disconnectRrConfirm?.reason ?? ''}
+              onChange={(e) =>
+                setDisconnectRrConfirm((prev) =>
+                  prev ? { ...prev, reason: e.target.value } : prev
+                )
+              }
+              placeholder={t(
+                'pages.clients.detail.disconnectRRReasonPlaceholder',
+                'e.g. Created by mistake, debtor walked back the agreement…'
+              )}
+              maxLength={500}
+              rows={3}
+              className="text-dark-500 focus:border-primary-500 focus:ring-primary-500 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm outline-none placeholder:text-gray-400 focus:ring-1"
+            />
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setDisconnectRrConfirm(null)}
+              disabled={isDisconnectingRr}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => {
+                if (disconnectRrConfirm !== null && disconnectRrConfirm.reason.trim().length > 0) {
+                  disconnectRr(
+                    {
+                      clientId,
+                      raId: disconnectRrConfirm.raId,
+                      reason: disconnectRrConfirm.reason.trim(),
+                    },
+                    { onSuccess: () => setDisconnectRrConfirm(null) }
+                  )
+                }
+              }}
+              disabled={
+                isDisconnectingRr ||
+                !disconnectRrConfirm ||
+                disconnectRrConfirm.reason.trim().length === 0
+              }
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isDisconnectingRr
+                ? t('actions.saving', 'Saving...')
+                : t('pages.clients.detail.disconnectRR', 'Disconnect RR')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Record Overpayment Modal — append-only, multiple per RR allowed */}
+        <Modal
+          open={overpaymentModal !== null}
+          onClose={() => setOverpaymentModal(null)}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
+                <Icons.MoneyReceive01 size={20} className="text-emerald-600" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.recordOverpayment', 'Record Overpayment')}
+          />
+          <ModalContent>
+            <p className="text-dark-500 mb-3 text-base font-light">
+              {t(
+                'pages.clients.detail.recordOverpaymentHelp',
+                'Record an excess payment above the scheduled amount. Choose where to allocate the excess.'
+              )}
+            </p>
+
+            <label className="text-dark-500 mb-1 block text-sm font-medium">
+              {t('pages.clients.detail.overpaymentAmount', 'Overpayment amount')}
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={overpaymentModal?.amount ?? ''}
+              onChange={(e) =>
+                setOverpaymentModal((prev) => (prev ? { ...prev, amount: e.target.value } : prev))
+              }
+              placeholder="0.00"
+              className="text-dark-500 placeholder:text-dark-300 focus:border-primary-500 focus:ring-primary-500 mb-3 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+            />
+
+            <label className="text-dark-500 mb-1 block text-sm font-medium">
+              {t('pages.clients.detail.allocationTarget', 'Allocate excess to')}
+            </label>
+            <div className="mb-3 flex gap-4">
+              <label className="text-dark-500 flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="allocation_target"
+                  value="next"
+                  checked={overpaymentModal?.allocationTarget === 'next'}
+                  onChange={() =>
+                    setOverpaymentModal((prev) =>
+                      prev ? { ...prev, allocationTarget: 'next' } : prev
+                    )
+                  }
+                />
+                {t(
+                  'pages.clients.detail.allocateToNext',
+                  'Next scheduled payment (reduces next installment)'
+                )}
+              </label>
+              <label className="text-dark-500 flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="allocation_target"
+                  value="last"
+                  checked={overpaymentModal?.allocationTarget === 'last'}
+                  onChange={() =>
+                    setOverpaymentModal((prev) =>
+                      prev ? { ...prev, allocationTarget: 'last' } : prev
+                    )
+                  }
+                />
+                {t('pages.clients.detail.allocateToLast', 'Final payment (RR closes earlier)')}
+              </label>
+            </div>
+
+            <label className="text-dark-500 mb-1 block text-sm font-medium">
+              {t('pages.clients.detail.overpaymentReason', 'Reason (optional)')}
+            </label>
+            <textarea
+              value={overpaymentModal?.reason ?? ''}
+              onChange={(e) =>
+                setOverpaymentModal((prev) => (prev ? { ...prev, reason: e.target.value } : prev))
+              }
+              placeholder={t(
+                'pages.clients.detail.overpaymentReasonPlaceholder',
+                'e.g. Debtor paid round amount, receipt #1234…'
+              )}
+              maxLength={500}
+              rows={3}
+              className="text-dark-500 placeholder:text-dark-300 focus:border-primary-500 focus:ring-primary-500 w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:ring-1"
+            />
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => setOverpaymentModal(null)}
+              disabled={isRecordingOverpayment}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => {
+                if (!overpaymentModal) return
+                const parsed = Number(overpaymentModal.amount)
+                if (!Number.isFinite(parsed) || parsed <= 0) {
+                  return
+                }
+                recordOverpayment(
+                  {
+                    clientId,
+                    raId: overpaymentModal.raId,
+                    amount: parsed,
+                    allocationTarget: overpaymentModal.allocationTarget,
+                    reason:
+                      overpaymentModal.reason.trim().length > 0
+                        ? overpaymentModal.reason.trim()
+                        : undefined,
+                  },
+                  { onSuccess: () => setOverpaymentModal(null) }
+                )
+              }}
+              disabled={
+                isRecordingOverpayment ||
+                !overpaymentModal ||
+                !Number.isFinite(Number(overpaymentModal.amount)) ||
+                Number(overpaymentModal.amount) <= 0
+              }
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isRecordingOverpayment
+                ? t('actions.saving', 'Saving...')
+                : t('pages.clients.detail.recordOverpayment', 'Record Overpayment')}
             </Button>
           </ModalFooter>
         </Modal>
