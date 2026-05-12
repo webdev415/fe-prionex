@@ -2736,6 +2736,123 @@
         "unhidden": "Целевое действие восстановлено"
       }
     },
+    "chainBuilder": {
+      "title": "Конструктор цепочек",
+      "selectChain": "Выберите цепочку...",
+      "selectChainHint": "Выберите цепочку выше, чтобы открыть визуальный конструктор.",
+      "steps": "шагов",
+      "loadingChains": "Загрузка цепочек...",
+      "loadingChain": "Загрузка цепочки...",
+      "loadingBuilder": "Загрузка данных конструктора...",
+      "triggers": "Триггеры",
+      "blockers": "Блокировки",
+      "effects": "Эффекты",
+      "branches": "Ветки",
+      "stepConfig": "Настройка шага",
+      "delay": "Задержка",
+      "delayMinutes": "{{minutes}} мин",
+      "required": "Обязательный",
+      "selectStepHint": "Нажмите шаг на схеме, чтобы настроить его.",
+      "branchTo": "Ветка к шагу...",
+      "conditionLeaf": "Если результат... (иначе = по умолчанию)",
+      "conditionElse": "иначе (по умолчанию / без условия)",
+      "branchAddedCondition": "Добавлена условная ветка",
+      "effectCondition": "Всегда (или выберите условия...)",
+      "branchAddedElse": "Добавлена ветка по умолчанию (else)",
+      "removeItem": "Удалить",
+      "taFallback": "ЦД #{{id}}",
+      "branchElse": "иначе",
+      "orLower": "или",
+      "ifPrefix": "если",
+      "branchElseShort": "(иначе)",
+      "branchIfLeaf": "если лист #{{id}}",
+      "branchUnknownStep": "шаг #{{id}}",
+      "branchEdgeIfDropdown": "если #{{id}}",
+      "branchEdgeLeaf": "лист #{{id}}",
+      "addToSpamNoContactSteps": "В этой цепочке нет шагов с типом «контакт». Добавьте шаг с телефоном перед настройкой add_to_spam.",
+      "placeholders": {
+        "selectTag": "Выберите тег...",
+        "selectSourceChain": "Выберите исходную цепочку...",
+        "selectBlockingChain": "Выберите блокирующую цепочку...",
+        "resultCode": "Код результата",
+        "debtStatus": "Статус (напр. просрочка)",
+        "daysCooldown": "Дней (напр. 30)",
+        "selectSmsTemplate": "Выберите SMS-шаблон...",
+        "subjectRequired": "Тема (обязательно)",
+        "searchSubjects": "Поиск тем...",
+        "titleOptional": "Заголовок (необязательно)",
+        "descriptionOptional": "Описание (необязательно)",
+        "assigneeRequired": "Исполнитель... (обязательно)",
+        "pickUser": "Выберите пользователя...",
+        "searchUsers": "Поиск пользователей...",
+        "dueDateNone": "Срок — нет (необязательно)",
+        "phoneSourceRequired": "Источник телефона... (обязательно)"
+      },
+      "dueDateRefs": {
+        "chain_entry_date": "Дата входа в цепочку",
+        "chain_completion_date": "Дата завершения цепочки"
+      },
+      "assigneeModes": {
+        "created_by": "Кто запустил цепочку",
+        "client_responsible": "Ответственный оператор",
+        "specific_user": "Конкретный пользователь"
+      },
+      "taskPriority": {
+        "low": "Низкий",
+        "normal": "Обычный",
+        "high": "Высокий",
+        "urgent": "Срочный",
+        "critical": "Критический"
+      },
+      "addTrigger": "+ Добавить триггер",
+      "addBlocker": "+ Добавить блокировку",
+      "addEffect": "+ Добавить эффект",
+      "toasts": {
+        "triggerAdded": "Триггер добавлен",
+        "blockerAdded": "Блокировка добавлена",
+        "effectAdded": "Эффект добавлен"
+      },
+      "types": {
+        "trigger": {
+          "tag_change": "Изменение тега",
+          "call_result": "Результат звонка",
+          "date_reached": "Дата наступила",
+          "debt_status": "Статус долга",
+          "chain_completed": "Цепочка завершена",
+          "role_action": "Действие роли"
+        },
+        "blocker": {
+          "already_launched": "Уже запущена",
+          "launched_within": "Запуск в течение периода",
+          "chain_active": "Цепочка активна",
+          "tag_present": "Тег присутствует",
+          "in_cooldown": "Период ожидания"
+        },
+        "effect": {
+          "add_tag": "Добавить тег",
+          "remove_tag": "Снять тег",
+          "create_task": "Создать задачу",
+          "send_sms": "Отправить SMS",
+          "add_to_spam": "В спам"
+        }
+      },
+      "config": {
+        "tag": "тег: {{label}}",
+        "template": "шаблон: {{label}}",
+        "chain": "цепочка: {{label}}",
+        "subject": "тема: {{label}}",
+        "user": "пользователь: {{label}}",
+        "assignee": "исполнитель: {{label}}",
+        "dueChainEntry": "срок: дата входа в цепочку",
+        "dueChainCompletion": "срок: дата завершения цепочки",
+        "dueStep": "срок: {{step}}",
+        "dueStepOrderUnknown": "срок: порядок шага {{order}}",
+        "phone": "телефон: {{step}}",
+        "phoneUnknown": "телефон: шаг #{{id}}",
+        "generic": "{{key}}: {{value}}",
+        "stepRef": "Шаг {{order}} — {{name}}"
+      }
+    },
     "documentGeneration": {
       "title": "Генерация документов",
       "tabs": {

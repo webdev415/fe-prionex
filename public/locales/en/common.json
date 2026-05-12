@@ -2489,12 +2489,16 @@
       "selectChain": "Select a chain...",
       "selectChainHint": "Select a chain above to open the visual builder.",
       "steps": "steps",
+      "loadingChains": "Loading chains...",
+      "loadingChain": "Loading chain...",
+      "loadingBuilder": "Loading builder data...",
       "triggers": "Triggers",
       "blockers": "Blockers",
       "effects": "Effects",
       "branches": "Branches",
       "stepConfig": "Step config",
       "delay": "Delay",
+      "delayMinutes": "{{minutes}} min",
       "required": "Required",
       "selectStepHint": "Click a step on the canvas to configure it.",
       "branchTo": "Branch to step...",
@@ -2502,7 +2506,100 @@
       "conditionElse": "else (default / no condition)",
       "branchAddedCondition": "Conditional branch added",
       "effectCondition": "Always (or select conditions...)",
-      "branchAddedElse": "Default branch added (else)"
+      "branchAddedElse": "Default branch added (else)",
+      "removeItem": "Remove",
+      "taFallback": "TA #{{id}}",
+      "branchElse": "else",
+      "orLower": "or",
+      "ifPrefix": "if",
+      "branchElseShort": "(else)",
+      "branchIfLeaf": "if leaf #{{id}}",
+      "branchUnknownStep": "step #{{id}}",
+      "branchEdgeIfDropdown": "if #{{id}}",
+      "branchEdgeLeaf": "leaf #{{id}}",
+      "addToSpamNoContactSteps": "No contact-type steps in this chain. Add a step that collects a phone before configuring add_to_spam.",
+      "placeholders": {
+        "selectTag": "Select tag...",
+        "selectSourceChain": "Select source chain...",
+        "selectBlockingChain": "Select blocking chain...",
+        "resultCode": "Result code",
+        "debtStatus": "Status (e.g. overdue)",
+        "daysCooldown": "Days (e.g. 30)",
+        "selectSmsTemplate": "Select SMS template...",
+        "subjectRequired": "Subject (required)",
+        "searchSubjects": "Search subjects...",
+        "titleOptional": "Title (optional override)",
+        "descriptionOptional": "Description (optional)",
+        "assigneeRequired": "Assignee... (required)",
+        "pickUser": "Pick user...",
+        "searchUsers": "Search users...",
+        "dueDateNone": "Due date — none (optional)",
+        "phoneSourceRequired": "Phone source... (required)"
+      },
+      "dueDateRefs": {
+        "chain_entry_date": "Chain entry date",
+        "chain_completion_date": "Chain completion date"
+      },
+      "assigneeModes": {
+        "created_by": "Chain starter",
+        "client_responsible": "Responsible operator",
+        "specific_user": "Specific user"
+      },
+      "taskPriority": {
+        "low": "Low",
+        "normal": "Normal",
+        "high": "High",
+        "urgent": "Urgent",
+        "critical": "Critical"
+      },
+      "addTrigger": "+ Add trigger",
+      "addBlocker": "+ Add blocker",
+      "addEffect": "+ Add effect",
+      "toasts": {
+        "triggerAdded": "Trigger added",
+        "blockerAdded": "Blocker added",
+        "effectAdded": "Effect added"
+      },
+      "types": {
+        "trigger": {
+          "tag_change": "Tag change",
+          "call_result": "Call result",
+          "date_reached": "Date reached",
+          "debt_status": "Debt status",
+          "chain_completed": "Chain completed",
+          "role_action": "Role action"
+        },
+        "blocker": {
+          "already_launched": "Already launched",
+          "launched_within": "Launched within",
+          "chain_active": "Chain active",
+          "tag_present": "Tag present",
+          "in_cooldown": "In cooldown"
+        },
+        "effect": {
+          "add_tag": "Add tag",
+          "remove_tag": "Remove tag",
+          "create_task": "Create task",
+          "send_sms": "Send SMS",
+          "add_to_spam": "Add to spam"
+        }
+      },
+      "config": {
+        "tag": "tag: {{label}}",
+        "template": "template: {{label}}",
+        "chain": "chain: {{label}}",
+        "subject": "subject: {{label}}",
+        "user": "user: {{label}}",
+        "assignee": "assignee: {{label}}",
+        "dueChainEntry": "due: chain entry date",
+        "dueChainCompletion": "due: chain completion date",
+        "dueStep": "due: {{step}}",
+        "dueStepOrderUnknown": "due: step_order {{order}}",
+        "phone": "phone: {{step}}",
+        "phoneUnknown": "phone: step #{{id}}",
+        "generic": "{{key}}: {{value}}",
+        "stepRef": "Step {{order}} — {{name}}"
+      }
     },
     "quickPicks": {
       "title": "Quick Picks",
