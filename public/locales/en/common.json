@@ -395,6 +395,7 @@
         "loadFailed": "Failed to load calls",
         "loadInteractionsFailed": "Failed to load interactions",
         "loadTimelineFailed": "Failed to load the timeline.",
+        "invalidCallId": "Invalid Call ID. Paste a full call UUID (36 characters).",
         "loadScreenTimeFailed": "Failed to load screen-time data.",
         "loadHeatmapFailed": "Failed to load the heatmap.",
         "loadScriptAnalyticsFailed": "Failed to load script analytics.",
@@ -1783,7 +1784,9 @@
           "min": "min:",
           "max": "max:",
           "validationPaymentExceedsDebt": "Payment cannot exceed current debt ({{amount}})",
-          "validationPaymentMustBePositive": "Payment amount must be positive."
+          "validationPaymentMustBePositive": "Payment amount must be positive.",
+          "closedDebtBadge": "Closed",
+          "closedDebtCorrectionHint": "This debt is closed. The payment is recorded as a technical correction and will not reopen the debt."
         },
         "editPayment": {
           "title": "Edit Payment #{{paymentId}}",
@@ -2143,6 +2146,7 @@
           "saleDate": "Sale Date",
           "principalAmount": "Principal Amount",
           "principalDebt": "Principal Debt",
+          "eligibleForReturn": "Eligible for Return",
           "remainingDebtAmount": "Remaining Debt Amount",
           "totalToReturn": "Total To Return",
           "rrAmount": "RR Amount",

@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
@@ -26,8 +27,12 @@ export function TimelineTab() {
   const [draftCallId, setDraftCallId] = useState(urlState.call_id ?? '')
 
   const callId = urlState.call_id ?? null
-  const { data, isPending, isError } = useTimeline(callId, !!callId)
+  const { data, isPending, isError, error } = useTimeline(callId, !!callId)
   const exportMutation = useExportTimeline()
+
+  // 422 means the supplied call_id didn't parse as a UUID. Anything else is a
+  // generic server/network failure.
+  const isInvalidCallId = isError && axios.isAxiosError(error) && error.response?.status === 422
 
   const handleApply = () => {
     const trimmed = draftCallId.trim() || undefined
@@ -102,7 +107,12 @@ export function TimelineTab() {
         </div>
       ) : isError ? (
         <div className="rounded-xl bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
-          {t('pages.actionAnalysis.errors.loadTimelineFailed', 'Failed to load the timeline.')}
+          {isInvalidCallId
+            ? t(
+                'pages.actionAnalysis.errors.invalidCallId',
+                'Invalid Call ID. Paste a full call UUID (36 characters).'
+              )
+            : t('pages.actionAnalysis.errors.loadTimelineFailed', 'Failed to load the timeline.')}
         </div>
       ) : isPending ? (
         <div className="overflow-x-auto rounded-xl bg-white/80 shadow-sm">
