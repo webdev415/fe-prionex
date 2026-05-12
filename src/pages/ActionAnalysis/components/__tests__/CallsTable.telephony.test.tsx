@@ -28,7 +28,9 @@ function makeCall(overrides: Partial<CallMonitoringItem>): CallMonitoringItem {
     ring_duration: null,
     talk_duration: 60,
     total_duration: 65,
-    client_id: null,
+    // Real client_id so the Client column renders a #link rather than '—'
+    // and our em-dash assertions only catch the telephony column.
+    client_id: 42,
     campaign_id: null,
     has_recording: false,
     telephony_type: 'unknown',
