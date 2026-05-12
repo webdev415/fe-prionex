@@ -6,6 +6,8 @@
 
 import { describe, it, expect } from 'vitest'
 
+import type { TelephonyType } from '@/features/actionAnalysis'
+
 import {
   CALL_FILTERS_DEFAULT,
   readCallsUrlState,
@@ -55,10 +57,8 @@ describe('callsUrlState — telephony_types', () => {
   })
 
   it('roundtrips through write → read with all canonical values preserved', () => {
-    const original = {
-      ...CALL_FILTERS_DEFAULT,
-      telephony_types: ['white', 'grey', 'unknown'] as const,
-    }
+    const telephony_types: TelephonyType[] = ['white', 'grey', 'unknown']
+    const original = { ...CALL_FILTERS_DEFAULT, telephony_types }
     const written = writeCallsUrlState(new URLSearchParams(), original)
     const readBack = readCallsUrlState(written)
     expect(readBack.telephony_types).toEqual(['white', 'grey', 'unknown'])
