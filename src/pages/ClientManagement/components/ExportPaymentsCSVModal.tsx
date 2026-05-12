@@ -6,6 +6,7 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { convertUTCToUserTimezone } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
@@ -68,7 +69,7 @@ export function ExportPaymentsCSVModal({
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount
     if (isNaN(num)) return '₴ 0.00'
-    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
+    const locale = intlLocaleForUiLanguage(i18n.language)
     return `₴ ${num.toLocaleString(locale, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,

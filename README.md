@@ -11,7 +11,7 @@ Modern React-based frontend application for the Prionex CRM system, built with T
 - **Zustand** - Client state management
 - **React Router 7** - Routing
 - **Tailwind CSS 4** - Utility-first CSS
-- **i18next** - Internationalization (en, uk, ru)
+- **i18next** - Internationalization (en, uk)
 - **Radix UI** - Accessible component primitives
 - **React Hook Form** - Form management
 - **Zod** - Schema validation

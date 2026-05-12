@@ -86,8 +86,7 @@
   "language": {
     "select": "Select Language",
     "en": "English",
-    "uk": "Ukrainian",
-    "ru": "Russian"
+    "uk": "Ukrainian"
   },
   "notificationBell": {
     "title": "Notifications",

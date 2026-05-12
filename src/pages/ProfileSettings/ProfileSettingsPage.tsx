@@ -31,8 +31,7 @@ export function ProfileSettingsPage() {
 
   // Local form state initialized from store user
   const initialForm = useMemo(() => {
-    const raw = i18n.language as 'en' | 'uk' | 'ru'
-    const fromI18n: 'en' | 'uk' = raw === 'ru' ? 'uk' : (raw as 'en' | 'uk') || 'en'
+    const fromI18n = normalizeBackendLanguage(i18n.language)
     const currentLanguage: 'en' | 'uk' = user?.language
       ? normalizeBackendLanguage(user.language)
       : fromI18n
@@ -77,8 +76,7 @@ export function ProfileSettingsPage() {
   // Sync when i18n changes externally only (e.g. header switcher). Do not depend on form.language —
   // i18n.changeLanguage is async; including form.language would revert the profile dropdown immediately.
   useEffect(() => {
-    const raw = i18n.language as 'en' | 'uk' | 'ru'
-    const currentLanguage: 'en' | 'uk' = raw === 'ru' ? 'uk' : (raw as 'en' | 'uk') || 'en'
+    const currentLanguage: 'en' | 'uk' = normalizeBackendLanguage(i18n.language)
     // Defer to a microtask so the effect body itself doesn't call setState
     // synchronously (lint: react-hooks/set-state-in-effect).
     queueMicrotask(() => {
@@ -127,7 +125,7 @@ export function ProfileSettingsPage() {
       last_name: form.last_name,
       middle_name: form.middle_name || undefined,
       phone: form.phone || undefined,
-      language: (form.language as 'en' | 'uk' | 'ru') || undefined,
+      language: form.language || undefined,
       timezone: form.timezone || undefined,
       agent_status: user?.is_agent ? form.agent_status : undefined,
     }
