@@ -329,6 +329,21 @@ export function ClientDetailPage() {
   const { data: contactTypes = [] } = useContactTypes()
   const canCreateTasks = useHasPermission(PERMISSIONS.CLIENTS.CREATE_TASKS)
   const canEditClient = useHasPermission(PERMISSIONS.CLIENTS.EDIT)
+  // Per-transition RR permissions. Buttons in the RR actions column
+  // disable themselves (with a tooltip) when the operator's role lacks
+  // the corresponding gate. Auto transitions (driven by the lazy
+  // evaluator / payment event consumer) bypass these entirely.
+  const canMarkViolated = useHasPermission(
+    PERMISSIONS.RESTRUCTURING.TRANSITION_CONNECTED_TO_VIOLATED
+  )
+  const canRestoreFromViolated = useHasPermission(
+    PERMISSIONS.RESTRUCTURING.TRANSITION_VIOLATED_TO_CONNECTED
+  )
+  const canRestoreFromCancelled = useHasPermission(
+    PERMISSIONS.RESTRUCTURING.TRANSITION_CANCELLED_TO_CONNECTED
+  )
+  const canDisconnectRR = useHasPermission(PERMISSIONS.RESTRUCTURING.DISCONNECT)
+  const canCompleteRR = useHasPermission(PERMISSIONS.RESTRUCTURING.COMPLETE)
   const updateTaskMutation = useUpdateTask(clientId)
   const deleteTaskMutation = useDeleteTask(clientId)
   // Fetch client tags from API (real)
@@ -1288,9 +1303,19 @@ export function ClientDetailPage() {
         const sid = row.status_id
         const isTerminal = sid === 3 || sid === 4 || sid === 5
         const isCompleted = sid === 4 || sid === 5
-        const canMarkViolated = sid === 1
-        const canRestore = sid === 2 || sid === 3
+        // Status eligibility: which transitions does the row's *current
+        // status* allow at all? (Independent of the operator's role.)
+        const showMarkViolated = sid === 1
+        const showRestore = sid === 2 || sid === 3
+        // Role permission for the "Restore" button depends on whether we're
+        // coming from Violated or Cancelled (two separate permissions).
+        const canRestoreFromHere =
+          (sid === 2 && canRestoreFromViolated) || (sid === 3 && canRestoreFromCancelled)
         const transitionBusy = isTransitioningRr || isDisconnectingRr
+        const noPermTip = t(
+          'pages.clients.detail.noTransitionPermission',
+          "Your role doesn't allow this transition."
+        )
         return (
           <div className="flex items-center justify-center gap-1">
             <button
@@ -1300,22 +1325,30 @@ export function ClientDetailPage() {
             >
               <Icons.Eye size={18} />
             </button>
-            {canMarkViolated && (
+            {showMarkViolated && (
               <button
                 onClick={() => transitionRr({ clientId, raId: row.id, targetStatusId: 2 })}
-                disabled={transitionBusy}
-                className="p-1 text-amber-600 hover:text-amber-800 disabled:opacity-50"
-                title={t('pages.clients.detail.markRRViolated', 'Mark Violated')}
+                disabled={transitionBusy || !canMarkViolated}
+                className="p-1 text-amber-600 hover:text-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
+                title={
+                  canMarkViolated
+                    ? t('pages.clients.detail.markRRViolated', 'Mark Violated')
+                    : noPermTip
+                }
               >
                 <Icons.Warning size={18} />
               </button>
             )}
-            {canRestore && (
+            {showRestore && (
               <button
                 onClick={() => transitionRr({ clientId, raId: row.id, targetStatusId: 1 })}
-                disabled={transitionBusy}
-                className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                title={t('pages.clients.detail.restoreRRConnected', 'Restore to Connected')}
+                disabled={transitionBusy || !canRestoreFromHere}
+                className="p-1 text-blue-600 hover:text-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+                title={
+                  canRestoreFromHere
+                    ? t('pages.clients.detail.restoreRRConnected', 'Restore to Connected')
+                    : noPermTip
+                }
               >
                 <Icons.Reload size={18} />
               </button>
@@ -1323,9 +1356,11 @@ export function ClientDetailPage() {
             {!isTerminal && (
               <button
                 onClick={() => setCompleteRrConfirm(row.id)}
-                disabled={isCompletingRa || transitionBusy}
-                className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
-                title={t('pages.clients.detail.completeRR', 'Complete RR')}
+                disabled={isCompletingRa || transitionBusy || !canCompleteRR}
+                className="p-1 text-green-600 hover:text-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+                title={
+                  canCompleteRR ? t('pages.clients.detail.completeRR', 'Complete RR') : noPermTip
+                }
               >
                 <Icons.Success size={18} />
               </button>
@@ -1350,9 +1385,13 @@ export function ClientDetailPage() {
             {!isCompleted && sid !== 3 && (
               <button
                 onClick={() => setDisconnectRrConfirm({ raId: row.id, reason: '' })}
-                disabled={transitionBusy}
-                className="p-1 text-red-600 hover:text-red-800 disabled:opacity-50"
-                title={t('pages.clients.detail.disconnectRR', 'Disconnect RR')}
+                disabled={transitionBusy || !canDisconnectRR}
+                className="p-1 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                title={
+                  canDisconnectRR
+                    ? t('pages.clients.detail.disconnectRR', 'Disconnect RR')
+                    : noPermTip
+                }
               >
                 <Icons.CancelCircle size={18} />
               </button>

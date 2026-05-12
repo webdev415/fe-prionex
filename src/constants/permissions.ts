@@ -186,6 +186,21 @@ export const PERMISSIONS = {
     DELETE_TEMPLATES: 'delete_document_templates',
     GENERATE: 'generate_document',
   },
+
+  /**
+   * Restructuring Category (5 permissions)
+   * Per-transition gates for manual RR status changes. Each button in
+   * the RR actions column checks its specific permission. Automated
+   * transitions (overdue / debt = 0 / payment events) bypass these
+   * entirely — the system has its own authority.
+   */
+  RESTRUCTURING: {
+    TRANSITION_CONNECTED_TO_VIOLATED: 'rr_transition_connected_to_violated',
+    TRANSITION_VIOLATED_TO_CONNECTED: 'rr_transition_violated_to_connected',
+    TRANSITION_CANCELLED_TO_CONNECTED: 'rr_transition_cancelled_to_connected',
+    DISCONNECT: 'rr_disconnect',
+    COMPLETE: 'rr_complete',
+  },
 } as const
 
 /**
@@ -237,6 +252,7 @@ export const PERMISSION_CATEGORIES = {
   TA_CHAINS: 'TA Chains',
   ACTION_ANALYSIS: 'Action Analysis',
   DOCUMENT_GENERATION: 'Document Generation',
+  RESTRUCTURING: 'Restructuring',
 } as const
 
 /**
@@ -326,4 +342,14 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   create_edit_document_templates: 'Create and edit document templates',
   delete_document_templates: 'Delete document templates',
   generate_document: 'Generate a document on the client card',
+
+  // Restructuring — per-transition gates on the RR action buttons
+  rr_transition_connected_to_violated:
+    'Manually flip a Connected restructuring agreement to Violated (Mark Violated button)',
+  rr_transition_violated_to_connected:
+    'Manually restore a Violated restructuring agreement to Connected (Restore button)',
+  rr_transition_cancelled_to_connected:
+    'Manually restore a Cancelled restructuring agreement to Connected (rare; mistaken cancellation)',
+  rr_disconnect: 'Manually disconnect a restructuring agreement (status → Cancelled with reason)',
+  rr_complete: 'Manually mark a restructuring agreement as Completed',
 }
