@@ -14,6 +14,7 @@ import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import { useExportHeatmap, useHeatmap, type HeatmapState } from '@/features/operatorAnalytics'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import {
   readHeatmapBarState,
   toHeatmapFilters,
@@ -42,7 +43,7 @@ export function HeatmapTab() {
   const periodReady =
     urlState.period !== 'custom' || !!(urlState.customFromDate && urlState.customToDate)
 
-  const { data, isLoading, isError } = useHeatmap(filters, periodReady)
+  const { data, isPending, isError } = useHeatmap(filters, periodReady)
   const exportMutation = useExportHeatmap()
 
   const operatorById = useMemo(() => {
@@ -154,9 +155,18 @@ export function HeatmapTab() {
         <div className="rounded-xl bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
           {t('pages.actionAnalysis.errors.loadHeatmapFailed', 'Failed to load the heatmap.')}
         </div>
-      ) : isLoading ? (
-        <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
-          {t('common.loading', 'Loading...')}
+      ) : isPending ? (
+        <div className="overflow-x-auto rounded-xl bg-white/80 p-4 shadow-sm">
+          <div className="mb-3 flex flex-wrap gap-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-7 w-24 animate-pulse rounded-full bg-gray-200"
+                aria-hidden
+              />
+            ))}
+          </div>
+          <TableSkeleton columns={12} rows={8} className="w-full min-w-[640px]" />
         </div>
       ) : !operatorList.length ? (
         <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">

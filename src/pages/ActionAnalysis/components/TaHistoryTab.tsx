@@ -8,6 +8,7 @@ import { useTargetActions } from '@/features/targetActions/hooks/useTargetAction
 import type { TargetAction } from '@/features/targetActions/api/types'
 import { useTaHistory } from '@/features/actionAnalysis'
 import { Pagination } from '@/components/ui/Pagination'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { defaultCustomDateRange } from '../lib/dateRange'
 import {
   TA_HISTORY_FILTERS_DEFAULT,
@@ -82,7 +83,7 @@ export function TaHistoryTab() {
     (barState.period !== 'custom' || !!(barState.customFromDate && barState.customToDate)) &&
     !isDeptEmpty
 
-  const { data, error } = useTaHistory(queryFilters, queryEnabled)
+  const { data, error, isPending } = useTaHistory(queryFilters, queryEnabled)
 
   const handleApply = (next: TaHistoryBarState) => {
     let out: TaHistoryBarState = next
@@ -145,12 +146,16 @@ export function TaHistoryTab() {
         </div>
       ) : (
         <>
-          <TaHistoryTable
-            data={items}
-            chains={chains}
-            tasById={tasById}
-            userTimezone={userTimezone}
-          />
+          {queryEnabled && isPending ? (
+            <TableSkeleton columns={8} rows={pageSize} className="w-full" />
+          ) : (
+            <TaHistoryTable
+              data={items}
+              chains={chains}
+              tasById={tasById}
+              userTimezone={userTimezone}
+            />
+          )}
           {total > pageSize && (
             <Pagination
               currentPage={page}

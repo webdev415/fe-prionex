@@ -11,6 +11,7 @@ import {
 } from '@/features/actionAnalysis'
 import { useCallDetail } from '@/features/calls/hooks/useCall'
 import { Pagination } from '@/components/ui/Pagination'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import { defaultCustomDateRange } from '../lib/dateRange'
 import {
@@ -89,7 +90,7 @@ export function CallsTab() {
     }),
     [apiFiltersBase, page, pageSize]
   )
-  const { data, isFetching, error } = useCallMonitoring(queryFilters, callsQueryEnabled)
+  const { data, error, isPending } = useCallMonitoring(queryFilters, callsQueryEnabled)
 
   // Modal state lives entirely in the URL (?call_id=…) so deep-links work:
   // pasting the URL into another browser opens the modal with that exact call.
@@ -258,7 +259,11 @@ export function CallsTab() {
         </div>
       ) : (
         <>
-          <CallsTable data={calls} loading={isFetching} onOpenCall={handleOpenCall} />
+          {callsQueryEnabled && isPending ? (
+            <TableSkeleton columns={7} rows={pageSize} className="w-full" />
+          ) : (
+            <CallsTable data={calls} onOpenCall={handleOpenCall} />
+          )}
           {total > pageSize && (
             <Pagination
               currentPage={page}

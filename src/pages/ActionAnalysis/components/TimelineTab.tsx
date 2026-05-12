@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Icons } from '@/lib/icons'
 import { useExportTimeline, useTimeline, type TimelineEventDto } from '@/features/operatorAnalytics'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { readTimelineBarState, writeTimelineBarState } from '../lib/analyticsUrlState'
 
 function formatOffset(seconds?: number | null): string {
@@ -25,7 +26,7 @@ export function TimelineTab() {
   const [draftCallId, setDraftCallId] = useState(urlState.call_id ?? '')
 
   const callId = urlState.call_id ?? null
-  const { data, isLoading, isError } = useTimeline(callId, !!callId)
+  const { data, isPending, isError } = useTimeline(callId, !!callId)
   const exportMutation = useExportTimeline()
 
   const handleApply = () => {
@@ -103,9 +104,9 @@ export function TimelineTab() {
         <div className="rounded-xl bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
           {t('pages.actionAnalysis.errors.loadTimelineFailed', 'Failed to load the timeline.')}
         </div>
-      ) : isLoading ? (
-        <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
-          {t('common.loading', 'Loading...')}
+      ) : isPending ? (
+        <div className="overflow-x-auto rounded-xl bg-white/80 shadow-sm">
+          <TableSkeleton columns={4} rows={8} className="w-full" />
         </div>
       ) : events.length === 0 ? (
         <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">

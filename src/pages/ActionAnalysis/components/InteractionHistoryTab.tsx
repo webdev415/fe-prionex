@@ -14,6 +14,7 @@ import {
   type InteractionMonitoringSortDir,
 } from '@/features/actionAnalysis'
 import { Pagination } from '@/components/ui/Pagination'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { defaultCustomDateRange } from '../lib/dateRange'
 import {
   INTERACTION_FILTERS_DEFAULT,
@@ -74,7 +75,7 @@ export function InteractionHistoryTab() {
     (barState.period !== 'custom' || !!(barState.customFromDate && barState.customToDate)) &&
     resolvedUsers.kind !== 'empty'
 
-  const { data, error } = useInteractionMonitoring(queryFilters, queryEnabled)
+  const { data, error, isPending } = useInteractionMonitoring(queryFilters, queryEnabled)
 
   const handleApply = (next: InteractionBarState) => {
     let out: InteractionBarState = next
@@ -156,13 +157,17 @@ export function InteractionHistoryTab() {
         </div>
       ) : (
         <>
-          <InteractionHistoryTable
-            data={items}
-            sortBy={barState.sort_by ?? 'date'}
-            sortDir={barState.sort_dir ?? 'desc'}
-            onSortChange={handleSortChange}
-            internalDateType={barState.internal_date_type}
-          />
+          {queryEnabled && isPending ? (
+            <TableSkeleton columns={11} rows={pageSize} className="w-full" />
+          ) : (
+            <InteractionHistoryTable
+              data={items}
+              sortBy={barState.sort_by ?? 'date'}
+              sortDir={barState.sort_dir ?? 'desc'}
+              onSortChange={handleSortChange}
+              internalDateType={barState.internal_date_type}
+            />
+          )}
           {total > pageSize && (
             <Pagination
               currentPage={page}

@@ -7,6 +7,7 @@ import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import { useExportScriptAnalytics, useScriptAnalytics } from '@/features/operatorAnalytics'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import {
   readAnalyticsBarState,
   toAnalyticsRangeFilters,
@@ -27,7 +28,7 @@ export function ScriptAnalyticsTab() {
   const periodReady =
     urlState.period !== 'custom' || !!(urlState.customFromDate && urlState.customToDate)
 
-  const { data, isLoading, isError } = useScriptAnalytics(filters, periodReady)
+  const { data, isPending, isError } = useScriptAnalytics(filters, periodReady)
   const exportMutation = useExportScriptAnalytics()
 
   const operatorById = useMemo(() => {
@@ -97,9 +98,23 @@ export function ScriptAnalyticsTab() {
             'Failed to load script analytics.'
           )}
         </div>
-      ) : isLoading ? (
-        <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
-          {t('common.loading', 'Loading...')}
+      ) : isPending ? (
+        <div className="flex flex-col gap-4">
+          <div className="rounded-xl bg-white/80 p-4 shadow-sm" aria-busy="true">
+            <div className="mb-2 h-4 w-44 animate-pulse rounded bg-gray-200" />
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="h-3 w-36 shrink-0 animate-pulse rounded bg-gray-200" />
+                  <div className="h-3 flex-1 animate-pulse rounded bg-gray-100" />
+                  <div className="h-3 w-8 shrink-0 animate-pulse rounded bg-gray-200" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="overflow-x-auto rounded-xl bg-white/80 shadow-sm">
+            <TableSkeleton columns={4} rows={8} className="w-full" />
+          </div>
         </div>
       ) : !opsData.length ? (
         <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">

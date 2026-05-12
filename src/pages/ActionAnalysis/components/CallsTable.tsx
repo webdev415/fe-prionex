@@ -22,7 +22,6 @@ function isAnswered(c: CallMonitoringItem): boolean {
 
 interface Props {
   data: CallMonitoringItem[]
-  loading?: boolean
   /**
    * Single open-the-call entry point — the row's recording button writes
    * `?call_id=…` to the URL, the parent (`CallsTab`) opens the merged
