@@ -65,7 +65,8 @@
     "next": "Next",
     "close": "Close",
     "logout": "Logout",
-    "loggingOut": "Logging out..."
+    "loggingOut": "Logging out...",
+    "deleting": "Deleting…"
   },
   "components": {
     "pagination": {
@@ -86,8 +87,7 @@
   "language": {
     "select": "Select Language",
     "en": "English",
-    "uk": "Ukrainian",
-    "ru": "Russian"
+    "uk": "Ukrainian"
   },
   "notificationBell": {
     "title": "Notifications",
@@ -1315,6 +1315,7 @@
             "amount": "Amount",
             "date": "Date",
             "method": "Method",
+            "paymentType": "Payment Type",
             "type": "Type",
             "status": "Status",
             "note": "Note"
@@ -2195,6 +2196,10 @@
         "writeOff": "Write-off",
         "reversal": "Reversal",
         "closeLoan": "Close Loan",
+        "editClosureDate": "Edit closure date",
+        "closureDate": "Closure date",
+        "closureDateRequired": "Closure date is required",
+        "closureDateFuture": "Closure date cannot be in the future",
         "sendToUBCI": "Send to UBCI",
         "rrCalculator": "RR Calculator",
         "rrDetail": "Restructuring Agreement Detail",
@@ -2412,7 +2417,7 @@
       "delayHint": "The previous step was just completed. Please wait for the delay to pass.",
       "saveInteraction": "Save interaction",
       "continueToNext": "Continue →",
-      "quickPicks": "Quick start",
+      "quickPicks": "Quick Picks",
       "chainProgress": "Chain progress",
       "stepOf": "step {{current}} of {{total}}",
       "current": "current",
@@ -2506,12 +2511,16 @@
       "selectChain": "Select a chain...",
       "selectChainHint": "Select a chain above to open the visual builder.",
       "steps": "steps",
+      "loadingChains": "Loading chains...",
+      "loadingChain": "Loading chain...",
+      "loadingBuilder": "Loading builder data...",
       "triggers": "Triggers",
       "blockers": "Blockers",
       "effects": "Effects",
       "branches": "Branches",
       "stepConfig": "Step config",
       "delay": "Delay",
+      "delayMinutes": "{{minutes}} min",
       "required": "Required",
       "selectStepHint": "Click a step on the canvas to configure it.",
       "branchTo": "Branch to step...",
@@ -2519,7 +2528,100 @@
       "conditionElse": "else (default / no condition)",
       "branchAddedCondition": "Conditional branch added",
       "effectCondition": "Always (or select conditions...)",
-      "branchAddedElse": "Default branch added (else)"
+      "branchAddedElse": "Default branch added (else)",
+      "removeItem": "Remove",
+      "taFallback": "TA #{{id}}",
+      "branchElse": "else",
+      "orLower": "or",
+      "ifPrefix": "if",
+      "branchElseShort": "(else)",
+      "branchIfLeaf": "if leaf #{{id}}",
+      "branchUnknownStep": "step #{{id}}",
+      "branchEdgeIfDropdown": "if #{{id}}",
+      "branchEdgeLeaf": "leaf #{{id}}",
+      "addToSpamNoContactSteps": "No contact-type steps in this chain. Add a step that collects a phone before configuring add_to_spam.",
+      "placeholders": {
+        "selectTag": "Select tag...",
+        "selectSourceChain": "Select source chain...",
+        "selectBlockingChain": "Select blocking chain...",
+        "resultCode": "Result code",
+        "debtStatus": "Status (e.g. overdue)",
+        "daysCooldown": "Days (e.g. 30)",
+        "selectSmsTemplate": "Select SMS template...",
+        "subjectRequired": "Subject (required)",
+        "searchSubjects": "Search subjects...",
+        "titleOptional": "Title (optional override)",
+        "descriptionOptional": "Description (optional)",
+        "assigneeRequired": "Assignee... (required)",
+        "pickUser": "Pick user...",
+        "searchUsers": "Search users...",
+        "dueDateNone": "Due date — none (optional)",
+        "phoneSourceRequired": "Phone source... (required)"
+      },
+      "dueDateRefs": {
+        "chain_entry_date": "Chain entry date",
+        "chain_completion_date": "Chain completion date"
+      },
+      "assigneeModes": {
+        "created_by": "Chain starter",
+        "client_responsible": "Responsible operator",
+        "specific_user": "Specific user"
+      },
+      "taskPriority": {
+        "low": "Low",
+        "normal": "Normal",
+        "high": "High",
+        "urgent": "Urgent",
+        "critical": "Critical"
+      },
+      "addTrigger": "+ Add trigger",
+      "addBlocker": "+ Add blocker",
+      "addEffect": "+ Add effect",
+      "toasts": {
+        "triggerAdded": "Trigger added",
+        "blockerAdded": "Blocker added",
+        "effectAdded": "Effect added"
+      },
+      "types": {
+        "trigger": {
+          "tag_change": "Tag change",
+          "call_result": "Call result",
+          "date_reached": "Date reached",
+          "debt_status": "Debt status",
+          "chain_completed": "Chain completed",
+          "role_action": "Role action"
+        },
+        "blocker": {
+          "already_launched": "Already launched",
+          "launched_within": "Launched within",
+          "chain_active": "Chain active",
+          "tag_present": "Tag present",
+          "in_cooldown": "In cooldown"
+        },
+        "effect": {
+          "add_tag": "Add tag",
+          "remove_tag": "Remove tag",
+          "create_task": "Create task",
+          "send_sms": "Send SMS",
+          "add_to_spam": "Add to spam"
+        }
+      },
+      "config": {
+        "tag": "tag: {{label}}",
+        "template": "template: {{label}}",
+        "chain": "chain: {{label}}",
+        "subject": "subject: {{label}}",
+        "user": "user: {{label}}",
+        "assignee": "assignee: {{label}}",
+        "dueChainEntry": "due: chain entry date",
+        "dueChainCompletion": "due: chain completion date",
+        "dueStep": "due: {{step}}",
+        "dueStepOrderUnknown": "due: step_order {{order}}",
+        "phone": "phone: {{step}}",
+        "phoneUnknown": "phone: step #{{id}}",
+        "generic": "{{key}}: {{value}}",
+        "stepRef": "Step {{order}} — {{name}}"
+      }
     },
     "quickPicks": {
       "title": "Quick Picks",
@@ -2527,6 +2629,9 @@
       "selectDepartment": "Select department...",
       "selectDepartmentHint": "Select a department to manage its templates.",
       "selectChain": "Select chain...",
+      "loadingDepartments": "Loading departments...",
+      "loadingTemplates": "Loading templates…",
+      "loadingStepPresets": "Loading step fields…",
       "empty": "No templates configured for this department yet.",
       "addTemplate": "Add template",
       "templateName": "Template name",
@@ -2535,6 +2640,9 @@
       "leaveEmpty": "Leave empty...",
       "creditAutoFill": "Credit is selected by operator from client data",
       "addButton": "Add template",
+      "chainFallback": "Chain #{{id}}",
+      "taFallback": "TA #{{id}}",
+      "presetChip": "{{label}}: {{value}}",
       "toasts": {
         "added": "Template added",
         "removed": "Template removed"
@@ -2592,7 +2700,7 @@
         "create": "Create template",
         "intro": "Reusable document bodies with variable placeholders.",
         "empty": "No templates yet.",
-        "loading": "Loading...",
+        "loading": "Loading…",
         "loadError": "Failed to load templates.",
         "columns": {
           "name": "Template name",
@@ -2735,6 +2843,9 @@
       "empty": "No TA Chains found. Click \"Create chain\" to build the first one.",
       "noTargetActionsHint": "You need at least one active Target Action before you can build a chain. Create one in System Settings → Target Actions.",
       "table": {
+        "name": "Name",
+        "steps": "Steps",
+        "type": "Type",
         "department": "Department"
       },
       "chainTypes": {
@@ -2749,7 +2860,8 @@
       "actions": {
         "clone": "Clone",
         "activate": "Activate",
-        "deactivate": "Deactivate"
+        "deactivate": "Deactivate",
+        "delete": "Delete"
       },
       "form": {
         "name": "Name",
@@ -2780,7 +2892,19 @@
           "title": "Create TA Chain"
         },
         "edit": {
-          "title": "Edit TA Chain"
+          "title": "Edit TA Chain",
+          "notFound": "TA chain not found"
+        },
+        "delete": {
+          "title": "Delete TA Chain",
+          "warning": "This action cannot be undone. The chain will be permanently removed.",
+          "chainDetails": "Chain details",
+          "whatHappensTitle": "What will happen:",
+          "bulletRemoveRow": "The chain definition will be permanently deleted.",
+          "bulletRefusedIfUsed": "If the chain has any recorded interactions or started instances, deletion is refused. Deactivate it instead.",
+          "bulletCascadeChildren": "Associated steps, blockers, triggers, and quick picks are removed with the chain.",
+          "acknowledge": "I understand this action cannot be undone.",
+          "deleting": "Deleting…"
         }
       },
       "errors": {
@@ -2792,7 +2916,8 @@
         "updated": "TA Chain updated",
         "cloned": "TA Chain cloned",
         "activated": "TA Chain activated",
-        "deactivated": "TA Chain deactivated"
+        "deactivated": "TA Chain deactivated",
+        "deleted": "TA Chain deleted"
       }
     },
     "taManagement": {
@@ -2800,7 +2925,8 @@
         "targetActions": "Target Actions",
         "taChains": "TA Chains",
         "dictionary": "Dictionary",
-        "chainBuilder": "Chain Builder"
+        "chainBuilder": "Chain Builder",
+        "quickPicks": "Quick Picks"
       }
     },
     "targetActions": {
@@ -2853,7 +2979,8 @@
           "title": "Create Target Action"
         },
         "edit": {
-          "title": "Edit Target Action"
+          "title": "Edit Target Action",
+          "notFound": "Target action not found"
         }
       },
       "errors": {

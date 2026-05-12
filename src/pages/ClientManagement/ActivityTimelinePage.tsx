@@ -6,6 +6,7 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
@@ -230,11 +231,7 @@ export function ActivityTimelinePage() {
 
   const dateInputFormat = i18n.language?.startsWith('en') ? 'MM/dd/yyyy' : 'dd/MM/yyyy'
 
-  const numberFormatLocale = i18n.language?.startsWith('uk')
-    ? 'uk-UA'
-    : i18n.language?.startsWith('ru')
-      ? 'ru-RU'
-      : 'en-US'
+  const numberFormatLocale = intlLocaleForUiLanguage(i18n.language)
 
   const totalCount = activitiesResponse?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage))

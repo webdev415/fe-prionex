@@ -307,15 +307,44 @@ export async function createRestructuringAgreement(
 }
 
 /**
- * Close a debt (set status to 'closed')
+ * Close a debt (set status to 'closed').
+ *
+ * `closureDate` is sent to the backend as `closure_date` (ISO YYYY-MM-DD).
+ * Omit it to fall back to the server's default (today). The backend rejects
+ * any closure_date later than today.
  */
 export async function closeDebt(
   clientId: number,
-  debtId: number
-): Promise<{ id: number; status: string }> {
-  const response = await api.patch<{ id: number; status: string }>(
-    `${BASE_URL}/${clientId}/debts/${debtId}/close`
-  )
+  debtId: number,
+  closureDate?: string
+): Promise<{ id: number; status: string; credit_closed_date: string | null }> {
+  const response = await api.patch<{
+    id: number
+    status: string
+    credit_closed_date: string | null
+  }>(`${BASE_URL}/${clientId}/debts/${debtId}/close`, {
+    closure_date: closureDate ?? null,
+  })
+  return response.data
+}
+
+/**
+ * Edit the closure date of an already-closed debt.
+ * Backend rejects any closure_date later than today, and 400s if the
+ * debt is not currently in status='closed'.
+ */
+export async function updateDebtClosureDate(
+  clientId: number,
+  debtId: number,
+  closureDate: string
+): Promise<{ id: number; status: string; credit_closed_date: string | null }> {
+  const response = await api.patch<{
+    id: number
+    status: string
+    credit_closed_date: string | null
+  }>(`${BASE_URL}/${clientId}/debts/${debtId}/closure-date`, {
+    closure_date: closureDate,
+  })
   return response.data
 }
 
@@ -479,6 +508,7 @@ export const clientApi = {
   getRestructuringAgreementDetail,
   createRestructuringAgreement,
   closeDebt,
+  updateDebtClosureDate,
   completeRestructuringAgreement,
   transitionRestructuringAgreementStatus,
   disconnectRestructuringAgreement,

@@ -9,6 +9,18 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 
 const TABLE_COLUMNS = 4 // Name, Description, Assigned Roles, Actions
 
+/** Table-area skeleton when project changes while header and project select stay mounted. */
+export function DepartmentManagementTablesSkeleton() {
+  return (
+    <div className="space-y-8">
+      <section className="rounded-xl bg-white/50 p-6">
+        <div className="mb-3 h-7 w-44 animate-pulse rounded bg-gray-300" />
+        <TableSkeleton columns={TABLE_COLUMNS} rows={5} />
+      </section>
+    </div>
+  )
+}
+
 export function DepartmentManagementPageSkeleton() {
   return (
     <div>
@@ -26,13 +38,7 @@ export function DepartmentManagementPageSkeleton() {
         <div className="h-7 w-48 animate-pulse rounded bg-gray-300" />
       </div>
 
-      {/* Table Section Skeleton */}
-      <div className="space-y-8">
-        <section className="rounded-xl bg-white/50 p-6">
-          <div className="mb-3 h-7 w-44 animate-pulse rounded bg-gray-300" />
-          <TableSkeleton columns={TABLE_COLUMNS} rows={5} />
-        </section>
-      </div>
+      <DepartmentManagementTablesSkeleton />
     </div>
   )
 }

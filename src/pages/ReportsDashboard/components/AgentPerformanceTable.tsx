@@ -6,6 +6,7 @@
 
 import { useState, useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { Input } from '@/components/ui/Input'
 import {
   Select,
@@ -184,7 +185,7 @@ export function AgentPerformanceTable({
   }, [data, clientPhone])
 
   const formatCurrency = (amount: number) => {
-    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
+    const locale = intlLocaleForUiLanguage(i18n.language)
     return new Intl.NumberFormat(locale, {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,

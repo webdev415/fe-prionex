@@ -51,11 +51,22 @@ i18n
     },
   })
 
-/** Map API `language` (uk|en|ru) to an i18n-supported UI code (ru → uk per product rules). */
+/**
+ * Map API / legacy `language` to a supported UI code (en | uk only).
+ * Legacy `ru` is mapped to `uk` so existing accounts keep a Cyrillic UI.
+ */
 export function normalizeBackendLanguage(lang: string | undefined | null): SupportedLanguage {
-  if (lang === 'en' || lang === 'uk') return lang
-  if (lang === 'ru') return 'uk'
+  const base = (lang ?? '').split('-')[0].toLowerCase()
+  if (base === 'en') return 'en'
+  if (base === 'uk') return 'uk'
+  if (base === 'ru') return 'uk'
   return 'en'
+}
+
+/** BCP 47 locale for `Intl`, dates, and numbers from UI language (en | uk). */
+export function intlLocaleForUiLanguage(lang: string | undefined | null): string {
+  const base = (lang ?? 'en').split('-')[0]
+  return base === 'uk' ? 'uk-UA' : 'en-US'
 }
 
 /** Apply server-stored language so UI matches the account after login/refresh (persists via i18n localStorage). */
