@@ -1302,6 +1302,7 @@
             "amount": "Amount",
             "date": "Date",
             "method": "Method",
+            "paymentType": "Payment Type",
             "type": "Type",
             "status": "Status",
             "note": "Note"
