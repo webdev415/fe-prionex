@@ -26,8 +26,6 @@ import {
 import { InteractionFiltersBar } from './InteractionFiltersBar'
 import { InteractionHistoryTable } from './InteractionHistoryTable'
 
-const PAGE_SIZE = 20
-
 export function InteractionHistoryTab() {
   const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -61,15 +59,16 @@ export function InteractionHistoryTab() {
   )
 
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const queryFilters: InteractionMonitoringFilters = useMemo(() => {
     const base = toInteractionMonitoringQuery(barState, operators)
     return {
       ...base,
       page,
-      page_size: PAGE_SIZE,
+      page_size: pageSize,
     }
-  }, [barState, operators, page])
+  }, [barState, operators, page, pageSize])
 
   const queryEnabled =
     (barState.period !== 'custom' || !!(barState.customFromDate && barState.customToDate)) &&
@@ -123,7 +122,7 @@ export function InteractionHistoryTab() {
 
   const items = resolvedUsers.kind === 'empty' ? [] : (data?.items ?? [])
   const total = resolvedUsers.kind === 'empty' ? 0 : (data?.total ?? 0)
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   const emptyDeptMessage = resolvedUsers.kind === 'empty'
 
@@ -164,13 +163,13 @@ export function InteractionHistoryTab() {
             onSortChange={handleSortChange}
             internalDateType={barState.internal_date_type}
           />
-          {total > PAGE_SIZE && (
+          {total > pageSize && (
             <Pagination
               currentPage={page}
               totalPages={totalPages}
-              pageSize={PAGE_SIZE}
+              pageSize={pageSize}
               onPageChange={setPage}
-              onPageSizeChange={() => {}}
+              onPageSizeChange={setPageSize}
             />
           )}
         </>

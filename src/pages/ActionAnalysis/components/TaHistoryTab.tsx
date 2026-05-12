@@ -19,8 +19,6 @@ import {
 import { TaHistoryFiltersBar } from './TaHistoryFiltersBar'
 import { TaHistoryTable } from './TaHistoryTable'
 
-const PAGE_SIZE = 20
-
 export function TaHistoryTab() {
   const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -69,14 +67,15 @@ export function TaHistoryTab() {
     barState.departmentId != null && (recordedByIn == null || recordedByIn.length === 0)
 
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const queryFilters = useMemo(
     () => ({
       ...toTaHistoryQuery(barState, recordedByIn),
-      skip: (page - 1) * PAGE_SIZE,
-      limit: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      limit: pageSize,
     }),
-    [barState, recordedByIn, page]
+    [barState, recordedByIn, page, pageSize]
   )
 
   const queryEnabled =
@@ -114,7 +113,7 @@ export function TaHistoryTab() {
 
   const items = isDeptEmpty ? [] : (data?.items ?? [])
   const total = isDeptEmpty ? 0 : (data?.total_count ?? 0)
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   return (
     <div className="flex flex-col gap-4">
@@ -152,13 +151,13 @@ export function TaHistoryTab() {
             tasById={tasById}
             userTimezone={userTimezone}
           />
-          {total > PAGE_SIZE && (
+          {total > pageSize && (
             <Pagination
               currentPage={page}
               totalPages={totalPages}
-              pageSize={PAGE_SIZE}
+              pageSize={pageSize}
               onPageChange={setPage}
-              onPageSizeChange={() => {}}
+              onPageSizeChange={setPageSize}
             />
           )}
         </>
