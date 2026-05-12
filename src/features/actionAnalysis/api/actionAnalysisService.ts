@@ -19,6 +19,9 @@ function buildCallParams(filters: CallMonitoringFilters): URLSearchParams {
   if (filters.from_datetime) params.set('from_datetime', filters.from_datetime)
   if (filters.to_datetime) params.set('to_datetime', filters.to_datetime)
   if (filters.campaign_id) params.set('campaign_id', filters.campaign_id)
+  filters.telephony_types?.forEach((t) => {
+    if (t) params.append('telephony_types', t)
+  })
   if (filters.sort) params.set('sort', filters.sort)
   if (filters.limit != null) params.set('limit', String(filters.limit))
   if (filters.offset != null) params.set('offset', String(filters.offset))
