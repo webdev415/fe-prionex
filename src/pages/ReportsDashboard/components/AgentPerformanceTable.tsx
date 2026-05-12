@@ -111,6 +111,7 @@ export interface AgentPerformance {
 
 export interface AgentPerformanceTableProps {
   data: AgentPerformance[]
+  isLoading?: boolean
   selectedPeriod: Period
   selectedOperator: number | null
   onOperatorChange: (operatorId: number | null) => void
@@ -133,6 +134,7 @@ export interface Column<T> {
 
 export function AgentPerformanceTable({
   data,
+  isLoading = false,
   selectedPeriod,
   selectedOperator,
   onOperatorChange,
@@ -409,52 +411,93 @@ export function AgentPerformanceTable({
               </tr>
             </thead>
             <tbody>
-              {filteredData.map((item, rowIndex) => (
-                <tr
-                  key={item.id}
-                  className={`transition-colors ${
-                    rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
-                  }`}
-                >
-                  {columns.map((column, colIndex) => (
-                    <td
-                      key={column.key}
-                      className={`text-dark-500 h-[49px] px-6 text-xs font-medium ${
-                        column.align === 'center'
-                          ? 'text-center'
-                          : column.align === 'right'
-                            ? 'text-right'
-                            : 'text-left'
-                      } ${colIndex < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''}`}
-                    >
-                      {column.render
-                        ? column.render(item)
-                        : String((item as unknown as Record<string, unknown>)[column.key] ?? '')}
-                    </td>
-                  ))}
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, rowIndex) => (
+                  <tr
+                    key={`skeleton-row-${rowIndex}`}
+                    className={rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'}
+                  >
+                    {columns.map((_, colIndex) => (
+                      <td
+                        key={`skeleton-col-${colIndex}`}
+                        className={`h-[49px] px-6 ${
+                          colIndex < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''
+                        }`}
+                      >
+                        <div
+                          className={`h-4 animate-pulse rounded bg-gray-200 ${
+                            colIndex === 0
+                              ? 'w-[60%]'
+                              : colIndex === columns.length - 1
+                                ? 'ml-auto w-[40%]'
+                                : 'mx-auto w-[70%]'
+                          }`}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : filteredData.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="text-dark-500 h-[49px] px-6 text-center text-xs font-medium"
+                  >
+                    {t('pages.reports.agentPerformance.noData')}
+                  </td>
                 </tr>
-              ))}
-              {/* Total Row */}
-              <tr className="bg-[#F2F3F0]">
-                <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-left text-xs font-semibold">
-                  {t('pages.reports.tableHeaders.total')}
-                </td>
-                <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-semibold">
-                  {totals.calls}
-                </td>
-                <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-semibold">
-                  {totals.contactRate}%
-                </td>
-                <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-semibold">
-                  {totals.avgDuration}
-                </td>
-                <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-semibold">
-                  {totals.sms}
-                </td>
-                <td className="text-dark-500 h-[49px] px-6 text-right text-xs font-semibold">
-                  {formatCurrency(totals.payments)} {t('pages.reports.currencySymbol')}
-                </td>
-              </tr>
+              ) : (
+                <>
+                  {filteredData.map((item, rowIndex) => (
+                    <tr
+                      key={item.id}
+                      className={`transition-colors ${
+                        rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'
+                      }`}
+                    >
+                      {columns.map((column, colIndex) => (
+                        <td
+                          key={column.key}
+                          className={`text-dark-500 h-[49px] px-6 text-xs font-medium ${
+                            column.align === 'center'
+                              ? 'text-center'
+                              : column.align === 'right'
+                                ? 'text-right'
+                                : 'text-left'
+                          } ${colIndex < columns.length - 1 ? 'border-r border-[#EBECE8]' : ''}`}
+                        >
+                          {column.render
+                            ? column.render(item)
+                            : String(
+                                (item as unknown as Record<string, unknown>)[column.key] ?? ''
+                              )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  {/* Total Row */}
+                  <tr className="bg-[#F2F3F0]">
+                    <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-left text-xs font-semibold">
+                      {t('pages.reports.tableHeaders.total')}
+                    </td>
+                    <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-semibold">
+                      {totals.calls}
+                    </td>
+                    <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-semibold">
+                      {totals.contactRate}%
+                    </td>
+                    <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-semibold">
+                      {totals.avgDuration}
+                    </td>
+                    <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-6 text-center text-xs font-semibold">
+                      {totals.sms}
+                    </td>
+                    <td className="text-dark-500 h-[49px] px-6 text-right text-xs font-semibold">
+                      {formatCurrency(totals.payments)} {t('pages.reports.currencySymbol')}
+                    </td>
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
         </div>

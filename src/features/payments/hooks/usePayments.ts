@@ -48,12 +48,22 @@ export function usePayments(params: PaymentListParams = {}) {
  */
 export function useClientPaymentHistory(
   params: ClientPaymentHistoryParams,
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean; keepPreviousDataBetweenFetches?: boolean }
 ) {
   return useQuery({
     queryKey: ['client-payment-history', params],
     queryFn: () => getClientPaymentHistory(params),
     enabled: options?.enabled !== false && !!params.client_id,
+    placeholderData: (previousData, previousQuery) => {
+      if (!options?.keepPreviousDataBetweenFetches || !previousData || !previousQuery) {
+        return undefined
+      }
+      const prevParams = previousQuery.queryKey[1] as ClientPaymentHistoryParams | undefined
+      if (!prevParams || prevParams.client_id !== params.client_id) {
+        return undefined
+      }
+      return previousData
+    },
   })
 }
 

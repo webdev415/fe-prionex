@@ -43,6 +43,8 @@ export interface TagDefinition extends Tag {
   is_protected: boolean
   protected_removal_roles: string[]
   expiry_type: ExpiryType
+  /** Restrict to departments; omit / empty = all departments */
+  department_ids?: number[] | null
   updated_at?: string
   is_deleted?: boolean
 }
@@ -71,6 +73,7 @@ export interface TagDefinitionCreate extends TagCreate {
   is_protected?: boolean
   protected_removal_roles?: string[]
   expiry_type?: ExpiryType
+  department_ids?: number[] | null
 }
 
 export interface TagUpdate {
@@ -95,6 +98,7 @@ export interface TagDefinitionUpdate extends TagUpdate {
   is_protected?: boolean
   protected_removal_roles?: string[]
   expiry_type?: ExpiryType
+  department_ids?: number[] | null
 }
 
 export interface TagsListResponse {

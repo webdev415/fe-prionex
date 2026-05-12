@@ -428,6 +428,7 @@
       },
       "timeline": {
         "callId": "Call ID",
+        "load": "Load",
         "callIdPlaceholder": "Paste a call UUID to load the timeline",
         "empty": "Enter a call ID above to inspect its operator action timeline.",
         "noEvents": "No tracking events recorded for this call.",
@@ -2011,6 +2012,7 @@
           "loanNumber": "Loan Number",
           "phone": "Phone",
           "type": "Type",
+          "channel": "Channel",
           "subtype": "Subtype",
           "contactType": "Contact Type",
           "result": "Result",
@@ -2225,6 +2227,7 @@
         "primaryCreditorCommentsDescription": "Historical interaction data from the debt seller will appear here when available.",
         "spamCallHistory": "Spam Call History",
         "noSpamCallHistory": "No spam call history",
+        "noSearcherComments": "No searcher comments yet",
         "totalCost": "Total Cost",
         "deliveryRate": "Delivery Rate",
         "delivered": "delivered",
@@ -2246,7 +2249,8 @@
           "tasks": "Tasks",
           "docs": "Docs",
           "callSms": "Call / SMS",
-          "taChains": "TA Chains"
+          "taChains": "TA Chains",
+          "searcherComments": "Searcher Comments"
         }
       },
       "debtSummary": {
@@ -3710,7 +3714,8 @@
       },
       "agentPerformance": {
         "title": "Agent Performance ({{count}} operators)",
-        "exportTable": "Export Table"
+        "exportTable": "Export Table",
+        "noData": "No operator performance found"
       },
       "tableHeaders": {
         "operator": "Operator",

@@ -7,6 +7,7 @@ import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import { useExportScreenTime, useScreenTime } from '@/features/operatorAnalytics'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import {
   readAnalyticsBarState,
   toAnalyticsRangeFilters,
@@ -42,7 +43,7 @@ export function ScreenTimeTab() {
   const periodReady =
     urlState.period !== 'custom' || !!(urlState.customFromDate && urlState.customToDate)
 
-  const { data, isLoading, isError } = useScreenTime(filters, periodReady)
+  const { data, isPending, isError } = useScreenTime(filters, periodReady)
   const exportMutation = useExportScreenTime()
 
   const operatorById = useMemo(() => {
@@ -105,9 +106,9 @@ export function ScreenTimeTab() {
             'Failed to load screen-time data.'
           )}
         </div>
-      ) : isLoading ? (
-        <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
-          {t('common.loading', 'Loading...')}
+      ) : isPending ? (
+        <div className="overflow-x-auto rounded-xl bg-white/80 shadow-sm">
+          <TableSkeleton columns={6} rows={8} className="w-full" />
         </div>
       ) : !data?.operators?.length ? (
         <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">

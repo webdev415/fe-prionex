@@ -173,7 +173,7 @@ export function ClientDetailPage() {
   const [closeLoanConfirm, setCloseLoanConfirm] = useState<number | null>(null) // debtId to close
   const [completeRrConfirm, setCompleteRrConfirm] = useState<number | null>(null) // raId to complete
   const [activeCommentTab, setActiveCommentTab] = useState<
-    'ta-chains' | 'comments' | 'primary' | 'dial-history'
+    'ta-chains' | 'comments' | 'primary' | 'searcher' | 'dial-history'
   >('ta-chains')
   const [isChainExecutorOpen, setIsChainExecutorOpen] = useState(false)
   const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
@@ -588,11 +588,19 @@ export function ClientDetailPage() {
     t,
   ])
 
+  const displayedActivities = useMemo(
+    () => (client?.activities ?? []).filter((a) => a._raw?.type_code !== 'SEARCHING'),
+    [client?.activities]
+  )
+  const displayedSearcherActivities = useMemo(
+    () => (client?.activities ?? []).filter((a) => a._raw?.type_code === 'SEARCHING'),
+    [client?.activities]
+  )
+
   const effectiveCommentTab =
-    activeCommentTab === 'comments' && !isActivitiesLoading && activities.length === 0
+    activeCommentTab === 'comments' && !isActivitiesLoading && displayedActivities.length === 0
       ? 'ta-chains'
       : activeCommentTab
-  const displayedActivities = client?.activities ?? []
 
   const normalizePhoneForLookup = (value: string) => stripPhoneFormat(value)
 
@@ -1253,6 +1261,18 @@ export function ClientDetailPage() {
       ),
     },
   ]
+
+  const SEARCHER_COMMENTS_COLUMN_KEYS = [
+    'date',
+    'phoneNumber',
+    'result',
+    'comment',
+    'employee',
+    'actions',
+  ] as const
+  const searcherActivityColumns = activityColumns.filter((c) =>
+    (SEARCHER_COMMENTS_COLUMN_KEYS as readonly string[]).includes(c.key as string)
+  )
 
   const dialHistoryColumns: Column<(typeof dialHistory)[0]>[] = [
     {
@@ -3549,6 +3569,17 @@ export function ClientDetailPage() {
                 {t('pages.clients.detail.commentsFromPrimaryCreditor')}
               </button>
               <button
+                onClick={() => setActiveCommentTab('searcher')}
+                className={cn(
+                  'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
+                  effectiveCommentTab === 'searcher'
+                    ? 'bg-secondary-800 text-white'
+                    : 'hover:bg-primary-200/10 hover:text-secondary-800'
+                )}
+              >
+                {t('pages.clients.detail.tabs.searcherComments')}
+              </button>
+              <button
                 onClick={() => setActiveCommentTab('dial-history')}
                 className={cn(
                   'text-dark-500 flex items-center justify-center gap-2 rounded-md px-4 py-2 text-xs leading-[140%] font-medium tracking-[-0.24px]',
@@ -3680,6 +3711,29 @@ export function ClientDetailPage() {
                 <p className="text-dark-500 text-sm leading-relaxed break-words whitespace-pre-wrap">
                   {profile.sale_notes}
                 </p>
+              </div>
+            ))}
+
+          {effectiveCommentTab === 'searcher' &&
+            (isActivitiesLoading ? (
+              <TableSkeleton columns={6} rows={3} className="w-full" />
+            ) : displayedSearcherActivities.length === 0 ? (
+              <div className="flex flex-col items-center gap-4 self-stretch py-16 md:gap-6">
+                <div className="flex flex-col items-center justify-center gap-4 self-stretch sm:flex-row md:gap-6">
+                  <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
+                  <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">
+                    {t('pages.clients.detail.noSearcherComments', 'No searcher comments yet')}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full overflow-x-auto">
+                <DataTable
+                  columns={searcherActivityColumns}
+                  data={displayedSearcherActivities.slice(0, 10)}
+                  className="w-full"
+                  tableClassName="w-max min-w-full"
+                />
               </div>
             ))}
 

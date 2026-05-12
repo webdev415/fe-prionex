@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Icons } from '@/lib/icons'
 import { useExportTimeline, useTimeline, type TimelineEventDto } from '@/features/operatorAnalytics'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { readTimelineBarState, writeTimelineBarState } from '../lib/analyticsUrlState'
 
 function formatOffset(seconds?: number | null): string {
@@ -26,7 +27,7 @@ export function TimelineTab() {
   const [draftCallId, setDraftCallId] = useState(urlState.call_id ?? '')
 
   const callId = urlState.call_id ?? null
-  const { data, isLoading, isError, error } = useTimeline(callId, !!callId)
+  const { data, isPending, isError, error } = useTimeline(callId, !!callId)
   const exportMutation = useExportTimeline()
 
   // 422 means the supplied call_id didn't parse as a UUID. Anything else is a
@@ -80,7 +81,7 @@ export function TimelineTab() {
             onClick={handleApply}
             className="h-[45px] sm:px-8"
           >
-            {t('pages.actionAnalysis.filters.applyFilters', 'Load')}
+            {t('pages.actionAnalysis.timeline.load', 'Load')}
           </Button>
           <Button
             type="button"
@@ -113,9 +114,9 @@ export function TimelineTab() {
               )
             : t('pages.actionAnalysis.errors.loadTimelineFailed', 'Failed to load the timeline.')}
         </div>
-      ) : isLoading ? (
-        <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
-          {t('common.loading', 'Loading...')}
+      ) : isPending ? (
+        <div className="overflow-x-auto rounded-xl bg-white/80 shadow-sm">
+          <TableSkeleton columns={4} rows={8} className="w-full" />
         </div>
       ) : events.length === 0 ? (
         <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
