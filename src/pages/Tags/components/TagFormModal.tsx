@@ -14,6 +14,8 @@ import { Controller } from 'react-hook-form'
 import { useCreateTagExtended, useUpdateTag } from '@/features/tags'
 import type { Tag, TagDefinition, TagCategory, TagVisibility } from '@/features/tags'
 import { useRoles } from '@/features/roles'
+import { useAuthStore } from '@/stores/authStore'
+import { useDepartments } from '@/features/departments/hooks/useDepartments'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
@@ -98,6 +100,17 @@ export function TagFormModal({
   const PRESET_COLORS = tagConfig.presetColors
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
   const templateRef = useRef<HTMLTextAreaElement>(null)
+
+  const { user } = useAuthStore()
+  const projectId = user?.active_project_id ? parseInt(user.active_project_id, 10) : undefined
+  const { data: departmentsData } = useDepartments({
+    project_id: projectId,
+    is_active: true,
+    page_size: 100,
+  })
+  const departments = useMemo(() => departmentsData?.departments ?? [], [departmentsData])
+
+  const [departmentIds, setDepartmentIds] = useState<number[]>([])
 
   // Fetch roles from API
   const { data: rolesData } = useRoles({ is_active: true, page_size: 100 })
@@ -217,6 +230,17 @@ export function TagFormModal({
     }
   }, [open, tag, reset])
 
+  useEffect(() => {
+    if (!open) return
+    const tagDef = tag as TagDefinition | undefined
+    setDepartmentIds(tagDef?.department_ids?.length ? [...tagDef.department_ids] : [])
+  }, [open, tag])
+
+  const toggleDepartment = (id: number) => {
+    if (isSystemTag) return
+    setDepartmentIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
+
   const onSubmit = useCallback(
     async (data: TagFormData) => {
       // Clean empty strings -> undefined so backend stores NULL not ""
@@ -231,6 +255,7 @@ export function TagFormModal({
             ? data.default_ttl_hours
             : undefined,
         default_expires_at: data.default_expires_at || undefined,
+        department_ids: departmentIds.length > 0 ? departmentIds : null,
       }
 
       try {
@@ -246,7 +271,7 @@ export function TagFormModal({
         console.error('Failed to save tag:', error)
       }
     },
-    [isEdit, tag, updateMutation, createMutation, onSuccess]
+    [isEdit, tag, updateMutation, createMutation, onSuccess, departmentIds]
   )
 
   const handleClose = useCallback(() => {
@@ -460,6 +485,49 @@ export function TagFormModal({
                 />
               </div>
             </div>
+
+            {/* Department scope (empty = all departments) */}
+            {!isSystemTag && (
+              <div className="space-y-2 rounded-lg border border-gray-200 px-4 py-3">
+                <Label>
+                  {t('pages.tags.fields.departments', 'Departments')}
+                  <FieldTooltip
+                    text={t(
+                      'pages.tags.fields.tooltips.departments',
+                      'Leave empty for all departments. Otherwise only operators in selected departments see this tag in the picker.'
+                    )}
+                  />
+                </Label>
+                <p className="text-xs text-gray-500">
+                  {t(
+                    'pages.tags.fields.departmentsHint',
+                    'No selection = visible to every department (same as today).'
+                  )}
+                </p>
+                <div className="max-h-44 space-y-2 overflow-y-auto rounded border border-gray-100 bg-white p-2">
+                  {departments.length === 0 ? (
+                    <p className="text-sm text-gray-400">
+                      {t('pages.tags.fields.noDepartments', 'No departments in this project.')}
+                    </p>
+                  ) : (
+                    departments.map((d) => (
+                      <label
+                        key={d.id}
+                        className="flex cursor-pointer items-center gap-2 text-sm text-gray-800"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-gray-300"
+                          checked={departmentIds.includes(d.id)}
+                          onChange={() => toggleDepartment(d.id)}
+                        />
+                        <span>{d.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Expiry Type */}
             <div className="rounded-lg border border-gray-200 px-4 py-3">
