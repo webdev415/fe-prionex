@@ -395,6 +395,7 @@
         "loadFailed": "Failed to load calls",
         "loadInteractionsFailed": "Failed to load interactions",
         "loadTimelineFailed": "Failed to load the timeline.",
+        "invalidCallId": "Invalid Call ID. Paste a full call UUID (36 characters).",
         "loadScreenTimeFailed": "Failed to load screen-time data.",
         "loadHeatmapFailed": "Failed to load the heatmap.",
         "loadScriptAnalyticsFailed": "Failed to load script analytics.",
