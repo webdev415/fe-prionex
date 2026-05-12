@@ -186,7 +186,7 @@ export function ActionAnalysisPage() {
           <p className="mt-1 text-sm font-light text-gray-600">
             {t(
               'pages.actionAnalysis.subtitle',
-              'Operator analytics and quality monitoring for the trainer team.'
+              'Call monitoring and interaction history for the trainer team.'
             )}
           </p>
         </div>

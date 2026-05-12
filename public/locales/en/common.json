@@ -427,6 +427,7 @@
       },
       "timeline": {
         "callId": "Call ID",
+        "load": "Load",
         "callIdPlaceholder": "Paste a call UUID to load the timeline",
         "empty": "Enter a call ID above to inspect its operator action timeline.",
         "noEvents": "No tracking events recorded for this call.",
