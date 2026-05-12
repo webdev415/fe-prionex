@@ -306,6 +306,13 @@
           "answered": "Answered",
           "notAnswered": "Not answered"
         },
+        "telephonyType": "Telephony type",
+        "telephonyTypes": {
+          "all": "All",
+          "white": "White",
+          "grey": "Grey",
+          "unknown": "Unknown"
+        },
         "channel": "Channel",
         "allChannels": "All",
         "internalDateType": "Internal date",
@@ -340,6 +347,7 @@
         "duration": "Duration",
         "status": "Status",
         "callType": "Call type",
+        "telephonyType": "Telephony type",
         "phone": "Phone",
         "agent": "Employee",
         "client": "Client",
@@ -362,6 +370,11 @@
       "callType": {
         "incoming": "Incoming",
         "outgoing": "Outgoing"
+      },
+      "telephonyType": {
+        "white": "White",
+        "grey": "Grey",
+        "unknown": "—"
       },
       "callDetail": {
         "title": "Call details",

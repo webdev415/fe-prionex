@@ -4,6 +4,10 @@ export type CallMonitoringSort = 'date_desc' | 'date_asc' | 'duration_desc' | 'd
 
 export type CallMonitoringOutcomeFilter = 'all' | 'answered' | 'not_answered'
 
+export type TelephonyType = 'white' | 'grey' | 'unknown'
+
+export const TELEPHONY_TYPE_VALUES: readonly TelephonyType[] = ['white', 'grey', 'unknown']
+
 export interface CallMonitoringFilters {
   agent_extensions?: string[]
   phone_number?: string
@@ -14,6 +18,7 @@ export interface CallMonitoringFilters {
   from_datetime?: string
   to_datetime?: string
   campaign_id?: string
+  telephony_types?: TelephonyType[]
   sort?: CallMonitoringSort
   limit?: number
   offset?: number
@@ -35,6 +40,7 @@ export interface CallMonitoringItem {
   client_id: number | null
   campaign_id: string | null
   has_recording: boolean
+  telephony_type: TelephonyType
 }
 
 export interface CallMonitoringSummary {

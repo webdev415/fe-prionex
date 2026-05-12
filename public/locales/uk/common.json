@@ -309,6 +309,13 @@
           "answered": "Відповідь",
           "notAnswered": "Без відповіді"
         },
+        "telephonyType": "Тип телефонії",
+        "telephonyTypes": {
+          "all": "Усі",
+          "white": "Біла",
+          "grey": "Сіра",
+          "unknown": "Невідомо"
+        },
         "channel": "Канал",
         "allChannels": "Усі",
         "internalDateType": "Внутрішня дата",
@@ -343,6 +350,7 @@
         "duration": "Тривалість",
         "status": "Статус",
         "callType": "Тип дзвінка",
+        "telephonyType": "Тип телефонії",
         "phone": "Телефон",
         "agent": "Співробітник",
         "client": "Клієнт",
@@ -365,6 +373,11 @@
       "callType": {
         "incoming": "Вхідний",
         "outgoing": "Вихідний"
+      },
+      "telephonyType": {
+        "white": "Біла",
+        "grey": "Сіра",
+        "unknown": "—"
       },
       "callDetail": {
         "title": "Деталі дзвінка",

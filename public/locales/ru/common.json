@@ -309,6 +309,13 @@
           "answered": "Отвечен",
           "notAnswered": "Не отвечен"
         },
+        "telephonyType": "Тип телефонии",
+        "telephonyTypes": {
+          "all": "Все",
+          "white": "Белая",
+          "grey": "Серая",
+          "unknown": "Неизвестно"
+        },
         "channel": "Канал",
         "allChannels": "Все",
         "internalDateType": "Внутренняя дата",
@@ -343,6 +350,7 @@
         "duration": "Длительность",
         "status": "Статус",
         "callType": "Тип звонка",
+        "telephonyType": "Тип телефонии",
         "phone": "Телефон",
         "agent": "Сотрудник",
         "client": "Клиент",
@@ -365,6 +373,11 @@
       "callType": {
         "incoming": "Входящий",
         "outgoing": "Исходящий"
+      },
+      "telephonyType": {
+        "white": "Белая",
+        "grey": "Серая",
+        "unknown": "—"
       },
       "callDetail": {
         "title": "Детали звонка",

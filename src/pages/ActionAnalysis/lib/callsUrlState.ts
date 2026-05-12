@@ -1,12 +1,16 @@
-import type {
-  CallMonitoringFilters,
-  CallMonitoringOutcomeFilter,
-  CallMonitoringPeriod,
+import {
+  TELEPHONY_TYPE_VALUES,
+  type CallMonitoringFilters,
+  type CallMonitoringOutcomeFilter,
+  type CallMonitoringPeriod,
+  type TelephonyType,
 } from '@/features/actionAnalysis'
 import type { CallFiltersBarValue } from '../components/CallFiltersBar'
 import { localDateStringsToIsoRange } from './dateRange'
 
 const DEFAULT_PERIOD: CallMonitoringPeriod = 'last_7d'
+
+const TELEPHONY_TYPE_SET = new Set<TelephonyType>(TELEPHONY_TYPE_VALUES)
 
 export const CALL_FILTERS_DEFAULT: CallFiltersBarValue = {
   agent_extensions: undefined,
@@ -17,6 +21,7 @@ export const CALL_FILTERS_DEFAULT: CallFiltersBarValue = {
   period: DEFAULT_PERIOD,
   customFromDate: undefined,
   customToDate: undefined,
+  telephony_types: undefined,
 }
 
 export function readCallsUrlState(params: URLSearchParams): CallFiltersBarValue {
@@ -35,6 +40,16 @@ export function readCallsUrlState(params: URLSearchParams): CallFiltersBarValue 
   const fromDate = params.get('from_date') ?? undefined
   const toDate = params.get('to_date') ?? undefined
 
+  // Comma-separated list. Drop anything that isn't a valid enum value so
+  // hand-edited URLs can't smuggle bad input into the request.
+  const telephonyRaw = params.get('telephony_types')
+  const telephony_types = telephonyRaw
+    ? telephonyRaw
+        .split(',')
+        .map((v) => v.trim())
+        .filter((v): v is TelephonyType => TELEPHONY_TYPE_SET.has(v as TelephonyType))
+    : []
+
   return {
     agent_extensions: exts.length ? exts : undefined,
     phone_number: phone,
@@ -44,6 +59,7 @@ export function readCallsUrlState(params: URLSearchParams): CallFiltersBarValue 
     max_duration: max ? Number(max) : undefined,
     customFromDate: fromDate,
     customToDate: toDate,
+    telephony_types: telephony_types.length ? telephony_types : undefined,
   }
 }
 
@@ -61,6 +77,7 @@ export function writeCallsUrlState(
   next.delete('max_duration')
   next.delete('from_date')
   next.delete('to_date')
+  next.delete('telephony_types')
 
   for (const ext of state.agent_extensions ?? []) {
     if (ext) next.append('agent_extension', ext)
@@ -74,6 +91,9 @@ export function writeCallsUrlState(
   if (state.period === 'custom' && state.customFromDate && state.customToDate) {
     next.set('from_date', state.customFromDate)
     next.set('to_date', state.customToDate)
+  }
+  if (state.telephony_types?.length) {
+    next.set('telephony_types', state.telephony_types.join(','))
   }
   return next
 }

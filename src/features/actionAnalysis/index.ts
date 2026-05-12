@@ -26,6 +26,7 @@ export type {
   CallMonitoringSort,
   CallMonitoringPeriod,
   CallMonitoringOutcomeFilter,
+  TelephonyType,
   InteractionMonitoringFilters,
   InteractionMonitoringItem,
   InteractionMonitoringResponse,
@@ -33,3 +34,4 @@ export type {
   InteractionMonitoringSortDir,
   InteractionInternalDateType,
 } from './types'
+export { TELEPHONY_TYPE_VALUES } from './types'
