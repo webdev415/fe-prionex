@@ -2080,7 +2080,9 @@
           "min": "мін:",
           "max": "макс:",
           "validationPaymentExceedsDebt": "Платіж не може перевищувати поточний борг ({{amount}})",
-          "validationPaymentMustBePositive": "Сума платежу повинна бути позитивною."
+          "validationPaymentMustBePositive": "Сума платежу повинна бути позитивною.",
+          "closedDebtBadge": "Закрито",
+          "closedDebtCorrectionHint": "Цей борг закрито. Платіж записується як технічне коригування і не відкриває борг повторно."
         },
         "editPayment": {
           "title": "Редагувати платіж #{{paymentId}}",
