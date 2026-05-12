@@ -2718,6 +2718,9 @@
       "empty": "No TA Chains found. Click \"Create chain\" to build the first one.",
       "noTargetActionsHint": "You need at least one active Target Action before you can build a chain. Create one in System Settings → Target Actions.",
       "table": {
+        "name": "Name",
+        "steps": "Steps",
+        "type": "Type",
         "department": "Department"
       },
       "chainTypes": {
@@ -2732,7 +2735,8 @@
       "actions": {
         "clone": "Clone",
         "activate": "Activate",
-        "deactivate": "Deactivate"
+        "deactivate": "Deactivate",
+        "delete": "Delete"
       },
       "form": {
         "name": "Name",
@@ -2763,7 +2767,19 @@
           "title": "Create TA Chain"
         },
         "edit": {
-          "title": "Edit TA Chain"
+          "title": "Edit TA Chain",
+          "notFound": "TA chain not found"
+        },
+        "delete": {
+          "title": "Delete TA Chain",
+          "warning": "This action cannot be undone. The chain will be permanently removed.",
+          "chainDetails": "Chain details",
+          "whatHappensTitle": "What will happen:",
+          "bulletRemoveRow": "The chain definition will be permanently deleted.",
+          "bulletRefusedIfUsed": "If the chain has any recorded interactions or started instances, deletion is refused. Deactivate it instead.",
+          "bulletCascadeChildren": "Associated steps, blockers, triggers, and quick picks are removed with the chain.",
+          "acknowledge": "I understand this action cannot be undone.",
+          "deleting": "Deleting…"
         }
       },
       "errors": {
@@ -2775,7 +2791,8 @@
         "updated": "TA Chain updated",
         "cloned": "TA Chain cloned",
         "activated": "TA Chain activated",
-        "deactivated": "TA Chain deactivated"
+        "deactivated": "TA Chain deactivated",
+        "deleted": "TA Chain deleted"
       }
     },
     "taManagement": {

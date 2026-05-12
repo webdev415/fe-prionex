@@ -24,7 +24,13 @@ import {
 import { useDepartments } from '@/features/departments/hooks/useDepartments'
 import { useAuthStore } from '@/stores/authStore'
 import type { TAChain } from '@/features/taChains/api/types'
-import { CreateTAChainModal, DeleteTAChainModal, EditTAChainModal } from './components'
+import {
+  CreateTAChainModal,
+  DeleteTAChainModal,
+  EditTAChainModal,
+  TAChainsListSectionSkeleton,
+  TAChainsPageSkeleton,
+} from './components'
 import { getErrorMessage } from '@/lib/errors'
 
 const TYPE_BADGE: Record<string, string> = {
@@ -35,7 +41,7 @@ const TYPE_BADGE: Record<string, string> = {
 export function TAChainsPage() {
   const { t } = useTranslation('common')
   const { user } = useAuthStore()
-  const projectId = user?.active_project_id ? parseInt(user.active_project_id) : undefined
+  const projectId = user?.active_project_id ? parseInt(user.active_project_id, 10) : undefined
 
   const [search, setSearch] = useState('')
   const [showInactive, setShowInactive] = useState(true)
@@ -43,7 +49,12 @@ export function TAChainsPage() {
   const [editId, setEditId] = useState<number | null>(null)
   const [chainToDelete, setChainToDelete] = useState<TAChain | null>(null)
 
-  const { data, isLoading } = useTAChains({ include_inactive: showInactive })
+  const {
+    data,
+    isPending: chainsPending,
+    isFetching: chainsFetching,
+    isPlaceholderData: chainsIsPlaceholder,
+  } = useTAChains({ include_inactive: showInactive })
   const { data: deptsData } = useDepartments({
     project_id: projectId,
     page_size: 100,
@@ -90,6 +101,13 @@ export function TAChainsPage() {
 
   const handleDelete = (c: TAChain) => setChainToDelete(c)
 
+  const showFullPageSkeleton = chainsPending && !data
+  const showListSkeleton = chainsIsPlaceholder && chainsFetching
+
+  if (showFullPageSkeleton) {
+    return <TAChainsPageSkeleton />
+  }
+
   return (
     <div className="flex w-full flex-col items-start gap-4">
       <div className="mb-4 flex w-full flex-col items-start gap-3 md:flex-row md:items-center md:justify-between">
@@ -128,115 +146,125 @@ export function TAChainsPage() {
         </div>
       </div>
 
-      {isLoading && <div className="text-sm text-gray-500">{t('common.loading')}</div>}
-
-      {!isLoading && filtered.length === 0 && (
+      {!showListSkeleton && filtered.length === 0 && (
         <div className="w-full rounded-lg border border-dashed border-gray-300 bg-white/60 p-10 text-center text-base text-gray-600">
           {t('pages.taChains.empty')}
         </div>
       )}
 
-      <ul className="flex w-full flex-col gap-3">
-        {filtered.map((chain) => (
-          <li
-            key={chain.id}
-            className={`flex flex-col gap-3 rounded-md border p-4 transition ${
-              chain.is_active ? 'border-gray-200 bg-white' : 'border-gray-200 bg-gray-50 opacity-70'
-            }`}
-          >
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-dark-500 text-base font-semibold">{chain.name}</h3>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${
-                      TYPE_BADGE[chain.chain_type] ?? 'bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    {t(`pages.taChains.chainTypes.${chain.chain_type}`)}
-                  </span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${
-                      chain.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'
-                    }`}
-                  >
-                    {chain.is_active
-                      ? t('pages.taChains.status.active')
-                      : t('pages.taChains.status.deactivated')}
-                  </span>
-                  {chain.is_system_hidden && (
-                    <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800">
-                      {t('pages.taChains.status.systemHidden')}
+      {showListSkeleton ? (
+        <TAChainsListSectionSkeleton />
+      ) : (
+        <ul className="flex w-full flex-col gap-3">
+          {filtered.map((chain) => (
+            <li
+              key={chain.id}
+              className={`flex flex-col gap-3 rounded-md border p-4 transition ${
+                chain.is_active
+                  ? 'border-gray-200 bg-white'
+                  : 'border-gray-200 bg-gray-50 opacity-70'
+              }`}
+            >
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-dark-500 text-base font-semibold">{chain.name}</h3>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${
+                        TYPE_BADGE[chain.chain_type] ?? 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {t(`pages.taChains.chainTypes.${chain.chain_type}`)}
                     </span>
-                  )}
-                </div>
-
-                {chain.description && (
-                  <p className="mt-2 text-xs text-gray-600">{chain.description}</p>
-                )}
-
-                <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-700">
-                  <span>
-                    <strong>{chain.step_count}</strong> {t('pages.taChains.steps.label')}
-                  </span>
-                  <span className="flex flex-wrap items-center gap-1">
-                    <span>{t('pages.taChains.table.department')}:</span>
-                    {chain.department_ids.length === 0 ? (
-                      <span className="text-gray-400">—</span>
-                    ) : (
-                      chain.department_ids.map((id) => (
-                        <span
-                          key={id}
-                          className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700"
-                        >
-                          {deptNameById.get(id) ?? `#${id}`}
-                        </span>
-                      ))
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${
+                        chain.is_active
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-200 text-gray-700'
+                      }`}
+                    >
+                      {chain.is_active
+                        ? t('pages.taChains.status.active')
+                        : t('pages.taChains.status.deactivated')}
+                    </span>
+                    {chain.is_system_hidden && (
+                      <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs text-yellow-800">
+                        {t('pages.taChains.status.systemHidden')}
+                      </span>
                     )}
-                  </span>
-                </div>
-              </div>
+                  </div>
 
-              <div className="flex shrink-0 flex-wrap gap-3 md:justify-end">
-                <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
-                  {chain.is_active && (
+                  {chain.description && (
+                    <p className="mt-2 text-xs text-gray-600">{chain.description}</p>
+                  )}
+
+                  <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-700">
+                    <span>
+                      <strong>{chain.step_count}</strong> {t('pages.taChains.steps.label')}
+                    </span>
+                    <span className="flex flex-wrap items-center gap-1">
+                      <span>{t('pages.taChains.table.department')}:</span>
+                      {chain.department_ids.length === 0 ? (
+                        <span className="text-gray-400">—</span>
+                      ) : (
+                        chain.department_ids.map((id) => (
+                          <span
+                            key={id}
+                            className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700"
+                          >
+                            {deptNameById.get(id) ?? `#${id}`}
+                          </span>
+                        ))
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 flex-wrap gap-3 md:justify-end">
+                  <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+                    {chain.is_active && (
+                      <LinkButton
+                        variant="regular-black"
+                        size="xs"
+                        onClick={() => setEditId(chain.id)}
+                        leftIcon={<Icons.PencilEdit size={16} strokeWidth={1.5} />}
+                      >
+                        {t('actions.edit')}
+                      </LinkButton>
+                    )}
                     <LinkButton
                       variant="regular-black"
                       size="xs"
-                      onClick={() => setEditId(chain.id)}
-                      leftIcon={<Icons.PencilEdit size={16} strokeWidth={1.5} />}
+                      onClick={() => handleClone(chain)}
                     >
-                      {t('actions.edit')}
+                      {t('pages.taChains.actions.clone')}
                     </LinkButton>
-                  )}
-                  <LinkButton variant="regular-black" size="xs" onClick={() => handleClone(chain)}>
-                    {t('pages.taChains.actions.clone')}
-                  </LinkButton>
-                  <LinkButton
-                    variant="regular-black"
-                    size="xs"
-                    onClick={() => handleToggleActive(chain)}
-                  >
-                    {chain.is_active
-                      ? t('pages.taChains.actions.deactivate')
-                      : t('pages.taChains.actions.activate')}
-                  </LinkButton>
-                </PermissionGuard>
-                <PermissionGuard permission={PERMISSIONS.TA_CHAINS.DELETE}>
-                  <LinkButton
-                    variant="regular-black"
-                    size="xs"
-                    onClick={() => handleDelete(chain)}
-                    leftIcon={<Icons.Delete size={16} strokeWidth={1.5} />}
-                  >
-                    {t('pages.taChains.actions.delete', 'Delete')}
-                  </LinkButton>
-                </PermissionGuard>
+                    <LinkButton
+                      variant="regular-black"
+                      size="xs"
+                      onClick={() => handleToggleActive(chain)}
+                    >
+                      {chain.is_active
+                        ? t('pages.taChains.actions.deactivate')
+                        : t('pages.taChains.actions.activate')}
+                    </LinkButton>
+                  </PermissionGuard>
+                  <PermissionGuard permission={PERMISSIONS.TA_CHAINS.DELETE}>
+                    <LinkButton
+                      variant="regular-black"
+                      size="xs"
+                      onClick={() => handleDelete(chain)}
+                      leftIcon={<Icons.Delete size={16} strokeWidth={1.5} />}
+                    >
+                      {t('pages.taChains.actions.delete', 'Delete')}
+                    </LinkButton>
+                  </PermissionGuard>
+                </div>
               </div>
-            </div>
-          </li>
-        ))}
-      </ul>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {showCreate && (
         <CreateTAChainModal
