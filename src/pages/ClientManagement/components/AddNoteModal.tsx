@@ -576,11 +576,11 @@ export function AddNoteModal({
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder={t('pages.clients.modals.addNote.typeYourNoteHere')}
-                maxLength={MAX_NOTE_LENGTH}
+                maxLength={isSearching ? undefined : MAX_NOTE_LENGTH}
                 className="text-dark-500 focus:ring-primary-300/20 focus:border-primary-300 min-h-[100px] w-full resize-none rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs font-light placeholder:text-gray-400 focus:ring-2 focus:outline-none sm:min-h-[120px] sm:text-sm"
               />
               <div className="absolute right-2 bottom-2 text-[10px] font-light text-gray-400 sm:text-xs">
-                {note.length}/{MAX_NOTE_LENGTH}
+                {isSearching ? note.length : `${note.length}/${MAX_NOTE_LENGTH}`}
               </div>
             </div>
           </div>

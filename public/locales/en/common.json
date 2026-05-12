@@ -329,6 +329,9 @@
         "stepValueMax": "Step value max",
         "stepValuePlaceholder": "Search…",
         "allStepValues": "All values",
+        "stepValuesHeading": "Step value filters",
+        "stepValueUnsupported": "No value filter available for this step.",
+        "selectedStepsCount": "{{count}} selected",
         "notesSearch": "Notes search",
         "notesSearchPlaceholder": "Search in notes…"
       },
@@ -348,6 +351,7 @@
         "contactType": "Contact type",
         "result": "Result",
         "promiseAmount": "Promise amount",
+        "createdBy": "Created by",
         "responsibleAtCreation": "Responsible at creation",
         "currentResponsible": "Current responsible",
         "internalDate": "Date (promise / callback)",
@@ -391,6 +395,7 @@
         "loadFailed": "Failed to load calls",
         "loadInteractionsFailed": "Failed to load interactions",
         "loadTimelineFailed": "Failed to load the timeline.",
+        "invalidCallId": "Invalid Call ID. Paste a full call UUID (36 characters).",
         "loadScreenTimeFailed": "Failed to load screen-time data.",
         "loadHeatmapFailed": "Failed to load the heatmap.",
         "loadScriptAnalyticsFailed": "Failed to load script analytics.",
@@ -423,6 +428,7 @@
       },
       "timeline": {
         "callId": "Call ID",
+        "load": "Load",
         "callIdPlaceholder": "Paste a call UUID to load the timeline",
         "empty": "Enter a call ID above to inspect its operator action timeline.",
         "noEvents": "No tracking events recorded for this call.",
@@ -1778,7 +1784,9 @@
           "min": "min:",
           "max": "max:",
           "validationPaymentExceedsDebt": "Payment cannot exceed current debt ({{amount}})",
-          "validationPaymentMustBePositive": "Payment amount must be positive."
+          "validationPaymentMustBePositive": "Payment amount must be positive.",
+          "closedDebtBadge": "Closed",
+          "closedDebtCorrectionHint": "This debt is closed. The payment is recorded as a technical correction and will not reopen the debt."
         },
         "editPayment": {
           "title": "Edit Payment #{{paymentId}}",
@@ -2006,6 +2014,7 @@
           "loanNumber": "Loan Number",
           "phone": "Phone",
           "type": "Type",
+          "channel": "Channel",
           "subtype": "Subtype",
           "contactType": "Contact Type",
           "result": "Result",
@@ -2137,6 +2146,7 @@
           "saleDate": "Sale Date",
           "principalAmount": "Principal Amount",
           "principalDebt": "Principal Debt",
+          "eligibleForReturn": "Eligible for Return",
           "remainingDebtAmount": "Remaining Debt Amount",
           "totalToReturn": "Total To Return",
           "rrAmount": "RR Amount",
@@ -2224,6 +2234,7 @@
         "primaryCreditorCommentsDescription": "Historical interaction data from the debt seller will appear here when available.",
         "spamCallHistory": "Spam Call History",
         "noSpamCallHistory": "No spam call history",
+        "noSearcherComments": "No searcher comments yet",
         "totalCost": "Total Cost",
         "deliveryRate": "Delivery Rate",
         "delivered": "delivered",
@@ -2245,7 +2256,8 @@
           "tasks": "Tasks",
           "docs": "Docs",
           "callSms": "Call / SMS",
-          "taChains": "TA Chains"
+          "taChains": "TA Chains",
+          "searcherComments": "Searcher Comments"
         }
       },
       "debtSummary": {
@@ -3709,7 +3721,8 @@
       },
       "agentPerformance": {
         "title": "Agent Performance ({{count}} operators)",
-        "exportTable": "Export Table"
+        "exportTable": "Export Table",
+        "noData": "No operator performance found"
       },
       "tableHeaders": {
         "operator": "Operator",

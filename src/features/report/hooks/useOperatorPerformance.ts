@@ -4,7 +4,7 @@
  * React Query hook for fetching operator performance data.
  */
 
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { reportApi } from '../api/reportApi'
 import type { OperatorPerformanceParams } from '../api/types'
 import {
@@ -73,6 +73,7 @@ export function useOperatorPerformance({
       const data = await reportApi.getOperatorPerformance(backendParams)
       return transformOperatorPerformance(data)
     },
+    placeholderData: keepPreviousData,
     enabled: enabled && !!projectId,
     staleTime: 0, // Always fetch fresh data
     refetchOnMount: 'always', // Always refetch when component mounts

@@ -15,6 +15,7 @@ export const PERMISSIONS = {
    */
   CLIENTS: {
     VIEW: 'view_clients',
+    VIEW_FULL_CLIENT_DATA: 'view_full_client_data',
     EDIT: 'edit_clients',
     ASSIGN_TAGS: 'assign_client_tags',
     EDIT_DEBT: 'edit_client_debt',
@@ -244,6 +245,7 @@ export const PERMISSION_CATEGORIES = {
 export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Clients
   view_clients: 'View client data and information',
+  view_full_client_data: 'View unmasked client PII (name, phone, TIN) in dashboards',
   edit_clients: 'Edit client information (except debt amounts and tags)',
   assign_client_tags: 'Assign and remove tags on client profiles',
   edit_client_debt: 'Edit debt amounts and DPD (Days Past Due)',

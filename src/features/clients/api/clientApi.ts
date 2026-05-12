@@ -361,6 +361,113 @@ export async function completeRestructuringAgreement(
   return response.data
 }
 
+export interface RRStatusChangeResponse {
+  id: number
+  status_id: number
+  status_name?: string | null
+  disconnect_reason?: string | null
+}
+
+export interface RRStatusHistoryEntry {
+  id: number
+  status_id: number
+  status_name?: string | null
+  change_source: 'manual' | 'auto' | 'disconnect'
+  change_reason?: string | null
+  changed_by?: number | null
+  changed_at: string
+}
+
+/**
+ * Manual status transition between non-terminal statuses.
+ * Allowed targets: 1 Connected, 2 Violated, 3 Cancelled.
+ * Backend validates the source→target pair against an allow-list.
+ */
+export async function transitionRestructuringAgreementStatus(
+  clientId: number,
+  raId: number,
+  payload: { target_status_id: 1 | 2 | 3; reason?: string }
+): Promise<RRStatusChangeResponse> {
+  const response = await api.patch<RRStatusChangeResponse>(
+    `${BASE_URL}/${clientId}/restructuring-agreements/${raId}/transition-status`,
+    payload
+  )
+  return response.data
+}
+
+/**
+ * Manual disconnect: flips status to Cancelled (3) and stores the
+ * operator's reason on `disconnect_reason`. Use case: RR was created
+ * by mistake, or the debtor walked back the agreement.
+ */
+export async function disconnectRestructuringAgreement(
+  clientId: number,
+  raId: number,
+  payload: { reason: string }
+): Promise<RRStatusChangeResponse> {
+  const response = await api.patch<RRStatusChangeResponse>(
+    `${BASE_URL}/${clientId}/restructuring-agreements/${raId}/disconnect`,
+    payload
+  )
+  return response.data
+}
+
+/**
+ * Newest-first audit log of status changes for one RR.
+ */
+export async function getRestructuringAgreementStatusHistory(
+  clientId: number,
+  raId: number
+): Promise<RRStatusHistoryEntry[]> {
+  const response = await api.get<RRStatusHistoryEntry[]>(
+    `${BASE_URL}/${clientId}/restructuring-agreements/${raId}/status-history`
+  )
+  return response.data
+}
+
+export interface OverpaymentResponse {
+  id: number
+  restructuring_agreement_id: number
+  amount: string
+  allocation_target: 'next' | 'last'
+  recorded_by?: number | null
+  reason?: string | null
+  created_at: string
+}
+
+/**
+ * Record an overpayment against an RR. Operator chooses where the
+ * excess applies via `allocation_target` ('next' or 'last').
+ */
+export async function recordRROverpayment(
+  clientId: number,
+  raId: number,
+  payload: {
+    amount: number
+    allocation_target: 'next' | 'last'
+    reason?: string
+  }
+): Promise<OverpaymentResponse> {
+  const response = await api.post<OverpaymentResponse>(
+    `${BASE_URL}/${clientId}/restructuring-agreements/${raId}/overpayment`,
+    payload
+  )
+  return response.data
+}
+
+/**
+ * Newest-first list of overpayments recorded against one RR.
+ */
+export async function getRROverpayments(
+  clientId: number,
+  raId: number
+): Promise<OverpaymentResponse[]> {
+  const response = await api.get<OverpaymentResponse[]>(
+    `${BASE_URL}/${clientId}/restructuring-agreements/${raId}/overpayments`
+  )
+  return response.data
+}
+
 /**
  * Get all contact types from the lookup table
  */
@@ -403,4 +510,9 @@ export const clientApi = {
   closeDebt,
   updateDebtClosureDate,
   completeRestructuringAgreement,
+  transitionRestructuringAgreementStatus,
+  disconnectRestructuringAgreement,
+  getRestructuringAgreementStatusHistory,
+  recordRROverpayment,
+  getRROverpayments,
 }

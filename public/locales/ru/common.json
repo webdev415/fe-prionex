@@ -332,6 +332,9 @@
         "stepValueMax": "Значение шага макс",
         "stepValuePlaceholder": "Поиск…",
         "allStepValues": "Все значения",
+        "stepValuesHeading": "Фильтры значений шагов",
+        "stepValueUnsupported": "Для этого шага нет фильтра по значению.",
+        "selectedStepsCount": "Выбрано: {{count}}",
         "notesSearch": "Поиск по заметкам",
         "notesSearchPlaceholder": "Поиск в заметках…"
       },
@@ -351,6 +354,7 @@
         "contactType": "Тип контакта",
         "result": "Результат",
         "promiseAmount": "Сумма обещания",
+        "createdBy": "Кем создано",
         "responsibleAtCreation": "Ответственный на момент создания",
         "currentResponsible": "Текущий ответственный",
         "internalDate": "Дата (обещание / перезвон)",
@@ -394,6 +398,7 @@
         "loadFailed": "Не удалось загрузить звонки",
         "loadInteractionsFailed": "Не удалось загрузить взаимодействия",
         "loadTimelineFailed": "Не удалось загрузить таймлайн.",
+        "invalidCallId": "Неверный ID звонка. Вставьте полный UUID (36 символов).",
         "loadScreenTimeFailed": "Не удалось загрузить данные экранного времени.",
         "loadHeatmapFailed": "Не удалось загрузить тепловую карту.",
         "loadScriptAnalyticsFailed": "Не удалось загрузить аналитику скриптов.",
@@ -426,6 +431,7 @@
       },
       "timeline": {
         "callId": "ID звонка",
+        "load": "Загрузить",
         "callIdPlaceholder": "Вставьте UUID звонка, чтобы загрузить таймлайн",
         "empty": "Введите ID звонка выше, чтобы посмотреть действия оператора.",
         "noEvents": "По этому звонку нет записанных событий.",
@@ -1431,6 +1437,7 @@
         "fromDate": "С даты",
         "toDate": "До даты",
         "clearAll": "Очистить все",
+        "latestOnly": "Показать только последнее взаимодействие",
         "noActivityRecordedYet": "Активность еще не записана",
         "resetFilters": "Сбросить фильтры",
         "tableHeaders": {
@@ -1441,6 +1448,7 @@
           "loanNumber": "Номер займа",
           "phone": "Телефон",
           "type": "Тип",
+          "channel": "Канал",
           "subtype": "Подтип",
           "contactType": "Тип контакта",
           "result": "Результат",
@@ -1575,6 +1583,7 @@
           "loanAmount": "Сумма займа",
           "principalDebt": "Основная задолженность",
           "principalAmount": "Основная сумма",
+          "eligibleForReturn": "Подлежит возврату",
           "remainingDebtAmount": "Остаток долга",
           "rrAmount": "Сумма РР",
           "rrConnectionDate": "Дата подключения РР",
@@ -1662,6 +1671,7 @@
         "primaryCreditorCommentsDescription": "Исторические данные о взаимодействии от продавца долга появятся здесь, когда будут доступны.",
         "spamCallHistory": "История спам-звонков",
         "noSpamCallHistory": "История спам-звонков отсутствует",
+        "noSearcherComments": "Пока нет комментариев поисковика",
         "totalCost": "Общая стоимость",
         "deliveryRate": "Уровень доставки",
         "delivered": "доставлено",
@@ -1683,7 +1693,8 @@
           "tasks": "Задания",
           "docs": "Документы",
           "callSms": "Звонок / SMS",
-          "taChains": "Цепочки ЦД"
+          "taChains": "Цепочки ЦД",
+          "searcherComments": "Комментарии поисковика"
         },
         "maritalStatuses": {
           "1": "Холост/Не замужем",
@@ -2075,7 +2086,9 @@
           "min": "мин:",
           "max": "макс:",
           "validationPaymentExceedsDebt": "Платеж не может превышать текущий долг ({{amount}})",
-          "validationPaymentMustBePositive": "Сумма платежа должна быть положительной."
+          "validationPaymentMustBePositive": "Сумма платежа должна быть положительной.",
+          "closedDebtBadge": "Закрыт",
+          "closedDebtCorrectionHint": "Этот долг закрыт. Платеж записывается как техническое исправление и не возобновляет долг."
         },
         "editPayment": {
           "title": "Редактировать платеж #{{paymentId}}",
@@ -3148,7 +3161,8 @@
       },
       "agentPerformance": {
         "title": "Производительность операторов ({{count}} операторов)",
-        "exportTable": "Экспортировать таблицу"
+        "exportTable": "Экспортировать таблицу",
+        "noData": "Данные о производительности операторов не найдены"
       },
       "tableHeaders": {
         "operator": "Оператор",
