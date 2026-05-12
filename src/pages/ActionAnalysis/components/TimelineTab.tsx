@@ -75,7 +75,7 @@ export function TimelineTab() {
             onClick={handleApply}
             className="h-[45px] sm:px-8"
           >
-            {t('pages.actionAnalysis.filters.applyFilters', 'Load')}
+            {t('pages.actionAnalysis.timeline.load', 'Load')}
           </Button>
           <Button
             type="button"
