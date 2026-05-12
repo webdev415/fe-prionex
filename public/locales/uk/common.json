@@ -304,11 +304,6 @@
           "custom": "Довільний"
         },
         "selectCustomRange": "Виберіть довільний діапазон, щоб завантажити дані.",
-        "statuses": {
-          "all": "Усі",
-          "answered": "Відповідь",
-          "notAnswered": "Без відповіді"
-        },
         "telephonyType": "Тип телефонії",
         "telephonyTypes": {
           "all": "Усі",
@@ -343,7 +338,46 @@
         "stepValueUnsupported": "Для цього кроку немає фільтра за значенням.",
         "selectedStepsCount": "Обрано: {{count}}",
         "notesSearch": "Пошук у нотатках",
-        "notesSearchPlaceholder": "Пошук у нотатках…"
+        "notesSearchPlaceholder": "Пошук у нотатках…",
+        "sortBy": "Сортування",
+        "sortOptions": {
+          "created_at_desc": "Створено (нові)",
+          "created_at_asc": "Створено (старі)",
+          "due_date_asc": "Термін (найближчі)",
+          "due_date_desc": "Термін (пізніші)"
+        },
+        "assignee": "Виконавець",
+        "author": "Автор",
+        "dueRangeHeading": "Термін (дата / час)",
+        "dueDateFrom": "Термін: дата від",
+        "dueDateTo": "Термін: дата до",
+        "dueTimeFrom": "Термін: час від",
+        "dueTimeTo": "Термін: час до",
+        "topic": "Тема",
+        "allTopics": "Усі теми",
+        "group": "Група",
+        "groupComingSoon": "Незабаром",
+        "priority": "Пріоритет",
+        "priorities": {
+          "all": "Усі",
+          "low": "Низький",
+          "normal": "Звичайний",
+          "high": "Високий",
+          "urgent": "Терміновий",
+          "critical": "Критичний"
+        },
+        "statuses": {
+          "all": "Усі",
+          "answered": "Відповідь",
+          "notAnswered": "Без відповіді",
+          "pending": "Очікує",
+          "in_progress": "В роботі",
+          "completed": "Завершено",
+          "cancelled": "Скасовано",
+          "extended": "Продовжено",
+          "rejected": "Відхилено",
+          "incoming_line_result": "Результат вхідної лінії"
+        }
       },
       "columns": {
         "dateTime": "Дата / Час",
@@ -368,7 +402,14 @@
         "internalDate": "Дата (обіцянка / передзвін)",
         "channel": "Канал",
         "chain": "Ланцюг",
-        "notes": "Нотатки"
+        "notes": "Нотатки",
+        "createdDate": "Дата створення",
+        "author": "Автор",
+        "assignee": "Виконавець",
+        "priority": "Пріоритет",
+        "topic": "Тема",
+        "dueDate": "Термін (дата)",
+        "dueTime": "Термін (час)"
       },
       "callType": {
         "incoming": "Вхідний",
@@ -407,6 +448,16 @@
       "empty": "Немає дзвінків, що відповідають фільтрам",
       "interactionsEmpty": "Немає взаємодій, що відповідають фільтрам",
       "taHistoryEmpty": "Немає ЦД-взаємодій, що відповідають фільтрам",
+      "taskHistoryEmpty": "Немає завдань, що відповідають фільтрам",
+      "taskHistorySummary": {
+        "total": "завдань"
+      },
+      "taskHistoryAnalytics": {
+        "title": "Завдання за термінами",
+        "subtitle": "Загальна кількість завдань із терміном у поточному діапазоні.",
+        "totalLabel": "завдань із терміном",
+        "empty": "Немає завдань із терміном у вибраному діапазоні."
+      },
       "errors": {
         "loadFailed": "Не вдалося завантажити дзвінки",
         "loadInteractionsFailed": "Не вдалося завантажити взаємодії",
@@ -416,6 +467,7 @@
         "loadHeatmapFailed": "Не вдалося завантажити теплову карту.",
         "loadScriptAnalyticsFailed": "Не вдалося завантажити аналітику скриптів.",
         "loadTaHistoryFailed": "Не вдалося завантажити історію ЦД",
+        "loadTaskHistoryFailed": "Не вдалося завантажити історію завдань",
         "departmentNoOperators": "У цьому відділі немає операторів у поточному проєкті.",
         "exportFailed": "Не вдалося експортувати",
         "callNotFound": "Дзвінок не знайдено"
@@ -437,6 +489,7 @@
         "list": "Список дзвінків",
         "interactions": "Історія взаємодій",
         "taHistory": "Історія ЦД",
+        "taskHistory": "Історія завдань",
         "timeline": "Таймлайн",
         "screenTime": "Екранний час",
         "heatmap": "Теплова карта",

@@ -304,11 +304,6 @@
           "custom": "Произвольный"
         },
         "selectCustomRange": "Выберите произвольный период, чтобы загрузить данные.",
-        "statuses": {
-          "all": "Все",
-          "answered": "Отвечен",
-          "notAnswered": "Не отвечен"
-        },
         "telephonyType": "Тип телефонии",
         "telephonyTypes": {
           "all": "Все",
@@ -343,7 +338,46 @@
         "stepValueUnsupported": "Для этого шага нет фильтра по значению.",
         "selectedStepsCount": "Выбрано: {{count}}",
         "notesSearch": "Поиск по заметкам",
-        "notesSearchPlaceholder": "Поиск в заметках…"
+        "notesSearchPlaceholder": "Поиск в заметках…",
+        "sortBy": "Сортировка",
+        "sortOptions": {
+          "created_at_desc": "Создана (сначала новые)",
+          "created_at_asc": "Создана (сначала старые)",
+          "due_date_asc": "Срок (ближайшие)",
+          "due_date_desc": "Срок (позднейшие)"
+        },
+        "assignee": "Исполнитель",
+        "author": "Автор",
+        "dueRangeHeading": "Срок (дата / время)",
+        "dueDateFrom": "Срок: дата от",
+        "dueDateTo": "Срок: дата до",
+        "dueTimeFrom": "Срок: время от",
+        "dueTimeTo": "Срок: время до",
+        "topic": "Тема",
+        "allTopics": "Все темы",
+        "group": "Группа",
+        "groupComingSoon": "Скоро",
+        "priority": "Приоритет",
+        "priorities": {
+          "all": "Все",
+          "low": "Низкий",
+          "normal": "Обычный",
+          "high": "Высокий",
+          "urgent": "Срочный",
+          "critical": "Критический"
+        },
+        "statuses": {
+          "all": "Все",
+          "answered": "Отвечен",
+          "notAnswered": "Не отвечен",
+          "pending": "В ожидании",
+          "in_progress": "В работе",
+          "completed": "Завершено",
+          "cancelled": "Отменено",
+          "extended": "Продлено",
+          "rejected": "Отклонено",
+          "incoming_line_result": "Итог входящей линии"
+        }
       },
       "columns": {
         "dateTime": "Дата / Время",
@@ -368,7 +402,14 @@
         "internalDate": "Дата (обещание / перезвон)",
         "channel": "Канал",
         "chain": "Цепочка",
-        "notes": "Заметки"
+        "notes": "Заметки",
+        "createdDate": "Дата создания",
+        "author": "Автор",
+        "assignee": "Исполнитель",
+        "priority": "Приоритет",
+        "topic": "Тема",
+        "dueDate": "Срок (дата)",
+        "dueTime": "Срок (время)"
       },
       "callType": {
         "incoming": "Входящий",
@@ -407,6 +448,16 @@
       "empty": "Нет звонков, соответствующих фильтрам",
       "interactionsEmpty": "Нет взаимодействий, соответствующих фильтрам",
       "taHistoryEmpty": "Нет ТА-взаимодействий, соответствующих фильтрам",
+      "taskHistoryEmpty": "Нет задач, соответствующих фильтрам",
+      "taskHistorySummary": {
+        "total": "задач"
+      },
+      "taskHistoryAnalytics": {
+        "title": "Задачи по срокам",
+        "subtitle": "Общее число задач со сроком в выбранном диапазоне.",
+        "totalLabel": "задач со сроком",
+        "empty": "Нет задач со сроком в выбранном диапазоне."
+      },
       "errors": {
         "loadFailed": "Не удалось загрузить звонки",
         "loadInteractionsFailed": "Не удалось загрузить взаимодействия",
@@ -416,6 +467,7 @@
         "loadHeatmapFailed": "Не удалось загрузить тепловую карту.",
         "loadScriptAnalyticsFailed": "Не удалось загрузить аналитику скриптов.",
         "loadTaHistoryFailed": "Не удалось загрузить историю ТА",
+        "loadTaskHistoryFailed": "Не удалось загрузить историю задач",
         "departmentNoOperators": "В этом отделе нет операторов в текущем проекте.",
         "exportFailed": "Не удалось экспортировать",
         "callNotFound": "Звонок не найден"
@@ -437,6 +489,7 @@
         "list": "Список звонков",
         "interactions": "История взаимодействий",
         "taHistory": "История ТА",
+        "taskHistory": "История задач",
         "timeline": "Таймлайн",
         "screenTime": "Экранное время",
         "heatmap": "Тепловая карта",
