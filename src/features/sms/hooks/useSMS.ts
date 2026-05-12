@@ -3,7 +3,7 @@
  * React Query hooks for SMS operations
  */
 
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { getClientSMSHistory, getSMSConfig, getTemplate, getTemplates } from '../api/smsApi'
 import type { SMSHistoryParams } from '../api/types'
 
@@ -14,6 +14,7 @@ export function useSMSTemplates(params?: { project_id?: number; category?: strin
   return useQuery({
     queryKey: ['sms', 'templates', params],
     queryFn: () => getTemplates(params),
+    placeholderData: keepPreviousData,
   })
 }
 
