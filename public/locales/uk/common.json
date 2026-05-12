@@ -398,6 +398,7 @@
         "loadFailed": "Не вдалося завантажити дзвінки",
         "loadInteractionsFailed": "Не вдалося завантажити взаємодії",
         "loadTimelineFailed": "Не вдалося завантажити таймлайн.",
+        "invalidCallId": "Невірний ID дзвінка. Вставте повний UUID (36 символів).",
         "loadScreenTimeFailed": "Не вдалося завантажити дані екранного часу.",
         "loadHeatmapFailed": "Не вдалося завантажити теплову карту.",
         "loadScriptAnalyticsFailed": "Не вдалося завантажити аналітику скриптів.",

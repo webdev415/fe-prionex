@@ -398,6 +398,7 @@
         "loadFailed": "Не удалось загрузить звонки",
         "loadInteractionsFailed": "Не удалось загрузить взаимодействия",
         "loadTimelineFailed": "Не удалось загрузить таймлайн.",
+        "invalidCallId": "Неверный ID звонка. Вставьте полный UUID (36 символов).",
         "loadScreenTimeFailed": "Не удалось загрузить данные экранного времени.",
         "loadHeatmapFailed": "Не удалось загрузить тепловую карту.",
         "loadScriptAnalyticsFailed": "Не удалось загрузить аналитику скриптов.",
