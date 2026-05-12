@@ -115,3 +115,95 @@ export interface InteractionMonitoringResponse {
   page: number
   page_size: number
 }
+
+export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent' | 'critical'
+
+export type TaskStatus =
+  | 'pending'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled'
+  | 'extended'
+  | 'rejected'
+  | 'incoming_line_result'
+
+export type TaskHistoryDateType = 'created' | 'due'
+
+export type TaskHistorySort =
+  | 'created_at_desc'
+  | 'created_at_asc'
+  | 'due_date_asc'
+  | 'due_date_desc'
+
+export interface TaskHistoryFilters {
+  date_from?: string
+  date_to?: string
+  date_type?: TaskHistoryDateType
+  assigned_to_user_ids?: number[]
+  group_id?: number
+  subject_id?: number
+  priority?: TaskPriority
+  status?: TaskStatus
+  sort?: TaskHistorySort
+  skip?: number
+  limit?: number
+}
+
+export interface TaskHistoryItem {
+  id: number
+  project_id: number
+  client_id: number | null
+  debt_id: number | null
+  subject_id: number | null
+  subject_name: string | null
+  subject_code: string | null
+  title: string
+  description: string | null
+  comment: string | null
+  priority: TaskPriority | string
+  status: TaskStatus | string
+  due_date: string | null
+  is_overdue: boolean
+  assigned_to_user_id: number | null
+  assigned_to_username: string | null
+  is_dismissed: boolean
+  created_at: string | null
+  updated_at: string | null
+  created_by: number
+  created_by_name: string | null
+  legacy_id: string | null
+}
+
+export interface TaskHistoryResponse {
+  items: TaskHistoryItem[]
+  total: number
+  skip: number
+  limit: number
+}
+
+export interface TaskHistoryAnalyticsBucket {
+  date: string
+  count: number
+}
+
+export interface TaskHistoryAnalyticsResponse {
+  buckets: TaskHistoryAnalyticsBucket[]
+  total: number
+}
+
+export interface TaskHistoryAnalyticsFilters {
+  date_from?: string
+  date_to?: string
+  assigned_to_user_ids?: number[]
+  group_id?: number
+  subject_id?: number
+  priority?: TaskPriority
+  status?: TaskStatus
+}
+
+export interface TaskSubject {
+  id: number
+  code: string
+  name: string
+  name_en?: string | null
+}

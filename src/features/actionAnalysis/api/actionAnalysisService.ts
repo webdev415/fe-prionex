@@ -147,6 +147,63 @@ export async function exportTaHistory(filters: TAInteractionListParams): Promise
   return response.data
 }
 
+import type {
+  TaskHistoryAnalyticsFilters,
+  TaskHistoryAnalyticsResponse,
+  TaskHistoryFilters,
+  TaskHistoryResponse,
+  TaskSubject,
+} from '../types'
+
+function buildTaskHistoryParams(filters: TaskHistoryFilters): URLSearchParams {
+  const params = new URLSearchParams()
+  if (filters.date_from) params.set('date_from', filters.date_from)
+  if (filters.date_to) params.set('date_to', filters.date_to)
+  if (filters.date_type) params.set('date_type', filters.date_type)
+  filters.assigned_to_user_ids?.forEach((id) => params.append('assigned_to_user_ids', String(id)))
+  if (filters.group_id != null) params.set('group_id', String(filters.group_id))
+  if (filters.subject_id != null) params.set('subject_id', String(filters.subject_id))
+  if (filters.priority) params.set('priority', filters.priority)
+  if (filters.status) params.set('status', filters.status)
+  if (filters.sort) params.set('sort', filters.sort)
+  if (filters.skip != null) params.set('skip', String(filters.skip))
+  if (filters.limit != null) params.set('limit', String(filters.limit))
+  return params
+}
+
+export async function getTaskHistory(filters: TaskHistoryFilters): Promise<TaskHistoryResponse> {
+  const response = await api.get<TaskHistoryResponse>('/api/v1/tasks/history', {
+    params: buildTaskHistoryParams(filters),
+  })
+  return response.data
+}
+
+function buildTaskHistoryAnalyticsParams(filters: TaskHistoryAnalyticsFilters): URLSearchParams {
+  const params = new URLSearchParams()
+  if (filters.date_from) params.set('date_from', filters.date_from)
+  if (filters.date_to) params.set('date_to', filters.date_to)
+  filters.assigned_to_user_ids?.forEach((id) => params.append('assigned_to_user_ids', String(id)))
+  if (filters.group_id != null) params.set('group_id', String(filters.group_id))
+  if (filters.subject_id != null) params.set('subject_id', String(filters.subject_id))
+  if (filters.priority) params.set('priority', filters.priority)
+  if (filters.status) params.set('status', filters.status)
+  return params
+}
+
+export async function getTaskHistoryAnalytics(
+  filters: TaskHistoryAnalyticsFilters
+): Promise<TaskHistoryAnalyticsResponse> {
+  const response = await api.get<TaskHistoryAnalyticsResponse>('/api/v1/tasks/history/analytics', {
+    params: buildTaskHistoryAnalyticsParams(filters),
+  })
+  return response.data
+}
+
+export async function listTaskSubjects(): Promise<TaskSubject[]> {
+  const response = await api.get<{ subjects: TaskSubject[] }>('/api/v1/tasks/subjects')
+  return response.data.subjects ?? []
+}
+
 export const actionAnalysisService = {
   getCallMonitoring,
   exportCallMonitoring,
@@ -155,4 +212,7 @@ export const actionAnalysisService = {
   listInteractionChannels,
   getTaHistory,
   exportTaHistory,
+  getTaskHistory,
+  getTaskHistoryAnalytics,
+  listTaskSubjects,
 }

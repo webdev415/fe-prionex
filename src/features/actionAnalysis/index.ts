@@ -9,6 +9,12 @@ export { useInteractionChannels, interactionChannelsKeys } from './hooks/useInte
 export { useTaHistory, taHistoryKeys } from './hooks/useTaHistory'
 export { useExportTaHistory } from './hooks/useExportTaHistory'
 export {
+  useTaskHistory,
+  useTaskHistoryAnalytics,
+  useTaskSubjects,
+  taskHistoryKeys,
+} from './hooks/useTaskHistory'
+export {
   getCallMonitoring,
   exportCallMonitoring,
   getInteractionMonitoring,
@@ -16,6 +22,9 @@ export {
   listInteractionChannels,
   getTaHistory,
   exportTaHistory,
+  getTaskHistory,
+  getTaskHistoryAnalytics,
+  listTaskSubjects,
   actionAnalysisService,
 } from './api/actionAnalysisService'
 export type {
@@ -33,5 +42,16 @@ export type {
   InteractionMonitoringSortBy,
   InteractionMonitoringSortDir,
   InteractionInternalDateType,
+  TaskPriority,
+  TaskStatus,
+  TaskHistoryDateType,
+  TaskHistorySort,
+  TaskHistoryFilters,
+  TaskHistoryItem,
+  TaskHistoryResponse,
+  TaskHistoryAnalyticsBucket,
+  TaskHistoryAnalyticsResponse,
+  TaskHistoryAnalyticsFilters,
+  TaskSubject,
 } from './types'
 export { TELEPHONY_TYPE_VALUES } from './types'

@@ -301,11 +301,6 @@
           "custom": "Custom"
         },
         "selectCustomRange": "Pick a custom date range to load data.",
-        "statuses": {
-          "all": "All",
-          "answered": "Answered",
-          "notAnswered": "Not answered"
-        },
         "telephonyType": "Telephony type",
         "telephonyTypes": {
           "all": "All",
@@ -340,7 +335,44 @@
         "stepValueUnsupported": "No value filter available for this step.",
         "selectedStepsCount": "{{count}} selected",
         "notesSearch": "Notes search",
-        "notesSearchPlaceholder": "Search in notes…"
+        "notesSearchPlaceholder": "Search in notes…",
+        "sortBy": "Sort by",
+        "sortOptions": {
+          "created_at_desc": "Created (newest)",
+          "created_at_asc": "Created (oldest)",
+          "due_date_asc": "Due (soonest)",
+          "due_date_desc": "Due (latest)"
+        },
+        "taskDateType": "Date type",
+        "taskDateTypes": {
+          "created": "Created",
+          "due": "Due"
+        },
+        "topic": "Topic",
+        "allTopics": "All topics",
+        "group": "Group",
+        "groupComingSoon": "Coming soon",
+        "priority": "Priority",
+        "priorities": {
+          "all": "All",
+          "low": "Low",
+          "normal": "Normal",
+          "high": "High",
+          "urgent": "Urgent",
+          "critical": "Critical"
+        },
+        "statuses": {
+          "all": "All",
+          "answered": "Answered",
+          "notAnswered": "Not answered",
+          "pending": "Pending",
+          "in_progress": "In progress",
+          "completed": "Completed",
+          "cancelled": "Cancelled",
+          "extended": "Extended",
+          "rejected": "Rejected",
+          "incoming_line_result": "Incoming line result"
+        }
       },
       "columns": {
         "dateTime": "Date / Time",
@@ -365,7 +397,14 @@
         "internalDate": "Date (promise / callback)",
         "channel": "Channel",
         "chain": "Chain",
-        "notes": "Notes"
+        "notes": "Notes",
+        "createdDate": "Created date",
+        "author": "Author",
+        "assignee": "Assignee",
+        "priority": "Priority",
+        "topic": "Topic",
+        "dueDate": "Due date",
+        "dueTime": "Due time"
       },
       "callType": {
         "incoming": "Incoming",
@@ -404,6 +443,16 @@
       "empty": "No calls match the current filters",
       "interactionsEmpty": "No interactions match the current filters",
       "taHistoryEmpty": "No TA interactions match the current filters",
+      "taskHistoryEmpty": "No tasks match the current filters",
+      "taskHistorySummary": {
+        "total": "tasks"
+      },
+      "taskHistoryAnalytics": {
+        "title": "Tasks due by date",
+        "subtitle": "Total tasks due within the current filter range.",
+        "totalLabel": "tasks due",
+        "empty": "No tasks due in the selected range."
+      },
       "errors": {
         "loadFailed": "Failed to load calls",
         "loadInteractionsFailed": "Failed to load interactions",
@@ -413,6 +462,7 @@
         "loadHeatmapFailed": "Failed to load the heatmap.",
         "loadScriptAnalyticsFailed": "Failed to load script analytics.",
         "loadTaHistoryFailed": "Failed to load TA history",
+        "loadTaskHistoryFailed": "Failed to load task history",
         "departmentNoOperators": "No operators in this department for the current project.",
         "exportFailed": "Export failed",
         "callNotFound": "Call not found"
@@ -434,6 +484,7 @@
         "list": "Call List",
         "interactions": "Interaction History",
         "taHistory": "TA History",
+        "taskHistory": "Task History",
         "timeline": "Timeline",
         "screenTime": "Screen Time",
         "heatmap": "Heatmap",
