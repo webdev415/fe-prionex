@@ -246,7 +246,7 @@ export function DocumentGenerationPage() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4 p-6">
+    <div className="flex h-full flex-col gap-4">
       <h1 className="text-2xl font-semibold text-gray-900">
         {t('pages.documentGeneration.title', 'Document Generation')}
       </h1>
@@ -392,6 +392,7 @@ export function DocumentGenerationPage() {
                 onChange={({ value }) => updateFilter('date_from', dateToYmd(value))}
                 max={ymdToDate(filters.date_to) ?? undefined}
                 placeholder={t('pages.documentGeneration.filters.dateFrom', 'Date from')}
+                className="rounded-lg border-gray-400"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -403,6 +404,7 @@ export function DocumentGenerationPage() {
                 onChange={({ value }) => updateFilter('date_to', dateToYmd(value))}
                 min={ymdToDate(filters.date_from) ?? undefined}
                 placeholder={t('pages.documentGeneration.filters.dateTo', 'Date to')}
+                className="rounded-lg border-gray-400"
               />
             </div>
             <div className="flex items-end">
