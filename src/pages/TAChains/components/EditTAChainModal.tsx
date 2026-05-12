@@ -3,6 +3,7 @@ import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/M
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { TAChainForm } from './TAChainForm'
+import { EditTAChainFormSkeleton } from './EditTAChainFormSkeleton'
 import { useTAChain } from '@/features/taChains/hooks/useTAChains'
 
 interface Props {
@@ -16,7 +17,7 @@ const FORM_ID = 'edit-ta-chain-form'
 
 export function EditTAChainModal({ open, chainId, onClose, onSuccess }: Props) {
   const { t } = useTranslation('common')
-  const { data: chain, isLoading } = useTAChain(chainId)
+  const { data: chain, isPending } = useTAChain(chainId)
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="2xl">
@@ -29,9 +30,9 @@ export function EditTAChainModal({ open, chainId, onClose, onSuccess }: Props) {
         title={t('pages.taChains.modals.edit.title')}
       />
       <ModalContent>
-        {isLoading || !chain ? (
-          <div className="text-sm text-gray-500">{t('common.loading')}</div>
-        ) : (
+        {isPending ? (
+          <EditTAChainFormSkeleton />
+        ) : chain ? (
           <TAChainForm
             formId={FORM_ID}
             initial={chain}
@@ -40,13 +41,23 @@ export function EditTAChainModal({ open, chainId, onClose, onSuccess }: Props) {
               onClose()
             }}
           />
+        ) : (
+          <div className="py-8 text-center text-sm text-gray-600">
+            {t('pages.taChains.modals.edit.notFound')}
+          </div>
         )}
       </ModalContent>
       <ModalFooter>
         <Button type="button" variant="cancel" onClick={onClose} className="flex-1">
           {t('actions.cancel')}
         </Button>
-        <Button type="submit" form={FORM_ID} variant="primary" className="flex-1">
+        <Button
+          type="submit"
+          form={FORM_ID}
+          variant="primary"
+          disabled={isPending || !chain}
+          className="flex-1"
+        >
           {t('actions.save')}
         </Button>
       </ModalFooter>

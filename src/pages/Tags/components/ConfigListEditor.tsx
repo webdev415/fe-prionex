@@ -24,7 +24,7 @@ interface ConfigListEditorProps {
   i18nPrefix?: string
 }
 
-const LANGS = ['en', 'ru', 'uk'] as const
+const LANGS = ['en', 'uk'] as const
 
 /** Build nested object from dot-path key, e.g. "a.b.c" + "val" → { a: { b: { c: "val" } } } */
 function buildNestedObj(dotPath: string, value: string): Record<string, unknown> {
@@ -52,10 +52,10 @@ export function ConfigListEditor({
   const { t, i18n } = useTranslation('common')
   const [langsLoaded, setLangsLoaded] = useState(false)
 
-  // Pre-load all languages so we can read/write translations for en/ru/uk
+  // Pre-load all languages so we can read/write translations for en/uk
   useEffect(() => {
     if (i18nPrefix && !langsLoaded) {
-      i18n.loadLanguages(['en', 'ru', 'uk']).then(() => setLangsLoaded(true))
+      i18n.loadLanguages(['en', 'uk']).then(() => setLangsLoaded(true))
     }
   }, [i18n, i18nPrefix, langsLoaded])
 
@@ -66,8 +66,8 @@ export function ConfigListEditor({
   const [editLabel, setEditLabel] = useState('')
 
   // Multi-lang state for add/edit when i18nPrefix is used
-  const [newLangs, setNewLangs] = useState<Record<string, string>>({ en: '', ru: '', uk: '' })
-  const [editLangs, setEditLangs] = useState<Record<string, string>>({ en: '', ru: '', uk: '' })
+  const [newLangs, setNewLangs] = useState<Record<string, string>>({ en: '', uk: '' })
+  const [editLangs, setEditLangs] = useState<Record<string, string>>({ en: '', uk: '' })
 
   const getDisplayLabel = (item: ConfigItem) => {
     if (i18nPrefix) {
@@ -97,7 +97,7 @@ export function ConfigListEditor({
       })
       onAdd({ value, label })
       setNewValue('')
-      setNewLangs({ en: '', ru: '', uk: '' })
+      setNewLangs({ en: '', uk: '' })
     } else {
       onAdd({ value, label: showLabel ? newLabel.trim() || value : value })
       setNewValue('')

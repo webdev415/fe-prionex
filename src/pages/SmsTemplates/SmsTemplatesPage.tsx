@@ -29,6 +29,7 @@ import {
   ViewTemplateModal,
   DeleteTemplateModal,
   SmsTemplatesPageSkeleton,
+  SmsTemplatesTableSectionSkeleton,
 } from './components'
 
 // Maximum length for message text excerpt in table
@@ -71,9 +72,19 @@ export function SmsTemplatesPage() {
   }, [openDropdownTemplateId])
 
   // Fetch templates from API
-  const { data: templatesData, isLoading } = useSMSTemplates(
-    user?.active_project_id ? { project_id: parseInt(user.active_project_id) } : undefined
+  const {
+    data: templatesData,
+    isPending: templatesPending,
+    isFetching: templatesFetching,
+    isPlaceholderData: templatesIsPlaceholder,
+  } = useSMSTemplates(
+    user?.active_project_id ? { project_id: parseInt(user.active_project_id, 10) } : undefined
   )
+
+  // Full-page skeleton: no data yet (keepPreviousData does not apply on first load).
+  const showFullPageSkeleton = templatesPending && !templatesData
+  // Table-only skeleton: new query key is fetching while showing previous list as placeholder (e.g. project change).
+  const showTableSkeleton = templatesIsPlaceholder && templatesFetching
 
   // Map API templates to frontend format
   const apiTemplates = useMemo(() => {
@@ -311,8 +322,7 @@ export function SmsTemplatesPage() {
     },
   ]
 
-  // Show loading skeleton
-  if (isLoading) {
+  if (showFullPageSkeleton) {
     return <SmsTemplatesPageSkeleton />
   }
 
@@ -352,118 +362,125 @@ export function SmsTemplatesPage() {
         </PermissionGuard>
       </div>
 
-      {/* Data Table */}
-      <DataTable
-        columns={columns}
-        data={paginatedTemplates}
-        sortConfig={sortConfig}
-        onSort={handleSort}
-        emptyMessage={t('pages.smsTemplates.noTemplatesFound')}
-        className="flex flex-col items-start gap-8 self-stretch"
-      />
+      {showTableSkeleton ? (
+        <SmsTemplatesTableSectionSkeleton />
+      ) : (
+        <>
+          {/* Data Table */}
+          <DataTable
+            columns={columns}
+            data={paginatedTemplates}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+            emptyMessage={t('pages.smsTemplates.noTemplatesFound')}
+            className="flex flex-col items-start gap-8 self-stretch"
+          />
 
-      {/* Pagination */}
-      <div className="flex w-full flex-row justify-center gap-3 sm:items-center sm:justify-between">
-        <span className="hidden text-xs font-light text-gray-700 sm:inline sm:text-sm">
-          {t('pages.smsTemplates.showing')} {paginatedTemplates.length} {t('pages.smsTemplates.of')}{' '}
-          {filteredTemplates.length} {t('pages.smsTemplates.templates')}
-        </span>
-        <div className="flex items-center justify-center gap-2">
-          {/* Previous Arrow */}
-          <button
-            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
-            aria-label="Previous page"
-          >
-            <Icons.ArrowLeft size={16} className="text-dark-500" strokeWidth={1.5} />
-          </button>
+          {/* Pagination */}
+          <div className="flex w-full flex-row justify-center gap-3 sm:items-center sm:justify-between">
+            <span className="hidden text-xs font-light text-gray-700 sm:inline sm:text-sm">
+              {t('pages.smsTemplates.showing')} {paginatedTemplates.length}{' '}
+              {t('pages.smsTemplates.of')} {filteredTemplates.length}{' '}
+              {t('pages.smsTemplates.templates')}
+            </span>
+            <div className="flex items-center justify-center gap-2">
+              {/* Previous Arrow */}
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
+                aria-label="Previous page"
+              >
+                <Icons.ArrowLeft size={16} className="text-dark-500" strokeWidth={1.5} />
+              </button>
 
-          {/* Page Numbers */}
-          {(() => {
-            const pages: (number | string)[] = []
-            const maxVisible = 5
+              {/* Page Numbers */}
+              {(() => {
+                const pages: (number | string)[] = []
+                const maxVisible = 5
 
-            if (totalPages <= maxVisible) {
-              // Show all pages if 5 or fewer
-              for (let i = 1; i <= totalPages; i++) {
-                pages.push(i)
-              }
-            } else {
-              // Always show first page
-              pages.push(1)
+                if (totalPages <= maxVisible) {
+                  // Show all pages if 5 or fewer
+                  for (let i = 1; i <= totalPages; i++) {
+                    pages.push(i)
+                  }
+                } else {
+                  // Always show first page
+                  pages.push(1)
 
-              // Determine pages around current
-              if (currentPage <= 3) {
-                // Near the start: show 1, 2, 3, 4
-                for (let i = 2; i <= 4; i++) {
-                  pages.push(i)
+                  // Determine pages around current
+                  if (currentPage <= 3) {
+                    // Near the start: show 1, 2, 3, 4
+                    for (let i = 2; i <= 4; i++) {
+                      pages.push(i)
+                    }
+                    pages.push('ellipsis')
+                    pages.push(totalPages)
+                  } else if (currentPage >= totalPages - 2) {
+                    // Near the end: show last-3, last-2, last-1, last
+                    pages.push('ellipsis')
+                    for (let i = totalPages - 3; i <= totalPages; i++) {
+                      pages.push(i)
+                    }
+                  } else {
+                    // In the middle: show current-1, current, current+1
+                    pages.push('ellipsis')
+                    pages.push(currentPage - 1)
+                    pages.push(currentPage)
+                    pages.push(currentPage + 1)
+                    pages.push('ellipsis')
+                    pages.push(totalPages)
+                  }
                 }
-                pages.push('ellipsis')
-                pages.push(totalPages)
-              } else if (currentPage >= totalPages - 2) {
-                // Near the end: show last-3, last-2, last-1, last
-                pages.push('ellipsis')
-                for (let i = totalPages - 3; i <= totalPages; i++) {
-                  pages.push(i)
-                }
-              } else {
-                // In the middle: show current-1, current, current+1
-                pages.push('ellipsis')
-                pages.push(currentPage - 1)
-                pages.push(currentPage)
-                pages.push(currentPage + 1)
-                pages.push('ellipsis')
-                pages.push(totalPages)
-              }
-            }
 
-            return pages.map((page, index) => {
-              if (page === 'ellipsis') {
-                return (
-                  <span
-                    key={`ellipsis-${index}`}
-                    className="text-dark-500 px-1 text-xs sm:px-2 sm:text-sm"
-                  >
-                    ...
-                  </span>
-                )
-              }
-              return (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page as number)}
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors sm:h-10 sm:w-10 sm:text-sm ${
-                    currentPage === page
-                      ? 'bg-secondary-800 text-white'
-                      : 'text-dark-500 border border-gray-300 bg-white hover:bg-gray-100'
-                  }`}
-                  aria-label={`Go to page ${page}`}
-                  aria-current={currentPage === page ? 'page' : undefined}
-                >
-                  {page}
-                </button>
-              )
-            })
-          })()}
+                return pages.map((page, index) => {
+                  if (page === 'ellipsis') {
+                    return (
+                      <span
+                        key={`ellipsis-${index}`}
+                        className="text-dark-500 px-1 text-xs sm:px-2 sm:text-sm"
+                      >
+                        ...
+                      </span>
+                    )
+                  }
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page as number)}
+                      className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-colors sm:h-10 sm:w-10 sm:text-sm ${
+                        currentPage === page
+                          ? 'bg-secondary-800 text-white'
+                          : 'text-dark-500 border border-gray-300 bg-white hover:bg-gray-100'
+                      }`}
+                      aria-label={`Go to page ${page}`}
+                      aria-current={currentPage === page ? 'page' : undefined}
+                    >
+                      {page}
+                    </button>
+                  )
+                })
+              })()}
 
-          {/* Next Arrow */}
-          <button
-            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
-            aria-label="Next page"
-          >
-            <Icons.ArrowRight size={16} className="text-dark-500" strokeWidth={1.5} />
-          </button>
-        </div>
-        <div className="flex hidden items-center gap-1 sm:flex">
-          <Icons.Info size={14} className="text-gray-500 sm:size-4" strokeWidth={1.5} />
-          <span className="text-[10px] font-light text-gray-700 sm:text-xs">
-            {t('pages.smsTemplates.systemTemplatesCannotBeDeleted')}
-          </span>
-        </div>
-      </div>
+              {/* Next Arrow */}
+              <button
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-300 bg-white transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white"
+                aria-label="Next page"
+              >
+                <Icons.ArrowRight size={16} className="text-dark-500" strokeWidth={1.5} />
+              </button>
+            </div>
+            <div className="flex hidden items-center gap-1 sm:flex">
+              <Icons.Info size={14} className="text-gray-500 sm:size-4" strokeWidth={1.5} />
+              <span className="text-[10px] font-light text-gray-700 sm:text-xs">
+                {t('pages.smsTemplates.systemTemplatesCannotBeDeleted')}
+              </span>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Modals */}
       {showCreateModal && (

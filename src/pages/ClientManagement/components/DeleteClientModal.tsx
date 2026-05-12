@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { AxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'
+import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { useDeleteClient } from '@/features/clients/hooks/useClients'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -30,13 +31,6 @@ export interface DeleteClientModalProps {
   onSuccess: () => void
 }
 
-function localeFromLanguage(language: string): string {
-  const base = language.split('-')[0] ?? 'en'
-  if (base === 'uk') return 'uk-UA'
-  if (base === 'ru') return 'ru-RU'
-  return 'en-US'
-}
-
 export function DeleteClientModal({
   open,
   client,
@@ -49,7 +43,7 @@ export function DeleteClientModal({
   const { mutate: deleteClient, isPending: isDeleting } = useDeleteClient()
 
   const formatCurrency = (amount: number) => {
-    return `₴ ${amount.toLocaleString(localeFromLanguage(i18n.language), {
+    return `₴ ${amount.toLocaleString(intlLocaleForUiLanguage(i18n.language), {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`

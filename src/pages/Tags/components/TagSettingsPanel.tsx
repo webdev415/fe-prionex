@@ -38,7 +38,16 @@ export function TagSettingsPanel({
   onCreateGroup,
 }: TagSettingsPanelProps) {
   const { t } = useTranslation('common')
-  const [openSection, setOpenSection] = useState<SectionId | null>('dictionary')
+  const [accordion, setAccordion] = useState<{
+    open: SectionId | null
+    /** Bodies stay mounted after first open so height can animate closed. */
+    hydrated: Set<SectionId>
+  }>(() => ({
+    open: 'dictionary',
+    hydrated: new Set<SectionId>(['dictionary']),
+  }))
+  const openSection = accordion.open
+  const hydratedSections = accordion.hydrated
 
   const config = useTagConfigStore()
   const loadFromServer = useTagConfigStore((state) => state.loadFromServer)
@@ -138,7 +147,12 @@ export function TagSettingsPanel({
   }
 
   const toggleSection = (id: SectionId) => {
-    setOpenSection((prev) => (prev === id ? null : id))
+    setAccordion((a) => {
+      const nextOpen = a.open === id ? null : id
+      const nextHydrated = new Set(a.hydrated)
+      if (nextOpen !== null) nextHydrated.add(nextOpen)
+      return { open: nextOpen, hydrated: nextHydrated }
+    })
   }
 
   const sections: Array<{
@@ -222,46 +236,57 @@ export function TagSettingsPanel({
         </PermissionGuard>
       </div>
 
-      {sections.map((section) => (
-        <div
-          key={section.id}
-          className="overflow-hidden rounded-lg border border-gray-200 bg-white"
-        >
-          {/* Accordion header */}
-          <button
-            onClick={() => toggleSection(section.id)}
-            className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+      {sections.map((section) => {
+        const isOpen = openSection === section.id
+        return (
+          <div
+            key={section.id}
+            className="overflow-hidden rounded-lg border border-gray-200 bg-white"
           >
-            <span className="text-gray-500">{section.icon}</span>
-            <span className="flex-1 text-sm font-medium text-gray-900">{section.title}</span>
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-              {section.count}
-            </span>
-            <Icons.ArrowRight
-              size={16}
-              className={`text-gray-400 transition-transform ${openSection === section.id ? 'rotate-90' : ''}`}
-              strokeWidth={1.5}
-            />
-          </button>
+            {/* Accordion header */}
+            <button
+              type="button"
+              aria-expanded={isOpen}
+              onClick={() => toggleSection(section.id)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50"
+            >
+              <span className="text-gray-500">{section.icon}</span>
+              <span className="flex-1 text-sm font-medium text-gray-900">{section.title}</span>
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                {section.count}
+              </span>
+              <Icons.ArrowRight
+                size={16}
+                className={`shrink-0 text-gray-400 transition-transform duration-300 ease-in-out motion-reduce:transition-none ${isOpen ? 'rotate-90' : ''}`}
+                strokeWidth={1.5}
+              />
+            </button>
 
-          {/* Accordion content */}
-          {openSection === section.id && (
-            <div className="border-t border-gray-100 px-4 py-4">
-              {section.id === 'dictionary' && <DictionarySettings />}
-              {section.id === 'rules' && <RuleSettings />}
-              {section.id === 'segments' && <SegmentSettings tags={tags} />}
-              {section.id === 'groups' && (
-                <GroupsSettings
-                  mutexGroups={mutexGroups}
-                  isLoading={isLoading}
-                  onCreateGroup={onCreateGroup}
-                  t={t}
-                />
-              )}
-            </div>
-          )}
-        </div>
-      ))}
+            {/* Accordion body — grid 0fr/1fr animates height open/close */}
+            {hydratedSections.has(section.id) && (
+              <div
+                className={`grid border-t border-gray-100 transition-[grid-template-rows] duration-300 ease-in-out motion-reduce:transition-none ${isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+              >
+                <div className="min-h-0 overflow-hidden">
+                  <div className="px-4 py-4">
+                    {section.id === 'dictionary' && <DictionarySettings />}
+                    {section.id === 'rules' && <RuleSettings />}
+                    {section.id === 'segments' && <SegmentSettings tags={tags} />}
+                    {section.id === 'groups' && (
+                      <GroupsSettings
+                        mutexGroups={mutexGroups}
+                        isLoading={isLoading}
+                        onCreateGroup={onCreateGroup}
+                        t={t}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

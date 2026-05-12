@@ -31,7 +31,10 @@ import { CreateRoleModal } from './components/CreateRoleModal'
 import { RoleDetailModal } from './components/RoleDetailModal'
 import { EditRoleModal } from './components/EditRoleModal'
 import { ArchiveRoleModal } from './components/ArchiveRoleModal'
-import { RoleManagementPageSkeleton } from './components/RoleManagementPageSkeleton'
+import {
+  RoleManagementPageSkeleton,
+  RoleManagementTablesSkeleton,
+} from './components/RoleManagementPageSkeleton'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
@@ -89,7 +92,7 @@ export function RoleManagementPage() {
 
   const {
     data,
-    isLoading: loadingRoles,
+    isPending: rolesPending,
     isError,
     error,
     refetch,
@@ -213,12 +216,16 @@ export function RoleManagementPage() {
     },
   ]
 
-  const isLoading = loadingProjects || loadingRoles
+  // Full-page skeleton only while the projects list has never loaded (avoids hiding header/select on project change).
+  const showFullPageSkeleton = loadingProjects && projectsData === undefined
+  const shellReady = projects.length > 0 && selectedProjectId !== null
+  const showTablesSkeleton =
+    !showFullPageSkeleton && projects.length > 0 && !isError && (!shellReady || rolesPending)
 
   return (
     <div>
       {/* Page Header */}
-      {!isLoading && (
+      {!showFullPageSkeleton && (
         <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-2 sm:gap-3">
             <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
@@ -252,7 +259,7 @@ export function RoleManagementPage() {
       )}
 
       {/* Project Selector */}
-      {!isLoading && (
+      {!showFullPageSkeleton && (
         <div className="mb-6 flex items-center gap-3">
           <span className="text-base font-light text-gray-500 sm:text-xl">
             {t('pages.roles.project')}
@@ -282,21 +289,22 @@ export function RoleManagementPage() {
       )}
 
       {/* Loading States */}
-      {isLoading && <RoleManagementPageSkeleton />}
+      {showFullPageSkeleton && <RoleManagementPageSkeleton />}
+      {showTablesSkeleton && <RoleManagementTablesSkeleton />}
 
       {/* Error States */}
-      {!isLoading && projects.length === 0 && (
+      {!showFullPageSkeleton && projects.length === 0 && (
         <div className="rounded-lg bg-white p-8 text-center shadow-sm">
           <p className="text-sm text-gray-500">{t('pages.roles.noActiveProjects')}</p>
         </div>
       )}
 
-      {!isLoading && projects.length > 0 && isError && (
+      {!showFullPageSkeleton && projects.length > 0 && isError && (
         <ErrorState error={error} onRetry={() => refetch()} title={t('pages.roles.errorLoading')} />
       )}
 
       {/* Content */}
-      {!isLoading && projects.length > 0 && !isError && (
+      {!showFullPageSkeleton && projects.length > 0 && !isError && !showTablesSkeleton && (
         <div className="space-y-8">
           {/* Default Roles */}
           <section className="rounded-xl bg-white/50 p-6">

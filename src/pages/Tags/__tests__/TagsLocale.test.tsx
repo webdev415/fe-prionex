@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import enCommon from '@/../public/locales/en/common.json'
 import ukCommon from '@/../public/locales/uk/common.json'
-import ruCommon from '@/../public/locales/ru/common.json'
 import { DEFAULT_AVAILABLE_EVENTS } from '@/stores/tagConfigStore'
 
 type Json = Record<string, unknown>
@@ -30,22 +29,19 @@ function leafKeysUnder(obj: Json, prefix: string): string[] {
 describe('Tags locale parity', () => {
   const enKeys = new Set(tagKeys(enCommon as Json))
   const ukKeys = new Set(tagKeys(ukCommon as Json))
-  const ruKeys = new Set(tagKeys(ruCommon as Json))
 
   it('every locale exposes pages.tags.* keys', () => {
     expect(enKeys.size).toBeGreaterThan(0)
     expect(ukKeys.size).toBeGreaterThan(0)
-    expect(ruKeys.size).toBeGreaterThan(0)
   })
 
-  it('all three locales agree on pages.tags.* key set', () => {
-    const all = new Set<string>([...enKeys, ...ukKeys, ...ruKeys])
+  it('en and uk agree on pages.tags.* key set', () => {
+    const all = new Set<string>([...enKeys, ...ukKeys])
     const missing = {
       en: [...all].filter((k) => !enKeys.has(k)),
       uk: [...all].filter((k) => !ukKeys.has(k)),
-      ru: [...all].filter((k) => !ruKeys.has(k)),
     }
-    expect(missing).toEqual({ en: [], uk: [], ru: [] })
+    expect(missing).toEqual({ en: [], uk: [] })
   })
 
   it('no pages.tags.* value is an empty string in any locale', () => {
@@ -68,16 +64,15 @@ describe('Tags locale parity', () => {
     }
     expect(emptyKeys(enCommon as Json)).toEqual([])
     expect(emptyKeys(ukCommon as Json)).toEqual([])
-    expect(emptyKeys(ruCommon as Json)).toEqual([])
   })
 
-  it('every DEFAULT_AVAILABLE_EVENTS field has pages.tags.rules.eventPayloadFields.<field> in ru/uk/en', () => {
+  it('every DEFAULT_AVAILABLE_EVENTS field has pages.tags.rules.eventPayloadFields.<field> in en/uk', () => {
     const fieldNames = new Set(
       DEFAULT_AVAILABLE_EVENTS.flatMap((event) => event.fields.map((f) => f.value))
     )
-    const localeKeys = { ru: ruKeys, uk: ukKeys, en: enKeys }
+    const localeKeys = { uk: ukKeys, en: enKeys }
     const missing: string[] = []
-    for (const lang of ['ru', 'uk', 'en'] as const) {
+    for (const lang of ['uk', 'en'] as const) {
       for (const fieldName of fieldNames) {
         const path = `pages.tags.rules.eventPayloadFields.${fieldName}`
         if (!localeKeys[lang].has(path)) {
@@ -88,37 +83,35 @@ describe('Tags locale parity', () => {
     expect(missing).toEqual([])
   })
 
-  it('pages.tags.rules.eventOptions.* leaf keys agree across ru/uk/en', () => {
+  it('pages.tags.rules.eventOptions.* leaf keys agree across en/uk', () => {
     const prefix = 'pages.tags.rules.eventOptions.'
     const enLeaves = new Set(leafKeysUnder(enCommon as Json, prefix))
     const ukLeaves = new Set(leafKeysUnder(ukCommon as Json, prefix))
-    const ruLeaves = new Set(leafKeysUnder(ruCommon as Json, prefix))
-    const all = new Set<string>([...enLeaves, ...ukLeaves, ...ruLeaves])
+    const all = new Set<string>([...enLeaves, ...ukLeaves])
     const missing = {
       en: [...all].filter((k) => !enLeaves.has(k)),
       uk: [...all].filter((k) => !ukLeaves.has(k)),
-      ru: [...all].filter((k) => !ruLeaves.has(k)),
     }
-    expect(missing).toEqual({ en: [], uk: [], ru: [] })
+    expect(missing).toEqual({ en: [], uk: [] })
   })
 
-  it('interaction.created result_name values are not language-mixed (RU vs UK spot-check)', () => {
-    const ruResults = (ruCommon as Json).pages as Json
-    const uk = (ukCommon as Json).pages as Json
-    const ruResultName = (
-      (((ruResults.tags as Json).rules as Json).eventOptions as Json)['interaction.created'] as Json
+  it('interaction.created result_name: EN stays ASCII labels; UK differs for Cyrillic', () => {
+    const enPages = (enCommon as Json).pages as Json
+    const ukPages = (ukCommon as Json).pages as Json
+    const enResultName = (
+      (((enPages.tags as Json).rules as Json).eventOptions as Json)['interaction.created'] as Json
     ).result_name as Record<string, string>
     const ukResultName = (
-      (((uk.tags as Json).rules as Json).eventOptions as Json)['interaction.created'] as Json
+      (((ukPages.tags as Json).rules as Json).eventOptions as Json)['interaction.created'] as Json
     ).result_name as Record<string, string>
 
-    expect(ruResultName['No contact']).toBe('Нет контакта')
+    expect(enResultName['No contact']).toBe('No contact')
     expect(ukResultName['No contact']).toBe('Немає контакту')
-    expect(ruResultName['Agreement']).toBe('Обещание оплаты')
+    expect(enResultName['Agreement']).toBe('Agreement')
     expect(ukResultName['Agreement']).toBe('Обіцянка оплати')
-    expect(ruResultName['Refusal to pay']).toBe('Отказ от оплаты')
+    expect(enResultName['Refusal to pay']).toBe('Refusal to pay')
     expect(ukResultName['Refusal to pay']).toBe('Відмова від оплати')
-    expect(ruResultName['Hanged up']).toBe('Положил трубку')
+    expect(enResultName['Hanged up']).toBe('Hanged up')
     expect(ukResultName['Hanged up']).toBe('Поклав слухавку')
   })
 })

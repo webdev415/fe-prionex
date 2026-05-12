@@ -143,7 +143,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
               <DialogPrimitive.Close asChild>
                 <button
                   type="button"
-                  aria-label="Close"
+                  aria-label={t('actions.close', 'Close')}
                   className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-gray-100"
                 >
                   <Icon icon={Cancel01Icon} size={18} className="text-dark-500" strokeWidth={1.5} />

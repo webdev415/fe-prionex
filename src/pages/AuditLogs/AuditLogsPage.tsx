@@ -10,7 +10,10 @@ import { useTranslation } from 'react-i18next'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import { AuditLogDetailModal } from './components/AuditLogDetailModal'
 import { CSVExportDialog, type CSVExportOptions } from './components/CSVExportDialog'
-import { AuditLogsPageSkeleton } from './components/AuditLogsPageSkeleton'
+import {
+  AuditLogsPageSkeleton,
+  AuditLogsTableSectionSkeleton,
+} from './components/AuditLogsPageSkeleton'
 import { DataTable, type Column, type SortConfig, type SortOrder } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { Button } from '@/components/ui/Button'
@@ -158,7 +161,7 @@ export function AuditLogsPage() {
   // Only fetch if user has view_audit_logs permission
   const {
     data: auditData,
-    isLoading,
+    isPending: auditLogsPending,
     error,
   } = useAuditLogs(apiParams, {
     enabled: canViewAuditLogs,
@@ -204,9 +207,12 @@ export function AuditLogsPage() {
     gcTime: 0, // Don't keep in cache
   })
 
-  // Check if initial load is happening (first time loading audit logs or filter options)
-  const isInitialLoading =
-    isLoading || isLoadingRoles || isLoadingUsers || isLoadingEntityTypes || isLoadingActions
+  // Full-page skeleton only until filter dropdown data has loaded once (not on every audit refetch).
+  const showFullPageSkeleton =
+    (isLoadingRoles && !rolesData) ||
+    (isLoadingUsers && !usersData) ||
+    (isLoadingEntityTypes && !entityTypesData) ||
+    (isLoadingActions && !actionsData)
 
   // Map backend response to frontend AuditLog type
   const mapAuditLogResponse = useCallback((log: AuditLogResponse): AuditLog => {
@@ -810,8 +816,7 @@ export function AuditLogsPage() {
     )
   }
 
-  // Show skeleton during initial load
-  if (isInitialLoading && !auditData) {
+  if (showFullPageSkeleton) {
     return <AuditLogsPageSkeleton />
   }
 
@@ -841,17 +846,15 @@ export function AuditLogsPage() {
         roles={roles}
         entityTypes={entityTypes}
         actions={actions}
-        isLoading={isLoading}
+        isLoading={auditLogsPending}
       />
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Audit Logs Table */}
         <div className="flex flex-1 flex-col gap-4 overflow-hidden rounded-xl bg-white/50 p-3 sm:gap-6 sm:p-6">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-muted-foreground">{t('common.loading')}</div>
-            </div>
+          {auditLogsPending ? (
+            <AuditLogsTableSectionSkeleton />
           ) : error ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-error-500">{t('pages.auditLogs.loadError')}</div>
