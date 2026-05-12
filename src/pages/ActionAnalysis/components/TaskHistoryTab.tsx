@@ -63,6 +63,11 @@ export function TaskHistoryTab() {
     return undefined
   }, [barState.departmentId, barState.employeeIds, operators])
 
+  const createdByIn = useMemo<number[] | undefined>(
+    () => (barState.authorIds.length > 0 ? barState.authorIds : undefined),
+    [barState.authorIds]
+  )
+
   const isDeptEmpty =
     barState.departmentId != null && (assignedToUserIds == null || assignedToUserIds.length === 0)
 
@@ -71,16 +76,16 @@ export function TaskHistoryTab() {
 
   const listFilters = useMemo(
     () => ({
-      ...toTaskHistoryQuery(barState, assignedToUserIds),
+      ...toTaskHistoryQuery(barState, assignedToUserIds, createdByIn),
       skip: (page - 1) * pageSize,
       limit: pageSize,
     }),
-    [barState, assignedToUserIds, page, pageSize]
+    [barState, assignedToUserIds, createdByIn, page, pageSize]
   )
 
   const analyticsFilters = useMemo(
-    () => toTaskHistoryAnalyticsQuery(barState, assignedToUserIds),
-    [barState, assignedToUserIds]
+    () => toTaskHistoryAnalyticsQuery(barState, assignedToUserIds, createdByIn),
+    [barState, assignedToUserIds, createdByIn]
   )
 
   const queryEnabled =

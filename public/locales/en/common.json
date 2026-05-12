@@ -343,11 +343,13 @@
           "due_date_asc": "Due (soonest)",
           "due_date_desc": "Due (latest)"
         },
-        "taskDateType": "Date type",
-        "taskDateTypes": {
-          "created": "Created",
-          "due": "Due"
-        },
+        "assignee": "Assignee",
+        "author": "Author",
+        "dueRangeHeading": "Due date / time",
+        "dueDateFrom": "Due date from",
+        "dueDateTo": "Due date to",
+        "dueTimeFrom": "Due time from",
+        "dueTimeTo": "Due time to",
         "topic": "Topic",
         "allTopics": "All topics",
         "group": "Group",

@@ -346,11 +346,13 @@
           "due_date_asc": "Термін (найближчі)",
           "due_date_desc": "Термін (пізніші)"
         },
-        "taskDateType": "Тип дати",
-        "taskDateTypes": {
-          "created": "Створення",
-          "due": "Термін"
-        },
+        "assignee": "Виконавець",
+        "author": "Автор",
+        "dueRangeHeading": "Термін (дата / час)",
+        "dueDateFrom": "Термін: дата від",
+        "dueDateTo": "Термін: дата до",
+        "dueTimeFrom": "Термін: час від",
+        "dueTimeTo": "Термін: час до",
         "topic": "Тема",
         "allTopics": "Усі теми",
         "group": "Група",

@@ -2,13 +2,14 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type {
   CallMonitoringPeriod,
-  TaskHistoryDateType,
   TaskPriority,
   TaskStatus,
   TaskSubject,
 } from '@/features/actionAnalysis'
 import type { OperatorUser } from '@/features/users/api/usersApi'
 import { Button } from '@/components/ui/Button'
+import { DateSelect } from '@/components/ui/DateSelect'
+import { Input } from '@/components/ui/Input'
 import {
   Select,
   SelectContent,
@@ -34,7 +35,6 @@ const STATUS_VALUES: readonly TaskStatus[] = [
   'rejected',
   'incoming_line_result',
 ]
-const DATE_TYPE_VALUES: readonly TaskHistoryDateType[] = ['created', 'due']
 
 interface Props {
   value: TaskHistoryBarState
@@ -58,13 +58,25 @@ function buildDepartmentOptions(operators: OperatorUser[]) {
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
 }
 
+function ymdToDate(ymd: string | undefined): Date | null {
+  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return null
+  const [y, m, d] = ymd.split('-').map(Number)
+  return new Date(y, m - 1, d, 12, 0, 0, 0)
+}
+
+function dateToYmd(d: Date | null): string | undefined {
+  if (!d) return undefined
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 export function TaskHistoryFiltersBar({
   value,
   operators,
   subjects,
   onApply,
   onClear,
-  userTimezone: _userTimezone,
+  userTimezone,
 }: Props) {
   const { t } = useTranslation('common')
 
@@ -96,6 +108,9 @@ export function TaskHistoryFiltersBar({
     onClear()
   }
 
+  const dueFrom = ymdToDate(draft.dueFromDate)
+  const dueTo = ymdToDate(draft.dueToDate)
+
   return (
     <div className={FILTER_SURFACE}>
       <div className="flex w-full flex-col gap-4 sm:gap-6">
@@ -104,33 +119,12 @@ export function TaskHistoryFiltersBar({
           customFromDate={draft.customFromDate}
           customToDate={draft.customToDate}
           onChange={(next) => update(next)}
-          userTimezone={_userTimezone}
+          userTimezone={userTimezone}
         />
 
         <div className="h-px w-full bg-gray-200" />
 
         <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4">
-          <div className="flex flex-col gap-1.5">
-            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
-              {t('pages.actionAnalysis.filters.taskDateType', 'Date type')}
-            </span>
-            <Select
-              value={draft.dateType}
-              onValueChange={(v) => update({ dateType: v as TaskHistoryDateType })}
-            >
-              <SelectTrigger className="h-[45px] w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DATE_TYPE_VALUES.map((dt) => (
-                  <SelectItem key={dt} value={dt}>
-                    {t(`pages.actionAnalysis.filters.taskDateTypes.${dt}`, dt)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="flex flex-col gap-1.5">
             <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
               {t('pages.actionAnalysis.filters.department', 'Department')}
@@ -169,7 +163,14 @@ export function TaskHistoryFiltersBar({
             onChange={(ids) => update({ departmentId: null, employeeIds: ids })}
             disabled={draft.departmentId != null}
             disabledLabel={departmentName}
-            label={t('pages.actionAnalysis.filters.employee', 'Employee')}
+            label={t('pages.actionAnalysis.filters.assignee', 'Assignee')}
+          />
+
+          <EmployeeFilterDropdown
+            operators={operators}
+            selectedIds={draft.authorIds}
+            onChange={(ids) => update({ authorIds: ids })}
+            label={t('pages.actionAnalysis.filters.author', 'Author')}
           />
 
           <div className="flex flex-col gap-1.5">
@@ -266,6 +267,70 @@ export function TaskHistoryFiltersBar({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        </div>
+
+        {/* Due-date / Due-time filters live after Status. The two visible
+            filters compose into one due_date_from / due_date_to window. */}
+        <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white/60 p-4">
+          <span className="text-dark-500 text-xs font-semibold tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+            {t('pages.actionAnalysis.filters.dueRangeHeading', 'Due date / time')}
+          </span>
+          <div className="grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-gray-600">
+                {t('pages.actionAnalysis.filters.dueDateFrom', 'Due date from')}
+              </span>
+              <DateSelect
+                value={dueFrom}
+                onChange={({ value: v }) => update({ dueFromDate: dateToYmd(v) ?? undefined })}
+                placeholder={t('pages.actionAnalysis.filters.selectStartDate', 'Select start date')}
+                max={dueTo ?? undefined}
+                format="yyyy-MM-dd"
+                className="min-w-0 flex-1 [&_input]:h-[45px]"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-gray-600">
+                {t('pages.actionAnalysis.filters.dueTimeFrom', 'Due time from')}
+              </span>
+              <Input
+                type="time"
+                className="h-[45px]"
+                value={draft.dueFromTime ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value
+                  update({ dueFromTime: v === '' ? undefined : v })
+                }}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-gray-600">
+                {t('pages.actionAnalysis.filters.dueDateTo', 'Due date to')}
+              </span>
+              <DateSelect
+                value={dueTo}
+                onChange={({ value: v }) => update({ dueToDate: dateToYmd(v) ?? undefined })}
+                placeholder={t('pages.actionAnalysis.filters.selectEndDate', 'Select end date')}
+                min={dueFrom ?? undefined}
+                format="yyyy-MM-dd"
+                className="min-w-0 flex-1 [&_input]:h-[45px]"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-gray-600">
+                {t('pages.actionAnalysis.filters.dueTimeTo', 'Due time to')}
+              </span>
+              <Input
+                type="time"
+                className="h-[45px]"
+                value={draft.dueToTime ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value
+                  update({ dueToTime: v === '' ? undefined : v })
+                }}
+              />
+            </div>
           </div>
         </div>
 

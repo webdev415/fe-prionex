@@ -346,11 +346,13 @@
           "due_date_asc": "Срок (ближайшие)",
           "due_date_desc": "Срок (позднейшие)"
         },
-        "taskDateType": "Тип даты",
-        "taskDateTypes": {
-          "created": "Создана",
-          "due": "Срок"
-        },
+        "assignee": "Исполнитель",
+        "author": "Автор",
+        "dueRangeHeading": "Срок (дата / время)",
+        "dueDateFrom": "Срок: дата от",
+        "dueDateTo": "Срок: дата до",
+        "dueTimeFrom": "Срок: время от",
+        "dueTimeTo": "Срок: время до",
         "topic": "Тема",
         "allTopics": "Все темы",
         "group": "Группа",

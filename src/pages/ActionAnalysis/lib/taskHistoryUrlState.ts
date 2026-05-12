@@ -1,6 +1,5 @@
 import type {
   CallMonitoringPeriod,
-  TaskHistoryDateType,
   TaskHistoryFilters,
   TaskHistorySort,
   TaskPriority,
@@ -9,10 +8,8 @@ import type {
 import { localDateStringsToIsoRange } from './dateRange'
 
 const DEFAULT_PERIOD: CallMonitoringPeriod = 'last_7d'
-const DEFAULT_DATE_TYPE: TaskHistoryDateType = 'created'
 const DEFAULT_SORT: TaskHistorySort = 'created_at_desc'
 
-const TASK_HISTORY_DATE_TYPES: readonly TaskHistoryDateType[] = ['created', 'due']
 const TASK_HISTORY_SORTS: readonly TaskHistorySort[] = [
   'created_at_desc',
   'created_at_asc',
@@ -30,17 +27,35 @@ const TASK_STATUSES: readonly TaskStatus[] = [
   'incoming_line_result',
 ]
 
+/** Bar state for the Task History sub-tab.
+ *
+ * `period` + `customFromDate`/`customToDate` drive the top date-range picker
+ * and always filter `created_at` (the Created date column).
+ *
+ * `dueFromDate`/`dueFromTime` + `dueToDate`/`dueToTime` are the two
+ * separate filters under Status — they compose into one `due_date_from`/
+ * `due_date_to` window on `Task.due_date`. Time inputs are optional and
+ * default to `00:00` / `23:59:59.999` when only a date is set.
+ *
+ * `employeeIds` is the multi-select Assignee filter (renamed from
+ * "Employee" in the UI but the URL key stays `employee_id` for back-compat).
+ * `authorIds` is the multi-select Author filter, URL key `author_id`.
+ */
 export interface TaskHistoryBarState {
   period?: CallMonitoringPeriod
   customFromDate?: string
   customToDate?: string
-  dateType: TaskHistoryDateType
   departmentId: number | null
   employeeIds: number[]
+  authorIds: number[]
   groupId?: number
   subjectId?: number
   priority?: TaskPriority
   status?: TaskStatus
+  dueFromDate?: string
+  dueFromTime?: string
+  dueToDate?: string
+  dueToTime?: string
   sort: TaskHistorySort
 }
 
@@ -48,13 +63,17 @@ export const TASK_HISTORY_FILTERS_DEFAULT: TaskHistoryBarState = {
   period: DEFAULT_PERIOD,
   customFromDate: undefined,
   customToDate: undefined,
-  dateType: DEFAULT_DATE_TYPE,
   departmentId: null,
   employeeIds: [],
+  authorIds: [],
   groupId: undefined,
   subjectId: undefined,
   priority: undefined,
   status: undefined,
+  dueFromDate: undefined,
+  dueFromTime: undefined,
+  dueToDate: undefined,
+  dueToTime: undefined,
   sort: DEFAULT_SORT,
 }
 
@@ -67,6 +86,16 @@ function parsePositiveInt(value: string | null | undefined): number | undefined 
 function parseEnum<T extends string>(value: string | null, allowed: readonly T[]): T | undefined {
   if (value == null) return undefined
   return (allowed as readonly string[]).includes(value) ? (value as T) : undefined
+}
+
+function parseYmd(value: string | null): string | undefined {
+  if (value == null) return undefined
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined
+}
+
+function parseHm(value: string | null): string | undefined {
+  if (value == null) return undefined
+  return /^\d{2}:\d{2}$/.test(value) ? value : undefined
 }
 
 export function readTaskHistoryUrlState(params: URLSearchParams): TaskHistoryBarState {
@@ -84,20 +113,26 @@ export function readTaskHistoryUrlState(params: URLSearchParams): TaskHistoryBar
     .getAll('employee_id')
     .map((s) => Number(s))
     .filter((n) => Number.isFinite(n) && n > 0)
+  const authorIds = params
+    .getAll('author_id')
+    .map((s) => Number(s))
+    .filter((n) => Number.isFinite(n) && n > 0)
 
   return {
     period,
     customFromDate: params.get('from_date') ?? undefined,
     customToDate: params.get('to_date') ?? undefined,
-    dateType:
-      parseEnum<TaskHistoryDateType>(params.get('date_type'), TASK_HISTORY_DATE_TYPES) ??
-      DEFAULT_DATE_TYPE,
     departmentId: dept != null ? dept : null,
     employeeIds,
+    authorIds,
     groupId: parsePositiveInt(params.get('group_id')),
     subjectId: parsePositiveInt(params.get('subject_id')),
     priority: parseEnum<TaskPriority>(params.get('priority'), TASK_PRIORITIES),
     status: parseEnum<TaskStatus>(params.get('status'), TASK_STATUSES),
+    dueFromDate: parseYmd(params.get('due_from_date')),
+    dueFromTime: parseHm(params.get('due_from_time')),
+    dueToDate: parseYmd(params.get('due_to_date')),
+    dueToTime: parseHm(params.get('due_to_time')),
     sort: parseEnum<TaskHistorySort>(params.get('sort'), TASK_HISTORY_SORTS) ?? DEFAULT_SORT,
   }
 }
@@ -110,22 +145,23 @@ export function writeTaskHistoryUrlState(
   next.delete('period')
   next.delete('from_date')
   next.delete('to_date')
-  next.delete('date_type')
   next.delete('department_id')
   next.delete('employee_id')
+  next.delete('author_id')
   next.delete('group_id')
   next.delete('subject_id')
   next.delete('priority')
   next.delete('status')
+  next.delete('due_from_date')
+  next.delete('due_from_time')
+  next.delete('due_to_date')
+  next.delete('due_to_time')
   next.delete('sort')
 
   if (state.period && state.period !== DEFAULT_PERIOD) next.set('period', state.period)
   if (state.period === 'custom' && state.customFromDate && state.customToDate) {
     next.set('from_date', state.customFromDate)
     next.set('to_date', state.customToDate)
-  }
-  if (state.dateType && state.dateType !== DEFAULT_DATE_TYPE) {
-    next.set('date_type', state.dateType)
   }
   if (state.departmentId != null) {
     next.set('department_id', String(state.departmentId))
@@ -134,15 +170,22 @@ export function writeTaskHistoryUrlState(
       next.append('employee_id', String(id))
     }
   }
+  for (const id of state.authorIds) {
+    next.append('author_id', String(id))
+  }
   if (state.groupId != null) next.set('group_id', String(state.groupId))
   if (state.subjectId != null) next.set('subject_id', String(state.subjectId))
   if (state.priority) next.set('priority', state.priority)
   if (state.status) next.set('status', state.status)
+  if (state.dueFromDate) next.set('due_from_date', state.dueFromDate)
+  if (state.dueFromTime) next.set('due_from_time', state.dueFromTime)
+  if (state.dueToDate) next.set('due_to_date', state.dueToDate)
+  if (state.dueToTime) next.set('due_to_time', state.dueToTime)
   if (state.sort && state.sort !== DEFAULT_SORT) next.set('sort', state.sort)
   return next
 }
 
-function resolveDateRange(state: TaskHistoryBarState): {
+function resolveCreatedAtRange(state: TaskHistoryBarState): {
   date_from?: string
   date_to?: string
 } {
@@ -172,15 +215,58 @@ function resolveDateRange(state: TaskHistoryBarState): {
   return {}
 }
 
+/**
+ * Compose the two visible filters ("Due date" + "Due time") into one
+ * `due_date_from` / `due_date_to` window expressed in the user's local
+ * timezone, then converted to UTC ISO. If only dates are provided the
+ * window snaps to the start/end of those days; if a date is missing on
+ * either side, that side of the window is left open.
+ */
+function resolveDueDateRange(state: TaskHistoryBarState): {
+  due_date_from?: string
+  due_date_to?: string
+} {
+  const compose = (
+    ymd: string | undefined,
+    hm: string | undefined,
+    side: 'from' | 'to'
+  ): string | undefined => {
+    if (!ymd) return undefined
+    const [y, m, d] = ymd.split('-').map(Number)
+    let hh = 0
+    let mm = 0
+    let ss = 0
+    let ms = 0
+    if (hm) {
+      const [hhStr, mmStr] = hm.split(':')
+      hh = Number(hhStr)
+      mm = Number(mmStr)
+    } else if (side === 'to') {
+      hh = 23
+      mm = 59
+      ss = 59
+      ms = 999
+    }
+    const dt = new Date(y, m - 1, d, hh, mm, ss, ms)
+    if (isNaN(dt.getTime())) return undefined
+    return dt.toISOString()
+  }
+  return {
+    due_date_from: compose(state.dueFromDate, state.dueFromTime, 'from'),
+    due_date_to: compose(state.dueToDate, state.dueToTime, 'to'),
+  }
+}
+
 export function toTaskHistoryQuery(
   state: TaskHistoryBarState,
-  assignedToUserIds: number[] | undefined
+  assignedToUserIds: number[] | undefined,
+  createdByIn: number[] | undefined
 ): TaskHistoryFilters {
-  const range = resolveDateRange(state)
   return {
-    ...range,
-    date_type: state.dateType,
+    ...resolveCreatedAtRange(state),
+    ...resolveDueDateRange(state),
     assigned_to_user_ids: assignedToUserIds,
+    created_by_in: createdByIn,
     group_id: state.groupId,
     subject_id: state.subjectId,
     priority: state.priority,
@@ -191,12 +277,14 @@ export function toTaskHistoryQuery(
 
 export function toTaskHistoryAnalyticsQuery(
   state: TaskHistoryBarState,
-  assignedToUserIds: number[] | undefined
+  assignedToUserIds: number[] | undefined,
+  createdByIn: number[] | undefined
 ) {
-  const range = resolveDateRange(state)
   return {
-    ...range,
+    ...resolveCreatedAtRange(state),
+    ...resolveDueDateRange(state),
     assigned_to_user_ids: assignedToUserIds,
+    created_by_in: createdByIn,
     group_id: state.groupId,
     subject_id: state.subjectId,
     priority: state.priority,

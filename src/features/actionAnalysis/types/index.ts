@@ -127,8 +127,6 @@ export type TaskStatus =
   | 'rejected'
   | 'incoming_line_result'
 
-export type TaskHistoryDateType = 'created' | 'due'
-
 export type TaskHistorySort =
   | 'created_at_desc'
   | 'created_at_asc'
@@ -138,8 +136,10 @@ export type TaskHistorySort =
 export interface TaskHistoryFilters {
   date_from?: string
   date_to?: string
-  date_type?: TaskHistoryDateType
+  due_date_from?: string
+  due_date_to?: string
   assigned_to_user_ids?: number[]
+  created_by_in?: number[]
   group_id?: number
   subject_id?: number
   priority?: TaskPriority
@@ -194,7 +194,10 @@ export interface TaskHistoryAnalyticsResponse {
 export interface TaskHistoryAnalyticsFilters {
   date_from?: string
   date_to?: string
+  due_date_from?: string
+  due_date_to?: string
   assigned_to_user_ids?: number[]
+  created_by_in?: number[]
   group_id?: number
   subject_id?: number
   priority?: TaskPriority

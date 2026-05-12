@@ -44,7 +44,6 @@ export type {
   InteractionInternalDateType,
   TaskPriority,
   TaskStatus,
-  TaskHistoryDateType,
   TaskHistorySort,
   TaskHistoryFilters,
   TaskHistoryItem,
