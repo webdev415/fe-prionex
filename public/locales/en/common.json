@@ -65,7 +65,8 @@
     "next": "Next",
     "close": "Close",
     "logout": "Logout",
-    "loggingOut": "Logging out..."
+    "loggingOut": "Logging out...",
+    "deleting": "Deleting…"
   },
   "components": {
     "pagination": {
@@ -2677,7 +2678,7 @@
         "create": "Create template",
         "intro": "Reusable document bodies with variable placeholders.",
         "empty": "No templates yet.",
-        "loading": "Loading...",
+        "loading": "Loading…",
         "loadError": "Failed to load templates.",
         "columns": {
           "name": "Template name",

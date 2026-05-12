@@ -8,9 +8,11 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { useDocumentTemplates, type DocumentTemplate } from '@/features/documents'
+import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
 import { DocumentTemplateEditor } from './DocumentTemplateEditor'
@@ -41,7 +43,7 @@ export function DocumentTemplatesTab() {
 
   const dateFormatter = useMemo(
     () =>
-      new Intl.DateTimeFormat(i18n.language, {
+      new Intl.DateTimeFormat(intlLocaleForUiLanguage(i18n.language), {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -146,15 +148,19 @@ export function DocumentTemplatesTab() {
         <div className="border-error-200 bg-error-50 text-error-700 rounded-xl border p-4 text-sm">
           {t('pages.documentGeneration.templates.loadError', 'Failed to load templates.')}
         </div>
+      ) : isLoading ? (
+        <section
+          className="min-h-[200px]"
+          aria-busy="true"
+          aria-label={t('pages.documentGeneration.templates.loading', 'Loading…')}
+        >
+          <TableSkeleton columns={columns.length} rows={5} className="shadow-sm" />
+        </section>
       ) : (
         <DataTable<DocumentTemplate>
           columns={columns}
           data={items}
-          emptyMessage={
-            isLoading
-              ? t('pages.documentGeneration.templates.loading', 'Loading…')
-              : t('pages.documentGeneration.templates.empty', 'No templates yet.')
-          }
+          emptyMessage={t('pages.documentGeneration.templates.empty', 'No templates yet.')}
         />
       )}
 
