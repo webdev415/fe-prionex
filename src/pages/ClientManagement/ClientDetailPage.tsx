@@ -18,6 +18,7 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { DateSelect } from '@/components/ui/DateSelect'
+import { Label } from '@/components/ui/Label'
 import {
   Select,
   SelectContent,
@@ -65,6 +66,7 @@ import {
   useRestructuringAgreementDetail,
   useCreateRestructuringAgreement,
   useCloseDebt,
+  useUpdateDebtClosureDate,
   useCompleteRestructuringAgreement,
   useUpdateTask,
   useDeleteTask,
@@ -137,6 +139,26 @@ const stripPhoneFormat = (value: string) => value.replace(/[\s\-().]/g, '')
 const looksLikeUkrainePhone = (value: string) =>
   /^(\+?38)?0\d{9}$/.test(stripPhoneFormat(value)) || /^380\d{9}$/.test(stripPhoneFormat(value))
 
+/** Today at local midnight — used as max/default for closure-date pickers. */
+const getTodayAtMidnight = (): Date => {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+}
+
+/** Parse an ISO YYYY-MM-DD as a local-midnight Date (avoids TZ shifts). */
+const parseISODateAtMidnight = (iso: string): Date => {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, (m || 1) - 1, d || 1)
+}
+
+/** Format a Date as YYYY-MM-DD (the wire format the backend expects). */
+const formatDateAsISO = (d: Date): string => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export function ClientDetailPage() {
   const { t, i18n } = useTranslation('common')
   const { isCallActive, setOpenCallModal } = useCallStore()
@@ -171,6 +193,14 @@ export function ClientDetailPage() {
   })
   const [connectRrError, setConnectRrError] = useState<string | null>(null)
   const [closeLoanConfirm, setCloseLoanConfirm] = useState<number | null>(null) // debtId to close
+  // Local state for the closure-date picker inside the close-loan modal.
+  // Defaults to today; max = today (future dates rejected).
+  const [closeLoanClosureDate, setCloseLoanClosureDate] = useState<Date | null>(null)
+  const [closeLoanDateError, setCloseLoanDateError] = useState<string | null>(null)
+  // Inline-edit modal for closure date on already-closed debts.
+  const [editClosureDateDebtId, setEditClosureDateDebtId] = useState<number | null>(null)
+  const [editClosureDateValue, setEditClosureDateValue] = useState<Date | null>(null)
+  const [editClosureDateError, setEditClosureDateError] = useState<string | null>(null)
   const [completeRrConfirm, setCompleteRrConfirm] = useState<number | null>(null) // raId to complete
   const [activeCommentTab, setActiveCommentTab] = useState<
     'ta-chains' | 'comments' | 'primary' | 'dial-history'
@@ -224,6 +254,7 @@ export function ClientDetailPage() {
   )
   const { mutate: createRr, isPending: isCreatingRr } = useCreateRestructuringAgreement()
   const { mutate: closeDebt, isPending: isClosingDebt } = useCloseDebt()
+  const { mutate: updateClosureDate, isPending: isUpdatingClosureDate } = useUpdateDebtClosureDate()
   const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
   const { data: paymentsSection, isLoading: isPaymentsLoading } = useClientPaymentsSection(
     clientId,
@@ -405,6 +436,9 @@ export function ClientDetailPage() {
         principalDebt: Number(d.principal_debt ?? d.principal_amount ?? 0),
         remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
         totalToReturn: Number(d.total_to_return ?? 0),
+        // Closure date — surfaced for closed debts so the user can see it and,
+        // with the close_client_debt permission, edit it after closure.
+        creditClosedDate: d.credit_closed_date ?? null,
         status: d.status,
       })),
       // Payments mapped from PaymentResponse to UI shape
@@ -997,6 +1031,10 @@ export function ClientDetailPage() {
     )
   }
 
+  // Show the Closure Date column whenever the table contains at least one
+  // closed loan — otherwise it would be a column full of dashes.
+  const hasClosedLoan = client.loans.some((loan) => loan.status === 'closed')
+
   const loanColumns: Column<(typeof client.loans)[0]>[] = [
     { key: 'loanNumber', header: t('pages.clients.detail.tableHeaders.loanNumber'), align: 'left' },
     { key: 'issueDate', header: t('pages.clients.detail.tableHeaders.issueDate'), align: 'left' },
@@ -1006,6 +1044,19 @@ export function ClientDetailPage() {
       align: 'left',
     },
     { key: 'saleDate', header: t('pages.clients.detail.tableHeaders.saleDate'), align: 'left' },
+    ...(hasClosedLoan
+      ? [
+          {
+            key: 'creditClosedDate' as const,
+            header: t('pages.clients.detail.closureDate', 'Closure date'),
+            align: 'left' as const,
+            render: (loan: (typeof client.loans)[0]) =>
+              loan.status === 'closed' && loan.creditClosedDate
+                ? formatDate(loan.creditClosedDate)
+                : '-',
+          },
+        ]
+      : []),
     {
       key: 'principalAmount',
       header: t('pages.clients.detail.tableHeaders.principalAmount'),
@@ -1034,19 +1085,49 @@ export function ClientDetailPage() {
       key: 'actions',
       header: t('pages.clients.detail.tableHeaders.actions'),
       align: 'center',
-      render: (loan) =>
-        loan.status === 'active' ? (
-          <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-            <button
-              onClick={() => setCloseLoanConfirm(loan.id)}
-              disabled={isClosingDebt}
-              className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
-              title={t('pages.clients.detail.closeLoan')}
-            >
-              <Icons.Success size={18} />
-            </button>
-          </PermissionGuard>
-        ) : null,
+      render: (loan) => {
+        if (loan.status === 'active') {
+          return (
+            <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+              <button
+                onClick={() => {
+                  setCloseLoanConfirm(loan.id)
+                  setCloseLoanClosureDate(getTodayAtMidnight())
+                  setCloseLoanDateError(null)
+                }}
+                disabled={isClosingDebt}
+                className="p-1 text-green-600 hover:text-green-800 disabled:opacity-50"
+                title={t('pages.clients.detail.closeLoan')}
+              >
+                <Icons.Success size={18} />
+              </button>
+            </PermissionGuard>
+          )
+        }
+        if (loan.status === 'closed') {
+          return (
+            <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
+              <button
+                onClick={() => {
+                  setEditClosureDateDebtId(loan.id)
+                  setEditClosureDateValue(
+                    loan.creditClosedDate
+                      ? parseISODateAtMidnight(loan.creditClosedDate)
+                      : getTodayAtMidnight()
+                  )
+                  setEditClosureDateError(null)
+                }}
+                disabled={isUpdatingClosureDate}
+                className="p-1 text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
+              >
+                <Icons.Edit size={18} />
+              </button>
+            </PermissionGuard>
+          )
+        }
+        return null
+      },
     },
   ]
 
@@ -4093,10 +4174,13 @@ export function ClientDetailPage() {
           </ModalFooter>
         </Modal>
 
-        {/* Close Loan Confirmation Modal */}
+        {/* Close Loan Modal — confirmation + closure date picker. */}
         <Modal
           open={closeLoanConfirm !== null}
-          onClose={() => setCloseLoanConfirm(null)}
+          onClose={() => {
+            setCloseLoanConfirm(null)
+            setCloseLoanDateError(null)
+          }}
           maxWidth="md"
         >
           <ModalHeader
@@ -4108,18 +4192,39 @@ export function ClientDetailPage() {
             title={t('pages.clients.detail.closeLoan')}
           />
           <ModalContent>
-            <p className="text-dark-500 text-base font-light">
+            <p className="text-dark-500 mb-4 text-base font-light">
               {t(
                 'pages.clients.detail.confirmCloseLoan',
                 'Are you sure you want to close this loan? This action cannot be undone.'
               )}
             </p>
+            <div className="flex flex-col items-start gap-2 self-stretch">
+              <Label required className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                {t('pages.clients.detail.closureDate', 'Closure date')}
+              </Label>
+              <DateSelect
+                value={closeLoanClosureDate}
+                onChange={({ value }) => {
+                  setCloseLoanClosureDate(value)
+                  setCloseLoanDateError(null)
+                }}
+                placeholder={t('pages.clients.modals.recordPayment.selectDate', 'Select date')}
+                className="rounded-md"
+                max={getTodayAtMidnight()}
+              />
+              {closeLoanDateError && (
+                <span className="text-sm text-red-600">{closeLoanDateError}</span>
+              )}
+            </div>
           </ModalContent>
           <ModalFooter>
             <Button
               type="button"
               variant="cancel"
-              onClick={() => setCloseLoanConfirm(null)}
+              onClick={() => {
+                setCloseLoanConfirm(null)
+                setCloseLoanDateError(null)
+              }}
               disabled={isClosingDebt}
               className="h-[45px] flex-1 text-sm"
             >
@@ -4129,10 +4234,30 @@ export function ClientDetailPage() {
               type="button"
               variant="danger"
               onClick={() => {
-                if (closeLoanConfirm !== null) {
-                  closeDebt({ clientId, debtId: closeLoanConfirm })
-                  setCloseLoanConfirm(null)
+                if (closeLoanConfirm === null) return
+                if (!closeLoanClosureDate) {
+                  setCloseLoanDateError(
+                    t('pages.clients.detail.closureDateRequired', 'Closure date is required')
+                  )
+                  return
                 }
+                const today = getTodayAtMidnight()
+                if (closeLoanClosureDate.getTime() > today.getTime()) {
+                  setCloseLoanDateError(
+                    t(
+                      'pages.clients.detail.closureDateFuture',
+                      'Closure date cannot be in the future'
+                    )
+                  )
+                  return
+                }
+                closeDebt({
+                  clientId,
+                  debtId: closeLoanConfirm,
+                  closureDate: formatDateAsISO(closeLoanClosureDate),
+                })
+                setCloseLoanConfirm(null)
+                setCloseLoanDateError(null)
               }}
               disabled={isClosingDebt}
               className="h-[45px] flex-1 text-sm"
@@ -4140,6 +4265,93 @@ export function ClientDetailPage() {
               {isClosingDebt
                 ? t('actions.saving', 'Saving...')
                 : t('pages.clients.detail.closeLoan')}
+            </Button>
+          </ModalFooter>
+        </Modal>
+
+        {/* Edit Closure Date Modal — for already-closed debts. */}
+        <Modal
+          open={editClosureDateDebtId !== null}
+          onClose={() => {
+            setEditClosureDateDebtId(null)
+            setEditClosureDateError(null)
+          }}
+          maxWidth="md"
+        >
+          <ModalHeader
+            icon={
+              <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+                <Icons.Edit size={20} className="text-dark-500" strokeWidth={2} />
+              </div>
+            }
+            title={t('pages.clients.detail.editClosureDate', 'Edit closure date')}
+          />
+          <ModalContent>
+            <div className="flex flex-col items-start gap-2 self-stretch">
+              <Label required className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                {t('pages.clients.detail.closureDate', 'Closure date')}
+              </Label>
+              <DateSelect
+                value={editClosureDateValue}
+                onChange={({ value }) => {
+                  setEditClosureDateValue(value)
+                  setEditClosureDateError(null)
+                }}
+                placeholder={t('pages.clients.modals.recordPayment.selectDate', 'Select date')}
+                className="rounded-md"
+                max={getTodayAtMidnight()}
+              />
+              {editClosureDateError && (
+                <span className="text-sm text-red-600">{editClosureDateError}</span>
+              )}
+            </div>
+          </ModalContent>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="cancel"
+              onClick={() => {
+                setEditClosureDateDebtId(null)
+                setEditClosureDateError(null)
+              }}
+              disabled={isUpdatingClosureDate}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {t('actions.cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => {
+                if (editClosureDateDebtId === null) return
+                if (!editClosureDateValue) {
+                  setEditClosureDateError(
+                    t('pages.clients.detail.closureDateRequired', 'Closure date is required')
+                  )
+                  return
+                }
+                const today = getTodayAtMidnight()
+                if (editClosureDateValue.getTime() > today.getTime()) {
+                  setEditClosureDateError(
+                    t(
+                      'pages.clients.detail.closureDateFuture',
+                      'Closure date cannot be in the future'
+                    )
+                  )
+                  return
+                }
+                updateClosureDate({
+                  clientId,
+                  debtId: editClosureDateDebtId,
+                  closureDate: formatDateAsISO(editClosureDateValue),
+                })
+                setEditClosureDateDebtId(null)
+                setEditClosureDateError(null)
+              }}
+              disabled={isUpdatingClosureDate}
+              className="h-[45px] flex-1 text-sm"
+            >
+              {isUpdatingClosureDate ? t('actions.saving', 'Saving...') : t('actions.save', 'Save')}
             </Button>
           </ModalFooter>
         </Modal>
