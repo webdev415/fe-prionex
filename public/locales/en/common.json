@@ -2395,7 +2395,7 @@
       "delayHint": "The previous step was just completed. Please wait for the delay to pass.",
       "saveInteraction": "Save interaction",
       "continueToNext": "Continue →",
-      "quickPicks": "Quick start",
+      "quickPicks": "Quick Picks",
       "chainProgress": "Chain progress",
       "stepOf": "step {{current}} of {{total}}",
       "current": "current",
@@ -2607,6 +2607,9 @@
       "selectDepartment": "Select department...",
       "selectDepartmentHint": "Select a department to manage its templates.",
       "selectChain": "Select chain...",
+      "loadingDepartments": "Loading departments...",
+      "loadingTemplates": "Loading templates…",
+      "loadingStepPresets": "Loading step fields…",
       "empty": "No templates configured for this department yet.",
       "addTemplate": "Add template",
       "templateName": "Template name",
@@ -2615,6 +2618,9 @@
       "leaveEmpty": "Leave empty...",
       "creditAutoFill": "Credit is selected by operator from client data",
       "addButton": "Add template",
+      "chainFallback": "Chain #{{id}}",
+      "taFallback": "TA #{{id}}",
+      "presetChip": "{{label}}: {{value}}",
       "toasts": {
         "added": "Template added",
         "removed": "Template removed"
@@ -2897,7 +2903,8 @@
         "targetActions": "Target Actions",
         "taChains": "TA Chains",
         "dictionary": "Dictionary",
-        "chainBuilder": "Chain Builder"
+        "chainBuilder": "Chain Builder",
+        "quickPicks": "Quick Picks"
       }
     },
     "targetActions": {

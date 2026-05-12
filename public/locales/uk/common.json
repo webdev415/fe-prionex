@@ -2431,7 +2431,7 @@
       "delayHint": "Попередній крок щойно завершено. Зачекайте, поки пройде затримка.",
       "saveInteraction": "Зберегти взаємодію",
       "continueToNext": "Далі →",
-      "quickPicks": "Швидкий старт",
+      "quickPicks": "Quick Picks",
       "chainProgress": "Перебіг ланцюжка",
       "stepOf": "крок {{current}} з {{total}}",
       "current": "поточний",
@@ -2669,7 +2669,8 @@
         "targetActions": "Цільові дії",
         "taChains": "Ланцюжки ЦД",
         "dictionary": "Словник",
-        "chainBuilder": "Конструктор ланцюжків"
+        "chainBuilder": "Конструктор ланцюжків",
+        "quickPicks": "Quick Picks"
       }
     },
     "targetActions": {
@@ -2851,6 +2852,31 @@
         "phoneUnknown": "телефон: крок #{{id}}",
         "generic": "{{key}}: {{value}}",
         "stepRef": "Крок {{order}} — {{name}}"
+      }
+    },
+    "quickPicks": {
+      "title": "Quick Picks",
+      "description": "Створюйте іменовані шаблони з попередньо заповненими значеннями кроків. Оператор обирає шаблон — ланцюжок заповнюється автоматично.",
+      "selectDepartment": "Оберіть відділ...",
+      "selectDepartmentHint": "Оберіть відділ, щоб керувати його шаблонами.",
+      "selectChain": "Оберіть ланцюжок...",
+      "loadingDepartments": "Завантаження відділів...",
+      "loadingTemplates": "Завантаження шаблонів…",
+      "loadingStepPresets": "Завантаження полів кроків…",
+      "empty": "Для цього відділу шаблони ще не налаштовані.",
+      "addTemplate": "Додати шаблон",
+      "templateName": "Назва шаблону",
+      "templateNamePlaceholder": "напр. PTP — стандарт",
+      "presetValues": "Попереднє заповнення кроків (залиште порожнім, щоб пропустити)",
+      "leaveEmpty": "Залишити порожнім...",
+      "creditAutoFill": "Кредит оператор обирає з даних клієнта",
+      "addButton": "Додати шаблон",
+      "chainFallback": "Ланцюжок #{{id}}",
+      "taFallback": "ЦД #{{id}}",
+      "presetChip": "{{label}}: {{value}}",
+      "toasts": {
+        "added": "Шаблон додано",
+        "removed": "Шаблон вилучено"
       }
     },
     "documentGeneration": {

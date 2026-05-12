@@ -2431,7 +2431,7 @@
       "delayHint": "Предыдущий шаг только что завершён. Дождитесь окончания задержки.",
       "saveInteraction": "Сохранить взаимодействие",
       "continueToNext": "Далее →",
-      "quickPicks": "Быстрый старт",
+      "quickPicks": "Quick Picks",
       "chainProgress": "Ход цепочки",
       "stepOf": "шаг {{current}} из {{total}}",
       "current": "текущий",
@@ -2669,7 +2669,8 @@
         "targetActions": "Целевые действия",
         "taChains": "Цепочки ЦД",
         "dictionary": "Словарь",
-        "chainBuilder": "Конструктор цепочек"
+        "chainBuilder": "Конструктор цепочек",
+        "quickPicks": "Quick Picks"
       }
     },
     "targetActions": {
@@ -2851,6 +2852,31 @@
         "phoneUnknown": "телефон: шаг #{{id}}",
         "generic": "{{key}}: {{value}}",
         "stepRef": "Шаг {{order}} — {{name}}"
+      }
+    },
+    "quickPicks": {
+      "title": "Quick Picks",
+      "description": "Создавайте именованные шаблоны с предзаполненными значениями шагов. Оператор выбирает шаблон — цепочка заполняется автоматически.",
+      "selectDepartment": "Выберите отдел...",
+      "selectDepartmentHint": "Выберите отдел, чтобы управлять его шаблонами.",
+      "selectChain": "Выберите цепочку...",
+      "loadingDepartments": "Загрузка отделов...",
+      "loadingTemplates": "Загрузка шаблонов…",
+      "loadingStepPresets": "Загрузка полей шагов…",
+      "empty": "Для этого отдела шаблоны ещё не настроены.",
+      "addTemplate": "Добавить шаблон",
+      "templateName": "Название шаблона",
+      "templateNamePlaceholder": "напр. PTP — стандарт",
+      "presetValues": "Предзаполнение шагов (оставьте пустым, чтобы пропустить)",
+      "leaveEmpty": "Оставить пустым...",
+      "creditAutoFill": "Кредит оператор выбирает из данных клиента",
+      "addButton": "Добавить шаблон",
+      "chainFallback": "Цепочка #{{id}}",
+      "taFallback": "ЦД #{{id}}",
+      "presetChip": "{{label}}: {{value}}",
+      "toasts": {
+        "added": "Шаблон добавлен",
+        "removed": "Шаблон удалён"
       }
     },
     "documentGeneration": {
