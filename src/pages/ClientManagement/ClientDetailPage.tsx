@@ -4106,7 +4106,7 @@ export function ClientDetailPage() {
           telephonyUnavailable={isTelephonyUnavailable}
           onCallStart={(callType: CallType, dialPhone: string) => {
             if (!dialPhone?.trim()) return
-            handleOriginateCall(dialPhone, client.fullName, client.id.toString(), callType)
+            return handleOriginateCall(dialPhone, client.fullName, client.id.toString(), callType)
           }}
           onCallEnd={(_duration: number, _status: CallStatus) => {
             handleCallEnd()

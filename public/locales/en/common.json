@@ -1625,6 +1625,8 @@
           "callType": "Call Type",
           "whiteLine": "White Line",
           "grayLine": "Gray Line",
+          "lineWhite": "White",
+          "lineGray": "Gray",
           "spamCalls": "Spam calls",
           "markAsSpam": "Mark as Spam",
           "callNow": "Call Now",

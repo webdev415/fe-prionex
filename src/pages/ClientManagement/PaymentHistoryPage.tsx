@@ -2064,7 +2064,7 @@ export function PaymentHistoryPage() {
         telephonyUnavailable={isTelephonyUnavailable}
         onCallStart={(callType: CallType, dialPhone: string) => {
           if (!dialPhone?.trim()) return
-          handleOriginateCall(
+          return handleOriginateCall(
             dialPhone,
             client?.fullName || '',
             client?.id?.toString() || '',
