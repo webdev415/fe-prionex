@@ -60,6 +60,11 @@ export interface RestructuringAgreementSummary {
 export interface RestructuringPaymentEntry {
   date?: string | null
   amount?: string | null
+  // Filled by backend FIFO allocation against verified payments. Lets
+  // the RR detail modal show plan + actual side by side.
+  received_date?: string | null
+  received_amount?: string | null
+  status?: 'paid' | 'partially_paid' | 'unpaid' | null
 }
 
 export interface CreateRestructuringAgreementRequest {

@@ -4284,13 +4284,17 @@ export function ClientDetailPage() {
                     </span>
                   </div>
                 </div>
-                {/* Payment schedule with vertical scroll */}
+                {/* Payment schedule with vertical scroll. Each row shows
+                    the plan side by side with the actual payment received
+                    (FIFO-allocated against verified payments by the
+                    backend). Status badge tells the operator at a glance
+                    which installments are paid / partial / unpaid. */}
                 {rrDetail.payments.length > 0 && (
                   <div className="pt-2">
                     <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
                       {t('pages.clients.detail.rrPaymentSchedule')}
                     </h3>
-                    <div className="max-h-48 overflow-y-auto">
+                    <div className="max-h-60 overflow-y-auto">
                       <DataTable<RestructuringPaymentEntry & { id: number }>
                         columns={[
                           {
@@ -4303,6 +4307,46 @@ export function ClientDetailPage() {
                             header: t('pages.clients.detail.rrPaymentAmount'),
                             align: 'right',
                             render: (p) => formatMoneyUAHTwoDecimals(Number(p.amount ?? 0)),
+                          },
+                          {
+                            key: 'received_date',
+                            header: t('pages.clients.detail.rrReceivedDate', 'Received Date'),
+                            render: (p) => (p.received_date ? formatDate(p.received_date) : '—'),
+                          },
+                          {
+                            key: 'received_amount',
+                            header: t('pages.clients.detail.rrReceivedAmount', 'Received Amount'),
+                            align: 'right',
+                            render: (p) =>
+                              p.received_amount != null
+                                ? formatMoneyUAHTwoDecimals(Number(p.received_amount))
+                                : '—',
+                          },
+                          {
+                            key: 'status',
+                            header: t('pages.clients.detail.rrPaymentStatus', 'Status'),
+                            render: (p) => {
+                              const s = p.status ?? 'unpaid'
+                              const cls =
+                                s === 'paid'
+                                  ? 'bg-green-100 text-green-700'
+                                  : s === 'partially_paid'
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : 'bg-gray-100 text-gray-600'
+                              const label =
+                                s === 'paid'
+                                  ? t('pages.clients.detail.rrPaid', 'Paid')
+                                  : s === 'partially_paid'
+                                    ? t('pages.clients.detail.rrPartiallyPaid', 'Partially Paid')
+                                    : t('pages.clients.detail.rrUnpaid', 'Unpaid')
+                              return (
+                                <span
+                                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}
+                                >
+                                  {label}
+                                </span>
+                              )
+                            },
                           },
                         ]}
                         data={rrDetail.payments.map((p, idx) => ({ ...p, id: idx }))}
