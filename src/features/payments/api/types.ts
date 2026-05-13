@@ -113,6 +113,10 @@ export interface EditPaymentRequest {
   bank_transaction_id?: string
 }
 
+export interface ReassignPaymentEmployeeRequest {
+  recorded_by_user_id: number
+}
+
 export interface PaymentListParams {
   page?: number
   limit?: number
