@@ -1,4 +1,4 @@
-import i18n from './i18n'
+import i18n, { intlLocaleForUiLanguage } from './i18n'
 
 /**
  * Formatting utilities for display
@@ -48,7 +48,7 @@ export function parseAmount(value: string | number | null | undefined): number {
 
 /**
  * Format currency value with ₴ symbol
- * Uses locale-aware formatting and replaces commas with spaces (for Ukrainian/Russian locales)
+ * Uses locale-aware formatting and replaces commas with spaces for Ukrainian locale
  * Accepts both string and number inputs (backend sends financial fields as strings).
  * Example: "₴ 10 080" or "₴ 1,234" (depending on locale)
  */
@@ -58,9 +58,7 @@ export function formatCurrency(amount?: string | number | null): string {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
   if (isNaN(num)) return '—'
 
-  // Get current language from i18n, default to 'uk'
-  const currentLanguage = i18n.language || 'uk'
-  const locale = currentLanguage === 'uk' ? 'uk-UA' : currentLanguage === 'ru' ? 'ru-RU' : 'en-US'
+  const locale = intlLocaleForUiLanguage(i18n.language)
 
   // Format with locale-aware number formatting
   const formatted = new Intl.NumberFormat(locale, {

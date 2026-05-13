@@ -38,6 +38,10 @@ export interface DebtDetail {
   principal_debt?: string | null
   total_paid_amount?: string | null
   total_to_return?: string | null
+
+  // Legacy TABLE460.f53 — total amount eligible for return after sale.
+  // Surfaced on the loans table only when it differs from remaining_debt_amount.
+  legacy_f53?: string | null
 }
 
 export interface RestructuringAgreementSummary {
@@ -56,6 +60,11 @@ export interface RestructuringAgreementSummary {
 export interface RestructuringPaymentEntry {
   date?: string | null
   amount?: string | null
+  // Filled by backend FIFO allocation against verified payments. Lets
+  // the RR detail modal show plan + actual side by side.
+  received_date?: string | null
+  received_amount?: string | null
+  status?: 'paid' | 'partially_paid' | 'unpaid' | null
 }
 
 export interface CreateRestructuringAgreementRequest {
@@ -786,6 +795,7 @@ export interface CallRecord {
   caller_id_name?: string | null
   caller_id_number?: string | null
   campaign_id?: string | null
+  direction?: string | null
   state: string
   uniqueid?: string | null
   initiated_at: string
@@ -801,6 +811,7 @@ export interface CallRecord {
   notes?: string | null
   call_metadata?: Record<string, unknown> | null
   hangup_cause?: number | null
+  telephony_type?: string | null
 }
 
 export interface SmsRecord {

@@ -22,7 +22,9 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { Button } from '@/components/ui/Button'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { cn } from '@/lib/utils'
+import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import {
   useDocumentJournal,
   type DocumentJournalEntry,
@@ -155,7 +157,7 @@ export function DocumentGenerationPage() {
 
   const dateFormatter = useMemo(
     () =>
-      new Intl.DateTimeFormat(i18n.language, {
+      new Intl.DateTimeFormat(intlLocaleForUiLanguage(i18n.language), {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -246,7 +248,7 @@ export function DocumentGenerationPage() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4 p-6">
+    <div className="flex h-full flex-col gap-4">
       <h1 className="text-2xl font-semibold text-gray-900">
         {t('pages.documentGeneration.title', 'Document Generation')}
       </h1>
@@ -392,6 +394,7 @@ export function DocumentGenerationPage() {
                 onChange={({ value }) => updateFilter('date_from', dateToYmd(value))}
                 max={ymdToDate(filters.date_to) ?? undefined}
                 placeholder={t('pages.documentGeneration.filters.dateFrom', 'Date from')}
+                className="rounded-lg border-gray-400"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -403,10 +406,11 @@ export function DocumentGenerationPage() {
                 onChange={({ value }) => updateFilter('date_to', dateToYmd(value))}
                 min={ymdToDate(filters.date_from) ?? undefined}
                 placeholder={t('pages.documentGeneration.filters.dateTo', 'Date to')}
+                className="rounded-lg border-gray-400"
               />
             </div>
             <div className="flex items-end">
-              <Button variant="secondary" onClick={resetFilters} className="w-full">
+              <Button variant="secondary" onClick={resetFilters} className="h-[45px] w-full">
                 {t('pages.documentGeneration.filters.reset', 'Reset')}
               </Button>
             </div>
@@ -416,15 +420,19 @@ export function DocumentGenerationPage() {
             <div className="border-error-200 bg-error-50 text-error-700 rounded-xl border p-4 text-sm">
               {t('pages.documentGeneration.journal.loadError', 'Failed to load document journal.')}
             </div>
+          ) : isLoading ? (
+            <section
+              className="min-h-[200px]"
+              aria-busy="true"
+              aria-label={t('pages.documentGeneration.journal.loading', 'Loading…')}
+            >
+              <TableSkeleton columns={columns.length} rows={6} className="shadow-sm" />
+            </section>
           ) : (
             <DataTable<DocumentJournalEntry>
               columns={columns}
               data={data?.items ?? []}
-              emptyMessage={
-                isLoading
-                  ? t('pages.documentGeneration.journal.loading', 'Loading…')
-                  : t('pages.documentGeneration.journal.empty', 'No documents found.')
-              }
+              emptyMessage={t('pages.documentGeneration.journal.empty', 'No documents found.')}
             />
           )}
 

@@ -8,6 +8,7 @@ import { useTargetActions } from '@/features/targetActions/hooks/useTargetAction
 import type { TargetAction } from '@/features/targetActions/api/types'
 import { useTaHistory } from '@/features/actionAnalysis'
 import { Pagination } from '@/components/ui/Pagination'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { defaultCustomDateRange } from '../lib/dateRange'
 import {
   TA_HISTORY_FILTERS_DEFAULT,
@@ -18,8 +19,6 @@ import {
 } from '../lib/taHistoryUrlState'
 import { TaHistoryFiltersBar } from './TaHistoryFiltersBar'
 import { TaHistoryTable } from './TaHistoryTable'
-
-const PAGE_SIZE = 20
 
 export function TaHistoryTab() {
   const { t } = useTranslation('common')
@@ -69,21 +68,22 @@ export function TaHistoryTab() {
     barState.departmentId != null && (recordedByIn == null || recordedByIn.length === 0)
 
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const queryFilters = useMemo(
     () => ({
       ...toTaHistoryQuery(barState, recordedByIn),
-      skip: (page - 1) * PAGE_SIZE,
-      limit: PAGE_SIZE,
+      skip: (page - 1) * pageSize,
+      limit: pageSize,
     }),
-    [barState, recordedByIn, page]
+    [barState, recordedByIn, page, pageSize]
   )
 
   const queryEnabled =
     (barState.period !== 'custom' || !!(barState.customFromDate && barState.customToDate)) &&
     !isDeptEmpty
 
-  const { data, error } = useTaHistory(queryFilters, queryEnabled)
+  const { data, error, isPending } = useTaHistory(queryFilters, queryEnabled)
 
   const handleApply = (next: TaHistoryBarState) => {
     let out: TaHistoryBarState = next
@@ -114,7 +114,7 @@ export function TaHistoryTab() {
 
   const items = isDeptEmpty ? [] : (data?.items ?? [])
   const total = isDeptEmpty ? 0 : (data?.total_count ?? 0)
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   return (
     <div className="flex flex-col gap-4">
@@ -146,19 +146,23 @@ export function TaHistoryTab() {
         </div>
       ) : (
         <>
-          <TaHistoryTable
-            data={items}
-            chains={chains}
-            tasById={tasById}
-            userTimezone={userTimezone}
-          />
-          {total > PAGE_SIZE && (
+          {queryEnabled && isPending ? (
+            <TableSkeleton columns={8} rows={pageSize} className="w-full" />
+          ) : (
+            <TaHistoryTable
+              data={items}
+              chains={chains}
+              tasById={tasById}
+              userTimezone={userTimezone}
+            />
+          )}
+          {total > pageSize && (
             <Pagination
               currentPage={page}
               totalPages={totalPages}
-              pageSize={PAGE_SIZE}
+              pageSize={pageSize}
               onPageChange={setPage}
-              onPageSizeChange={() => {}}
+              onPageSizeChange={setPageSize}
             />
           )}
         </>

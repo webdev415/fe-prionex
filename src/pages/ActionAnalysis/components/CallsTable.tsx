@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { TelephonyTypeBadge } from '@/components/ui/TelephonyTypeBadge'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatDateTime } from '@/lib/formatters'
@@ -22,7 +23,6 @@ function isAnswered(c: CallMonitoringItem): boolean {
 
 interface Props {
   data: CallMonitoringItem[]
-  loading?: boolean
   /**
    * Single open-the-call entry point — the row's recording button writes
    * `?call_id=…` to the URL, the parent (`CallsTab`) opens the merged
@@ -89,6 +89,11 @@ export function CallsTable({ data, onOpenCall }: Props) {
           </span>
         )
       },
+    },
+    {
+      key: 'telephonyType',
+      header: t('pages.actionAnalysis.columns.telephonyType', 'Telephony type'),
+      render: (r) => <TelephonyTypeBadge type={r.telephony_type} direction={r.direction} />,
     },
     {
       key: 'phone',

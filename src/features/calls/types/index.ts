@@ -44,6 +44,7 @@ export interface CallDetail {
   call_id: string
   agent_extension: string
   customer_number: string
+  direction?: string | null
   state: CallState
   initiated_at: string
   ringing_at?: string
@@ -56,6 +57,7 @@ export interface CallDetail {
   outcome?: CallOutcome
   disposition?: string
   notes?: string
+  telephony_type?: string | null
 }
 
 export interface CallHistoryFilters {

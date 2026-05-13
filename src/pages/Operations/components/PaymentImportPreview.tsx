@@ -126,6 +126,24 @@ function usePaymentPreviewColumns(t: TFunction<'common'>): Column<PreviewRowWith
         ),
       },
       {
+        // Free-text payment_type carried over from the CSV (e.g. "Изипей").
+        // Kept separate from the New/Pending badge so each column shows one
+        // piece of information.
+        key: 'payment_type',
+        header: t(`${c}.paymentType`),
+        render: (row: PreviewRowWithId) => {
+          if (row.status === 'error') return <span className="text-xs text-gray-400">—</span>
+          const typeText = row.payment_type?.trim() || null
+          return typeText ? (
+            <span className="text-xs text-gray-700">{typeText}</span>
+          ) : (
+            <span className="text-xs text-gray-400">—</span>
+          )
+        },
+      },
+      {
+        // New/Pending pill — reflects whether the row would create a new
+        // payment or match an existing pending one.
         key: 'has_pending_match',
         header: t(`${c}.type`),
         render: (row: PreviewRowWithId) => {

@@ -3,6 +3,7 @@
  * TIN-based brand isolation architecture
  */
 
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
@@ -363,7 +364,9 @@ export function useClientCallSmsHistory(clientId: number, enabled = true) {
           duration: durationSecs > 0 ? `${durationMin}m ${durationSec}s` : '-',
           operator: c.agent_extension && c.agent_extension !== '000' ? c.agent_extension : '-',
           cost: 0,
-          type: 'Outgoing' as 'Outgoing' | 'Incoming',
+          type: c.direction === 'inbound' ? ('Incoming' as const) : ('Outgoing' as const),
+          direction: c.direction ?? null,
+          telephony_type: c.telephony_type ?? null,
           line: '',
           initiated_at: c.initiated_at ?? new Date().toISOString(),
           recording_path: c.recording_path ?? null,
@@ -549,6 +552,7 @@ export function useClientActivitiesPaginated(
     queryFn: () => interactionApi.getClientInteractions(clientId, params),
     enabled: enabled && clientId > 0,
     staleTime: 30000,
+    placeholderData: (previousData) => previousData,
   })
 }
 
@@ -585,14 +589,42 @@ export function useClientDialHistory(clientId: number, enabled = true) {
 
 /**
  * Get restructuring agreements for a client (RR tab).
+ *
+ * Side effect: the BE list endpoint runs a lazy RR → Debt close
+ * cascade so already-terminal RRs (Completed / Completed Early)
+ * trigger their linked debt to close. When this query observes a
+ * terminal RR (status_id 4 or 5), we invalidate the loans query so
+ * the closed debt disappears from "Loans in Process" without a
+ * manual page refresh. Detail is invalidated too because
+ * remaining_debt_amount and status are surfaced in the client detail
+ * card.
  */
 export function useClientRestructuringAgreements(clientId: number, enabled = true) {
-  return useQuery({
+  const queryClient = useQueryClient()
+  const query = useQuery({
     queryKey: clientKeys.restructuringAgreements(clientId),
     queryFn: () => clientApi.getClientRestructuringAgreements(clientId),
     enabled: enabled && clientId > 0,
     staleTime: 30000,
   })
+
+  const hasTerminalRR = Array.isArray(query.data)
+    ? query.data.some((ra) => ra.status_id === 4 || ra.status_id === 5)
+    : false
+  const dataUpdatedAt = query.dataUpdatedAt
+
+  // Refetch loans + detail exactly when the RR list resolves with at
+  // least one terminal RR. The dependency on dataUpdatedAt makes this
+  // re-run on every successful fetch (not just the first), so a fresh
+  // cascade close becomes visible after a poll/refresh.
+  useEffect(() => {
+    if (clientId > 0 && hasTerminalRR) {
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId) })
+    }
+  }, [clientId, hasTerminalRR, dataUpdatedAt, queryClient])
+
+  return query
 }
 
 /**
@@ -630,14 +662,21 @@ export function useCreateRestructuringAgreement() {
 }
 
 /**
- * Close a debt (set status to 'closed').
+ * Close a debt (set status to 'closed') with an optional explicit closure date.
  */
 export function useCloseDebt() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ clientId, debtId }: { clientId: number; debtId: number }) =>
-      clientApi.closeDebt(clientId, debtId),
+    mutationFn: ({
+      clientId,
+      debtId,
+      closureDate,
+    }: {
+      clientId: number
+      debtId: number
+      closureDate?: string
+    }) => clientApi.closeDebt(clientId, debtId, closureDate),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId) })
       queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
@@ -646,6 +685,34 @@ export function useCloseDebt() {
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       const message = error?.response?.data?.detail || 'Failed to close loan'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Edit the closure date on an already-closed debt.
+ */
+export function useUpdateDebtClosureDate() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      debtId,
+      closureDate,
+    }: {
+      clientId: number
+      debtId: number
+      closureDate: string
+    }) => clientApi.updateDebtClosureDate(clientId, debtId, closureDate),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
+      toast.success('Closure date updated')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to update closure date'
       toast.error(message)
     },
   })
@@ -664,10 +731,150 @@ export function useCompleteRestructuringAgreement() {
       queryClient.invalidateQueries({
         queryKey: clientKeys.restructuringAgreements(variables.clientId),
       })
+      // Completing an RR cascade-closes the linked debt on the BE
+      // (see rr_status_service.cascade_close_debt_for_terminal_rr),
+      // so the loans list and client detail need to refetch or the
+      // closed loan will keep appearing in "Loans in Process".
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
       toast.success('Restructuring agreement completed')
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       const message = error?.response?.data?.detail || 'Failed to complete restructuring agreement'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Manual status transition between non-terminal statuses (Connected /
+ * Violated / Cancelled). Backend enforces the allowed-transition matrix.
+ */
+export function useTransitionRRStatus() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      raId,
+      targetStatusId,
+      reason,
+    }: {
+      clientId: number
+      raId: number
+      targetStatusId: 1 | 2 | 3
+      reason?: string
+    }) =>
+      clientApi.transitionRestructuringAgreementStatus(clientId, raId, {
+        target_status_id: targetStatusId,
+        reason,
+      }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringAgreements(variables.clientId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringDetail(variables.clientId, variables.raId),
+      })
+      toast.success('Restructuring status updated')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to update restructuring status'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Manual disconnect of an RR — flips status to Cancelled with a
+ * mandatory reason. Use when the RR was created by mistake.
+ */
+export function useDisconnectRR() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ clientId, raId, reason }: { clientId: number; raId: number; reason: string }) =>
+      clientApi.disconnectRestructuringAgreement(clientId, raId, { reason }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringAgreements(variables.clientId),
+      })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringDetail(variables.clientId, variables.raId),
+      })
+      toast.success('Restructuring disconnected')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to disconnect restructuring'
+      toast.error(message)
+    },
+  })
+}
+
+/**
+ * Newest-first audit log of status changes for one RR.
+ */
+export function useRRStatusHistory(clientId: number, raId: number, enabled = true) {
+  return useQuery({
+    queryKey: [...clientKeys.restructuringDetail(clientId, raId), 'status-history'] as const,
+    queryFn: () => clientApi.getRestructuringAgreementStatusHistory(clientId, raId),
+    enabled: enabled && clientId > 0 && raId > 0,
+    staleTime: 30000,
+  })
+}
+
+/**
+ * List overpayments recorded against an RR (newest-first).
+ */
+export function useRROverpayments(clientId: number, raId: number, enabled = true) {
+  return useQuery({
+    queryKey: [...clientKeys.restructuringDetail(clientId, raId), 'overpayments'] as const,
+    queryFn: () => clientApi.getRROverpayments(clientId, raId),
+    enabled: enabled && clientId > 0 && raId > 0,
+    staleTime: 30000,
+  })
+}
+
+/**
+ * Record an overpayment against an RR. Append-only — multiple
+ * overpayment rows per RR are allowed; corrective rows over mutation.
+ */
+export function useRecordRROverpayment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      clientId,
+      raId,
+      amount,
+      allocationTarget,
+      reason,
+    }: {
+      clientId: number
+      raId: number
+      amount: number
+      allocationTarget: 'next' | 'last'
+      reason?: string
+    }) =>
+      clientApi.recordRROverpayment(clientId, raId, {
+        amount,
+        allocation_target: allocationTarget,
+        reason,
+      }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: [
+          ...clientKeys.restructuringDetail(variables.clientId, variables.raId),
+          'overpayments',
+        ],
+      })
+      queryClient.invalidateQueries({
+        queryKey: clientKeys.restructuringAgreements(variables.clientId),
+      })
+      toast.success('Overpayment recorded')
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to record overpayment'
       toast.error(message)
     },
   })

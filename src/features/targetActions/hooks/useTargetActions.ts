@@ -2,7 +2,7 @@
  * React Query hooks for Target Actions (KAN-317).
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cloneTargetAction,
   createTargetAction,
@@ -20,6 +20,7 @@ export function useTargetActions(params?: TargetActionListParams) {
   return useQuery({
     queryKey: [...KEY, params],
     queryFn: () => getTargetActions(params),
+    placeholderData: keepPreviousData,
   })
 }
 

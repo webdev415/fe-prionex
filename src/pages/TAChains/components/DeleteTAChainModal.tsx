@@ -31,7 +31,7 @@ export function DeleteTAChainModal({ open, chain, onClose, onSuccess }: DeleteTA
     if (!chain || !confirmDelete) return
     try {
       await deleteMut.mutateAsync(chain.id)
-      toast.success(t('pages.taChains.toasts.deleted', 'Chain deleted'))
+      toast.success(t('pages.taChains.toasts.deleted'))
       setConfirmDelete(false)
       onSuccess?.()
       onClose()
@@ -39,6 +39,8 @@ export function DeleteTAChainModal({ open, chain, onClose, onSuccess }: DeleteTA
       toast.error(getErrorMessage(err))
     }
   }
+
+  const chainTypeLabel = chain ? t(`pages.taChains.chainTypes.${chain.chain_type}`) : ''
 
   return (
     <Modal open={open} onClose={handleClose} maxWidth="md">
@@ -48,37 +50,33 @@ export function DeleteTAChainModal({ open, chain, onClose, onSuccess }: DeleteTA
             <Icons.Delete size={20} className="text-dark-500" strokeWidth={2} />
           </div>
         }
-        title={t('pages.taChains.deleteModal.title', 'Delete TA Chain')}
+        title={t('pages.taChains.modals.delete.title')}
         className="pb-6"
       />
       <ModalContent>
         <div className="border-error-200 bg-error-50 mb-4 flex w-full items-start gap-3 rounded-xl border px-6 py-3">
           <Icons.Warning size={28} className="text-error-500 flex-shrink-0" strokeWidth={2} />
           <span className="text-error-500 text-left text-sm leading-[150%] font-medium tracking-[-0.28px]">
-            {t(
-              'pages.taChains.deleteModal.warning',
-              'This action cannot be undone. The chain will be permanently removed.'
-            )}
+            {t('pages.taChains.modals.delete.warning')}
           </span>
         </div>
 
         {chain && (
           <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
             <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-              {t('pages.taChains.deleteModal.chainDetails', 'Chain details')}
+              {t('pages.taChains.modals.delete.chainDetails')}
             </span>
             <div className="flex flex-col items-start justify-center gap-3 self-stretch rounded-xl border border-white bg-white/50 px-4 py-4 sm:px-6 sm:py-5">
               <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
-                {t('pages.taChains.table.name', 'Name')}:{' '}
-                <span className="font-medium">{chain.name}</span>
+                {t('pages.taChains.table.name')}: <span className="font-medium">{chain.name}</span>
               </span>
               <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
-                {t('pages.taChains.table.steps', 'Steps')}:{' '}
+                {t('pages.taChains.table.steps')}:{' '}
                 <span className="font-medium">{chain.step_count}</span>
               </span>
               <span className="text-dark-500 text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
-                {t('pages.taChains.table.type', 'Type')}:{' '}
-                <span className="font-medium">{chain.chain_type}</span>
+                {t('pages.taChains.table.type')}:{' '}
+                <span className="font-medium">{chainTypeLabel}</span>
               </span>
             </div>
           </div>
@@ -86,27 +84,12 @@ export function DeleteTAChainModal({ open, chain, onClose, onSuccess }: DeleteTA
 
         <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
           <span className="text-dark-500 text-sm leading-[150%] font-medium tracking-[-0.28px]">
-            {t('pages.taChains.deleteModal.whatHappensTitle', 'What will happen:')}
+            {t('pages.taChains.modals.delete.whatHappensTitle')}
           </span>
           <ul className="text-dark-500 list-disc space-y-2 pl-5 text-xs sm:text-sm">
-            <li>
-              {t(
-                'pages.taChains.deleteModal.bullet.removeRow',
-                'The chain definition will be permanently deleted.'
-              )}
-            </li>
-            <li>
-              {t(
-                'pages.taChains.deleteModal.bullet.refusedIfUsed',
-                'If the chain has any recorded interactions or started instances, deletion is refused. Deactivate it instead.'
-              )}
-            </li>
-            <li>
-              {t(
-                'pages.taChains.deleteModal.bullet.cascadeChildren',
-                'Associated steps, blockers, triggers, and quick picks are removed with the chain.'
-              )}
-            </li>
+            <li>{t('pages.taChains.modals.delete.bulletRemoveRow')}</li>
+            <li>{t('pages.taChains.modals.delete.bulletRefusedIfUsed')}</li>
+            <li>{t('pages.taChains.modals.delete.bulletCascadeChildren')}</li>
           </ul>
         </div>
 
@@ -122,17 +105,14 @@ export function DeleteTAChainModal({ open, chain, onClose, onSuccess }: DeleteTA
             htmlFor="confirm-delete-ta-chain"
             className="text-dark-500 cursor-pointer text-sm leading-[150%] font-medium"
           >
-            {t(
-              'pages.taChains.deleteModal.acknowledge',
-              'I understand this action cannot be undone.'
-            )}
+            {t('pages.taChains.modals.delete.acknowledge')}
           </label>
         </div>
       </ModalContent>
 
       <ModalFooter>
         <Button variant="outline" onClick={handleClose} disabled={deleteMut.isPending}>
-          {t('actions.cancel', 'Cancel')}
+          {t('actions.cancel')}
         </Button>
         <Button
           variant="danger"
@@ -141,8 +121,8 @@ export function DeleteTAChainModal({ open, chain, onClose, onSuccess }: DeleteTA
           {...(deleteMut.isPending && { loading: true })}
         >
           {deleteMut.isPending
-            ? t('pages.taChains.deleteModal.deleting', 'Deleting…')
-            : t('pages.taChains.actions.delete', 'Delete')}
+            ? t('pages.taChains.modals.delete.deleting')
+            : t('pages.taChains.actions.delete')}
         </Button>
       </ModalFooter>
     </Modal>

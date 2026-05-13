@@ -93,7 +93,6 @@ function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
 function resolveSpeechLang(language?: string): string {
   if (!language) return 'en-US'
   if (language.startsWith('uk')) return 'uk-UA'
-  if (language.startsWith('ru')) return 'ru-RU'
   return 'en-US'
 }
 

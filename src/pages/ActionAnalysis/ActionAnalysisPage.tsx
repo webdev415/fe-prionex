@@ -17,6 +17,7 @@ import {
 import { CallsTab } from './components/CallsTab'
 import { InteractionHistoryTab } from './components/InteractionHistoryTab'
 import { TaHistoryTab } from './components/TaHistoryTab'
+import { TaskHistoryTab } from './components/TaskHistoryTab'
 import { TimelineTab } from './components/TimelineTab'
 import { ScreenTimeTab } from './components/ScreenTimeTab'
 import { HeatmapTab } from './components/HeatmapTab'
@@ -48,6 +49,11 @@ const SUB_TAB_LABEL_KEYS: Record<
     key: 'pages.actionAnalysis.subTabs.taHistory',
     fallback: 'TA History',
     permission: PERMISSIONS.ACTION_ANALYSIS.VIEW_TA_HISTORY,
+  },
+  'task-history': {
+    key: 'pages.actionAnalysis.subTabs.taskHistory',
+    fallback: 'Task History',
+    permission: PERMISSIONS.ACTION_ANALYSIS.VIEW_TASK_HISTORY,
   },
   timeline: {
     key: 'pages.actionAnalysis.subTabs.timeline',
@@ -186,7 +192,7 @@ export function ActionAnalysisPage() {
           <p className="mt-1 text-sm font-light text-gray-600">
             {t(
               'pages.actionAnalysis.subtitle',
-              'Operator analytics and quality monitoring for the trainer team.'
+              'Call monitoring and interaction history for the trainer team.'
             )}
           </p>
         </div>
@@ -258,6 +264,7 @@ export function ActionAnalysisPage() {
             {activeSubTab === 'list' && <CallsTab />}
             {activeSubTab === 'interactions' && <InteractionHistoryTab />}
             {activeSubTab === 'ta-history' && <TaHistoryTab />}
+            {activeSubTab === 'task-history' && <TaskHistoryTab />}
             {activeSubTab === 'timeline' && <TimelineTab />}
             {activeSubTab === 'screen-time' && <ScreenTimeTab />}
             {activeSubTab === 'heatmap' && <HeatmapTab />}

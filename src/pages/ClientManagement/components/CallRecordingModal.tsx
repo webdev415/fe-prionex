@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { Modal, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
+import { TelephonyTypeBadge } from '@/components/ui/TelephonyTypeBadge'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useCallStore } from '@/stores/callStore'
@@ -34,6 +35,12 @@ export interface CallRecordingModalProps {
      * leave it unset and get the legacy plain-text rendering.
      */
     clientId?: number | null
+    /**
+     * KAN-482: telephony type ('white' | 'grey' | 'unknown') + direction
+     * drive the inline White/Grey badge. Inbound calls always render `—`.
+     */
+    direction?: string | null
+    telephony_type?: string | null
   }
   onMinimize?: () => void
 }
@@ -296,8 +303,11 @@ export function CallRecordingModal({
 
         {/* Call Details */}
         <div className="flex flex-col gap-2">
-          <div className="text-dark-500 self-stretch text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
-            {callData.type}
+          <div className="text-dark-500 flex items-center justify-center gap-2 self-stretch text-center text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
+            <span>{callData.type}</span>
+            {/* KAN-482: White/Grey telephony badge. Inbound + unknown render
+                as an em-dash inside the badge component. */}
+            <TelephonyTypeBadge type={callData.telephony_type} direction={callData.direction} />
           </div>
           <div className="text-dark-500 self-stretch text-center text-sm leading-[150%] font-light tracking-[-0.36px] sm:text-[18px]">
             {callData.clientId != null ? (

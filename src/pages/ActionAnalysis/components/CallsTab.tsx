@@ -11,6 +11,7 @@ import {
 } from '@/features/actionAnalysis'
 import { useCallDetail } from '@/features/calls/hooks/useCall'
 import { Pagination } from '@/components/ui/Pagination'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
 import { defaultCustomDateRange } from '../lib/dateRange'
 import {
@@ -36,9 +37,9 @@ interface CallSeed {
   initiated_at: string
   talk_duration?: number | null
   client_id?: number | null
+  telephony_type?: string | null
 }
 
-const PAGE_SIZE = 20
 const CALL_ID_PARAM = 'call_id'
 
 function formatDuration(seconds: number | null | undefined): string {
@@ -76,17 +77,21 @@ export function CallsTab() {
   const apiFiltersBase = useMemo(() => toCallMonitoringQuery(barState), [barState])
 
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const callsQueryEnabled =
     barState.period !== 'custom' || !!(barState.customFromDate && barState.customToDate)
 
-  const queryFilters: CallMonitoringFilters = {
-    ...apiFiltersBase,
-    sort: 'date_desc',
-    limit: PAGE_SIZE,
-    offset: (page - 1) * PAGE_SIZE,
-  }
-  const { data, isFetching, error } = useCallMonitoring(queryFilters, callsQueryEnabled)
+  const queryFilters: CallMonitoringFilters = useMemo(
+    () => ({
+      ...apiFiltersBase,
+      sort: 'date_desc',
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+    }),
+    [apiFiltersBase, page, pageSize]
+  )
+  const { data, error, isPending } = useCallMonitoring(queryFilters, callsQueryEnabled)
 
   // Modal state lives entirely in the URL (?call_id=…) so deep-links work:
   // pasting the URL into another browser opens the modal with that exact call.
@@ -115,10 +120,11 @@ export function CallsTab() {
         call_id: fetchedDetail.call_id,
         agent_extension: fetchedDetail.agent_extension,
         customer_number: fetchedDetail.customer_number,
-        direction: null,
+        direction: fetchedDetail.direction ?? null,
         initiated_at: fetchedDetail.initiated_at,
         talk_duration: fetchedDetail.talk_duration ?? null,
         client_id: null,
+        telephony_type: fetchedDetail.telephony_type ?? null,
       }
     }
     return null
@@ -186,7 +192,7 @@ export function CallsTab() {
 
   const summary = data?.summary
   const total = data?.total ?? 0
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   // Modal feed: prefer the row from the listing (richer fields like client_id
   // and direction), fall back to the single-fetch when deep-linked.
@@ -221,6 +227,8 @@ export function CallsTab() {
       phone: detailForModal.customer_number,
       call_id: detailForModal.call_id,
       clientId: detailForModal.client_id ?? null,
+      direction: detailForModal.direction ?? null,
+      telephony_type: detailForModal.telephony_type ?? null,
     }
   }, [detailForModal, operatorLookup, t])
 
@@ -255,14 +263,18 @@ export function CallsTab() {
         </div>
       ) : (
         <>
-          <CallsTable data={calls} loading={isFetching} onOpenCall={handleOpenCall} />
-          {total > PAGE_SIZE && (
+          {callsQueryEnabled && isPending ? (
+            <TableSkeleton columns={7} rows={pageSize} className="w-full" />
+          ) : (
+            <CallsTable data={calls} onOpenCall={handleOpenCall} />
+          )}
+          {total > pageSize && (
             <Pagination
               currentPage={page}
               totalPages={totalPages}
-              pageSize={PAGE_SIZE}
+              pageSize={pageSize}
               onPageChange={setPage}
-              onPageSizeChange={() => {}}
+              onPageSizeChange={setPageSize}
             />
           )}
         </>
