@@ -801,6 +801,8 @@ export function ClientDetailPage() {
     duration: string
     phone: string
     call_id?: string
+    direction?: string | null
+    telephony_type?: string | null
   } | null>(null)
   const [isViewSMSModalOpen, setIsViewSMSModalOpen] = useState(false)
   const [selectedSMSData, setSelectedSMSData] = useState<{

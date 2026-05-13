@@ -18,6 +18,8 @@ type CallData = {
   duration: string
   phone: string
   call_id?: string
+  direction?: string | null
+  telephony_type?: string | null
 }
 
 type SMSData = {
@@ -209,6 +211,8 @@ export function CallLogCard({
         duration: duration || '',
         phone: phone || '',
         call_id: call_id,
+        direction: direction ?? (type === 'Incoming' ? 'inbound' : 'outbound'),
+        telephony_type: telephony_type ?? null,
       })
       setOpenCallModal('call-recording')
       setIsCallRecordingModalOpen?.(true)
