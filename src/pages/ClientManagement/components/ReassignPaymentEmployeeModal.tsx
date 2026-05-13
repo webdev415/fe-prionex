@@ -52,7 +52,7 @@ function ReassignBody({
   return (
     <>
       <ModalHeader title={t('pages.clients.modals.reassignEmployee.title')} onClose={onClose} />
-      <ModalContent className="space-y-4">
+      <ModalContent className="space-y-4 overflow-visible">
         <p className="text-sm text-gray-600">
           {t('pages.clients.modals.reassignEmployee.description')}
         </p>

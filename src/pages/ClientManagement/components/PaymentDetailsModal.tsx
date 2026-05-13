@@ -429,11 +429,11 @@ export function PaymentDetailsModal({
                         <button
                           type="button"
                           onClick={onReassignEmployee}
-                          className="text-secondary-600 hover:text-secondary-800 focus:ring-secondary-500 inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors hover:bg-gray-100 focus:ring-2 focus:outline-none"
+                          className="bg-primary-50 text-primary-700 hover:bg-primary-100 hover:text-primary-800 focus:ring-primary-500 inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors focus:ring-2 focus:outline-none"
                           aria-label={t('pages.clients.modals.paymentDetails.reassignEmployee')}
                           title={t('pages.clients.modals.paymentDetails.reassignEmployee')}
                         >
-                          <Icons.Edit size={14} strokeWidth={1.5} />
+                          <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
                         </button>
                       )}
                     </span>
