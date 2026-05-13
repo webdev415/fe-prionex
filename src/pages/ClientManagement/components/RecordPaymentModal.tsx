@@ -4,7 +4,7 @@
  * Modal for recording a new payment for a client.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -35,12 +35,37 @@ const getTodayAtMidnight = (): Date => {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate())
 }
 
+// status_ids: 3 Cancelled, 4 Completed, 5 Completed Early.
+// Hoisted out of the component so its identity is stable across
+// renders — keeps it usable in hook dependency arrays.
+const TERMINAL_RR_STATUSES = [3, 4, 5]
+
+/**
+ * Subset of a Restructuring Agreement that this modal needs.
+ * Sourced from useClientRestructuringAgreements (RR summary).
+ */
+export interface RecordPaymentModalRR {
+  id: number
+  debt_id?: number | null
+  contract_number?: string | null
+  restructuring_amount?: string | number | null
+  status_id?: number | null
+}
+
 export interface RecordPaymentModalProps {
   open: boolean
   onClose: () => void
   customerName: string
   currentDebt: number
   debts?: DebtDetail[]
+  /**
+   * Optional list of the client's RRs. Used to render the RR selector
+   * under Design 3: when the currently selected debt has at least one
+   * non-terminal RR, the operator can earmark this payment for it.
+   * Auto-fills when there's exactly one eligible RR; required dropdown
+   * when there are multiple; hidden when there are none.
+   */
+  restructuringAgreements?: RecordPaymentModalRR[]
   /** Whether user has verify_payment permission. When false, hides Verified radio and Save & Verify button. */
   canVerify?: boolean
   onSave: (data: {
@@ -54,6 +79,7 @@ export interface RecordPaymentModalProps {
     last4Digits?: string
     paymentMethodDetails?: string
     debtId?: number
+    restructuringAgreementId?: number
   }) => void
 }
 
@@ -63,6 +89,7 @@ export function RecordPaymentModal({
   customerName,
   currentDebt,
   debts,
+  restructuringAgreements,
   canVerify = true,
   onSave,
 }: RecordPaymentModalProps) {
@@ -110,6 +137,38 @@ export function RecordPaymentModal({
   // by definition report zero remaining balance, otherwise the feature
   // is useless.
   const isClosedDebtCorrection = selectedDebt?.status === 'closed'
+
+  // RRs eligible to be earmarked by this payment. We narrow the full
+  // RR list to those (a) tied to the currently selected debt and
+  // (b) non-terminal (not Cancelled / Completed / Completed Early).
+  // Terminal RRs are excluded because earmarking a payment to a closed
+  // restructuring plan would be meaningless.
+  const eligibleRRs = useMemo(() => {
+    if (!restructuringAgreements || selectedDebtId == null) return []
+    return restructuringAgreements.filter(
+      (ra) =>
+        ra.debt_id === selectedDebtId &&
+        (ra.status_id == null || !TERMINAL_RR_STATUSES.includes(ra.status_id))
+    )
+  }, [restructuringAgreements, selectedDebtId])
+
+  // Auto-select when there's exactly one eligible RR (zero clicks for
+  // the common case). When 0 or 2+, leave it null so the operator
+  // explicitly chooses (or chooses "no RR" for general payments).
+  const [selectedRrId, setSelectedRrId] = useState<number | null>(null)
+  // Keep the selected RR consistent with the eligible set when the
+  // debt changes. If the previous selection isn't eligible anymore,
+  // reset to the single-RR auto-fill or clear.
+  useEffect(() => {
+    if (eligibleRRs.length === 1) {
+      setSelectedRrId(eligibleRRs[0].id)
+    } else if (selectedRrId != null && !eligibleRRs.some((ra) => ra.id === selectedRrId)) {
+      setSelectedRrId(null)
+    } else if (eligibleRRs.length === 0) {
+      setSelectedRrId(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eligibleRRs])
 
   const amountValue = parseFloat(paymentAmount) || 0
   const minAmount = 100
@@ -213,6 +272,7 @@ export function RecordPaymentModal({
       last4Digits: paymentMethod === 'Card' ? last4Digits : undefined,
       paymentMethodDetails: paymentMethodDetails.trim() || undefined,
       debtId: selectedDebtId ?? undefined,
+      restructuringAgreementId: selectedRrId ?? undefined,
     })
 
     // Reset form
@@ -227,6 +287,7 @@ export function RecordPaymentModal({
     setPaymentMethodDetails('')
     setLast4DigitsError(null)
     setSelectedDebtId(selectableDebts[0]?.id ?? null)
+    setSelectedRrId(null)
     onClose()
   }
 
@@ -243,6 +304,7 @@ export function RecordPaymentModal({
     setPaymentMethodDetails('')
     setLast4DigitsError(null)
     setSelectedDebtId(selectableDebts[0]?.id ?? null)
+    setSelectedRrId(null)
     onClose()
   }
 
@@ -353,6 +415,59 @@ export function RecordPaymentModal({
                     <Icons.Warning size={18} className="mt-0.5 shrink-0 text-amber-600" />
                     <span className="text-sm leading-[150%] font-light tracking-[-0.28px] text-amber-900">
                       {t('pages.clients.modals.recordPayment.closedDebtCorrectionHint')}
+                    </span>
+                  </div>
+                )}
+                {/* Restructuring Agreement earmark (Design 3).
+                    Only shown when the selected debt has at least one
+                    non-terminal RR. With one eligible RR the field is
+                    auto-filled; with multiple the operator must pick.
+                    Leaving it as "None" records a general debt payment
+                    that won't affect any RR's schedule. */}
+                {eligibleRRs.length > 0 && (
+                  <div className="flex flex-col items-start gap-2 self-stretch">
+                    <Label className="text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                      {t(
+                        'pages.clients.modals.recordPayment.restructuringAgreement',
+                        'Restructuring Agreement (optional)'
+                      )}
+                    </Label>
+                    <Select
+                      value={selectedRrId ? String(selectedRrId) : '__none__'}
+                      onValueChange={(value) =>
+                        setSelectedRrId(value === '__none__' ? null : Number(value))
+                      }
+                    >
+                      <SelectTrigger className="w-full rounded-md">
+                        <SelectValue
+                          placeholder={t(
+                            'pages.clients.modals.recordPayment.rrPlaceholder',
+                            'Select RR or leave as general'
+                          )}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">
+                          {t(
+                            'pages.clients.modals.recordPayment.rrNone',
+                            'No RR (general debt payment)'
+                          )}
+                        </SelectItem>
+                        {eligibleRRs.map((ra) => (
+                          <SelectItem key={ra.id} value={String(ra.id)}>
+                            {`#${ra.id}`}
+                            {ra.restructuring_amount
+                              ? ` • ${formatMoneyUAHTwoDecimals(Number(ra.restructuring_amount))}`
+                              : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="text-xs leading-[150%] font-light text-gray-500">
+                      {t(
+                        'pages.clients.modals.recordPayment.rrHelpText',
+                        'Earmarking the payment fills the selected RR’s schedule. Leave empty for a general debt payment.'
+                      )}
                     </span>
                   </div>
                 )}

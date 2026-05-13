@@ -73,6 +73,11 @@ export interface Payment {
 export interface RecordPaymentRequest {
   client_id: number
   debt_id?: number
+  // Optional Restructuring Agreement earmark (Design 3). When set, the
+  // payment is tied to that RR's schedule and counts toward its
+  // auto-completion. When null/omitted, it's a "general" debt payment
+  // with no RR earmarking — still reduces displayed total_to_return.
+  restructuring_agreement_id?: number
   amount: number
   payment_date: string // ISO date string (YYYY-MM-DD)
   payment_method: PaymentMethod

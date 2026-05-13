@@ -23,7 +23,7 @@ import { RecordPaymentModal } from './components/RecordPaymentModal'
 import { PaymentVerificationQueueModal } from './components/PaymentVerificationQueueModal'
 import { PaymentDetailsModal } from './components/PaymentDetailsModal'
 import { CancelPaymentModal } from './components/CancelPaymentModal'
-import { useClient } from '@/features/clients/hooks/useClients'
+import { useClient, useClientRestructuringAgreements } from '@/features/clients/hooks/useClients'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { useCallStore } from '@/stores/callStore'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
@@ -189,6 +189,11 @@ export function DebtSummaryPage() {
     isError: isClientError,
     error: clientError,
   } = useClient(clientId, !!clientId)
+
+  // Restructuring agreements for this client — surfaced to the
+  // Record Payment modal so the operator can earmark a payment to a
+  // specific RR (Design 3).
+  const { data: clientRRs = [] } = useClientRestructuringAgreements(clientId, !!clientId)
 
   // Fetch payment history for this client
   const { data: paymentHistoryData, refetch: refetchPayments } = useClientPaymentHistory(
@@ -847,6 +852,7 @@ export function DebtSummaryPage() {
     last4Digits?: string
     paymentMethodDetails?: string
     debtId?: number
+    restructuringAgreementId?: number
   }) => {
     const clientId = id ? Number(id) : 0
     if (!clientId) {
@@ -869,6 +875,7 @@ export function DebtSummaryPage() {
       {
         client_id: clientId,
         debt_id: data.debtId,
+        restructuring_agreement_id: data.restructuringAgreementId,
         amount: data.amount,
         payment_date: paymentDate,
         payment_method: backendMethod,
@@ -1467,6 +1474,13 @@ export function DebtSummaryPage() {
           customerName={debtSummary.customerName}
           currentDebt={debtSummary.totalDebt}
           debts={apiClient?.debts}
+          restructuringAgreements={clientRRs.map((ra) => ({
+            id: ra.id,
+            debt_id: ra.debt_id,
+            contract_number: ra.contract_number,
+            restructuring_amount: ra.restructuring_amount,
+            status_id: ra.status_id,
+          }))}
           onSave={handleRecordPayment}
           canVerify={canVerifyPayment}
         />
