@@ -453,7 +453,20 @@
         "title": "Tasks due by date",
         "subtitle": "Total tasks due within the current filter range.",
         "totalLabel": "tasks due",
-        "empty": "No tasks due in the selected range."
+        "empty": "No tasks due in the selected range.",
+        "emptyMonth": "No tasks due this month.",
+        "today": "Today",
+        "prevMonth": "Previous month",
+        "nextMonth": "Next month",
+        "weekdayShort": {
+          "mon": "Mon",
+          "tue": "Tue",
+          "wed": "Wed",
+          "thu": "Thu",
+          "fri": "Fri",
+          "sat": "Sat",
+          "sun": "Sun"
+        }
       },
       "errors": {
         "loadFailed": "Failed to load calls",
