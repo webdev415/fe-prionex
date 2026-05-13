@@ -1852,6 +1852,8 @@
           "callType": "Тип дзвінка",
           "whiteLine": "Біла лінія",
           "grayLine": "Сіра лінія",
+          "lineWhite": "Біла",
+          "lineGray": "Сіра",
           "spamCalls": "Спам дзвінки",
           "markAsSpam": "Позначити як спам",
           "callNow": "Зателефонувати зараз",

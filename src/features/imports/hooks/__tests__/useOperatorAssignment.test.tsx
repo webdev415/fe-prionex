@@ -20,6 +20,12 @@ vi.mock('@/features/imports/api/operatorAssignmentApi', () => ({
   },
 }))
 
+vi.mock('@/features/imports/api/importsApi', () => ({
+  importsApi: {
+    cancelImportJob: vi.fn().mockResolvedValue({ success: true }),
+  },
+}))
+
 import {
   useOperatorAssignmentUpload,
   useOperatorAssignmentExecute,

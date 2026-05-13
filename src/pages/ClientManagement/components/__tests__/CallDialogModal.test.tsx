@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { CallDialogModal } from '../CallDialogModal'
@@ -83,7 +83,13 @@ describe('CallDialogModal', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
-    // Mock useCallStore hook
+    // Mock useCallStore hook + the .getState() static method.
+    // Track the latest snapshot in a closure so getState() can return it
+    // and the modal's post-origination patch path can find a matching id.
+    let lastSnapshot: unknown = null
+    mockSetMinimizedCall.mockImplementation((snap) => {
+      lastSnapshot = snap
+    })
     vi.mocked(callStoreModule.useCallStore).mockReturnValue({
       setMinimizedCall: mockSetMinimizedCall,
       setOpenCallModal: mockSetOpenCallModal,
@@ -92,6 +98,11 @@ describe('CallDialogModal', () => {
       isCallActive: vi.fn().mockReturnValue(false),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(callStoreModule.useCallStore as any).getState = vi.fn(() => ({
+      minimizedCall: lastSnapshot,
+      setMinimizedCall: mockSetMinimizedCall,
+    }))
   })
 
   afterEach(() => {
@@ -178,6 +189,97 @@ describe('CallDialogModal', () => {
       fireEvent.click(minimizeButton)
 
       expect(mockSetMinimizedCall).toHaveBeenCalled()
+    })
+
+    it('auto-minimizes immediately on click, then patches the call_id when origination resolves', async () => {
+      const resolvedCallId = 'srv-call-abc-123'
+      const onCallStart = vi
+        .fn<(callType: string, dial: string) => Promise<string | null>>()
+        .mockResolvedValue(resolvedCallId)
+
+      render(
+        <CallDialogModal {...defaultProps} onCallStart={onCallStart} onMinimize={mockOnMinimize} />,
+        { wrapper: createWrapper() }
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: 'Call Now' }))
+
+      // First write: minimize immediately on click with callId=null.
+      expect(mockSetMinimizedCall).toHaveBeenCalledTimes(1)
+      expect(mockOnMinimize).toHaveBeenCalledTimes(1)
+      const initialSnapshot = mockSetMinimizedCall.mock.calls[0][0]
+      expect(initialSnapshot).toMatchObject({
+        type: 'call-dialog',
+        callId: null,
+        callState: 'dialing',
+        callType: 'white-line',
+      })
+
+      // After the origination Promise resolves, the snapshot is patched with
+      // the real call_id so the bar can poll state and hang up.
+      await waitFor(() => {
+        expect(mockSetMinimizedCall).toHaveBeenCalledTimes(2)
+      })
+      const patchedSnapshot = mockSetMinimizedCall.mock.calls[1][0]
+      expect(patchedSnapshot).toMatchObject({
+        id: initialSnapshot.id,
+        callId: resolvedCallId,
+        callState: 'dialing',
+      })
+    })
+
+    it('auto-minimizes immediately on click, then flips the snapshot to failed on origination failure', async () => {
+      const onCallStart = vi
+        .fn<(callType: string, dial: string) => Promise<string | null>>()
+        .mockResolvedValue(null)
+
+      render(
+        <CallDialogModal {...defaultProps} onCallStart={onCallStart} onMinimize={mockOnMinimize} />,
+        { wrapper: createWrapper() }
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: 'Call Now' }))
+
+      // Minimize fires on click regardless of outcome.
+      expect(mockSetMinimizedCall).toHaveBeenCalledTimes(1)
+      expect(mockOnMinimize).toHaveBeenCalledTimes(1)
+      const initialSnapshot = mockSetMinimizedCall.mock.calls[0][0]
+      expect(initialSnapshot.callState).toBe('dialing')
+
+      // On null resolution, the snapshot flips to 'failed' so the bar's
+      // auto-dismiss timer clears the bar.
+      await waitFor(() => {
+        expect(mockSetMinimizedCall).toHaveBeenCalledTimes(2)
+      })
+      const failedSnapshot = mockSetMinimizedCall.mock.calls[1][0]
+      expect(failedSnapshot).toMatchObject({
+        id: initialSnapshot.id,
+        callState: 'failed',
+      })
+    })
+
+    it('auto-minimizes on click for legacy void-returning onCallStart (no patch follow-up)', async () => {
+      const onCallStart = vi.fn<(callType: string, dial: string) => void>(() => undefined)
+
+      render(
+        <CallDialogModal {...defaultProps} onCallStart={onCallStart} onMinimize={mockOnMinimize} />,
+        { wrapper: createWrapper() }
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: 'Call Now' }))
+
+      // Minimize still fires immediately.
+      expect(mockSetMinimizedCall).toHaveBeenCalledTimes(1)
+      expect(mockOnMinimize).toHaveBeenCalledTimes(1)
+      expect(mockSetMinimizedCall.mock.calls[0][0]).toMatchObject({
+        callId: null,
+        callState: 'dialing',
+      })
+
+      // No Promise → no follow-up patch.
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(mockSetMinimizedCall).toHaveBeenCalledTimes(1)
     })
   })
 

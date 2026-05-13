@@ -113,39 +113,45 @@ export function useCallOrigination() {
     clientName: string,
     clientId: string,
     callType: CallType
-  ) => {
+  ): Promise<string | null> => {
     if (isCallCooldown) {
-      return
+      return Promise.resolve(null)
     }
 
     if (!user?.asterisk_extension) {
       setCallError('Your account is not configured for calling. Please contact administrator.')
       startCallErrorCooldown()
-      return
+      return Promise.resolve(null)
     }
     setCallError(null)
     setActiveCallType(callType)
 
     const context = callType === 'gray-line' ? 'outbound-gray' : 'outbound-white'
 
-    originateCall(
-      {
-        agent_extension: user.asterisk_extension,
-        customer_number: phoneNumber,
-        caller_id_name: 'CRM Call',
-        client_id: Number(clientId) || undefined,
-        campaign_id: user.active_project_id ?? undefined,
-        metadata: { client_name: clientName },
-        context,
-      },
-      {
-        onSuccess: (data) => setCurrentCallId(data.call_id),
-        onError: (err: unknown) => {
-          setCallError(getOriginateErrorMessage(err))
-          startCallErrorCooldown()
+    return new Promise<string | null>((resolve) => {
+      originateCall(
+        {
+          agent_extension: user.asterisk_extension!,
+          customer_number: phoneNumber,
+          caller_id_name: 'CRM Call',
+          client_id: Number(clientId) || undefined,
+          campaign_id: user.active_project_id ?? undefined,
+          metadata: { client_name: clientName },
+          context,
         },
-      }
-    )
+        {
+          onSuccess: (data) => {
+            setCurrentCallId(data.call_id)
+            resolve(data.call_id)
+          },
+          onError: (err: unknown) => {
+            setCallError(getOriginateErrorMessage(err))
+            startCallErrorCooldown()
+            resolve(null)
+          },
+        }
+      )
+    })
   }
 
   const handleCloseCallModal = () => {
