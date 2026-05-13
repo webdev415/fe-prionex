@@ -790,6 +790,7 @@ export interface CallRecord {
   caller_id_name?: string | null
   caller_id_number?: string | null
   campaign_id?: string | null
+  direction?: string | null
   state: string
   uniqueid?: string | null
   initiated_at: string
@@ -805,6 +806,7 @@ export interface CallRecord {
   notes?: string | null
   call_metadata?: Record<string, unknown> | null
   hangup_cause?: number | null
+  telephony_type?: string | null
 }
 
 export interface SmsRecord {

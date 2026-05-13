@@ -132,6 +132,8 @@ type ExtendedCallItem = {
   line: string
   call_id?: string
   initiated_at?: string
+  direction?: string | null
+  telephony_type?: string | null
 }
 
 // Contact type names are now returned by the backend from client_contact_types lookup table
@@ -3430,6 +3432,16 @@ export function ClientDetailPage() {
                                           phone={call.phone}
                                           line={call.line}
                                           operator={call.operator}
+                                          direction={
+                                            'direction' in call
+                                              ? (call.direction as string | null)
+                                              : null
+                                          }
+                                          telephony_type={
+                                            'telephony_type' in call
+                                              ? (call.telephony_type as string | null)
+                                              : null
+                                          }
                                           call_id={
                                             'call_id' in call ? (call.call_id as string) : undefined
                                           }
