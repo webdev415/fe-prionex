@@ -8,6 +8,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
+import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import {
   useTags,
   useSegments,
@@ -89,12 +90,6 @@ const TABS: { id: TabId; labelKey: string; fallback: string }[] = [
 
 const CATEGORY_FILTERS = ['all', 'status', 'risk', 'communication', 'behavior', 'system', 'custom']
 
-const DATE_LOCALE_BY_LANGUAGE: Record<string, string> = {
-  en: 'en-US',
-  ru: 'ru-RU',
-  uk: 'uk-UA',
-}
-
 export function TagsPage() {
   const { t, i18n } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -133,7 +128,7 @@ export function TagsPage() {
     return tags.filter((tag) => tag.category === categoryFilter)
   }, [tags, categoryFilter])
 
-  const dateLocale = DATE_LOCALE_BY_LANGUAGE[i18n.language] ?? 'ru-RU'
+  const dateLocale = intlLocaleForUiLanguage(i18n.language)
 
   const handleEdit = (tag: Tag) => {
     setEditTag(tag)

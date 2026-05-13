@@ -6,6 +6,7 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
@@ -26,6 +27,7 @@ import { EditInteractionModal } from '@/pages/ClientManagement/components/EditIn
 import { PriorityBadge } from './components/PriorityBadge'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { DoubleButton } from '@/components/ui/DoubleButton'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
 import { formatDate, formatDateTime } from '@/lib/formatters'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
@@ -49,7 +51,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { formatUkrainePhoneForDisplay, normalizeUkrainePhoneToDb } from '@/lib/phone'
 
 export function ActivityTimelinePage() {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { isCallActive, setOpenCallModal } = useCallStore()
@@ -171,11 +173,12 @@ export function ActivityTimelinePage() {
   const { data: interactionTypes } = useInteractionTypes()
 
   // Fetch activities with server-side pagination
-  const { data: activitiesResponse, isLoading: isActivitiesLoading } = useClientActivitiesPaginated(
-    clientId,
-    apiParams,
-    clientId > 0
-  )
+  const {
+    data: activitiesResponse,
+    isFetching: isActivitiesFetching,
+    isPending: isActivitiesPending,
+    isPlaceholderData: isActivitiesPlaceholder,
+  } = useClientActivitiesPaginated(clientId, apiParams, clientId > 0)
 
   const { mutate: createNote } = useCreateNoteInteraction()
   const { mutate: updateInteraction, isPending: isUpdating } = useUpdateInteraction()
@@ -185,8 +188,8 @@ export function ActivityTimelinePage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingInteraction, setEditingInteraction] = useState<InteractionResponse | null>(null)
 
-  // Combined loading state
-  const isLoading = isProfileLoading || isActivitiesLoading
+  const showActivitiesTableSkeleton =
+    isActivitiesFetching && (isActivitiesPending || isActivitiesPlaceholder)
 
   // Map activities from API to display format
   const activitiesState = useMemo(() => {
@@ -226,11 +229,15 @@ export function ActivityTimelinePage() {
     }))
   }, [activitiesResponse, loans, t])
 
+  const dateInputFormat = i18n.language?.startsWith('en') ? 'MM/dd/yyyy' : 'dd/MM/yyyy'
+
+  const numberFormatLocale = intlLocaleForUiLanguage(i18n.language)
+
   const totalCount = activitiesResponse?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage))
 
   const formatCurrencyWithDecimals = (amount: number) => {
-    return new Intl.NumberFormat('uk-UA', {
+    return new Intl.NumberFormat(numberFormatLocale, {
       minimumFractionDigits: amount % 1 !== 0 ? 1 : 0,
       maximumFractionDigits: 1,
       useGrouping: true,
@@ -281,7 +288,7 @@ export function ActivityTimelinePage() {
     },
     {
       key: 'subtype',
-      header: t('pages.clients.activity.tableHeaders.channel', 'Channel'),
+      header: t('pages.clients.activity.tableHeaders.channel'),
       align: 'left',
       className: 'w-[100px] overflow-hidden whitespace-normal break-words',
     },
@@ -381,8 +388,7 @@ export function ActivityTimelinePage() {
     selectedOperatorId !== 'all' ||
     latestOnly
 
-  // Show loading skeleton while loading or if client data not available
-  if (isLoading || !client) {
+  if (isProfileLoading || !client) {
     return <ActivityTimelinePageSkeleton />
   }
 
@@ -461,7 +467,7 @@ export function ActivityTimelinePage() {
                 setCurrentPage(1)
               }}
             >
-              <SelectTrigger aria-label="Type">
+              <SelectTrigger aria-label={t('pages.clients.activity.tableHeaders.type')}>
                 <SelectValue placeholder={t('pages.clients.activity.all')} />
               </SelectTrigger>
               <SelectContent>
@@ -485,8 +491,9 @@ export function ActivityTimelinePage() {
                   setDateFrom(value)
                   setCurrentPage(1)
                 }}
-                placeholder="Min"
-                format="yyyy-MM-dd"
+                max={dateTo ?? undefined}
+                placeholder={t('pages.clients.filters.min')}
+                format={dateInputFormat}
                 className="flex flex-1 flex-col gap-2"
               />
               <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -498,8 +505,9 @@ export function ActivityTimelinePage() {
                   setDateTo(value)
                   setCurrentPage(1)
                 }}
-                placeholder="Max"
-                format="yyyy-MM-dd"
+                min={dateFrom ?? undefined}
+                placeholder={t('pages.clients.filters.max')}
+                format={dateInputFormat}
                 className="flex flex-1 flex-col gap-2"
               />
             </div>
@@ -519,8 +527,9 @@ export function ActivityTimelinePage() {
                   setPromiseDateFrom(value)
                   setCurrentPage(1)
                 }}
-                placeholder="Min"
-                format="yyyy-MM-dd"
+                max={promiseDateTo ?? undefined}
+                placeholder={t('pages.clients.filters.min')}
+                format={dateInputFormat}
                 className="flex flex-1 flex-col gap-2"
               />
               <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -532,8 +541,9 @@ export function ActivityTimelinePage() {
                   setPromiseDateTo(value)
                   setCurrentPage(1)
                 }}
-                placeholder="Max"
-                format="yyyy-MM-dd"
+                min={promiseDateFrom ?? undefined}
+                placeholder={t('pages.clients.filters.max')}
+                format={dateInputFormat}
                 className="flex flex-1 flex-col gap-2"
               />
             </div>
@@ -549,8 +559,9 @@ export function ActivityTimelinePage() {
                   setCallbackDateFrom(value)
                   setCurrentPage(1)
                 }}
-                placeholder="Min"
-                format="yyyy-MM-dd"
+                max={callbackDateTo ?? undefined}
+                placeholder={t('pages.clients.filters.min')}
+                format={dateInputFormat}
                 className="flex flex-1 flex-col gap-2"
               />
               <span className="text-sm leading-[155%] font-medium tracking-[-0.28px] text-gray-700 sm:text-base sm:tracking-[-0.32px]">
@@ -562,8 +573,9 @@ export function ActivityTimelinePage() {
                   setCallbackDateTo(value)
                   setCurrentPage(1)
                 }}
-                placeholder="Max"
-                format="yyyy-MM-dd"
+                min={callbackDateFrom ?? undefined}
+                placeholder={t('pages.clients.filters.max')}
+                format={dateInputFormat}
                 className="flex flex-1 flex-col gap-2"
               />
             </div>
@@ -629,8 +641,12 @@ export function ActivityTimelinePage() {
           </div>
         </div>
 
-        {/* Activity Table or Empty State */}
-        {activitiesState.length === 0 ? (
+        {/* Activity Table, table-only skeleton while refetching, or empty state */}
+        {showActivitiesTableSkeleton ? (
+          <div className="w-full overflow-x-auto">
+            <TableSkeleton columns={activityColumns.length} rows={rowsPerPage} className="w-full" />
+          </div>
+        ) : activitiesState.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-4 self-stretch md:gap-6">
             <Icons.FileRemove size={48} className="text-gray-500" strokeWidth={0.5} />
             <p className="text-dark-500 text-center text-xl leading-tight font-light tracking-[-0.48px] md:text-2xl">

@@ -1,6 +1,10 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CallMonitoringFilters, CallMonitoringPeriod } from '@/features/actionAnalysis'
+import type {
+  CallMonitoringFilters,
+  CallMonitoringPeriod,
+  TelephonyType,
+} from '@/features/actionAnalysis'
 import type { OperatorUser } from '@/features/users/api/usersApi'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -182,6 +186,40 @@ export function CallFiltersBar({ value, operators, onApply, onClear, userTimezon
                 update({ max_duration: v === '' ? undefined : Number(v) })
               }}
             />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-dark-500 text-xs font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+              {t('pages.actionAnalysis.filters.telephonyType', 'Telephony type')}
+            </span>
+            <Select
+              value={draft.telephony_types?.[0] ?? 'all'}
+              onValueChange={(v) => {
+                if (v === 'all') {
+                  update({ telephony_types: undefined })
+                } else {
+                  update({ telephony_types: [v as TelephonyType] })
+                }
+              }}
+            >
+              <SelectTrigger className="h-[45px] w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  {t('pages.actionAnalysis.filters.telephonyTypes.all', 'All')}
+                </SelectItem>
+                <SelectItem value="white">
+                  {t('pages.actionAnalysis.filters.telephonyTypes.white', 'White')}
+                </SelectItem>
+                <SelectItem value="grey">
+                  {t('pages.actionAnalysis.filters.telephonyTypes.grey', 'Grey')}
+                </SelectItem>
+                <SelectItem value="unknown">
+                  {t('pages.actionAnalysis.filters.telephonyTypes.unknown', 'Unknown')}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

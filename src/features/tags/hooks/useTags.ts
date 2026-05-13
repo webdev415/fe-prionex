@@ -46,9 +46,10 @@ export const tagsKeys = {
  */
 export function useTags(projectId?: number, options?: { includeHidden?: boolean }) {
   const roleName = useAuthStore((state) => state.user?.active_role_name)
+  const activeDepartmentId = useAuthStore((state) => state.user?.active_department_id)
   const includeHidden = options?.includeHidden ?? false
   return useQuery({
-    queryKey: [...tagsKeys.list(projectId), { includeHidden, roleName }],
+    queryKey: [...tagsKeys.list(projectId), { includeHidden, roleName, activeDepartmentId }],
     queryFn: () => tagsApi.getTags(projectId),
     select: (tags) => filterTagsForRole(tags, roleName, includeHidden),
     staleTime: 5 * 60 * 1000, // 5 minutes

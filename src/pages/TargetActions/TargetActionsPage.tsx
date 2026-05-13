@@ -23,7 +23,12 @@ import {
   useUnhideTargetAction,
 } from '@/features/targetActions/hooks/useTargetActions'
 import type { TargetAction } from '@/features/targetActions/api/types'
-import { CreateTargetActionModal, EditTargetActionModal } from './components'
+import {
+  CreateTargetActionModal,
+  EditTargetActionModal,
+  TargetActionsPageSkeleton,
+  TargetActionsTableSectionSkeleton,
+} from './components'
 import { getErrorMessage } from '@/lib/errors'
 
 const TYPE_BADGE: Record<string, string> = {
@@ -41,7 +46,12 @@ export function TargetActionsPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
 
-  const { data, isLoading } = useTargetActions({ include_hidden: showHidden })
+  const {
+    data,
+    isPending: targetActionsPending,
+    isFetching: targetActionsFetching,
+    isPlaceholderData: targetActionsIsPlaceholder,
+  } = useTargetActions({ include_hidden: showHidden })
   const cloneMut = useCloneTargetAction()
   const hideMut = useHideTargetAction()
   const unhideMut = useUnhideTargetAction()
@@ -162,6 +172,13 @@ export function TargetActionsPage() {
     },
   ]
 
+  const showFullPageSkeleton = targetActionsPending && !data
+  const showTableSkeleton = targetActionsIsPlaceholder && targetActionsFetching
+
+  if (showFullPageSkeleton) {
+    return <TargetActionsPageSkeleton />
+  }
+
   return (
     <div className="flex w-full flex-col items-start gap-4">
       <div className="mb-4 flex w-full flex-col items-start gap-3 md:flex-row md:items-center md:justify-between">
@@ -200,12 +217,16 @@ export function TargetActionsPage() {
         </div>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={filtered}
-        emptyMessage={isLoading ? t('common.loading') : t('pages.targetActions.empty')}
-        className="flex flex-col items-start gap-8 self-stretch"
-      />
+      {showTableSkeleton ? (
+        <TargetActionsTableSectionSkeleton />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={filtered}
+          emptyMessage={t('pages.targetActions.empty')}
+          className="flex flex-col items-start gap-8 self-stretch"
+        />
+      )}
 
       {showCreate && (
         <CreateTargetActionModal

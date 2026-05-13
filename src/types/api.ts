@@ -96,7 +96,7 @@ export interface User {
   is_agent?: boolean
   agent_status?: string
   timezone?: string
-  /** Backend UI language preference (uk | en | ru). */
+  /** Backend UI language preference (uk | en; legacy `ru` may still appear as string). */
   language?: string
   mustChangePassword?: boolean
   /** Mirrors backend `two_factor_enabled` for the dashboard 2FA toggle. */
@@ -110,7 +110,7 @@ export interface UpdateMyProfileInput {
   last_name?: string
   middle_name?: string
   phone?: string
-  language?: 'uk' | 'en' | 'ru'
+  language?: 'uk' | 'en'
   timezone?: string
   agent_status?: string
 }

@@ -54,7 +54,9 @@ export function DeleteDocumentTemplateModal({ open, template, onClose }: Props) 
             {t('actions.cancel', 'Cancel')}
           </Button>
           <Button variant="danger" onClick={handleDelete} disabled={mutation.isPending}>
-            {mutation.isPending ? t('actions.saving', 'Saving…') : t('actions.delete', 'Delete')}
+            {mutation.isPending
+              ? t('actions.deleting', 'Deleting…')
+              : t('actions.delete', 'Delete')}
           </Button>
         </div>
       </div>

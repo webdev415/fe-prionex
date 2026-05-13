@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Icons } from '@/lib/icons'
 import { useExportTimeline, useTimeline, type TimelineEventDto } from '@/features/operatorAnalytics'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { readTimelineBarState, writeTimelineBarState } from '../lib/analyticsUrlState'
 
 function formatOffset(seconds?: number | null): string {
@@ -25,8 +27,12 @@ export function TimelineTab() {
   const [draftCallId, setDraftCallId] = useState(urlState.call_id ?? '')
 
   const callId = urlState.call_id ?? null
-  const { data, isLoading, isError } = useTimeline(callId, !!callId)
+  const { data, isPending, isError, error } = useTimeline(callId, !!callId)
   const exportMutation = useExportTimeline()
+
+  // 422 means the supplied call_id didn't parse as a UUID. Anything else is a
+  // generic server/network failure.
+  const isInvalidCallId = isError && axios.isAxiosError(error) && error.response?.status === 422
 
   const handleApply = () => {
     const trimmed = draftCallId.trim() || undefined
@@ -75,7 +81,7 @@ export function TimelineTab() {
             onClick={handleApply}
             className="h-[45px] sm:px-8"
           >
-            {t('pages.actionAnalysis.filters.applyFilters', 'Load')}
+            {t('pages.actionAnalysis.timeline.load', 'Load')}
           </Button>
           <Button
             type="button"
@@ -101,11 +107,16 @@ export function TimelineTab() {
         </div>
       ) : isError ? (
         <div className="rounded-xl bg-red-50 p-6 text-center text-sm text-red-700 shadow-sm">
-          {t('pages.actionAnalysis.errors.loadTimelineFailed', 'Failed to load the timeline.')}
+          {isInvalidCallId
+            ? t(
+                'pages.actionAnalysis.errors.invalidCallId',
+                'Invalid Call ID. Paste a full call UUID (36 characters).'
+              )
+            : t('pages.actionAnalysis.errors.loadTimelineFailed', 'Failed to load the timeline.')}
         </div>
-      ) : isLoading ? (
-        <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">
-          {t('common.loading', 'Loading...')}
+      ) : isPending ? (
+        <div className="overflow-x-auto rounded-xl bg-white/80 shadow-sm">
+          <TableSkeleton columns={4} rows={8} className="w-full" />
         </div>
       ) : events.length === 0 ? (
         <div className="rounded-xl bg-white/50 p-6 text-center text-sm text-gray-500 shadow-sm">

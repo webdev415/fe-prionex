@@ -14,6 +14,7 @@ import {
   type InteractionMonitoringSortDir,
 } from '@/features/actionAnalysis'
 import { Pagination } from '@/components/ui/Pagination'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { defaultCustomDateRange } from '../lib/dateRange'
 import {
   INTERACTION_FILTERS_DEFAULT,
@@ -25,8 +26,6 @@ import {
 } from '../lib/interactionsUrlState'
 import { InteractionFiltersBar } from './InteractionFiltersBar'
 import { InteractionHistoryTable } from './InteractionHistoryTable'
-
-const PAGE_SIZE = 20
 
 export function InteractionHistoryTab() {
   const { t } = useTranslation('common')
@@ -61,21 +60,22 @@ export function InteractionHistoryTab() {
   )
 
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
   const queryFilters: InteractionMonitoringFilters = useMemo(() => {
     const base = toInteractionMonitoringQuery(barState, operators)
     return {
       ...base,
       page,
-      page_size: PAGE_SIZE,
+      page_size: pageSize,
     }
-  }, [barState, operators, page])
+  }, [barState, operators, page, pageSize])
 
   const queryEnabled =
     (barState.period !== 'custom' || !!(barState.customFromDate && barState.customToDate)) &&
     resolvedUsers.kind !== 'empty'
 
-  const { data, error } = useInteractionMonitoring(queryFilters, queryEnabled)
+  const { data, error, isPending } = useInteractionMonitoring(queryFilters, queryEnabled)
 
   const handleApply = (next: InteractionBarState) => {
     let out: InteractionBarState = next
@@ -123,7 +123,7 @@ export function InteractionHistoryTab() {
 
   const items = resolvedUsers.kind === 'empty' ? [] : (data?.items ?? [])
   const total = resolvedUsers.kind === 'empty' ? 0 : (data?.total ?? 0)
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   const emptyDeptMessage = resolvedUsers.kind === 'empty'
 
@@ -157,20 +157,24 @@ export function InteractionHistoryTab() {
         </div>
       ) : (
         <>
-          <InteractionHistoryTable
-            data={items}
-            sortBy={barState.sort_by ?? 'date'}
-            sortDir={barState.sort_dir ?? 'desc'}
-            onSortChange={handleSortChange}
-            internalDateType={barState.internal_date_type}
-          />
-          {total > PAGE_SIZE && (
+          {queryEnabled && isPending ? (
+            <TableSkeleton columns={11} rows={pageSize} className="w-full" />
+          ) : (
+            <InteractionHistoryTable
+              data={items}
+              sortBy={barState.sort_by ?? 'date'}
+              sortDir={barState.sort_dir ?? 'desc'}
+              onSortChange={handleSortChange}
+              internalDateType={barState.internal_date_type}
+            />
+          )}
+          {total > pageSize && (
             <Pagination
               currentPage={page}
               totalPages={totalPages}
-              pageSize={PAGE_SIZE}
+              pageSize={pageSize}
               onPageChange={setPage}
-              onPageSizeChange={() => {}}
+              onPageSizeChange={setPageSize}
             />
           )}
         </>

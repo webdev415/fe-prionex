@@ -15,6 +15,7 @@ export const PERMISSIONS = {
    */
   CLIENTS: {
     VIEW: 'view_clients',
+    VIEW_FULL_CLIENT_DATA: 'view_full_client_data',
     EDIT: 'edit_clients',
     ASSIGN_TAGS: 'assign_client_tags',
     EDIT_DEBT: 'edit_client_debt',
@@ -171,6 +172,7 @@ export const PERMISSIONS = {
     VIEW_ACTIVITY_HEATMAP: 'view_activity_heatmap',
     VIEW_SCRIPT_ANALYTICS: 'view_script_analytics',
     VIEW_TA_HISTORY: 'view_ta_history',
+    VIEW_TASK_HISTORY: 'view_task_history',
   },
 
   /**
@@ -184,6 +186,21 @@ export const PERMISSIONS = {
     CREATE_EDIT_TEMPLATES: 'create_edit_document_templates',
     DELETE_TEMPLATES: 'delete_document_templates',
     GENERATE: 'generate_document',
+  },
+
+  /**
+   * Restructuring Category (5 permissions)
+   * Per-transition gates for manual RR status changes. Each button in
+   * the RR actions column checks its specific permission. Automated
+   * transitions (overdue / debt = 0 / payment events) bypass these
+   * entirely — the system has its own authority.
+   */
+  RESTRUCTURING: {
+    TRANSITION_CONNECTED_TO_VIOLATED: 'rr_transition_connected_to_violated',
+    TRANSITION_VIOLATED_TO_CONNECTED: 'rr_transition_violated_to_connected',
+    TRANSITION_CANCELLED_TO_CONNECTED: 'rr_transition_cancelled_to_connected',
+    DISCONNECT: 'rr_disconnect',
+    COMPLETE: 'rr_complete',
   },
 } as const
 
@@ -236,6 +253,7 @@ export const PERMISSION_CATEGORIES = {
   TA_CHAINS: 'TA Chains',
   ACTION_ANALYSIS: 'Action Analysis',
   DOCUMENT_GENERATION: 'Document Generation',
+  RESTRUCTURING: 'Restructuring',
 } as const
 
 /**
@@ -244,6 +262,7 @@ export const PERMISSION_CATEGORIES = {
 export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Clients
   view_clients: 'View client data and information',
+  view_full_client_data: 'View unmasked client PII (name, phone, TIN) in dashboards',
   edit_clients: 'Edit client information (except debt amounts and tags)',
   assign_client_tags: 'Assign and remove tags on client profiles',
   edit_client_debt: 'Edit debt amounts and DPD (Days Past Due)',
@@ -317,6 +336,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   view_script_analytics:
     'View Script Analytics & anomaly detection (interaction-result distribution and auto-flags)',
   view_ta_history: 'View TA History sub-tab (chain interactions with chain + step filters)',
+  view_task_history: 'View Task History sub-tab (all operator tasks with filters)',
 
   // Document Generation
   view_document_journal: 'View the journal of all generated and uploaded documents',
@@ -324,4 +344,14 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   create_edit_document_templates: 'Create and edit document templates',
   delete_document_templates: 'Delete document templates',
   generate_document: 'Generate a document on the client card',
+
+  // Restructuring — per-transition gates on the RR action buttons
+  rr_transition_connected_to_violated:
+    'Manually flip a Connected restructuring agreement to Violated (Mark Violated button)',
+  rr_transition_violated_to_connected:
+    'Manually restore a Violated restructuring agreement to Connected (Restore button)',
+  rr_transition_cancelled_to_connected:
+    'Manually restore a Cancelled restructuring agreement to Connected (rare; mistaken cancellation)',
+  rr_disconnect: 'Manually disconnect a restructuring agreement (status → Cancelled with reason)',
+  rr_complete: 'Manually mark a restructuring agreement as Completed',
 }

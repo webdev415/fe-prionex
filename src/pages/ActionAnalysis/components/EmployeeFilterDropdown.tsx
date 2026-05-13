@@ -110,7 +110,7 @@ export function EmployeeFilterDropdown({
               type="button"
               disabled={disabled}
               className={cn(
-                'text-dark-500 focus:border-primary-500 flex h-[45px] w-full items-center justify-between rounded-md border border-gray-200 bg-white px-3 py-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-50'
+                'text-dark-500 focus:border-primary-500 flex h-[45px] w-full items-center justify-between rounded-lg border border-gray-400 bg-white px-3 py-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-50'
               )}
             >
               <span className="truncate text-left">{triggerLabel}</span>

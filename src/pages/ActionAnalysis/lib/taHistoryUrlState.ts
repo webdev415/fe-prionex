@@ -4,6 +4,12 @@ import { localDateStringsToIsoRange } from './dateRange'
 
 const DEFAULT_PERIOD: CallMonitoringPeriod = 'last_7d'
 
+export interface StepValueEntry {
+  eq?: string
+  min?: string
+  max?: string
+}
+
 export interface TaHistoryBarState {
   period?: CallMonitoringPeriod
   customFromDate?: string
@@ -11,10 +17,8 @@ export interface TaHistoryBarState {
   departmentId: number | null
   employeeIds: number[]
   chainId?: number
-  targetActionId?: number
-  stepValueEq?: string
-  stepValueMin?: string
-  stepValueMax?: string
+  targetActionIds: number[]
+  stepValues: Record<number, StepValueEntry>
   notesSearch?: string
 }
 
@@ -25,11 +29,22 @@ export const TA_HISTORY_FILTERS_DEFAULT: TaHistoryBarState = {
   departmentId: null,
   employeeIds: [],
   chainId: undefined,
-  targetActionId: undefined,
-  stepValueEq: undefined,
-  stepValueMin: undefined,
-  stepValueMax: undefined,
+  targetActionIds: [],
+  stepValues: {},
   notesSearch: undefined,
+}
+
+function parseStepValueList(items: string[]): Map<number, string> {
+  const out = new Map<number, string>()
+  for (const raw of items) {
+    if (!raw || !raw.includes(':')) continue
+    const colon = raw.indexOf(':')
+    const head = raw.slice(0, colon)
+    const value = raw.slice(colon + 1)
+    const id = Number(head)
+    if (Number.isFinite(id) && id > 0) out.set(id, value)
+  }
+  return out
 }
 
 export function readTaHistoryUrlState(params: URLSearchParams): TaHistoryBarState {
@@ -42,11 +57,29 @@ export function readTaHistoryUrlState(params: URLSearchParams): TaHistoryBarStat
 
   const chainIdRaw = params.get('chain_id')
   const chainId = chainIdRaw ? Number(chainIdRaw) : undefined
-  const stepRaw = params.get('step')
-  const targetActionId = chainId && stepRaw ? Number(stepRaw) : undefined
 
-  // Step value sub-filters only carry meaning when a step is picked.
-  const hasStep = chainId != null && targetActionId != null
+  const targetActionIds = params
+    .getAll('step')
+    .map((s) => Number(s))
+    .filter((n) => Number.isFinite(n) && n > 0)
+
+  // Per-step value sub-filters only carry meaning when at least one step is
+  // picked AND a chain is set (resolver needs the chain to map ta_id → step).
+  const stepValues: Record<number, StepValueEntry> = {}
+  if (chainId != null && targetActionIds.length > 0) {
+    const eqMap = parseStepValueList(params.getAll('step_eq'))
+    const minMap = parseStepValueList(params.getAll('step_min'))
+    const maxMap = parseStepValueList(params.getAll('step_max'))
+    const picked = new Set(targetActionIds)
+    for (const id of picked) {
+      const entry: StepValueEntry = {}
+      if (eqMap.has(id)) entry.eq = eqMap.get(id)
+      if (minMap.has(id)) entry.min = minMap.get(id)
+      if (maxMap.has(id)) entry.max = maxMap.get(id)
+      if (entry.eq || entry.min || entry.max) stepValues[id] = entry
+    }
+  }
+
   return {
     period,
     customFromDate: params.get('from_date') ?? undefined,
@@ -54,10 +87,8 @@ export function readTaHistoryUrlState(params: URLSearchParams): TaHistoryBarStat
     departmentId: dept ? Number(dept) : null,
     employeeIds,
     chainId: Number.isFinite(chainId) ? chainId : undefined,
-    targetActionId: Number.isFinite(targetActionId) ? targetActionId : undefined,
-    stepValueEq: hasStep ? (params.get('step_value') ?? undefined) : undefined,
-    stepValueMin: hasStep ? (params.get('step_min') ?? undefined) : undefined,
-    stepValueMax: hasStep ? (params.get('step_max') ?? undefined) : undefined,
+    targetActionIds,
+    stepValues,
     notesSearch: params.get('notes') ?? undefined,
   }
 }
@@ -74,7 +105,7 @@ export function writeTaHistoryUrlState(
   next.delete('employee_id')
   next.delete('chain_id')
   next.delete('step')
-  next.delete('step_value')
+  next.delete('step_eq')
   next.delete('step_min')
   next.delete('step_max')
   next.delete('notes')
@@ -92,11 +123,17 @@ export function writeTaHistoryUrlState(
     }
   }
   if (state.chainId != null) next.set('chain_id', String(state.chainId))
-  if (state.chainId != null && state.targetActionId != null) {
-    next.set('step', String(state.targetActionId))
-    if (state.stepValueEq) next.set('step_value', state.stepValueEq)
-    if (state.stepValueMin) next.set('step_min', state.stepValueMin)
-    if (state.stepValueMax) next.set('step_max', state.stepValueMax)
+  if (state.chainId != null && state.targetActionIds.length > 0) {
+    for (const id of state.targetActionIds) {
+      next.append('step', String(id))
+    }
+    for (const id of state.targetActionIds) {
+      const entry = state.stepValues[id]
+      if (!entry) continue
+      if (entry.eq) next.append('step_eq', `${id}:${entry.eq}`)
+      if (entry.min) next.append('step_min', `${id}:${entry.min}`)
+      if (entry.max) next.append('step_max', `${id}:${entry.max}`)
+    }
   }
   if (state.notesSearch && state.notesSearch.trim()) {
     next.set('notes', state.notesSearch.trim())
@@ -137,15 +174,26 @@ export function toTaHistoryQuery(
     date_to = now.toISOString()
   }
 
+  const step_value_eq: string[] = []
+  const step_value_min: string[] = []
+  const step_value_max: string[] = []
+  for (const id of state.targetActionIds) {
+    const entry = state.stepValues[id]
+    if (!entry) continue
+    if (entry.eq) step_value_eq.push(`${id}:${entry.eq}`)
+    if (entry.min) step_value_min.push(`${id}:${entry.min}`)
+    if (entry.max) step_value_max.push(`${id}:${entry.max}`)
+  }
+
   return {
     chain_id: state.chainId,
-    target_action_id: state.targetActionId,
+    target_action_id_in: state.targetActionIds.length > 0 ? state.targetActionIds : undefined,
     recorded_by_in: recordedByIn,
     date_from,
     date_to,
-    step_value_eq: state.stepValueEq,
-    step_value_min: state.stepValueMin,
-    step_value_max: state.stepValueMax,
+    step_value_eq: step_value_eq.length ? step_value_eq : undefined,
+    step_value_min: step_value_min.length ? step_value_min : undefined,
+    step_value_max: step_value_max.length ? step_value_max : undefined,
     notes_search: state.notesSearch,
   }
 }

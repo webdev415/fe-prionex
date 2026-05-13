@@ -11,6 +11,24 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 const TABLE_COLUMNS = 6
 const ITEMS_PER_PAGE = 10
 
+/** Table + pagination skeleton inside the white card (filter/sort/page changes without remounting the full page). */
+export function AuditLogsTableSectionSkeleton() {
+  return (
+    <>
+      <TableSkeleton columns={TABLE_COLUMNS} rows={ITEMS_PER_PAGE} className="w-full" />
+      <div className="flex w-full items-center justify-center">
+        <div className="flex items-center gap-2">
+          <div className="h-10 w-10 animate-pulse rounded-full bg-gray-200" />
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="h-10 w-10 animate-pulse rounded-full bg-gray-200" />
+          ))}
+          <div className="h-10 w-10 animate-pulse rounded-full bg-gray-200" />
+        </div>
+      </div>
+    </>
+  )
+}
+
 export function AuditLogsPageSkeleton() {
   return (
     <div className="flex h-full flex-col">
@@ -94,20 +112,8 @@ export function AuditLogsPageSkeleton() {
 
       {/* Main Content Area Skeleton */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Audit Logs Table Skeleton */}
         <div className="flex flex-1 flex-col gap-4 overflow-hidden rounded-xl bg-white/50 p-3 sm:gap-6 sm:p-6">
-          <TableSkeleton columns={TABLE_COLUMNS} rows={ITEMS_PER_PAGE} className="w-full" />
-
-          {/* Pagination Skeleton */}
-          <div className="flex w-full items-center justify-center">
-            <div className="flex items-center gap-2">
-              <div className="h-10 w-10 animate-pulse rounded-full bg-gray-200" />
-              {Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="h-10 w-10 animate-pulse rounded-full bg-gray-200" />
-              ))}
-              <div className="h-10 w-10 animate-pulse rounded-full bg-gray-200" />
-            </div>
-          </div>
+          <AuditLogsTableSectionSkeleton />
         </div>
       </div>
     </div>

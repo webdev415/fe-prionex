@@ -4,6 +4,10 @@ export type CallMonitoringSort = 'date_desc' | 'date_asc' | 'duration_desc' | 'd
 
 export type CallMonitoringOutcomeFilter = 'all' | 'answered' | 'not_answered'
 
+export type TelephonyType = 'white' | 'grey' | 'unknown'
+
+export const TELEPHONY_TYPE_VALUES: readonly TelephonyType[] = ['white', 'grey', 'unknown']
+
 export interface CallMonitoringFilters {
   agent_extensions?: string[]
   phone_number?: string
@@ -14,6 +18,7 @@ export interface CallMonitoringFilters {
   from_datetime?: string
   to_datetime?: string
   campaign_id?: string
+  telephony_types?: TelephonyType[]
   sort?: CallMonitoringSort
   limit?: number
   offset?: number
@@ -35,6 +40,7 @@ export interface CallMonitoringItem {
   client_id: number | null
   campaign_id: string | null
   has_recording: boolean
+  telephony_type: TelephonyType
 }
 
 export interface CallMonitoringSummary {
@@ -108,4 +114,99 @@ export interface InteractionMonitoringResponse {
   total: number
   page: number
   page_size: number
+}
+
+export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent' | 'critical'
+
+export type TaskStatus =
+  | 'pending'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled'
+  | 'extended'
+  | 'rejected'
+  | 'incoming_line_result'
+
+export type TaskHistorySort =
+  | 'created_at_desc'
+  | 'created_at_asc'
+  | 'due_date_asc'
+  | 'due_date_desc'
+
+export interface TaskHistoryFilters {
+  date_from?: string
+  date_to?: string
+  due_date_from?: string
+  due_date_to?: string
+  assigned_to_user_ids?: number[]
+  created_by_in?: number[]
+  group_id?: number
+  subject_id?: number
+  priority?: TaskPriority
+  status?: TaskStatus
+  sort?: TaskHistorySort
+  skip?: number
+  limit?: number
+}
+
+export interface TaskHistoryItem {
+  id: number
+  project_id: number
+  client_id: number | null
+  debt_id: number | null
+  subject_id: number | null
+  subject_name: string | null
+  subject_code: string | null
+  title: string
+  description: string | null
+  comment: string | null
+  priority: TaskPriority | string
+  status: TaskStatus | string
+  due_date: string | null
+  is_overdue: boolean
+  assigned_to_user_id: number | null
+  assigned_to_username: string | null
+  is_dismissed: boolean
+  created_at: string | null
+  updated_at: string | null
+  created_by: number
+  created_by_name: string | null
+  legacy_id: string | null
+}
+
+export interface TaskHistoryResponse {
+  items: TaskHistoryItem[]
+  total: number
+  skip: number
+  limit: number
+}
+
+export interface TaskHistoryAnalyticsBucket {
+  date: string
+  count: number
+}
+
+export interface TaskHistoryAnalyticsResponse {
+  buckets: TaskHistoryAnalyticsBucket[]
+  total: number
+}
+
+export interface TaskHistoryAnalyticsFilters {
+  date_from?: string
+  date_to?: string
+  due_date_from?: string
+  due_date_to?: string
+  assigned_to_user_ids?: number[]
+  created_by_in?: number[]
+  group_id?: number
+  subject_id?: number
+  priority?: TaskPriority
+  status?: TaskStatus
+}
+
+export interface TaskSubject {
+  id: number
+  code: string
+  name: string
+  name_en?: string | null
 }

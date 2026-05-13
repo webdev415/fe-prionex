@@ -36,6 +36,7 @@ import {
   EditDepartmentModal,
   ArchiveDepartmentModal,
   DepartmentManagementPageSkeleton,
+  DepartmentManagementTablesSkeleton,
 } from './components'
 
 export function DepartmentManagementPage() {
@@ -90,7 +91,7 @@ export function DepartmentManagementPage() {
 
   const {
     data,
-    isLoading: loadingDepartments,
+    isPending: departmentsPending,
     isError,
     error,
     refetch,
@@ -208,12 +209,16 @@ export function DepartmentManagementPage() {
     },
   ]
 
-  const isLoading = loadingProjects || loadingDepartments
+  // Full-page skeleton only until projects list has loaded once (keeps header/select on project change).
+  const showFullPageSkeleton = loadingProjects && projectsData === undefined
+  const shellReady = projects.length > 0 && selectedProjectId !== null
+  const showTablesSkeleton =
+    !showFullPageSkeleton && projects.length > 0 && !isError && (!shellReady || departmentsPending)
 
   return (
     <div>
       {/* Page Header */}
-      {!isLoading && (
+      {!showFullPageSkeleton && (
         <div className="mb-4 flex items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-2 sm:gap-3">
             <h1 className="text-dark-500 text-xl font-light sm:text-2xl">
@@ -247,7 +252,7 @@ export function DepartmentManagementPage() {
       )}
 
       {/* Project Selector */}
-      {!isLoading && (
+      {!showFullPageSkeleton && (
         <div className="mb-6 flex items-center gap-3">
           <span className="text-base font-light text-gray-500 sm:text-xl">
             {t('pages.departments.project')}
@@ -277,16 +282,17 @@ export function DepartmentManagementPage() {
       )}
 
       {/* Loading States */}
-      {isLoading && <DepartmentManagementPageSkeleton />}
+      {showFullPageSkeleton && <DepartmentManagementPageSkeleton />}
+      {showTablesSkeleton && <DepartmentManagementTablesSkeleton />}
 
       {/* Error States */}
-      {!isLoading && projects.length === 0 && (
+      {!showFullPageSkeleton && projects.length === 0 && (
         <div className="rounded-lg bg-white p-8 text-center shadow-sm">
           <p className="text-sm text-gray-500">{t('pages.departments.noActiveProjects')}</p>
         </div>
       )}
 
-      {!isLoading && projects.length > 0 && isError && (
+      {!showFullPageSkeleton && projects.length > 0 && isError && (
         <ErrorState
           error={error}
           onRetry={() => refetch()}
@@ -295,7 +301,7 @@ export function DepartmentManagementPage() {
       )}
 
       {/* Content */}
-      {!isLoading && projects.length > 0 && !isError && (
+      {!showFullPageSkeleton && projects.length > 0 && !isError && !showTablesSkeleton && (
         <div className="space-y-8">
           <section className="rounded-xl bg-white/50 p-6">
             <h2 className="mb-3 text-base font-light text-black sm:text-xl">

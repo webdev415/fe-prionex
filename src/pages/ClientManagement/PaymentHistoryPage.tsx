@@ -4,8 +4,9 @@
  * Displays full payment history for a client with filtering and pagination.
  */
 
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback, useTransition } from 'react'
 import { useTranslation } from 'react-i18next'
+import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { convertUTCToUserTimezone, formatIsoDate } from '@/lib/formatters'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useAuthStore } from '@/stores/authStore'
@@ -79,6 +80,122 @@ interface Payment {
   project_name?: string
 }
 
+/** Thead pulse row — identical for full-page load and in-table refetch skeleton */
+function PaymentHistoryTableHeadSkeletonRow() {
+  return (
+    <tr className="bg-white">
+      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+        <div className="flex items-center gap-1">
+          <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+          <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+        </div>
+      </th>
+      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+        <div className="h-3 w-24 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-28" />
+      </th>
+      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+        <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
+      </th>
+      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
+        <div className="ml-auto flex items-center justify-end gap-1">
+          <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-14" />
+          <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+        </div>
+      </th>
+      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+        <div className="flex items-center gap-1">
+          <div className="h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+          <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+        </div>
+      </th>
+      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+        <div className="flex items-center gap-1">
+          <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
+          <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+        </div>
+      </th>
+      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+        <div className="flex items-center gap-1">
+          <div className="h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+          <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+        </div>
+      </th>
+      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+        <div className="flex items-center gap-1">
+          <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-14" />
+          <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded bg-gray-200 opacity-50" />
+        </div>
+      </th>
+      <th className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
+        <div className="mx-auto h-3 w-14 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
+      </th>
+    </tr>
+  )
+}
+
+/** Tbody rows — same cell frame as loaded payment rows; bars fill cell width like full-page skeleton */
+function PaymentHistoryTableBodySkeletonRows() {
+  const bar = (align: 'left' | 'right', narrow = false) => {
+    const width = narrow
+      ? 'w-[72%] max-w-[4.5rem]'
+      : align === 'right'
+        ? 'w-[70%] max-w-[5rem]'
+        : 'w-[88%] max-w-[11rem]'
+    const alignCls = align === 'right' ? 'ml-auto' : 'mr-auto'
+    return (
+      <div
+        className={cn(
+          'block h-3 min-w-[3rem] animate-pulse rounded bg-gray-200 sm:h-4',
+          width,
+          alignCls
+        )}
+      />
+    )
+  }
+
+  return (
+    <>
+      {Array.from({ length: 10 }).map((_, rowIndex) => (
+        <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'}>
+          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+            {bar('left')}
+          </td>
+          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+            {bar('left', true)}
+          </td>
+          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+            {bar('left', true)}
+          </td>
+          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-right text-xs font-medium sm:px-6">
+            {bar('right', true)}
+          </td>
+          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+            {bar('left')}
+          </td>
+          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+            {bar('left')}
+          </td>
+          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+            {bar('left', true)}
+          </td>
+          <td className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+            <div className="flex w-full min-w-0 items-center gap-2">
+              <div className="h-3 w-3 shrink-0 animate-pulse rounded-full bg-gray-200" />
+              <div className="h-3 max-w-[6rem] min-w-0 flex-1 animate-pulse rounded bg-gray-200 sm:h-4 sm:max-w-[7rem]" />
+            </div>
+          </td>
+          <td className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
+            <div className="mx-auto flex w-full max-w-[7rem] items-center justify-center gap-1 sm:max-w-[9rem] sm:gap-2">
+              <div className="h-5 w-10 shrink-0 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-11" />
+              <div className="hidden h-5 w-10 shrink-0 animate-pulse rounded bg-gray-200 sm:block sm:h-6 sm:w-11" />
+            </div>
+          </td>
+        </tr>
+      ))}
+    </>
+  )
+}
+
 export function PaymentHistoryPage() {
   const { t, i18n } = useTranslation('common')
   const userTimezone = useAuthStore((state) => state.user?.timezone)
@@ -150,6 +267,7 @@ export function PaymentHistoryPage() {
 
   // Sorting state
   const [sortConfig, setSortConfig] = useState<{ key: string; order: 'asc' | 'desc' } | null>(null)
+  const [isSortPending, startSortTransition] = useTransition()
 
   // Call functionality state
   const { isCallActive, setOpenCallModal } = useCallStore()
@@ -183,6 +301,7 @@ export function PaymentHistoryPage() {
   const {
     data: paymentHistoryData,
     isLoading: isLoadingPayments,
+    isFetching: isFetchingPayments,
     isError: isPaymentError,
     error: paymentError,
     refetch: refetchPayments,
@@ -198,7 +317,7 @@ export function PaymentHistoryPage() {
       date_field: 'recorded_at',
       tz: userTimezone,
     },
-    { enabled: !!clientId }
+    { enabled: !!clientId, keepPreviousDataBetweenFetches: true }
   )
 
   // Get client name and create client object for call functionality
@@ -616,7 +735,7 @@ export function PaymentHistoryPage() {
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount
     if (isNaN(num)) return '₴ 0'
-    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
+    const locale = intlLocaleForUiLanguage(i18n.language)
     return `₴ ${num
       .toLocaleString(locale, {
         minimumFractionDigits: 0,
@@ -648,11 +767,14 @@ export function PaymentHistoryPage() {
     )
   }
 
-  // Handle sort
+  // Handle sort (transition shows table-only skeleton while client-side sort applies)
   const handleSort = (key: string) => {
-    const newOrder: 'asc' | 'desc' =
-      sortConfig?.key === key && sortConfig.order === 'asc' ? 'desc' : 'asc'
-    setSortConfig({ key, order: newOrder })
+    startSortTransition(() => {
+      setSortConfig((prev) => {
+        const newOrder: 'asc' | 'desc' = prev?.key === key && prev.order === 'asc' ? 'desc' : 'asc'
+        return { key, order: newOrder }
+      })
+    })
   }
 
   // Get sort icon for column header
@@ -775,8 +897,7 @@ export function PaymentHistoryPage() {
     return filteredPayments.slice(start, end)
   }, [filteredPayments, currentPage, pageSize])
 
-  // Calculate display range subtitle for title
-  const getPaymentHistorySubtitle = () => {
+  const paymentHistorySubtitle = useMemo(() => {
     if (!paymentHistory || filteredPayments.length === 0) {
       return null
     }
@@ -785,181 +906,26 @@ export function PaymentHistoryPage() {
     const start = (currentPage - 1) * pageSize + 1
     const end = Math.min(currentPage * pageSize, total)
 
-    // If showing first page with 10 items, show "Last 10"
     if (currentPage === 1 && pageSize === 10 && total >= 10) {
       return t('pages.clients.paymentHistory.subtitle.last10')
     }
 
-    // Otherwise show the range
     if (start === end) {
       return t('pages.clients.paymentHistory.subtitle.single', { index: start, total })
     }
     return t('pages.clients.paymentHistory.subtitle.range', { start, end, total })
-  }
+  }, [paymentHistory, filteredPayments, currentPage, pageSize, t])
 
-  // Show loading state while fetching client or payment history
-  if (isLoadingClient || isLoadingPayments || !paymentHistory) {
-    return (
-      <div className="flex flex-1 flex-col items-start gap-5 self-stretch">
-        {/* Header Skeleton */}
-        <div className="flex flex-col gap-3 self-stretch sm:h-12 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-center gap-2 sm:gap-4 sm:self-stretch">
-            <div className="h-10 w-24 animate-pulse rounded-full bg-gray-200 sm:h-12 sm:w-32" />
-            <div className="h-6 w-48 animate-pulse rounded bg-gray-200 sm:h-8 sm:w-64" />
-          </div>
-          <div className="h-10 w-full animate-pulse rounded-full bg-gray-200 sm:h-12 sm:w-32" />
-        </div>
+  /** Same thead + tbody skeleton as full-page load (filters stay interactive). */
+  const showPaymentTableBodySkeleton = Boolean(
+    paymentHistory && (isFetchingPayments || isSortPending)
+  )
 
-        {/* Main Content Skeleton */}
-        <div className="flex flex-col items-start gap-5 self-stretch xl:flex-row">
-          {/* Left Column Skeleton */}
-          <div className="flex w-full flex-col items-start gap-5 self-stretch xl:w-[35%]">
-            {/* Client Information Card Skeleton */}
-            <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-4 sm:p-6">
-              {/* Client Name Skeleton */}
-              <div className="flex flex-col items-center justify-center gap-4 self-stretch">
-                <div className="flex items-center justify-center gap-2 sm:gap-4">
-                  <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
-                  <div className="h-5 w-36 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-48" />
-                </div>
-                <div className="h-6 w-20 animate-pulse rounded-full bg-gray-200 sm:h-8 sm:w-24" />
-              </div>
+  const showFullPageLoadingSkeleton =
+    isLoadingClient ||
+    !apiClient ||
+    (!paymentHistoryData && !isPaymentError && (isLoadingPayments || isFetchingPayments))
 
-              {/* Progress Circle Skeleton */}
-              <div className="mb-6 flex justify-center">
-                <div className="relative flex h-[120px] w-[120px] items-center justify-center sm:h-[150px] sm:w-[150px]">
-                  <div className="h-[120px] w-[120px] animate-pulse rounded-full bg-gray-200 sm:h-[150px] sm:w-[150px]" />
-                  <div className="absolute h-10 w-10 animate-pulse rounded-full bg-gray-300 sm:h-12 sm:w-12" />
-                </div>
-              </div>
-
-              {/* Total Paid Skeleton */}
-              <div className="flex flex-col items-center gap-5 self-stretch">
-                <div className="h-5 w-28 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-32" />
-              </div>
-
-              {/* Action Buttons Skeleton */}
-              <div className="flex w-full flex-col items-start gap-3 sm:flex-row">
-                <div className="h-10 w-full flex-1 animate-pulse rounded-full bg-gray-200 sm:w-auto" />
-                <div className="h-10 w-full flex-1 animate-pulse rounded-full bg-gray-200 sm:w-auto" />
-              </div>
-            </div>
-
-            {/* Summary Cards Skeleton */}
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div
-                key={index}
-                className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5"
-              >
-                <div className="flex flex-col items-start gap-2 self-stretch px-4 sm:flex-row sm:items-start sm:justify-between sm:px-6">
-                  <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
-                  <div className="h-3 w-28 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-32" />
-                </div>
-                <div className="flex flex-col items-start gap-2 self-stretch px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                  <div className="h-5 w-28 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-32" />
-                  <div className="h-4 w-14 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-16" />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Right Column Skeleton - Payment History Table */}
-          <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
-            <div className="flex flex-col items-start gap-3 self-stretch">
-              <div className="h-4 w-40 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-48" />
-
-              {/* Filters Skeleton */}
-              <div className="flex flex-col items-start gap-3 self-stretch rounded-t-xl border border-b-0 border-[#EBECE8] bg-white p-3 sm:flex-row sm:gap-5 sm:p-4">
-                <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 sm:w-auto">
-                  <div className="h-3 w-12 animate-pulse rounded bg-gray-200" />
-                  <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
-                </div>
-                <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 sm:w-auto">
-                  <div className="h-3 w-16 animate-pulse rounded bg-gray-200" />
-                  <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
-                </div>
-                <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 sm:w-auto">
-                  <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
-                  <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
-                </div>
-                <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 sm:w-auto">
-                  <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
-                  <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
-                </div>
-              </div>
-
-              {/* Table Skeleton */}
-              <div className="w-full overflow-x-auto overflow-y-hidden rounded-xl rounded-t-none border border-[#EBECE8] bg-[#EBECE8] shadow-sm">
-                <table className="min-w-full border-collapse">
-                  <thead>
-                    <tr className="bg-white">
-                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
-                        <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
-                      </th>
-                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-right sm:px-6">
-                        <div className="ml-auto h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
-                      </th>
-                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
-                        <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
-                      </th>
-                      <th className="h-[49px] border-r border-[#EBECE8] px-3 text-left sm:px-6">
-                        <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
-                      </th>
-                      <th className="h-[49px] px-3 text-center sm:px-6">
-                        <div className="mx-auto h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Array.from({ length: 10 }).map((_, rowIndex) => (
-                      <tr
-                        key={rowIndex}
-                        className={rowIndex % 2 === 0 ? 'bg-[#F2F3F0]' : 'bg-white'}
-                      >
-                        <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
-                          <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
-                        </td>
-                        <td className="h-[49px] border-r border-[#EBECE8] px-3 text-right sm:px-6">
-                          <div className="ml-auto h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
-                        </td>
-                        <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
-                          <div className="h-3 w-12 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-16" />
-                        </td>
-                        <td className="h-[49px] border-r border-[#EBECE8] px-3 sm:px-6">
-                          <div className="flex items-center gap-2">
-                            <div className="h-3 w-3 animate-pulse rounded-full bg-gray-200" />
-                            <div className="hidden h-4 w-16 animate-pulse rounded bg-gray-200 sm:block sm:w-20" />
-                          </div>
-                        </td>
-                        <td className="h-[49px] px-3 text-center sm:px-6">
-                          <div className="mx-auto h-5 w-20 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-24" />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Pagination Skeleton */}
-              <div className="flex flex-col items-start gap-3 self-stretch sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
-                  <div className="h-9 w-18 animate-pulse rounded bg-gray-200 sm:h-10 sm:w-20" />
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="h-9 w-9 animate-pulse rounded bg-gray-200 sm:h-10 sm:w-10" />
-                  <div className="h-9 w-9 animate-pulse rounded bg-gray-200 sm:h-10 sm:w-10" />
-                  <div className="h-3 w-16 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-20" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Show error state if client or payment fetch failed
   if (isClientError || isPaymentError) {
     const errorMessage =
       clientError?.message || paymentError?.message || t('pages.clients.debtSummary.errorOccurred')
@@ -979,6 +945,159 @@ export function PaymentHistoryPage() {
         >
           {t('pages.clients.debtSummary.backToClient')}
         </Button>
+      </div>
+    )
+  }
+
+  if (showFullPageLoadingSkeleton || !paymentHistory) {
+    return (
+      <div className="flex flex-1 flex-col items-start gap-5 self-stretch">
+        {/* Header — matches loaded: xl row, back + title | export */}
+        <div className="flex flex-col gap-3 self-stretch xl:h-12 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4 sm:self-stretch">
+            <div className="h-10 w-24 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-12 sm:w-28" />
+            <div className="h-6 min-w-0 flex-1 animate-pulse rounded bg-gray-200 sm:h-8" />
+          </div>
+          <div className="h-10 w-full animate-pulse rounded-full bg-gray-200 sm:h-12 xl:w-40 xl:shrink-0" />
+        </div>
+
+        <div className="flex flex-col items-start gap-5 self-stretch xl:flex-row">
+          <div className="flex w-full flex-col items-start gap-5 self-stretch xl:w-[35%]">
+            <div className="flex min-h-[517px] flex-1 flex-col items-center justify-center gap-6 self-stretch rounded-xl border border-white p-4 sm:p-6">
+              <div className="flex flex-col items-center justify-center gap-4 self-stretch">
+                <div className="flex items-center justify-center gap-2 sm:gap-4">
+                  <div className="flex items-center gap-2.5 rounded-full bg-white/80 p-2">
+                    <div className="h-5 w-5 animate-pulse rounded-full bg-gray-200 sm:h-6 sm:w-6" />
+                  </div>
+                  <div className="h-5 w-36 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-48" />
+                </div>
+                <div className="h-6 w-28 animate-pulse rounded-full bg-gray-200 sm:h-7 sm:w-32" />
+              </div>
+
+              <div className="mb-6 flex justify-center">
+                <div className="relative flex h-[120px] w-[120px] items-center justify-center sm:h-[150px] sm:w-[150px]">
+                  <div className="h-[120px] w-[120px] animate-pulse rounded-full bg-gray-200 sm:h-[150px] sm:w-[150px]" />
+                  <div className="absolute h-10 w-10 animate-pulse rounded-full bg-gray-300 sm:h-12 sm:w-12" />
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center gap-5 self-stretch">
+                <div className="h-5 w-40 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-48" />
+              </div>
+
+              <div className="flex w-full flex-col items-start gap-3">
+                <div className="h-10 w-full animate-pulse rounded-full bg-gray-200" />
+                <div className="h-10 w-full animate-pulse rounded-full bg-gray-200" />
+              </div>
+            </div>
+
+            {/* Total payments — gradient strip like loaded */}
+            <div className="relative flex flex-col items-start gap-1 self-stretch overflow-hidden rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+              <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200 sm:h-[18px] sm:w-[18px]" />
+                  <div className="h-3 w-28 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-32" />
+                </div>
+                <div className="h-3 w-28 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-32" />
+              </div>
+              <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 px-6">
+                <div className="h-5 w-24 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-28" />
+                <div className="h-4 w-8 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-10" />
+              </div>
+              <div className="from-primary-300 to-secondary-800 absolute bottom-0 h-[3px] w-full bg-gradient-to-r opacity-60" />
+            </div>
+
+            {/* Verified */}
+            <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+              <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200 sm:h-[18px] sm:w-[18px]" />
+                  <div className="h-3 w-24 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-28" />
+                </div>
+                <div className="h-3 w-28 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-32" />
+              </div>
+              <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 px-6">
+                <div className="h-5 w-24 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-28" />
+                <div className="h-4 w-8 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-10" />
+              </div>
+            </div>
+
+            {/* Pending */}
+            <div className="flex flex-col items-start gap-1 self-stretch rounded-xl border border-white bg-white/50 px-0 pt-4 pb-6 sm:pt-5">
+              <div className="flex flex-row items-start justify-between gap-2 self-stretch px-4 px-6">
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200 sm:h-[18px] sm:w-[18px]" />
+                  <div className="h-3 w-20 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-24" />
+                </div>
+                <div className="h-3 w-28 animate-pulse rounded bg-gray-200 sm:h-4 sm:w-32" />
+              </div>
+              <div className="flex flex-row items-center justify-between gap-2 self-stretch px-4 px-6">
+                <div className="h-5 w-24 animate-pulse rounded bg-gray-200 sm:h-6 sm:w-28" />
+                <div className="h-4 w-8 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-10" />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex min-h-[740px] w-full min-w-0 flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
+            <div className="flex flex-col items-start gap-3 self-stretch">
+              <div className="h-4 w-48 animate-pulse rounded bg-gray-200 sm:h-5 sm:w-56" />
+
+              <div className="flex flex-col items-start self-stretch">
+                <div className="flex flex-col items-start gap-3 self-stretch rounded-t-xl border border-b-0 border-[#EBECE8] bg-white p-3 sm:flex-row sm:gap-5 sm:p-4">
+                  <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 self-stretch sm:w-auto">
+                    <div className="h-3 w-12 animate-pulse rounded bg-gray-200" />
+                    <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
+                  </div>
+                  <div className="flex w-full flex-1 flex-col items-start justify-center gap-1 self-stretch sm:w-auto">
+                    <div className="h-3 w-16 animate-pulse rounded bg-gray-200" />
+                    <div className="h-[45px] w-full animate-pulse rounded-md bg-gray-200" />
+                  </div>
+                  <div className="flex flex-col items-start justify-center gap-1 self-stretch sm:min-w-0 sm:flex-1">
+                    <div className="h-3 w-20 animate-pulse rounded bg-gray-200" />
+                    <div className="flex items-center gap-3 self-stretch">
+                      <div className="h-[45px] min-w-0 flex-1 animate-pulse rounded-md bg-gray-200" />
+                      <div className="h-3 w-2 shrink-0 animate-pulse rounded bg-gray-200" />
+                      <div className="h-[45px] min-w-0 flex-1 animate-pulse rounded-md bg-gray-200" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="data-table-scroll w-full overflow-x-auto overflow-y-hidden rounded-xl rounded-t-none border border-[#EBECE8] bg-[#EBECE8] shadow-sm">
+                  <table className="min-w-full border-collapse">
+                    <thead>
+                      <PaymentHistoryTableHeadSkeletonRow />
+                    </thead>
+                    <tbody>
+                      <PaymentHistoryTableBodySkeletonRows />
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="flex w-full justify-end">
+                <div className="flex w-full flex-wrap items-center justify-between gap-2 py-4 sm:gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="hidden h-3 w-28 animate-pulse rounded bg-gray-200 md:block" />
+                    <div className="h-8 w-12 animate-pulse rounded-md bg-gray-200 sm:h-9 sm:w-14" />
+                  </div>
+                  <div className="flex max-w-full items-center gap-1 overflow-hidden sm:gap-2">
+                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
+                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
+                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
+                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
+                    <div className="h-8 w-8 shrink-0 animate-pulse rounded-full bg-gray-200 sm:h-10 sm:w-10" />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="hidden h-3 w-10 animate-pulse rounded bg-gray-200 md:block" />
+                    <div className="h-3 w-5 animate-pulse rounded bg-gray-200" />
+                    <div className="h-3 w-4 animate-pulse rounded bg-gray-200" />
+                    <div className="h-3 w-5 animate-pulse rounded bg-gray-200" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -1248,9 +1367,12 @@ export function PaymentHistoryPage() {
         <div className="flex min-h-[740px] flex-1 flex-col items-center gap-6 self-stretch rounded-xl bg-white/50 p-4 sm:p-6">
           <div className="flex flex-col items-start gap-3 self-stretch">
             <span className="text-dark-500 text-sm leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
-              {t('pages.clients.paymentHistory.title')}{' '}
-              {getPaymentHistorySubtitle() && (
-                <span className="font-light">({getPaymentHistorySubtitle()})</span>
+              {t('pages.clients.paymentHistory.title')}
+              {paymentHistorySubtitle && (
+                <>
+                  {' '}
+                  <span className="font-light">({paymentHistorySubtitle})</span>
+                </>
               )}
             </span>
             <div className="flex flex-col items-start self-stretch">
@@ -1333,77 +1455,88 @@ export function PaymentHistoryPage() {
               </div>
 
               {/* Custom Table */}
-              <div className="data-table-scroll w-full overflow-x-auto overflow-y-hidden rounded-xl rounded-t-none border border-[#EBECE8] bg-[#EBECE8] shadow-sm">
+              <div
+                className={cn(
+                  'data-table-scroll w-full overflow-x-auto overflow-y-hidden rounded-xl rounded-t-none border border-[#EBECE8] bg-[#EBECE8] shadow-sm',
+                  showPaymentTableBodySkeleton && 'relative min-h-[490px]'
+                )}
+              >
                 <table className="min-w-full border-collapse">
                   <thead>
-                    <tr className="bg-white">
-                      <th
-                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
-                        onClick={() => handleSort('date')}
-                      >
-                        <span className="inline-flex items-center gap-1">
-                          {t('pages.clients.paymentHistory.tableHeaders.date')}
-                          {getSortIcon('date')}
-                        </span>
-                      </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
-                        {t('pages.clients.paymentHistory.tableHeaders.paymentConfirmationDate')}
-                      </th>
-                      <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
-                        {t('pages.clients.paymentHistory.tableHeaders.cancelledDate')}
-                      </th>
-                      <th
-                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-right text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
-                        onClick={() => handleSort('amount')}
-                      >
-                        <span className="inline-flex items-center justify-end gap-1">
-                          {t('pages.clients.paymentHistory.tableHeaders.amount')}
-                          {getSortIcon('amount')}
-                        </span>
-                      </th>
-                      <th
-                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
-                        onClick={() => handleSort('method')}
-                      >
-                        <span className="inline-flex items-center gap-1">
-                          {t('pages.clients.paymentHistory.tableHeaders.method')}
-                          {getSortIcon('method')}
-                        </span>
-                      </th>
-                      <th
-                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
-                        onClick={() => handleSort('reference')}
-                      >
-                        <span className="inline-flex items-center gap-1">
-                          {t('pages.clients.paymentHistory.tableHeaders.reference')}
-                          {getSortIcon('reference')}
-                        </span>
-                      </th>
-                      <th
-                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
-                        onClick={() => handleSort('contract')}
-                      >
-                        <span className="inline-flex items-center gap-1">
-                          {t('pages.clients.paymentHistory.tableHeaders.contractNumber')}
-                          {getSortIcon('contract')}
-                        </span>
-                      </th>
-                      <th
-                        className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
-                        onClick={() => handleSort('status')}
-                      >
-                        <span className="inline-flex items-center gap-1">
-                          {t('pages.clients.paymentHistory.tableHeaders.status')}
-                          {getSortIcon('status')}
-                        </span>
-                      </th>
-                      <th className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
-                        {t('pages.clients.paymentHistory.tableHeaders.actions')}
-                      </th>
-                    </tr>
+                    {showPaymentTableBodySkeleton ? (
+                      <PaymentHistoryTableHeadSkeletonRow />
+                    ) : (
+                      <tr className="bg-white">
+                        <th
+                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          onClick={() => handleSort('date')}
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            {t('pages.clients.paymentHistory.tableHeaders.date')}
+                            {getSortIcon('date')}
+                          </span>
+                        </th>
+                        <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                          {t('pages.clients.paymentHistory.tableHeaders.paymentConfirmationDate')}
+                        </th>
+                        <th className="text-dark-500 h-[49px] border-r border-[#EBECE8] px-3 text-left text-xs font-medium sm:px-6">
+                          {t('pages.clients.paymentHistory.tableHeaders.cancelledDate')}
+                        </th>
+                        <th
+                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-right text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          onClick={() => handleSort('amount')}
+                        >
+                          <span className="inline-flex items-center justify-end gap-1">
+                            {t('pages.clients.paymentHistory.tableHeaders.amount')}
+                            {getSortIcon('amount')}
+                          </span>
+                        </th>
+                        <th
+                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          onClick={() => handleSort('method')}
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            {t('pages.clients.paymentHistory.tableHeaders.method')}
+                            {getSortIcon('method')}
+                          </span>
+                        </th>
+                        <th
+                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          onClick={() => handleSort('reference')}
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            {t('pages.clients.paymentHistory.tableHeaders.reference')}
+                            {getSortIcon('reference')}
+                          </span>
+                        </th>
+                        <th
+                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          onClick={() => handleSort('contract')}
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            {t('pages.clients.paymentHistory.tableHeaders.contractNumber')}
+                            {getSortIcon('contract')}
+                          </span>
+                        </th>
+                        <th
+                          className="text-dark-500 h-[49px] cursor-pointer border-r border-[#EBECE8] px-3 text-left text-xs font-medium transition-colors select-none hover:bg-gray-50 sm:px-6"
+                          onClick={() => handleSort('status')}
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            {t('pages.clients.paymentHistory.tableHeaders.status')}
+                            {getSortIcon('status')}
+                          </span>
+                        </th>
+                        <th className="text-dark-500 h-[49px] px-3 text-center text-xs font-medium sm:px-6">
+                          {t('pages.clients.paymentHistory.tableHeaders.actions')}
+                        </th>
+                      </tr>
+                    )}
                   </thead>
                   <tbody>
-                    {paginatedPayments.length === 0 ? (
+                    {showPaymentTableBodySkeleton ? (
+                      <PaymentHistoryTableBodySkeletonRows />
+                    ) : paginatedPayments.length === 0 ? (
                       <tr>
                         <td
                           colSpan={9}
@@ -1638,7 +1771,12 @@ export function PaymentHistoryPage() {
 
             {/* Pagination */}
             {totalPages > 0 && (
-              <div className="flex w-full justify-end">
+              <div
+                className={cn(
+                  'flex w-full justify-end',
+                  showPaymentTableBodySkeleton && 'pointer-events-none opacity-50'
+                )}
+              >
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}

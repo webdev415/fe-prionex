@@ -5,6 +5,7 @@
  */
 
 import { useTranslation } from 'react-i18next'
+import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 import { PriorityBadge } from '@/pages/ClientManagement/components/PriorityBadge'
@@ -42,7 +43,7 @@ export function SearchResults({
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount
     if (isNaN(num)) return '0'
-    const locale = i18n.language === 'uk' ? 'uk-UA' : i18n.language === 'ru' ? 'ru-RU' : 'en-US'
+    const locale = intlLocaleForUiLanguage(i18n.language)
     return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: 'UAH',
