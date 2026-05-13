@@ -45,7 +45,7 @@ export interface CallDialogModalProps {
   isCallCooldown?: boolean
   cooldownSecondsRemaining?: number
   telephonyUnavailable?: boolean
-  onCallStart?: (callType: CallType, dialPhoneNumber: string) => void
+  onCallStart?: (callType: CallType, dialPhoneNumber: string) => void | Promise<string | null>
   onCallEnd?: (duration: number, status: CallStatus) => void
   onAnswer?: () => void
   onReject?: () => void
@@ -351,11 +351,31 @@ export function CallDialogModal({
     if (!canPlaceCall) return
     const dialPhone = manualPhoneEnabled ? manualPhoneDigits : String(phoneNumber).trim()
     setDialDisplayPhone(dialPhone)
-    if (onCallStart) {
-      onCallStart(callType, dialPhone)
-    }
     setCallState('dialing')
     setElapsedTime(0)
+    const result = onCallStart?.(callType, dialPhone)
+    // Collapse the modal immediately on click — the operator returns to
+    // the client card without waiting on the origination round-trip.
+    const snapshotId = handleMinimize({ callState: 'dialing', elapsedTime: 0 })
+    // Patch the snapshot once origination resolves so the bar can poll
+    // call state and use the real call_id for hang-up. Skipped when the
+    // callsite doesn't return a Promise (legacy void-return callers).
+    if (result && typeof (result as Promise<string | null>).then === 'function') {
+      void (result as Promise<string | null>).then((callId) => {
+        const current = useCallStore.getState().minimizedCall
+        // If the snapshot has been replaced (operator started another
+        // call), don't trample the newer state.
+        if (!current || current.id !== snapshotId || current.type !== 'call-dialog') return
+        if (callId) {
+          if (!current.callId) setMinimizedCall({ ...current, callId })
+        } else {
+          // Origination failed — flip to 'failed' so the bar's auto-dismiss
+          // timer fires and the operator's bar clears itself. The global
+          // toast from useOriginateCall surfaces the human-readable error.
+          setMinimizedCall({ ...current, callState: 'failed' })
+        }
+      })
+    }
   }
 
   const handleAnswer = () => {
@@ -407,9 +427,14 @@ export function CallDialogModal({
     }
   }
 
-  const handleMinimize = () => {
+  const handleMinimize = (overrides?: {
+    callId?: string
+    callState?: CallState
+    elapsedTime?: number
+  }): string => {
+    const id = `call-dialog-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     setMinimizedCall({
-      id: `call-dialog-${Date.now()}`,
+      id,
       type: 'call-dialog',
       clientName,
       // Always store the ORIGINAL client phone here so restoring and
@@ -418,10 +443,10 @@ export function CallDialogModal({
       // Separate field for what the minimized-bubble tooltip should show.
       displayPhone,
       clientId,
-      callId: callId || null,
-      callState,
+      callId: overrides?.callId ?? callId ?? null,
+      callState: overrides?.callState ?? callState,
       callType,
-      elapsedTime,
+      elapsedTime: overrides?.elapsedTime ?? elapsedTime,
       manualPhoneEnabled,
       manualPhoneDigits,
       timestamp: Date.now(),
@@ -433,6 +458,7 @@ export function CallDialogModal({
     } else {
       onClose()
     }
+    return id
   }
 
   const handleClose = () => {
@@ -475,7 +501,7 @@ export function CallDialogModal({
       >
         {/* Minimize Button */}
         <button
-          onClick={handleMinimize}
+          onClick={() => handleMinimize()}
           className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100 sm:top-4 sm:right-12"
           aria-label="Minimize modal"
         >
@@ -601,7 +627,7 @@ export function CallDialogModal({
     >
       {/* Minimize Button */}
       <button
-        onClick={handleMinimize}
+        onClick={() => handleMinimize()}
         className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100 sm:top-4 sm:right-12"
         aria-label="Minimize modal"
       >
