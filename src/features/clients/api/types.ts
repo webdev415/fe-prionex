@@ -129,6 +129,12 @@ export interface Client {
   total_debt: string
   primary_creditor?: string | null
 
+  // Last interaction result — name + id of the result attached to the
+  // most recent non-deleted interaction. ``null`` means no interaction
+  // logged yet. The table renders "—" in that case.
+  last_interaction_result_id?: number | null
+  last_interaction_result_name?: string | null
+
   // Assignment (Sprint 2 - Phase A)
   responsible_employee_id?: number | null
   responsible_searcher_id?: number | null
@@ -221,6 +227,7 @@ export interface GetClientsParams {
     | 'responsible_searcher_id'
     | 'total_debt'
     | 'assignment_date'
+    | 'last_interaction_result'
   sort_order?: 'asc' | 'desc'
 
   // Filter: Portfolio/Sellers
@@ -265,6 +272,11 @@ export interface GetClientsParams {
   // Filter: Interaction logged date (applies to promise and callback subqueries)
   interaction_date_from?: string // YYYY-MM-DD format
   interaction_date_to?: string // YYYY-MM-DD format
+
+  // Filter: Last-interaction-result (multi-select). Comma-separated
+  // interaction_result IDs. Narrows clients to those whose most recent
+  // interaction has one of these result ids.
+  last_interaction_result_ids?: string
 
   // Filter: Assignment Date (date of latest assignment record for current employee)
   assignment_date_from?: string // YYYY-MM-DD format
