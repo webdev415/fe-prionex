@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { TelephonyTypeBadge } from '@/components/ui/TelephonyTypeBadge'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatDateTime } from '@/lib/formatters'
@@ -92,29 +93,7 @@ export function CallsTable({ data, onOpenCall }: Props) {
     {
       key: 'telephonyType',
       header: t('pages.actionAnalysis.columns.telephonyType', 'Telephony type'),
-      render: (r) => {
-        // Telephony type is meaningful for outbound calls only (KAN-476 PM
-        // decision). The backend already enforces this, but render defensively
-        // so any stray inbound row with a non-default value stays blank.
-        if (r.direction === 'inbound') {
-          return <span className="text-sm text-gray-400">—</span>
-        }
-        if (r.telephony_type === 'white') {
-          return (
-            <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-              {t('pages.actionAnalysis.telephonyType.white', 'White')}
-            </span>
-          )
-        }
-        if (r.telephony_type === 'grey') {
-          return (
-            <span className="bg-warning-50 text-warning-700 inline-flex rounded-full px-2 py-0.5 text-xs font-medium">
-              {t('pages.actionAnalysis.telephonyType.grey', 'Grey')}
-            </span>
-          )
-        }
-        return <span className="text-sm text-gray-400">—</span>
-      },
+      render: (r) => <TelephonyTypeBadge type={r.telephony_type} direction={r.direction} />,
     },
     {
       key: 'phone',

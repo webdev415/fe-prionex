@@ -3,6 +3,7 @@
  * TIN-based brand isolation architecture
  */
 
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { AxiosError } from 'axios'
@@ -363,7 +364,9 @@ export function useClientCallSmsHistory(clientId: number, enabled = true) {
           duration: durationSecs > 0 ? `${durationMin}m ${durationSec}s` : '-',
           operator: c.agent_extension && c.agent_extension !== '000' ? c.agent_extension : '-',
           cost: 0,
-          type: 'Outgoing' as 'Outgoing' | 'Incoming',
+          type: c.direction === 'inbound' ? ('Incoming' as const) : ('Outgoing' as const),
+          direction: c.direction ?? null,
+          telephony_type: c.telephony_type ?? null,
           line: '',
           initiated_at: c.initiated_at ?? new Date().toISOString(),
           recording_path: c.recording_path ?? null,
@@ -586,14 +589,42 @@ export function useClientDialHistory(clientId: number, enabled = true) {
 
 /**
  * Get restructuring agreements for a client (RR tab).
+ *
+ * Side effect: the BE list endpoint runs a lazy RR → Debt close
+ * cascade so already-terminal RRs (Completed / Completed Early)
+ * trigger their linked debt to close. When this query observes a
+ * terminal RR (status_id 4 or 5), we invalidate the loans query so
+ * the closed debt disappears from "Loans in Process" without a
+ * manual page refresh. Detail is invalidated too because
+ * remaining_debt_amount and status are surfaced in the client detail
+ * card.
  */
 export function useClientRestructuringAgreements(clientId: number, enabled = true) {
-  return useQuery({
+  const queryClient = useQueryClient()
+  const query = useQuery({
     queryKey: clientKeys.restructuringAgreements(clientId),
     queryFn: () => clientApi.getClientRestructuringAgreements(clientId),
     enabled: enabled && clientId > 0,
     staleTime: 30000,
   })
+
+  const hasTerminalRR = Array.isArray(query.data)
+    ? query.data.some((ra) => ra.status_id === 4 || ra.status_id === 5)
+    : false
+  const dataUpdatedAt = query.dataUpdatedAt
+
+  // Refetch loans + detail exactly when the RR list resolves with at
+  // least one terminal RR. The dependency on dataUpdatedAt makes this
+  // re-run on every successful fetch (not just the first), so a fresh
+  // cascade close becomes visible after a poll/refresh.
+  useEffect(() => {
+    if (clientId > 0 && hasTerminalRR) {
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId) })
+    }
+  }, [clientId, hasTerminalRR, dataUpdatedAt, queryClient])
+
+  return query
 }
 
 /**
@@ -700,6 +731,12 @@ export function useCompleteRestructuringAgreement() {
       queryClient.invalidateQueries({
         queryKey: clientKeys.restructuringAgreements(variables.clientId),
       })
+      // Completing an RR cascade-closes the linked debt on the BE
+      // (see rr_status_service.cascade_close_debt_for_terminal_rr),
+      // so the loans list and client detail need to refetch or the
+      // closed loan will keep appearing in "Loans in Process".
+      queryClient.invalidateQueries({ queryKey: clientKeys.loans(variables.clientId) })
+      queryClient.invalidateQueries({ queryKey: clientKeys.detail(variables.clientId) })
       toast.success('Restructuring agreement completed')
     },
     onError: (error: AxiosError<{ detail?: string }>) => {

@@ -26,7 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
-import { AddNoteModal } from './components/AddNoteModal'
 import { EditInteractionModal } from './components/EditInteractionModal'
 import { AddTaskModal } from './components/AddTaskModal'
 // import { DeleteClientModal } from './components/DeleteClientModal'
@@ -82,10 +81,7 @@ import {
 } from '@/features/clients/hooks/useClients'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
 import type { OverpaymentResponse, RRStatusHistoryEntry } from '@/features/clients/api/clientApi'
-import {
-  useCreateNoteInteraction,
-  useUpdateInteraction,
-} from '@/features/clients/hooks/useNoteInteraction'
+import { useUpdateInteraction } from '@/features/clients/hooks/useNoteInteraction'
 import type { InteractionResponse } from '@/features/clients/api/types'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
@@ -102,7 +98,7 @@ import { useHasPermission } from '@/hooks/usePermissions'
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
-import { formatUkrainePhoneForDisplay, normalizeUkrainePhoneToDb } from '@/lib/phone'
+import { formatUkrainePhoneForDisplay } from '@/lib/phone'
 import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
 
 // Extended types for SMS and Call items with API-specific properties
@@ -132,6 +128,8 @@ type ExtendedCallItem = {
   line: string
   call_id?: string
   initiated_at?: string
+  direction?: string | null
+  telephony_type?: string | null
 }
 
 // Contact type names are now returned by the backend from client_contact_types lookup table
@@ -228,7 +226,36 @@ export function ClientDetailPage() {
     'ta-chains' | 'comments' | 'primary' | 'searcher' | 'dial-history'
   >('ta-chains')
   const [isChainExecutorOpen, setIsChainExecutorOpen] = useState(false)
+  // Context for the chain executor when opened from a phone row. null/null
+  // means "general entry point" (header Log Interaction button) — no chain
+  // filter, no pre-filled phone. Set together when opening from a phone
+  // row, and cleared when the modal closes so the next general open is
+  // clean. See refactor ticket: per-phone-number context-aware TA trigger.
+  const [chainExecutorContactSource, setChainExecutorContactSource] = useState<
+    'client' | 'recommender' | null
+  >(null)
+  const [chainExecutorPrefilledPhone, setChainExecutorPrefilledPhone] = useState<string | null>(
+    null
+  )
   const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
+
+  // Classify a contact_type_id into the chain-picker bucket the backend
+  // uses (see /api/v1/clients/{id}/phones?source=...). Client bucket =
+  // the debtor's own phones (mobile/home/work + registration variants).
+  // Recommender bucket = guarantor + third-party phones. Any other type
+  // id (or null) falls back to 'recommender' since this helper is only
+  // called from the recommenders tab where non-classified phones live.
+  // The two id sets MUST stay in sync with
+  // services/client/app/routers/clients.py:CONTACT_SOURCE_TYPE_IDS.
+  const classifyContactSource = (
+    contactTypeId: number | null | undefined
+  ): 'client' | 'recommender' => {
+    const CLIENT_PHONE_TYPE_IDS = new Set([1, 2, 3, 19, 29])
+    if (contactTypeId != null && CLIENT_PHONE_TYPE_IDS.has(contactTypeId)) {
+      return 'client'
+    }
+    return 'recommender'
+  }
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
@@ -358,9 +385,6 @@ export function ClientDetailPage() {
   const { data: responsibleEmployeeDepartment } = useUserDepartment(
     profile?.responsible_employee_id || 0
   )
-
-  // Note creation mutation (via interaction API)
-  const { mutate: createNote } = useCreateNoteInteraction()
 
   // Assign client mutation (used by AssignRoleModal)
   const assignClientMutation = useAssignClient()
@@ -777,7 +801,6 @@ export function ClientDetailPage() {
   }
 
   // Tags are now fetched from useClientTags hook instead of local state
-  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false)
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
   // isCallModalOpen, currentCallId managed by useCallOrigination hook
   const [isCallRecordingModalOpen, setIsCallRecordingModalOpen] = useState(false)
@@ -799,6 +822,8 @@ export function ClientDetailPage() {
     duration: string
     phone: string
     call_id?: string
+    direction?: string | null
+    telephony_type?: string | null
   } | null>(null)
   const [isViewSMSModalOpen, setIsViewSMSModalOpen] = useState(false)
   const [selectedSMSData, setSelectedSMSData] = useState<{
@@ -815,7 +840,6 @@ export function ClientDetailPage() {
   const [isSendSMSModalOpen, setIsSendSMSModalOpen] = useState(false)
   const [selectedPhoneForSMS, setSelectedPhoneForSMS] = useState<string>('')
   const [selectedPhoneForCall, setSelectedPhoneForCall] = useState<string>('')
-  const [selectedPhoneForNote, setSelectedPhoneForNote] = useState<string>('')
   const [contactEditorMode, setContactEditorMode] = useState<'add' | 'edit' | null>(null)
   const [editingContactId, setEditingContactId] = useState<number | null>(null)
   const [contactDeleteConfirmId, setContactDeleteConfirmId] = useState<number | null>(null)
@@ -1888,9 +1912,13 @@ export function ClientDetailPage() {
                 variant="outline"
                 leftIcon={<Icons.PencilEdit size={20} />}
                 className="flex w-full flex-1 flex-row rounded-full text-xs font-medium md:text-sm xl:w-auto xl:flex-none"
-                onClick={() => setIsNoteModalOpen(true)}
+                onClick={() => {
+                  setChainExecutorContactSource(null)
+                  setChainExecutorPrefilledPhone(null)
+                  setIsChainExecutorOpen(true)
+                }}
               >
-                {t('pages.clients.activity.addNote')}
+                {t('pages.clientChains.logInteraction')}
               </Button>
             </PermissionGuard>
             <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_TASKS}>
@@ -2183,8 +2211,9 @@ export function ClientDetailPage() {
                         <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
                           <button
                             onClick={() => {
-                              setSelectedPhoneForNote(phone.number)
-                              setIsNoteModalOpen(true)
+                              setChainExecutorContactSource('client')
+                              setChainExecutorPrefilledPhone(phone.number)
+                              setIsChainExecutorOpen(true)
                             }}
                             className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
                           >
@@ -2565,8 +2594,9 @@ export function ClientDetailPage() {
                             <PermissionGuard permission={PERMISSIONS.CLIENTS.CREATE_INTERACTIONS}>
                               <button
                                 onClick={() => {
-                                  setSelectedPhoneForNote(client.work?.workPhone || '')
-                                  setIsNoteModalOpen(true)
+                                  setChainExecutorContactSource('client')
+                                  setChainExecutorPrefilledPhone(client.work?.workPhone || '')
+                                  setIsChainExecutorOpen(true)
                                 }}
                                 className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
                               >
@@ -3074,8 +3104,16 @@ export function ClientDetailPage() {
                                     >
                                       <button
                                         onClick={() => {
-                                          setSelectedPhoneForNote(contact.contactValue)
-                                          setIsNoteModalOpen(true)
+                                          // Classify by the phone's actual contact_type_id
+                                          // rather than by which tab the row lives in: a
+                                          // "Mobile phone from registers" (type 29) sits
+                                          // in the Recommenders tab but the backend treats
+                                          // it as a client phone.
+                                          setChainExecutorContactSource(
+                                            classifyContactSource(contact.contactTypeId)
+                                          )
+                                          setChainExecutorPrefilledPhone(contact.contactValue)
+                                          setIsChainExecutorOpen(true)
                                         }}
                                         className="text-primary-500 flex h-[20px] w-[20px] cursor-pointer items-center justify-center hover:opacity-80"
                                       >
@@ -3430,6 +3468,16 @@ export function ClientDetailPage() {
                                           phone={call.phone}
                                           line={call.line}
                                           operator={call.operator}
+                                          direction={
+                                            'direction' in call
+                                              ? (call.direction as string | null)
+                                              : null
+                                          }
+                                          telephony_type={
+                                            'telephony_type' in call
+                                              ? (call.telephony_type as string | null)
+                                              : null
+                                          }
                                           call_id={
                                             'call_id' in call ? (call.call_id as string) : undefined
                                           }
@@ -3851,13 +3899,6 @@ export function ClientDetailPage() {
           {/* Content based on active tab */}
           {effectiveCommentTab === 'ta-chains' && (
             <div className="flex w-full flex-col gap-4">
-              <button
-                type="button"
-                onClick={() => setIsChainExecutorOpen(true)}
-                className="bg-primary-300 text-dark-500 hover:bg-primary-500 w-full rounded-lg px-4 py-3 text-sm font-medium transition-colors sm:w-auto sm:self-start"
-              >
-                {t('pages.clientChains.logInteraction')}
-              </button>
               <TAInteractionHistory clientId={clientId} debts={loans} />
             </div>
           )}
@@ -3865,7 +3906,11 @@ export function ClientDetailPage() {
           {/* Chain Executor Modal */}
           <Modal
             open={isChainExecutorOpen}
-            onClose={() => setIsChainExecutorOpen(false)}
+            onClose={() => {
+              setIsChainExecutorOpen(false)
+              setChainExecutorContactSource(null)
+              setChainExecutorPrefilledPhone(null)
+            }}
             maxWidth="xl"
             showCloseButton={false}
           >
@@ -3879,7 +3924,11 @@ export function ClientDetailPage() {
                 <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
               </button>
               <button
-                onClick={() => setIsChainExecutorOpen(false)}
+                onClick={() => {
+                  setIsChainExecutorOpen(false)
+                  setChainExecutorContactSource(null)
+                  setChainExecutorPrefilledPhone(null)
+                }}
                 className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
                 aria-label="Close modal"
               >
@@ -3892,8 +3941,18 @@ export function ClientDetailPage() {
                 clientName={client?.fullName ?? `Client #${clientId}`}
                 responsibleEmployeeId={profile?.responsible_employee_id ?? null}
                 debts={loans}
-                onSave={() => setIsChainExecutorOpen(false)}
-                onMinimize={() => setIsChainExecutorOpen(false)}
+                contactSource={chainExecutorContactSource}
+                prefilledPhone={chainExecutorPrefilledPhone}
+                onSave={() => {
+                  setIsChainExecutorOpen(false)
+                  setChainExecutorContactSource(null)
+                  setChainExecutorPrefilledPhone(null)
+                }}
+                onMinimize={() => {
+                  setIsChainExecutorOpen(false)
+                  setChainExecutorContactSource(null)
+                  setChainExecutorPrefilledPhone(null)
+                }}
                 onMinimizeRef={chainExecutorMinimizeRef}
               />
             </ModalContent>
@@ -3914,15 +3973,19 @@ export function ClientDetailPage() {
                   {t('pages.clients.detail.startByCallingSendingSMSOrAddingNote')}
                 </p>
                 <button
-                  onClick={() => setIsNoteModalOpen(true)}
+                  onClick={() => {
+                    setChainExecutorContactSource(null)
+                    setChainExecutorPrefilledPhone(null)
+                    setIsChainExecutorOpen(true)
+                  }}
                   className="bg-secondary-800 flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
-                  aria-label={t('pages.clients.detail.addFirstNote')}
+                  aria-label={t('pages.clientChains.logInteraction')}
                 >
                   <div className="bg-primary-300 ml-1 flex h-10 w-10 items-center justify-center rounded-full">
                     <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
                   </div>
                   <span className="px-4 py-3 text-sm font-medium text-white">
-                    {t('pages.clients.detail.addFirstNote')}
+                    {t('pages.clientChains.logInteraction')}
                   </span>
                 </button>
               </div>
@@ -4026,41 +4089,6 @@ export function ClientDetailPage() {
                 },
               }
             )
-          }}
-        />
-
-        {/* Add Note Modal */}
-        <AddNoteModal
-          open={isNoteModalOpen}
-          onClose={() => {
-            setIsNoteModalOpen(false)
-            setSelectedPhoneForNote('')
-          }}
-          phoneNumber={formatUkrainePhoneForDisplay(
-            selectedPhoneForNote || client.phones?.[0]?.number || '',
-            ''
-          )}
-          clientId={clientId}
-          loanOptions={loans
-            .filter((loan) => loan.status.toLowerCase() !== 'closed')
-            .map((loan) => ({
-              id: loan.id,
-              contractNumber: loan.contract_number ?? String(loan.id),
-            }))}
-          onSave={(data) => {
-            const selectedPhone = selectedPhoneForNote || client.phones?.[0]?.number || ''
-            const fallbackPhone = selectedPhone.trim() || undefined
-            const normalizedPhoneForPayload =
-              normalizeUkrainePhoneToDb(selectedPhone) ?? fallbackPhone
-            createNote({
-              clientId,
-              data: {
-                ...data,
-                // Persist phone in canonical DB format so interaction history always has it.
-                phone_used: normalizedPhoneForPayload,
-              },
-            })
-            setIsNoteModalOpen(false)
           }}
         />
 
@@ -4284,13 +4312,17 @@ export function ClientDetailPage() {
                     </span>
                   </div>
                 </div>
-                {/* Payment schedule with vertical scroll */}
+                {/* Payment schedule with vertical scroll. Each row shows
+                    the plan side by side with the actual payment received
+                    (FIFO-allocated against verified payments by the
+                    backend). Status badge tells the operator at a glance
+                    which installments are paid / partial / unpaid. */}
                 {rrDetail.payments.length > 0 && (
                   <div className="pt-2">
                     <h3 className="text-dark-500 mb-2 text-sm font-medium sm:text-base">
                       {t('pages.clients.detail.rrPaymentSchedule')}
                     </h3>
-                    <div className="max-h-48 overflow-y-auto">
+                    <div className="max-h-60 overflow-y-auto">
                       <DataTable<RestructuringPaymentEntry & { id: number }>
                         columns={[
                           {
@@ -4303,6 +4335,46 @@ export function ClientDetailPage() {
                             header: t('pages.clients.detail.rrPaymentAmount'),
                             align: 'right',
                             render: (p) => formatMoneyUAHTwoDecimals(Number(p.amount ?? 0)),
+                          },
+                          {
+                            key: 'received_date',
+                            header: t('pages.clients.detail.rrReceivedDate', 'Received Date'),
+                            render: (p) => (p.received_date ? formatDate(p.received_date) : '—'),
+                          },
+                          {
+                            key: 'received_amount',
+                            header: t('pages.clients.detail.rrReceivedAmount', 'Received Amount'),
+                            align: 'right',
+                            render: (p) =>
+                              p.received_amount != null
+                                ? formatMoneyUAHTwoDecimals(Number(p.received_amount))
+                                : '—',
+                          },
+                          {
+                            key: 'status',
+                            header: t('pages.clients.detail.rrPaymentStatus', 'Status'),
+                            render: (p) => {
+                              const s = p.status ?? 'unpaid'
+                              const cls =
+                                s === 'paid'
+                                  ? 'bg-green-100 text-green-700'
+                                  : s === 'partially_paid'
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : 'bg-gray-100 text-gray-600'
+                              const label =
+                                s === 'paid'
+                                  ? t('pages.clients.detail.rrPaid', 'Paid')
+                                  : s === 'partially_paid'
+                                    ? t('pages.clients.detail.rrPartiallyPaid', 'Partially Paid')
+                                    : t('pages.clients.detail.rrUnpaid', 'Unpaid')
+                              return (
+                                <span
+                                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}
+                                >
+                                  {label}
+                                </span>
+                              )
+                            },
                           },
                         ]}
                         data={rrDetail.payments.map((p, idx) => ({ ...p, id: idx }))}

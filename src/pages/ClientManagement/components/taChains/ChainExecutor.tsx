@@ -71,6 +71,20 @@ interface Props {
     days_past_due?: number | null
     seller_company?: string | null
   }>
+  /**
+   * Context-aware entry filter. When set, the chain list is narrowed to
+   * chains that contain at least one contact-type step whose
+   * ``contact_source`` matches. ``null`` (the default, used by the
+   * header "Log Interaction" button) shows every available chain.
+   */
+  contactSource?: 'client' | 'recommender' | null
+  /**
+   * Phone number to pre-fill on contact-type steps. When set, contact
+   * steps whose ``contact_source`` matches ``contactSource`` are
+   * auto-selected with this value so the operator never has to pick
+   * the phone manually. Empty value = no auto-fill (general entry).
+   */
+  prefilledPhone?: string | null
   onSave?: () => void
   onMinimize?: () => void
   onMinimizeRef?: React.MutableRefObject<(() => void) | null>
@@ -129,6 +143,8 @@ export function ChainExecutor({
   clientName,
   responsibleEmployeeId,
   debts = [],
+  contactSource = null,
+  prefilledPhone = null,
   onSave,
   onMinimize,
   onMinimizeRef,
@@ -155,10 +171,18 @@ export function ChainExecutor({
     include_inactive: false,
     department_id: seesAllDepartments ? undefined : operatorDepartmentId,
   })
-  const manualChains = useMemo(
-    () => (chainsData?.items ?? []).filter((c) => c.chain_type === 'manual'),
-    [chainsData]
-  )
+  const manualChains = useMemo(() => {
+    const all = (chainsData?.items ?? []).filter((c) => c.chain_type === 'manual')
+    // Strict context filter (refactor ticket): when this executor was
+    // opened from a specific phone row, only show chains whose contact
+    // steps target that phone's source. A chain qualifies when *any*
+    // of its steps has the matching contact_source — that's the step
+    // where the prefilled phone will land. Chains with no contact_source
+    // tagged on any step are hidden under context entry because the
+    // ticket calls for "only show TA whose contact type matches".
+    if (!contactSource) return all
+    return all.filter((c) => (c.steps ?? []).some((s) => s.contact_source === contactSource))
+  }, [chainsData, contactSource])
 
   // Full TA data (for dropdown values + flags)
   const { data: tasData } = useTargetActions({ include_hidden: false })
@@ -553,13 +577,29 @@ export function ChainExecutor({
   ])
 
   // Reset instant-mode state when the user changes which chain is selected
-  // (or when an active instance appears/disappears).
+  // (or when an active instance appears/disappears). Also seed contact
+  // steps with the prefilledPhone for context-aware entries — when the
+  // executor was opened from a phone row, every instant contact step
+  // whose source matches starts pre-filled with that phone so the
+  // operator can save with one click.
   useEffect(() => {
-    setInstantValues({})
+    if (prefilledPhone && contactSource && effectiveChain) {
+      const seed: Record<number, InstantStepValue> = {}
+      for (const step of effectiveChain.steps ?? []) {
+        const ta = taById.get(step.target_action_id)
+        const stepSource = step.contact_source ?? 'client'
+        if (ta?.field_type === 'contact' && stepSource === contactSource) {
+          seed[step.id] = { ...EMPTY_INSTANT_VALUE, value: prefilledPhone }
+        }
+      }
+      setInstantValues(seed)
+    } else {
+      setInstantValues({})
+    }
     setInstantNotes('')
     setInstantSubmitting(false)
     setNotifyResponsible(true)
-  }, [selectedChainId, activeInstance?.id])
+  }, [selectedChainId, activeInstance?.id, prefilledPhone, contactSource, effectiveChain, taById])
 
   // Reset current step fields on step change + pre-fill from template
   useEffect(() => {
@@ -570,10 +610,28 @@ export function ChainExecutor({
     }
     const taId = currentStep?.target_action_id
     const preset = taId ? presetValuesRef.current[String(taId)] : undefined
-    setStepValue(preset ?? '')
+    // Auto-fill the phone for context-aware entries (refactor ticket):
+    // when this executor was opened from a phone row and we land on a
+    // contact-type step that matches the source, pre-select the phone
+    // so the operator can advance with zero clicks. The radio list still
+    // shows other phones from the same source, but this one is checked
+    // by default. Template preset wins if both are set.
+    const isContactStep = currentTA?.field_type === 'contact'
+    const stepSource = currentStep?.contact_source ?? 'client'
+    const phonePrefill =
+      isContactStep && prefilledPhone && contactSource === stepSource ? prefilledPhone : ''
+    setStepValue(preset ?? phonePrefill)
     setPromiseDate('')
     setPromiseAmount('')
-  }, [activeInstance?.id, activeInstance?.current_step_order, currentStep?.target_action_id])
+  }, [
+    activeInstance?.id,
+    activeInstance?.current_step_order,
+    currentStep?.target_action_id,
+    currentStep?.contact_source,
+    currentTA?.field_type,
+    contactSource,
+    prefilledPhone,
+  ])
 
   // ── Step editing ──────────────────────────────────────────────────────────
 

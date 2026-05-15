@@ -71,6 +71,7 @@ interface DisplayClient {
   employeeName: string
   searcherName: string
   assignmentDate: string
+  lastInteractionResult: string
 }
 
 // Default thresholds (fallback if API not available)
@@ -123,6 +124,7 @@ const mapAPIClientToDisplay = (
       ? userNameMap.get(client.responsible_searcher_id) || '-'
       : '-',
     assignmentDate: client.assignment_date ? formatDate(client.assignment_date) : '-',
+    lastInteractionResult: client.last_interaction_result_name || '—',
   }
 }
 
@@ -182,6 +184,11 @@ export interface ClientFilters {
   // Tags Filter
   tagIds?: number[]
 
+  // Last Interaction Result Filter — multi-select of interaction_result
+  // IDs. The dropdown options come from the live /interaction-results
+  // config so admin-managed result changes show up without a deploy.
+  lastInteractionResultIds?: number[]
+
   // Priority Filter
   priorities?: Priority[]
 }
@@ -208,6 +215,10 @@ export function ClientManagementPage() {
   const [portfolioFilter, setPortfolioFilter] = useURLState<number[]>('sellers', [])
   const [statusFilter, setStatusFilter] = useURLState<string[]>('status', [])
   const [tagIdsFilter, setTagIdsFilter] = useURLState<number[]>('tags', [])
+  const [lastInteractionResultIdsFilter, setLastInteractionResultIdsFilter] = useURLState<number[]>(
+    'lastInteractionResults',
+    []
+  )
   const [responsibleEmployeeFilter, setResponsibleEmployeeFilter] = useURLState<string>(
     'employee',
     ''
@@ -270,6 +281,7 @@ export function ClientManagementPage() {
       portfolio: portfolioFilter,
       status: statusFilter,
       tagIds: tagIdsFilter,
+      lastInteractionResultIds: lastInteractionResultIdsFilter,
       responsibleEmployee: responsibleEmployeeFilter || undefined,
       responsibleSearcher: responsibleSearcherFilter || undefined,
       unassignedOnly: unassignedOnlyFilter,
@@ -297,6 +309,7 @@ export function ClientManagementPage() {
       portfolioFilter,
       statusFilter,
       tagIdsFilter,
+      lastInteractionResultIdsFilter,
       responsibleEmployeeFilter,
       responsibleSearcherFilter,
       unassignedOnlyFilter,
@@ -392,6 +405,7 @@ export function ClientManagementPage() {
       portfolioFilter.length > 0 ||
       statusFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
+      lastInteractionResultIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
@@ -430,6 +444,7 @@ export function ClientManagementPage() {
     portfolioFilter,
     statusFilter,
     tagIdsFilter,
+    lastInteractionResultIdsFilter,
     responsibleEmployeeFilter,
     responsibleSearcherFilter,
     unassignedOnlyFilter,
@@ -468,6 +483,7 @@ export function ClientManagementPage() {
       portfolioFilter.length > 0 ||
       statusFilter.length > 0 ||
       tagIdsFilter.length > 0 ||
+      lastInteractionResultIdsFilter.length > 0 ||
       unassignedOnlyFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
@@ -598,6 +614,7 @@ export function ClientManagementPage() {
       creditor: 'primary_creditor',
       debt: 'total_debt',
       assignmentDate: 'assignment_date',
+      lastInteractionResult: 'last_interaction_result',
     }
 
     const params: Record<string, unknown> = {
@@ -676,6 +693,14 @@ export function ClientManagementPage() {
     // FILTER 9: Tags
     if (filters.tagIds && filters.tagIds.length > 0) {
       params.tag_ids = filters.tagIds.join(',')
+    }
+
+    // FILTER 9b: Last Interaction Result (multi-select). Sent as
+    // comma-separated ids matching the BE schema. Empty/undefined
+    // means "no filter" — BE returns all clients regardless of last
+    // result.
+    if (filters.lastInteractionResultIds && filters.lastInteractionResultIds.length > 0) {
+      params.last_interaction_result_ids = filters.lastInteractionResultIds.join(',')
     }
 
     // FILTER 10: Priority
@@ -810,6 +835,7 @@ export function ClientManagementPage() {
     if (filters.assignmentDateFrom || filters.assignmentDateTo) count++
     if (filters.portfolio && filters.portfolio.length > 0) count++
     if (filters.tagIds && filters.tagIds.length > 0) count++
+    if (filters.lastInteractionResultIds && filters.lastInteractionResultIds.length > 0) count++
     if (filters.status && filters.status.length > 0) count++
     if (filters.responsibleEmployee) count++
     if (filters.responsibleSearcher) count++
@@ -1082,6 +1108,16 @@ export function ClientManagementPage() {
       return
     }
 
+    if (newFilters._action === 'toggleLastInteractionResult') {
+      const resultId = newFilters._value as number
+      const checked = newFilters._checked as boolean
+      setLastInteractionResultIdsFilter((prev) =>
+        checked ? [...prev, resultId] : prev.filter((id) => id !== resultId)
+      )
+      setCurrentPage(1)
+      return
+    }
+
     // Handle regular filter updates (non-toggle actions)
     // Only update if value has actually changed (use JSON.stringify for deep comparison)
     if (JSON.stringify(newFilters.portfolio) !== JSON.stringify(portfolioFilter)) {
@@ -1092,6 +1128,12 @@ export function ClientManagementPage() {
     }
     if (JSON.stringify(newFilters.tagIds) !== JSON.stringify(tagIdsFilter)) {
       setTagIdsFilter(newFilters.tagIds || [])
+    }
+    if (
+      JSON.stringify(newFilters.lastInteractionResultIds) !==
+      JSON.stringify(lastInteractionResultIdsFilter)
+    ) {
+      setLastInteractionResultIdsFilter(newFilters.lastInteractionResultIds || [])
     }
     if (newFilters.responsibleEmployee !== responsibleEmployeeFilter) {
       setResponsibleEmployeeFilter(newFilters.responsibleEmployee || '')
@@ -1170,6 +1212,7 @@ export function ClientManagementPage() {
     setPortfolioFilter([])
     setStatusFilter([])
     setTagIdsFilter([])
+    setLastInteractionResultIdsFilter([])
     setResponsibleEmployeeFilter('')
     setResponsibleSearcherFilter('')
     setUnassignedOnlyFilter(false)
@@ -1367,6 +1410,14 @@ export function ClientManagementPage() {
       align: 'left',
       sortable: true,
       sortKey: 'assignmentDate',
+    },
+    {
+      key: 'lastInteractionResult',
+      header: t('pages.clients.tableHeaders.lastInteractionResult', 'Last Interaction Result'),
+      align: 'left',
+      sortable: true,
+      sortKey: 'lastInteractionResult',
+      render: (client) => client.lastInteractionResult,
     },
     {
       key: 'actions',

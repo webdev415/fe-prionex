@@ -60,6 +60,11 @@ export interface RestructuringAgreementSummary {
 export interface RestructuringPaymentEntry {
   date?: string | null
   amount?: string | null
+  // Filled by backend FIFO allocation against verified payments. Lets
+  // the RR detail modal show plan + actual side by side.
+  received_date?: string | null
+  received_amount?: string | null
+  status?: 'paid' | 'partially_paid' | 'unpaid' | null
 }
 
 export interface CreateRestructuringAgreementRequest {
@@ -123,6 +128,12 @@ export interface Client {
   debt_count: number
   total_debt: string
   primary_creditor?: string | null
+
+  // Last interaction result — name + id of the result attached to the
+  // most recent non-deleted interaction. ``null`` means no interaction
+  // logged yet. The table renders "—" in that case.
+  last_interaction_result_id?: number | null
+  last_interaction_result_name?: string | null
 
   // Assignment (Sprint 2 - Phase A)
   responsible_employee_id?: number | null
@@ -216,6 +227,7 @@ export interface GetClientsParams {
     | 'responsible_searcher_id'
     | 'total_debt'
     | 'assignment_date'
+    | 'last_interaction_result'
   sort_order?: 'asc' | 'desc'
 
   // Filter: Portfolio/Sellers
@@ -260,6 +272,11 @@ export interface GetClientsParams {
   // Filter: Interaction logged date (applies to promise and callback subqueries)
   interaction_date_from?: string // YYYY-MM-DD format
   interaction_date_to?: string // YYYY-MM-DD format
+
+  // Filter: Last-interaction-result (multi-select). Comma-separated
+  // interaction_result IDs. Narrows clients to those whose most recent
+  // interaction has one of these result ids.
+  last_interaction_result_ids?: string
 
   // Filter: Assignment Date (date of latest assignment record for current employee)
   assignment_date_from?: string // YYYY-MM-DD format
@@ -790,6 +807,7 @@ export interface CallRecord {
   caller_id_name?: string | null
   caller_id_number?: string | null
   campaign_id?: string | null
+  direction?: string | null
   state: string
   uniqueid?: string | null
   initiated_at: string
@@ -805,6 +823,7 @@ export interface CallRecord {
   notes?: string | null
   call_metadata?: Record<string, unknown> | null
   hangup_cause?: number | null
+  telephony_type?: string | null
 }
 
 export interface SmsRecord {
