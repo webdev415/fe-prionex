@@ -209,6 +209,37 @@ export async function listTaskSubjects(): Promise<TaskSubject[]> {
   return response.data.subjects ?? []
 }
 
+import type { PaymentMonitoringFilters, PaymentMonitoringResponse } from '../types'
+
+function buildPaymentMonitoringParams(filters: PaymentMonitoringFilters): URLSearchParams {
+  // Repeated `?key=val` for list-shaped filters — FastAPI's
+  // `Optional[List[…]] = Query(None)` rejects Axios's default `[]` suffix.
+  const params = new URLSearchParams()
+  if (filters.period) params.set('period', filters.period)
+  if (filters.from_datetime) params.set('from_datetime', filters.from_datetime)
+  if (filters.to_datetime) params.set('to_datetime', filters.to_datetime)
+  if (filters.date_field) params.set('date_field', filters.date_field)
+  filters.user_ids?.forEach((id) => params.append('user_ids', String(id)))
+  filters.payment_method_in?.forEach((m) => params.append('payment_method_in', m))
+  filters.status_in?.forEach((s) => params.append('status_in', s))
+  filters.payment_type_in?.forEach((t) => params.append('payment_type_in', t))
+  if (filters.amount_min != null) params.set('amount_min', String(filters.amount_min))
+  if (filters.amount_max != null) params.set('amount_max', String(filters.amount_max))
+  if (filters.sort) params.set('sort', filters.sort)
+  if (filters.page != null) params.set('page', String(filters.page))
+  if (filters.limit != null) params.set('limit', String(filters.limit))
+  return params
+}
+
+export async function getPaymentMonitoring(
+  filters: PaymentMonitoringFilters
+): Promise<PaymentMonitoringResponse> {
+  const response = await api.get<PaymentMonitoringResponse>('/api/v1/payments/monitoring', {
+    params: buildPaymentMonitoringParams(filters),
+  })
+  return response.data
+}
+
 export const actionAnalysisService = {
   getCallMonitoring,
   exportCallMonitoring,
@@ -220,4 +251,5 @@ export const actionAnalysisService = {
   getTaskHistory,
   getTaskHistoryAnalytics,
   listTaskSubjects,
+  getPaymentMonitoring,
 }
