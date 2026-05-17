@@ -145,8 +145,21 @@ export function CallFiltersBar({ value, operators, onApply, onClear, userTimezon
                 <SelectItem value="answered">
                   {t('pages.actionAnalysis.filters.statuses.answered', 'Answered')}
                 </SelectItem>
-                <SelectItem value="not_answered">
-                  {t('pages.actionAnalysis.filters.statuses.notAnswered', 'Not answered')}
+                <SelectItem value="no_answer">
+                  {t('pages.clients.statuses.noAnswer', 'No answer')}
+                </SelectItem>
+                <SelectItem value="busy">{t('pages.clients.statuses.busy', 'Busy')}</SelectItem>
+                <SelectItem value="cancel">
+                  {t('pages.clients.statuses.cancel', 'Cancelled')}
+                </SelectItem>
+                <SelectItem value="unavailable">
+                  {t('pages.clients.statuses.unavailable', 'Unavailable')}
+                </SelectItem>
+                <SelectItem value="congestion">
+                  {t('pages.clients.statuses.congestion', 'Congestion')}
+                </SelectItem>
+                <SelectItem value="failed">
+                  {t('pages.clients.statuses.failed', 'Failed')}
                 </SelectItem>
               </SelectContent>
             </Select>

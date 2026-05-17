@@ -2,7 +2,22 @@ export type CallMonitoringPeriod = 'today' | 'yesterday' | 'last_7d' | 'last_30d
 
 export type CallMonitoringSort = 'date_desc' | 'date_asc' | 'duration_desc' | 'duration_asc'
 
-export type CallMonitoringOutcomeFilter = 'all' | 'answered' | 'not_answered'
+// KAN-490: granular DialStatus-derived outcomes in the Call List status filter.
+// `not_answered` is the legacy rollup — removed from the UI dropdown but kept
+// in the type and backend so existing bookmarks with `?status=not_answered`
+// keep working.
+export type CallMonitoringOutcomeFilter =
+  | 'all'
+  | 'answered'
+  | 'no_answer'
+  | 'busy'
+  | 'cancel'
+  | 'unavailable'
+  | 'congestion'
+  // `failed` is a state, not an outcome — set when the call never connected
+  // (originate failure, hangup-with-no-channel, stale-call cleanup).
+  | 'failed'
+  | 'not_answered'
 
 export type TelephonyType = 'white' | 'grey' | 'unknown'
 
