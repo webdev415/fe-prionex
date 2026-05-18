@@ -406,6 +406,8 @@
         },
         "amountMin": "Min amount",
         "amountMax": "Max amount",
+        "amountMinPlaceholder": "0.00",
+        "amountMaxPlaceholder": "e.g. 1000.00",
         "paymentSortOptions": {
           "recorded_at_desc": "Created (newest)",
           "recorded_at_asc": "Created (oldest)",

@@ -166,6 +166,7 @@ export function PaymentHistoryFiltersBar({
               inputMode="decimal"
               min={0}
               className="h-[45px]"
+              placeholder={t('pages.actionAnalysis.filters.amountMinPlaceholder', '0.00')}
               value={draft.amountMin ?? ''}
               onChange={(e) => {
                 const v = e.target.value
@@ -183,6 +184,7 @@ export function PaymentHistoryFiltersBar({
               inputMode="decimal"
               min={0}
               className="h-[45px]"
+              placeholder={t('pages.actionAnalysis.filters.amountMaxPlaceholder', 'e.g. 1000')}
               value={draft.amountMax ?? ''}
               onChange={(e) => {
                 const v = e.target.value

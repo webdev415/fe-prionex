@@ -409,6 +409,8 @@
         },
         "amountMin": "Сума від",
         "amountMax": "Сума до",
+        "amountMinPlaceholder": "0.00",
+        "amountMaxPlaceholder": "напр. 1000.00",
         "paymentSortOptions": {
           "recorded_at_desc": "Створено (нові)",
           "recorded_at_asc": "Створено (старі)",
