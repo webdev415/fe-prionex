@@ -11,6 +11,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { CallDialogModal } from '../CallDialogModal'
 import * as useCallHook from '@/features/calls/hooks/useCall'
 import * as callStoreModule from '@/stores/callStore'
+import { CALL_MODAL_AUTO_CLOSE_SECONDS } from '@/features/calls/constants/callModal'
 
 // Mock dependencies
 vi.mock('@/features/calls/hooks/useCall')
@@ -271,7 +272,7 @@ describe('CallDialogModal', () => {
       })
 
       expect(screen.getByText(/Auto-closing in/i)).toBeInTheDocument()
-      expect(screen.getByText('3')).toBeInTheDocument()
+      expect(screen.getByText(String(CALL_MODAL_AUTO_CLOSE_SECONDS))).toBeInTheDocument()
     })
 
     it('should have countdown timer in ended state', () => {
@@ -290,6 +291,30 @@ describe('CallDialogModal', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Close' }))
       expect(mockOnClose).toHaveBeenCalledTimes(1)
+    })
+
+    it('should start auto-close countdown when backend reports COMPLETED', () => {
+      vi.useFakeTimers()
+      vi.mocked(useCallHook.useCallDetails).mockReturnValue({
+        data: {
+          state: 'COMPLETED',
+          total_duration: 42,
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any)
+
+      render(<CallDialogModal {...defaultProps} callId="call-123" initialState="ended" />, {
+        wrapper: createWrapper(),
+      })
+
+      expect(screen.getByText(String(CALL_MODAL_AUTO_CLOSE_SECONDS))).toBeInTheDocument()
+
+      vi.advanceTimersByTime(CALL_MODAL_AUTO_CLOSE_SECONDS * 1000)
+      expect(mockOnClose).toHaveBeenCalledTimes(1)
+      vi.useRealTimers()
     })
   })
 
