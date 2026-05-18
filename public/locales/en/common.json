@@ -375,6 +375,49 @@
           "extended": "Extended",
           "rejected": "Rejected",
           "incoming_line_result": "Incoming line result"
+        },
+        "confirmedAtRangeHeading": "Confirmed at",
+        "confirmedAtFrom": "From",
+        "confirmedAtTo": "To",
+        "paymentDateRangeHeading": "Payment date",
+        "paymentDateFrom": "From",
+        "paymentDateTo": "To",
+        "selectedCount": "{{count}} selected",
+        "paymentMethod": "Payment method",
+        "paymentMethods": {
+          "all": "All methods",
+          "bank_transfer": "Bank transfer",
+          "online_gateway": "Online (link)",
+          "cash": "Cash",
+          "card": "Card",
+          "other": "Other"
+        },
+        "paymentStatuses": {
+          "all": "All",
+          "pending": "Pending",
+          "verified": "Confirmed",
+          "cancelled": "Rejected"
+        },
+        "paymentType": "Payment type",
+        "paymentTypes": {
+          "all": "All types",
+          "payment_by_rr": "Payment by RR",
+          "partial_payment": "Partial payment",
+          "full_payment": "Full payment"
+        },
+        "amountMin": "Min amount",
+        "amountMax": "Max amount",
+        "amountMinPlaceholder": "0.00",
+        "amountMaxPlaceholder": "e.g. 1000.00",
+        "paymentSortOptions": {
+          "recorded_at_desc": "Created (newest)",
+          "recorded_at_asc": "Created (oldest)",
+          "verified_at_desc": "Confirmed (newest)",
+          "verified_at_asc": "Confirmed (oldest)",
+          "amount_desc": "Amount (high → low)",
+          "amount_asc": "Amount (low → high)",
+          "payment_date_desc": "Payment date (newest)",
+          "payment_date_asc": "Payment date (oldest)"
         }
       },
       "columns": {
@@ -407,7 +450,15 @@
         "priority": "Priority",
         "topic": "Topic",
         "dueDate": "Due date",
-        "dueTime": "Due time"
+        "dueTime": "Due time",
+        "loanNumber": "Loan number",
+        "loanSaleDate": "Date of loan sale",
+        "paymentType": "Payment type",
+        "operator": "Operator",
+        "createdAt": "Created at",
+        "confirmedAt": "Confirmed at",
+        "amount": "Amount",
+        "paymentMethod": "Payment method"
       },
       "callType": {
         "incoming": "Incoming",
@@ -479,6 +530,7 @@
         "loadScriptAnalyticsFailed": "Failed to load script analytics.",
         "loadTaHistoryFailed": "Failed to load TA history",
         "loadTaskHistoryFailed": "Failed to load task history",
+        "loadPaymentHistoryFailed": "Failed to load payment history",
         "departmentNoOperators": "No operators in this department for the current project.",
         "exportFailed": "Export failed",
         "callNotFound": "Call not found"
@@ -501,10 +553,26 @@
         "interactions": "Interaction History",
         "taHistory": "TA History",
         "taskHistory": "Task History",
+        "paymentHistory": "Payment History",
         "timeline": "Timeline",
         "screenTime": "Screen Time",
         "heatmap": "Heatmap",
         "scriptAnalytics": "Script Analytics"
+      },
+      "scope": {
+        "label": "View scope",
+        "my": "My actions",
+        "group": "Group actions",
+        "department": "Department actions",
+        "all": "All actions",
+        "groupComingSoon": "Coming soon"
+      },
+      "paymentHistoryEmpty": "No payments match the current filters",
+      "paymentHistorySummary": {
+        "totalPayments": "payments",
+        "totalAmount": "total",
+        "verified": "confirmed",
+        "pending": "pending"
       },
       "timeline": {
         "callId": "Call ID",
@@ -1906,6 +1974,9 @@
           "last4DigitsMustBe4": "Last 4 digits must be exactly 4 numbers",
           "paymentMethodDetails": "Payment Method Details",
           "paymentMethodDetailsPlaceholder": "Enter additional payment details (optional)",
+          "paymentTypeLabel": "Payment type",
+          "paymentTypePlaceholder": "Select payment type",
+          "paymentTypeRequired": "Payment type is required",
           "impactPreview": "Impact Preview",
           "currentTotalDebt": "Current Total Debt:",
           "paymentAmountLabel": "Payment Amount:",

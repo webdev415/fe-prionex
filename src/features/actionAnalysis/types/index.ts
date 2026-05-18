@@ -225,3 +225,96 @@ export interface TaskSubject {
   name: string
   name_en?: string | null
 }
+
+// ---------------------------------------------------------------------------
+// Payment Monitoring (KAN-506)
+// ---------------------------------------------------------------------------
+
+export type PaymentMethod = 'bank_transfer' | 'online_gateway' | 'cash' | 'card' | 'other'
+
+export type PaymentStatus = 'pending' | 'verified' | 'cancelled'
+
+/** KAN-507 controlled-vocabulary values stored on payments.payment_type. */
+export type PaymentType = 'payment_by_rr' | 'partial_payment' | 'full_payment'
+
+export const PAYMENT_METHOD_VALUES: readonly PaymentMethod[] = [
+  'bank_transfer',
+  'online_gateway',
+  'cash',
+  'card',
+  'other',
+]
+export const PAYMENT_STATUS_VALUES: readonly PaymentStatus[] = ['pending', 'verified', 'cancelled']
+export const PAYMENT_TYPE_VALUES: readonly PaymentType[] = [
+  'payment_by_rr',
+  'partial_payment',
+  'full_payment',
+]
+
+export type PaymentMonitoringSort =
+  | 'recorded_at_desc'
+  | 'recorded_at_asc'
+  | 'verified_at_desc'
+  | 'verified_at_asc'
+  | 'amount_desc'
+  | 'amount_asc'
+  | 'payment_date_desc'
+  | 'payment_date_asc'
+
+export interface PaymentMonitoringFilters {
+  period?: CallMonitoringPeriod
+  /** Top date range — always filters Payment.recorded_at (Created at). */
+  from_datetime?: string
+  to_datetime?: string
+  /** Independent Confirmed-at range (Payment.verified_at). ISO datetime. */
+  verified_at_from?: string
+  verified_at_to?: string
+  /** Independent Payment-date range (Payment.payment_date). YYYY-MM-DD. */
+  payment_date_from?: string
+  payment_date_to?: string
+  user_ids?: number[]
+  payment_method_in?: PaymentMethod[]
+  status_in?: PaymentStatus[]
+  /** Stored values from KAN-507; legacy free-text rows match by exact equality. */
+  payment_type_in?: string[]
+  amount_min?: number
+  amount_max?: number
+  sort?: PaymentMonitoringSort
+  page?: number
+  limit?: number
+}
+
+export interface PaymentMonitoringItem {
+  id: number
+  payment_number: string
+  client_id: number
+  debt_id: number | null
+  /** Cross-service enrichment from the client service (KAN-506). */
+  debt_contract_number: string | null
+  seller_company: string | null
+  purchase_date: string | null // YYYY-MM-DD
+  /** Raw column — typically `PaymentType` once KAN-507 ships; legacy rows hold free text. */
+  payment_type: string | null
+  recorded_by_user_id: number | null
+  recorded_by_full_name: string | null
+  recorded_at: string | null
+  verified_at: string | null
+  amount: string
+  payment_method: PaymentMethod
+  status: PaymentStatus
+}
+
+export interface PaymentMonitoringSummary {
+  total_payments: number
+  total_amount: string
+  verified_amount: string
+  pending_amount: string
+}
+
+export interface PaymentMonitoringResponse {
+  items: PaymentMonitoringItem[]
+  summary: PaymentMonitoringSummary
+  total: number
+  page: number
+  limit: number
+}

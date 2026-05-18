@@ -20,6 +20,7 @@ import {
   writeCallsUrlState,
   toCallMonitoringQuery,
 } from '../lib/callsUrlState'
+import { useScopedUserIds } from '../lib/scope'
 import type { CallFiltersBarValue } from './CallFiltersBar'
 import { CallFiltersBar } from './CallFiltersBar'
 import { CallsTable } from './CallsTable'
@@ -76,20 +77,48 @@ export function CallsTab() {
 
   const apiFiltersBase = useMemo(() => toCallMonitoringQuery(barState), [barState])
 
+  const scoped = useScopedUserIds(operators)
+
+  // Scope drives an effective list of Asterisk extensions (the call service
+  // filters by extension, not user_id). Map scope.userIds → extensions through
+  // the cached operators list; operators without an extension are silently
+  // dropped — they can't have made calls anyway.
+  const scopedExtensions = useMemo<string[] | undefined>(() => {
+    if (scoped.userIds == null) return undefined
+    if (scoped.userIds.length === 0) return [] // scope=department with no operators
+    const idSet = new Set(scoped.userIds)
+    return operators
+      .filter((o) => idSet.has(o.id) && o.asterisk_extension)
+      .map((o) => o.asterisk_extension as string)
+  }, [scoped.userIds, operators])
+
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
   const callsQueryEnabled =
-    barState.period !== 'custom' || !!(barState.customFromDate && barState.customToDate)
+    (barState.period !== 'custom' || !!(barState.customFromDate && barState.customToDate)) &&
+    !(scopedExtensions != null && scopedExtensions.length === 0)
+
+  // Intersect the tab-level operator filter with the scope-derived extensions.
+  // Tab-level wins as a refinement within the scope; if scope is unset (all),
+  // the tab-level filter passes through unchanged.
+  const effectiveAgentExtensions = useMemo<string[] | undefined>(() => {
+    const tabLevel = apiFiltersBase.agent_extensions
+    if (scopedExtensions == null) return tabLevel
+    if (tabLevel == null || tabLevel.length === 0) return scopedExtensions
+    const scopeSet = new Set(scopedExtensions)
+    return tabLevel.filter((ext) => scopeSet.has(ext))
+  }, [apiFiltersBase.agent_extensions, scopedExtensions])
 
   const queryFilters: CallMonitoringFilters = useMemo(
     () => ({
       ...apiFiltersBase,
+      agent_extensions: effectiveAgentExtensions,
       sort: 'date_desc',
       limit: pageSize,
       offset: (page - 1) * pageSize,
     }),
-    [apiFiltersBase, page, pageSize]
+    [apiFiltersBase, effectiveAgentExtensions, page, pageSize]
   )
   const { data, error, isPending } = useCallMonitoring(queryFilters, callsQueryEnabled)
 
@@ -240,6 +269,7 @@ export function CallsTab() {
         onApply={handleApply}
         onClear={handleClear}
         userTimezone={userTimezone}
+        scope={scoped}
       />
 
       <div className="flex flex-wrap gap-4 text-sm text-gray-700">

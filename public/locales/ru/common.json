@@ -378,6 +378,49 @@
           "extended": "Продлено",
           "rejected": "Отклонено",
           "incoming_line_result": "Итог входящей линии"
+        },
+        "confirmedAtRangeHeading": "Подтверждён",
+        "confirmedAtFrom": "С",
+        "confirmedAtTo": "По",
+        "paymentDateRangeHeading": "Дата платежа",
+        "paymentDateFrom": "С",
+        "paymentDateTo": "По",
+        "selectedCount": "Выбрано: {{count}}",
+        "paymentMethod": "Способ оплаты",
+        "paymentMethods": {
+          "all": "Все способы",
+          "bank_transfer": "Банковский перевод",
+          "online_gateway": "Онлайн (ссылка)",
+          "cash": "Наличные",
+          "card": "Карта",
+          "other": "Другое"
+        },
+        "paymentStatuses": {
+          "all": "Все",
+          "pending": "В ожидании",
+          "verified": "Подтверждён",
+          "cancelled": "Отклонён"
+        },
+        "paymentType": "Тип платежа",
+        "paymentTypes": {
+          "all": "Все типы",
+          "payment_by_rr": "Платёж по РР",
+          "partial_payment": "Частичный платёж",
+          "full_payment": "Полный платёж"
+        },
+        "amountMin": "Сумма от",
+        "amountMax": "Сумма до",
+        "amountMinPlaceholder": "0.00",
+        "amountMaxPlaceholder": "напр. 1000.00",
+        "paymentSortOptions": {
+          "recorded_at_desc": "Создан (новые)",
+          "recorded_at_asc": "Создан (старые)",
+          "verified_at_desc": "Подтверждён (новые)",
+          "verified_at_asc": "Подтверждён (старые)",
+          "amount_desc": "Сумма (по убыванию)",
+          "amount_asc": "Сумма (по возрастанию)",
+          "payment_date_desc": "Дата платежа (новые)",
+          "payment_date_asc": "Дата платежа (старые)"
         }
       },
       "columns": {
@@ -410,7 +453,15 @@
         "priority": "Приоритет",
         "topic": "Тема",
         "dueDate": "Срок (дата)",
-        "dueTime": "Срок (время)"
+        "dueTime": "Срок (время)",
+        "loanNumber": "Номер займа",
+        "loanSaleDate": "Дата продажи займа",
+        "paymentType": "Тип платежа",
+        "operator": "Оператор",
+        "createdAt": "Создан",
+        "confirmedAt": "Подтверждён",
+        "amount": "Сумма",
+        "paymentMethod": "Способ оплаты"
       },
       "callType": {
         "incoming": "Входящий",
@@ -482,6 +533,7 @@
         "loadScriptAnalyticsFailed": "Не удалось загрузить аналитику скриптов.",
         "loadTaHistoryFailed": "Не удалось загрузить историю ТА",
         "loadTaskHistoryFailed": "Не удалось загрузить историю задач",
+        "loadPaymentHistoryFailed": "Не удалось загрузить историю платежей",
         "departmentNoOperators": "В этом отделе нет операторов в текущем проекте.",
         "exportFailed": "Не удалось экспортировать",
         "callNotFound": "Звонок не найден"
@@ -504,10 +556,26 @@
         "interactions": "История взаимодействий",
         "taHistory": "История ТА",
         "taskHistory": "История задач",
+        "paymentHistory": "История платежей",
         "timeline": "Таймлайн",
         "screenTime": "Экранное время",
         "heatmap": "Тепловая карта",
         "scriptAnalytics": "Аналитика скриптов"
+      },
+      "scope": {
+        "label": "Область просмотра",
+        "my": "Мои действия",
+        "group": "Действия группы",
+        "department": "Действия отдела",
+        "all": "Все действия",
+        "groupComingSoon": "Скоро"
+      },
+      "paymentHistoryEmpty": "Нет платежей, соответствующих фильтрам",
+      "paymentHistorySummary": {
+        "totalPayments": "платежей",
+        "totalAmount": "всего",
+        "verified": "подтверждено",
+        "pending": "в ожидании"
       },
       "timeline": {
         "callId": "ID звонка",
@@ -2143,6 +2211,9 @@
           "last4DigitsMustBe4": "Последние 4 цифры должны быть ровно 4 числами",
           "paymentMethodDetails": "Детали способа оплаты",
           "paymentMethodDetailsPlaceholder": "Введите дополнительные детали оплаты (необязательно)",
+          "paymentTypeLabel": "Тип платежа",
+          "paymentTypePlaceholder": "Выберите тип платежа",
+          "paymentTypeRequired": "Тип платежа обязателен",
           "impactPreview": "Предварительный просмотр влияния",
           "currentTotalDebt": "Текущий общий долг:",
           "paymentAmountLabel": "Сумма платежа:",

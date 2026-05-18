@@ -17,6 +17,7 @@ import {
   toTaHistoryQuery,
   type TaHistoryBarState,
 } from '../lib/taHistoryUrlState'
+import { useScopedUserIds } from '../lib/scope'
 import { TaHistoryFiltersBar } from './TaHistoryFiltersBar'
 import { TaHistoryTable } from './TaHistoryTable'
 
@@ -53,19 +54,30 @@ export function TaHistoryTab() {
     )
   }, [searchParams, setSearchParams, userTimezone])
 
+  const scoped = useScopedUserIds(operators)
+
   const recordedByIn = useMemo<number[] | undefined>(() => {
+    // Tab-level Department picker still refines within scope when scope=all.
     if (barState.departmentId != null) {
       const ids = operators
         .filter((o) => o.department_id === barState.departmentId)
         .map((o) => o.id)
-      return ids.length ? ids : undefined
+      const intersected =
+        scoped.userIds == null ? ids : ids.filter((id) => scoped.userIds!.includes(id))
+      return intersected.length ? intersected : undefined
     }
-    if (barState.employeeIds.length > 0) return barState.employeeIds
-    return undefined
-  }, [barState.departmentId, barState.employeeIds, operators])
+    if (barState.employeeIds.length > 0) {
+      if (scoped.userIds == null) return barState.employeeIds
+      const scopeSet = new Set(scoped.userIds)
+      const intersected = barState.employeeIds.filter((id) => scopeSet.has(id))
+      return intersected.length ? intersected : undefined
+    }
+    return scoped.userIds && scoped.userIds.length > 0 ? scoped.userIds : undefined
+  }, [barState.departmentId, barState.employeeIds, operators, scoped.userIds])
 
   const isDeptEmpty =
-    barState.departmentId != null && (recordedByIn == null || recordedByIn.length === 0)
+    (barState.departmentId != null || scoped.isEmptyResolution) &&
+    (recordedByIn == null || recordedByIn.length === 0)
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -126,6 +138,7 @@ export function TaHistoryTab() {
         onApply={handleApply}
         onClear={handleClear}
         userTimezone={userTimezone}
+        scope={scoped}
       />
 
       <div className="text-sm text-gray-700">

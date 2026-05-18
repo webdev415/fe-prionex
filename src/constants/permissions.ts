@@ -173,6 +173,7 @@ export const PERMISSIONS = {
     VIEW_SCRIPT_ANALYTICS: 'view_script_analytics',
     VIEW_TA_HISTORY: 'view_ta_history',
     VIEW_TASK_HISTORY: 'view_task_history',
+    VIEW_PAYMENT_HISTORY: 'view_payment_history',
   },
 
   /**
@@ -337,6 +338,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
     'View Script Analytics & anomaly detection (interaction-result distribution and auto-flags)',
   view_ta_history: 'View TA History sub-tab (chain interactions with chain + step filters)',
   view_task_history: 'View Task History sub-tab (all operator tasks with filters)',
+  view_payment_history: 'View Payment History sub-tab (all operator payments with filters)',
 
   // Document Generation
   view_document_journal: 'View the journal of all generated and uploaded documents',
