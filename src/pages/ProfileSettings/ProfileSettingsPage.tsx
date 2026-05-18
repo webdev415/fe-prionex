@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { useAuth, useUpdateMyProfile, ChangePasswordModal, TwoFactorSection } from '@/features/auth'
+import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/features/auth/api/authApi'
 import { timezoneOptions } from '@/features/users/schemas/userSchemas'
 import { Input } from '@/components/ui/Input'
@@ -23,6 +24,7 @@ import { normalizeBackendLanguage } from '@/lib/i18n'
 import type { UpdateMyProfileInput } from '@/types/api'
 export function ProfileSettingsPage() {
   const { user, isLoading: authLoading } = useAuth()
+  const refreshUser = useAuthStore((state) => state.refreshUser)
   const { t, i18n } = useTranslation('common')
   const { mutateAsync: updateMyProfileMutateAsync } = useUpdateMyProfile()
   const [isUpdatingLocal, setIsUpdatingLocal] = useState(false)
@@ -51,6 +53,24 @@ export function ProfileSettingsPage() {
   }, [user, i18n.language])
 
   const [form, setForm] = useState(initialForm)
+
+  // Re-sync form when auth user loads or is refreshed (e.g. after permission refresh / project switch)
+  useEffect(() => {
+    if (!user) return
+    setForm((prev) => ({
+      ...prev,
+      username: user.username || prev.username,
+      email: user.email || prev.email,
+      first_name: user.firstName || prev.first_name,
+      last_name: user.lastName || prev.last_name,
+      timezone: user.timezone || prev.timezone,
+      agent_status: user.agent_status || prev.agent_status,
+      language: user.language
+        ? (normalizeBackendLanguage(user.language) as 'en' | 'uk')
+        : prev.language,
+    }))
+  }, [user])
+
   const [savedProfileSnapshot, setSavedProfileSnapshot] = useState(() => ({
     email: initialForm.email,
     first_name: initialForm.first_name,
@@ -72,6 +92,11 @@ export function ProfileSettingsPage() {
       form.timezone !== savedProfileSnapshot.timezone
     )
   }, [form, savedProfileSnapshot])
+
+  // Refresh auth user once on mount so profile has full /me data (projects, agent fields, names)
+  useEffect(() => {
+    void refreshUser()
+  }, [refreshUser])
 
   // Sync when i18n changes externally only (e.g. header switcher). Do not depend on form.language —
   // i18n.changeLanguage is async; including form.language would revert the profile dropdown immediately.
@@ -187,6 +212,25 @@ export function ProfileSettingsPage() {
                 {t('pages.profile.roleLabel')}{' '}
                 <span className="text-dark-500 font-medium">{user?.active_role_name || ''}</span>
               </span>
+              {(user?.active_department_name || user?.active_group_name) && (
+                <span className="text-sm leading-[155%] font-light tracking-[-0.32px] text-gray-700 sm:text-base">
+                  {user?.active_department_name && (
+                    <>
+                      {t('pages.profile.departmentLabel')}{' '}
+                      <span className="text-dark-500 font-medium">
+                        {user.active_department_name}
+                      </span>
+                    </>
+                  )}
+                  {user?.active_department_name && user?.active_group_name && ' · '}
+                  {user?.active_group_name && (
+                    <>
+                      {t('pages.profile.groupLabel')}{' '}
+                      <span className="text-dark-500 font-medium">{user.active_group_name}</span>
+                    </>
+                  )}
+                </span>
+              )}
               {user?.asterisk_extension && (
                 <div className="text-xs text-gray-500">Extension: {user.asterisk_extension}</div>
               )}

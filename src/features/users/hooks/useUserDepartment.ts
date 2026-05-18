@@ -19,6 +19,8 @@ export function useUserDepartment(userId: number) {
 
   return {
     data: data?.department_name ?? null,
+    departmentName: data?.department_name ?? null,
+    groupName: data?.group_name ?? null,
     isLoading,
   }
 }

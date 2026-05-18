@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/features/auth/api/authApi'
+import { mapBackendUserToUser } from '@/lib/mapBackendUser'
 import { toast } from 'sonner'
 
 const REFRESH_INTERVAL = 5 * 60 * 1000 // 5 minutes
@@ -43,32 +44,8 @@ export function usePermissionRefresh() {
         const newPermissions = response.data.permissions?.sort().join(',')
 
         if (oldPermissions !== newPermissions) {
-          // Map backend user data to frontend User type
-          const updatedUser = {
-            id: String(response.data.id),
-            username: response.data.username,
-            email: response.data.email,
-            firstName: response.data.first_name,
-            lastName: response.data.last_name,
-            projects:
-              response.data.projects?.map((p: { id: number; name: string; role_name: string }) => ({
-                id: String(p.id),
-                name: p.name,
-                roles: [{ id: String(p.id), name: p.role_name }],
-              })) || [],
-            active_project_id: response.data.active_project
-              ? String(response.data.active_project.id)
-              : null,
-            active_role_id: response.data.role ? String(response.data.role.id) : null,
-            active_role_name: response.data.role?.name || null,
-            active_department_id: response.data.active_department_id ?? null,
-            permissions: response.data.permissions || [],
-            createdAt: response.data.created_at,
-            updatedAt: response.data.created_at,
-            timezone: response.data.timezone,
-          }
+          const updatedUser = mapBackendUserToUser(response.data)
 
-          // Update user in auth store using Zustand's set method
           useAuthStore.setState({ user: updatedUser })
 
           // Show notification to user

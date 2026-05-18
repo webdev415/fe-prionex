@@ -14,7 +14,7 @@ import { useAuth } from '@/features/auth'
 import { authApi } from '@/features/auth/api/authApi'
 import { useAuthStore } from '@/stores/authStore'
 import { setAccessToken } from '@/lib/api'
-import type { User } from '@/types/api'
+import { mapBackendUserToUser } from '@/lib/mapBackendUser'
 import { Icons } from '@/lib/icons'
 import {
   DropdownMenu,
@@ -34,7 +34,8 @@ export function ProjectSelector() {
   // Get user's assigned projects
   const userProjects = user?.projects || []
   const hasProjects = userProjects.length >= 1
-  const currentProject = userProjects.find((p) => p.id === user?.active_project_id)
+  const currentProject =
+    userProjects.find((p) => p.id === user?.active_project_id) ?? userProjects[0]
 
   // Close dropdown on window resize to prevent positioning issues
   useEffect(() => {
@@ -48,8 +49,7 @@ export function ProjectSelector() {
     return () => window.removeEventListener('resize', handleResize)
   }, [isOpen])
 
-  // Don't render if user has no projects or no current project
-  if (!hasProjects || !currentProject) {
+  if (!hasProjects) {
     return null
   }
 
@@ -75,34 +75,8 @@ export function ProjectSelector() {
       // Fetch updated user data directly (bypassing checkAuth guard)
       try {
         const userResponse = await authApi.me()
-        const backendUser = userResponse.data
+        const updatedUser = mapBackendUserToUser(userResponse.data)
 
-        // Map backend user data to frontend User type
-        const updatedUser: User = {
-          id: String(backendUser.id),
-          username: backendUser.username,
-          email: backendUser.email,
-          firstName: backendUser.first_name,
-          lastName: backendUser.last_name,
-          projects:
-            backendUser.projects?.map((p) => ({
-              id: String(p.id),
-              name: p.name,
-              roles: [{ id: String(p.id), name: p.role_name }],
-            })) || [],
-          active_project_id: backendUser.active_project
-            ? String(backendUser.active_project.id)
-            : null,
-          active_role_id: backendUser.role ? String(backendUser.role.id) : null,
-          active_role_name: backendUser.role?.name || null,
-          active_department_id: backendUser.active_department_id ?? null,
-          permissions: backendUser.permissions || [],
-          createdAt: backendUser.created_at,
-          updatedAt: backendUser.created_at,
-          timezone: backendUser.timezone,
-        }
-
-        // Update store state directly
         useAuthStore.setState({ user: updatedUser, hasCheckedAuth: true })
 
         // Clear all React Query cache so data re-fetches with new project context
@@ -144,7 +118,9 @@ export function ProjectSelector() {
           )}
           disabled={isSwitchingProject}
         >
-          <span className={cn('max-w-[220px] truncate text-center')}>{currentProject.name}</span>
+          <span className={cn('max-w-[220px] truncate text-center')}>
+            {currentProject?.name || t('pages.users.unknownProject')}
+          </span>
           <Icons.ArrowDown size={18} strokeWidth={1.5} className={'text-secondary-800'} />
         </button>
       </DropdownMenuTrigger>
