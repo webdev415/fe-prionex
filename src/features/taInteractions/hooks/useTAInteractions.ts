@@ -32,6 +32,7 @@ export function useClientTAInteractions(
     queryKey: [...INT_KEY, 'client', clientId, params],
     queryFn: () => getTAInteractions({ client_id: clientId!, ...params }),
     enabled: clientId !== null && clientId > 0,
+    staleTime: 10_000,
   })
 }
 
@@ -46,9 +47,14 @@ export function useCreateTAInteraction() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (payload: TAInteractionCreate) => createTAInteraction(payload),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: INT_KEY })
-      qc.invalidateQueries({ queryKey: INST_KEY })
+    onSuccess: (created) => {
+      // Per-client narrowing: don't invalidate the entire INT_KEY/INST_KEY
+      // subtree across the app — only the active client's history and
+      // instance list. The pinned-chain selector also depends on this
+      // client's pin state, so refresh it too.
+      qc.invalidateQueries({ queryKey: [...INT_KEY, 'client', created.client_id] })
+      qc.invalidateQueries({ queryKey: [...INST_KEY, 'client', created.client_id] })
+      qc.invalidateQueries({ queryKey: ['ta-pinned-chains', created.client_id] })
     },
   })
 }
@@ -108,6 +114,7 @@ export function useClientChainInstances(clientId: number | null) {
     queryKey: [...INST_KEY, 'client', clientId],
     queryFn: () => getChainInstances({ client_id: clientId! }),
     enabled: clientId !== null && clientId > 0,
+    staleTime: 10_000,
   })
 }
 
@@ -181,10 +188,23 @@ export function useAdvanceChainInstance() {
           return next
         }
       )
-      qc.invalidateQueries({ queryKey: INST_KEY })
-      // Refresh data that effects may have changed
-      qc.invalidateQueries({ queryKey: ['clients'] }) // spam call history, tags, etc.
-      qc.invalidateQueries({ queryKey: ['tasks'] }) // task bell + task tab
+      // Per-client narrowing: don't invalidate the entire ['clients'] subtree
+      // on every step click. Mid-chain advance has no side effects on the
+      // client (execute_effects is a documented no-op — see
+      // app/services/chain_automation.py::execute_effects); only completion
+      // fires tags/tasks/dial-history effects.
+      qc.invalidateQueries({ queryKey: [...INST_KEY, 'client', updated.client_id] })
+
+      if (updated.status === 'completed') {
+        // Completion effects (add_tag/remove_tag/add_to_spam/send_sms/create_task)
+        // can mutate tags, dial-history (spam list), and tasks. Refresh those
+        // explicitly. The TA history list refresh is also needed because the
+        // final interaction was just recorded.
+        qc.invalidateQueries({ queryKey: ['clients', updated.client_id, 'tags'] })
+        qc.invalidateQueries({ queryKey: ['clients', updated.client_id, 'dialHistory'] })
+        qc.invalidateQueries({ queryKey: ['clients', updated.client_id, 'tasks'] })
+        qc.invalidateQueries({ queryKey: [...INT_KEY, 'client', updated.client_id] })
+      }
     },
   })
 }
@@ -214,7 +234,7 @@ export function useRewindChainInstance() {
           return next
         }
       )
-      qc.invalidateQueries({ queryKey: INST_KEY })
+      qc.invalidateQueries({ queryKey: [...INST_KEY, 'client', updated.client_id] })
     },
   })
 }

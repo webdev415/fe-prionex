@@ -35,6 +35,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { searchClients, mapPriorityLevel, type SearchType } from '@/api/clientSearchApi'
 import { RouteChangeTracker, TrackingProvider } from '@/features/operatorAnalytics'
 
+// Minimum digit count required to fire a phone-type search. Mirrors the
+// backend guard at services/client/app/routers/search.py (PHONE_MIN_DIGITS).
+// Inputs shorter than this would return tens of thousands of substring
+// matches and choke the enrichment pipeline; gating on the client avoids
+// the round trip and lets the dropdown show a clear "keep typing" hint.
+const PHONE_SEARCH_MIN_DIGITS = 8
+
 interface DashboardLayoutProps {
   children: ReactNode
 }
@@ -433,6 +440,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [searchHint, setSearchHint] = useState<string | null>(null)
   const [showSearchDropdown, setShowSearchDropdown] = useState(false)
   const searchContainerRef = useRef<HTMLDivElement>(null)
 
@@ -491,8 +499,29 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         setSearchResults([])
         setIsSearching(false)
         setSearchError(null)
+        setSearchHint(null)
         setShowSearchDropdown(false)
         return
+      }
+
+      // Phone search needs enough digits to be both useful (results small
+      // enough to render) and fast (enrichment doesn't choke on tens of
+      // thousands of candidate contacts). The backend enforces the same
+      // threshold — see PHONE_MIN_DIGITS in services/client/.../search.py.
+      // Doing the gate client-side avoids a round trip entirely and lets
+      // us show the user a clear "keep typing" hint.
+      if (type === 'phone') {
+        const phoneDigitCount = (query.match(/\d/g) ?? []).length
+        if (phoneDigitCount < PHONE_SEARCH_MIN_DIGITS) {
+          setLocalSearchQuery(query)
+          setLocalSearchType(type)
+          setSearchResults([])
+          setIsSearching(false)
+          setSearchError(null)
+          setSearchHint(t('search.phoneMinDigits', { count: PHONE_SEARCH_MIN_DIGITS }))
+          setShowSearchDropdown(true)
+          return
+        }
       }
 
       // Same query/type with cached results (e.g. user closed dropdown by clicking away):
@@ -508,6 +537,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       setIsSearching(true)
       setSearchError(null)
+      setSearchHint(null)
       setShowSearchDropdown(true)
 
       try {
@@ -872,6 +902,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     results={searchResults}
                     isLoading={isSearching}
                     error={searchError}
+                    hint={searchHint}
                     onViewAll={handleViewAllResults}
                     onResultClick={handleResultClick}
                   />
