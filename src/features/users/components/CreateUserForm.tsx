@@ -12,7 +12,6 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useCreateUser } from '../hooks/useCreateUser'
-import { useProjectRoles } from '@/features/roles'
 import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Label } from '@/components/ui/Label'
@@ -26,6 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { createUserSchema } from '../schemas/userSchemas'
+import { ProjectRoleGroupRow } from './ProjectRoleGroupRow'
 
 interface Project {
   id: number
@@ -37,51 +37,6 @@ interface CreateUserFormProps {
   projects: Project[]
   onSuccess: () => void
   onCancel?: () => void
-}
-
-interface ProjectRoleRowProps {
-  projectId: number
-  projectName?: string
-  selectedRoleId: number | undefined
-  onRoleChange: (roleId: number) => void
-}
-
-function ProjectRoleRow({
-  projectId,
-  projectName,
-  selectedRoleId,
-  onRoleChange,
-}: ProjectRoleRowProps) {
-  const { t } = useTranslation('common')
-  const { data: rolesData } = useProjectRoles(projectId)
-  const availableRoles = (rolesData?.roles || []).filter((role) => role.is_active)
-
-  return (
-    <div className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 sm:gap-4">
-      <span className="text-dark-500 text-sm font-light">{projectName}:</span>
-      <Select
-        value={selectedRoleId?.toString() || ''}
-        onValueChange={(value) => onRoleChange(parseInt(value, 10))}
-      >
-        <SelectTrigger className="border-light-50 text-dark-500 mt-1 w-full border text-sm">
-          <SelectValue placeholder={t('pages.users.forms.notAssigned')} />
-        </SelectTrigger>
-        <SelectContent>
-          {availableRoles.length > 0 ? (
-            availableRoles.map((role) => (
-              <SelectItem key={role.id} value={role.id.toString()}>
-                {role.name}
-              </SelectItem>
-            ))
-          ) : (
-            <SelectItem value="no-roles-available" disabled>
-              {t('pages.users.forms.noRolesAvailable')}
-            </SelectItem>
-          )}
-        </SelectContent>
-      </Select>
-    </div>
-  )
 }
 
 // Extended schema to support multiple projects with roles
@@ -117,6 +72,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
   const { mutate, isError, error } = useCreateUser()
   const [selectedProjects, setSelectedProjects] = useState<number[]>([])
   const [projectRoles, setProjectRoles] = useState<Record<number, number>>({})
+  const [projectGroups, setProjectGroups] = useState<Record<number, number | undefined>>({})
 
   const {
     register,
@@ -151,6 +107,9 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
       const newRoles = { ...projectRoles }
       delete newRoles[projectId]
       setProjectRoles(newRoles)
+      const newGroups = { ...projectGroups }
+      delete newGroups[projectId]
+      setProjectGroups(newGroups)
       // Convert number keys to string keys for form validation
       const projectRolesForForm: Record<string, number> = {}
       Object.keys(newRoles).forEach((key) => {
@@ -165,9 +124,18 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
     }
   }
 
+  const handleGroupChange = (projectId: number, groupId: number | undefined) => {
+    setProjectGroups((prev) => ({ ...prev, [projectId]: groupId }))
+  }
+
   const handleRoleChange = async (projectId: number, roleId: number) => {
     const newRoles = { ...projectRoles, [projectId]: roleId }
     setProjectRoles(newRoles)
+    setProjectGroups((prev) => {
+      const next = { ...prev }
+      delete next[projectId]
+      return next
+    })
     // Convert number keys to string keys for form validation
     const projectRolesForForm: Record<string, number> = {}
     Object.keys(newRoles).forEach((key) => {
@@ -186,6 +154,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
     const project_assignments = formData.selectedProjects.map((projectId) => ({
       project_id: projectId,
       role_id: formData.projectRoles[String(projectId)],
+      group_id: projectGroups[projectId],
     }))
 
     // Note: status is not sent to API as users are always created as "active"
@@ -522,12 +491,14 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
           </h3>
           <div className="space-y-3">
             {selectedProjects.map((projectId) => (
-              <ProjectRoleRow
+              <ProjectRoleGroupRow
                 key={projectId}
                 projectId={projectId}
                 projectName={projects.find((p) => p.id === projectId)?.name}
                 selectedRoleId={projectRoles[projectId]}
+                selectedGroupId={projectGroups[projectId]}
                 onRoleChange={(roleId) => handleRoleChange(projectId, roleId)}
+                onGroupChange={(groupId) => handleGroupChange(projectId, groupId)}
               />
             ))}
           </div>
