@@ -3654,6 +3654,16 @@ export function ClientDetailPage() {
                                                 ? (call.recording_path as string | null)
                                                 : null
                                             }
+                                            direction={
+                                              'direction' in call
+                                                ? (call.direction as string | null)
+                                                : null
+                                            }
+                                            telephony_type={
+                                              'telephony_type' in call
+                                                ? (call.telephony_type as string | null)
+                                                : null
+                                            }
                                             icon={
                                               <Icons.PlayCircle02
                                                 size={20}
