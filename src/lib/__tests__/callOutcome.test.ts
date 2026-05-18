@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { classifyCallOutcome, OUTCOME_PALETTE_CLASSES } from '../callOutcome'
+import { classifyCallOutcome, isNonAnsweredOutcome, OUTCOME_PALETTE_CLASSES } from '../callOutcome'
 
 describe('classifyCallOutcome', () => {
   it.each([
@@ -39,6 +39,32 @@ describe('classifyCallOutcome', () => {
   it('handles null and undefined defensively', () => {
     expect(classifyCallOutcome(null)).toEqual({ labelKey: '', fallback: '', palette: 'gray' })
     expect(classifyCallOutcome(undefined)).toEqual({ labelKey: '', fallback: '', palette: 'gray' })
+  })
+})
+
+describe('isNonAnsweredOutcome', () => {
+  it.each([
+    ['no_answer', true],
+    ['NO ANSWER', true],
+    ['busy', true],
+    ['cancel', true],
+    ['unavailable', true],
+    ['congestion', true],
+    ['failed', true],
+    ['answered', false],
+    ['completed', false],
+    ['delivered', false],
+    ['pending', false],
+    ['ringing', false],
+    ['voicemail', false], // unknown outcomes default to false so we don't hide data
+    ['', false],
+  ])('returns %s -> %s', (input, expected) => {
+    expect(isNonAnsweredOutcome(input)).toBe(expected)
+  })
+
+  it('handles null and undefined defensively', () => {
+    expect(isNonAnsweredOutcome(null)).toBe(false)
+    expect(isNonAnsweredOutcome(undefined)).toBe(false)
   })
 })
 

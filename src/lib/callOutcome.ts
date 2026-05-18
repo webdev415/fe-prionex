@@ -1,13 +1,3 @@
-/**
- * Shared classifier for call-outcome render data (KAN-490).
- *
- * Two surfaces consume the same DialStatus-derived `outcome` field —
- * the contact-card Call/SMS section (CallLogCard) and the Action Analysis
- * Call List (CallsTable). Each renders the value with a different visual
- * shell (dot+ring+text vs. pill), so the shape stays site-specific; only
- * the label-and-palette mapping is centralised here to prevent drift.
- */
-
 export type OutcomePalette = 'success' | 'error' | 'warning' | 'gray'
 
 export interface CallOutcomeRender {
@@ -82,6 +72,21 @@ export function classifyCallOutcome(status: string | null | undefined): CallOutc
     default:
       return { labelKey: '', fallback: status ?? '', palette: 'gray' }
   }
+}
+
+const NON_ANSWERED_OUTCOMES = new Set([
+  'NO_ANSWER',
+  'NO ANSWER',
+  'BUSY',
+  'CANCEL',
+  'UNAVAILABLE',
+  'CONGESTION',
+  'FAILED',
+])
+
+export function isNonAnsweredOutcome(status: string | null | undefined): boolean {
+  if (!status) return false
+  return NON_ANSWERED_OUTCOMES.has(status.toUpperCase())
 }
 
 // Literal Tailwind class strings — spelled out so the purger keeps them.

@@ -6,7 +6,11 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatDateTime } from '@/lib/formatters'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
-import { classifyCallOutcome, OUTCOME_PALETTE_CLASSES } from '@/lib/callOutcome'
+import {
+  classifyCallOutcome,
+  isNonAnsweredOutcome,
+  OUTCOME_PALETTE_CLASSES,
+} from '@/lib/callOutcome'
 import type { CallMonitoringItem } from '@/features/actionAnalysis'
 
 type Row = CallMonitoringItem & { id: string }
@@ -20,12 +24,6 @@ function formatDuration(seconds: number | null | undefined): string {
 
 interface Props {
   data: CallMonitoringItem[]
-  /**
-   * Single open-the-call entry point — the row's recording button writes
-   * `?call_id=…` to the URL, the parent (`CallsTab`) opens the merged
-   * Recording + Details modal in response. KAN-409 follow-up collapsed the
-   * separate "View detail" action into this same path.
-   */
   onOpenCall: (call: CallMonitoringItem) => void
 }
 
@@ -45,9 +43,10 @@ export function CallsTable({ data, onOpenCall }: Props) {
     {
       key: 'duration',
       header: t('pages.actionAnalysis.columns.duration', 'Duration'),
-      render: (r) => (
-        <span className="text-sm text-gray-700">{formatDuration(r.talk_duration)}</span>
-      ),
+      render: (r) => {
+        const display = isNonAnsweredOutcome(r.outcome) ? null : r.talk_duration
+        return <span className="text-sm text-gray-700">{formatDuration(display)}</span>
+      },
     },
     {
       key: 'status',
