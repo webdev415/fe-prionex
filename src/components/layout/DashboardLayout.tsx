@@ -664,6 +664,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermission: PERMISSIONS.REPORTS.VIEW_ALL_REPORTS,
       },
       {
+        path: '/dashboard/messaging/campaigns',
+        icon: 'mail-send-01',
+        label: t('navigation.campaignAnalytics', 'Campaign Analytics'),
+        requiredPermission: PERMISSIONS.MESSAGING.VIEW_CAMPAIGN_ANALYTICS,
+      },
+      {
         path: '/dashboard/action-analysis',
         icon: 'analytics-01',
         label: t('navigation.actionAnalysis'),
@@ -705,6 +711,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         label: t('navigation.systemSettings', 'System Settings'),
         requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
         subItems: [
+          {
+            path: '/dashboard/system-settings/messaging-integrations',
+            label: t('navigation.messagingIntegrations', 'Messaging Integrations'),
+            icon: 'mail-send-01',
+            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
+          },
+          {
+            path: '/dashboard/system-settings/messaging-drafts',
+            label: t('navigation.messagingDrafts', 'Message Drafts'),
+            icon: 'mail-send-01',
+            requiredPermission: PERMISSIONS.MESSAGING.VIEW_BULK_MESSAGING,
+          },
           {
             path: '/dashboard/system-settings/tags',
             label: t('navigation.tags', 'Tags'),

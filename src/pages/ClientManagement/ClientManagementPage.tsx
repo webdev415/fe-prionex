@@ -21,6 +21,7 @@ import { BulkAssignClientModal } from './components/BulkAssignClientModal'
 import { formatDate } from '@/lib/formatters'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { BulkTagModal } from './components/BulkTagModal'
+import { BulkSendMessageModal } from './components/BulkSendMessageModal'
 import { ClientManagementPageSkeleton } from './components/ClientManagementPageSkeleton'
 import { Icons } from '@/lib/icons'
 import {
@@ -48,6 +49,7 @@ import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
+import { toast } from 'sonner'
 
 // Display type matching page requirements
 interface DisplayClient {
@@ -335,6 +337,7 @@ export function ClientManagementPage() {
   const [assignModalClientId, setAssignModalClientId] = useState<number | null>(null)
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false)
   const [showBulkTagModal, setShowBulkTagModal] = useState(false)
+  const [showBulkSendMessageModal, setShowBulkSendMessageModal] = useState(false)
   const [bulkTagAction, setBulkTagAction] = useState<'add' | 'remove'>('add')
   const [tagModalOpen, setTagModalOpen] = useState(false)
   const [selectedClientForTags, setSelectedClientForTags] = useState<{
@@ -872,6 +875,20 @@ export function ClientManagementPage() {
   const handleBulkRemoveTags = () => {
     setBulkTagAction('remove')
     setShowBulkTagModal(true)
+  }
+
+  const handleBulkSendMessage = () => {
+    if (totalSelectedCount === 0) {
+      toast.error(
+        t(
+          'pages.clients.bulkActions.selectClientsFirst',
+          'Select at least one client before starting a bulk action'
+        )
+      )
+      return
+    }
+
+    setShowBulkSendMessageModal(true)
   }
 
   const handleBulkAssignSubmit = (assignmentData: {
@@ -1621,6 +1638,17 @@ export function ClientManagementPage() {
                         </span>
                       </DropdownMenuItem>
                     </PermissionGuard>
+                    <PermissionGuard permission={PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGNS}>
+                      <DropdownMenuItem
+                        onClick={handleBulkSendMessage}
+                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-gray-50 focus:bg-gray-50"
+                      >
+                        <Icons.MailSend01 size={18} className="text-dark-500" strokeWidth={1.5} />
+                        <span className="text-dark-500 text-sm font-medium">
+                          {t('pages.clients.bulkActions.sendMessage', 'Send Message')}
+                        </span>
+                      </DropdownMenuItem>
+                    </PermissionGuard>
                   </DropdownMenuContent>
                 </DropdownMenu>
               }
@@ -1687,6 +1715,21 @@ export function ClientManagementPage() {
           clientCount={totalSelectedCount}
           action={bulkTagAction}
           onClose={() => setShowBulkTagModal(false)}
+        />
+
+        <BulkSendMessageModal
+          open={showBulkSendMessageModal}
+          clientIds={Array.from(selectedClients).map(Number)}
+          selectedClients={selectedClientsData}
+          totalSelectedCount={totalSelectedCount}
+          allClientsSelectedAcrossPages={allClientsSelected}
+          onClose={() => setShowBulkSendMessageModal(false)}
+          onLaunched={() => {
+            setShowBulkSendMessageModal(false)
+            setSelectedClients(new Set())
+            setAllClientsSelected(false)
+            setExcludedClients(new Set())
+          }}
         />
       </div>
     </TooltipProvider>

@@ -61,6 +61,21 @@ const SmsTemplatesPage = lazy(() =>
     default: m.SmsTemplatesPage,
   }))
 )
+const MessagingCampaignsPage = lazy(() =>
+  import('@/pages/MessagingCampaigns').then((m) => ({
+    default: m.MessagingCampaignsPage,
+  }))
+)
+const MessagingDraftsPage = lazy(() =>
+  import('@/pages/MessagingDrafts').then((m) => ({
+    default: m.MessagingDraftsPage,
+  }))
+)
+const MessagingIntegrationsPage = lazy(() =>
+  import('@/pages/MessagingIntegrations').then((m) => ({
+    default: m.MessagingIntegrationsPage,
+  }))
+)
 const TAManagementPage = lazy(() =>
   import('@/pages/TAManagement').then((m) => ({
     default: m.TAManagementPage,
@@ -212,6 +227,18 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'messaging',
+        element: <Navigate to="/dashboard/messaging/campaigns" replace />,
+      },
+      {
+        path: 'messaging/campaigns',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.VIEW_CAMPAIGN_ANALYTICS}>
+            {withSuspense(<MessagingCampaignsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
         path: 'projects',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.PROJECTS.MANAGE}>
@@ -264,6 +291,22 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.TAGS.VIEW}>
             {withSuspense(<TagsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/messaging-drafts',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.VIEW_BULK_MESSAGING}>
+            {withSuspense(<MessagingDraftsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'system-settings/messaging-integrations',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS}>
+            {withSuspense(<MessagingIntegrationsPage />)}
           </PermissionRoute>
         ),
       },
