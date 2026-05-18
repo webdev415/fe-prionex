@@ -26,6 +26,13 @@ interface SearchResultsProps {
   results?: SearchResult[]
   isLoading?: boolean
   error?: string | null
+  /**
+   * Soft guidance shown when the search is intentionally suppressed
+   * (e.g. user hasn't typed enough digits yet for a phone search).
+   * Rendered with an info icon and neutral colour to distinguish from
+   * the hard ``error`` state.
+   */
+  hint?: string | null
   onViewAll?: () => void
   onResultClick?: (result: SearchResult) => void
 }
@@ -35,6 +42,7 @@ export function SearchResults({
   results,
   isLoading = false,
   error = null,
+  hint = null,
   onViewAll,
   onResultClick,
 }: SearchResultsProps) {
@@ -64,6 +72,20 @@ export function SearchResults({
   const dropdownBase =
     'absolute left-0 top-full z-[200] mt-2 w-full min-w-0 rounded-lg border border-gray-200 bg-white shadow-lg'
 
+  // Hint State — soft guidance (e.g. "type at least 8 digits"). Checked
+  // before Loading so the typeahead doesn't flash a spinner over the hint
+  // while the user is still typing.
+  if (hint) {
+    return (
+      <div className={cn(dropdownBase, 'p-3 sm:p-4')}>
+        <div className="flex items-center gap-3">
+          <Icons.Info size={20} className="text-primary-500 shrink-0" strokeWidth={2} />
+          <span className="text-sm text-gray-600">{hint}</span>
+        </div>
+      </div>
+    )
+  }
+
   // Loading State
   if (isLoading) {
     return (
@@ -76,13 +98,14 @@ export function SearchResults({
     )
   }
 
-  // Error State
+  // Error State — renders the actual ``error`` text (previously this branch
+  // was rendering a hardcoded ``t('search.error')`` and ignoring the prop).
   if (error) {
     return (
       <div className={cn(dropdownBase, 'p-3 sm:p-4')}>
         <div className="flex items-center gap-3">
           <Icons.Warning size={20} className="text-error-500 shrink-0" strokeWidth={2} />
-          <span className="text-sm text-gray-600">{t('search.error')}</span>
+          <span className="text-sm text-gray-600">{error}</span>
         </div>
       </div>
     )
