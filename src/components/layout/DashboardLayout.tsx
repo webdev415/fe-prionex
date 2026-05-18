@@ -536,7 +536,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           id: item.id,
           name: item.full_name,
           debt: item.total_debt,
-          phone: item.phone_primary ?? '',
+          phone: (item.phones ?? []).join(', '),
           email: item.email_primary ?? '',
           priority: mapPriorityLevel(item.priority_level),
           score: item.priority_score,
